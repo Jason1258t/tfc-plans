@@ -1,5 +1,5 @@
 import { BookOpen, Eye, FilePlus2, Pencil, Sparkles, Trash2, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useData } from '../data/DataContext';
 import { artifactsStore, tasksStore } from '../data/store';
 import { extractResources, geminiEnabled, geminiErrorText } from '../lib/gemini';
@@ -7,8 +7,10 @@ import { useItems } from '../lib/items';
 import { mergeResources } from '../lib/resources';
 import { cx, timeAgo } from '../lib/util';
 import { PRIORITIES, STATUSES, type NewTask, type Task } from '../types';
-import { removeFile, uploadFile } from '../lib/files';
+import { filesEnabled, removeFile, uploadFile } from '../lib/files';
+import { isImage, prepareFile, startUpload, validateFiles } from '../lib/uploads';
 import { Attachments } from './Attachments';
+import { Gallery } from './Gallery';
 import { Checklist } from './Checklist';
 import { ItemIcon } from './ItemIcon';
 import { ItemPicker } from './ItemPicker';
@@ -59,6 +61,8 @@ function CreateTask({
   }));
   const [busy, setBusy] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const intake = useFileIntake({ addPending: (f) => setPendingFiles((list) => [...list, ...f]) });
+  const removePending = (f: File) => setPendingFiles((list) => list.filter((x) => x !== f));
   const [uploadNote, setUploadNote] = useState<string | null>(null);
   const canSave = draft.title.trim().length > 0 && !busy;
 
@@ -127,12 +131,18 @@ function CreateTask({
           }
         }}
       >
-        <TaskFields value={draft} live={false} onPatch={(p) => setDraft((d) => ({ ...d, ...p }))} autoFocusTitle />
+        <TaskFields
+          value={draft}
+          live={false}
+          onPatch={(p) => setDraft((d) => ({ ...d, ...p }))}
+          autoFocusTitle
+          gallery={<Gallery pending={pendingFiles} onRemovePending={removePending} onAdd={intake.add} />}
+        />
         <section className="tf-section">
           <div className="tf-section-head">
             <h3>Файлы</h3>
           </div>
-          <Attachments pending={pendingFiles} onPendingChange={setPendingFiles} />
+          <Attachments pending={pendingFiles} onRemovePending={removePending} onAdd={intake.add} error={intake.error} />
         </section>
       </div>
     </Modal>
@@ -151,6 +161,7 @@ function EditTask({
   onOpenArtifact: (id: string) => void;
 }) {
   const { tasks, artifacts, files, loading, nick } = useData();
+  const intake = useFileIntake({ taskId, author: nick });
   const items = useItems();
   const task = tasks.find((t) => t.id === taskId);
   const [aiBusy, setAiBusy] = useState(false);
@@ -241,13 +252,14 @@ function EditTask({
             )
           }
           checklistError={aiError}
+          gallery={<Gallery taskId={task.id} onAdd={intake.add} />}
         />
 
         <section className="tf-section">
           <div className="tf-section-head">
             <h3>Файлы</h3>
           </div>
-          <Attachments taskId={task.id} />
+          <Attachments taskId={task.id} onAdd={intake.add} error={intake.error} />
         </section>
 
         <section className="tf-section">
@@ -289,6 +301,44 @@ function EditTask({
   );
 }
 
+// ---------------------------------------------------------------- приём файлов
+
+/**
+ * Общий вход для файлов из кнопок, drag&drop и буфера обмена: проверка размера, сжатие картинок,
+ * затем — загрузка (существующая задача) или добавление в черновик. Ctrl+V с картинкой в любом месте окна.
+ */
+function useFileIntake(target: { taskId: string; author: string } | { addPending: (files: File[]) => void }) {
+  const [error, setError] = useState<string | null>(null);
+  const targetRef = useRef(target);
+  useEffect(() => {
+    targetRef.current = target;
+  });
+
+  const add = useCallback(async (list: File[]) => {
+    setError(null);
+    const prepared = await Promise.all(list.map(prepareFile));
+    const { ok, error } = validateFiles(prepared);
+    setError(error);
+    const t = targetRef.current;
+    if ('addPending' in t) t.addPending(ok);
+    else ok.forEach((f) => startUpload(f, t.taskId, t.author));
+  }, []);
+
+  useEffect(() => {
+    if (!filesEnabled) return;
+    const onPaste = (e: ClipboardEvent) => {
+      const images = [...(e.clipboardData?.files ?? [])].filter(isImage);
+      if (!images.length) return;
+      e.preventDefault();
+      add(images);
+    };
+    document.addEventListener('paste', onPaste);
+    return () => document.removeEventListener('paste', onPaste);
+  }, [add]);
+
+  return { add, error };
+}
+
 // ---------------------------------------------------------------- общие поля
 
 type Values = Pick<
@@ -304,6 +354,8 @@ interface FieldsProps {
   autoFocusTitle?: boolean;
   checklistExtra?: React.ReactNode;
   checklistError?: string | null;
+  /** Галерея картинок под описанием */
+  gallery?: React.ReactNode;
 }
 
 /** Текстовое поле: в live-режиме держит локальный черновик и коммитит на blur */
@@ -327,7 +379,7 @@ function useTextField(remote: string, live: boolean, commit: (v: string) => void
   };
 }
 
-function TaskFields({ value, onPatch, live, autoFocusTitle, checklistExtra, checklistError }: FieldsProps) {
+function TaskFields({ value, onPatch, live, autoFocusTitle, checklistExtra, checklistError, gallery }: FieldsProps) {
   const { groups, nick } = useData();
   const title = useTextField(value.title, live, (v) => {
     // В черновике пишем как есть; у существующей задачи пустое название не сохраняем
@@ -517,6 +569,7 @@ function TaskFields({ value, onPatch, live, autoFocusTitle, checklistExtra, chec
             <Markdown source={value.description} />
           </div>
         )}
+        {gallery && <div className="tf-gallery">{gallery}</div>}
       </section>
 
       <section className="tf-section">

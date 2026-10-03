@@ -1,95 +1,56 @@
 import { Download, File as FileIcon, FileArchive, Paperclip, Trash2, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useData } from '../data/DataContext';
-import {
-  downloadFile,
-  filesEnabled,
-  formatSize,
-  MAX_FILE_SIZE,
-  removeFile,
-  uploadFile,
-  type FileMeta,
-} from '../lib/files';
+import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, type FileMeta } from '../lib/files';
+import { dismissUpload, isImage, useUploads } from '../lib/uploads';
 import { cx, timeAgo } from '../lib/util';
 import './Attachments.css';
 
-type Props =
-  /** Файлы существующей задачи — грузятся сразу */
-  | { taskId: string; pending?: never; onPendingChange?: never }
-  /** Черновик новой задачи — файлы копятся и загружаются после «Создать» */
-  | { taskId?: never; pending: File[]; onPendingChange: (files: File[]) => void };
-
-interface Upload {
-  key: string;
-  name: string;
-  progress: number;
-  error?: string;
+interface Props {
+  /** Существующая задача; без него — черновик новой задачи */
+  taskId?: string;
+  /** Файлы черновика, загрузятся после «Создать» */
+  pending?: File[];
+  onRemovePending?: (file: File) => void;
+  /** Добавить файлы (картинки уйдут в галерею, остальное — сюда) */
+  onAdd: (files: File[]) => void;
+  error?: string | null;
 }
 
 const isArchive = (name: string) => /\.(zip|jar|rar|7z|gz|tar)$/i.test(name);
 
-export function Attachments(props: Props) {
-  const { files, nick } = useData();
+/** Список вложений, кроме картинок — те показываются галереей */
+export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: Props) {
+  const { files } = useData();
+  const uploads = useUploads(taskId).filter((u) => !u.image);
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-  const [uploads, setUploads] = useState<Upload[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [ownError, setOwnError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const attached = props.taskId
-    ? files.filter((f) => f.taskId === props.taskId).sort((a, b) => a.createdAt - b.createdAt)
+  const attached = taskId
+    ? files.filter((f) => f.taskId === taskId && !isImage(f)).sort((a, b) => a.createdAt - b.createdAt)
     : [];
+  const pendingFiles = (pending ?? []).filter((f) => !isImage(f));
 
-  const add = (list: FileList | File[]) => {
-    setError(null);
-    const arr = [...list];
-    const tooBig = arr.filter((f) => f.size > MAX_FILE_SIZE);
-    if (tooBig.length) setError(`Больше ${formatSize(MAX_FILE_SIZE)}: ${tooBig.map((f) => f.name).join(', ')}`);
-    const ok = arr.filter((f) => f.size <= MAX_FILE_SIZE);
-    if (!ok.length) return;
-    if (props.pending) return props.onPendingChange([...props.pending, ...ok]);
-    for (const file of ok) {
-      const key = `${file.name}-${Date.now()}-${Math.random()}`;
-      setUploads((u) => [...u, { key, name: file.name, progress: 0 }]);
-      uploadFile(file, { taskId: props.taskId, author: nick }, (p) =>
-        setUploads((u) => u.map((x) => (x.key === key ? { ...x, progress: p } : x))),
-      ).then(
-        () => setUploads((u) => u.filter((x) => x.key !== key)),
-        (e) =>
-          setUploads((u) =>
-            u.map((x) => (x.key === key ? { ...x, error: e instanceof Error ? e.message : String(e) } : x)),
-          ),
-      );
-    }
-  };
-
-  const download = async (f: FileMeta) => {
-    setBusyId(f.id);
-    setError(null);
+  const run = async (id: string, fn: () => Promise<void>) => {
+    setBusyId(id);
+    setOwnError(null);
     try {
-      await downloadFile(f);
+      await fn();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setOwnError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusyId(null);
     }
   };
 
-  const remove = async (f: FileMeta) => {
-    if (!confirm(`Удалить файл «${f.name}»?`)) return;
-    setBusyId(f.id);
-    try {
-      await removeFile(f);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusyId(null);
-    }
-  };
+  const remove = (f: FileMeta) => confirm(`Удалить файл «${f.name}»?`) && run(f.id, () => removeFile(f));
 
   if (!filesEnabled) return <div className="faint small">Вложения доступны, когда подключён Firebase.</div>;
 
-  const empty = !attached.length && !uploads.length && !props.pending?.length;
+  const empty = !attached.length && !uploads.length && !pendingFiles.length;
+  const shownError = error ?? ownError;
 
   return (
     <div
@@ -103,7 +64,7 @@ export function Attachments(props: Props) {
       onDrop={(e) => {
         e.preventDefault();
         setDragging(false);
-        if (e.dataTransfer.files.length) add(e.dataTransfer.files);
+        if (e.dataTransfer.files.length) onAdd([...e.dataTransfer.files]);
       }}
     >
       {!empty && (
@@ -115,7 +76,7 @@ export function Attachments(props: Props) {
               ) : (
                 <FileIcon size={18} className="attach-ico" />
               )}
-              <button className="attach-name" onClick={() => download(f)} title="Скачать">
+              <button className="attach-name" onClick={() => run(f.id, () => downloadFile(f))} title="Скачать">
                 {f.name}
               </button>
               <span className="faint small attach-meta">
@@ -123,7 +84,7 @@ export function Attachments(props: Props) {
               </span>
               <button
                 className="btn ghost sm icon"
-                onClick={() => download(f)}
+                onClick={() => run(f.id, () => downloadFile(f))}
                 disabled={busyId === f.id}
                 aria-label={`Скачать ${f.name}`}
                 title="Скачать"
@@ -141,14 +102,14 @@ export function Attachments(props: Props) {
               </button>
             </li>
           ))}
-          {props.pending?.map((f, i) => (
+          {pendingFiles.map((f, i) => (
             <li key={`${f.name}-${i}`} className="attach-row">
               <FileIcon size={18} className="attach-ico" />
               <span className="attach-name static">{f.name}</span>
               <span className="faint small attach-meta">{formatSize(f.size)} · загрузится при создании</span>
               <button
                 className="btn ghost sm icon"
-                onClick={() => props.onPendingChange(props.pending.filter((_, j) => j !== i))}
+                onClick={() => onRemovePending?.(f)}
                 aria-label={`Убрать ${f.name}`}
               >
                 <X size={15} />
@@ -164,11 +125,7 @@ export function Attachments(props: Props) {
                   <span className="small attach-meta" style={{ color: 'var(--danger)' }}>
                     {u.error}
                   </span>
-                  <button
-                    className="btn ghost sm icon"
-                    onClick={() => setUploads((list) => list.filter((x) => x.key !== u.key))}
-                    aria-label="Скрыть"
-                  >
+                  <button className="btn ghost sm icon" onClick={() => dismissUpload(u.key)} aria-label="Скрыть">
                     <X size={15} />
                   </button>
                 </>
@@ -195,11 +152,11 @@ export function Attachments(props: Props) {
         multiple
         hidden
         onChange={(e) => {
-          if (e.target.files) add(e.target.files);
+          if (e.target.files) onAdd([...e.target.files]);
           e.target.value = '';
         }}
       />
-      {error && <div className="error-box">{error}</div>}
+      {shownError && <div className="error-box">{shownError}</div>}
     </div>
   );
 }

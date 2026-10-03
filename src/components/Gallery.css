@@ -1,0 +1,225 @@
+.gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 8px;
+}
+
+.g-thumb {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface-2);
+  cursor: zoom-in;
+}
+
+.g-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+button.g-thumb:hover {
+  border-color: var(--accent);
+}
+
+.g-skeleton {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--surface-2), var(--surface-3), var(--surface-2));
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite linear;
+}
+
+.g-skeleton.failed {
+  animation: none;
+  background: var(--danger-soft);
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.g-thumb.uploading {
+  cursor: default;
+}
+
+.g-thumb.uploading img {
+  opacity: 0.45;
+}
+
+.g-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 13px;
+  color: #fff;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.6);
+  border: 0;
+  background: none;
+}
+
+.g-overlay.err {
+  background: rgb(160 30 20 / 0.6);
+  cursor: pointer;
+}
+
+.g-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.6);
+  color: #fff;
+  cursor: pointer;
+}
+
+.gallery-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.gallery-add:hover,
+.gallery.dragging .gallery-add {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.gallery.dragging .gallery-add {
+  background: var(--accent-soft);
+}
+
+/* ------------------------------------------------------------------ просмотр */
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgb(8 7 6 / 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 72px 24px;
+  animation: fade-in 0.12s ease-out;
+}
+
+.lb-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 12px 10px 20px;
+  color: #eee;
+}
+
+.lb-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.lb-meta {
+  margin-left: 10px;
+  font-weight: 400;
+  font-size: 12px;
+  color: #999;
+}
+
+.lb-btn,
+.lb-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: #ddd;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.lb-btn {
+  width: 38px;
+  height: 38px;
+}
+
+.lb-btn:hover,
+.lb-nav:hover {
+  background: rgb(255 255 255 / 0.12);
+  color: #fff;
+}
+
+.lb-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 8px 40px rgb(0 0 0 / 0.5);
+}
+
+.lb-loading {
+  color: #aaa;
+}
+
+.lb-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 64px;
+}
+
+.lb-nav.prev {
+  left: 12px;
+}
+.lb-nav.next {
+  right: 12px;
+}
+
+@media (max-width: 600px) {
+  .lightbox {
+    padding: 56px 8px 56px;
+  }
+  .lb-nav {
+    top: auto;
+    bottom: 4px;
+    transform: none;
+  }
+  .lb-meta {
+    display: none;
+  }
+}

@@ -100,16 +100,42 @@ export async function uploadFile(
   return meta.id;
 }
 
+const blobCache = new Map<string, Promise<Blob>>();
+
+/** Собирает файл из кусков (результат кешируется на время сессии) */
+export function fileBlob(f: FileMeta): Promise<Blob> {
+  let p = blobCache.get(f.id);
+  if (!p) {
+    p = (async () => {
+      await authReady;
+      const snap = await getDocs(collection(db!, 'files', f.id, 'chunks'));
+      const parts = snap.docs
+        .map((d) => d.data() as { i: number; data: Bytes })
+        .sort((a, b) => a.i - b.i)
+        .map((c) => c.data.toUint8Array());
+      if (parts.length !== f.chunks) throw new Error('Файл повреждён: не хватает частей');
+      return new Blob(parts as BlobPart[], { type: f.type });
+    })();
+    p.catch(() => blobCache.delete(f.id));
+    blobCache.set(f.id, p);
+  }
+  return p;
+}
+
+const urlCache = new Map<string, Promise<string>>();
+/** object URL для показа картинки в <img> */
+export function fileUrl(f: FileMeta): Promise<string> {
+  let p = urlCache.get(f.id);
+  if (!p) {
+    p = fileBlob(f).then((b) => URL.createObjectURL(b));
+    p.catch(() => urlCache.delete(f.id));
+    urlCache.set(f.id, p);
+  }
+  return p;
+}
+
 export async function downloadFile(f: FileMeta): Promise<void> {
-  await authReady;
-  const snap = await getDocs(collection(db!, 'files', f.id, 'chunks'));
-  const parts = snap.docs
-    .map((d) => d.data() as { i: number; data: Bytes })
-    .sort((a, b) => a.i - b.i)
-    .map((c) => c.data.toUint8Array());
-  if (parts.length !== f.chunks) throw new Error('Файл повреждён: не хватает частей');
-  const blob = new Blob(parts as BlobPart[], { type: f.type });
-  const url = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(await fileBlob(f));
   const a = document.createElement('a');
   a.href = url;
   a.download = f.name;

@@ -1,4 +1,5 @@
-import { Check, FileText, Paperclip, UserRound } from 'lucide-react';
+import { Check, FileText, Image as ImageIcon, Paperclip, UserRound } from 'lucide-react';
+import { isImage } from '../lib/uploads';
 import { useData } from '../data/DataContext';
 import { tasksStore } from '../data/store';
 import { checklistProgress, entryDone } from '../lib/tasks';
@@ -22,7 +23,9 @@ export function TaskRow({ task, selected, onOpen, onOpenDoc }: Props) {
   const resources = task.checklist.filter((c) => c.itemId && !entryDone(c));
   const docs = artifacts.filter((a) => a.taskId === task.id).sort((a, b) => b.updatedAt - a.updatedAt);
   const group = groups.find((g) => g.id === task.groupId);
-  const fileCount = files.filter((f) => f.taskId === task.id).length;
+  const taskFiles = files.filter((f) => f.taskId === task.id);
+  const imageCount = taskFiles.filter(isImage).length;
+  const fileCount = taskFiles.length - imageCount;
 
   const toggleDone = () =>
     tasksStore.update(
@@ -92,6 +95,12 @@ export function TaskRow({ task, selected, onOpen, onOpenDoc }: Props) {
       </div>
 
       <div className="task-side">
+        {imageCount > 0 && (
+          <span className="file-count" {...tooltipHandlers(`Изображений: ${imageCount}`)}>
+            <ImageIcon size={13} />
+            {imageCount}
+          </span>
+        )}
         {fileCount > 0 && (
           <span className="file-count" {...tooltipHandlers(`Файлов: ${fileCount}`)}>
             <Paperclip size={13} />
