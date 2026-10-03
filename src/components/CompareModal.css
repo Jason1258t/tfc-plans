@@ -1,0 +1,79 @@
+.compare {
+  position: relative;
+}
+
+.compare-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.compare-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 12px;
+  min-height: 180px;
+  background: var(--tooltip-bg);
+  border: 2px solid #2a0a5c;
+  cursor: pointer;
+  color: #fff;
+  text-align: center;
+}
+
+.compare-option:hover,
+.compare-option:focus-visible {
+  border-color: var(--mc-yellow);
+}
+
+.compare-slot {
+  width: 64px;
+  height: 64px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.compare-title {
+  font-size: 18px;
+  text-shadow: 2px 2px 0 #3f3f3f;
+  overflow-wrap: anywhere;
+}
+
+.compare-option .muted {
+  color: var(--mc-gray);
+  font-size: 13px;
+}
+
+.compare-ranking {
+  margin: 0;
+  padding-left: 1.6em;
+}
+
+.compare-ranking li {
+  padding: 2px 0;
+}
+
+.compare-ranking li > * {
+  vertical-align: middle;
+}
+
+.compare-ranking li {
+  display: list-item;
+}
+
+.compare-ranking .rank-score {
+  float: right;
+  color: #3c8527;
+  margin-left: 8px;
+}
+
+@media (max-width: 520px) {
+  .compare-pair {
+    grid-template-columns: 1fr;
+  }
+  .compare-option {
+    min-height: 0;
+  }
+}

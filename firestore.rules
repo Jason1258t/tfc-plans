@@ -1,0 +1,50 @@
+rules_version = '2';
+
+// Настоящей авторизации нет: ник — это подпись, хранится в куке.
+// Приложение входит анонимно, поэтому требуем request.auth != null —
+// это отсекает голые запросы к REST API без SDK, но не является защитой от «своих».
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function nick(v) {
+      return v is string && v.size() >= 2 && v.size() <= 24;
+    }
+
+    match /tasks/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 300
+        && nick(request.resource.data.author)
+        && request.resource.data.checklist is list
+        && request.resource.data.checklist.size() <= 500;
+      allow update: if signedIn()
+        && request.resource.data.author == resource.data.author
+        && request.resource.data.title is string
+        && request.resource.data.title.size() <= 300
+        && request.resource.data.checklist.size() <= 500;
+      allow delete: if signedIn();
+    }
+
+    match /groups/{id} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 40;
+      allow delete: if signedIn();
+    }
+
+    match /artifacts/{id} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && request.resource.data.content is string
+        && request.resource.data.content.size() <= 900000
+        && nick(request.resource.data.updatedBy);
+      allow delete: if signedIn();
+    }
+  }
+}

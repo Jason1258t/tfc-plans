@@ -1,0 +1,50 @@
+.item-picker {
+  position: relative;
+  width: 100%;
+}
+
+.item-picker-list {
+  position: absolute;
+  z-index: 50;
+  left: 0;
+  right: 0;
+  top: calc(100% + 2px);
+  max-height: 320px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 2px;
+  list-style: none;
+  background: var(--tooltip-bg);
+  border: 2px solid var(--tooltip-border);
+  color: #fff;
+}
+
+.item-picker-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  cursor: pointer;
+}
+
+.item-picker-list li.active {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.item-picker-list .name {
+  text-shadow: 2px 2px 0 #3f3f3f;
+}
+
+.item-picker-list .en {
+  color: var(--mc-gray);
+  font-size: 13px;
+}
+
+.item-picker-list .id {
+  display: block;
+  font-size: 12px;
+  color: #8080ff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

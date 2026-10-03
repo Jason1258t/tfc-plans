@@ -1,0 +1,89 @@
+.checklist-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.checklist-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px;
+  background: rgba(0, 0, 0, 0.06);
+  min-height: 40px;
+}
+
+.checklist-row.done .cl-text {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.cl-slot {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.cl-text {
+  overflow-wrap: anywhere;
+}
+
+.cl-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.cl-num {
+  width: 56px;
+  min-height: 28px;
+  padding: 2px 4px;
+  text-align: center;
+  flex: none;
+}
+
+.cl-sep {
+  color: #6b6b6b;
+}
+
+.cl-actions {
+  display: inline-flex;
+  gap: 0;
+}
+
+.cl-mini {
+  background: none;
+  border: 0;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--panel-text);
+  opacity: 0.45;
+  font-size: 12px;
+}
+
+.cl-mini:hover {
+  opacity: 1;
+}
+
+.cl-mini.danger:hover {
+  color: #b00;
+}
+
+.cl-add .cl-num {
+  min-height: 36px;
+}
+
+@media (max-width: 600px) {
+  .checklist-row {
+    flex-wrap: wrap;
+  }
+  .checklist-row .cl-counter {
+    margin-left: 44px;
+  }
+}

@@ -1,0 +1,292 @@
+.board-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 16px;
+  padding: 16px;
+  align-items: start;
+  flex: 1;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: sticky;
+  top: 72px;
+}
+
+.group-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.group-list li {
+  display: flex;
+  align-items: center;
+}
+
+.group-item {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  background: none;
+  border: 2px solid transparent;
+  cursor: pointer;
+  text-align: left;
+  color: var(--panel-text);
+}
+
+.group-item:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.group-item.active {
+  border-color: #fff;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.group-icon {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.group-count {
+  font-size: 13px;
+  color: #6b6b6b;
+}
+
+.group-edit {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: var(--panel-text);
+  padding: 2px 6px;
+  opacity: 0.5;
+}
+
+.group-edit:hover {
+  opacity: 1;
+}
+
+.filters summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.filters summary::-webkit-details-marker {
+  display: none;
+}
+
+.filters summary h3 {
+  display: inline;
+}
+
+.filters summary::after {
+  content: ' ▾';
+  color: var(--panel-text);
+}
+
+.filters[open] summary {
+  margin-bottom: 8px;
+}
+
+.filters[open] summary::after {
+  content: ' ▴';
+}
+
+.compare-btn {
+  width: 100%;
+  min-height: 44px;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+  min-width: 0;
+}
+
+.error-panel {
+  grid-column: 1 / -1;
+  color: #8b0000;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 2px solid rgba(0, 0, 0, 0.8);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.06);
+  min-height: 200px;
+}
+
+.column.drag-over {
+  border-color: var(--mc-yellow);
+}
+
+.column-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 2px;
+}
+
+.column-head h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.column-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quick-add {
+  display: flex;
+  gap: 6px;
+}
+
+/* ------------------------------------------------------------------ карточка */
+
+.task-card {
+  background: var(--tooltip-bg);
+  border: 2px solid #2a0a5c;
+  outline: 2px solid rgba(16, 0, 16, 0.94);
+  padding: 8px;
+  cursor: pointer;
+  color: #fff;
+}
+
+.task-card:hover,
+.task-card:focus-visible {
+  border-color: var(--tooltip-border);
+  outline-color: #000;
+}
+
+.task-card:focus-visible {
+  outline: 2px solid var(--mc-yellow);
+}
+
+.task-card.prio-3 {
+  border-color: #6a2a8a;
+}
+
+.task-card.is-done {
+  opacity: 0.6;
+}
+
+.task-card.is-done .task-title {
+  text-decoration: line-through;
+}
+
+.task-card-icon {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.task-title {
+  font-size: 16px;
+  line-height: 1.25;
+  text-shadow: 2px 2px 0 #3f3f3f;
+  overflow-wrap: anywhere;
+}
+
+.task-meta {
+  font-size: 13px;
+  color: var(--mc-gray);
+  margin-top: 2px;
+}
+
+.task-meta .assignee {
+  color: var(--mc-green);
+}
+
+.task-rating {
+  font-size: 13px;
+  color: var(--xp);
+  text-shadow: 1px 1px 0 #000;
+}
+
+.task-resources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.task-resources .res {
+  position: relative;
+  display: inline-flex;
+  padding: 2px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.res-qty {
+  position: absolute;
+  right: 0;
+  bottom: -3px;
+  font-size: 12px;
+  text-shadow: 1px 1px 0 #3f3f3f;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------------ адаптив */
+
+@media (max-width: 1000px) {
+  .board-layout {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .board-layout {
+    padding: 8px 16px;
+  }
+  .sidebar {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .sidebar .mc-panel {
+    padding: 8px;
+  }
+  .group-list {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 4px;
+    padding-bottom: 2px;
+  }
+  .group-list li {
+    flex: none;
+  }
+  .group-item {
+    white-space: nowrap;
+  }
+  .board {
+    grid-template-columns: 1fr;
+  }
+}
