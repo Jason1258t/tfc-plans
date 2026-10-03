@@ -66,7 +66,7 @@ FIREBASE_CLI_EXPERIMENTS=ailogic firebase ailogic:providers:enable gemini-develo
 После этого один раз откройте в консоли **AI Logic → Get started → Gemini Developer API**: только этот
 шаг выдаёт Gemini-ключ. Без него агент отвечает ошибкой «genai config not found».
 
-Модель Gemini задаётся в `VITE_GEMINI_MODEL` (по умолчанию `gemini-2.5-flash`).
+Модель Gemini задаётся в `VITE_GEMINI_MODEL` (по умолчанию `gemini-3.8-flash`).
 
 > Про безопасность. Настоящей авторизации нет, так что любой, у кого есть ссылка, может читать и
 > править задачи. Это сознательный выбор для игры с друзьями. Чтобы чужие не тратили квоту Gemini,

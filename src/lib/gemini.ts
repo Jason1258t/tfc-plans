@@ -6,7 +6,7 @@ import { itemName } from './items';
 
 export const geminiEnabled = Boolean(app);
 
-const MODEL = import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.5-flash';
+const MODEL = import.meta.env.VITE_GEMINI_MODEL || 'gemini-3.8-flash';
 
 const SYSTEM = `Ты помощник группы игроков в Minecraft-сборке на TerraFirmaCraft (TFC) для Minecraft 1.21.1.
 TFC сильно меняет ванильную игру: металлургия через тигли и наковальни, сезоны и климат, гниение еды, питание,
