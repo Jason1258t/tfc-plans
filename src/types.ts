@@ -1,13 +1,13 @@
 export type TaskStatus = 'todo' | 'doing' | 'done';
 
-/** Редкость = важность. Цвета как у редкости предметов в Minecraft */
+/** Важность задачи: 0 — низкая … 3 — критическая */
 export type Priority = 0 | 1 | 2 | 3;
 
-export const PRIORITIES: { value: Priority; label: string; color: string }[] = [
-  { value: 0, label: 'Обычная', color: 'var(--mc-white)' },
-  { value: 1, label: 'Необычная', color: 'var(--mc-yellow)' },
-  { value: 2, label: 'Редкая', color: 'var(--mc-aqua)' },
-  { value: 3, label: 'Эпическая', color: 'var(--mc-purple)' },
+export const PRIORITIES: { value: Priority; label: string; short: string; color: string }[] = [
+  { value: 0, label: 'Низкая', short: 'Низк.', color: 'var(--imp-0)' },
+  { value: 1, label: 'Обычная', short: 'Обычн.', color: 'var(--imp-1)' },
+  { value: 2, label: 'Высокая', short: 'Высок.', color: 'var(--imp-2)' },
+  { value: 3, label: 'Критическая', short: 'Крит.', color: 'var(--imp-3)' },
 ];
 
 export const STATUSES: { value: TaskStatus; label: string }[] = [
@@ -45,6 +45,8 @@ export interface Task {
   author: string;
   /** Кто взялся за задачу */
   assignee?: string | null;
+  /** Когда задачу отметили выполненной */
+  completedAt?: number | null;
   createdAt: number;
   updatedAt: number;
 }

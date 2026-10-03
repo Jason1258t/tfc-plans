@@ -1,11 +1,12 @@
+import { Check, ChevronDown, ChevronUp, Minus, Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import { itemName, useItems } from '../lib/items';
 import { entryDone } from '../lib/tasks';
 import { cx, uid } from '../lib/util';
 import type { ChecklistEntry } from '../types';
+import './Checklist.css';
 import { ItemIcon } from './ItemIcon';
 import { ItemPicker } from './ItemPicker';
-import './Checklist.css';
 
 interface Props {
   entries: ChecklistEntry[];
@@ -13,8 +14,8 @@ interface Props {
 }
 
 /**
- * Чеклист задачи: ресурсы (предмет + сколько нужно/собрано) и обычные пункты.
- * Поле добавления: выбрал предмет из подсказки — добавился ресурс, нажал Enter на тексте — обычный пункт.
+ * Чеклист задачи: ресурсы (предмет + сколько собрано из нужного) и обычные пункты.
+ * В поле добавления: выбрал предмет из подсказки — ресурс, нажал Enter на тексте — обычный пункт.
  */
 export function Checklist({ entries, onChange }: Props) {
   const items = useItems();
@@ -44,36 +45,42 @@ export function Checklist({ entries, onChange }: Props) {
   return (
     <div className="checklist">
       {entries.length > 0 && (
-        <ul className="checklist-list">
+        <ul className="cl-list">
           {entries.map((e) => {
             const done = entryDone(e);
             return (
-              <li key={e.id} className={cx('checklist-row', done && 'done')}>
+              <li key={e.id} className={cx('cl-row', done && 'done')}>
                 {e.itemId ? (
                   <>
-                    <span className="mc-slot cl-slot">
-                      <ItemIcon id={e.itemId} size={28} />
-                    </span>
+                    <button
+                      className={cx('cl-check', done && 'on')}
+                      aria-label={done ? 'Сбросить' : 'Собрано всё'}
+                      aria-pressed={done}
+                      onClick={() => patch(e.id, { got: done ? 0 : (e.qty ?? 1) })}
+                    >
+                      {done && <Check size={12} strokeWidth={3} />}
+                    </button>
+                    <ItemIcon id={e.itemId} size={22} />
                     <span className="grow cl-text">{itemName(items?.byId.get(e.itemId), e.text || e.itemId)}</span>
                     <span className="cl-counter">
                       <button
-                        className="mc-btn sm icon-only"
+                        className="btn ghost sm icon"
                         aria-label="Минус один"
                         onClick={() => patch(e.id, { got: Math.max(0, (e.got ?? 0) - 1) })}
                       >
-                        −
+                        <Minus size={14} />
                       </button>
                       <input
-                        className="mc-input cl-num"
+                        className="cl-num"
                         type="number"
                         min={0}
                         value={e.got ?? 0}
                         aria-label="Собрано"
                         onChange={(ev) => patch(e.id, { got: Math.max(0, Number(ev.target.value) || 0) })}
                       />
-                      <span className="cl-sep">/</span>
+                      <span className="faint">/</span>
                       <input
-                        className="mc-input cl-num"
+                        className="cl-num"
                         type="number"
                         min={1}
                         value={e.qty ?? 1}
@@ -81,43 +88,36 @@ export function Checklist({ entries, onChange }: Props) {
                         onChange={(ev) => patch(e.id, { qty: Math.max(1, Number(ev.target.value) || 1) })}
                       />
                       <button
-                        className="mc-btn sm icon-only"
+                        className="btn ghost sm icon"
                         aria-label="Плюс один"
                         onClick={() => patch(e.id, { got: (e.got ?? 0) + 1 })}
                       >
-                        +
-                      </button>
-                      <button
-                        className={cx('mc-btn sm icon-only', done && 'green')}
-                        aria-label="Собрано всё"
-                        title="Собрано всё"
-                        onClick={() => patch(e.id, { got: done ? 0 : (e.qty ?? 1) })}
-                      >
-                        ✓
+                        <Plus size={14} />
                       </button>
                     </span>
                   </>
                 ) : (
                   <>
-                    <label className="row grow cl-text" style={{ cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={Boolean(e.done)}
-                        onChange={(ev) => patch(e.id, { done: ev.target.checked })}
-                      />
-                      <span>{e.text}</span>
-                    </label>
+                    <button
+                      className={cx('cl-check', done && 'on')}
+                      aria-label={done ? 'Снять отметку' : 'Отметить'}
+                      aria-pressed={done}
+                      onClick={() => patch(e.id, { done: !e.done })}
+                    >
+                      {done && <Check size={12} strokeWidth={3} />}
+                    </button>
+                    <span className="grow cl-text">{e.text}</span>
                   </>
                 )}
                 <span className="cl-actions">
-                  <button className="cl-mini" aria-label="Выше" onClick={() => move(e.id, -1)}>
-                    ▲
+                  <button className="btn ghost sm icon" aria-label="Выше" onClick={() => move(e.id, -1)}>
+                    <ChevronUp size={14} />
                   </button>
-                  <button className="cl-mini" aria-label="Ниже" onClick={() => move(e.id, 1)}>
-                    ▼
+                  <button className="btn ghost sm icon" aria-label="Ниже" onClick={() => move(e.id, 1)}>
+                    <ChevronDown size={14} />
                   </button>
-                  <button className="cl-mini danger" aria-label="Удалить" onClick={() => remove(e.id)}>
-                    ✕
+                  <button className="btn ghost sm icon danger" aria-label="Удалить" onClick={() => remove(e.id)}>
+                    <X size={14} />
                   </button>
                 </span>
               </li>
@@ -125,9 +125,9 @@ export function Checklist({ entries, onChange }: Props) {
           })}
         </ul>
       )}
-      <div className="row cl-add">
+      <div className="row">
         <input
-          className="mc-input cl-num"
+          className="input cl-qty"
           type="number"
           min={1}
           value={qty}
@@ -137,14 +137,14 @@ export function Checklist({ entries, onChange }: Props) {
         />
         <div className="grow">
           <ItemPicker
-            placeholder="Предмет или пункт… (Enter — текстовый пункт)"
+            placeholder="Добавить предмет или пункт (Enter — текстом)"
             onPick={(it) => addItem(it.i, it.r ?? it.e)}
             onSubmitText={(text) => onChange([...entries, { id: uid(), text, done: false }])}
           />
         </div>
       </div>
       {entries.length > 0 && (
-        <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+        <div className="faint small" style={{ marginTop: 6 }}>
           Выполнено {doneCount} из {entries.length}
         </div>
       )}

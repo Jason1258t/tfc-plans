@@ -1,4 +1,4 @@
-import { addDoc, collection, deleteDoc, doc, onSnapshot, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, onSnapshot, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { authReady, db } from '../firebase';
 import type { Artifact, Group, NewArtifact, NewGroup, NewTask, Task } from '../types';
 
@@ -32,7 +32,11 @@ function firestoreStore<T extends { id: string }, N extends object>(name: string
     async add(data) {
       await authReady;
       const now = Date.now();
-      const created = await addDoc(ref, { ...data, createdAt: now, updatedAt: now });
+      // id известен сразу, запись применяется локально мгновенно — не ждём подтверждения сервера
+      const created = doc(ref);
+      setDoc(created, { ...data, createdAt: now, updatedAt: now }).catch((e) =>
+        console.error(`Не удалось сохранить в ${name}:`, e),
+      );
       return created.id;
     },
     async update(id, patch) {

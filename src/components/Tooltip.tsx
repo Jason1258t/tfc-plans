@@ -47,10 +47,10 @@ export function TooltipLayer() {
     };
   }, []);
   if (!tip) return null;
-  const left = Math.min(tip.x + 14, window.innerWidth - 330);
+  const left = Math.min(tip.x + 12, window.innerWidth - 310);
   const top = tip.y - 30 < 4 ? tip.y + 20 : tip.y - 30;
   return (
-    <div className="mc-tooltip" style={{ left, top }}>
+    <div className="tooltip" style={{ left, top }}>
       <div>{tip.title}</div>
       {tip.sub && <div className="sub">{tip.sub}</div>}
     </div>

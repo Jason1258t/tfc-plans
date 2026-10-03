@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { searchItems, useItems, type McItem } from '../lib/items';
+import { cx } from '../lib/util';
 import { ItemIcon } from './ItemIcon';
 import './ItemPicker.css';
 
@@ -11,6 +12,9 @@ interface Props {
   clearOnPick?: boolean;
   /** Enter без выбранного предмета — отдаёт введённый текст (для свободных пунктов) */
   onSubmitText?: (text: string) => void;
+  small?: boolean;
+  /** Список открывается вверх (поле внизу экрана) */
+  dropUp?: boolean;
 }
 
 /** Поле поиска предмета с выпадающим списком (по-русски, по-английски или по id) */
@@ -20,6 +24,8 @@ export function ItemPicker({
   autoFocus,
   clearOnPick = true,
   onSubmitText,
+  small,
+  dropUp,
 }: Props) {
   const items = useItems();
   const [q, setQ] = useState('');
@@ -43,7 +49,7 @@ export function ItemPicker({
   return (
     <div className="item-picker">
       <input
-        className="mc-input"
+        className={cx('input', small && 'sm')}
         value={q}
         placeholder={items ? placeholder : 'Загружаю предметы…'}
         autoFocus={autoFocus}
@@ -78,7 +84,7 @@ export function ItemPicker({
         aria-autocomplete="list"
       />
       {open && results.length > 0 && (
-        <ul className="item-picker-list" ref={listRef} role="listbox">
+        <ul className={cx('item-picker-list', dropUp && 'up')} ref={listRef} role="listbox">
           {results.map((it, i) => (
             <li
               key={it.i}
@@ -91,7 +97,7 @@ export function ItemPicker({
               }}
               onMouseEnter={() => setActive(i)}
             >
-              <ItemIcon id={it.i} size={28} tip={false} />
+              <ItemIcon id={it.i} size={24} tip={false} />
               <span className="grow">
                 <span className="name">{it.r ?? it.e}</span>
                 {it.r && <span className="en"> · {it.e}</span>}

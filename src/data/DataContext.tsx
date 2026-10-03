@@ -52,7 +52,7 @@ function normalizeTask(t: Task): Task {
     ...t,
     description: t.description ?? '',
     status: t.status ?? 'todo',
-    priority: t.priority ?? 0,
+    priority: t.priority ?? 1,
     rating: t.rating ?? 1000,
     checklist: t.checklist ?? [],
     groupId: t.groupId ?? null,

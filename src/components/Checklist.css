@@ -1,33 +1,48 @@
-.checklist-list {
+.cl-list {
   list-style: none;
   margin: 0 0 8px;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 
-.checklist-row {
+.cl-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 2px 4px;
-  background: rgba(0, 0, 0, 0.06);
+  gap: 10px;
+  padding: 5px 6px 5px 10px;
   min-height: 40px;
+  background: var(--surface);
 }
 
-.checklist-row.done .cl-text {
+.cl-row + .cl-row {
+  border-top: 1px solid var(--border);
+}
+
+.cl-row.done .cl-text {
+  color: var(--text-3);
   text-decoration: line-through;
-  opacity: 0.6;
 }
 
-.cl-slot {
-  width: 36px;
-  height: 36px;
+.cl-check {
+  width: 18px;
+  height: 18px;
+  flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: none;
+  border-radius: 5px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--accent-text);
+  cursor: pointer;
+  padding: 0;
+}
+
+.cl-check.on {
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 .cl-text {
@@ -37,53 +52,54 @@
 .cl-counter {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
 }
 
 .cl-num {
-  width: 56px;
-  min-height: 28px;
-  padding: 2px 4px;
+  width: 44px;
+  height: 26px;
+  padding: 0 4px;
   text-align: center;
-  flex: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-2);
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
 }
 
-.cl-sep {
-  color: #6b6b6b;
+.cl-num::-webkit-inner-spin-button,
+.cl-qty::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+.cl-qty {
+  width: 56px;
+  flex: none;
+  text-align: center;
 }
 
 .cl-actions {
   display: inline-flex;
-  gap: 0;
+  opacity: 0;
+  transition: opacity 0.1s;
 }
 
-.cl-mini {
-  background: none;
-  border: 0;
-  padding: 4px;
-  cursor: pointer;
-  color: var(--panel-text);
-  opacity: 0.45;
-  font-size: 12px;
-}
-
-.cl-mini:hover {
+.cl-row:hover .cl-actions,
+.cl-row:focus-within .cl-actions {
   opacity: 1;
 }
 
-.cl-mini.danger:hover {
-  color: #b00;
+@media (hover: none) {
+  .cl-actions {
+    opacity: 1;
+  }
 }
 
-.cl-add .cl-num {
-  min-height: 36px;
-}
-
-@media (max-width: 600px) {
-  .checklist-row {
+@media (max-width: 560px) {
+  .cl-row {
     flex-wrap: wrap;
   }
-  .checklist-row .cl-counter {
-    margin-left: 44px;
+  .cl-counter {
+    margin-left: 28px;
   }
 }

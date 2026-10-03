@@ -42,24 +42,38 @@ export function describeTask(task: Task, items: ItemIndex | null): string {
   return lines.join('\n');
 }
 
+export interface ChatTurn {
+  role: 'user' | 'model';
+  text: string;
+}
+
 export interface AskParams {
   instruction: string;
+  /** Предыдущие реплики диалога с агентом (без контекста документа) */
+  history?: ChatTurn[];
   taskContext?: string;
   document?: string;
   selection?: string;
 }
 
-/** Стриминговый ответ для редактора артефактов. Возвращает накопленный текст в onChunk. */
+/**
+ * Стриминговый ответ агента в документе. Контекст (задача, документ, выделение) прикладывается
+ * только к текущему сообщению, история диалога — краткая, чтобы не раздувать запрос.
+ */
 export async function askGemini(p: AskParams, onChunk: (full: string) => void, signal?: AbortSignal): Promise<string> {
   const parts: string[] = [];
   if (p.taskContext) parts.push(`## Контекст задачи\n${p.taskContext}`);
   if (p.document?.trim()) parts.push(`## Текущий документ\n${p.document}`);
   if (p.selection?.trim()) parts.push(`## Выделенный фрагмент (работай с ним)\n${p.selection}`);
   parts.push(
-    `## Запрос\n${p.instruction}\n\nВерни только Markdown-текст результата, без вступлений и без обрамления в \`\`\`.`,
+    `## Запрос\n${p.instruction}\n\nОтвечай Markdown-текстом, который можно сразу вставить в документ: без вступлений и без обрамления в \`\`\`. ` +
+      `Если вопрос не про изменение документа — просто ответь по существу.`,
   );
 
-  const res = await getModel().generateContentStream(parts.join('\n\n'), { signal });
+  const chat = getModel().startChat({
+    history: (p.history ?? []).slice(-8).map((t) => ({ role: t.role, parts: [{ text: t.text }] })),
+  });
+  const res = await chat.sendMessageStream(parts.join('\n\n'), { signal });
   let full = '';
   for await (const chunk of res.stream) {
     full += chunk.text();
@@ -98,4 +112,15 @@ export async function extractResources(text: string): Promise<ExtractedResource[
   );
   const parsed = JSON.parse(res.response.text()) as ExtractedResource[];
   return parsed.filter((r) => r.name && r.qty > 0);
+}
+
+/** Понятное сообщение для частых ошибок настройки Firebase AI Logic */
+export function geminiErrorText(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (msg.includes('genai config not found'))
+    return 'AI Logic не настроен: в консоли Firebase откройте AI Logic → Get started → Gemini Developer API.';
+  if (msg.includes('429') || /quota|RESOURCE_EXHAUSTED/i.test(msg))
+    return 'Превышен лимит запросов к Gemini. Попробуйте через минуту.';
+  if (/PERMISSION_DENIED|403/.test(msg)) return `Нет доступа к Gemini (проверьте настройки API-ключа). ${msg}`;
+  return msg;
 }

@@ -1,8 +1,8 @@
 import { NavLink } from 'react-router-dom';
 import { firebaseEnabled } from '../firebase';
+import './Header.css';
 import { ItemIcon } from './ItemIcon';
 import { tooltipHandlers } from './Tooltip';
-import './Header.css';
 
 interface Props {
   nick: string;
@@ -13,31 +13,29 @@ export function Header({ nick, onChangeNick }: Props) {
   return (
     <header className="app-header">
       <NavLink to="/" className="brand">
-        <ItemIcon id="tfc:metal/ingot/copper" size={32} tip={false} />
-        <span className="brand-title">TFC&nbsp;Планы</span>
+        <ItemIcon id="tfc:metal/ingot/copper" size={22} tip={false} />
+        <span className="brand-name">TFC Планы</span>
       </NavLink>
-      <nav className="row">
-        <NavLink to="/" end className={({ isActive }) => `mc-btn sm ${isActive ? 'active' : ''}`}>
-          <ItemIcon texture="minecraft/item/chest_minecart" size={20} tip={false} />
-          <span className="hide-sm">Задачи</span>
+      <nav className="nav">
+        <NavLink to="/" end>
+          Задачи
         </NavLink>
-        <NavLink to="/artifacts" className={({ isActive }) => `mc-btn sm ${isActive ? 'active' : ''}`}>
-          <ItemIcon texture="minecraft/item/written_book" size={20} tip={false} />
-          <span className="hide-sm">Артефакты</span>
-        </NavLink>
+        <NavLink to="/docs">Документы</NavLink>
       </nav>
-      <div className="grow" />
+      <span className="grow" />
       {!firebaseEnabled && (
         <span
-          className="local-badge"
+          className="offline"
           {...tooltipHandlers('Локальный режим', 'Firebase не настроен — данные только в этом браузере')}
         >
-          offline
+          локально
         </span>
       )}
-      <button className="mc-btn sm nick" onClick={onChangeNick} {...tooltipHandlers('Сменить ник')}>
-        <span className="nick-dot" />
-        {nick}
+      <button className="nick" onClick={onChangeNick} {...tooltipHandlers('Сменить ник')}>
+        <span className="avatar" aria-hidden>
+          {nick.slice(0, 1).toUpperCase()}
+        </span>
+        <span className="nick-name">{nick}</span>
       </button>
     </header>
   );

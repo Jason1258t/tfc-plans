@@ -3,47 +3,61 @@
   width: 100%;
 }
 
+.input.sm {
+  height: 28px;
+  font-size: 13px;
+}
+
 .item-picker-list {
   position: absolute;
-  z-index: 50;
+  z-index: 60;
   left: 0;
   right: 0;
-  top: calc(100% + 2px);
-  max-height: 320px;
+  top: calc(100% + 4px);
+  min-width: 260px;
+  max-height: 300px;
   overflow-y: auto;
   margin: 0;
-  padding: 2px;
+  padding: 4px;
   list-style: none;
-  background: var(--tooltip-bg);
-  border: 2px solid var(--tooltip-border);
-  color: #fff;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+}
+
+.item-picker-list.up {
+  top: auto;
+  bottom: calc(100% + 4px);
 }
 
 .item-picker-list li {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 3px 6px;
+  gap: 10px;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
 .item-picker-list li.active {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--surface-2);
 }
 
 .item-picker-list .name {
-  text-shadow: 2px 2px 0 #3f3f3f;
+  font-weight: 500;
 }
 
 .item-picker-list .en {
-  color: var(--mc-gray);
-  font-size: 13px;
+  color: var(--text-3);
+  font-size: 12px;
 }
 
 .item-picker-list .id {
   display: block;
-  font-size: 12px;
-  color: #8080ff;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-3);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -1,14 +1,14 @@
 import { lazy, Suspense, useState } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Header } from './components/Header';
-import { NickModal } from './components/NickModal';
+import { NickDialog } from './components/NickDialog';
 import { TooltipLayer } from './components/Tooltip';
 import { DataProvider } from './data/DataContext';
 import { readNick, writeNick } from './lib/nick';
-import { BoardPage } from './pages/BoardPage';
+import { TasksPage } from './pages/TasksPage';
 
-const ArtifactPage = lazy(() => import('./pages/ArtifactPage').then((m) => ({ default: m.ArtifactPage })));
-const ArtifactsPage = lazy(() => import('./pages/ArtifactsPage').then((m) => ({ default: m.ArtifactsPage })));
+const DocsPage = lazy(() => import('./pages/DocsPage').then((m) => ({ default: m.DocsPage })));
+const DocPage = lazy(() => import('./pages/DocPage').then((m) => ({ default: m.DocPage })));
 
 export default function App() {
   const [nick, setNick] = useState(readNick);
@@ -20,7 +20,7 @@ export default function App() {
     setChangingNick(false);
   };
 
-  if (!nick) return <NickModal onSave={save} />;
+  if (!nick) return <NickDialog onSave={save} />;
 
   return (
     <BrowserRouter>
@@ -28,13 +28,13 @@ export default function App() {
         <Header nick={nick} onChangeNick={() => setChangingNick(true)} />
         <Suspense fallback={<div className="empty">Загрузка…</div>}>
           <Routes>
-            <Route path="/" element={<BoardPage />} />
-            <Route path="/artifacts" element={<ArtifactsPage />} />
-            <Route path="/a/:id" element={<ArtifactPage />} />
-            <Route path="*" element={<BoardPage />} />
+            <Route path="/" element={<TasksPage />} />
+            <Route path="/docs" element={<DocsPage />} />
+            <Route path="/docs/:id" element={<DocPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
-        {changingNick && <NickModal initial={nick} onSave={save} onCancel={() => setChangingNick(false)} />}
+        {changingNick && <NickDialog initial={nick} onSave={save} onCancel={() => setChangingNick(false)} />}
         <TooltipLayer />
       </DataProvider>
     </BrowserRouter>
