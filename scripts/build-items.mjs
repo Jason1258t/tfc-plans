@@ -6,9 +6,9 @@
  *
  * Источники:
  *   - ванильный Minecraft (client.jar с серверов Mojang + ru_ru из asset index)
- *   - моды из списка MOD_SOURCES (sparse git clone репозитория на GitHub)
+ *   - все jar из папки mods/ — просто скопируйте туда моды сборки
+ *   - MOD_SOURCES (sparse git clone) — запасной вариант для TFC, если его jar нет в mods/
  *
- * Чтобы добавить аддон сборки — допишите его в MOD_SOURCES.
  * Сгенерированные файлы не коммитятся (это ассеты Mojang/авторов модов).
  *
  * Использование:  npm run items          (пересобрать, используя кеш)
@@ -22,7 +22,10 @@ import AdmZip from 'adm-zip';
 
 const MC_VERSION = '1.21.1';
 
-/** Моды: репозиторий, ветка и namespace(ы) ассетов внутри src/main/resources/assets */
+/**
+ * Моды из GitHub. Используются, только если такой namespace не нашёлся ни в одном jar из mods/
+ * (тогда берётся jar — он точно совпадает с версией в сборке).
+ */
 const MOD_SOURCES = [
   {
     name: 'tfc',
@@ -56,6 +59,8 @@ const UI_TEXTURES = [
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE = path.join(ROOT, '.cache', 'assets');
+const MODS_DIR = path.join(ROOT, 'mods');
+export const SIGNATURE_FILE = path.join(ROOT, '.cache', 'items-signature.json');
 const OUT_ICONS = path.join(ROOT, 'public', 'icons');
 const OUT_JSON = path.join(ROOT, 'public', 'items.json');
 const fresh = process.argv.includes('--fresh');
@@ -123,10 +128,72 @@ function prepareMod(src) {
   return dir;
 }
 
+/** Список jar в mods/ с размером и датой — по нему понимаем, что сборка изменилась */
+export function modsSignature() {
+  if (!fs.existsSync(MODS_DIR)) return [];
+  return fs
+    .readdirSync(MODS_DIR)
+    .filter((f) => f.endsWith('.jar'))
+    .sort()
+    .map((f) => {
+      const st = fs.statSync(path.join(MODS_DIR, f));
+      return `${f}:${st.size}:${Math.round(st.mtimeMs)}`;
+    });
+}
+
+/**
+ * Распаковывает из jar только assets/<ns>/{models,textures,lang/en_us|ru_ru}.
+ * Результат кешируется по имени+размеру+дате файла, повторный запуск ничего не распаковывает.
+ */
+function prepareJar(file) {
+  const st = fs.statSync(file);
+  const key = `${path.basename(file, '.jar')}-${st.size}-${Math.round(st.mtimeMs)}`.replace(/[^\w.+-]/g, '_');
+  const dir = path.join(CACHE, 'jars', key);
+  const done = path.join(dir, '.done');
+  if (!fs.existsSync(done) || fresh) {
+    fs.rmSync(dir, { recursive: true, force: true });
+    let zip;
+    try {
+      zip = new AdmZip(file);
+    } catch (e) {
+      log(`пропускаю ${path.basename(file)}: не читается как zip (${e.message})`);
+      return null;
+    }
+    const wanted = /^assets\/[a-z0-9_.-]+\/(models\/.+\.json|textures\/.+\.png|lang\/(en_us|ru_ru)\.json)$/;
+    for (const entry of zip.getEntries()) {
+      if (entry.isDirectory || !wanted.test(entry.entryName)) continue;
+      const target = path.join(dir, entry.entryName);
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.writeFileSync(target, entry.getData());
+    }
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(done, new Date().toISOString());
+  }
+  const assets = path.join(dir, 'assets');
+  const namespaces = fs.existsSync(assets) ? fs.readdirSync(assets).filter((n) => !n.startsWith('.')) : [];
+  return { root: assets, namespaces };
+}
+
 // ---------------------------------------------------------------- модели → текстура
 
-/** namespace → каталог assets, где лежит <ns>/models, <ns>/textures */
+/**
+ * namespace → каталоги assets, где лежит <ns>/models, <ns>/textures. Один namespace может быть
+ * в нескольких jar (аддоны дописывают модели в чужой namespace) — ищем по порядку.
+ */
 const assetRoots = new Map();
+function addRoot(ns, root) {
+  const list = assetRoots.get(ns) ?? [];
+  if (!list.includes(root)) list.push(root);
+  assetRoots.set(ns, list);
+}
+/** Первый существующий файл <root>/<ns>/<rel> среди корней namespace */
+function findAsset(ns, rel) {
+  for (const root of assetRoots.get(ns) ?? []) {
+    const file = path.join(root, ns, rel);
+    if (fs.existsSync(file)) return file;
+  }
+  return null;
+}
 
 function splitId(ref, defaultNs = 'minecraft') {
   const [ns, p] = ref.includes(':') ? ref.split(':', 2) : [defaultNs, ref];
@@ -139,15 +206,12 @@ function readModel(ref) {
   const key = `${ns}:${p}`;
   if (modelCache.has(key)) return modelCache.get(key);
   let model = null;
-  const root = assetRoots.get(ns);
-  if (root) {
-    const file = path.join(root, ns, 'models', `${p}.json`);
-    if (fs.existsSync(file)) {
-      try {
-        model = JSON.parse(fs.readFileSync(file, 'utf8'));
-      } catch {
-        model = null;
-      }
+  const file = findAsset(ns, `models/${p}.json`);
+  if (file) {
+    try {
+      model = JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch {
+      model = null;
     }
   }
   modelCache.set(key, model);
@@ -181,16 +245,14 @@ const TEXTURE_PRIORITY = [
 
 function textureFile(texRef) {
   const { ns, p } = splitId(texRef);
-  const root = assetRoots.get(ns);
-  if (!root) return null;
-  const file = path.join(root, ns, 'textures', `${p}.png`);
-  if (fs.existsSync(file)) return { ns, p, file };
+  const file = findAsset(ns, `textures/${p}.png`);
+  if (file) return { ns, p, file };
   // Часть текстур TFC генерируется в рантайме перекраской базовой (wood/lumber_acacia ← wood/lumber)
   let base = p;
   while (/_[a-z0-9]+$/.test(base)) {
     base = base.replace(/_[a-z0-9]+$/, '');
-    const baseFile = path.join(root, ns, 'textures', `${base}.png`);
-    if (fs.existsSync(baseFile)) return { ns, p: base, file: baseFile };
+    const baseFile = findAsset(ns, `textures/${base}.png`);
+    if (baseFile) return { ns, p: base, file: baseFile };
   }
   return null;
 }
@@ -200,13 +262,46 @@ function resolveIcon(itemModelRef) {
   const deref = (v, n = 0) =>
     typeof v === 'string' && v.startsWith('#') && n < 10 ? deref(textures[v.slice(1)], n + 1) : v;
   const keys = [...TEXTURE_PRIORITY, ...Object.keys(textures)];
-  for (const k of keys) {
-    const v = deref(textures[k]);
-    if (typeof v !== 'string' || v.startsWith('#')) continue;
-    const tex = textureFile(v);
-    if (tex) return tex;
+  const { ns: itemNs } = splitId(itemModelRef);
+  // Сначала текстуры самого мода: у шестерни Create «particle» — ванильное бревно, а нужна её собственная
+  for (const ownOnly of [true, false]) {
+    for (const k of keys) {
+      const v = deref(textures[k]);
+      if (typeof v !== 'string' || v.startsWith('#')) continue;
+      if (ownOnly && splitId(v).ns !== itemNs) continue;
+      const tex = textureFile(v);
+      if (tex) return tex;
+    }
   }
   return null;
+}
+
+/** namespace → (имя файла без .png → путь текстуры) — для поиска по имени предмета */
+const textureIndex = new Map();
+function texturesByName(ns) {
+  if (textureIndex.has(ns)) return textureIndex.get(ns);
+  const map = new Map();
+  for (const root of assetRoots.get(ns) ?? []) {
+    const base = path.join(root, ns, 'textures');
+    if (!fs.existsSync(base)) continue;
+    for (const rel of fs.readdirSync(base, { recursive: true })) {
+      if (!rel.endsWith('.png')) continue;
+      const p = rel.slice(0, -4).split(path.sep).join('/');
+      if (!/^(item|block)s?\//.test(p)) continue;
+      const name = p.split('/').pop();
+      // Предпочитаем item/ перед block/
+      if (!map.has(name) || p.startsWith('item')) map.set(name, p);
+    }
+  }
+  textureIndex.set(ns, map);
+  return map;
+}
+
+/** Для 3D/OBJ-моделей без явной текстуры (мультиблоки IE и т.п.) — текстура с тем же именем */
+function iconByName(ns, p) {
+  const name = p.split('/').pop();
+  const found = texturesByName(ns).get(name);
+  return found ? textureFile(`${ns}:${found}`) : null;
 }
 
 /** Иконки для предметов, чья текстура целиком собирается в рантайме (жидкости в вёдрах и т.п.) */
@@ -238,13 +333,38 @@ function copyIcon(tex) {
 async function main() {
   fs.mkdirSync(CACHE, { recursive: true });
   const vanillaDir = await prepareVanilla();
-  assetRoots.set('minecraft', path.join(vanillaDir, 'assets'));
-  const sources = [{ ns: 'minecraft', root: path.join(vanillaDir, 'assets') }];
+  const vanillaRoot = path.join(vanillaDir, 'assets');
+  addRoot('minecraft', vanillaRoot);
+  /** Пары (namespace, корень), откуда читаем переводы и перечисляем предметы */
+  const sources = [{ ns: 'minecraft', root: vanillaRoot }];
+
+  // 1. Все jar из mods/
+  const jars = fs.existsSync(MODS_DIR)
+    ? fs
+        .readdirSync(MODS_DIR)
+        .filter((f) => f.endsWith('.jar'))
+        .sort()
+    : [];
+  if (jars.length) log(`mods/: ${jars.length} jar`);
+  for (const jar of jars) {
+    const res = prepareJar(path.join(MODS_DIR, jar));
+    if (!res) continue;
+    for (const ns of res.namespaces) {
+      // Переопределения ванили внутри модов не должны перебивать оригинал
+      if (ns === 'minecraft') continue;
+      addRoot(ns, res.root);
+      if (fs.existsSync(path.join(res.root, ns, 'lang', 'en_us.json'))) sources.push({ ns, root: res.root });
+    }
+  }
+
+  // 2. GitHub-источники — только для того, чего нет среди jar
   for (const src of MOD_SOURCES) {
+    const missing = src.namespaces.filter((ns) => !assetRoots.has(ns));
+    if (!missing.length) continue;
     const dir = prepareMod(src);
-    for (const ns of src.namespaces) {
-      const root = path.join(dir, src.assetsDir);
-      assetRoots.set(ns, root);
+    const root = path.join(dir, src.assetsDir);
+    for (const ns of missing) {
+      addRoot(ns, root);
       sources.push({ ns, root });
     }
   }
@@ -253,6 +373,7 @@ async function main() {
   const items = [];
   const seen = new Set();
 
+  const perNs = new Map();
   for (const { ns, root } of sources) {
     const en = readLang(root, ns, 'en_us');
     const ru = readLang(root, ns, 'ru_ru');
@@ -266,7 +387,7 @@ async function main() {
       if (seen.has(id)) continue;
       // Предметом считаем только то, у чего есть модель предмета
       if (!readModel(`${ns}:item/${p}`)) continue;
-      const tex = resolveIcon(`${ns}:item/${p}`) ?? fallbackIcon(p);
+      const tex = resolveIcon(`${ns}:item/${p}`) ?? iconByName(ns, p) ?? fallbackIcon(p);
       seen.add(id);
       count++;
       items.push({
@@ -276,8 +397,10 @@ async function main() {
         ...(tex ? { t: copyIcon(tex) } : {}),
       });
     }
-    log(`${ns}: ${count} предметов`);
+    if (count) perNs.set(ns, (perNs.get(ns) ?? 0) + count);
   }
+  const summary = [...perNs].sort((a, b) => b[1] - a[1]);
+  log(`по модам: ${summary.map(([ns, n]) => `${ns} ${n}`).join(', ')}`);
 
   for (const ref of UI_TEXTURES) {
     const tex = textureFile(ref);
@@ -286,11 +409,15 @@ async function main() {
   }
 
   fs.writeFileSync(OUT_JSON, JSON.stringify(items));
+  fs.writeFileSync(SIGNATURE_FILE, JSON.stringify(modsSignature()));
   const kb = Math.round(fs.statSync(OUT_JSON).size / 1024);
   log(`готово: ${items.length} предметов, ${copied.size} иконок, items.json ${kb}KB`);
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+// Запуск как скрипт (а не импорт из ensure-items)
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

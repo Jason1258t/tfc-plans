@@ -33,5 +33,9 @@ firestore-debug.log*
 public/icons/
 public/items.json
 
+# Jar модов сборки — источник библиотеки предметов, в git не храним
+mods/*
+!mods/README.md
+
 # Локальные настройки Claude Code
 .claude/
