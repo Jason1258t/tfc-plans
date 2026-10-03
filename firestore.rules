@@ -38,6 +38,34 @@ service cloud.firestore {
       allow delete: if signedIn();
     }
 
+    // Вложения: метаданные + содержимое кусками по ~700 КБ (см. src/lib/files.ts)
+    match /files/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 200
+        && request.resource.data.size is int
+        && request.resource.data.size <= 26214400
+        && request.resource.data.chunks is int
+        && request.resource.data.chunks <= 40
+        && request.resource.data.complete == false
+        && nick(request.resource.data.author);
+      // Менять можно только флаг готовности
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['complete']);
+      allow delete: if signedIn();
+
+      match /chunks/{n} {
+        allow read: if signedIn();
+        allow create: if signedIn()
+          && request.resource.data.data is bytes
+          && request.resource.data.data.size() <= 750000
+          && request.resource.data.i is int;
+        allow delete: if signedIn();
+      }
+    }
+
     match /artifacts/{id} {
       allow read: if signedIn();
       allow create, update: if signedIn()

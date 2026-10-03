@@ -1,11 +1,13 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Artifact, Group, Task } from '../types';
+import { subscribeFiles, type FileMeta } from '../lib/files';
 import { artifactsStore, groupsStore, tasksStore } from './store';
 
 interface Data {
   tasks: Task[];
   groups: Group[];
   artifacts: Artifact[];
+  files: FileMeta[];
   loading: boolean;
   error: string | null;
   nick: string;
@@ -17,6 +19,7 @@ export function DataProvider({ nick, children }: { nick: string; children: React
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [groups, setGroups] = useState<Group[] | null>(null);
   const [artifacts, setArtifacts] = useState<Artifact[] | null>(null);
+  const [files, setFiles] = useState<FileMeta[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,6 +31,7 @@ export function DataProvider({ nick, children }: { nick: string; children: React
         onError,
       ),
       artifactsStore.subscribe(setArtifacts, onError),
+      subscribeFiles(setFiles, onError),
     ];
     return () => unsubs.forEach((u) => u());
   }, []);
@@ -37,11 +41,12 @@ export function DataProvider({ nick, children }: { nick: string; children: React
       tasks: tasks ?? [],
       groups: groups ?? [],
       artifacts: artifacts ?? [],
+      files,
       loading: !tasks || !groups || !artifacts,
       error,
       nick,
     }),
-    [tasks, groups, artifacts, error, nick],
+    [tasks, groups, artifacts, files, error, nick],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

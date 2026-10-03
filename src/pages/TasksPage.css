@@ -350,6 +350,14 @@
   flex: none;
 }
 
+.file-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
 .doc-btn {
   display: inline-flex;
   align-items: center;

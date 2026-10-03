@@ -7,6 +7,8 @@ import { useItems } from '../lib/items';
 import { mergeResources } from '../lib/resources';
 import { cx, timeAgo } from '../lib/util';
 import { PRIORITIES, STATUSES, type NewTask, type Task } from '../types';
+import { removeFile, uploadFile } from '../lib/files';
+import { Attachments } from './Attachments';
 import { Checklist } from './Checklist';
 import { ItemIcon } from './ItemIcon';
 import { ItemPicker } from './ItemPicker';
@@ -56,6 +58,8 @@ function CreateTask({
     completedAt: null,
   }));
   const [busy, setBusy] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [uploadNote, setUploadNote] = useState<string | null>(null);
   const canSave = draft.title.trim().length > 0 && !busy;
 
   const save = async (withDoc: boolean) => {
@@ -64,6 +68,15 @@ function CreateTask({
     try {
       const title = draft.title.trim();
       const id = await tasksStore.add({ ...draft, title });
+      // Окно не закрываем, пока не загрузились вложения — иначе неудача прошла бы незамеченной
+      for (const [i, f] of pendingFiles.entries()) {
+        setUploadNote(`Загружаю файлы: ${i + 1} из ${pendingFiles.length}…`);
+        try {
+          await uploadFile(f, { taskId: id, author: nick });
+        } catch (e) {
+          alert(`Задача создана, но файл «${f.name}» не загрузился: ${e instanceof Error ? e.message : e}`);
+        }
+      }
       if (withDoc) {
         const docId = await artifactsStore.add({
           title: `План: ${title}`,
@@ -86,7 +99,7 @@ function CreateTask({
       title="Новая задача"
       footer={
         <>
-          <span className="faint small grow hide-sm">Ctrl+Enter — создать</span>
+          <span className="faint small grow hide-sm">{uploadNote ?? 'Ctrl+Enter — создать'}</span>
           <button className="btn ghost" onClick={onClose}>
             Отмена
           </button>
@@ -115,6 +128,12 @@ function CreateTask({
         }}
       >
         <TaskFields value={draft} live={false} onPatch={(p) => setDraft((d) => ({ ...d, ...p }))} autoFocusTitle />
+        <section className="tf-section">
+          <div className="tf-section-head">
+            <h3>Файлы</h3>
+          </div>
+          <Attachments pending={pendingFiles} onPendingChange={setPendingFiles} />
+        </section>
       </div>
     </Modal>
   );
@@ -131,7 +150,7 @@ function EditTask({
   onClose: () => void;
   onOpenArtifact: (id: string) => void;
 }) {
-  const { tasks, artifacts, loading, nick } = useData();
+  const { tasks, artifacts, files, loading, nick } = useData();
   const items = useItems();
   const task = tasks.find((t) => t.id === taskId);
   const [aiBusy, setAiBusy] = useState(false);
@@ -161,9 +180,15 @@ function EditTask({
   };
 
   const remove = async () => {
-    const extra = linked.length ? ` и ${linked.length} документ(ов)` : '';
+    const taskFiles = files.filter((f) => f.taskId === task.id);
+    const extras = [
+      linked.length && `${linked.length} документ(ов)`,
+      taskFiles.length && `${taskFiles.length} файл(ов)`,
+    ].filter(Boolean);
+    const extra = extras.length ? ` вместе с ${extras.join(' и ')}` : '';
     if (!confirm(`Удалить задачу «${task.title}»${extra}? Это нельзя отменить.`)) return;
     if (linked.length) await artifactsStore.remove(linked.map((a) => a.id));
+    await Promise.all(taskFiles.map((f) => removeFile(f)));
     await tasksStore.remove(task.id);
     onClose();
   };
@@ -217,6 +242,13 @@ function EditTask({
           }
           checklistError={aiError}
         />
+
+        <section className="tf-section">
+          <div className="tf-section-head">
+            <h3>Файлы</h3>
+          </div>
+          <Attachments taskId={task.id} />
+        </section>
 
         <section className="tf-section">
           <div className="tf-section-head">
