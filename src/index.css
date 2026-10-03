@@ -671,3 +671,18 @@ select.input {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+.crash {
+  max-width: 560px;
+  margin: 10vh auto;
+  padding: 0 16px;
+}
+
+.crash pre {
+  white-space: pre-wrap;
+  font-size: 12px;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--danger);
+}

@@ -1,4 +1,5 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 import { getAuth, signInAnonymously } from 'firebase/auth';
 import {
   initializeFirestore,
@@ -20,6 +21,22 @@ const config = {
 export const firebaseEnabled = Boolean(config.apiKey && config.projectId);
 
 export const app: FirebaseApp | null = firebaseEnabled ? initializeApp(config) : null;
+
+/**
+ * App Check: Firestore и Gemini принимают запросы только от этого сайта (reCAPTCHA Enterprise,
+ * невидимая проверка). Для отладки с чужого домена: VITE_APPCHECK_DEBUG=true и токен из консоли
+ * браузера зарегистрировать в Firebase Console → App Check → Manage debug tokens.
+ */
+const recaptchaKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+if (app && recaptchaKey) {
+  if (import.meta.env.VITE_APPCHECK_DEBUG === 'true') {
+    (self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN: boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+  }
+  initializeAppCheck(app, {
+    provider: new ReCaptchaEnterpriseProvider(recaptchaKey),
+    isTokenAutoRefreshEnabled: true,
+  });
+}
 export const db: Firestore | null = app
   ? initializeFirestore(app, {
       ignoreUndefinedProperties: true,

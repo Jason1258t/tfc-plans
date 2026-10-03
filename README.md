@@ -66,11 +66,21 @@ FIREBASE_CLI_EXPERIMENTS=ailogic firebase ailogic:providers:enable gemini-develo
 После этого один раз откройте в консоли **AI Logic → Get started → Gemini Developer API**: только этот
 шаг выдаёт Gemini-ключ. Без него агент отвечает ошибкой «genai config not found».
 
+### App Check
+
+Включён в режиме **Enforced** для Firestore, Authentication и AI Logic (сервис `firebaseml`).
+Провайдер — reCAPTCHA Enterprise, ключ `VITE_RECAPTCHA_SITE_KEY`. Разрешённые домены ключа:
+`tfc-plans-fd2c.web.app`, `tfc-plans-fd2c.firebaseapp.com` и `localhost`.
+Если приложение откроют с другого домена, запросы будут отклоняться. Для отладки поставьте `VITE_APPCHECK_DEBUG=true`
+и зарегистрируйте debug-токен из консоли браузера в Firebase Console → App Check.
+
+Gemini-ключ (`Gemini API key (Firebase AI Logic)`, ограничен только Generative Language API) хранится на стороне
+AI Logic и в код не попадает.
+
 Модель Gemini задаётся в `VITE_GEMINI_MODEL` (по умолчанию `gemini-3.8-flash`).
 
-> Про безопасность. Настоящей авторизации нет, так что любой, у кого есть ссылка, может читать и
-> править задачи. Это сознательный выбор для игры с друзьями. Чтобы чужие не тратили квоту Gemini,
-> включите [App Check](https://firebase.google.com/docs/app-check) для AI Logic и Firestore.
+> Про безопасность. Настоящей авторизации нет, так что любой, у кого есть ссылка на сайт, может читать и
+> править задачи. Это сознательный выбор для игры с друзьями. App Check не даёт обращаться к базе и Gemini в обход сайта.
 
 ## Библиотека предметов
 
