@@ -174,6 +174,26 @@ function prepareJar(file) {
   return { root: assets, namespaces };
 }
 
+/**
+ * JSON из модов бывает «грязным»: BOM в начале, комментарии, висячие запятые.
+ * Пытаемся прочитать строго, потом — после чистки; не вышло — null.
+ */
+function parseLooseJson(text) {
+  const t = text.replace(/^\uFEFF/, '');
+  try {
+    return JSON.parse(t);
+  } catch {
+    try {
+      const cleaned = t
+        .replace(/("(?:[^"\\]|\\.)*")|\/\/[^\n]*|\/\*[\s\S]*?\*\//g, (m, str) => str ?? '')
+        .replace(/,(\s*[}\]])/g, '$1');
+      return JSON.parse(cleaned);
+    } catch {
+      return null;
+    }
+  }
+}
+
 // ---------------------------------------------------------------- модели → текстура
 
 /**
@@ -208,11 +228,7 @@ function readModel(ref) {
   let model = null;
   const file = findAsset(ns, `models/${p}.json`);
   if (file) {
-    try {
-      model = JSON.parse(fs.readFileSync(file, 'utf8'));
-    } catch {
-      model = null;
-    }
+    model = parseLooseJson(fs.readFileSync(file, 'utf8'));
   }
   modelCache.set(key, model);
   return model;
@@ -315,7 +331,13 @@ function fallbackIcon(p) {
 
 function readLang(root, ns, lang) {
   const file = path.join(root, ns, 'lang', `${lang}.json`);
-  return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
+  if (!fs.existsSync(file)) return {};
+  const data = parseLooseJson(fs.readFileSync(file, 'utf8'));
+  if (!data || typeof data !== 'object') {
+    log(`⚠ не читается ${path.relative(CACHE, file)} — пропускаю переводы ${ns} (${lang})`);
+    return {};
+  }
+  return data;
 }
 
 const copied = new Set();
