@@ -258,3 +258,53 @@ export async function suggestReplacements(
   const res = await withFallback(FAST_MODELS, (name) => modelFor(name, config).generateContent(prompt));
   return JSON.parse(res.response.text()) as ReplacementAnswer[];
 }
+
+// ---------------------------------------------------------------- подсказки по типам рецептов
+
+export interface GeneratedHint {
+  title: string;
+  body: string;
+}
+
+/**
+ * Агент пишет подсказку по типу рецепта по фактам: статистика полей по всем рецептам этого типа
+ * в сборке + несколько реальных примеров. Используется, когда подсказки нет или она устарела.
+ */
+export async function generateRecipeHint(
+  type: string,
+  stats: { path: string; pct: number; kinds: string; examples: string[] }[],
+  examples: unknown[],
+  existing?: string,
+): Promise<GeneratedHint> {
+  const config = {
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseSchema: Schema.object({
+        properties: {
+          title: Schema.string({ description: 'Короткое название по-русски: «Мод: машина/процесс», до 60 символов' }),
+          body: Schema.string({ description: 'Подсказка в Markdown по-русски' }),
+        },
+      }),
+    },
+  };
+  const statText = stats
+    .map(
+      (s) =>
+        `- ${s.path} — ${s.pct}% рецептов, ${s.kinds}${s.examples.length ? `, примеры: ${s.examples.join(', ')}` : ''}`,
+    )
+    .join('\n');
+  const prompt =
+    `Напиши подсказку для человека, который пишет датапак-рецепт типа \`${type}\` (Minecraft 1.21.1, NeoForge, сборка TerraFirmaCraft).\n` +
+    `Опирайся ТОЛЬКО на факты ниже — статистику полей по всем рецептам этого типа в сборке и реальные примеры. ` +
+    `Не выдумывай полей, которых нет в статистике. Если смысл поля неочевиден — так и напиши.\n\n` +
+    `Формат body: 1 строка — что это за механизм/процесс; затем список полей «- \`поле\` — что это, формат, типичные значения»; ` +
+    `единицы измерения (тики: 20 = 1 с, mB, °C, RF), обязательные и необязательные поля (по проценту встречаемости). ` +
+    `Без вступлений, кратко.\n\n` +
+    (existing ? `Текущая подсказка (обнови, если она неточна или неполна):\n${existing}\n\n` : '') +
+    `## Поля (по ${stats.length ? 'всем рецептам типа' : 'примерам'})\n${statText || '- нет данных'}\n\n` +
+    `## Примеры\n${examples.map((e) => '```json\n' + JSON.stringify(e, null, 1).slice(0, 2500) + '\n```').join('\n')}`;
+  const res = await withFallback(CHAT_MODELS, (name) => modelFor(name, config).generateContent(prompt));
+  const parsed = JSON.parse(res.response.text()) as GeneratedHint;
+  if (!parsed.title || !parsed.body) throw new Error('Агент вернул пустую подсказку');
+  return parsed;
+}

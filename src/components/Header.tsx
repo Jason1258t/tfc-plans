@@ -1,7 +1,11 @@
+import { Search } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { firebaseEnabled } from '../firebase';
 import './Header.css';
 import { ItemIcon } from './ItemIcon';
+import { ItemIdSearch } from './ItemIdSearch';
+import { Modal } from './Modal';
 import { tooltipHandlers } from './Tooltip';
 
 interface Props {
@@ -10,6 +14,19 @@ interface Props {
 }
 
 export function Header({ nick, onChangeNick }: Props) {
+  const [searching, setSearching] = useState(false);
+  // Ctrl/Cmd+K — поиск id предмета из любого места
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setSearching(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   return (
     <header className="app-header">
       <NavLink to="/" className="brand">
@@ -22,6 +39,7 @@ export function Header({ nick, onChangeNick }: Props) {
         </NavLink>
         <NavLink to="/docs">Документы</NavLink>
         <NavLink to="/schematics">Схемы</NavLink>
+        <NavLink to="/datapacks">Датапаки</NavLink>
       </nav>
       <span className="grow" />
       {!firebaseEnabled && (
@@ -31,6 +49,19 @@ export function Header({ nick, onChangeNick }: Props) {
         >
           локально
         </span>
+      )}
+      <button
+        className="btn ghost sm id-search-btn"
+        onClick={() => setSearching(true)}
+        {...tooltipHandlers('Найти id предмета', 'Ctrl/Cmd+K')}
+      >
+        <Search size={15} />
+        <span className="hide-sm">id предмета</span>
+      </button>
+      {searching && (
+        <Modal onClose={() => setSearching(false)} title="Поиск id предмета">
+          <ItemIdSearch autoFocus />
+        </Modal>
       )}
       <button className="nick" onClick={onChangeNick} {...tooltipHandlers('Сменить ник')}>
         <span className="avatar" aria-hidden>

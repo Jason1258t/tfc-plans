@@ -75,3 +75,40 @@ export interface Artifact {
 export type NewTask = Omit<Task, 'id' | 'createdAt' | 'updatedAt'>;
 export type NewGroup = Omit<Group, 'id' | 'createdAt'>;
 export type NewArtifact = Omit<Artifact, 'id' | 'createdAt' | 'updatedAt'>;
+
+/**
+ * Файл датапака.
+ * add — новый рецепт по шаблону; replace — переопределение существующего рецепта по тому же пути;
+ * remove — отключение рецепта (`neoforge:conditions: [neoforge:false]`, как это делает сам TFC);
+ * file — произвольный файл (например, реестр WoodenCog).
+ */
+export type DatapackEntryKind = 'add' | 'replace' | 'remove' | 'file';
+
+export interface DatapackEntry {
+  id: string;
+  kind: DatapackEntryKind;
+  /** Путь внутри zip: data/<ns>/recipe/<path>.json */
+  path: string;
+  /** Содержимое файла (JSON текстом) */
+  content: string;
+  /** Тип рецепта — для подсказки */
+  recipeType?: string;
+  /** Откуда взят шаблон/оригинал: id рецепта «ns:path» */
+  sourceRecipe?: string;
+  note?: string;
+}
+
+export interface Datapack {
+  id: string;
+  name: string;
+  /** namespace для новых рецептов: data/<namespace>/recipe/… */
+  namespace: string;
+  description: string;
+  entries: DatapackEntry[];
+  author: string;
+  updatedBy: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type NewDatapack = Omit<Datapack, 'id' | 'createdAt' | 'updatedAt'>;

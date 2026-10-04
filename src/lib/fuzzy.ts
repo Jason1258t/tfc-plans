@@ -65,7 +65,10 @@ export function fuzzyCandidates(idx: ItemIndex, queries: string[], limit = 12, m
   const pool = new Set<number>();
   for (const q of qs) for (const t of tokens(q)) for (const n of byStem.get(stem(t)) ?? []) pool.add(n);
   if (!pool.size) return [];
-  const fuse = new Fuse([...pool].map((n) => docs[n]), FUSE_OPTIONS);
+  const fuse = new Fuse(
+    [...pool].map((n) => docs[n]),
+    FUSE_OPTIONS,
+  );
 
   const best = new Map<string, Candidate>();
   for (const q of qs) {

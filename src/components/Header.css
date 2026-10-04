@@ -26,6 +26,13 @@
 .nav {
   display: flex;
   gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.nav a {
+  white-space: nowrap;
 }
 
 .nav a {
@@ -81,6 +88,12 @@
   color: var(--accent-text);
   font-size: 12px;
   font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .id-search-btn .hide-sm {
+    display: none;
+  }
 }
 
 @media (max-width: 560px) {

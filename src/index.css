@@ -431,6 +431,10 @@ select.input {
   max-width: 420px;
 }
 
+.modal.wide {
+  max-width: 1120px;
+}
+
 .modal-head {
   display: flex;
   align-items: center;
@@ -478,7 +482,8 @@ select.input {
     padding: 0;
   }
   .modal,
-  .modal.narrow {
+  .modal.narrow,
+  .modal.wide {
     max-width: none;
     min-height: 100%;
     border-radius: 0;

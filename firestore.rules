@@ -66,6 +66,34 @@ service cloud.firestore {
       }
     }
 
+    // Подсказки по типам рецептов: первичное наполнение — scripts/seed-recipe-hints.mjs,
+    // дальше правят люди и агент с сайта
+    match /recipeHints/{id} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && request.resource.data.type is string
+        && request.resource.data.title is string
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.body is string
+        && request.resource.data.body.size() <= 20000
+        && request.resource.data.source in ['agent', 'manual', 'claude']
+        && nick(request.resource.data.updatedBy);
+      allow delete: if signedIn();
+    }
+
+    // Черновики датапаков: файлы хранятся текстом внутри документа
+    match /datapacks/{id} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 80
+        && request.resource.data.entries is list
+        && request.resource.data.entries.size() <= 300
+        && nick(request.resource.data.updatedBy);
+      allow delete: if signedIn();
+    }
+
     match /artifacts/{id} {
       allow read: if signedIn();
       allow create, update: if signedIn()

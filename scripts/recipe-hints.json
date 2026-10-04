@@ -1,0 +1,202 @@
+[
+  {
+    "type": "minecraft:crafting_shaped",
+    "title": "Верстак: по форме",
+    "body": "Крафт 3×3 с фиксированным расположением.\n\n- `pattern` — до 3 строк по до 3 символа; пробел = пустая клетка.\n- `key` — что означает каждый символ: `{\"item\": \"ns:id\"}` или `{\"tag\": \"c:...\"}` (тег — без `#`).\n- `result` — `{\"id\": \"ns:id\", \"count\": N}`.\n- `category` (`misc`, `building`, `redstone`, `equipment`) и `group` — только для книги рецептов, можно не указывать.\n\n**TFC:** если нужны инструменты, которые тратят прочность, или еда с сохранением свежести — бери `tfc:advanced_shaped_crafting`."
+  },
+  {
+    "type": "minecraft:crafting_shapeless",
+    "title": "Верстак: без формы",
+    "body": "Ингредиенты в любом порядке.\n\n- `ingredients` — массив, до 9 элементов; каждый — `{\"item\": ...}` или `{\"tag\": ...}`. Повтори элемент, если нужно несколько штук.\n- `result` — `{\"id\": \"ns:id\", \"count\": N}`.\n- Жидкость в предмете (ведро, кувшин): `{\"type\": \"tfc:fluid_content\", \"fluid\": {\"fluid\": \"minecraft:water\", \"amount\": 100}}`.\n- Еда TFC: оберни в `{\"type\": \"tfc:and\", \"children\": [{\"item\": ...}, {\"type\": \"tfc:not_rotten\"}]}`, иначе подойдёт и гнилая."
+  },
+  {
+    "type": "minecraft:stonecutting",
+    "title": "Камнерез",
+    "body": "Один вход → один выход.\n\n- `ingredient` — `{\"item\": ...}` или `{\"tag\": ...}`.\n- `result` — `{\"id\": \"ns:id\", \"count\": N}` (например, блок → 2 плиты)."
+  },
+  {
+    "type": "minecraft:smelting",
+    "title": "Печь",
+    "body": "- `ingredient` — что плавим.\n- `result` — `{\"id\": ...}`.\n- `cookingtime` — тики (20 = 1 с; стандарт 200).\n- `experience` — опыт за предмет (0.1–1).\n\n**TFC:** ванильная печь в TFC почти не используется; для нагрева предметов и плавки металлов нужен `tfc:heating`."
+  },
+  {
+    "type": "minecraft:blasting",
+    "title": "Плавильная печь",
+    "body": "Как `minecraft:smelting`, но обычно `cookingtime` = 100 (в 2 раза быстрее). Поля: `ingredient`, `result`, `cookingtime`, `experience`."
+  },
+  {
+    "type": "tfc:heating",
+    "title": "TFC: нагрев",
+    "body": "Что происходит с предметом при нагреве в костре, кузне, тигле и т. п. (и в чаше Create через WoodenCog).\n\n- `ingredient` — предмет/тег.\n- `temperature` — °C, при которой срабатывает. Плавление металлов: медь 1080, бронза 950, чугун/железо 1535, сталь 1540.\n- `result_fluid` — `{\"id\": \"tfc:metal/copper\", \"amount\": 100}` — расплав в mB (слиток = 100 mB).\n- `result_item` — если превращается в предмет; для еды — `{\"stack\": {...}, \"modifiers\": [{\"type\": \"tfc:copy_food\"}]}`, чтобы сохранить свежесть.\n- `use_durability` — `true` для инструментов: выход металла зависит от прочности.\n\nДля плавки задавай `result_fluid`, для готовки — `result_item`."
+  },
+  {
+    "type": "tfc:advanced_shaped_crafting",
+    "title": "TFC: верстак по форме (расширенный)",
+    "body": "Как `minecraft:crafting_shaped` (`pattern`, `key`), плюс:\n\n- `result` — `{\"stack\": {\"id\": ..., \"count\": 1}, \"modifiers\": [...]}` или просто `{\"id\": ..., \"count\": N}`. Модификаторы: `tfc:copy_food` (свежесть), `tfc:copy_forging_bonus` (бонус ковки), `tfc:add_trait`.\n- `input_row` / `input_column` — координаты клетки, из которой копируются свойства для модификаторов.\n- `remainder` — `{\"modifiers\": [{\"type\": \"tfc:damage_crafting_remainder\"}]}`: инструмент (пила, нож) не исчезает, а теряет прочность."
+  },
+  {
+    "type": "tfc:advanced_shapeless_crafting",
+    "title": "TFC: верстак без формы (расширенный)",
+    "body": "Как `minecraft:crafting_shapeless`, плюс:\n\n- `primary_ingredient` — главный ингредиент, с которого копируются свойства (обычно инструмент: `{\"tag\": \"c:tools/knife\"}`).\n- `remainder` — `{\"modifiers\": [{\"type\": \"tfc:damage_crafting_remainder\"}]}`: инструмент остаётся, теряя прочность.\n- `result` — `{\"id\": ..., \"count\": N}` или `{\"stack\": {...}, \"modifiers\": [...]}`."
+  },
+  {
+    "type": "tfc:anvil",
+    "title": "TFC: наковальня",
+    "body": "- `ingredient` — заготовка: обычно тег `c:ingots/…`, `c:double_ingots/…`, `c:sheets/…`.\n- `result` — `{\"id\": ..., \"count\": N}`.\n- `tier` — минимальный уровень наковальни: 0 камень, 1 медь, 2 бронза, 3 кованое железо, 4 сталь, 5 чёрная сталь, 6 красная/синяя сталь.\n- `rules` — до 3 последних ударов, например `[\"hit_last\", \"bend_not_last\", \"shrink_not_last\"]`. Действия: `hit`, `draw`, `punch`, `bend`, `upset`, `shrink`; позиции: `_last`, `_second_last`, `_third_last`, `_not_last`, `_any`.\n- `apply_bonus` — `true`, если у результата есть бонус ковки (инструменты, оружие)."
+  },
+  {
+    "type": "tfc:welding",
+    "title": "TFC: сварка",
+    "body": "На наковальне с флюсом.\n\n- `first_input`, `second_input` — `{\"item\": ...}` или `{\"tag\": ...}`.\n- `result` — `{\"id\": ..., \"count\": 1}`.\n- `tier` — уровень наковальни (см. `tfc:anvil`).\n- `bonus` — `copy_best` / `copy_worst`: какой бонус ковки получит результат."
+  },
+  {
+    "type": "tfc:casting",
+    "title": "TFC: литьё в форму",
+    "body": "- `mold` — `{\"item\": \"tfc:ceramic/ingot_mold\"}` (или другая форма).\n- `fluid` — `{\"fluid\": \"tfc:metal/copper\", \"amount\": 100}`.\n- `result` — `{\"id\": ..., \"count\": 1}`.\n- `break_chance` — шанс разбить форму (0–1; керамика обычно 0.1)."
+  },
+  {
+    "type": "tfc:alloy",
+    "title": "TFC: сплав",
+    "body": "Состав сплава в тигле/сосуде.\n\n- `contents` — массив `{\"fluid\": \"tfc:metal/copper\", \"min\": 0.88, \"max\": 0.92}` (доли от 0 до 1).\n- `result` — id жидкого металла (`tfc:metal/bronze`).\n\nСумма минимумов ≤ 1 ≤ сумма максимумов, иначе сплав невозможен."
+  },
+  {
+    "type": "tfc:barrel_sealed",
+    "title": "TFC: запечатанная бочка",
+    "body": "- `input_item` — `{\"item\"|\"tag\": ..., \"count\": N}`.\n- `input_fluid` — `{\"fluid\": \"minecraft:water\", \"amount\": 1000}` (можно `tag`).\n- `output_item` — `{\"id\": ..., \"count\": N}`; `output_fluid` — `{\"id\": ..., \"amount\": N}`.\n- `duration` — тики: 1000 = 1 игровой час, 24000 = сутки.\n\nНе забудь, что объём бочки ограничен (10 000 mB)."
+  },
+  {
+    "type": "tfc:barrel_instant",
+    "title": "TFC: бочка, мгновенно",
+    "body": "Срабатывает сразу при добавлении, без запечатывания. Поля как у `tfc:barrel_sealed`, но без `duration`: `input_item`, `input_fluid`, `output_item`, `output_fluid`."
+  },
+  {
+    "type": "tfc:pot",
+    "title": "TFC: котелок",
+    "body": "- `ingredients` — до 5 предметов (для еды — с `tfc:not_rotten`).\n- `fluid_ingredient` — `{\"fluid\": ..., \"amount\": N}`.\n- `duration` — тики варки; `temperature` — минимальная °C костра.\n- `fluid_output` — жидкость на выходе, `uses_all_fluid` — тратить ли всю жидкость."
+  },
+  {
+    "type": "tfc:quern",
+    "title": "TFC: жернов",
+    "body": "- `ingredient` — что мелем (можно массив вариантов).\n- `result` — `{\"id\": ..., \"count\": N}`; для еды — `{\"stack\": ..., \"modifiers\": [{\"type\": \"tfc:copy_food\"}]}`."
+  },
+  {
+    "type": "tfc:knapping",
+    "title": "TFC: скалывание / раскрой",
+    "body": "- `knapping_type` — `tfc:rock`, `tfc:clay`, `tfc:fire_clay`, `tfc:leather`, `tfc:goat_horn`…\n- `pattern` — строки до 5×5, `#` = оставить, пробел = убрать.\n- `ingredient` — какие камни/материалы подходят (для `tfc:rock` обычно тег породы).\n- `result` — `{\"id\": ..., \"count\": N}`.\n- `default_on` — чем считать клетки за пределами шаблона; `outside_slot_required`."
+  },
+  {
+    "type": "tfc:chisel",
+    "title": "TFC: долото",
+    "body": "Обработка блока в мире.\n\n- `ingredient` — массив id блоков.\n- `result` — id блока-результата.\n- `mode` — `tfc:smooth`, `tfc:stair`, `tfc:slab`.\n- `item_output` — что выпадает дополнительно (опционально)."
+  },
+  {
+    "type": "tfc:collapse",
+    "title": "TFC: обрушение",
+    "body": "Во что превращается блок при обвале.\n\n- `ingredient` — массив id блоков.\n- `result` — блок после обрушения (обычно булыжник той же породы)."
+  },
+  {
+    "type": "tfc:glassworking",
+    "title": "TFC: стеклодувное дело",
+    "body": "- `batch` — стекломасса (`tfc:glass_batches` или конкретная).\n- `operations` — по порядку: `tfc:blow`, `tfc:roll`, `tfc:stretch`, `tfc:pinch`, `tfc:flatten`, `tfc:saw`, `tfc:table_pour`, `tfc:basin_pour`, добавки (`tfc:soda_ash`, `tfc:graphite`…).\n- `result` — `{\"id\": ..., \"count\": N}`."
+  },
+  {
+    "type": "create:mixing",
+    "title": "Create: смешивание в чаше",
+    "body": "Механический миксер над чашей.\n\n- `ingredients` — предметы/теги и жидкости: `{\"type\": \"fluid_stack\", \"fluid\": \"minecraft:water\", \"amount\": 250}` или `{\"type\": \"fluid_tag\", \"fluid_tag\": \"c:…\", \"amount\": N}`.\n- `results` — `{\"id\": ..., \"count\": N}` для предметов, `{\"id\": ..., \"amount\": N}` для жидкостей; `chance` — вероятность.\n- `heat_requirement` — `heated` (горелка) или `superheated` (на blaze cake); без поля — без нагрева.\n- `processing_time` — тики (опционально).\n\n**В вашей сборке:** WoodenCog плавит металлы в чаше по `tfc:heating` и реальной температуре источника, а не по `heat_requirement`. Горелка в режиме heated (kindled) даёт 1350 °C — сталь (1540 °C) ей не по силам."
+  },
+  {
+    "type": "create:compacting",
+    "title": "Create: прессование в чаше",
+    "body": "Механический пресс над чашей. Поля как у `create:mixing`: `ingredients`, `results`, `heat_requirement`, `processing_time`. Жидкость: `{\"type\": \"neoforge:single\", \"fluid\": ..., \"amount\": N}`."
+  },
+  {
+    "type": "create:pressing",
+    "title": "Create: пресс на ленте/депо",
+    "body": "- `ingredients` — один предмет/тег.\n- `results` — `[{\"id\": ..., \"count\": N}]` (листы из слитков и т. п.)."
+  },
+  {
+    "type": "create:cutting",
+    "title": "Create: механическая пила",
+    "body": "- `ingredients` — один предмет/тег.\n- `results` — `[{\"id\": ..., \"count\": N}]`.\n- `processing_time` — тики (опционально; обычно 50–200)."
+  },
+  {
+    "type": "create:crushing",
+    "title": "Create: дробильные колёса",
+    "body": "- `ingredients` — что дробим.\n- `results` — основной выход и побочные с `chance` (0–1): `[{\"id\": ..., \"count\": 2}, {\"id\": ..., \"chance\": 0.25}]`.\n- `processing_time` — тики (обычно 250–450)."
+  },
+  {
+    "type": "create:milling",
+    "title": "Create: жёрнов Create",
+    "body": "Как `create:crushing`: `ingredients`, `results` с `chance`, `processing_time` (обычно 50–400)."
+  },
+  {
+    "type": "create:splashing",
+    "title": "Create: промывка (вентилятор + вода)",
+    "body": "- `ingredients` — один предмет/тег.\n- `results` — с `chance` для побочных выходов (промывка дроблёной руды)."
+  },
+  {
+    "type": "create:deploying",
+    "title": "Create: развёртыватель",
+    "body": "- `ingredients` — ровно два: [что лежит на ленте/депо, что в руке развёртывателя].\n- `results` — `[{\"id\": ...}]`.\n- `keep_held_item` — `true`, если предмет в руке не тратится (инструмент)."
+  },
+  {
+    "type": "create:item_application",
+    "title": "Create: применение предмета к блоку",
+    "body": "ПКМ предметом по блоку (обшивка корпусов).\n\n- `ingredients` — [блок, предмет в руке].\n- `results` — блок-результат.\n- `keep_held_item` — не тратить предмет в руке."
+  },
+  {
+    "type": "create:filling",
+    "title": "Create: разливщик (заполнение)",
+    "body": "- `ingredients` — [предмет, жидкость `{\"type\": \"fluid_stack\", \"fluid\": ..., \"amount\": N}`].\n- `results` — заполненный предмет."
+  },
+  {
+    "type": "create:sequenced_assembly",
+    "title": "Create: последовательная сборка",
+    "body": "- `ingredient` — стартовый предмет.\n- `transitional_item` — `{\"id\": ...}` — незавершённая деталь между шагами.\n- `sequence` — шаги, каждый — рецепт `create:deploying` / `create:filling` / `create:pressing` / `create:cutting`, где первый ингредиент и результат — `transitional_item`.\n- `loops` — сколько раз повторить последовательность.\n- `results` — итог; `chance` здесь — вес (например, 120 к 8 на брак)."
+  },
+  {
+    "type": "create:mechanical_crafting",
+    "title": "Create: механический крафтер",
+    "body": "Как `minecraft:crafting_shaped`, но сетка до 9×9 (`pattern` любой ширины), плюс `accept_mirrored` — разрешать зеркальную раскладку."
+  },
+  {
+    "type": "immersiveengineering:crusher",
+    "title": "IE: дробилка",
+    "body": "- `input` — предмет/тег.\n- `result` — `{\"id\": ..., \"count\": N}` или `{\"basePredicate\": {\"tag\": ...}, \"count\": N}` (выход по тегу).\n- `secondaries` — `[{\"chance\": 0.2, \"output\": {...}}]`.\n- `energy` — RF на операцию (обычно 1600–4800)."
+  },
+  {
+    "type": "immersiveengineering:metal_press",
+    "title": "IE: металлический пресс",
+    "body": "- `input` — `{\"tag\": \"c:ingots/copper\"}` или `{\"basePredicate\": {...}, \"count\": N}`.\n- `mold` — форма: `immersiveengineering:mold_plate`, `mold_rod`, `mold_wire`, `mold_gear`, `mold_unpacking`, `mold_packing_4/9`…\n- `result` — предмет или `basePredicate` по тегу.\n- `energy` — RF (2400–3200)."
+  },
+  {
+    "type": "immersiveengineering:arc_furnace",
+    "title": "IE: дуговая печь",
+    "body": "- `input` — основной ингредиент (`basePredicate` + `count` для нескольких).\n- `additives` — добавки (флюс, второй металл для сплава).\n- `results` — массив выходов; `slag` — шлак (опционально).\n- `time` — тики, `energy` — RF всего (порядка 51 200–512 000)."
+  },
+  {
+    "type": "immersiveengineering:sawmill",
+    "title": "IE: лесопилка",
+    "body": "- `input` — бревно/доска.\n- `result` — основной выход; `stripped` — промежуточный ободранный блок.\n- `secondaryOutputs`, `strippingSecondaries` — побочное (опилки `c:dusts/wood`).\n- `energy` — RF (800–1600)."
+  },
+  {
+    "type": "firmalife:vat",
+    "title": "Firmalife: чан",
+    "body": "- `input_item` — `{\"item\"|\"tag\": ..., \"count\": N}`.\n- `input_fluid` — `{\"fluid\": ..., \"amount\": N}`.\n- `output_item` / `output_fluid` — результат; для варенья — `jar_output`.\n- `length` — тики, `temperature` — °C."
+  },
+  {
+    "type": "createdieselgenerators:basin_fermenting",
+    "title": "Diesel Generators: брожение в чаше",
+    "body": "- `ingredients` — предметы/теги (`createdieselgenerators:fermentable`).\n- `results` — жидкость `{\"id\": \"createdieselgenerators:ethanol\", \"amount\": 200}` или предмет.\n- `processing_time` — тики; `heat_requirement` — `heated` при необходимости."
+  },
+  {
+    "type": "createdieselgenerators:distillation",
+    "title": "Diesel Generators: дистилляция",
+    "body": "- `ingredients` — `[{\"type\": \"fluid_tag\", \"fluid_tag\": \"c:crude_oil\", \"amount\": 100}]`.\n- `results` — несколько жидкостей с `amount` (дизель, бензин…).\n- `heat_requirement` — `heated`/`superheated`; `processing_time` — тики."
+  },
+  {
+    "type": "createdieselgenerators:compression_molding",
+    "title": "Diesel Generators: формовка",
+    "body": "- `ingredients` — предметы/теги.\n- `mold` — форма (`createdieselgenerators:lines`, `bowl`, `bar`…).\n- `results` — `[{\"id\": ..., \"count\": N}]`; `heat_requirement` — опционально."
+  }
+]

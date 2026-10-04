@@ -11,12 +11,14 @@ interface Props {
   actions?: ReactNode;
   footer?: ReactNode;
   narrow?: boolean;
+  /** Широкое окно (каталоги, редакторы) */
+  wide?: boolean;
   /** Не закрывать по клику мимо/Esc (например, ввод ника) */
   locked?: boolean;
   label?: string;
 }
 
-export function Modal({ onClose, children, title, actions, footer, narrow, locked, label }: Props) {
+export function Modal({ onClose, children, title, actions, footer, narrow, wide, locked, label }: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => !locked && e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -31,7 +33,7 @@ export function Modal({ onClose, children, title, actions, footer, narrow, locke
   return createPortal(
     <div className="modal-backdrop" onMouseDown={(e) => !locked && e.target === e.currentTarget && onClose()}>
       <div
-        className={cx('modal', narrow && 'narrow')}
+        className={cx('modal', narrow && 'narrow', wide && 'wide')}
         role="dialog"
         aria-modal="true"
         aria-label={label ?? (typeof title === 'string' ? title : undefined)}
