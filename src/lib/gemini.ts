@@ -6,7 +6,25 @@ import { itemName } from './items';
 
 export const geminiEnabled = Boolean(app);
 
-const MODEL = import.meta.env.VITE_GEMINI_MODEL || 'gemini-3.8-flash';
+/**
+ * У каждой модели свой бесплатный лимит (у gemini-3.8-flash — 20 запросов в сутки), поэтому
+ * задаём цепочки: если у модели кончился суточный лимит или она недоступна, берём следующую.
+ */
+const uniq = (xs: (string | undefined)[]) => [...new Set(xs.filter(Boolean) as string[])];
+/** Чат в документах — самая умная модель первой */
+const CHAT_MODELS = uniq([
+  import.meta.env.VITE_GEMINI_MODEL,
+  'gemini-3.8-flash',
+  'gemini-3.5-flash',
+  'gemini-3.5-flash-lite',
+]);
+/** Простые структурированные задачи (выбор из списка, разбор ресурсов) — сначала лёгкая модель с бо́льшим лимитом */
+const FAST_MODELS = uniq([
+  import.meta.env.VITE_GEMINI_FAST_MODEL,
+  'gemini-3.5-flash-lite',
+  'gemini-3.5-flash',
+  'gemini-3.8-flash',
+]);
 
 const SYSTEM = `Ты помощник группы игроков в Minecraft-сборке на TerraFirmaCraft (TFC) для Minecraft 1.21.1.
 TFC сильно меняет ванильную игру: металлургия через тигли и наковальни, сезоны и климат, гниение еды, питание,
@@ -15,14 +33,48 @@ TFC сильно меняет ванильную игру: металлурги�
 Пиши по-русски, в Markdown (заголовки, списки, таблицы, чекбоксы "- [ ]").
 Если не уверен в точных цифрах или рецептах TFC — так и пиши, не выдумывай.`;
 
-let model: GenerativeModel | null = null;
-function getModel(): GenerativeModel {
+function modelFor(name: string, extra: Partial<Parameters<typeof getGenerativeModel>[1]> = {}): GenerativeModel {
   if (!app) throw new Error('Gemini доступен только при подключённом Firebase');
-  model ??= getGenerativeModel(getAI(app, { backend: new GoogleAIBackend() }), {
-    model: MODEL,
+  return getGenerativeModel(getAI(app, { backend: new GoogleAIBackend() }), {
+    model: name,
     systemInstruction: SYSTEM,
+    ...extra,
   });
-  return model;
+}
+
+const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+/** Ждать сервер просит секунды — это минутный лимит или перегрузка, есть смысл повторить */
+const shortWait = (msg: string) => {
+  if (!/\[(500|503|429)\b|high demand|overloaded|RESOURCE_EXHAUSTED|UNAVAILABLE/i.test(msg)) return null;
+  if (/retry in \d+h|retry in \d+m\d/i.test(msg)) return null; // суточный лимит — ждать бессмысленно
+  const s = Number(msg.match(/retry in ([\d.]+)s/i)?.[1]);
+  return s ? Math.min(s * 1000 + 500, 30_000) : 2500;
+};
+/** Модель не подходит совсем: снята, не найдена или суточный лимит исчерпан */
+const skipModel = (msg: string) =>
+  /\[404\b|not found|no longer available/i.test(msg) || (/\[429\b|quota/i.test(msg) && shortWait(msg) === null);
+
+/**
+ * Запрос с запасными моделями: короткие ошибки (минутный лимит, перегрузка) повторяем на той же модели,
+ * при суточном лимите или недоступности — переходим к следующей.
+ */
+async function withFallback<R>(models: string[], run: (model: string) => Promise<R>): Promise<R> {
+  let last: unknown;
+  for (const name of models) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await run(name);
+      } catch (e) {
+        last = e;
+        const msg = errText(e);
+        if (skipModel(msg)) break;
+        const wait = shortWait(msg);
+        if (wait === null || attempt === 2) throw e;
+        await new Promise((r) => setTimeout(r, wait));
+      }
+    }
+  }
+  throw last;
 }
 
 export function describeTask(task: Task, items: ItemIndex | null): string {
@@ -70,10 +122,11 @@ export async function askGemini(p: AskParams, onChunk: (full: string) => void, s
       `Если вопрос не про изменение документа — просто ответь по существу.`,
   );
 
-  const chat = getModel().startChat({
-    history: (p.history ?? []).slice(-8).map((t) => ({ role: t.role, parts: [{ text: t.text }] })),
-  });
-  const res = await chat.sendMessageStream(parts.join('\n\n'), { signal });
+  const history = (p.history ?? []).slice(-8).map((t) => ({ role: t.role, parts: [{ text: t.text }] }));
+  // Ошибка лимита приходит до первого куска ответа, поэтому запасная модель подхватывает запрос целиком
+  const res = await withFallback(CHAT_MODELS, (name) =>
+    modelFor(name).startChat({ history }).sendMessageStream(parts.join('\n\n'), { signal }),
+  );
   let full = '';
   for await (const chunk of res.stream) {
     full += chunk.text();
@@ -89,9 +142,7 @@ export interface ExtractedResource {
 
 /** Достаёт список ресурсов из произвольного текста плана — для заполнения чеклиста */
 export async function extractResources(text: string): Promise<ExtractedResource[]> {
-  const m = getGenerativeModel(getAI(app!, { backend: new GoogleAIBackend() }), {
-    model: MODEL,
-    systemInstruction: SYSTEM,
+  const config = {
     generationConfig: {
       responseMimeType: 'application/json',
       responseSchema: Schema.array({
@@ -105,10 +156,12 @@ export async function extractResources(text: string): Promise<ExtractedResource[
         }),
       }),
     },
-  });
-  const res = await m.generateContent(
-    `Выпиши из текста все игровые предметы/ресурсы, которые нужно собрать или скрафтить, с количеством. ` +
-      `Если количество не указано — оцени разумно или поставь 1. Не включай постройки и действия.\n\n${text}`,
+  };
+  const res = await withFallback(FAST_MODELS, (name) =>
+    modelFor(name, config).generateContent(
+      `Выпиши из текста все игровые предметы/ресурсы, которые нужно собрать или скрафтить, с количеством. ` +
+        `Если количество не указано — оцени разумно или поставь 1. Не включай постройки и действия.\n\n${text}`,
+    ),
   );
   const parsed = JSON.parse(res.response.text()) as ExtractedResource[];
   return parsed.filter((r) => r.name && r.qty > 0);
@@ -119,8 +172,69 @@ export function geminiErrorText(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e);
   if (msg.includes('genai config not found'))
     return 'AI Logic не настроен: в консоли Firebase откройте AI Logic → Get started → Gemini Developer API.';
-  if (msg.includes('429') || /quota|RESOURCE_EXHAUSTED/i.test(msg))
-    return 'Превышен лимит запросов к Gemini. Попробуйте через минуту.';
+  if (/high demand|overloaded|\[50[03]\b/i.test(msg))
+    return 'Gemini сейчас перегружен — попробуйте ещё раз через минуту.';
+  if (/\[429\b|quota|RESOURCE_EXHAUSTED/i.test(msg)) {
+    const wait = msg.match(/retry in (\d+h)?(\d+m)?/i);
+    if (wait?.[1] || wait?.[2])
+      return `Исчерпан суточный бесплатный лимит Gemini на всех моделях. Снова заработает через ${(wait[1] ?? '') + (wait[2] ?? '')}`
+        .replace('h', ' ч ')
+        .replace('m', ' мин');
+    return 'Превышен лимит запросов к Gemini в минуту — попробуйте чуть позже.';
+  }
   if (/PERMISSION_DENIED|403/.test(msg)) return `Нет доступа к Gemini (проверьте настройки API-ключа). ${msg}`;
   return msg;
+}
+
+// ---------------------------------------------------------------- подбор замен для схем
+
+export interface ReplacementRequest {
+  source: string;
+  names: string;
+  candidates: { id: string; names: string; similarity: number }[];
+}
+
+export interface ReplacementAnswer {
+  source: string;
+  /** id из кандидатов или "" — подходящей замены нет */
+  target: string;
+  reason: string;
+}
+
+/** Агент выбирает замену для каждого блока строго из предложенных кандидатов */
+export async function suggestReplacements(
+  blocks: ReplacementRequest[],
+  instruction: string,
+): Promise<ReplacementAnswer[]> {
+  const config = {
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseSchema: Schema.array({
+        items: Schema.object({
+          properties: {
+            source: Schema.string({ description: 'id исходного блока, как в запросе' }),
+            target: Schema.string({ description: 'id выбранного кандидата или пустая строка' }),
+            reason: Schema.string({ description: 'Коротко, по-русски: почему так' }),
+          },
+        }),
+      }),
+    },
+  };
+  const list = blocks
+    .map(
+      (b) =>
+        `### ${b.source} (${b.names})\n` +
+        (b.candidates.length
+          ? b.candidates.map((c) => `- ${c.id} | ${c.names} | ${Math.round(c.similarity * 100)}%`).join('\n')
+          : '- (кандидатов нет)'),
+    )
+    .join('\n\n');
+  const prompt =
+    `Мы переносим схему постройки Create в сборку TerraFirmaCraft. Для каждого блока выбери замену СТРОГО из его списка ` +
+    `кандидатов (формат: id | названия | похожесть по поиску). Сохраняй форму блока: дверь → дверь, ступеньки → ступеньки, ` +
+    `плита → плита, бревно → бревно; меняй материал так, как просит пользователь. При прочих равных предпочитай блоки TerraFirmaCraft и его аддонов (tfc:, afc:, rnr:, firmalife:) декоративным модам (copycats, dndecor, createdeco). Если блок и так подходит или ` +
+    `подходящего кандидата нет — верни target "". Не выдумывай id.\n\n` +
+    `Пожелания пользователя: ${instruction.trim() || 'заменить ванильные материалы на аналоги TFC'}\n\n${list}`;
+  const res = await withFallback(FAST_MODELS, (name) => modelFor(name, config).generateContent(prompt));
+  return JSON.parse(res.response.text()) as ReplacementAnswer[];
 }

@@ -1,4 +1,6 @@
 import { readNbt, T, writeNbt, type Compound, type ParsedNbt, type Tag } from './nbt';
+import { fuzzyCandidates } from './fuzzy';
+import { geminiErrorText, suggestReplacements, type ReplacementAnswer, type ReplacementRequest } from './gemini';
 import type { ItemIndex } from './items';
 
 /**
@@ -128,4 +130,148 @@ export function applyRules(ids: string[], rules: Rule[], items: ItemIndex): Rule
     else failed.push({ source: id, target });
   }
   return { applied, failed };
+}
+
+// ---------------------------------------------------------------- замена агентом
+
+export interface AgentFailure {
+  source: string;
+  target?: string;
+  reason: string;
+}
+
+export interface AgentResult {
+  applied: Map<string, string>;
+  /** source → объяснение агента */
+  reasons: Map<string, string>;
+  /** Оставлены как есть: агент решил не менять или у блока нет вариантов кроме него самого */
+  kept: AgentFailure[];
+  /** Настоящие неудачи: ошибка агента, выдуманный id, нет ответа */
+  failed: AgentFailure[];
+}
+
+// Бесплатный тариф Gemini — 5 запросов в минуту на модель: крупные пачки и строго по одной
+const BATCH = 60;
+const STOP_WORDS = new Set([
+  'заменить',
+  'замена',
+  'оставить',
+  'аналоги',
+  'аналог',
+  'материалы',
+  'ванильные',
+  'ванильный',
+  'блоки',
+  'вместо',
+  'нужно',
+  'хочу',
+  'terrafirmacraft',
+]);
+const PARALLEL = 1;
+
+const applyText = (s: string, rules: Rule[]) =>
+  rules.filter((r) => r.from.trim()).reduce((acc, r) => acc.split(r.from.trim()).join(r.to.trim()), s);
+
+/**
+ * Для каждого блока: нечёткий поиск кандидатов (по названию и id, в том числе после правил-подсказок),
+ * затем Gemini выбирает одного из кандидатов. Ответ проверяется: принимаются только id из списка.
+ */
+export async function agentReplace(
+  ids: string[],
+  rules: Rule[],
+  instruction: string,
+  items: ItemIndex,
+  onProgress?: (done: number, total: number) => void,
+): Promise<AgentResult> {
+  // Слова-материалы из пожеланий и правил («гранит», «eucalyptus») — ищем их вместе с формой блока
+  const hintWords = [
+    ...new Set(
+      `${instruction} ${rules.map((r) => r.to).join(' ')}`
+        .toLowerCase()
+        .split(/[^a-zа-яё0-9]+/)
+        .filter((w) => w.length >= 4 && !STOP_WORDS.has(w)),
+    ),
+  ].slice(0, 12);
+
+  const requests: ReplacementRequest[] = ids.map((id) => {
+    const known = items.byId.get(id);
+    const ns = id.split(':')[0];
+    const words = (id.split(':')[1] ?? id).replace(/[/_]/g, ' ');
+    const queries = [applyText(words, rules), words];
+    if (known) queries.push(applyText(known.e, rules), known.e, ...(known.r ? [known.r] : []));
+    const direct = fuzzyCandidates(items, queries);
+    // Форма блока (последнее слово id: planks, door, stairs, bricks) + материал из пожеланий,
+    // среди других модов: stone_bricks + «гранит» → tfc:rock/bricks/granite
+    const form = words.split(' ').pop() ?? '';
+    const byHint =
+      form.length >= 3 && hintWords.length
+        ? fuzzyCandidates(
+            items,
+            hintWords.flatMap((w) => [`${form} ${w}`, w]),
+            16,
+          ).filter((c) => !c.item.i.startsWith(`${ns}:`))
+        : [];
+    const seen = new Set<string>([id]);
+    const candidates = [...direct, ...byHint.slice(0, 8)]
+      .filter((c) => !seen.has(c.item.i) && !!seen.add(c.item.i))
+      .map((c) => ({
+        id: c.item.i,
+        names: [c.item.e, c.item.r].filter(Boolean).join(' / '),
+        similarity: c.similarity,
+      }));
+    return { source: id, names: known ? [known.e, known.r].filter(Boolean).join(' / ') : 'нет в сборке', candidates };
+  });
+
+  const result: AgentResult = { applied: new Map(), reasons: new Map(), kept: [], failed: [] };
+  const withCandidates = requests.filter((r) => r.candidates.length);
+  for (const r of requests)
+    if (!r.candidates.length) result.kept.push({ source: r.source, reason: 'поиск не нашёл других похожих предметов' });
+
+  const hints = rules.filter((r) => r.from.trim()).map((r) => `${r.from.trim()} → ${r.to.trim()}`);
+  const fullInstruction = [instruction.trim(), hints.length ? `Подсказки-замены: ${hints.join('; ')}` : '']
+    .filter(Boolean)
+    .join('\n');
+
+  const batches: ReplacementRequest[][] = [];
+  for (let i = 0; i < withCandidates.length; i += BATCH) batches.push(withCandidates.slice(i, i + BATCH));
+  let done = 0;
+  onProgress?.(0, withCandidates.length);
+
+  const runBatch = async (batch: ReplacementRequest[]) => {
+    let answers: ReplacementAnswer[] = [];
+    try {
+      answers = await suggestReplacements(batch, fullInstruction);
+    } catch (e) {
+      for (const b of batch) result.failed.push({ source: b.source, reason: `ошибка агента: ${geminiErrorText(e)}` });
+      return;
+    }
+    const byId = new Map(answers.map((a) => [a.source, a]));
+    for (const b of batch) {
+      const a = byId.get(b.source);
+      if (!a) result.failed.push({ source: b.source, reason: 'агент не ответил по этому блоку' });
+      else if (!a.target || a.target === b.source)
+        result.kept.push({ source: b.source, reason: a.reason || 'агент решил оставить как есть' });
+      else if (!b.candidates.some((c) => c.id === a.target) || !items.byId.has(a.target))
+        result.failed.push({
+          source: b.source,
+          target: a.target,
+          reason: 'агент предложил id не из списка — отклонено',
+        });
+      else {
+        result.applied.set(b.source, a.target);
+        if (a.reason) result.reasons.set(b.source, a.reason);
+      }
+    }
+    done += batch.length;
+    onProgress?.(done, withCandidates.length);
+  };
+
+  // Несколько пачек параллельно
+  const queue = [...batches];
+  await Promise.all(
+    Array.from({ length: Math.min(PARALLEL, queue.length) }, async () => {
+      while (queue.length) await runBatch(queue.shift()!);
+    }),
+  );
+  return result;
 }

@@ -29,8 +29,11 @@ export const app: FirebaseApp | null = firebaseEnabled ? initializeApp(config) :
  */
 const recaptchaKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 if (app && recaptchaKey) {
-  if (import.meta.env.VITE_APPCHECK_DEBUG === 'true') {
-    (self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN: boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+  // Локальная разработка: заранее зарегистрированный debug-токен (только в dev-сборке, в прод не попадает)
+  const debugToken = import.meta.env.DEV ? import.meta.env.VITE_APPCHECK_DEBUG_TOKEN : undefined;
+  if (debugToken || import.meta.env.VITE_APPCHECK_DEBUG === 'true') {
+    (self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN: string | boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN =
+      debugToken || true;
   }
   initializeAppCheck(app, {
     provider: new ReCaptchaEnterpriseProvider(recaptchaKey),

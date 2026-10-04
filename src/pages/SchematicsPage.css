@@ -264,3 +264,39 @@
     padding-left: 38px;
   }
 }
+
+.agent-toggle {
+  color: var(--amethyst);
+}
+
+.agent-toggle:has(input:checked) {
+  border-color: var(--amethyst);
+  background: var(--amethyst-soft);
+  color: var(--amethyst);
+}
+
+.agent-toggle input {
+  accent-color: var(--amethyst);
+}
+
+.agent-hint {
+  font-size: 13px;
+}
+
+.btn.primary.agent-run {
+  background: var(--amethyst);
+  border-color: var(--amethyst);
+  color: #fff;
+}
+
+.btn.primary.agent-run:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--amethyst) 85%, #000);
+}
+
+.rule-result details.kept summary {
+  color: var(--text-2);
+}
+
+.bad-count {
+  color: var(--danger);
+}

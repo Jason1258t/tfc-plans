@@ -1,14 +1,17 @@
-import { ArrowRight, Download, FileBox, Plus, RotateCcw, Search, Upload, Wand2, X } from 'lucide-react';
+import { ArrowRight, Download, FileBox, Plus, RotateCcw, Search, Sparkles, Upload, Wand2, X } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { ItemIcon } from '../components/ItemIcon';
 import { ItemPicker } from '../components/ItemPicker';
 import { formatSize } from '../lib/files';
+import { geminiEnabled } from '../lib/gemini';
 import { itemName, useItems } from '../lib/items';
 import {
   applyRules,
   changesIn,
   exportSchematic,
   loadSchematic,
+  agentReplace,
+  type AgentResult,
   type Rule,
   type RuleResult,
   type Schematic,
@@ -21,6 +24,27 @@ const DEFAULT_RULES: Rule[] = [
   { from: 'minecraft:', to: 'tfc:' },
   { from: 'oak', to: 'eucalyptus' },
 ];
+
+const AGENT_KEY = 'tfc-tm:schematic-agent';
+
+function loadPref<T>(key: string, fallback: T): T {
+  try {
+    const v = JSON.parse(localStorage.getItem(key) ?? 'null');
+    return v ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function savePref(key: string, v: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify(v));
+  } catch {
+    /* не запомним — не страшно */
+  }
+}
+
+type SmartResult = ({ kind: 'rules' } & RuleResult) | ({ kind: 'agent' } & AgentResult);
 
 function loadRules(): Rule[] {
   try {
@@ -62,7 +86,19 @@ export function SchematicsPage() {
   const [picking, setPicking] = useState<string | null>(null);
   const [rules, setRules] = useState<Rule[]>(loadRules);
   const [overwrite, setOverwrite] = useState(false);
-  const [ruleResult, setRuleResult] = useState<RuleResult | null>(null);
+  const [result, setResult] = useState<SmartResult | null>(null);
+  const [agentPrefs, setAgentPrefs] = useState(() =>
+    loadPref(AGENT_KEY, { enabled: true, hint: 'ванильные материалы → аналоги TerraFirmaCraft' }),
+  );
+  const useAgent = geminiEnabled && agentPrefs.enabled;
+  const [progress, setProgress] = useState<[number, number] | null>(null);
+  /** Пояснения агента к выбранным им заменам */
+  const [reasons, setReasons] = useState<Map<string, string>>(new Map());
+  const updateAgent = (patch: Partial<typeof agentPrefs>) => {
+    const next = { ...agentPrefs, ...patch };
+    setAgentPrefs(next);
+    savePref(AGENT_KEY, next);
+  };
   const inputRef = useRef<HTMLInputElement>(null);
 
   const addFiles = async (files: File[]) => {
@@ -98,25 +134,45 @@ export function SchematicsPage() {
     });
   }, [blocks, filter, replace, items]);
 
-  const setTarget = (id: string, to: string | null) =>
+  const setTarget = (id: string, to: string | null) => {
+    setReasons((m) => {
+      if (!m.has(id)) return m;
+      const next = new Map(m);
+      next.delete(id);
+      return next;
+    });
     setReplace((m) => {
       const next = new Map(m);
       if (to && to !== id) next.set(id, to);
       else next.delete(id);
       return next;
     });
+  };
 
   const updateRules = (next: Rule[]) => {
     setRules(next);
     saveRules(next);
   };
 
-  const runRules = () => {
-    if (!items) return;
+  const runSmart = async () => {
+    if (!items || progress) return;
     const ids = blocks.map((b) => b.id).filter((id) => overwrite || !replace.has(id));
-    const result = applyRules(ids, rules, items);
-    setReplace((m) => new Map([...m, ...result.applied]));
-    setRuleResult(result);
+    if (!useAgent) {
+      const r = applyRules(ids, rules, items);
+      setReplace((m) => new Map([...m, ...r.applied]));
+      setResult({ kind: 'rules', ...r });
+      return;
+    }
+    setResult(null);
+    setProgress([0, ids.length]);
+    try {
+      const r = await agentReplace(ids, rules, agentPrefs.hint, items, (done, total) => setProgress([done, total]));
+      setReplace((m) => new Map([...m, ...r.applied]));
+      setReasons((m) => new Map([...m, ...r.reasons]));
+      setResult({ kind: 'agent', ...r });
+    } finally {
+      setProgress(null);
+    }
   };
 
   const replacedTypes = blocks.filter((b) => replace.has(b.id)).length;
@@ -215,19 +271,40 @@ export function SchematicsPage() {
             <div className="row">
               <Wand2 size={16} className="ai-ico" />
               <h3 className="grow">Умная замена</h3>
-              <span className="tag">тестовый режим</span>
+              {geminiEnabled && (
+                <label className="toggle sm-toggle agent-toggle">
+                  <input
+                    type="checkbox"
+                    checked={agentPrefs.enabled}
+                    onChange={(e) => updateAgent({ enabled: e.target.checked })}
+                  />
+                  <Sparkles size={13} />
+                  Использовать агента
+                </label>
+              )}
             </div>
             <p className="faint small" style={{ margin: 0 }}>
-              Правила применяются по очереди к id блока как замена подстроки. Замена принимается, только если
-              получившийся предмет есть в сборке.
+              {useAgent
+                ? 'Для каждого блока нечёткий поиск подбирает похожие предметы сборки (с учётом правил ниже), а агент Gemini выбирает из них подходящий по форме и материалу.'
+                : 'Правила применяются по очереди к id блока как замена подстроки. Замена принимается, только если получившийся предмет есть в сборке.'}
             </p>
+            {useAgent && (
+              <textarea
+                className="input agent-hint"
+                rows={2}
+                value={agentPrefs.hint}
+                placeholder="Пожелания агенту: «дуб → эвкалипт, камень → гранит, стекло оставить»"
+                aria-label="Пожелания агенту"
+                onChange={(e) => updateAgent({ hint: e.target.value })}
+              />
+            )}
             <ul className="rules">
               {rules.map((r, i) => (
                 <li key={i} className="row">
                   <input
                     className="input"
                     value={r.from}
-                    placeholder="что (oak)"
+                    placeholder={useAgent ? 'подсказка: что (oak)' : 'что (oak)'}
                     aria-label="Что заменить"
                     onChange={(e) => updateRules(rules.map((x, j) => (j === i ? { ...x, from: e.target.value } : x)))}
                   />
@@ -259,29 +336,63 @@ export function SchematicsPage() {
                 Перезаписывать ручные замены
               </label>
               <span className="grow" />
-              <button className="btn primary" onClick={runRules} disabled={!items || !rules.some((r) => r.from.trim())}>
-                <Wand2 size={15} />
-                Применить
+              <button
+                className={cx('btn primary', useAgent && 'agent-run')}
+                onClick={runSmart}
+                disabled={!items || !!progress || (!useAgent && !rules.some((r) => r.from.trim()))}
+              >
+                {useAgent ? <Sparkles size={15} /> : <Wand2 size={15} />}
+                {progress ? `Агент думает… ${progress[0]}/${progress[1]}` : 'Применить'}
               </button>
             </div>
-            {ruleResult && (
+            {result && (
               <div className="rule-result">
                 <div>
-                  Заменено типов блоков: <b>{ruleResult.applied.size}</b>
-                  {ruleResult.failed.length > 0 && (
+                  Заменено типов блоков: <b>{result.applied.size}</b>
+                  {result.kind === 'agent' && result.kept.length > 0 && (
                     <>
                       {' '}
-                      · не удалось: <b>{ruleResult.failed.length}</b>
+                      · оставлено как есть: <b>{result.kept.length}</b>
+                    </>
+                  )}
+                  {result.failed.length > 0 && (
+                    <>
+                      {' '}
+                      · не удалось: <b className="bad-count">{result.failed.length}</b>
                     </>
                   )}
                 </div>
-                {ruleResult.failed.length > 0 && (
-                  <details>
-                    <summary>Для этих блоков не нашлось предмета в сборке</summary>
+                {result.failed.length > 0 && (
+                  <details open={result.kind === 'agent'}>
+                    <summary>
+                      {result.kind === 'rules'
+                        ? 'Для этих блоков не нашлось предмета в сборке'
+                        : 'Не удалось подобрать замену'}
+                    </summary>
                     <ul className="rule-failed">
-                      {ruleResult.failed.map((f) => (
+                      {result.failed.map((f) => (
                         <li key={f.source}>
-                          <code>{f.source}</code> → <code className="bad">{f.target}</code>
+                          <code>{f.source}</code>
+                          {f.target && (
+                            <>
+                              {' '}
+                              → <code className="bad">{f.target}</code>
+                            </>
+                          )}
+                          {'reason' in f && <span className="faint"> — {f.reason}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+                {result.kind === 'agent' && result.kept.length > 0 && (
+                  <details className="kept">
+                    <summary>Оставлены как есть</summary>
+                    <ul className="rule-failed">
+                      {result.kept.map((f) => (
+                        <li key={f.source}>
+                          <code>{f.source}</code>
+                          <span className="faint"> — {f.reason}</span>
                         </li>
                       ))}
                     </ul>
@@ -300,7 +411,7 @@ export function SchematicsPage() {
               Заменено {replacedTypes} из {blocks.length}
             </span>
             {replace.size > 0 && (
-              <button className="btn ghost sm" onClick={() => setReplace(new Map())}>
+              <button className="btn ghost sm" onClick={() => (setReplace(new Map()), setReasons(new Map()))}>
                 <RotateCcw size={14} />
                 Сбросить все
               </button>
@@ -343,12 +454,17 @@ export function SchematicsPage() {
                       </div>
                     ) : to ? (
                       <>
-                        <button className="schem-target" onClick={() => setPicking(id)} title="Выбрать другой">
+                        <button
+                          className="schem-target"
+                          onClick={() => setPicking(id)}
+                          title={reasons.get(id) ? `Агент: ${reasons.get(id)}` : 'Выбрать другой'}
+                        >
                           <ItemIcon id={to} size={28} />
                           <span className="grow schem-names">
                             <span className="schem-name">{itemName(items?.byId.get(to), to)}</span>
                             <code className="schem-id">{to}</code>
                           </span>
+                          {reasons.get(id) && <Sparkles size={13} className="ai-ico" aria-label="Выбрано агентом" />}
                         </button>
                         <button
                           className="btn ghost sm icon"
