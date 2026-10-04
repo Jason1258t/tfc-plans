@@ -8,6 +8,7 @@ import { readNick, writeNick } from './lib/nick';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { DocPage } from './pages/DocPage';
 import { DocsPage } from './pages/DocsPage';
+import { SchematicsPage } from './pages/SchematicsPage';
 import { TasksPage } from './pages/TasksPage';
 
 export default function App() {
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="/" element={<TasksPage />} />
             <Route path="/docs" element={<DocsPage />} />
             <Route path="/docs/:id" element={<DocPage />} />
+            <Route path="/schematics" element={<SchematicsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </ErrorBoundary>

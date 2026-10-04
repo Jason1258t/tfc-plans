@@ -1,0 +1,266 @@
+.schem-page {
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.schem-page.dragging {
+  outline: 2px dashed var(--accent);
+  outline-offset: -8px;
+  border-radius: var(--radius-lg);
+}
+
+.schem-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.schem-head h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 650;
+}
+
+.schem-head p {
+  margin: 0;
+}
+
+.schem-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 56px 16px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.schem-drop:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.schem-files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.schem-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.schem-file-name {
+  display: block;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------------ умная замена */
+
+.schem-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--amethyst) 35%, var(--border));
+  border-radius: var(--radius);
+  background: linear-gradient(to bottom, var(--amethyst-soft), var(--surface) 80px);
+}
+
+.schem-rules h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ai-ico {
+  color: var(--amethyst);
+}
+
+.rules {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rules .input {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.sm-toggle {
+  height: 28px;
+  font-size: 13px;
+}
+
+.rule-result {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: 13px;
+}
+
+.rule-result summary {
+  margin-top: 6px;
+  cursor: pointer;
+  color: var(--danger);
+}
+
+.rule-failed {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  max-height: 220px;
+  overflow-y: auto;
+  font-size: 12px;
+}
+
+.rule-failed code {
+  font-family: var(--font-mono);
+}
+
+.rule-failed .bad {
+  color: var(--danger);
+  text-decoration: line-through;
+}
+
+/* ------------------------------------------------------------------ таблица блоков */
+
+.schem-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.schem-toolbar .search {
+  flex: 1;
+}
+
+.schem-blocks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.schem-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  min-height: 48px;
+}
+
+.schem-row + .schem-row {
+  border-top: 1px solid var(--border);
+}
+
+.schem-row.replaced {
+  background: color-mix(in srgb, var(--accent-soft) 60%, transparent);
+}
+
+.schem-src,
+.schem-dst {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.schem-names {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.schem-name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.schem-id {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.schem-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.schem-arrow {
+  color: var(--text-3);
+}
+
+.schem-row.replaced .schem-arrow {
+  color: var(--accent);
+}
+
+.schem-target {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.schem-target:hover {
+  border-color: var(--border-strong);
+}
+
+.schem-choose {
+  color: var(--text-3);
+}
+
+@media (max-width: 700px) {
+  .schem-head {
+    flex-direction: column;
+  }
+  .schem-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    padding: 8px 10px;
+  }
+  .schem-arrow {
+    display: none;
+  }
+  .schem-dst {
+    padding-left: 38px;
+  }
+}
