@@ -1,6 +1,12 @@
 import { readNbt, T, writeNbt, type Compound, type ParsedNbt, type Tag } from './nbt';
 import { fuzzyCandidates } from './fuzzy';
-import { geminiErrorText, suggestReplacements, type ReplacementAnswer, type ReplacementRequest } from './gemini';
+import {
+  geminiErrorText,
+  suggestReplacements,
+  type BlockRow,
+  type CandidateRow,
+  type ReplacementAnswer,
+} from './gemini';
 import type { ItemIndex } from './items';
 
 /**
@@ -144,14 +150,19 @@ export interface AgentResult {
   applied: Map<string, string>;
   /** source → объяснение агента */
   reasons: Map<string, string>;
+  /** source → запасные варианты агента (2-й и 3-й), для переключения в один клик */
+  alternatives: Map<string, string[]>;
   /** Оставлены как есть: агент решил не менять или у блока нет вариантов кроме него самого */
   kept: AgentFailure[];
-  /** Настоящие неудачи: ошибка агента, выдуманный id, нет ответа */
+  /** Настоящие неудачи: ошибка агента, номера не из списка, нет ответа */
   failed: AgentFailure[];
+  /** Сколько запросов к Gemini понадобилось */
+  requests: number;
 }
 
-// Бесплатный тариф Gemini — 5 запросов в минуту на модель: крупные пачки и строго по одной
-const BATCH = 60;
+/** Блоков на один запрос: обычная схема целиком помещается в один (бесплатный лимит — запросы, а не размер) */
+const BATCH = 200;
+const MAX_CANDIDATES = 20;
 const STOP_WORDS = new Set([
   'заменить',
   'замена',
@@ -167,14 +178,17 @@ const STOP_WORDS = new Set([
   'хочу',
   'terrafirmacraft',
 ]);
-const PARALLEL = 1;
 
 const applyText = (s: string, rules: Rule[]) =>
   rules.filter((r) => r.from.trim()).reduce((acc, r) => acc.split(r.from.trim()).join(r.to.trim()), s);
 
+const namesOf = (it: { e: string; r?: string }) => [it.e, it.r].filter(Boolean).join(' / ');
+
 /**
- * Для каждого блока: нечёткий поиск кандидатов (по названию и id, в том числе после правил-подсказок),
- * затем Gemini выбирает одного из кандидатов. Ответ проверяется: принимаются только id из списка.
+ * 1. Для всех блоков заранее, без запросов: нечёткий поиск до 20 кандидатов (название и id с учётом правил,
+ *    форма блока × материалы из пожеланий).
+ * 2. Один запрос на всю схему: общая таблица кандидатов, агент отвечает до 3 номеров на блок.
+ * 3. Проверка: принимаются только номера из списка этого блока; первый валидный — замена, остальные — запасные.
  */
 export async function agentReplace(
   ids: string[],
@@ -193,13 +207,36 @@ export async function agentReplace(
     ),
   ].slice(0, 12);
 
-  const requests: ReplacementRequest[] = ids.map((id) => {
+  // Общая таблица кандидатов: id → номер
+  const tableIndex = new Map<string, number>();
+  const table: CandidateRow[] = [];
+  const numberOf = (id: string) => {
+    let n = tableIndex.get(id);
+    if (n === undefined) {
+      n = table.length + 1;
+      tableIndex.set(id, n);
+      table.push({ n, id, names: namesOf(items.byId.get(id)!) });
+    }
+    return n;
+  };
+
+  const blocks: BlockRow[] = [];
+  const result: AgentResult = {
+    applied: new Map(),
+    reasons: new Map(),
+    alternatives: new Map(),
+    kept: [],
+    failed: [],
+    requests: 0,
+  };
+
+  ids.forEach((id) => {
     const known = items.byId.get(id);
     const ns = id.split(':')[0];
     const words = (id.split(':')[1] ?? id).replace(/[/_]/g, ' ');
     const queries = [applyText(words, rules), words];
     if (known) queries.push(applyText(known.e, rules), known.e, ...(known.r ? [known.r] : []));
-    const direct = fuzzyCandidates(items, queries);
+    const direct = fuzzyCandidates(items, queries, 14);
     // Форма блока (последнее слово id: planks, door, stairs, bricks) + материал из пожеланий,
     // среди других модов: stone_bricks + «гранит» → tfc:rock/bricks/granite
     const form = words.split(' ').pop() ?? '';
@@ -212,66 +249,69 @@ export async function agentReplace(
           ).filter((c) => !c.item.i.startsWith(`${ns}:`))
         : [];
     const seen = new Set<string>([id]);
-    const candidates = [...direct, ...byHint.slice(0, 8)]
+    const candidates = [...direct, ...byHint]
       .filter((c) => !seen.has(c.item.i) && !!seen.add(c.item.i))
-      .map((c) => ({
-        id: c.item.i,
-        names: [c.item.e, c.item.r].filter(Boolean).join(' / '),
-        similarity: c.similarity,
-      }));
-    return { source: id, names: known ? [known.e, known.r].filter(Boolean).join(' / ') : 'нет в сборке', candidates };
+      .slice(0, MAX_CANDIDATES);
+    if (!candidates.length) {
+      result.kept.push({ source: id, reason: 'поиск не нашёл других похожих предметов' });
+      return;
+    }
+    blocks.push({
+      n: blocks.length + 1,
+      source: id,
+      names: known ? namesOf(known) : 'нет в сборке',
+      candidates: candidates.map((c) => ({ n: numberOf(c.item.i), similarity: c.similarity })),
+    });
   });
-
-  const result: AgentResult = { applied: new Map(), reasons: new Map(), kept: [], failed: [] };
-  const withCandidates = requests.filter((r) => r.candidates.length);
-  for (const r of requests)
-    if (!r.candidates.length) result.kept.push({ source: r.source, reason: 'поиск не нашёл других похожих предметов' });
 
   const hints = rules.filter((r) => r.from.trim()).map((r) => `${r.from.trim()} → ${r.to.trim()}`);
   const fullInstruction = [instruction.trim(), hints.length ? `Подсказки-замены: ${hints.join('; ')}` : '']
     .filter(Boolean)
     .join('\n');
 
-  const batches: ReplacementRequest[][] = [];
-  for (let i = 0; i < withCandidates.length; i += BATCH) batches.push(withCandidates.slice(i, i + BATCH));
   let done = 0;
-  onProgress?.(0, withCandidates.length);
-
-  const runBatch = async (batch: ReplacementRequest[]) => {
-    let answers: ReplacementAnswer[] = [];
+  onProgress?.(0, blocks.length);
+  // Пачки строго по очереди (лимит бесплатного тарифа — запросы в минуту)
+  for (let i = 0; i < blocks.length; i += BATCH) {
+    const batch = blocks.slice(i, i + BATCH);
+    // В таблицу пачки — только её кандидаты
+    const used = new Set(batch.flatMap((b) => b.candidates.map((c) => c.n)));
+    result.requests++;
+    let answers: ReplacementAnswer[];
     try {
-      answers = await suggestReplacements(batch, fullInstruction);
+      answers = await suggestReplacements(
+        table.filter((c) => used.has(c.n)),
+        batch,
+        fullInstruction,
+      );
     } catch (e) {
       for (const b of batch) result.failed.push({ source: b.source, reason: `ошибка агента: ${geminiErrorText(e)}` });
-      return;
+      continue;
     }
-    const byId = new Map(answers.map((a) => [a.source, a]));
+    const byBlock = new Map(answers.map((a) => [Number(a.block), a]));
     for (const b of batch) {
-      const a = byId.get(b.source);
-      if (!a) result.failed.push({ source: b.source, reason: 'агент не ответил по этому блоку' });
-      else if (!a.target || a.target === b.source)
-        result.kept.push({ source: b.source, reason: a.reason || 'агент решил оставить как есть' });
-      else if (!b.candidates.some((c) => c.id === a.target) || !items.byId.has(a.target))
-        result.failed.push({
-          source: b.source,
-          target: a.target,
-          reason: 'агент предложил id не из списка — отклонено',
-        });
-      else {
-        result.applied.set(b.source, a.target);
+      const a = byBlock.get(b.n);
+      if (!a) {
+        result.failed.push({ source: b.source, reason: 'агент не ответил по этому блоку' });
+        continue;
+      }
+      const allowed = new Set(b.candidates.map((c) => c.n));
+      const valid = [...new Set((a.options ?? []).map(Number))]
+        .filter((n) => allowed.has(n))
+        .map((n) => table[n - 1].id)
+        .slice(0, 3);
+      if (valid.length) {
+        result.applied.set(b.source, valid[0]);
+        if (valid.length > 1) result.alternatives.set(b.source, valid.slice(1));
         if (a.reason) result.reasons.set(b.source, a.reason);
+      } else if (!a.options?.length) {
+        result.kept.push({ source: b.source, reason: a.reason || 'агент решил оставить как есть' });
+      } else {
+        result.failed.push({ source: b.source, reason: 'агент вернул номера не из списка кандидатов — отклонено' });
       }
     }
     done += batch.length;
-    onProgress?.(done, withCandidates.length);
-  };
-
-  // Несколько пачек параллельно
-  const queue = [...batches];
-  await Promise.all(
-    Array.from({ length: Math.min(PARALLEL, queue.length) }, async () => {
-      while (queue.length) await runBatch(queue.shift()!);
-    }),
-  );
+    onProgress?.(done, blocks.length);
+  }
   return result;
 }

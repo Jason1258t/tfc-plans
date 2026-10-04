@@ -94,6 +94,14 @@ export function SchematicsPage() {
   const [progress, setProgress] = useState<[number, number] | null>(null);
   /** Пояснения агента к выбранным им заменам */
   const [reasons, setReasons] = useState<Map<string, string>>(new Map());
+  /** Запасные варианты агента: переключение в один клик */
+  const [alts, setAlts] = useState<Map<string, string[]>>(new Map());
+  /** Выбрать запасной вариант: текущая замена уходит в запасные */
+  const swapAlt = (id: string, alt: string) => {
+    const current = replace.get(id);
+    setReplace((m) => new Map(m).set(id, alt));
+    setAlts((m) => new Map(m).set(id, [...(current ? [current] : []), ...(m.get(id) ?? []).filter((x) => x !== alt)]));
+  };
   const updateAgent = (patch: Partial<typeof agentPrefs>) => {
     const next = { ...agentPrefs, ...patch };
     setAgentPrefs(next);
@@ -135,12 +143,14 @@ export function SchematicsPage() {
   }, [blocks, filter, replace, items]);
 
   const setTarget = (id: string, to: string | null) => {
-    setReasons((m) => {
+    const drop = (m: Map<string, unknown>) => {
       if (!m.has(id)) return m;
       const next = new Map(m);
       next.delete(id);
       return next;
-    });
+    };
+    setReasons((m) => drop(m) as Map<string, string>);
+    setAlts((m) => drop(m) as Map<string, string[]>);
     setReplace((m) => {
       const next = new Map(m);
       if (to && to !== id) next.set(id, to);
@@ -169,6 +179,7 @@ export function SchematicsPage() {
       const r = await agentReplace(ids, rules, agentPrefs.hint, items, (done, total) => setProgress([done, total]));
       setReplace((m) => new Map([...m, ...r.applied]));
       setReasons((m) => new Map([...m, ...r.reasons]));
+      setAlts((m) => new Map([...m, ...r.alternatives]));
       setResult({ kind: 'agent', ...r });
     } finally {
       setProgress(null);
@@ -349,6 +360,7 @@ export function SchematicsPage() {
               <div className="rule-result">
                 <div>
                   Заменено типов блоков: <b>{result.applied.size}</b>
+                  {result.kind === 'agent' && <span className="faint"> · запросов к агенту: {result.requests}</span>}
                   {result.kind === 'agent' && result.kept.length > 0 && (
                     <>
                       {' '}
@@ -411,7 +423,10 @@ export function SchematicsPage() {
               Заменено {replacedTypes} из {blocks.length}
             </span>
             {replace.size > 0 && (
-              <button className="btn ghost sm" onClick={() => (setReplace(new Map()), setReasons(new Map()))}>
+              <button
+                className="btn ghost sm"
+                onClick={() => (setReplace(new Map()), setReasons(new Map()), setAlts(new Map()))}
+              >
                 <RotateCcw size={14} />
                 Сбросить все
               </button>
@@ -474,6 +489,22 @@ export function SchematicsPage() {
                         >
                           <X size={15} />
                         </button>
+                        {(alts.get(id)?.length ?? 0) > 0 && (
+                          <div className="schem-alts">
+                            <span className="faint small">ещё:</span>
+                            {alts.get(id)!.map((alt) => (
+                              <button
+                                key={alt}
+                                className="alt-chip"
+                                onClick={() => swapAlt(id, alt)}
+                                title={`Заменить на ${alt}`}
+                              >
+                                <ItemIcon id={alt} size={16} tip={false} />
+                                <span>{itemName(items?.byId.get(alt), alt)}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </>
                     ) : (
                       <button className="btn ghost sm schem-choose" onClick={() => setPicking(id)}>

@@ -188,22 +188,36 @@ export function geminiErrorText(e: unknown): string {
 
 // ---------------------------------------------------------------- подбор замен для схем
 
-export interface ReplacementRequest {
+/** Кандидат в общей таблице запроса: каждый предмет перечисляется один раз */
+export interface CandidateRow {
+  n: number;
+  id: string;
+  names: string;
+}
+
+export interface BlockRow {
+  n: number;
   source: string;
   names: string;
-  candidates: { id: string; names: string; similarity: number }[];
+  /** номера кандидатов из общей таблицы и похожесть по поиску (0..1) */
+  candidates: { n: number; similarity: number }[];
 }
 
 export interface ReplacementAnswer {
-  source: string;
-  /** id из кандидатов или "" — подходящей замены нет */
-  target: string;
+  block: number;
+  /** До 3 номеров кандидатов, лучший первым; пусто — оставить блок как есть */
+  options: number[];
   reason: string;
 }
 
-/** Агент выбирает замену для каждого блока строго из предложенных кандидатов */
+/**
+ * Один запрос на всю схему: общая таблица кандидатов + блоки со ссылками на неё.
+ * Агент отвечает номерами (не id) — выдумать несуществующий предмет он физически не может,
+ * а номера вне списка блока отбрасываются при проверке.
+ */
 export async function suggestReplacements(
-  blocks: ReplacementRequest[],
+  table: CandidateRow[],
+  blocks: BlockRow[],
   instruction: string,
 ): Promise<ReplacementAnswer[]> {
   const config = {
@@ -212,29 +226,35 @@ export async function suggestReplacements(
       responseSchema: Schema.array({
         items: Schema.object({
           properties: {
-            source: Schema.string({ description: 'id исходного блока, как в запросе' }),
-            target: Schema.string({ description: 'id выбранного кандидата или пустая строка' }),
-            reason: Schema.string({ description: 'Коротко, по-русски: почему так' }),
+            block: Schema.integer({ description: 'Номер блока (B…), только число' }),
+            options: Schema.array({
+              items: Schema.integer(),
+              description: 'До 3 номеров кандидатов этого блока, лучший первым; пустой массив — оставить как есть',
+            }),
+            reason: Schema.string({ description: 'Коротко, по-русски: почему выбран первый вариант' }),
           },
         }),
       }),
     },
   };
+  const candidates = table.map((c) => `${c.n} | ${c.id} | ${c.names}`).join('\n');
   const list = blocks
     .map(
       (b) =>
-        `### ${b.source} (${b.names})\n` +
-        (b.candidates.length
-          ? b.candidates.map((c) => `- ${c.id} | ${c.names} | ${Math.round(c.similarity * 100)}%`).join('\n')
-          : '- (кандидатов нет)'),
+        `B${b.n} | ${b.source} | ${b.names} → ` +
+        b.candidates.map((c) => `${c.n}:${Math.round(c.similarity * 100)}`).join(' '),
     )
-    .join('\n\n');
+    .join('\n');
   const prompt =
-    `Мы переносим схему постройки Create в сборку TerraFirmaCraft. Для каждого блока выбери замену СТРОГО из его списка ` +
-    `кандидатов (формат: id | названия | похожесть по поиску). Сохраняй форму блока: дверь → дверь, ступеньки → ступеньки, ` +
-    `плита → плита, бревно → бревно; меняй материал так, как просит пользователь. При прочих равных предпочитай блоки TerraFirmaCraft и его аддонов (tfc:, afc:, rnr:, firmalife:) декоративным модам (copycats, dndecor, createdeco). Если блок и так подходит или ` +
-    `подходящего кандидата нет — верни target "". Не выдумывай id.\n\n` +
-    `Пожелания пользователя: ${instruction.trim() || 'заменить ванильные материалы на аналоги TFC'}\n\n${list}`;
+    `Мы переносим схему постройки Create в сборку TerraFirmaCraft.\n` +
+    `Для каждого блока выбери до 3 замен из ЕГО списка кандидатов (номера после стрелки, через двоеточие — похожесть ` +
+    `по поиску в процентах), лучший вариант первым. Сохраняй форму блока: дверь → дверь, ступеньки → ступеньки, ` +
+    `плита → плита, бревно → бревно; меняй материал так, как просит пользователь. При прочих равных предпочитай ` +
+    `блоки TerraFirmaCraft и его аддонов (tfc:, afc:, rnr:, firmalife:) декоративным модам (copycats, dndecor, createdeco). ` +
+    `Если блок и так подходит или подходящих кандидатов нет — верни пустой options. Ответь по каждому блоку.\n\n` +
+    `Пожелания пользователя: ${instruction.trim() || 'заменить ванильные материалы на аналоги TFC'}\n\n` +
+    `## Кандидаты (номер | id | названия)\n${candidates}\n\n` +
+    `## Блоки схемы (B-номер | id | названия → номера кандидатов:похожесть)\n${list}`;
   const res = await withFallback(FAST_MODELS, (name) => modelFor(name, config).generateContent(prompt));
   return JSON.parse(res.response.text()) as ReplacementAnswer[];
 }
