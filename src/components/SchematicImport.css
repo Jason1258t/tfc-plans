@@ -1,0 +1,100 @@
+.si {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.si-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px 16px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text-2);
+  cursor: pointer;
+  text-align: center;
+}
+
+.si-drop:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.si-files,
+.si-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.si-files {
+  gap: 4px;
+}
+
+.si-files li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.si-tools {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.si-copies {
+  gap: 6px;
+}
+
+.si-copies .input {
+  width: 72px;
+}
+
+.si-list {
+  max-height: 50vh;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.si-list li + li {
+  border-top: 1px solid var(--border);
+}
+
+.si-list label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.si-list li.off {
+  opacity: 0.5;
+}
+
+.si-list li.unknown .si-name > span {
+  color: var(--imp-2);
+}
+
+.si-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.si-name code {
+  overflow-wrap: anywhere;
+}
+
+.si-qty {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}

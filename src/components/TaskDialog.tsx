@@ -1,4 +1,4 @@
-import { BookOpen, Eye, FilePlus2, Pencil, Sparkles, Trash2, X } from 'lucide-react';
+import { BookOpen, Boxes, Eye, FilePlus2, Pencil, Sparkles, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useData } from '../data/DataContext';
 import { artifactsStore, tasksStore } from '../data/store';
@@ -16,6 +16,7 @@ import { ItemIcon } from './ItemIcon';
 import { ItemPicker } from './ItemPicker';
 import { Markdown, itemToken } from './Markdown';
 import { Modal } from './Modal';
+import { SchematicImport } from './SchematicImport';
 import './TaskDialog.css';
 
 export type TaskDialogMode = { kind: 'create'; groupId: string | null } | { kind: 'edit'; taskId: string };
@@ -389,6 +390,7 @@ function TaskFields({ value, onPatch, live, autoFocusTitle, checklistExtra, chec
   const desc = useTextField(value.description, live, (v) => onPatch({ description: v }));
   const [descMode, setDescMode] = useState<'edit' | 'view'>(value.description ? 'view' : 'edit');
   const [pickingIcon, setPickingIcon] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   return (
     <>
@@ -575,8 +577,23 @@ function TaskFields({ value, onPatch, live, autoFocusTitle, checklistExtra, chec
       <section className="tf-section">
         <div className="tf-section-head">
           <h3>Ресурсы и чеклист</h3>
+          <button
+            className="btn sm"
+            onClick={() => setImporting(true)}
+            title="Посчитать блоки .nbt-схемы и добавить их как ресурсы"
+          >
+            <Boxes size={14} />
+            Из схемы
+          </button>
           {checklistExtra}
         </div>
+        {importing && (
+          <SchematicImport
+            checklist={value.checklist}
+            onApply={(checklist) => onPatch({ checklist })}
+            onClose={() => setImporting(false)}
+          />
+        )}
         {checklistError && <div className="error-box">{checklistError}</div>}
         <Checklist entries={value.checklist} onChange={(checklist) => onPatch({ checklist })} />
       </section>
