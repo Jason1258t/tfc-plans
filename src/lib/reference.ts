@@ -75,7 +75,56 @@ export interface Metal {
   specificHeat: number | null;
 }
 
+/** Вход/выход рецепта: жидкость (amount в mB), тег жидкости, предмет или тег предметов */
+export interface LiquidStack {
+  kind: 'fluid' | 'fluidTag' | 'item' | 'tag';
+  id: string;
+  amount?: number;
+  count?: number;
+  chance?: number;
+  /** Для тегов предметов — первые предметы (иконка) */
+  items?: string[];
+}
+
+export interface FuelRecipe {
+  id: string;
+  type: string;
+  inputs: LiquidStack[];
+  outputs: LiquidStack[];
+  meta: { heat?: string; time?: number; energy?: number; catalyst?: LiquidStack | null };
+}
+
+export interface EngineStats {
+  /** об/мин */
+  speed: number;
+  /** SU */
+  strength: number;
+  /** mB за тик */
+  burnRate: number;
+}
+
+/** Семейство жидкого топлива (по общему тегу c:*) */
+export interface LiquidFamily {
+  tag: string;
+  fluids: { id: string; name: GeoLikeName | null; bucket: string }[];
+  /** Двигатели Create: Diesel Generators */
+  engines: { normal: EngineStats | null; modular: EngineStats | null; huge: EngineStats | null } | null;
+  /** Множитель времени горения в горелке Create (CDG) */
+  burner: number | null;
+  /** Дизельный генератор IE */
+  ieGenerator: { burnTime: number | null } | null;
+  /** Горелка Create Liquid Fuel */
+  blazeBurner: { burnTime: number | null; superHeat: boolean; perTick: number } | null;
+  produce: FuelRecipe[];
+}
+
+interface GeoLikeName {
+  en: string | null;
+  ru: string | null;
+}
+
 export interface Reference {
+  liquid?: { families: LiquidFamily[] };
   veins: Vein[];
   smelt: Record<string, Smelt>;
   chains: Record<string, ChainStep[]>;
@@ -150,10 +199,19 @@ const METHOD: Record<string, string> = {
   'create:splashing': 'промывка вентилятором',
   'create:pressing': 'пресс',
   'create:sequenced_assembly': 'сборочная линия',
-  'create:mixing': 'смешивание',
+  'create:mixing': 'механический смеситель',
   'immersiveengineering:crusher': 'дробилка IE',
   'immersiveengineering:metal_press': 'пресс IE',
   'tfc:barrel_sealed': 'бочка',
+  'createdieselgenerators:distillation': 'дистилляционная колонна',
+  'createdieselgenerators:basin_fermenting': 'брожение в чаше',
+  'createdieselgenerators:bulk_fermenting': 'бродильный чан',
+  'create:compacting': 'механический пресс + чаша',
+  'immersiveengineering:fermenter': 'ферментер IE',
+  'immersiveengineering:squeezer': 'выжималка IE',
+  'immersiveengineering:refinery': 'очистительная установка IE',
+  'immersiveengineering:coke_oven': 'коксовая печь IE',
+  'immersiveengineering:mixer': 'смеситель IE',
   'tfc:barrel_instant': 'бочка',
 };
 export const methodLabel = (t: string) => METHOD[t] ?? t.split(':')[1]?.replaceAll('_', ' ') ?? t;

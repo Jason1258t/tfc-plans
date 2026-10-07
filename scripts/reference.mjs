@@ -26,13 +26,13 @@ function collect(dataDirs, sub, parse, filter = () => true) {
   return out;
 }
 
-/** Теги предметов: складываем значения по всем источникам, раскрываем вложенные #теги */
-function itemTags(dataDirs, parse) {
+/** Теги (предметов или жидкостей): складываем значения по всем источникам, раскрываем вложенные #теги */
+function itemTags(dataDirs, parse, kind = 'item') {
   const raw = new Map();
   for (const { dir } of dataDirs) {
     if (!fs.existsSync(dir)) continue;
     for (const ns of fs.readdirSync(dir)) {
-      const base = path.join(dir, ns, 'tags', 'item');
+      const base = path.join(dir, ns, 'tags', kind);
       if (!fs.existsSync(base)) continue;
       for (const rel of fs.readdirSync(base, { recursive: true })) {
         if (!rel.endsWith('.json')) continue;
@@ -255,7 +255,7 @@ function buildChains(starts, recipes, tags, smelt) {
   return chains;
 }
 
-export function buildReference(dataDirs, recipes, parse) {
+export function buildReference(dataDirs, recipes, parse, fluidNames = new Map()) {
   const tags = itemTags(dataDirs, parse);
 
   const veins = [
@@ -325,5 +325,188 @@ export function buildReference(dataDirs, recipes, parse) {
   const needed = new Set([...oreItems, ...Object.values(chains).map((c) => c.at(-1).item)]);
   const smeltUsed = Object.fromEntries(Object.entries(smelt).filter(([k]) => needed.has(k)));
 
-  return { veins, smelt: smeltUsed, chains, metals, fuels, foods, tagCount: tags.size };
+  const liquid = buildLiquidFuels(dataDirs, recipes, parse, tags, fluidNames);
+
+  return { veins, smelt: smeltUsed, chains, metals, fuels, foods, liquid, tagCount: tags.size };
+}
+
+// ---------------------------------------------------------------- жидкое топливо: нефть, бензин, дизель, этанол, био
+
+/**
+ * Семейства топлива — по общим тегам жидкостей c:* (этанол IE и этанол CDG — одно семейство, раз рецепты
+ * принимают тег). Для каждого: жидкости, как получить (рецепты с ним на выходе), где сжигать
+ * (двигатели Create: Diesel Generators, генератор IE, горелки Create Liquid Fuel).
+ */
+const FAMILY_TAGS = [
+  'c:crude_oil',
+  'c:gasoline',
+  'c:diesel',
+  'c:biodiesel',
+  'c:high_power_biodiesel',
+  'c:ethanol',
+  'c:plantoil',
+  'c:creosote',
+  'c:acetaldehyde',
+];
+
+/** Вход/выход рецепта в удобном виде. Объект с amount — жидкость, иначе предмет. */
+function stackOf(node) {
+  if (!node || typeof node !== 'object') return null;
+  const amount = typeof node.amount === 'number' ? node.amount : undefined;
+  const fluidTag = node.fluid_tag ?? node.fluidTag ?? (amount !== undefined ? node.tag : undefined);
+  if (fluidTag) return { kind: 'fluidTag', id: fluidTag, amount };
+  const fluid = typeof node.fluid === 'string' ? node.fluid : undefined;
+  if (fluid) return { kind: 'fluid', id: fluid, amount };
+  if (amount !== undefined && (node.id || node.item)) return { kind: 'fluid', id: node.id ?? node.item, amount };
+  if (node.tag) return { kind: 'tag', id: node.tag, count: node.count };
+  if (node.item || node.id) return { kind: 'item', id: node.item ?? node.id, count: node.count, chance: node.chance };
+  if (node.ingredient) return stackOf(node.ingredient);
+  if (node.basePredicate) return stackOf(node.basePredicate);
+  return null;
+}
+
+const OUT_KEYS = /^(result|results|output|outputs|fluid|fluidOutput)$/;
+const IN_KEYS = /^(ingredient|ingredients|input|input0|input1|inputs|fluidInput|catalyst)$/;
+
+function recipeIO(json) {
+  const inputs = [];
+  const outputs = [];
+  const add = (list, v) => {
+    for (const x of Array.isArray(v) ? v : [v]) {
+      const st = stackOf(x);
+      if (st) list.push(st);
+    }
+  };
+  // У IE «fluid» — выход только у машин без result (ферментер, выжималка); у смесителя и разлива — вход
+  const fluidIsOutput = !('result' in json) && !('results' in json);
+  for (const [k, v] of Object.entries(json)) {
+    if (k === 'fluid' && !fluidIsOutput) add(inputs, v);
+    else if (OUT_KEYS.test(k)) add(outputs, v);
+    else if (IN_KEYS.test(k)) add(k === 'catalyst' ? [] : inputs, v);
+  }
+  // Коксовая печь IE: креозот задаётся числом, без id жидкости
+  if (typeof json.creosote === 'number' && json.creosote > 0)
+    outputs.push({ kind: 'fluid', id: 'immersiveengineering:creosote', amount: json.creosote });
+  const meta = {};
+  if (json.heat_requirement || json.heatRequirement) meta.heat = json.heat_requirement ?? json.heatRequirement;
+  if (json.processing_time || json.processingTime || json.time)
+    meta.time = json.processing_time ?? json.processingTime ?? json.time;
+  if (json.energy) meta.energy = json.energy;
+  if (json.catalyst) meta.catalyst = stackOf(json.catalyst);
+  return { inputs, outputs, meta };
+}
+
+function buildLiquidFuels(dataDirs, recipes, parse, itemTagMap, fluidNames) {
+  const ftags = itemTags(dataDirs, parse, 'fluid');
+  // Модовые неймспейсы в сборке — чтобы не показывать топливо модов, которых нет (createliquidfuel ссылается на createaddition)
+  const present = new Set();
+  for (const { dir } of dataDirs) if (fs.existsSync(dir)) for (const ns of fs.readdirSync(dir)) present.add(ns);
+  const flowing = (id) => /:flowing_/.test(id);
+
+  const families = new Map();
+  const familyOf = new Map(); // жидкость → тег семейства
+  for (const tag of FAMILY_TAGS) {
+    const fluids = (ftags.get(tag) ?? []).filter((f) => !flowing(f));
+    if (!fluids.length) continue;
+    families.set(tag, { tag, fluids, engines: null, burner: null, ieGenerator: null, blazeBurner: null, produce: [] });
+    for (const f of fluids) if (!familyOf.has(f)) familyOf.set(f, tag);
+  }
+  const ensure = (fluidOrTag) => {
+    // Топливо, у которого нет общего тега — своё семейство из одной жидкости
+    if (fluidOrTag.startsWith('#')) {
+      const tag = fluidOrTag.slice(1);
+      if (!families.has(tag)) {
+        const fluids = (ftags.get(tag) ?? []).filter((f) => !flowing(f));
+        families.set(tag, {
+          tag,
+          fluids,
+          engines: null,
+          burner: null,
+          ieGenerator: null,
+          blazeBurner: null,
+          produce: [],
+        });
+        for (const f of fluids) if (!familyOf.has(f)) familyOf.set(f, tag);
+      }
+      return families.get(tag);
+    }
+    const tag = familyOf.get(fluidOrTag) ?? fluidOrTag;
+    if (!families.has(tag)) {
+      families.set(tag, {
+        tag,
+        fluids: [fluidOrTag],
+        engines: null,
+        burner: null,
+        ieGenerator: null,
+        blazeBurner: null,
+        produce: [],
+      });
+      familyOf.set(fluidOrTag, tag);
+    }
+    return families.get(tag);
+  };
+
+  // Двигатели Create: Diesel Generators
+  for (const [, { json }] of collect(dataDirs, 'createdieselgenerators/fuel_type', parse)) {
+    if (typeof json.fluid !== 'string') continue;
+    const fam = ensure(json.fluid);
+    const eng = (e) => (e ? { speed: e.speed, strength: e.strength, burnRate: e.burn_rate } : null);
+    fam.engines = { normal: eng(json.normal), modular: eng(json.modular), huge: eng(json.huge) };
+    fam.burner = json.burner_multiplier ?? null;
+  }
+  // Горелки Create Liquid Fuel
+  for (const [, { json }] of collect(dataDirs, 'createliquidfuel/compat', parse)) {
+    if (typeof json.fluid !== 'string' || !present.has(json.fluid.split(':')[0])) continue;
+    const fam = ensure(json.fluid);
+    fam.blazeBurner = {
+      burnTime: json.burnTime ?? null,
+      superHeat: Boolean(json.superHeat),
+      perTick: json.amountConsumedPerTick ?? 1,
+    };
+  }
+  // Дизельный генератор IE
+  for (const [, r] of recipes) {
+    const j = r.json;
+    if (j?.type !== 'immersiveengineering:generator_fuel') continue;
+    const ref = j.fluidTag ? `#${j.fluidTag}` : j.fluid;
+    if (!ref) continue;
+    ensure(ref).ieGenerator = { burnTime: j.burnTime ?? null };
+  }
+
+  // Как получить: рецепты, где жидкость семейства на выходе
+  const famByOutput = (st) => {
+    if (st.kind === 'fluid') return familyOf.get(st.id);
+    if (st.kind === 'fluidTag') return families.has(st.id) ? st.id : undefined;
+    return undefined;
+  };
+  for (const [id, r] of recipes) {
+    const j = r.json;
+    if (!j || typeof j.type !== 'string' || j.type.endsWith('generator_fuel')) continue;
+    const io = recipeIO(j);
+    const hit = new Set(io.outputs.map(famByOutput).filter(Boolean));
+    if (!hit.size) continue;
+    // Расплавленные/раскрытые теги предметов на входе — первые предметы для иконки
+    const inputs = io.inputs.map((st) =>
+      st.kind === 'tag' ? { ...st, items: (itemTagMap.get(st.id) ?? []).slice(0, 6) } : st,
+    );
+    for (const tag of hit)
+      families.get(tag).produce.push({ id, type: j.type, inputs, outputs: io.outputs, meta: io.meta });
+  }
+
+  const nameOf = (fluid) => fluidNames.get(fluid) ?? null;
+  const out = [...families.values()]
+    // Нефть оставляем всегда: её не делают рецептами, а добывают качалкой
+    .filter(
+      (f) =>
+        f.fluids.length && (f.tag === 'c:crude_oil' || f.engines || f.ieGenerator || f.blazeBurner || f.produce.length),
+    )
+    .map((f) => ({
+      ...f,
+      fluids: f.fluids.map((id) => ({
+        id,
+        name: nameOf(id),
+        bucket: `${id.split(':')[0]}:${id.split(':')[1]}_bucket`,
+      })),
+    }));
+  return { families: out };
 }

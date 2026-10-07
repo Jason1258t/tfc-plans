@@ -2,6 +2,7 @@ import { ArrowRight, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ItemIcon } from '../components/ItemIcon';
+import { LiquidFuelTab } from '../components/LiquidFuelTab';
 import { itemName, useItems, type ItemIndex } from '../lib/items';
 import {
   formatTicks,
@@ -22,10 +23,11 @@ import {
 import { cx } from '../lib/util';
 import './ReferencePage.css';
 
-type Tab = 'ores' | 'fuel' | 'food' | 'metals';
+type Tab = 'ores' | 'fuel' | 'liquid' | 'food' | 'metals';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'ores', label: 'Руды' },
   { id: 'fuel', label: 'Топливо' },
+  { id: 'liquid', label: 'Жидкое топливо' },
   { id: 'food', label: 'Еда' },
   { id: 'metals', label: 'Металлы' },
 ];
@@ -68,6 +70,12 @@ export function ReferencePage() {
         <OresTab ref_={ref} items={items} />
       ) : tab === 'fuel' ? (
         <FuelTab fuels={ref.fuels} items={items} />
+      ) : tab === 'liquid' ? (
+        ref.liquid ? (
+          <LiquidFuelTab families={ref.liquid.families} items={items} />
+        ) : (
+          <div className="empty">Справочник собран старой версией — выполните npm run items</div>
+        )
       ) : tab === 'food' ? (
         <FoodTab foods={ref.foods} items={items} />
       ) : (

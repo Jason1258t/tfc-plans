@@ -157,8 +157,8 @@ function prepareJar(file) {
   const st = fs.statSync(file);
   const key = `${path.basename(file, '.jar')}-${st.size}-${Math.round(st.mtimeMs)}`.replace(/[^\w.+-]/g, '_');
   const dir = path.join(CACHE, 'jars', key);
-  // v4 — плюс теги, жилы, данные TFC для справочника и география TFC Real World
-  const done = path.join(dir, '.done-v4');
+  // v5 — плюс теги, жилы, данные TFC для справочника, география TFC Real World и жидкое топливо
+  const done = path.join(dir, '.done-v5');
   if (!fs.existsSync(done) || fresh) {
     fs.rmSync(dir, { recursive: true, force: true });
     let zip;
@@ -171,7 +171,7 @@ function prepareJar(file) {
     // Рецепты — только папка recipe/ (1.21); recipes/ в некоторых jar — остатки 1.20, игра их не читает.
     // Для справочника: теги предметов, конфиги жил, данные TFC (топливо, еда, нагрев).
     const wanted =
-      /^(assets\/[a-z0-9_.-]+\/(models\/.+\.json|textures\/.+\.png|lang\/(en_us|ru_ru)\.json)|data\/[a-z0-9_.-]+\/(recipe\/.+|tags\/item\/.+|worldgen\/configured_feature\/(vein\/.+|[^/]*vein[^/]*)|tfc\/(fuel|food|fluid_heat)\/.+|geography\/.+|profiles\/.+\/settings)\.json|data\/[a-z0-9_.-]+\/profiles\/.+\/maps\/(continent|altitude|koppen|temperature|rainfall)\.png)$/;
+      /^(assets\/[a-z0-9_.-]+\/(models\/.+\.json|textures\/.+\.png|lang\/(en_us|ru_ru)\.json)|data\/[a-z0-9_.-]+\/(recipe\/.+|tags\/(item|fluid)\/.+|createdieselgenerators\/fuel_type\/.+|createliquidfuel\/compat\/.+|worldgen\/configured_feature\/(vein\/.+|[^/]*vein[^/]*)|tfc\/(fuel|food|fluid_heat)\/.+|geography\/.+|profiles\/.+\/settings)\.json|data\/[a-z0-9_.-]+\/profiles\/.+\/maps\/(continent|altitude|koppen|temperature|rainfall)\.png)$/;
     for (const entry of zip.getEntries()) {
       if (entry.isDirectory || !wanted.test(entry.entryName)) continue;
       const target = path.join(dir, entry.entryName);
@@ -444,9 +444,21 @@ async function main() {
   const seen = new Set();
 
   const perNs = new Map();
+  /** Названия жидкостей (fluid_type.<ns>.<path>) — для справочника топлива */
+  const fluidNames = new Map();
   for (const { ns, root } of sources) {
     const en = readLang(root, ns, 'en_us');
     const ru = readLang(root, ns, 'ru_ru');
+    // Ключи переводов жидкостей у модов разные (fluid.* / fluid_type.*), и в en и ru они могут не совпадать
+    for (const [lang, dict] of [['en', en], ['ru', ru]]) {
+      for (const [key, name] of Object.entries(dict)) {
+        const f = key.match(/^fluid(?:_type)?\.([a-z0-9_]+)\.([a-z0-9_.]+)$/);
+        if (!f) continue;
+        const id = `${f[1]}:${f[2].replaceAll('.', '/')}`;
+        const cur = fluidNames.get(id) ?? { en: null, ru: null };
+        fluidNames.set(id, { ...cur, [lang]: cur[lang] ?? name });
+      }
+    }
     let count = 0;
     for (const [key, name] of Object.entries(en)) {
       const m = key.match(/^(item|block)\.([a-z0-9_]+)\.([a-z0-9_.]+)$/);
@@ -480,7 +492,7 @@ async function main() {
 
   fs.writeFileSync(OUT_JSON, JSON.stringify(items));
   writeRecipes(recipes);
-  const ref = buildReference(dataDirs, recipes, parseLooseJson);
+  const ref = buildReference(dataDirs, recipes, parseLooseJson, fluidNames);
   fs.writeFileSync(OUT_REFERENCE, JSON.stringify(ref));
   log(
     `справочник: ${ref.veins.length} жил, ${ref.fuels.length} топлива, ${ref.foods.length} еды, ${ref.metals.length} металлов, ${ref.tagCount} тегов — ${Math.round(fs.statSync(OUT_REFERENCE).size / 1024)}KB`,
