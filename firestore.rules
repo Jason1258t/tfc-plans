@@ -38,6 +38,18 @@ service cloud.firestore {
       allow delete: if signedIn();
     }
 
+    // Обновления сборки: создаёт scripts/pack-release.mjs при деплое (от имени CLI, мимо правил).
+    // С сайта можно только записать/поправить патчноут (поле notes).
+    match /packUpdates/{id} {
+      allow read: if signedIn();
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['notes'])
+        && request.resource.data.notes.body is string
+        && request.resource.data.notes.body.size() <= 30000
+        && request.resource.data.notes.source in ['agent', 'manual']
+        && nick(request.resource.data.notes.updatedBy);
+    }
+
     // Вложения задач — пакет firestore-files, конфиг src/lib/files.config.ts.
     // Блок ниже генерируется: npm run rules:files
     // firestore-files:begin files

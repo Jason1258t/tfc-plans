@@ -18,6 +18,8 @@ const CHAT_MODELS = uniq([
   'gemini-3.5-flash',
   'gemini-3.5-flash-lite',
 ]);
+/** Длинные структурированные тексты (патчноуты) — сначала быстрая, но толковая модель */
+const WRITER_MODELS = uniq(['gemini-3.5-flash', 'gemini-3.8-flash', 'gemini-3.5-flash-lite']);
 /** Простые структурированные задачи (выбор из списка, разбор ресурсов) — сначала лёгкая модель с бо́льшим лимитом */
 const FAST_MODELS = uniq([
   import.meta.env.VITE_GEMINI_FAST_MODEL,
@@ -58,16 +60,32 @@ const skipModel = (msg: string) =>
  * Запрос с запасными моделями: короткие ошибки (минутный лимит, перегрузка) повторяем на той же модели,
  * при суточном лимите или недоступности — переходим к следующей.
  */
-async function withFallback<R>(models: string[], run: (model: string) => Promise<R>): Promise<R> {
+/** Модель иногда принимает запрос и молчит минутами — тогда не ждём, а идём к следующей */
+const MODEL_TIMEOUT_MS = 90_000;
+class ModelTimeout extends Error {}
+const withTimeout = <R>(p: Promise<R>, ms: number) =>
+  new Promise<R>((resolve, reject) => {
+    const t = setTimeout(() => reject(new ModelTimeout(`модель не ответила за ${ms / 1000} с`)), ms);
+    p.then(
+      (v) => (clearTimeout(t), resolve(v)),
+      (e) => (clearTimeout(t), reject(e)),
+    );
+  });
+
+async function withFallback<R>(
+  models: string[],
+  run: (model: string) => Promise<R>,
+  timeoutMs = MODEL_TIMEOUT_MS,
+): Promise<R> {
   let last: unknown;
   for (const name of models) {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        return await run(name);
+        return await withTimeout(run(name), timeoutMs);
       } catch (e) {
         last = e;
         const msg = errText(e);
-        if (skipModel(msg)) break;
+        if (e instanceof ModelTimeout || skipModel(msg)) break;
         const wait = shortWait(msg);
         if (wait === null || attempt === 2) throw e;
         await new Promise((r) => setTimeout(r, wait));
@@ -307,4 +325,41 @@ export async function generateRecipeHint(
   const parsed = JSON.parse(res.response.text()) as GeneratedHint;
   if (!parsed.title || !parsed.body) throw new Error('Агент вернул пустую подсказку');
   return parsed;
+}
+
+// ---------------------------------------------------------------- патчноут обновления сборки
+
+export interface PatchNotesInput {
+  /** Готовый текстовый отчёт о разнице сборок (см. describeUpdate в UpdatesPage) */
+  report: string;
+  /** Группы и активные задачи — чтобы модель отметила, что касается нас */
+  context: string;
+}
+
+/**
+ * Человеческий патчноут по машинной разнице сборок. Один запрос; модель обязана опираться
+ * только на отчёт (ченджлоги, списки модов и предметов), разделы без данных пропускает.
+ */
+export async function generatePatchNotes(input: PatchNotesInput): Promise<string> {
+  const config = {
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseSchema: Schema.object({ properties: { body: Schema.string({ description: 'Патчноут в Markdown' }) } }),
+    },
+  };
+  const prompt =
+    `Составь патчноут обновления нашей сборки для игроков группы. Ниже — машинный отчёт о том, что изменилось ` +
+    `(моды, их ченджлоги с Modrinth, предметы, рецепты, датапаки под угрозой) и контекст группы.\n\n` +
+    `Правила:\n` +
+    `- Только факты из отчёта. Ничего не додумывай; если ченджлога нет — не пересказывай «вероятные» изменения.\n` +
+    `- По-русски, Markdown. Разделы (пропускай пустые): «## Главное» (2–4 пункта, самое заметное для игры), ` +
+    `«## Новое» (по модам), «## Что проверить у нас» (датапаки под угрозой, задачи и механики группы, которых касаются изменения), ` +
+    `«## Мелочи» (исправления, техничка — кратко).\n` +
+    `- Названия предметов — как в отчёте (русские, если есть). Версии модов — «было → стало».\n` +
+    `- Без вступлений и выводов, коротко: игрок должен прочитать за минуту.\n\n` +
+    `# Контекст группы\n${input.context.slice(0, 4000)}\n\n# Отчёт\n${input.report.slice(0, 60_000)}`;
+  const res = await withFallback(WRITER_MODELS, (name) => modelFor(name, config).generateContent(prompt));
+  const body = (JSON.parse(res.response.text()) as { body?: string }).body?.trim();
+  if (!body) throw new Error('Агент вернул пустой патчноут');
+  return body;
 }

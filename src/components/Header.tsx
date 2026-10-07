@@ -2,6 +2,7 @@ import { Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { firebaseEnabled } from '../firebase';
+import { lastSeenUpdate, usePackUpdates } from '../lib/packUpdates';
 import './Header.css';
 import { ItemIcon } from './ItemIcon';
 import { ItemIdSearch } from './ItemIdSearch';
@@ -15,6 +16,14 @@ interface Props {
 
 export function Header({ nick, onChangeNick }: Props) {
   const [searching, setSearching] = useState(false);
+  const updates = usePackUpdates();
+  const [seen, setSeen] = useState(lastSeenUpdate);
+  useEffect(() => {
+    const on = () => setSeen(lastSeenUpdate());
+    window.addEventListener('tfc-updates-seen', on);
+    return () => window.removeEventListener('tfc-updates-seen', on);
+  }, []);
+  const fresh = Boolean(updates?.length && updates[0].createdAt > seen);
   // Ctrl/Cmd+K — поиск id предмета из любого места
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -41,6 +50,9 @@ export function Header({ nick, onChangeNick }: Props) {
         <NavLink to="/schematics">Схемы</NavLink>
         <NavLink to="/datapacks">Датапаки</NavLink>
         <NavLink to="/reference">Справочник</NavLink>
+        <NavLink to="/updates" title={fresh ? 'Есть новое обновление сборки' : undefined}>
+          Обновления{fresh && <span className="nav-dot" aria-label="новое" />}
+        </NavLink>
       </nav>
       <span className="grow" />
       {!firebaseEnabled && (

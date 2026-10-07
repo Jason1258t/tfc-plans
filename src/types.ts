@@ -95,6 +95,8 @@ export interface DatapackEntry {
   recipeType?: string;
   /** Откуда взят шаблон/оригинал: id рецепта «ns:path» */
   sourceRecipe?: string;
+  /** Отпечаток исходного рецепта на момент, когда его взяли (src/lib/hash.ts) — чтобы заметить, что мод его поменял */
+  sourceHash?: string;
   note?: string;
 }
 

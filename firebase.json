@@ -15,7 +15,8 @@
       "**/.*"
     ],
     "predeploy": [
-      "npm run build"
+      "npm run build",
+      "node scripts/pack-release.mjs"
     ],
     "rewrites": [
       {

@@ -19,6 +19,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import AdmZip from 'adm-zip';
+import { writeManifest } from './manifest.mjs';
 import { buildReference } from './reference.mjs';
 
 const MC_VERSION = '1.21.1';
@@ -66,6 +67,7 @@ const OUT_ICONS = path.join(ROOT, 'public', 'icons');
 const OUT_JSON = path.join(ROOT, 'public', 'items.json');
 const OUT_RECIPES = path.join(ROOT, 'public', 'recipes.json');
 const OUT_REFERENCE = path.join(ROOT, 'public', 'reference.json');
+const OUT_MANIFEST = path.join(ROOT, 'public', 'pack-manifest.json');
 const fresh = process.argv.includes('--fresh');
 
 const log = (...a) => console.log('[items]', ...a);
@@ -481,6 +483,16 @@ async function main() {
   fs.writeFileSync(OUT_REFERENCE, JSON.stringify(ref));
   log(
     `справочник: ${ref.veins.length} жил, ${ref.fuels.length} топлива, ${ref.foods.length} еды, ${ref.metals.length} металлов, ${ref.tagCount} тегов — ${Math.round(fs.statSync(OUT_REFERENCE).size / 1024)}KB`,
+  );
+  const manifest = writeManifest({
+    jarPaths: jars.map((j) => path.join(MODS_DIR, j)),
+    items,
+    recipes,
+    outFile: OUT_MANIFEST,
+    cacheDir: path.join(ROOT, '.cache'),
+  });
+  log(
+    `снимок сборки: ${manifest.mods.length} модов, pack-manifest.json ${Math.round(fs.statSync(OUT_MANIFEST).size / 1024)}KB`,
   );
   fs.writeFileSync(SIGNATURE_FILE, JSON.stringify(modsSignature()));
   const kb = Math.round(fs.statSync(OUT_JSON).size / 1024);

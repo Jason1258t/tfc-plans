@@ -6,8 +6,17 @@ import { Modal } from '../components/Modal';
 import { RecipeCatalog } from '../components/RecipeCatalog';
 import { useData } from '../data/DataContext';
 import { datapacksStore } from '../data/store';
-import { buildZip, entryFromRecipe, PACK_FORMAT, sanitizeNamespace, validatePack, zipName } from '../lib/datapack';
+import {
+  buildZip,
+  entryFromRecipe,
+  PACK_FORMAT,
+  sanitizeNamespace,
+  staleIssues,
+  validatePack,
+  zipName,
+} from '../lib/datapack';
 import { filesEnabled, uploadFile } from '../lib/files';
+import { useItems } from '../lib/items';
 import { useRecipes, type Recipe } from '../lib/recipes';
 import { cx, timeAgo, uid } from '../lib/util';
 import type { Datapack, DatapackEntry } from '../types';
@@ -125,7 +134,8 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
   const [editing, setEditing] = useState<DatapackEntry | null>(null);
   const [attaching, setAttaching] = useState(false);
 
-  const issues = useMemo(() => validatePack(pack), [pack]);
+  const items = useItems();
+  const issues = useMemo(() => [...validatePack(pack), ...staleIssues(pack, catalog, items)], [pack, catalog, items]);
   const update = (patch: Partial<Datapack>) => datapacksStore.update(pack.id, { ...patch, updatedBy: nick });
 
   const saveEntry = (entry: DatapackEntry) => {

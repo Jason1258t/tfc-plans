@@ -1,0 +1,198 @@
+.upd-page {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.upd-head h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 650;
+}
+
+.upd-head p {
+  margin: 0;
+}
+
+.upd-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.upd-card.latest {
+  border-color: var(--border-strong);
+}
+
+.upd-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.upd-card-head h2 {
+  margin: 0 0 2px;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.upd-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.upd-badges .tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.upd-badges .add {
+  color: var(--accent);
+}
+.upd-badges .upd {
+  color: var(--diamond);
+}
+.upd-badges .del,
+.upd-badges .warn {
+  color: var(--imp-3);
+}
+
+.upd-notes {
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  min-width: 0;
+}
+
+.upd-notes > :first-child {
+  margin-top: 0;
+}
+
+.upd-notes-edit {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  resize: vertical;
+}
+
+.upd-notes-actions,
+.upd-notes-meta,
+.upd-notes-empty {
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.upd-notes-empty {
+  margin-top: 0;
+}
+
+.upd-risks {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--imp-3) 45%, var(--border));
+  background: color-mix(in srgb, var(--imp-3) 8%, transparent);
+  font-size: 13px;
+}
+
+.upd-risks h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.upd-risks ul {
+  margin: 0;
+  padding-left: 18px;
+  overflow-wrap: anywhere;
+}
+
+.upd-toggle {
+  align-self: flex-start;
+}
+
+.upd-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.upd-block h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.upd-block > summary {
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.upd-mods {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.upd-mods summary {
+  cursor: pointer;
+}
+
+.upd-changelog {
+  margin: 6px 0 8px 14px;
+  padding: 8px 12px;
+  border-left: 2px solid var(--border-strong);
+  font-size: 13px;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.upd-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upd-icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  align-items: center;
+}
+
+.upd-recipes {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  max-height: 280px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+
+.upd-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+}

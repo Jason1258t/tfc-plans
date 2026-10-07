@@ -10,6 +10,7 @@ import { DocPage } from './pages/DocPage';
 import { DatapacksPage } from './pages/DatapacksPage';
 import { DocsPage } from './pages/DocsPage';
 import { ReferencePage } from './pages/ReferencePage';
+import { UpdatesPage } from './pages/UpdatesPage';
 import { SchematicsPage } from './pages/SchematicsPage';
 import { TasksPage } from './pages/TasksPage';
 
@@ -37,6 +38,7 @@ export default function App() {
             <Route path="/schematics" element={<SchematicsPage />} />
             <Route path="/datapacks" element={<DatapacksPage />} />
             <Route path="/reference" element={<ReferencePage />} />
+            <Route path="/updates" element={<UpdatesPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </ErrorBoundary>

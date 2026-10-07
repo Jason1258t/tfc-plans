@@ -1,6 +1,8 @@
 import { strToU8, zipSync } from 'fflate';
 import type { Datapack, DatapackEntry } from '../types';
-import { recipePath, type Recipe } from './recipes';
+import { recipeHash } from './hash';
+import type { ItemIndex } from './items';
+import { itemRefsOf, recipePath, type Recipe, type RecipeCatalog } from './recipes';
 import { uid } from './util';
 
 /** pack_format датапаков Minecraft 1.21.1 */
@@ -42,6 +44,7 @@ export function entryFromRecipe(
       content: pretty(r.j),
       recipeType: r.t,
       sourceRecipe: r.i,
+      sourceHash: recipeHash(r.j),
     };
   }
   return {
@@ -51,6 +54,7 @@ export function entryFromRecipe(
     content: pretty(kind === 'remove' ? REMOVAL_JSON : r.j),
     recipeType: r.t,
     sourceRecipe: r.i,
+    sourceHash: recipeHash(r.j),
   };
 }
 
@@ -83,6 +87,41 @@ export function validatePack(pack: Datapack): PackIssue[] {
         JSON.parse(e.content);
       } catch (err) {
         issues.push({ path: e.path, message: `ошибка JSON: ${err instanceof Error ? err.message : err}` });
+      }
+    }
+  }
+  return issues;
+}
+
+/**
+ * Расхождения датапака с текущей сборкой: исходный рецепт пропал или изменился (после обновления модов),
+ * в файлах упоминаются предметы, которых в сборке больше нет.
+ */
+export function staleIssues(pack: Datapack, catalog: RecipeCatalog | null, items: ItemIndex | null): PackIssue[] {
+  const issues: PackIssue[] = [];
+  for (const e of pack.entries) {
+    if (catalog?.list.length && e.sourceRecipe) {
+      const r = catalog.byId.get(e.sourceRecipe);
+      if (!r) issues.push({ path: e.path, message: `рецепта ${e.sourceRecipe} больше нет в сборке` });
+      else if (e.sourceHash && recipeHash(r.j) !== e.sourceHash && e.kind !== 'remove')
+        issues.push({
+          path: e.path,
+          message: `${e.kind === 'add' ? 'шаблон' : 'оригинал'} ${e.sourceRecipe} изменился в сборке — сверьте с новой версией`,
+        });
+    }
+    if (items?.list.length && e.path.endsWith('.json')) {
+      try {
+        // Жидкости (tfc:metal/copper, …fluid…) и ваниль не проверяем: их нет в библиотеке предметов
+        const missing = itemRefsOf(JSON.parse(e.content)).filter(
+          (id) => !items.byId.has(id) && !id.startsWith('minecraft:') && !/:metal\/[a-z_]+$|fluid/.test(id),
+        );
+        if (missing.length)
+          issues.push({
+            path: e.path,
+            message: `нет в сборке: ${missing.slice(0, 5).join(', ')}${missing.length > 5 ? '…' : ''}`,
+          });
+      } catch {
+        /* синтаксис проверяет validatePack */
       }
     }
   }
