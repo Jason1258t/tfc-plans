@@ -421,11 +421,11 @@ function FuelTab({ fuels, items }: { fuels: Fuel[]; items: ItemIndex | null }) {
       <div className="ref-filters">
         <label className="search grow">
           <Search size={15} className="faint" />
-          <input placeholder="Дерево, уголь, торф…" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <input placeholder="Уголь, кокс, торф…" value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
       </div>
       <p className="faint small ref-note">
-        Для горна, костра и печей TFC. Чистота влияет на то, насколько топливо годится для горна (меньше — больше дыма и
+        Для горна, костра и печей TFC (дерево и деревянные изделия не показываются). Чистота влияет на то, насколько топливо годится для горна (меньше — больше дыма и
         ниже эффективность).
       </p>
       <div className="ref-table-wrap">

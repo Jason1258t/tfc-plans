@@ -76,6 +76,9 @@ function ingredientItems(ing, tags) {
 
 const ingredientLabel = (ing) => (ing?.tag ? `#${ing.tag}` : (ing?.item ?? null));
 
+const WOODEN_FUEL =
+  /_logs?\b|_log\b|planks|\/log\/|\/wood\/|cactus_wood|tfcastikorcarts:|leaves|stick_bundle|driftwood|pinecone|:paper\b|books/;
+
 const GRADES = ['poor', 'normal', 'rich', 'single', 'deposit'];
 
 /**
@@ -291,15 +294,19 @@ export function buildReference(dataDirs, recipes, parse, fluidNames = new Map())
     specificHeat: json.specific_heat_capacity ?? null,
   }));
 
-  const fuels = [...collect(dataDirs, 'tfc/fuel', parse)].map(([id, { json, source }]) => ({
-    id,
-    source,
-    ingredient: ingredientLabel(json.ingredient),
-    items: ingredientItems(json.ingredient, tags),
-    temp: json.temperature ?? null,
-    duration: json.duration ?? null,
-    purity: json.purity ?? null,
-  }));
+  const fuels = [...collect(dataDirs, 'tfc/fuel', parse)]
+    .map(([id, { json, source }]) => ({
+      id,
+      source,
+      ingredient: ingredientLabel(json.ingredient),
+      items: ingredientItems(json.ingredient, tags),
+      temp: json.temperature ?? null,
+      duration: json.duration ?? null,
+      purity: json.purity ?? null,
+    }))
+    // Дерево и деревянные изделия (брёвна, доски, повозки, листья, книги…) группе в справочнике не нужны —
+    // остаются уголь, кокс, торф, лигнит и прочее «настоящее» топливо
+    .filter((f) => !WOODEN_FUEL.test([f.id, f.ingredient ?? '', ...f.items].join(' ')));
 
   const NUTRIENTS = ['grain', 'fruit', 'vegetables', 'protein', 'dairy'];
   const foods = [...collect(dataDirs, 'tfc/food', parse)].map(([id, { json, source }]) => ({
