@@ -19,6 +19,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import AdmZip from 'adm-zip';
+import { buildReference } from './reference.mjs';
 
 const MC_VERSION = '1.21.1';
 
@@ -64,6 +65,7 @@ export const SIGNATURE_FILE = path.join(ROOT, '.cache', 'items-signature.json');
 const OUT_ICONS = path.join(ROOT, 'public', 'icons');
 const OUT_JSON = path.join(ROOT, 'public', 'items.json');
 const OUT_RECIPES = path.join(ROOT, 'public', 'recipes.json');
+const OUT_REFERENCE = path.join(ROOT, 'public', 'reference.json');
 const fresh = process.argv.includes('--fresh');
 
 const log = (...a) => console.log('[items]', ...a);
@@ -82,8 +84,8 @@ async function fetchBuffer(url) {
 /** Скачивает client.jar и вытаскивает models/textures/lang en_us; ru_ru берёт из asset index */
 async function prepareVanilla() {
   const dir = path.join(CACHE, `minecraft-${MC_VERSION}`);
-  // .done-v2 — кеш с рецептами (v1 распаковывал только ассеты)
-  const done = path.join(dir, '.done-v2');
+  // .done-v3 — кеш с рецептами и тегами (v1 — только ассеты, v2 — без тегов)
+  const done = path.join(dir, '.done-v3');
   if (fs.existsSync(done) && !fresh) return dir;
   fs.rmSync(dir, { recursive: true, force: true });
   log(`vanilla ${MC_VERSION}: читаю манифест версий`);
@@ -95,7 +97,7 @@ async function prepareVanilla() {
   log('vanilla: качаю client.jar (~25MB)');
   const zip = new AdmZip(await fetchBuffer(meta.downloads.client.url));
   const wanted =
-    /^(assets\/minecraft\/(models\/(item|block)\/|textures\/(item|block)\/|lang\/en_us\.json)|data\/minecraft\/recipe\/.+\.json$)/;
+    /^(assets\/minecraft\/(models\/(item|block)\/|textures\/(item|block)\/|lang\/en_us\.json)|data\/minecraft\/(recipe|tags\/item)\/.+\.json$)/;
   for (const entry of zip.getEntries()) {
     if (entry.isDirectory || !wanted.test(entry.entryName)) continue;
     const target = path.join(dir, entry.entryName);
@@ -152,7 +154,8 @@ function prepareJar(file) {
   const st = fs.statSync(file);
   const key = `${path.basename(file, '.jar')}-${st.size}-${Math.round(st.mtimeMs)}`.replace(/[^\w.+-]/g, '_');
   const dir = path.join(CACHE, 'jars', key);
-  const done = path.join(dir, '.done-v2');
+  // v3 — плюс теги, жилы и данные TFC для справочника
+  const done = path.join(dir, '.done-v3');
   if (!fs.existsSync(done) || fresh) {
     fs.rmSync(dir, { recursive: true, force: true });
     let zip;
@@ -162,9 +165,10 @@ function prepareJar(file) {
       log(`пропускаю ${path.basename(file)}: не читается как zip (${e.message})`);
       return null;
     }
-    // Рецепты — только папка recipe/ (1.21); recipes/ в некоторых jar — остатки 1.20, игра их не читает
+    // Рецепты — только папка recipe/ (1.21); recipes/ в некоторых jar — остатки 1.20, игра их не читает.
+    // Для справочника: теги предметов, конфиги жил, данные TFC (топливо, еда, нагрев).
     const wanted =
-      /^(assets\/[a-z0-9_.-]+\/(models\/.+\.json|textures\/.+\.png|lang\/(en_us|ru_ru)\.json)|data\/[a-z0-9_.-]+\/recipe\/.+\.json)$/;
+      /^(assets\/[a-z0-9_.-]+\/(models\/.+\.json|textures\/.+\.png|lang\/(en_us|ru_ru)\.json)|data\/[a-z0-9_.-]+\/(recipe\/.+|tags\/item\/.+|worldgen\/configured_feature\/(vein\/.+|[^/]*vein[^/]*)|tfc\/(fuel|food|fluid_heat)\/.+)\.json)$/;
     for (const entry of zip.getEntries()) {
       if (entry.isDirectory || !wanted.test(entry.entryName)) continue;
       const target = path.join(dir, entry.entryName);
@@ -405,10 +409,13 @@ async function main() {
   /** Рецепты: «data/<ns>/recipe/<path>.json» → { источник, json }; поздние перекрывают ранние, как датапаки */
   const recipes = new Map();
   collectRecipes(recipes, path.join(vanillaDir, 'data'), 'minecraft');
+  /** data/ всех источников в порядке загрузки — для справочника */
+  const dataDirs = [{ dir: path.join(vanillaDir, 'data'), source: 'minecraft' }];
   for (const jar of jars) {
     const res = prepareJar(path.join(MODS_DIR, jar));
     if (!res) continue;
     collectRecipes(recipes, res.data, jar.replace(/\.jar$/, ''));
+    dataDirs.push({ dir: res.data, source: jar.replace(/\.jar$/, '') });
     for (const ns of res.namespaces) {
       // Переопределения ванили внутри модов не должны перебивать оригинал
       if (ns === 'minecraft') continue;
@@ -470,6 +477,11 @@ async function main() {
 
   fs.writeFileSync(OUT_JSON, JSON.stringify(items));
   writeRecipes(recipes);
+  const ref = buildReference(dataDirs, recipes, parseLooseJson);
+  fs.writeFileSync(OUT_REFERENCE, JSON.stringify(ref));
+  log(
+    `справочник: ${ref.veins.length} жил, ${ref.fuels.length} топлива, ${ref.foods.length} еды, ${ref.metals.length} металлов, ${ref.tagCount} тегов — ${Math.round(fs.statSync(OUT_REFERENCE).size / 1024)}KB`,
+  );
   fs.writeFileSync(SIGNATURE_FILE, JSON.stringify(modsSignature()));
   const kb = Math.round(fs.statSync(OUT_JSON).size / 1024);
   log(`готово: ${items.length} предметов, ${copied.size} иконок, items.json ${kb}KB`);

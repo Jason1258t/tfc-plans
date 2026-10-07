@@ -6,6 +6,7 @@ import { SIGNATURE_FILE, modsSignature } from './build-items.mjs';
 
 const itemsJson = fileURLToPath(new URL('../public/items.json', import.meta.url));
 const recipesJson = fileURLToPath(new URL('../public/recipes.json', import.meta.url));
+const referenceJson = fileURLToPath(new URL('../public/reference.json', import.meta.url));
 const current = JSON.stringify(modsSignature());
 let previous = null;
 try {
@@ -17,6 +18,7 @@ try {
 let reason = null;
 if (!fs.existsSync(itemsJson)) reason = 'библиотека предметов не найдена';
 else if (!fs.existsSync(recipesJson)) reason = 'каталог рецептов не найден';
+else if (!fs.existsSync(referenceJson)) reason = 'справочник не найден';
 else if (previous !== null && previous !== current) reason = 'набор модов в mods/ изменился';
 else if (previous === null && current !== '[]') reason = 'в mods/ появились моды';
 

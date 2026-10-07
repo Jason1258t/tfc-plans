@@ -33,6 +33,7 @@ firestore-debug.log*
 public/icons/
 public/items.json
 public/recipes.json
+public/reference.json
 
 # Jar модов сборки — источник библиотеки предметов, в git не храним
 mods/*

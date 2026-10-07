@@ -9,6 +9,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { DocPage } from './pages/DocPage';
 import { DatapacksPage } from './pages/DatapacksPage';
 import { DocsPage } from './pages/DocsPage';
+import { ReferencePage } from './pages/ReferencePage';
 import { SchematicsPage } from './pages/SchematicsPage';
 import { TasksPage } from './pages/TasksPage';
 
@@ -35,6 +36,7 @@ export default function App() {
             <Route path="/docs/:id" element={<DocPage />} />
             <Route path="/schematics" element={<SchematicsPage />} />
             <Route path="/datapacks" element={<DatapacksPage />} />
+            <Route path="/reference" element={<ReferencePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </ErrorBoundary>
