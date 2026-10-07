@@ -16,6 +16,7 @@ import { ItemIcon } from './ItemIcon';
 import { ItemPicker } from './ItemPicker';
 import { Markdown, itemToken } from './Markdown';
 import { Modal } from './Modal';
+import { PlaceField } from './PlaceField';
 import { SchematicImport } from './SchematicImport';
 import './TaskDialog.css';
 
@@ -59,6 +60,7 @@ function CreateTask({
     author: nick,
     assignee: null,
     completedAt: null,
+    place: null,
   }));
   const [busy, setBusy] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -344,7 +346,7 @@ function useFileIntake(target: { taskId: string; author: string } | { addPending
 
 type Values = Pick<
   Task,
-  'title' | 'description' | 'status' | 'priority' | 'checklist' | 'icon' | 'groupId' | 'assignee'
+  'title' | 'description' | 'status' | 'priority' | 'checklist' | 'icon' | 'groupId' | 'assignee' | 'place'
 >;
 
 interface FieldsProps {
@@ -522,6 +524,7 @@ function TaskFields({ value, onPatch, live, autoFocusTitle, checklistExtra, chec
           )}
         </div>
       </div>
+      <PlaceField value={value.place} onChange={(place) => onPatch({ place })} />
 
       <section className="tf-section">
         <div className="tf-section-head">

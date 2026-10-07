@@ -35,6 +35,8 @@ public/items.json
 public/recipes.json
 public/reference.json
 public/pack-manifest.json
+public/geo.json
+public/geo/
 
 # Jar модов сборки — источник библиотеки предметов, в git не храним
 mods/*

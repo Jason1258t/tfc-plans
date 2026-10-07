@@ -20,6 +20,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import AdmZip from 'adm-zip';
 import { writeManifest } from './manifest.mjs';
+import { writeGeo } from './geo.mjs';
 import { buildReference } from './reference.mjs';
 
 const MC_VERSION = '1.21.1';
@@ -156,8 +157,8 @@ function prepareJar(file) {
   const st = fs.statSync(file);
   const key = `${path.basename(file, '.jar')}-${st.size}-${Math.round(st.mtimeMs)}`.replace(/[^\w.+-]/g, '_');
   const dir = path.join(CACHE, 'jars', key);
-  // v3 — плюс теги, жилы и данные TFC для справочника
-  const done = path.join(dir, '.done-v3');
+  // v4 — плюс теги, жилы, данные TFC для справочника и география TFC Real World
+  const done = path.join(dir, '.done-v4');
   if (!fs.existsSync(done) || fresh) {
     fs.rmSync(dir, { recursive: true, force: true });
     let zip;
@@ -170,7 +171,7 @@ function prepareJar(file) {
     // Рецепты — только папка recipe/ (1.21); recipes/ в некоторых jar — остатки 1.20, игра их не читает.
     // Для справочника: теги предметов, конфиги жил, данные TFC (топливо, еда, нагрев).
     const wanted =
-      /^(assets\/[a-z0-9_.-]+\/(models\/.+\.json|textures\/.+\.png|lang\/(en_us|ru_ru)\.json)|data\/[a-z0-9_.-]+\/(recipe\/.+|tags\/item\/.+|worldgen\/configured_feature\/(vein\/.+|[^/]*vein[^/]*)|tfc\/(fuel|food|fluid_heat)\/.+)\.json)$/;
+      /^(assets\/[a-z0-9_.-]+\/(models\/.+\.json|textures\/.+\.png|lang\/(en_us|ru_ru)\.json)|data\/[a-z0-9_.-]+\/(recipe\/.+|tags\/item\/.+|worldgen\/configured_feature\/(vein\/.+|[^/]*vein[^/]*)|tfc\/(fuel|food|fluid_heat)\/.+|geography\/.+|profiles\/.+\/settings)\.json|data\/[a-z0-9_.-]+\/profiles\/.+\/maps\/(continent|altitude|koppen|temperature|rainfall)\.png)$/;
     for (const entry of zip.getEntries()) {
       if (entry.isDirectory || !wanted.test(entry.entryName)) continue;
       const target = path.join(dir, entry.entryName);
@@ -484,6 +485,8 @@ async function main() {
   log(
     `справочник: ${ref.veins.length} жил, ${ref.fuels.length} топлива, ${ref.foods.length} еды, ${ref.metals.length} металлов, ${ref.tagCount} тегов — ${Math.round(fs.statSync(OUT_REFERENCE).size / 1024)}KB`,
   );
+  const geo = writeGeo(dataDirs, parseLooseJson, path.join(ROOT, 'public'));
+  if (geo) log(`география: ${geo.profiles} профилей, ${geo.waypoints} городов, ${geo.maps} карт`);
   const manifest = writeManifest({
     jarPaths: jars.map((j) => path.join(MODS_DIR, j)),
     items,

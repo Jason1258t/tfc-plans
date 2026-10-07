@@ -1,0 +1,250 @@
+.map-page {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px 16px 24px;
+  min-height: 0;
+}
+
+.map-layout {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.map-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.map-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.map-title h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 650;
+  flex: 1;
+}
+
+.map-warn {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--imp-2) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--imp-2) 40%, var(--border));
+}
+
+.map-point {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.map-point-head {
+  gap: 8px;
+}
+
+.map-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+.map-dot.a {
+  background: var(--accent);
+}
+.map-dot.b {
+  background: var(--diamond);
+}
+
+.map-input {
+  position: relative;
+}
+
+.map-input .input {
+  width: 100%;
+}
+
+.map-suggest {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+}
+
+.map-suggest button {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.map-suggest button:hover {
+  background: var(--surface-2);
+}
+
+.map-point-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.map-coords {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.map-coords code {
+  font-size: 14px;
+  margin-right: auto;
+}
+
+.map-near {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.map-near li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.map-distance {
+  padding: 10px 12px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  font-size: 14px;
+}
+
+.map-hint {
+  line-height: 1.4;
+}
+
+.map-tasks ul {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.map-tasks li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.map-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  position: sticky;
+  top: calc(var(--header-h, 56px) + 12px);
+}
+
+.map-layers {
+  align-self: flex-start;
+  flex-wrap: wrap;
+}
+
+.map-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.map-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* ---------------------------------------------------------------- canvas */
+
+.wmap {
+  position: relative;
+  height: calc(100vh - var(--header-h, 56px) - 90px);
+  min-height: 320px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.wmap canvas {
+  display: block;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.wmap-zoom {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wmap-readout {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .map-layout {
+    grid-template-columns: 1fr;
+  }
+  .map-main {
+    position: static;
+    order: -1;
+  }
+  .wmap {
+    height: 60vh;
+  }
+}

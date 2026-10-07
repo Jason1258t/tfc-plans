@@ -29,6 +29,12 @@ export interface ChecklistEntry {
   done?: boolean;
 }
 
+export interface TaskPlace {
+  x: number;
+  z: number;
+  label?: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -47,6 +53,8 @@ export interface Task {
   assignee?: string | null;
   /** Когда задачу отметили выполненной */
   completedAt?: number | null;
+  /** Где в мире: блоковые координаты и подпись (база, жила, точка экспедиции) — показывается на карте */
+  place?: TaskPlace | null;
   createdAt: number;
   updatedAt: number;
 }

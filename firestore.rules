@@ -38,6 +38,21 @@ service cloud.firestore {
       allow delete: if signedIn();
     }
 
+    // Общие настройки сайта: settings/world — профиль и масштаб мира TFC Real World для карты
+    match /settings/{id} {
+      allow read: if signedIn();
+      allow write: if signedIn()
+        && id == 'world'
+        && request.resource.data.profile is string
+        && request.resource.data.profile.size() <= 100
+        && (request.resource.data.horizontalScale == null || (request.resource.data.horizontalScale is int
+            && request.resource.data.horizontalScale > 0 && request.resource.data.horizontalScale <= 1000000))
+        && (request.resource.data.verticalScale == null || (request.resource.data.verticalScale is int
+            && request.resource.data.verticalScale > 0 && request.resource.data.verticalScale <= 1000000))
+        && request.resource.data.verified is bool
+        && nick(request.resource.data.updatedBy);
+    }
+
     // Обновления сборки: создаёт scripts/pack-release.mjs при деплое (от имени CLI, мимо правил).
     // С сайта можно только записать/поправить патчноут (поле notes).
     match /packUpdates/{id} {
