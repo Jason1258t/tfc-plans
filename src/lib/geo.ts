@@ -18,10 +18,11 @@ export interface GeoProfile extends WorldProjection {
   /** id городов, которые показывает профиль */
   waypoints: string[];
   /** слой → путь к PNG (карта во весь мир: x ∈ [−h, h), z ∈ [−v, v)) */
-  maps: Partial<Record<MapLayer, string>>;
+  maps: Partial<Record<Exclude<MapLayer, 'atlas'>, string>>;
 }
 
-export type MapLayer = 'continent' | 'altitude' | 'koppen' | 'temperature' | 'rainfall';
+/** atlas — «обычная» карта, собирается из altitude + continent (src/lib/atlas.ts) */
+export type MapLayer = 'atlas' | 'continent' | 'altitude' | 'koppen' | 'temperature' | 'rainfall';
 
 export interface Waypoint {
   id: string;

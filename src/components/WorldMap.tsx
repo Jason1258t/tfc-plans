@@ -1,5 +1,6 @@
 import { Minus, Plus, Maximize } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { buildAtlas } from '../lib/atlas';
 import { geoName, type GeoProfile, type MapLayer, type Waypoint } from '../lib/geo';
 import { blockToGeo } from '../lib/projection';
 
@@ -19,8 +20,8 @@ interface Props {
   /** Блоковые координаты городов (посчитаны снаружи для текущего профиля) */
   cityPos: Map<string, { x: number; z: number }>;
   markers: MapMarker[];
-  /** Клик по карте (не перетаскивание): shift — вторая точка */
-  onPick: (x: number, z: number, second: boolean) => void;
+  /** Карточка точки по клику на карту (не перетаскивание) */
+  renderPopup: (point: { x: number; z: number }, close: () => void) => ReactNode;
   onMarker?: (m: MapMarker) => void;
   /** Сдвинуть вид к точке при её смене */
   focus?: { x: number; z: number; key: string } | null;
@@ -41,10 +42,11 @@ const css = (name: string, fallback: string) =>
  * Карта мира на canvas: PNG мода растянут на прямоугольник [−h, h) × [−v, v) блоков.
  * Колесо/щипок — зум у курсора, перетаскивание — сдвиг, клик — выбрать точку.
  */
-export function WorldMap({ profile, layer, waypoints, cityPos, markers, onPick, onMarker, focus }: Props) {
+export function WorldMap({ profile, layer, waypoints, cityPos, markers, renderPopup, onMarker, focus }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const imgRef = useRef<HTMLImageElement | null>(null);
+  const imgRef = useRef<HTMLImageElement | HTMLCanvasElement | null>(null);
+  const [popup, setPopup] = useState<{ x: number; z: number } | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [view, setView] = useState<View | null>(null);
   const [hover, setHover] = useState<{ x: number; z: number } | null>(null);
@@ -77,20 +79,31 @@ export function WorldMap({ profile, layer, waypoints, cityPos, markers, onPick, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile.id, h, v]);
 
-  // Картинка слоя
+  // Картинка слоя: «обычная» собирается из высот и маски суши, остальные — PNG мода как есть
   useEffect(() => {
-    const src = profile.maps[layer];
-    if (!src) {
-      imgRef.current = null;
-      setImgTick((t) => t + 1);
-      return;
-    }
-    const img = new Image();
-    img.onload = () => {
+    let cancelled = false;
+    const done = (img: HTMLImageElement | HTMLCanvasElement | null) => {
+      if (cancelled) return;
       imgRef.current = img;
       setImgTick((t) => t + 1);
     };
-    img.src = `${import.meta.env.BASE_URL}${src}`;
+    const url = (p: string) => `${import.meta.env.BASE_URL}${p}`;
+    if (layer === 'atlas') {
+      const { altitude, continent } = profile.maps;
+      if (altitude && continent) buildAtlas(url(altitude), url(continent)).then(done, () => done(null));
+      else done(null);
+    } else {
+      const src = profile.maps[layer];
+      if (!src) done(null);
+      else {
+        const img = new Image();
+        img.onload = () => done(img);
+        img.src = url(src);
+      }
+    }
+    return () => {
+      cancelled = true;
+    };
   }, [profile, layer]);
 
   // Перелёт к выбранной точке
@@ -131,7 +144,8 @@ export function WorldMap({ profile, layer, waypoints, cityPos, markers, onPick, 
     const mapH = 2 * v * view.scale;
     const img = imgRef.current;
     if (img) {
-      ctx.imageSmoothingEnabled = mapW < img.width * 2;
+      // Атлас сглаживаем всегда (как обычная карта), тематические слои при приближении — пикселями
+      ctx.imageSmoothingEnabled = layer === 'atlas' || mapW < img.width * 2;
       ctx.drawImage(img, x0, y0, mapW, mapH);
     }
     ctx.strokeStyle = css('--border-strong', '#555');
@@ -285,7 +299,7 @@ export function WorldMap({ profile, layer, waypoints, cityPos, markers, onPick, 
             if (m && onMarker) onMarker(m);
             else {
               const [wx, wz] = toWorld(p.x, p.y, view);
-              onPick(Math.round(wx), Math.round(wz), e.shiftKey);
+              setPopup({ x: Math.round(wx), z: Math.round(wz) });
             }
           }
           if (pointers.current.size === 0) drag.current = null;
@@ -307,11 +321,39 @@ export function WorldMap({ profile, layer, waypoints, cityPos, markers, onPick, 
           <Maximize size={14} />
         </button>
       </div>
+      {popup && view && (
+        <PopupBox at={toScreen(popup.x, popup.z, view)} size={size}>
+          {renderPopup(popup, () => setPopup(null))}
+        </PopupBox>
+      )}
       {hover && hoverGeo && (
         <div className="wmap-readout">
           x {Math.round(hover.x)} · z {Math.round(hover.z)} · {hoverGeo.lat.toFixed(2)}°, {hoverGeo.lon.toFixed(2)}°
         </div>
       )}
     </div>
+  );
+}
+
+/** Карточка у точки клика: держится внутри карты, едет вместе с картой при сдвиге */
+function PopupBox({ at, size, children }: { at: number[]; size: { w: number; h: number }; children: ReactNode }) {
+  const W = 260;
+  const left = Math.min(Math.max(at[0] - W / 2, 8), Math.max(8, size.w - W - 8));
+  const below = at[1] < size.h / 2;
+  return (
+    <>
+      <span className="wmap-pin" style={{ left: at[0], top: at[1] }} />
+      <div
+        className="wmap-popup"
+        style={{
+          left,
+          width: W,
+          ...(below ? { top: Math.max(8, at[1] + 14) } : { bottom: Math.max(8, size.h - at[1] + 14) }),
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </>
   );
 }

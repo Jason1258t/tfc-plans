@@ -248,3 +248,48 @@
     height: 60vh;
   }
 }
+
+.wmap-pin {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: var(--text);
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 0 1px var(--text);
+  pointer-events: none;
+}
+
+.wmap-popup {
+  position: absolute;
+  z-index: 2;
+  padding: 10px 12px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-lg);
+}
+
+.map-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.map-popup-head code {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.map-popup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.map-popup-actions .map-dot {
+  width: 8px;
+  height: 8px;
+}

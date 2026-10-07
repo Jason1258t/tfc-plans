@@ -26,7 +26,10 @@ import {
 import { cx } from '../lib/util';
 import './MapPage.css';
 
+const LAYER_KEY = 'tfc-tm:map-layer';
+
 const LAYERS: { id: MapLayer; label: string }[] = [
+  { id: 'atlas', label: 'Обычная' },
   { id: 'continent', label: 'Суша' },
   { id: 'altitude', label: 'Высоты' },
   { id: 'koppen', label: 'Климат (Кёппен)' },
@@ -57,7 +60,21 @@ function MapView({ geo, profile, world }: { geo: GeoData; profile: GeoProfile; w
   const { tasks, groups } = useData();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const [layer, setLayer] = useState<MapLayer>('altitude');
+  const [layer, setLayerState] = useState<MapLayer>(() => {
+    try {
+      return (localStorage.getItem(LAYER_KEY) as MapLayer | null) ?? 'atlas';
+    } catch {
+      return 'atlas';
+    }
+  });
+  const setLayer = (l: MapLayer) => {
+    setLayerState(l);
+    try {
+      localStorage.setItem(LAYER_KEY, l);
+    } catch {
+      /* приватный режим — слой просто не запомнится */
+    }
+  };
   const [showTasks, setShowTasks] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -143,7 +160,8 @@ function MapView({ geo, profile, world }: { geo: GeoData; profile: GeoProfile; w
         {a && b && <Distance a={a} b={b} />}
 
         <div className="map-hint faint small">
-          Клик по карте — точка A, с Shift — точка B. Ссылку на страницу можно переслать: точки в адресе.
+          Клик по карте — координаты точки; оттуда же её можно сделать точкой A или B. Ссылку на страницу можно
+          переслать: точки в адресе.
         </div>
 
         {placedTasks.length > 0 && (
@@ -170,7 +188,9 @@ function MapView({ geo, profile, world }: { geo: GeoData; profile: GeoProfile; w
 
       <section className="map-main">
         <div className="seg map-layers">
-          {LAYERS.filter((l) => profile.maps[l.id]).map((l) => (
+          {LAYERS.filter((l) =>
+            l.id === 'atlas' ? profile.maps.altitude && profile.maps.continent : profile.maps[l.id],
+          ).map((l) => (
             <button key={l.id} aria-pressed={layer === l.id} onClick={() => setLayer(l.id)}>
               {l.label}
             </button>
@@ -182,7 +202,18 @@ function MapView({ geo, profile, world }: { geo: GeoData; profile: GeoProfile; w
           waypoints={waypoints}
           cityPos={cityPos}
           markers={markers}
-          onPick={(x, z, second) => setPoint(second ? 'b' : 'a', { x, z })}
+          renderPopup={(pt, close) => (
+            <PointPopup
+              point={pointFromBlock(profile, pt.x, pt.z)}
+              profile={profile}
+              waypoints={waypoints}
+              onClose={close}
+              onSet={(which) => {
+                setPoint(which, pt);
+                close();
+              }}
+            />
+          )}
           onMarker={(m) => m.kind === 'task' && navigate(`/?task=${m.id}`)}
           focus={a ? { x: a.x, z: a.z, key: `${a.x}:${a.z}` } : null}
         />
@@ -306,6 +337,55 @@ function PointPanel({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Карточка точки по клику на карту */
+function PointPopup({
+  point,
+  profile,
+  waypoints,
+  onClose,
+  onSet,
+}: {
+  point: Point;
+  profile: GeoProfile;
+  waypoints: GeoData['waypoints'];
+  onClose: () => void;
+  onSet: (which: 'a' | 'b') => void;
+}) {
+  const near = nearestWaypoints(waypoints, point, 1)[0];
+  const br = near ? bearing(point, pointFromGeo(profile, near.w.lat, near.w.lon)) : null;
+  return (
+    <div className="map-popup">
+      <div className="row map-popup-head">
+        <code className="grow">
+          {point.x} {point.z}
+        </code>
+        <button className="btn ghost sm icon" aria-label="Закрыть" onClick={onClose}>
+          <X size={14} />
+        </button>
+      </div>
+      <div className="faint small">
+        {fmtLat(point.lat)}, {fmtLon(point.lon)}
+        {point.outside && ' · вне основной карты'}
+      </div>
+      {near && br && (
+        <div className="small">
+          Ближайший город — {geoName(near.w.name)}: {Math.round(br.blocks).toLocaleString('ru-RU')} бл. на {br.dir}
+        </div>
+      )}
+      <div className="map-popup-actions">
+        <CopyButton text={`${point.x} ${point.z}`} label="x z" />
+        <CopyButton text={`/tp @s ${point.x} ~ ${point.z}`} label="/tp" />
+        <button className="btn sm" onClick={() => onSet('a')}>
+          <span className="map-dot a" /> A
+        </button>
+        <button className="btn sm" onClick={() => onSet('b')}>
+          <span className="map-dot b" /> B
+        </button>
+      </div>
     </div>
   );
 }
