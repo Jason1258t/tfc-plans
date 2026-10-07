@@ -397,3 +397,24 @@
 .lf-empty {
   color: var(--imp-2);
 }
+
+.lf-unverified {
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--imp-2) 50%, var(--border));
+  color: var(--imp-2);
+  font-weight: 500;
+}
+
+.lf-use > summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.lf-use {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

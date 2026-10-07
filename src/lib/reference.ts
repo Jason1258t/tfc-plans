@@ -116,6 +116,8 @@ export interface LiquidFamily {
   /** Горелка Create Liquid Fuel */
   blazeBurner: { burnTime: number | null; superHeat: boolean; perTick: number } | null;
   produce: FuelRecipe[];
+  /** Где используется: жидкость на входе */
+  use?: FuelRecipe[];
 }
 
 interface GeoLikeName {

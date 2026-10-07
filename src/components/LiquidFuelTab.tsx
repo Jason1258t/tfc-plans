@@ -348,6 +348,11 @@ function FamilyCard({
     for (const list of m.values()) list.sort((a, b) => yieldOf(b, fam) - yieldOf(a, fam));
     return [...m];
   }, [fam]);
+  const useGroups = useMemo(() => {
+    const m = new Map<string, FuelRecipe[]>();
+    for (const r of fam.use ?? []) m.set(r.type, [...(m.get(r.type) ?? []), r]);
+    return [...m];
+  }, [fam]);
   return (
     <section className="ref-card">
       <header className="ref-card-head">
@@ -366,20 +371,64 @@ function FamilyCard({
           </div>
         </div>
       </header>
-      {fam.tag === 'c:crude_oil' ? (
-        <p className="faint small" style={{ margin: 0 }}>
-          Рецептами не делается — только добыча станком-качалкой (см. выше).
-        </p>
-      ) : groups.length === 0 ? (
+      {fam.tag === 'c:crude_oil' && <PumpjackMethod items={items} />}
+      {fam.tag !== 'c:crude_oil' && groups.length === 0 && (
         <p className="faint small" style={{ margin: 0 }}>
           Рецептов получения в сборке нет.
         </p>
-      ) : (
-        groups.map(([type, list]) => (
-          <MethodGroup key={type} type={type} list={list} items={items} byTag={byTag} removedBy={removedBy} />
-        ))
+      )}
+      {groups.map(([type, list]) => (
+        <MethodGroup key={type} type={type} list={list} items={items} byTag={byTag} removedBy={removedBy} />
+      ))}
+      {useGroups.length > 0 && (
+        <details className="lf-use">
+          <summary>
+            Где используется <span className="faint small">{recipesCount(fam.use?.length ?? 0)}</span>
+          </summary>
+          {useGroups.map(([type, list]) => (
+            <MethodGroup key={type} type={type} list={list} items={items} byTag={byTag} removedBy={removedBy} />
+          ))}
+        </details>
       )}
     </section>
+  );
+}
+
+/** Добыча нефти: рецепта нет, жидкость качает станок-качалка из запаса чанка */
+function PumpjackMethod({ items }: { items: ItemIndex | null }) {
+  const parts = [
+    'createdieselgenerators:pumpjack_crank',
+    'createdieselgenerators:pumpjack_bearing',
+    'createdieselgenerators:pumpjack_head',
+    'createdieselgenerators:pumpjack_hole',
+  ].filter((id) => items?.byId.has(id));
+  return (
+    <div className="lf-method">
+      <h4>
+        станок-качалка <span className="lf-unverified small">не проверено в игре</span>
+      </h4>
+      <ul className="lf-recipes">
+        <li>
+          <span className="lf-io">
+            {parts.map((id) => (
+              <span key={id} className="lf-stack" title={itemName(items?.byId.get(id), id)}>
+                <ItemIcon id={id} size={18} />
+              </span>
+            ))}
+            <ArrowRight size={13} className="faint" />
+            <span className="lf-stack">
+              {items?.byId.has('createdieselgenerators:crude_oil_bucket') && (
+                <ItemIcon id="createdieselgenerators:crude_oil_bucket" size={18} />
+              )}
+              сырая нефть из запаса чанка
+            </span>
+          </span>
+          <span className="faint small">
+            качалка над чанком с нефтью; запас чанка показывает детектор нефти
+          </span>
+        </li>
+      </ul>
+    </div>
   );
 }
 

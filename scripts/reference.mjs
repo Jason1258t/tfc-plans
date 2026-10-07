@@ -381,6 +381,8 @@ function recipeIO(json) {
   const fluidIsOutput = !('result' in json) && !('results' in json);
   for (const [k, v] of Object.entries(json)) {
     if (k === 'fluid' && !fluidIsOutput) add(inputs, v);
+    // Верстак с шаблоном: ингредиенты в key { "C": {...} }
+    else if (k === 'key' && v && typeof v === 'object') add(inputs, Object.values(v));
     else if (OUT_KEYS.test(k)) add(outputs, v);
     else if (IN_KEYS.test(k)) add(k === 'catalyst' ? [] : inputs, v);
   }
@@ -408,7 +410,16 @@ function buildLiquidFuels(dataDirs, recipes, parse, itemTagMap, fluidNames) {
   for (const tag of FAMILY_TAGS) {
     const fluids = (ftags.get(tag) ?? []).filter((f) => !flowing(f));
     if (!fluids.length) continue;
-    families.set(tag, { tag, fluids, engines: null, burner: null, ieGenerator: null, blazeBurner: null, produce: [] });
+    families.set(tag, {
+      tag,
+      fluids,
+      engines: null,
+      burner: null,
+      ieGenerator: null,
+      blazeBurner: null,
+      produce: [],
+      use: [],
+    });
     for (const f of fluids) if (!familyOf.has(f)) familyOf.set(f, tag);
   }
   const ensure = (fluidOrTag) => {
@@ -425,6 +436,8 @@ function buildLiquidFuels(dataDirs, recipes, parse, itemTagMap, fluidNames) {
           ieGenerator: null,
           blazeBurner: null,
           produce: [],
+          use: [],
+          use: [],
         });
         for (const f of fluids) if (!familyOf.has(f)) familyOf.set(f, tag);
       }
@@ -440,6 +453,7 @@ function buildLiquidFuels(dataDirs, recipes, parse, itemTagMap, fluidNames) {
         ieGenerator: null,
         blazeBurner: null,
         produce: [],
+        use: [],
       });
       familyOf.set(fluidOrTag, tag);
     }
@@ -477,20 +491,26 @@ function buildLiquidFuels(dataDirs, recipes, parse, itemTagMap, fluidNames) {
   const famByOutput = (st) => {
     if (st.kind === 'fluid') return familyOf.get(st.id);
     if (st.kind === 'fluidTag') return families.has(st.id) ? st.id : undefined;
+    // Ведро жидкости в рецепте верстака (асфальт из ведра нефти) — тоже эта жидкость
+    if (st.kind === 'item' && typeof st.id === 'string' && st.id.endsWith('_bucket'))
+      return familyOf.get(st.id.replace(/_bucket$/, ''));
     return undefined;
   };
+  // Заодно «где используется»: рецепты, где жидкость семейства на входе (кроме тех, где она же получается)
   for (const [id, r] of recipes) {
     const j = r.json;
     if (!j || typeof j.type !== 'string' || j.type.endsWith('generator_fuel')) continue;
     const io = recipeIO(j);
-    const hit = new Set(io.outputs.map(famByOutput).filter(Boolean));
-    if (!hit.size) continue;
-    // Расплавленные/раскрытые теги предметов на входе — первые предметы для иконки
+    const made = new Set(io.outputs.map(famByOutput).filter(Boolean));
+    const used = new Set(io.inputs.map(famByOutput).filter((t) => t && !made.has(t)));
+    if (!made.size && !used.size) continue;
+    // Раскрытые теги предметов на входе — первые предметы для иконки
     const inputs = io.inputs.map((st) =>
       st.kind === 'tag' ? { ...st, items: (itemTagMap.get(st.id) ?? []).slice(0, 6) } : st,
     );
-    for (const tag of hit)
-      families.get(tag).produce.push({ id, type: j.type, inputs, outputs: io.outputs, meta: io.meta });
+    const rec = { id, type: j.type, inputs, outputs: io.outputs, meta: io.meta };
+    for (const tag of made) families.get(tag).produce.push(rec);
+    for (const tag of used) families.get(tag).use.push(rec);
   }
 
   const nameOf = (fluid) => fluidNames.get(fluid) ?? null;
