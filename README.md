@@ -111,6 +111,21 @@ npm run deploy
 
 Если jar TerraFirmaCraft в `mods/` нет, TFC берётся с GitHub (`MOD_SOURCES` в скрипте).
 
+## Вложения
+
+Файлы задач (картинки, датапаки, скрипты) лежат в Firestore кусками — через пакет
+[`firestore-files`](https://github.com/Jason1258t/firestore-files): Firebase Storage на бесплатном тарифе недоступен.
+Коллекция, лимит (25 МБ) и правила доступа задаются в [`src/lib/files.config.ts`](src/lib/files.config.ts);
+блок `files` в `firestore.rules` генерируется из него:
+
+```bash
+npm run rules:files     # после правки конфига
+npm run deploy:rules
+```
+
+`scripts/migrate-files.mjs` перезаливает файлы, загруженные до перехода на пакет (добавляет контрольную сумму);
+повторный запуск ничего не делает, `--dry-run` — только показать.
+
 ## Датапаки
 
 Страница «Датапаки»: черновики хранятся в Firestore (`datapacks`), экспорт — zip под 1.21.1 (`pack_format` 48).
