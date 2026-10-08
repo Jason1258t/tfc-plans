@@ -1,4 +1,16 @@
-import { ArrowRight, Download, FileBox, Plus, RotateCcw, Search, Sparkles, Upload, Wand2, X } from 'lucide-react';
+import {
+  ArrowRight,
+  Download,
+  FileBox,
+  Plus,
+  RotateCcw,
+  Search,
+  Sparkles,
+  Trash2,
+  Upload,
+  Wand2,
+  X,
+} from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { ItemIcon } from '../components/ItemIcon';
 import { ItemPicker } from '../components/ItemPicker';
@@ -9,7 +21,9 @@ import {
   applyRules,
   changesIn,
   exportSchematic,
+  invalidTargets,
   loadSchematic,
+  REMOVE,
   agentReplace,
   type AgentResult,
   type Rule,
@@ -76,11 +90,15 @@ function download(bytes: Uint8Array, name: string) {
 
 const outName = (name: string) => name.replace(/(\.nbt)?$/i, '_tfc.nbt');
 
+/** Мод предмета — у одноимённых предметов (TFC и ванильный «Медный люк») различается только он */
+const modOf = (id: string) => id.split(':')[0];
+
 export function SchematicsPage() {
   const items = useItems();
   const [schematics, setSchematics] = useState<Schematic[]>([]);
   const [replace, setReplace] = useState<Map<string, string>>(new Map());
   const [loadErrors, setLoadErrors] = useState<string[]>([]);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [filter, setFilter] = useState('');
   const [picking, setPicking] = useState<string | null>(null);
@@ -137,12 +155,19 @@ export function SchematicsPage() {
     if (!q) return blocks;
     return blocks.filter(({ id }) => {
       const to = replace.get(id);
-      const hay = [id, itemName(items?.byId.get(id), ''), to ?? '', to ? itemName(items?.byId.get(to), '') : ''];
+      const hay = [
+        id,
+        itemName(items?.byId.get(id), ''),
+        to === REMOVE ? 'удалён' : (to ?? ''),
+        to && to !== REMOVE ? itemName(items?.byId.get(to), '') : '',
+      ];
       return hay.join(' ').toLowerCase().includes(q);
     });
   }, [blocks, filter, replace, items]);
 
   const setTarget = (id: string, to: string | null) => {
+    // В схему пишем только id из библиотеки сборки (или удаление)
+    if (to && to !== REMOVE && !items?.byId.has(to)) return;
     const drop = (m: Map<string, unknown>) => {
       if (!m.has(id)) return m;
       const next = new Map(m);
@@ -187,6 +212,19 @@ export function SchematicsPage() {
   };
 
   const replacedTypes = blocks.filter((b) => replace.has(b.id)).length;
+
+  const downloadSchematic = async (s: Schematic) => {
+    if (!items) return;
+    const bad = invalidTargets(replace, items).filter((b) => s.counts.has(b.from));
+    if (bad.length) {
+      setExportError(
+        `Не скачано: замены на предметы, которых нет в сборке — ${bad.map((b) => `${b.from} → ${b.to}`).join(', ')}`,
+      );
+      return;
+    }
+    setExportError(null);
+    download(await exportSchematic(s, replace), outName(s.fileName));
+  };
 
   return (
     <div
@@ -236,6 +274,8 @@ export function SchematicsPage() {
         </div>
       )}
 
+      {exportError && <div className="error-box">{exportError}</div>}
+
       {schematics.length === 0 ? (
         <button className="schem-drop" onClick={() => inputRef.current?.click()}>
           <FileBox size={32} />
@@ -255,12 +295,14 @@ export function SchematicsPage() {
                     <span className="faint small">
                       {formatSize(s.fileSize)}
                       {s.size && ` · ${s.size.join('×')}`} · {s.counts.size} типов блоков
-                      {ch.types > 0 && ` · заменено ${ch.types} (${ch.blocks} шт.)`}
+                      {ch.types > 0 && ` · изменено ${ch.types} (${ch.blocks} шт.)`}
+                      {ch.removed > 0 && ` · удаляется ${ch.removed} шт.`}
                     </span>
                   </span>
                   <button
                     className="btn sm"
-                    onClick={async () => download(await exportSchematic(s, replace), outName(s.fileName))}
+                    onClick={() => downloadSchematic(s)}
+                    disabled={!items}
                     title={`Скачать как ${outName(s.fileName)}`}
                   >
                     <Download size={14} />
@@ -438,7 +480,7 @@ export function SchematicsPage() {
               const known = items?.byId.get(id);
               const to = replace.get(id);
               return (
-                <li key={id} className={cx('schem-row', to && 'replaced')}>
+                <li key={id} className={cx('schem-row', to && 'replaced', to === REMOVE && 'removed')}>
                   <div className="schem-src">
                     <ItemIcon id={id} size={28} />
                     <span className="grow schem-names">
@@ -467,6 +509,24 @@ export function SchematicsPage() {
                           <X size={15} />
                         </button>
                       </div>
+                    ) : to === REMOVE ? (
+                      <>
+                        <span className="schem-target schem-removed">
+                          <Trash2 size={18} className="faint" />
+                          <span className="grow schem-names">
+                            <span className="schem-name">Удалён из схемы</span>
+                            <span className="faint small">принтер не будет ставить этот блок</span>
+                          </span>
+                        </span>
+                        <button
+                          className="btn ghost sm icon"
+                          onClick={() => setTarget(id, null)}
+                          aria-label="Вернуть блок"
+                          title="Вернуть блок"
+                        >
+                          <X size={15} />
+                        </button>
+                      </>
                     ) : to ? (
                       <>
                         <button
@@ -478,6 +538,9 @@ export function SchematicsPage() {
                           <span className="grow schem-names">
                             <span className="schem-name">{itemName(items?.byId.get(to), to)}</span>
                             <code className="schem-id">{to}</code>
+                          </span>
+                          <span className={cx('tag', 'mod-tag', modOf(to) !== modOf(id) && 'mod-changed')}>
+                            {modOf(to)}
                           </span>
                           {reasons.get(id) && <Sparkles size={13} className="ai-ico" aria-label="Выбрано агентом" />}
                         </button>
@@ -507,9 +570,19 @@ export function SchematicsPage() {
                         )}
                       </>
                     ) : (
-                      <button className="btn ghost sm schem-choose" onClick={() => setPicking(id)}>
-                        Выбрать замену…
-                      </button>
+                      <>
+                        <button className="btn ghost sm schem-choose" onClick={() => setPicking(id)}>
+                          Выбрать замену…
+                        </button>
+                        <button
+                          className="btn ghost sm icon"
+                          onClick={() => setTarget(id, REMOVE)}
+                          aria-label="Убрать блок из схемы"
+                          title="Убрать блок из схемы"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </>
                     )}
                   </div>
                 </li>

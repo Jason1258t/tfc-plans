@@ -62,3 +62,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.item-picker-list .id b {
+  font-weight: 600;
+  color: var(--text-2);
+}

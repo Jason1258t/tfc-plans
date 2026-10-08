@@ -250,6 +250,36 @@
 
 .schem-choose {
   color: var(--text-3);
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.schem-row.removed {
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
+.schem-row.removed .schem-src .schem-name {
+  text-decoration: line-through;
+}
+
+.schem-removed {
+  cursor: default;
+}
+
+.schem-removed:hover {
+  border-color: transparent;
+}
+
+.mod-tag {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+/* Замена уводит блок в другой мод (minecraft → tfc) — подсвечиваем, чтобы одноимённые не путались */
+.mod-tag.mod-changed {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
 }
 
 @media (max-width: 700px) {

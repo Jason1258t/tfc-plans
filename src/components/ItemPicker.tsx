@@ -101,7 +101,10 @@ export function ItemPicker({
               <span className="grow">
                 <span className="name">{it.r ?? it.e}</span>
                 {it.r && <span className="en"> · {it.e}</span>}
-                <span className="id">{it.i}</span>
+                {/* Мод жирным: «Медный люк» есть и в TFC, и в ванили — различаются только им */}
+                <span className="id">
+                  <b>{it.i.split(':')[0]}</b>:{it.i.split(':').slice(1).join(':')}
+                </span>
               </span>
             </li>
           ))}

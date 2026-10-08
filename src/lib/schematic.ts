@@ -79,17 +79,44 @@ export async function loadSchematic(file: File): Promise<Schematic> {
   };
 }
 
+/** Значение в карте замен: блок убирается из схемы целиком (позиции удаляются, а не заменяются воздухом) */
+export const REMOVE = '#remove';
+
+/**
+ * Замены, которые нельзя записать в схему: цель не из библиотеки предметов сборки.
+ * Перед скачиванием — чтобы в схему попадал ровно тот id, что есть в сборке (minecraft:… не станет tfc:…).
+ */
+export function invalidTargets(replace: Map<string, string>, items: ItemIndex) {
+  return [...replace].filter(([, to]) => to !== REMOVE && !items.byId.has(to)).map(([from, to]) => ({ from, to }));
+}
+
 /** Новый файл с заменами (исходник в памяти не меняется) */
 export async function exportSchematic(s: Schematic, replace: Map<string, string>): Promise<Uint8Array> {
   const root = structuredClone(s.parsed.root);
-  for (const palette of paletteLists(root.value)) {
+  const palettes = paletteLists(root.value);
+  // Индексы удаляемых блоков — по первой палитре (по ней же считаются блоки в loadSchematic)
+  const removed = new Set<number>();
+  palettes[0]?.forEach((entry, i) => {
+    const name = nameOf(entry);
+    if (name && replace.get(name) === REMOVE) removed.add(i);
+  });
+  for (const palette of palettes) {
     for (const entry of palette) {
       if (entry.type !== T.Compound) continue;
       const name = entry.value.get('Name');
       if (name?.type !== T.String) continue;
       const to = replace.get(name.value);
-      if (to) entry.value.set('Name', { type: T.String, value: to });
+      // Удалённые остаются в палитре (на них больше нет ссылок) — индексы остальных не сдвигаются
+      if (to && to !== REMOVE) entry.value.set('Name', { type: T.String, value: to });
     }
+  }
+  const blocks = root.value.get('blocks');
+  if (removed.size && blocks?.type === T.List) {
+    blocks.value = blocks.value.filter((b) => {
+      if (b.type !== T.Compound) return true;
+      const state = b.value.get('state');
+      return !(state?.type === T.Int && removed.has(state.value));
+    });
   }
   return writeNbt(root, s.parsed.gzipped);
 }
@@ -97,13 +124,15 @@ export async function exportSchematic(s: Schematic, replace: Map<string, string>
 export function changesIn(s: Schematic, replace: Map<string, string>) {
   let types = 0;
   let blocks = 0;
+  let removed = 0;
   for (const [id, n] of s.counts) {
-    if (replace.has(id)) {
-      types++;
-      blocks += n;
-    }
+    const to = replace.get(id);
+    if (!to) continue;
+    if (to === REMOVE) removed += n;
+    types++;
+    blocks += n;
   }
-  return { types, blocks };
+  return { types, blocks, removed };
 }
 
 // ---------------------------------------------------------------- «умная» замена (пока по подстрокам)
