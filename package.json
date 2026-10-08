@@ -14,7 +14,8 @@
     "deploy": "firebase deploy",
     "deploy:rules": "firebase deploy --only firestore:rules",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" scripts/*.mjs",
-    "rules:files": "firestore-files rules --config src/lib/files.config.ts --write firestore.rules"
+    "rules:files": "firestore-files rules --config src/lib/files.config.ts --write firestore.rules",
+    "config": "node scripts/import-config.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
@@ -37,6 +38,7 @@
     "adm-zip": "^0.6.1",
     "oxlint": "^1.81.0",
     "prettier": "^3.9.9",
+    "smol-toml": "^1.9.0",
     "typescript": "~6.0.2",
     "vite": "^8.3.0"
   }

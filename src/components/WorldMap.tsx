@@ -9,7 +9,7 @@ export interface MapMarker {
   x: number;
   z: number;
   label: string;
-  kind: 'a' | 'b' | 'task';
+  kind: 'a' | 'b' | 'task' | 'spawn';
   color?: string;
 }
 
@@ -184,13 +184,22 @@ export function WorldMap({ profile, layer, waypoints, cityPos, markers, renderPo
           ? css('--accent', '#7c4')
           : m.kind === 'b'
             ? css('--diamond', '#4cc')
-            : css('--amethyst', '#a6f'));
+            : m.kind === 'spawn'
+              ? css('--gold', '#e8c040')
+              : css('--amethyst', '#a6f'));
       ctx.fillStyle = color;
       ctx.strokeStyle = 'rgba(0,0,0,0.75)';
       ctx.lineWidth = 2;
       ctx.beginPath();
       if (m.kind === 'task') ctx.rect(sx - 5, sy - 5, 10, 10);
-      else ctx.arc(sx, sy, 6, 0, Math.PI * 2);
+      else if (m.kind === 'spawn') {
+        // Ромб — центр спавна из конфига сервера
+        ctx.moveTo(sx, sy - 7);
+        ctx.lineTo(sx + 7, sy);
+        ctx.lineTo(sx, sy + 7);
+        ctx.lineTo(sx - 7, sy);
+        ctx.closePath();
+      } else ctx.arc(sx, sy, 6, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
       ctx.font = '600 12px Inter, system-ui, sans-serif';

@@ -23,7 +23,7 @@ import {
   type Point,
   type WorldSettings,
 } from '../lib/geo';
-import { cx } from '../lib/util';
+import { cx, timeAgo } from '../lib/util';
 import './MapPage.css';
 
 const LAYER_KEY = 'tfc-tm:map-layer';
@@ -117,6 +117,12 @@ function MapView({ geo, profile, world }: { geo: GeoData; profile: GeoProfile; w
     for (const t of tasks)
       if (t.place && t.status !== 'done')
         markers.push({ id: t.id, x: t.place.x, z: t.place.z, label: t.place.label || t.title, kind: 'task' });
+  const spawn = world.spawn
+    ? 'lat' in world.spawn
+      ? pointFromGeo(profile, world.spawn.lat, world.spawn.lon)
+      : world.spawn
+    : null;
+  if (spawn) markers.push({ id: 'spawn', x: spawn.x, z: spawn.z, label: 'Спавн', kind: 'spawn' });
   if (b) markers.push({ id: 'b', x: b.x, z: b.z, label: 'B', kind: 'b' });
   if (a) markers.push({ id: 'a', x: a.x, z: a.z, label: 'A', kind: 'a' });
 
@@ -131,11 +137,18 @@ function MapView({ geo, profile, world }: { geo: GeoData; profile: GeoProfile; w
             <Settings size={14} /> {geoName(profile.name)}
           </button>
         </div>
-        {!world.verified && (
-          <p className="map-warn small">
-            Параметры мира — по умолчанию из мода, со скриншотами сервера не сверены. Если координаты не сходятся с
-            игрой, проверьте профиль и масштаб в настройках.
+        {world.fromConfig ? (
+          <p className="faint small" style={{ margin: 0 }}>
+            Параметры мира — из конфига сервера ({world.fromConfig.source}, импортировал {world.fromConfig.importedBy}{' '}
+            {timeAgo(world.fromConfig.importedAt)}).
           </p>
+        ) : (
+          !world.verified && (
+            <p className="map-warn small">
+              Параметры мира — по умолчанию из мода, со скриншотами сервера не сверены. Если координаты не сходятся с
+              игрой, проверьте профиль и масштаб в настройках.
+            </p>
+          )
         )}
 
         <PointPanel
@@ -452,7 +465,7 @@ function WorldSettingsDialog({ geo, world, onClose }: { geo: GeoData; world: Wor
           </button>
           <button
             className="btn primary"
-            disabled={busy}
+            disabled={busy || !!world.fromConfig}
             onClick={async () => {
               setBusy(true);
               try {
@@ -468,54 +481,64 @@ function WorldSettingsDialog({ geo, world, onClose }: { geo: GeoData; world: Wor
         </>
       }
     >
-      <p className="faint small" style={{ margin: 0 }}>
-        Берутся из серверного конфига TFC Real World (папка мира): профиль карты и масштабы. Пустое поле масштаба — как
-        в профиле.
-      </p>
-      <label className="map-form-row">
-        <span className="label">Профиль</span>
-        <select
-          className="input"
-          value={draft.profile}
-          onChange={(e) => setDraft({ ...draft, profile: e.target.value })}
-        >
-          {profiles.map((p) => (
-            <option key={p.id} value={p.id}>
-              {geoName(p.name)} — {p.id}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="map-form-grid">
+      {world.fromConfig ? (
+        <p className="map-config-note small">
+          Профиль и масштабы взяты из импортированного конфига сервера <code>tfc_real_world/server.toml</code> (
+          {world.fromConfig.source}, {world.fromConfig.importedBy}, {timeAgo(world.fromConfig.importedAt)}) и здесь не
+          меняются. Обновить: <code>npm run config -- serverconfig.zip</code> (см. README, «Конфиги сервера»).
+        </p>
+      ) : (
+        <p className="faint small" style={{ margin: 0 }}>
+          Берутся из серверного конфига TFC Real World: профиль карты и масштабы. Пустое поле масштаба — как в профиле.
+          Надёжнее импортировать сам конфиг: <code>npm run config -- serverconfig.zip</code>.
+        </p>
+      )}
+      <fieldset className="map-fieldset" disabled={!!world.fromConfig}>
         <label className="map-form-row">
-          <span className="label">horizontal_scale</span>
-          <input
+          <span className="label">Профиль</span>
+          <select
             className="input"
-            inputMode="numeric"
-            placeholder={String(base?.horizontalScale ?? '')}
-            value={draft.horizontalScale ?? ''}
-            onChange={(e) => setDraft({ ...draft, horizontalScale: intOrNull(e.target.value) })}
-          />
+            value={draft.profile}
+            onChange={(e) => setDraft({ ...draft, profile: e.target.value })}
+          >
+            {profiles.map((p) => (
+              <option key={p.id} value={p.id}>
+                {geoName(p.name)} — {p.id}
+              </option>
+            ))}
+          </select>
         </label>
-        <label className="map-form-row">
-          <span className="label">vertical_scale</span>
+        <div className="map-form-grid">
+          <label className="map-form-row">
+            <span className="label">horizontal_scale</span>
+            <input
+              className="input"
+              inputMode="numeric"
+              placeholder={String(base?.horizontalScale ?? '')}
+              value={draft.horizontalScale ?? ''}
+              onChange={(e) => setDraft({ ...draft, horizontalScale: intOrNull(e.target.value) })}
+            />
+          </label>
+          <label className="map-form-row">
+            <span className="label">vertical_scale</span>
+            <input
+              className="input"
+              inputMode="numeric"
+              placeholder={String(base?.verticalScale ?? '')}
+              value={draft.verticalScale ?? ''}
+              onChange={(e) => setDraft({ ...draft, verticalScale: intOrNull(e.target.value) })}
+            />
+          </label>
+        </div>
+        <label className="row small">
           <input
-            className="input"
-            inputMode="numeric"
-            placeholder={String(base?.verticalScale ?? '')}
-            value={draft.verticalScale ?? ''}
-            onChange={(e) => setDraft({ ...draft, verticalScale: intOrNull(e.target.value) })}
+            type="checkbox"
+            checked={draft.verified}
+            onChange={(e) => setDraft({ ...draft, verified: e.target.checked })}
           />
+          Сверено с игрой (координаты городов совпадают)
         </label>
-      </div>
-      <label className="row small">
-        <input
-          type="checkbox"
-          checked={draft.verified}
-          onChange={(e) => setDraft({ ...draft, verified: e.target.checked })}
-        />
-        Сверено с игрой (координаты городов совпадают)
-      </label>
+      </fieldset>
       {world.updatedBy && (
         <p className="faint small" style={{ margin: 0 }}>
           Последнее изменение: {world.updatedBy}

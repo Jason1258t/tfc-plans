@@ -203,8 +203,34 @@ node scripts/seed-recipe-hints.mjs
 `horizontal_scale`/`vertical_scale` — радиус карты в блоках, за краями мир повторяется зеркально.
 Города, регионы и карты-картинки профилей берутся из jar мода (`scripts/geo.mjs` → `public/geo.json`, `public/geo/`).
 
-Профиль и масштабы нашего мира хранятся в Firestore `settings/world` и правятся на странице карты (шестерёнка):
-они должны совпадать с серверным конфигом TFC Real World. Пока не сверено — на карте висит предупреждение.
+Профиль, масштабы и центр спавна нашего мира берутся из **импортированного конфига сервера**
+(`config/server__tfc_real_world__server.toml`, см. ниже). Сейчас на сервере `horizontal_scale = 100000`,
+`vertical_scale = 50000` — около 200 м на блок по экватору (Лондон — Париж ≈ 1900 блоков); спавн — у Милана (45.47° с. ш., 10.94° в. д.), он отмечен на карте.
+Если конфиг не импортирован, действуют ручные настройки `settings/world` (шестерёнка на странице карты).
+
+## Конфиги сервера
+
+Скрипт `scripts/import-config.mjs` разбирает TOML-конфиги модов и сохраняет их в Firestore, в коллекцию `config` —
+сайт читает настройки оттуда, а не из ручного ввода.
+
+```bash
+npm run config -- ~/Downloads/serverconfig.zip
+```
+
+- Вход — zip или папка. Путь конфига считается от `serverconfig/`, `config/` или `defaultconfigs/`
+  (`serverconfig/tfc_real_world/server.toml` → `tfc_real_world/server.toml`).
+- Один файл — один документ `config/{scope}__{путь, где / → __}`:
+  `{ scope, path, mod, values, sha1, source, importedBy, importedAt }`, `values` — разобранный TOML без комментариев.
+  Повторный импорт перезаписывает документ целиком.
+- `--scope <имя>` — чьи это настройки (по умолчанию `server`). Например, клиентские конфиги конкретного игрока:
+  `npm run config -- ~/instance/config --scope jason --only cold_sweat`.
+- `--only <подстрока пути>` — только подходящие файлы (можно несколько раз), `--dry-run` — показать без записи.
+- Пишет от имени залогиненного `firebase login` (как `pack-release`); сайту коллекция доступна только на чтение.
+- Чтение на сайте: `useModConfig(path, scope)` и `configValue(c, 'раздел.ключ', 'number')` из `src/lib/config.ts`.
+
+Что сейчас используется: `tfc_real_world/server.toml` — карта мира (`map_settings.map_profile`,
+`generation_modes.horizontal_scale`/`vertical_scale`, `spawn_settings`). `tfc_eratosthenes-server.toml` сохранён
+для справки: Eratosthenes берёт масштаб у TFC Real World и проецирует так же (`TFC_REAL_WORLD_FULL_WORLD`).
 
 ## Модель данных (Firestore)
 
@@ -218,6 +244,7 @@ node scripts/seed-recipe-hints.mjs
 | `schematics`  | библиотека схем: `name`, `fileName`, `fileId` (исходник в `files`), `replace[]` ({from, to}, `#remove` — удалить)                                                                |
 | `recipeHints` | подсказки по типам рецептов: `title`, `body`, `source`                                                                                                                           |
 | `packUpdates` | записи об обновлениях сборки (создаёт деплой), `notes` — патчноут                                                                                                                |
+| `config`      | конфиги модов из `npm run config`: `scope`, `path`, `mod`, `values` (TOML), `importedBy`, `importedAt`                                                                           |
 | `settings`    | `world`: профиль и масштабы мира TFC Real World                                                                                                                                  |
 
 Пункт чеклиста: `{ id, text, itemId?, qty?, got?, done? }`. Если есть `itemId`, это ресурс «собрано got из qty»,

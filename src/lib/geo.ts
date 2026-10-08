@@ -1,6 +1,7 @@
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { authReady, db } from '../firebase';
+import { configValue, useModConfig, type ModConfig } from './config';
 import { blockToGeo, geoToBlock, greatCircleKm, insideMap, type WorldProjection } from './projection';
 
 /** География TFC Real World из сборки (public/geo.json, scripts/geo.mjs) */
@@ -70,6 +71,10 @@ export interface WorldSettings {
   verticalScale: number | null;
   /** Сверено с конфигом сервера */
   verified: boolean;
+  /** Параметры взяты из импортированного конфига сервера (config/server__tfc_real_world__server.toml) */
+  fromConfig?: Pick<ModConfig, 'importedAt' | 'importedBy' | 'source'>;
+  /** Центр спавна из конфига: GEOGRAPHIC — широта/долгота, CLASSIC — блоки */
+  spawn?: { lat: number; lon: number } | { x: number; z: number };
   note?: string;
   updatedBy?: string;
   updatedAt?: number;
@@ -82,7 +87,37 @@ export const DEFAULT_WORLD: WorldSettings = {
   verified: false,
 };
 
+/** Параметры мира из серверного конфига TFC Real World */
+function worldFromConfig(c: ModConfig): WorldSettings {
+  const mode = configValue(c, 'spawn_settings.spawn_mode', 'string');
+  const lat = configValue(c, 'spawn_settings.spawn_center_latitude', 'number');
+  const lon = configValue(c, 'spawn_settings.spawn_center_longitude', 'number');
+  const x = configValue(c, 'tfc_spawn_settings.spawn_center_x', 'number');
+  const z = configValue(c, 'tfc_spawn_settings.spawn_center_z', 'number');
+  return {
+    // В конфиге — DEFAULT:FULL_EQUAL_EARTH, в geo.json id в нижнем регистре
+    profile: configValue(c, 'map_settings.map_profile', 'string')?.toLowerCase() ?? DEFAULT_WORLD.profile,
+    horizontalScale: configValue(c, 'generation_modes.horizontal_scale', 'number') ?? null,
+    verticalScale: configValue(c, 'generation_modes.vertical_scale', 'number') ?? null,
+    verified: true,
+    fromConfig: { importedAt: c.importedAt, importedBy: c.importedBy, source: c.source },
+    spawn:
+      mode === 'GEOGRAPHIC' && lat !== undefined && lon !== undefined
+        ? { lat, lon }
+        : mode === 'CLASSIC' && x !== undefined && z !== undefined
+          ? { x, z }
+          : undefined,
+  };
+}
+
+/** Импортированный конфиг сервера главнее ручных настроек (settings/world — запасной вариант) */
 export function useWorldSettings(): WorldSettings {
+  const manual = useManualWorldSettings();
+  const config = useModConfig('tfc_real_world/server.toml');
+  return useMemo(() => (config ? worldFromConfig(config) : manual), [config, manual]);
+}
+
+function useManualWorldSettings(): WorldSettings {
   const [s, setS] = useState<WorldSettings>(DEFAULT_WORLD);
   useEffect(() => {
     if (!db) return;

@@ -146,6 +146,12 @@ service cloud.firestore {
       allow delete: if signedIn();
     }
 
+    // Конфиги модов с сервера/инстанса — пишет только scripts/import-config.mjs (от имени владельца проекта)
+    match /config/{id} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     // Библиотека схем: исходник — в files/{fileId}, здесь имя и замены
     match /schematics/{id} {
       allow read: if signedIn();

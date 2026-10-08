@@ -10,17 +10,10 @@
  *   node scripts/pack-release.mjs --dry-run — показать разницу, ничего не записывая
  *   … --prev <файл>                         — сравнить с локальным снимком вместо опубликованного
  */
-import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
-import { createRequire } from 'node:module';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const PROJECT = JSON.parse(fs.readFileSync(path.join(ROOT, '.firebaserc'), 'utf8')).projects.default;
-const SITE = `https://${PROJECT}.web.app`;
-const DOCS = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;
+import { deployer, DOCS, ROOT, SITE, toValue, token } from './firestore-rest.mjs';
 const dryRun = process.argv.includes('--dry-run');
 const LIST_CAP = 3000;
 const CHANGELOG_CAP = 3000;
@@ -147,38 +140,6 @@ async function changelogs(mods) {
     out[m.id] = text;
   }
   return out;
-}
-
-// ---------------------------------------------------------------- Firestore REST
-
-function toValue(v) {
-  if (v === null || v === undefined) return { nullValue: null };
-  if (typeof v === 'boolean') return { booleanValue: v };
-  if (typeof v === 'number') return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
-  if (typeof v === 'string') return { stringValue: v };
-  if (Array.isArray(v)) return { arrayValue: { values: v.map(toValue) } };
-  return { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, toValue(x)])) } };
-}
-
-async function token() {
-  const require = createRequire(import.meta.url);
-  const fbRoot = execFileSync('npm', ['root', '-g'], { encoding: 'utf8' }).trim();
-  const auth = require(path.join(fbRoot, 'firebase-tools/lib/auth'));
-  const acc = auth.getGlobalDefaultAccount();
-  if (!acc) throw new Error('Нужно выполнить firebase login');
-  const { access_token } = await auth.getAccessToken(acc.tokens.refresh_token, [
-    'https://www.googleapis.com/auth/cloud-platform',
-  ]);
-  return access_token;
-}
-
-function deployer() {
-  if (process.env.TFC_NICK) return process.env.TFC_NICK;
-  try {
-    return execFileSync('git', ['config', 'user.name'], { encoding: 'utf8' }).trim() || 'deploy';
-  } catch {
-    return 'deploy';
-  }
 }
 
 // ---------------------------------------------------------------- main

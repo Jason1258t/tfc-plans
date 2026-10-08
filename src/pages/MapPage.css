@@ -293,3 +293,25 @@
   width: 8px;
   height: 8px;
 }
+
+.map-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.map-fieldset:disabled {
+  opacity: 0.6;
+}
+
+.map-config-note {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  line-height: 1.45;
+}
