@@ -1,5 +1,7 @@
 import {
   ArrowRight,
+  BookmarkPlus,
+  Check,
   Download,
   FileBox,
   Plus,
@@ -14,7 +16,9 @@ import {
 import { useMemo, useRef, useState } from 'react';
 import { ItemIcon } from '../components/ItemIcon';
 import { ItemPicker } from '../components/ItemPicker';
-import { formatSize } from '../lib/files';
+import { SchematicLibrary } from '../components/SchematicLibrary';
+import { useData } from '../data/DataContext';
+import { filesEnabled, formatSize } from '../lib/files';
 import { geminiEnabled } from '../lib/gemini';
 import { itemName, useItems } from '../lib/items';
 import {
@@ -30,6 +34,7 @@ import {
   type RuleResult,
   type Schematic,
 } from '../lib/schematic';
+import { saveToLibrary } from '../lib/schematicLibrary';
 import { cx } from '../lib/util';
 import './SchematicsPage.css';
 
@@ -90,11 +95,20 @@ function download(bytes: Uint8Array, name: string) {
 
 const outName = (name: string) => name.replace(/(\.nbt)?$/i, '_tfc.nbt');
 
+/** Отпечаток замен одной схемы — понять, отличаются ли они от сохранённых в библиотеке */
+const replaceSig = (s: Schematic, replace: Map<string, string>) =>
+  JSON.stringify([...replace].filter(([from]) => s.counts.has(from)).sort());
+
 /** Мод предмета — у одноимённых предметов (TFC и ванильный «Медный люк») различается только он */
 const modOf = (id: string) => id.split(':')[0];
 
 export function SchematicsPage() {
   const items = useItems();
+  const { nick } = useData();
+  /** key схемы → идёт сохранение в библиотеку / текст ошибки */
+  const [saving, setSaving] = useState<Record<string, 'saving' | string>>({});
+  /** key схемы → замены на момент сохранения (галочка, пока их не меняли) */
+  const [savedSig, setSavedSig] = useState<Record<string, string>>({});
   const [schematics, setSchematics] = useState<Schematic[]>([]);
   const [replace, setReplace] = useState<Map<string, string>>(new Map());
   const [loadErrors, setLoadErrors] = useState<string[]>([]);
@@ -213,9 +227,9 @@ export function SchematicsPage() {
 
   const replacedTypes = blocks.filter((b) => replace.has(b.id)).length;
 
-  const downloadSchematic = async (s: Schematic) => {
+  const downloadSchematic = async (s: Schematic, rep = replace) => {
     if (!items) return;
-    const bad = invalidTargets(replace, items).filter((b) => s.counts.has(b.from));
+    const bad = invalidTargets(rep, items).filter((b) => s.counts.has(b.from));
     if (bad.length) {
       setExportError(
         `Не скачано: замены на предметы, которых нет в сборке — ${bad.map((b) => `${b.from} → ${b.to}`).join(', ')}`,
@@ -223,7 +237,30 @@ export function SchematicsPage() {
       return;
     }
     setExportError(null);
-    download(await exportSchematic(s, replace), outName(s.fileName));
+    download(await exportSchematic(s, rep), outName(s.fileName));
+  };
+
+  const save = async (s: Schematic) => {
+    setSaving((m) => ({ ...m, [s.key]: 'saving' }));
+    try {
+      const id = await saveToLibrary(s, replace, nick);
+      setSchematics((list) => list.map((x) => (x.key === s.key ? { ...x, libraryId: id } : x)));
+      setSavedSig((m) => ({ ...m, [s.key]: replaceSig(s, replace) }));
+      setSaving((m) => {
+        const next = { ...m };
+        delete next[s.key];
+        return next;
+      });
+    } catch (e) {
+      setSaving((m) => ({ ...m, [s.key]: `Не сохранено: ${e instanceof Error ? e.message : e}` }));
+    }
+  };
+
+  /** Схема из библиотеки — в редактор вместе с её заменами */
+  const openSaved = (s: Schematic, rep: Map<string, string>) => {
+    setSchematics((list) => [...list.filter((x) => x.key !== s.key), s]);
+    setReplace((m) => new Map([...m, ...rep]));
+    setSavedSig((m) => ({ ...m, [s.key]: replaceSig(s, rep) }));
   };
 
   return (
@@ -308,6 +345,32 @@ export function SchematicsPage() {
                     <Download size={14} />
                     Скачать
                   </button>
+                  {filesEnabled && (
+                    <button
+                      className="btn sm"
+                      onClick={() => save(s)}
+                      disabled={saving[s.key] === 'saving'}
+                      title={
+                        s.libraryId
+                          ? 'Записать текущие замены в библиотеку'
+                          : 'Сохранить схему с заменами в общую библиотеку'
+                      }
+                    >
+                      {s.libraryId && savedSig[s.key] === replaceSig(s, replace) ? (
+                        <Check size={14} />
+                      ) : (
+                        <BookmarkPlus size={14} />
+                      )}
+                      {saving[s.key] === 'saving'
+                        ? 'Сохраняю…'
+                        : s.libraryId
+                          ? 'Обновить в библиотеке'
+                          : 'В библиотеку'}
+                    </button>
+                  )}
+                  {saving[s.key] && saving[s.key] !== 'saving' && (
+                    <span className="schem-save-error small">{saving[s.key]}</span>
+                  )}
                   <button
                     className="btn ghost sm icon"
                     onClick={() => setSchematics((l) => l.filter((x) => x.key !== s.key))}
@@ -590,6 +653,14 @@ export function SchematicsPage() {
             })}
           </ul>
         </>
+      )}
+
+      {filesEnabled && (
+        <SchematicLibrary
+          openIds={new Set(schematics.map((s) => s.libraryId).filter((x): x is string => !!x))}
+          onOpen={openSaved}
+          onDownload={downloadSchematic}
+        />
       )}
     </div>
   );

@@ -1,6 +1,17 @@
 import { collection, deleteDoc, doc, onSnapshot, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { authReady, db } from '../firebase';
-import type { Artifact, Datapack, Group, NewArtifact, NewDatapack, NewGroup, NewTask, Task } from '../types';
+import type {
+  Artifact,
+  Datapack,
+  Group,
+  NewArtifact,
+  NewDatapack,
+  NewGroup,
+  NewSavedSchematic,
+  NewTask,
+  SavedSchematic,
+  Task,
+} from '../types';
 
 /** Минимальный CRUD + подписка на коллекцию. Реализации: Firestore и localStorage. */
 export interface CollectionStore<T extends { id: string }, N> {
@@ -99,3 +110,4 @@ export const tasksStore = make<Task, NewTask>('tasks');
 export const groupsStore = make<Group, NewGroup>('groups');
 export const artifactsStore = make<Artifact, NewArtifact>('artifacts');
 export const datapacksStore = make<Datapack, NewDatapack>('datapacks');
+export const schematicsStore = make<SavedSchematic, NewSavedSchematic>('schematics');

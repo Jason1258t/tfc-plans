@@ -146,6 +146,20 @@ service cloud.firestore {
       allow delete: if signedIn();
     }
 
+    // Библиотека схем: исходник — в files/{fileId}, здесь имя и замены
+    match /schematics/{id} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.fileId is string
+        && request.resource.data.replace is list
+        && request.resource.data.replace.size() <= 2000
+        && nick(request.resource.data.updatedBy);
+      allow delete: if signedIn();
+    }
+
     match /artifacts/{id} {
       allow read: if signedIn();
       allow create, update: if signedIn()

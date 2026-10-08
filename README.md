@@ -26,6 +26,9 @@ React + Vite + Firebase (Firestore, Anonymous Auth, AI Logic / Gemini).
   бензин, дизель, этанол, растительное масло, биодизель), еда, температуры металлов.
 - **Карта мира TFC Real World**: обычный вид (атлас из высот мода) и тематические слои, клик — координаты точки,
   город ↔ координаты блока, расстояние и направление, места задач.
+- **Замена блоков в схемах Create (.nbt)**: вручную, правилами или агентом; блок можно убрать из схемы целиком.
+  В схему пишется ровно тот id, что есть в библиотеке предметов. **Библиотека схем**: общая, исходник + замены,
+  скачивается уже с заменами, можно открыть и поправить или удалить.
 - **Обновления сборки**: при деплое — запись о том, что поменялось в модах, и патчноут от модели.
 - Светлая и тёмная тема (по системной настройке), палитра взята из Minecraft.
 
@@ -205,16 +208,17 @@ node scripts/seed-recipe-hints.mjs
 
 ## Модель данных (Firestore)
 
-| Коллекция   | Поля                                                                                                                                     |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `tasks`     | `title`, `description` (md), `status`, `priority` 0–3, `rating` (Elo), `checklist[]`, `icon`, `groupId`, `author`, `assignee`, `place` ({x, z, label}), `createdAt`, `updatedAt` |
-| `groups`    | `name`, `icon`, `order`, `author`, `createdAt`                                                                                           |
-| `artifacts` | `title`, `content` (md), `taskId`, `author`, `updatedBy`, `createdAt`, `updatedAt`                                                       |
-| `files`       | вложения — пакет firestore-files (метаданные + `chunks/{n}`)                                                                         |
-| `datapacks`   | `name`, `namespace`, `description`, `entries[]` (`path`, `content`, `kind`, `sourceRecipe`, `sourceHash`)                            |
-| `recipeHints` | подсказки по типам рецептов: `title`, `body`, `source`                                                                               |
-| `packUpdates` | записи об обновлениях сборки (создаёт деплой), `notes` — патчноут                                                                    |
-| `settings`    | `world`: профиль и масштабы мира TFC Real World                                                                                      |
+| Коллекция     | Поля                                                                                                                                                                             |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tasks`       | `title`, `description` (md), `status`, `priority` 0–3, `rating` (Elo), `checklist[]`, `icon`, `groupId`, `author`, `assignee`, `place` ({x, z, label}), `createdAt`, `updatedAt` |
+| `groups`      | `name`, `icon`, `order`, `author`, `createdAt`                                                                                                                                   |
+| `artifacts`   | `title`, `content` (md), `taskId`, `author`, `updatedBy`, `createdAt`, `updatedAt`                                                                                               |
+| `files`       | вложения — пакет firestore-files (метаданные + `chunks/{n}`)                                                                                                                     |
+| `datapacks`   | `name`, `namespace`, `description`, `entries[]` (`path`, `content`, `kind`, `sourceRecipe`, `sourceHash`)                                                                        |
+| `schematics`  | библиотека схем: `name`, `fileName`, `fileId` (исходник в `files`), `replace[]` ({from, to}, `#remove` — удалить)                                                                |
+| `recipeHints` | подсказки по типам рецептов: `title`, `body`, `source`                                                                                                                           |
+| `packUpdates` | записи об обновлениях сборки (создаёт деплой), `notes` — патчноут                                                                                                                |
+| `settings`    | `world`: профиль и масштабы мира TFC Real World                                                                                                                                  |
 
 Пункт чеклиста: `{ id, text, itemId?, qty?, got?, done? }`. Если есть `itemId`, это ресурс «собрано got из qty»,
 иначе обычная галочка.

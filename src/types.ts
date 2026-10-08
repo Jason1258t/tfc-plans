@@ -122,3 +122,27 @@ export interface Datapack {
 }
 
 export type NewDatapack = Omit<Datapack, 'id' | 'createdAt' | 'updatedAt'>;
+
+/**
+ * Схема в библиотеке: исходный .nbt лежит в хранилище файлов (files/{fileId}, без задачи),
+ * а замены хранятся отдельно — скачивание собирает файл с заменами, схему можно открыть и поправить.
+ */
+export interface SavedSchematic {
+  id: string;
+  name: string;
+  fileName: string;
+  fileId: string;
+  fileSize: number;
+  /** Габариты x×y×z, если есть в файле */
+  size: number[] | null;
+  /** Всего блоков в схеме (до удалений) */
+  blocks: number;
+  /** Замены: to = '#remove' — блок удаляется из схемы */
+  replace: { from: string; to: string }[];
+  author: string;
+  updatedBy: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type NewSavedSchematic = Omit<SavedSchematic, 'id' | 'createdAt' | 'updatedAt'>;

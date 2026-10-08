@@ -16,6 +16,10 @@ import type { ItemIndex } from './items';
  */
 export interface Schematic {
   key: string;
+  /** Исходный файл — для сохранения в библиотеку */
+  file: File;
+  /** Открыта из библиотеки: id записи */
+  libraryId?: string;
   fileName: string;
   fileSize: number;
   parsed: ParsedNbt;
@@ -71,6 +75,7 @@ export async function loadSchematic(file: File): Promise<Schematic> {
 
   return {
     key: `${file.name}-${file.size}-${file.lastModified}`,
+    file,
     fileName: file.name,
     fileSize: file.size,
     parsed,

@@ -368,3 +368,58 @@
   border-color: var(--amethyst);
   background: var(--amethyst-soft);
 }
+
+.schem-save-error {
+  color: var(--danger);
+}
+
+/* ------------------------------------------------------------------ библиотека */
+
+.schem-library {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.schem-library h3 {
+  margin: 0;
+}
+
+.schem-library p {
+  margin: 0;
+}
+
+.schem-lib-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 500;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.schem-lib-name svg {
+  opacity: 0;
+  flex: none;
+}
+
+.schem-lib-name:hover svg,
+.schem-lib-name:focus-visible svg {
+  opacity: 1;
+}
+
+@media (max-width: 700px) {
+  .schem-file {
+    flex-wrap: wrap;
+  }
+  .schem-file > .grow {
+    flex-basis: calc(100% - 40px);
+  }
+}
