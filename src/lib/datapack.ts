@@ -2,7 +2,8 @@ import { strToU8, zipSync } from 'fflate';
 import type { Datapack, DatapackEntry } from '../types';
 import { recipeHash } from './hash';
 import type { ItemIndex } from './items';
-import { itemRefsOf, recipePath, type Recipe, type RecipeCatalog } from './recipes';
+import { entryRecipeId, recipePathOf, targetFromJson } from './kubejsFix';
+import { itemRefsOf, kubejsHits, recipePath, type Recipe, type RecipeCatalog } from './recipes';
 import { uid } from './util';
 
 /** pack_format датапаков Minecraft 1.21.1 */
@@ -59,6 +60,39 @@ export function entryFromRecipe(
 }
 
 /** Тип рецепта из текста JSON (для подсказки при правке) */
+/** Рецепт датапака под удалением KubeJS: какие правила его режут (только add/replace — remove и так удаляет) */
+export function kubejsIssues(pack: Datapack, catalog: RecipeCatalog | null) {
+  const rules = catalog?.kubejs?.rules;
+  const out = new Map<string, number[]>();
+  if (!rules?.length) return out;
+  for (const e of pack.entries) {
+    if (e.kind !== 'add' && e.kind !== 'replace') continue;
+    const id = entryRecipeId(e.path);
+    if (!id) continue;
+    let json: Record<string, unknown>;
+    try {
+      json = JSON.parse(e.content);
+    } catch {
+      continue;
+    }
+    const hits = kubejsHits(rules, targetFromJson(id, json));
+    if (hits.removed.length) out.set(e.id, hits.removed);
+  }
+  return out;
+}
+
+/** Рецепт из датапака с новым id: тот же JSON, другой путь */
+export function entryWithId(content: string, id: string, sourceRecipe?: string): DatapackEntry {
+  return {
+    id: uid(),
+    kind: 'add',
+    path: recipePathOf(id),
+    content,
+    recipeType: typeOfContent(content),
+    ...(sourceRecipe ? { sourceRecipe } : {}),
+  };
+}
+
 export function typeOfContent(content: string): string | undefined {
   try {
     const t = (JSON.parse(content) as { type?: unknown }).type;

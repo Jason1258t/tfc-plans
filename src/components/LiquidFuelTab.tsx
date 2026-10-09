@@ -423,9 +423,7 @@ function PumpjackMethod({ items }: { items: ItemIndex | null }) {
               сырая нефть из запаса чанка
             </span>
           </span>
-          <span className="faint small">
-            качалка над чанком с нефтью; запас чанка показывает детектор нефти
-          </span>
+          <span className="faint small">качалка над чанком с нефтью; запас чанка показывает детектор нефти</span>
         </li>
       </ul>
     </div>

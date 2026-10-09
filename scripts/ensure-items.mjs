@@ -32,3 +32,10 @@ if (reason) {
     stdio: 'inherit',
   });
 }
+
+// Скрипты KubeJS импортированы (instance/kubejs), а разбора нет — пересобрать public/kubejs.json
+const kubejsJson = fileURLToPath(new URL('../public/kubejs.json', import.meta.url));
+if (fs.existsSync(fileURLToPath(new URL('../instance/kubejs', import.meta.url))) && !fs.existsSync(kubejsJson)) {
+  console.log('[kubejs] разбор скриптов не найден — собираю…');
+  execFileSync(process.execPath, [fileURLToPath(new URL('./kubejs.mjs', import.meta.url))], { stdio: 'inherit' });
+}

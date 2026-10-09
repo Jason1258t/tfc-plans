@@ -49,6 +49,7 @@ export function Header({ nick, onChangeNick }: Props) {
         <NavLink to="/docs">Документы</NavLink>
         <NavLink to="/schematics">Схемы</NavLink>
         <NavLink to="/datapacks">Датапаки</NavLink>
+        <NavLink to="/recipes">Рецепты</NavLink>
         <NavLink to="/map">Карта</NavLink>
         <NavLink to="/reference">Справочник</NavLink>
         <NavLink to="/updates" title={fresh ? 'Есть новое обновление сборки' : undefined}>

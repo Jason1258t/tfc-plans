@@ -44,3 +44,7 @@ mods/*
 
 # Локальные настройки Claude Code
 .claude/
+
+# Папки инстанса (kubejs и т. п.) — импортируются npm run kubejs, в git не храним
+instance/
+public/kubejs.json

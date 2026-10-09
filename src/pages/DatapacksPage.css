@@ -233,3 +233,9 @@
     width: auto !important;
   }
 }
+
+.dp-kjs {
+  flex: none;
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}

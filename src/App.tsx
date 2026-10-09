@@ -8,6 +8,7 @@ import { readNick, writeNick } from './lib/nick';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { DocPage } from './pages/DocPage';
 import { DatapacksPage } from './pages/DatapacksPage';
+import { RecipesPage } from './pages/RecipesPage';
 import { DocsPage } from './pages/DocsPage';
 import { ReferencePage } from './pages/ReferencePage';
 import { UpdatesPage } from './pages/UpdatesPage';
@@ -38,6 +39,7 @@ export default function App() {
             <Route path="/docs/:id" element={<DocPage />} />
             <Route path="/schematics" element={<SchematicsPage />} />
             <Route path="/datapacks" element={<DatapacksPage />} />
+            <Route path="/recipes" element={<RecipesPage />} />
             <Route path="/reference" element={<ReferencePage />} />
             <Route path="/updates" element={<UpdatesPage />} />
             <Route path="/map" element={<MapPage />} />

@@ -10,7 +10,7 @@
 
 .cat-filters select.input {
   width: auto;
-  max-width: 280px;
+  max-width: 240px;
 }
 
 .cat-item-chip {
@@ -24,14 +24,29 @@
   background: var(--surface-2);
 }
 
+.cat-browser {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
 .cat-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 58vh;
-  overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius);
+}
+
+.cat-list.scroll {
+  max-height: 58vh;
+  overflow-y: auto;
+}
+
+.cat-kjs {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
 }
 
 .cat-row + .cat-row {
@@ -123,5 +138,8 @@
   .cat-src,
   .cat-main .tag {
     display: none;
+  }
+  .cat-actions {
+    flex-wrap: wrap;
   }
 }

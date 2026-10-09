@@ -1,0 +1,137 @@
+.kjs-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kjs-section + .kjs-section {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.kjs-section h3 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+}
+
+.kjs-section p {
+  margin: 0;
+}
+
+.kjs-rules {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kjs-rules li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  border-left: 3px solid var(--danger);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  min-width: 0;
+}
+
+.kjs-rules li.kjs-maybe {
+  border-left-color: var(--imp-2);
+}
+
+.kjs-loc {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.kjs-code,
+.kjs-diff,
+.kjs-script {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.kjs-patch {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.kjs-diff,
+.kjs-script {
+  margin: 0;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  white-space: pre-wrap;
+  box-sizing: border-box;
+}
+
+.kjs-script {
+  max-height: 240px;
+  overflow: auto;
+}
+
+.kjs-diff .del {
+  color: var(--danger);
+}
+
+.kjs-diff .add {
+  color: var(--accent);
+}
+
+.kjs-id {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kjs-ok {
+  color: var(--accent);
+}
+
+.kjs-bad {
+  color: var(--danger);
+}
+
+.kjs-way {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ---------------------------------------------------------------- значки статуса в каталоге */
+
+.kjs-badge {
+  flex: none;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.kjs-badge.removed {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+
+.kjs-badge.changed {
+  color: var(--imp-2);
+  border-color: color-mix(in srgb, var(--imp-2) 45%, var(--border));
+}
+
+.kjs-badge.added {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}

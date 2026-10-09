@@ -444,7 +444,6 @@ function buildLiquidFuels(dataDirs, recipes, parse, itemTagMap, fluidNames) {
           blazeBurner: null,
           produce: [],
           use: [],
-          use: [],
         });
         for (const f of fluids) if (!familyOf.has(f)) familyOf.set(f, tag);
       }

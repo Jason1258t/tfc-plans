@@ -1,7 +1,20 @@
-import { AlertTriangle, Download, FileCode2, FilePen, FilePlus2, Package, Paperclip, Plus, Trash2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  Download,
+  FileCode2,
+  FilePen,
+  FilePlus2,
+  FileTerminal,
+  Package,
+  Paperclip,
+  Plus,
+  ShieldAlert,
+  Trash2,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { EntryEditor } from '../components/EntryEditor';
+import { KubejsConstructor } from '../components/KubejsConstructor';
 import { Modal } from '../components/Modal';
 import { RecipeCatalog } from '../components/RecipeCatalog';
 import { useData } from '../data/DataContext';
@@ -9,6 +22,8 @@ import { datapacksStore } from '../data/store';
 import {
   buildZip,
   entryFromRecipe,
+  entryWithId,
+  kubejsIssues,
   PACK_FORMAT,
   sanitizeNamespace,
   staleIssues,
@@ -17,6 +32,7 @@ import {
 } from '../lib/datapack';
 import { filesEnabled, uploadFile } from '../lib/files';
 import { useItems } from '../lib/items';
+import { entryRecipeId, kubejsScript, scriptFileName } from '../lib/kubejsFix';
 import { useRecipes, type Recipe } from '../lib/recipes';
 import { cx, timeAgo, uid } from '../lib/util';
 import type { Datapack, DatapackEntry } from '../types';
@@ -133,8 +149,15 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
   const [catalogMode, setCatalogMode] = useState<'template' | 'existing' | null>(null);
   const [editing, setEditing] = useState<DatapackEntry | null>(null);
   const [attaching, setAttaching] = useState(false);
+  /** Конструктор для рецепта, который режет KubeJS; entryId — рецепт этого датапака */
+  const [constructing, setConstructing] = useState<{
+    recipeId: string;
+    json: Record<string, unknown>;
+    entryId?: string;
+  } | null>(null);
 
   const items = useItems();
+  const kjsHits = useMemo(() => kubejsIssues(pack, catalog), [pack, catalog]);
   const issues = useMemo(() => [...validatePack(pack), ...staleIssues(pack, catalog, items)], [pack, catalog, items]);
   const update = (patch: Partial<Datapack>) => datapacksStore.update(pack.id, { ...patch, updatedBy: nick });
 
@@ -159,6 +182,48 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
   };
 
   const exportZip = () => download(buildZip(pack), zipName(pack));
+
+  /** Рецепты датапака одним KubeJS-скриптом (event.custom) — их удаления KubeJS не трогают */
+  const recipeEntries = pack.entries.filter((e) => (e.kind === 'add' || e.kind === 'replace') && entryRecipeId(e.path));
+  const exportScript = () => {
+    const recipes = recipeEntries.flatMap((e) => {
+      try {
+        return [{ id: entryRecipeId(e.path)!, json: JSON.parse(e.content) }];
+      } catch {
+        return [];
+      }
+    });
+    const text = kubejsScript(recipes, `Рецепты датапака «${pack.name}»`);
+    const url = URL.createObjectURL(new Blob([text], { type: 'text/javascript' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = scriptFileName(pack.namespace);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  };
+
+  const openConstructor = (e: DatapackEntry) => {
+    try {
+      setConstructing({ recipeId: entryRecipeId(e.path)!, json: JSON.parse(e.content), entryId: e.id });
+    } catch {
+      /* битый JSON — сначала поправить в редакторе */
+    }
+  };
+
+  /** Из конструктора: рецепт с новым id — переименовать свой или создать по рецепту сборки */
+  const newEntryFromConstructor = (id: string, json: Record<string, unknown>) => {
+    const c = constructing;
+    setConstructing(null);
+    if (!c) return;
+    const fresh = entryWithId(JSON.stringify(json, null, 2), id, c.recipeId);
+    if (c.entryId)
+      update({
+        entries: pack.entries.map((e) => (e.id === c.entryId ? { ...e, kind: 'add', path: fresh.path } : e)),
+      });
+    else setEditing(fresh);
+  };
 
   return (
     <div className="dp-editor">
@@ -224,6 +289,14 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
           <FileCode2 size={15} /> Файл
         </button>
         <span className="grow" />
+        <button
+          className="btn"
+          onClick={exportScript}
+          disabled={!recipeEntries.length}
+          title="Рецепты датапака как KubeJS-скрипт (event.custom): удаления KubeJS на них не действуют"
+        >
+          <FileTerminal size={15} /> KubeJS-скрипт
+        </button>
         <button className="btn" onClick={() => setAttaching(true)} disabled={!pack.entries.length || !filesEnabled}>
           <Paperclip size={15} /> К задаче
         </button>
@@ -258,6 +331,21 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
                   {[e.recipeType, e.sourceRecipe && `из ${e.sourceRecipe}`, e.note].filter(Boolean).join(' · ')}
                 </span>
               </button>
+              {kjsHits.has(e.id) && (
+                <button
+                  className="btn sm dp-kjs"
+                  onClick={() => openConstructor(e)}
+                  title={`Удаляется KubeJS: ${kjsHits
+                    .get(e.id)!
+                    .map((n) => {
+                      const r = catalog!.kubejs!.rules[n];
+                      return `${r.file}:${r.idLine ?? r.line}`;
+                    })
+                    .join(', ')}`}
+                >
+                  <ShieldAlert size={13} /> KubeJS удалит
+                </button>
+              )}
               <button
                 className="btn ghost sm icon danger"
                 onClick={() => update({ entries: pack.entries.filter((x) => x.id !== e.id) })}
@@ -282,7 +370,23 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
       </footer>
 
       {catalogMode && (
-        <RecipeCatalog catalog={catalog} mode={catalogMode} onPick={pickRecipe} onClose={() => setCatalogMode(null)} />
+        <RecipeCatalog
+          catalog={catalog}
+          mode={catalogMode}
+          onPick={pickRecipe}
+          onConstructor={(r) => (setCatalogMode(null), setConstructing({ recipeId: r.i, json: r.j }))}
+          onClose={() => setCatalogMode(null)}
+        />
+      )}
+      {constructing && catalog?.kubejs && (
+        <KubejsConstructor
+          recipeId={constructing.recipeId}
+          json={constructing.json}
+          rules={catalog.kubejs.rules}
+          namespace={pack.namespace}
+          onNewEntry={newEntryFromConstructor}
+          onClose={() => setConstructing(null)}
+        />
       )}
       {editing && <EntryEditor entry={editing} catalog={catalog} onSave={saveEntry} onClose={() => setEditing(null)} />}
       {attaching && <AttachDialog pack={pack} onClose={() => setAttaching(false)} />}
