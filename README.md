@@ -287,16 +287,17 @@ npm run config -- ~/Downloads/serverconfig.zip
 ## Структура
 
 ```
-scripts/build-items.mjs      сборка библиотеки предметов
-src/data/store.ts            CRUD + подписки: Firestore или localStorage
-src/data/DataContext.tsx     живые данные для всего приложения
-src/lib/items.ts             загрузка и поиск предметов
-src/lib/gemini.ts            запросы к Gemini (стриминг, извлечение ресурсов)
-src/lib/tasks.ts             прогресс, сортировки, Elo
-src/components/              UI-кирпичики (ItemPicker, Checklist, Markdown, …)
-src/pages/                   список задач, документы, документ на всю страницу
-firestore.rules              правила доступа
+scripts/            сборщики: библиотека предметов, справочник, география, KubeJS, конфиги, запись обновлений
+src/data/           CRUD + подписки (Firestore или localStorage), живые данные приложения
+src/lib/            логика: предметы, рецепты и KubeJS, датапаки, схемы .nbt, справочник, карта, Gemini, файлы
+src/components/     UI-кирпичики (ItemPicker, RecipeCatalog, KubejsConstructor, WorldMap, …)
+src/pages/          задачи, документы, схемы, датапаки, рецепты, справочник, обновления, карта
+docs/plans/         планы крупных фич
+firestore.rules     правила доступа
 ```
+
+Подробная карта кода, команды и рабочие договорённости — в [CLAUDE.md](CLAUDE.md), текущее состояние и
+отложенные дела — в [docs/STATE.md](docs/STATE.md).
 
 ## Идеи на будущее
 
