@@ -38,6 +38,10 @@ export interface Plant {
   /** Высота раскидистого куста, блоков */
   maxHeight?: number;
   spreading?: boolean;
+  /** Что падает со спелой культуры (loot-таблица): byYield — количество зависит от ухода */
+  drops?: { item: string; min: number; max: number; byYield?: boolean }[];
+  /** Где растёт в природе: температура, грунтовая влага, лесистость (0–4), редкость «1 из N» */
+  wild?: { minT?: number; maxT?: number; minW?: number; maxW?: number; minF?: number; maxF?: number; rarity?: number };
 }
 
 export type Lifecycle = 'DORMANT' | 'HEALTHY' | 'FLOWERING' | 'FRUITING';

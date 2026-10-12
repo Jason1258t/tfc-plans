@@ -59,7 +59,7 @@ export type ConfigOrigin = 'world' | 'server' | 'config' | 'default';
 export const CONFIG_ORIGIN_LABEL: Record<ConfigOrigin, string> = {
   world: 'сохранение мира сервера',
   server: 'переопределение сервера (serverconfig/)',
-  config: 'конфиг сборки (config/)',
+  config: 'конфиг сервера (config/)',
   default: 'значение мода по умолчанию, конфиг не импортирован',
 };
 

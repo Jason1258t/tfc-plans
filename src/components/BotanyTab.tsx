@@ -234,6 +234,39 @@ function PlantCard({
             </dd>
           </>
         )}
+        {p.drops && (
+          <>
+            <dt>Урожай</dt>
+            <dd>
+              {p.drops
+                .map((d) => {
+                  const what =
+                    d.item === p.seed
+                      ? 'семена'
+                      : d.item === p.product
+                        ? 'плод'
+                        : itemName(items?.byId.get(d.item), d.item);
+                  const n = d.min === d.max ? String(d.max) : `${d.min}–${d.max}`;
+                  return `${what} ${n}${d.byYield ? ' (от ухода)' : ''}`;
+                })
+                .join(' · ')}
+            </dd>
+          </>
+        )}
+        {p.wild && (
+          <>
+            <dt>В природе</dt>
+            <dd>
+              {[
+                rangeLabel(p.wild.minT, p.wild.maxT, '°C'),
+                rangeLabel(p.wild.minW, p.wild.maxW, 'мм влаги'),
+                p.wild.rarity ? `редкость 1/${p.wild.rarity}` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </dd>
+          </>
+        )}
         {p.npk && (
           <>
             <dt>Удобрения</dt>

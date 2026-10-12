@@ -12,7 +12,9 @@
  *   { meta: { months, growthFactor, nutrientConsumption, nutrientGrowthFactor, … },
  *     entries: [{ i, k: crop|bush|tree|plant, n, src, r: { minT, maxT, minH, maxH }, product?, seed?, plant?,
  *                 npk?: [N, P, K], stages?: [int…], block?: 'ClimbingCropBlock',
- *                 life?: ['DORMANT'|'HEALTHY'|'FLOWERING'|'FRUITING' × 12], growDays?, maxHeight?, code?: источник }] }
+ *                 life?: ['DORMANT'|'HEALTHY'|'FLOWERING'|'FRUITING' × 12], growDays?, maxHeight?, code?: источник,
+ *                 drops?: [{ item, min, max, byYield? }] — с созревшего растения (loot_table/blocks/…),
+ *                 wild?: { minT, maxT, minW, maxW, minF, maxF, rarity } — где растёт в природе (placed_feature) }] }
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -195,6 +197,86 @@ function readCode(classDirs, warnings) {
   return { crops, life, meta, configs };
 }
 
+// ---------------------------------------------------------------- урожай и дикие формы (данные)
+
+/** Диапазон количества из loot-функции set_count: число, uniform или tfc:crop_yield_uniform (зависит от ухода) */
+function countRange(c) {
+  if (typeof c === 'number') return { min: c, max: c, byYield: false };
+  if (!c || typeof c !== 'object') return { min: 1, max: 1, byYield: false };
+  const lo = countRange(c.min ?? 1);
+  const hi = countRange(c.max ?? c.min ?? 1);
+  return { min: lo.min, max: hi.max, byYield: /crop_yield/.test(c.type ?? '') || lo.byYield || hi.byYield };
+}
+
+/**
+ * Что падает с созревшего растения: по каждому пулу берём предметы (условия считаем выполненными — растение
+ * спелое, инструмент подходящий), количества пулов складываются. Условный предмет может не выпасть — минимум 0.
+ */
+function lootDrops(json) {
+  const total = new Map();
+  for (const pool of json?.pools ?? []) {
+    const inPool = new Map();
+    const walk = (entry) => {
+      if (!entry || typeof entry !== 'object') return;
+      for (const ch of entry.children ?? []) walk(ch);
+      if (entry.type !== 'minecraft:item' || typeof entry.name !== 'string') return;
+      const set = (entry.functions ?? []).find((f) => /set_count$/.test(f.function ?? ''));
+      const r = countRange(set ? set.count : 1);
+      const cur = inPool.get(entry.name);
+      // Альтернативы одного пула — берём самый щедрый вариант
+      if (!cur || r.max > cur.max) inPool.set(entry.name, r);
+    };
+    for (const e of pool.entries ?? []) walk(e);
+    for (const [item, r] of inPool) {
+      const t = total.get(item) ?? { min: 0, max: 0, byYield: false };
+      total.set(item, { min: t.min + r.min, max: t.max + r.max, byYield: t.byYield || r.byYield });
+    }
+  }
+  return total;
+}
+
+/** Размещение в мире: климат (tfc:climate) и редкость из placed_feature; имя файла без папок → данные */
+function readPlacements(dataDirs, parse) {
+  const out = new Map();
+  for (const { dir } of dataDirs) {
+    if (!fs.existsSync(dir)) continue;
+    for (const ns of fs.readdirSync(dir)) {
+      const base = path.join(dir, ns, 'worldgen', 'placed_feature', 'plant');
+      if (!fs.existsSync(base)) continue;
+      for (const rel of fs.readdirSync(base, { recursive: true })) {
+        if (!String(rel).endsWith('.json')) continue;
+        const j = parse(fs.readFileSync(path.join(base, String(rel)), 'utf8'));
+        const placement = Array.isArray(j?.placement) ? j.placement : [];
+        const climate = placement.find((p) => /(^|:)climate$/.test(p?.type ?? ''));
+        if (!climate) continue;
+        const rarity = placement.find((p) => /rarity_filter$/.test(p?.type ?? ''))?.chance;
+        const pick = (k) => (typeof climate[k] === 'number' ? climate[k] : undefined);
+        const w = {
+          minT: pick('min_temperature'),
+          maxT: pick('max_temperature'),
+          minW: pick('min_groundwater') ?? pick('min_rainfall'),
+          maxW: pick('max_groundwater') ?? pick('max_rainfall'),
+          minF: pick('min_forest'),
+          maxF: pick('max_forest'),
+          rarity: typeof rarity === 'number' ? rarity : undefined,
+        };
+        const key = String(rel).slice(0, -5).split(path.sep).join('/');
+        out.set(`${ns}:${key}`, Object.fromEntries(Object.entries(w).filter(([, v]) => v !== undefined)));
+      }
+    }
+  }
+  return out;
+}
+
+function readLoot(dataDirs, parse, ns, rel) {
+  // Поздние источники перекрывают ранние, как датапаки
+  for (const { dir } of [...dataDirs].reverse()) {
+    const file = path.join(dir, ns, 'loot_table', 'blocks', `${rel}.json`);
+    if (fs.existsSync(file)) return parse(fs.readFileSync(file, 'utf8'));
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------- сборка
 
 export function buildBotany(dataDirs, parse, items) {
@@ -253,6 +335,31 @@ export function buildBotany(dataDirs, parse, items) {
       usedLife.add(e.n);
     }
   }
+  // Урожай (loot-таблицы) и дикие формы (размещение в мире) — из данных
+  const placements = readPlacements(dataDirs, parse);
+  for (const e of out.values()) {
+    const [ns, name] = e.i.split(':');
+    // Урожай из loot-таблицы есть только у культур: ягоды и фрукты собирают рукой (это код, а не loot)
+    if (e.k === 'crop') {
+      const drops = lootDrops(readLoot(dataDirs, parse, ns, `crop/${e.n}`));
+      const list = [...drops]
+        .filter(([item]) => item === e.product || item === e.seed || /:(food|seeds)\//.test(item))
+        .map(([item, r]) => ({ item, min: r.min, max: r.max, ...(r.byYield ? { byYield: true } : {}) }));
+      if (list.length) e.drops = list;
+    }
+    const wildAt =
+      e.k === 'crop'
+        ? [`plant/wild_crop/${e.n}_patch`, `plant/wild_crop/${e.n}`]
+        : [`plant/${name}_patch`, `plant/${name}`, `plant/${e.n}_patch`, `plant/${e.n}`];
+    for (const rel of wildAt) {
+      const w = placements.get(`${ns}:${rel.replace(/^plant\//, '')}`);
+      if (w && Object.keys(w).length) {
+        e.wild = w;
+        break;
+      }
+    }
+  }
+
   const lostCrops = [...code.crops.keys()].filter((n) => !usedCrops.has(n));
   const lostLife = [...code.life.keys()].filter((n) => !usedLife.has(n));
   if (lostCrops.length) warnings.push(`в коде есть культуры без climate_range: ${lostCrops.join(', ')}`);
@@ -306,6 +413,8 @@ export function writeBotany(dataDirs, parse, items, outFile) {
     npk: data.entries.filter((e) => e.npk).length,
     life: data.entries.filter((e) => e.life).length,
     configKeys: configs.reduce((n, c) => n + c.keys.length, 0),
+    drops: data.entries.filter((e) => e.drops).length,
+    wild: data.entries.filter((e) => e.wild).length,
     warnings,
   };
 }
