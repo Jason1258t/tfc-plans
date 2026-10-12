@@ -13,7 +13,8 @@ import {
   type Plant,
   type PlantKind,
 } from '../lib/botany';
-import { CONFIG_ORIGIN_LABEL, useLayeredNumber } from '../lib/config';
+import { useBotanyConfig, type BotanyConfig } from '../lib/botanyConfig';
+import { CONFIG_ORIGIN_LABEL } from '../lib/config';
 import { itemName, useItems, type ItemIndex } from '../lib/items';
 import type { Food } from '../lib/reference';
 import { cx } from '../lib/util';
@@ -36,6 +37,7 @@ export function BotanyTab({ foods, sub, onSub }: { foods: Food[]; sub: PlantKind
   const [temp, setTemp] = useState('');
   const [hydr, setHydr] = useState('');
   const [sort, setSort] = useState<Sort>('name');
+  const config = useBotanyConfig(meta);
 
   const counts = useMemo(() => {
     const c: Record<PlantKind, number> = { crop: 0, bush: 0, tree: 0, plant: 0 };
@@ -73,6 +75,12 @@ export function BotanyTab({ foods, sub, onSub }: { foods: Food[]; sub: PlantKind
       );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plants, sub, query, temp, hydr, sort, items]);
+
+  /** Общая шкала для полосок диапазонов: от самого холодного до самого жаркого растения в данных */
+  const scale = useMemo(() => {
+    const ts = (plants ?? []).flatMap((p) => [p.r.minT, p.r.maxT]).filter((v): v is number => v !== undefined);
+    return { minT: Math.floor(Math.min(-10, ...ts) / 5) * 5, maxT: Math.ceil(Math.max(35, ...ts) / 5) * 5 };
+  }, [plants]);
 
   if (plants === undefined) return <div className="empty">Загружаю ботанику…</div>;
   if (plants === null) return <div className="empty">Данных о растениях нет — выполните npm run mods</div>;
@@ -126,11 +134,8 @@ export function BotanyTab({ foods, sub, onSub }: { foods: Food[]; sub: PlantKind
             <option value="maxT">Сначала жаростойкие</option>
           </select>
         </div>
-        <p className="faint small ref-note">
-          Диапазоны — из данных мода (<code>climate_range</code>): вне них растение не растёт или чахнет. Если границы
-          нет в данных, она не показана. {list.length} из {counts[sub]}.
-        </p>
-        <GrowthNote meta={meta} sub={sub} />
+
+        <Summary meta={meta} sub={sub} config={config} shown={list.length} total={counts[sub]} />
 
         {list.length === 0 ? (
           <div className="empty">Ничего не подходит.</div>
@@ -144,6 +149,8 @@ export function BotanyTab({ foods, sub, onSub }: { foods: Food[]; sub: PlantKind
                 food={p.product ? foodBy.get(p.product) : undefined}
                 items={items}
                 meta={meta}
+                config={config}
+                scale={scale}
               />
             ))}
           </ul>
@@ -153,39 +160,148 @@ export function BotanyTab({ foods, sub, onSub }: { foods: Food[]; sub: PlantKind
   );
 }
 
-/** Общие для раздела числа: срок созревания и длина месяца — из кода мода с поправкой на конфиг сервера */
-function GrowthNote({ meta, sub }: { meta: BotanyMeta; sub: PlantKind }) {
-  const growth = meta.config?.cropGrowthModifier;
-  const month = meta.config?.defaultMonthLength;
-  const num = (v: unknown, d: number) => (typeof v === 'number' ? v : d);
-  const modifier = useLayeredNumber(growth?.file, growth?.key, num(growth?.default, 1));
-  const monthLen = useLayeredNumber(month?.file, month?.key, num(month?.default, 0), month?.world);
-  const days = growthDays(meta, modifier.value);
-  const ru = (v: number) => String(Math.round(v * 100) / 100).replace('.', ',');
-  if (sub === 'crop')
-    return days ? (
-      <p className="faint small ref-note">
-        Срок созревания у всех культур один: около {Math.round(days.base)} игровых суток без удобрений и до{' '}
-        {Math.round(days.best)} с полными. Множитель роста {ru(modifier.value)} — {CONFIG_ORIGIN_LABEL[modifier.origin]}
-        . Удобрения: «+» — культура берёт элемент из почвы, «−» — возвращает его. В игре не проверялось.
-      </p>
-    ) : null;
+const ru = (v: number, digits = 1) => String(Math.round(v * 10 ** digits) / 10 ** digits).replace('.', ',');
+const TICKS_PER_DAY = 24000;
+/** Игровые сутки — 20 минут реального времени при 20 тиках в секунду */
+const DAY_MINUTES = 20;
+const hours = (min: number) => (min >= 90 ? `${ru(min / 60)} ч` : `${Math.round(min)} мин`);
+
+/** Календарь сервера: длина месяца и то, сколько реального времени идут календарные сутки */
+function calendar(config: BotanyConfig) {
+  const month = config.num('defaultMonthLength');
+  const rate = config.num('calendarTickRate');
+  const dayLength = config.num('defaultCalendarDayLength');
+  // Скорость календаря = 20 / длина календарных суток в минутах (так её считает мод); в мире хранится уже скорость
+  const dayMinutes = rate ? DAY_MINUTES / rate.value : (dayLength?.value ?? null);
+  return { month, dayMinutes, dayOrigin: rate?.origin ?? dayLength?.origin ?? null };
+}
+
+/** Общие для подраздела сроки — блоком над карточками, чтобы не повторять на каждой */
+function Summary({
+  meta,
+  sub,
+  config,
+  shown,
+  total,
+}: {
+  meta: BotanyMeta;
+  sub: PlantKind;
+  config: BotanyConfig;
+  shown: number;
+  total: number;
+}) {
+  const cal = calendar(config);
+  const facts: { label: string; value: string; note?: string }[] = [];
+  if (sub === 'crop') {
+    const modifier = config.num('cropGrowthModifier');
+    const days = growthDays(meta, modifier?.value ?? 1);
+    if (days) {
+      facts.push({
+        label: 'Созревание',
+        value: `${Math.round(days.best)}–${Math.round(days.base)} игровых суток`,
+        note: `с удобрениями быстрее; это ${hours(days.best * DAY_MINUTES)}–${hours(days.base * DAY_MINUTES)} игры`,
+      });
+      if (modifier)
+        facts.push({
+          label: 'Множитель роста',
+          value: ru(modifier.value, 2),
+          note: CONFIG_ORIGIN_LABEL[modifier.origin],
+        });
+    }
+    const from = config.get('wildCropMaturityStartMonth');
+    const to = config.get('wildCropMaturityEndMonth');
+    const months = meta.months ?? [];
+    if (from && to && typeof from.value === 'string' && typeof to.value === 'string')
+      facts.push({
+        label: 'Дикие культуры спелые',
+        value: `${monthLabel(from.value, months.indexOf(from.value))} – ${monthLabel(to.value, months.indexOf(to.value))}`,
+        note: CONFIG_ORIGIN_LABEL[from.origin],
+      });
+  } else {
+    const bloom = config.num('fruitPickBloomDelayTicks');
+    if (bloom)
+      facts.push({
+        label: 'После сбора',
+        value: `${ru(bloom.value / TICKS_PER_DAY)} игровых суток до новых плодов`,
+        note: CONFIG_ORIGIN_LABEL[bloom.origin],
+      });
+  }
+  if (cal.month)
+    facts.push({
+      label: 'Месяц',
+      value: `${ru(cal.month.value)} календарных суток`,
+      note:
+        CONFIG_ORIGIN_LABEL[cal.month.origin] +
+        (cal.dayMinutes ? `; это ${hours(cal.month.value * cal.dayMinutes)} игры` : ''),
+    });
+  if (cal.dayMinutes && cal.dayOrigin)
+    facts.push({
+      label: 'Календарные сутки',
+      value: hours(cal.dayMinutes),
+      note: `${CONFIG_ORIGIN_LABEL[cal.dayOrigin]}; игровые сутки (день и ночь) — ${DAY_MINUTES} мин`,
+    });
   return (
-    <p className="faint small ref-note">
-      Календарь — состояние растения по месяцам из кода мода: плоды собирают в месяцы «плодоносит».
-      {monthLen.value > 0 &&
-        ` Месяц — ${ru(monthLen.value)} игровых суток (${CONFIG_ORIGIN_LABEL[monthLen.origin]}${
-          monthLen.origin === 'world'
-            ? ''
-            : '; если длину меняли командой, она хранится в сохранении мира — npm run world'
-        }).`}{' '}
-      В игре не проверялось.
-    </p>
+    <section className="botany-summary">
+      <dl>
+        {facts.map((f) => (
+          <div key={f.label}>
+            <dt>{f.label}</dt>
+            <dd>
+              <b>{f.value}</b>
+              {f.note && <span className="faint small"> · {f.note}</span>}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <p className="faint small">
+        {sub === 'crop'
+          ? 'Срок созревания у всех культур общий. Удобрения: «берёт» — культура забирает элемент из почвы, «возвращает» — пополняет его.'
+          : 'Календарь показывает состояние растения по месяцам; собирать плоды можно в месяцы «плодоносит».'}{' '}
+        Вне диапазона температуры и влажности растение не растёт. Всё взято из файлов сборки, в игре не проверялось.
+        Показано {shown} из {total}.
+      </p>
+      {sub !== 'crop' && (
+        <p className="botany-legend small">
+          {(Object.keys(LIFE_LABEL) as (keyof typeof LIFE_LABEL)[]).map((l) => (
+            <span key={l}>
+              <i className={`life-${l.toLowerCase()}`} /> {LIFE_LABEL[l]}
+            </span>
+          ))}
+        </p>
+      )}
+    </section>
   );
 }
 
-const NPK_LABEL = ['N', 'P', 'K'];
-const signed = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${String(Math.abs(v)).replace('.', ',')}`;
+const NPK_NAME = ['Азот', 'Фосфор', 'Калий'];
+const NPK_LETTER = ['N', 'P', 'K'];
+
+/** Полоска диапазона на общей шкале; открытая граница (нет в данных) уходит в край с затуханием */
+function RangeBar({
+  min,
+  max,
+  lo,
+  hi,
+  kind,
+}: {
+  min?: number;
+  max?: number;
+  lo: number;
+  hi: number;
+  kind: 'temp' | 'water';
+}) {
+  const pos = (v: number) => Math.max(0, Math.min(100, ((v - lo) / (hi - lo)) * 100));
+  const left = min === undefined ? 0 : pos(min);
+  const right = max === undefined ? 100 : pos(max);
+  return (
+    <span className={cx('botany-bar', kind)} aria-hidden="true">
+      <span
+        className={cx(min === undefined && 'open-left', max === undefined && 'open-right')}
+        style={{ left: `${left}%`, width: `${Math.max(2, right - left)}%` }}
+      />
+    </span>
+  );
+}
 
 function PlantCard({
   p,
@@ -193,130 +309,174 @@ function PlantCard({
   food,
   items,
   meta,
+  config,
+  scale,
 }: {
   p: Plant;
   name: string;
   food?: Food;
   items: ItemIndex | null;
   meta: BotanyMeta;
+  config: BotanyConfig;
+  scale: { minT: number; maxT: number };
 }) {
-  const t = rangeLabel(p.r.minT, p.r.maxT, '°C');
-  const h = rangeLabel(p.r.minH, p.r.maxH, '%');
   const icon = p.product ?? p.plant ?? p.seed;
   const seedName = p.seed ? itemName(items?.byId.get(p.seed), p.seed) : null;
+  const months = meta.months ?? [];
+
+  // Срок роста саженца: ключ сервера на каждое дерево (cherrySaplingGrowthTicks), иначе значение из кода мода
+  const camel = p.n.replace(/_(\w)/g, (_, c: string) => c.toUpperCase());
+  const modifier = config.num('saplingGrowthModifier')?.value ?? 1;
+  const own =
+    p.k === 'tree'
+      ? (config.num('saplingGrowthTicks', { name: camel }) ?? config.num(`${camel}SaplingGrowthTicks`))
+      : null;
+  const sapling = own
+    ? { days: (own.value * modifier) / TICKS_PER_DAY, origin: CONFIG_ORIGIN_LABEL[own.origin] }
+    : p.growDays !== undefined
+      ? { days: p.growDays * modifier, origin: 'значение мода по умолчанию' }
+      : null;
+
+  // Сколько плодов за один сбор: свой класс растения (BananaPlantBlock) или общий для кустов и листвы
+  const pickClass = Object.keys(meta.pick ?? {}).find((c) => c.toLowerCase().startsWith(p.n.replace(/_/g, '')));
+  const pick = p.life ? (meta.pick?.[pickClass ?? 'SeasonalPlantBlock'] ?? null) : null;
+  const fruiting = (p.life ?? []).flatMap((l, i) => (l === 'FRUITING' ? [monthLabel(months[i], i)] : []));
+
   return (
     <li className="botany-card">
-      <div className="botany-card-head">
-        {icon ? <ItemIcon id={icon} size={36} tip={false} /> : <span className="botany-noicon" />}
+      <header className="botany-card-head">
+        {icon ? <ItemIcon id={icon} size={40} tip={false} /> : <span className="botany-noicon" />}
         <div className="grow">
           <div className="botany-name">{name}</div>
           <code className="faint small">{p.i}</code>
         </div>
-      </div>
-      <dl className="botany-stats">
-        <dt>Температура</dt>
-        <dd>{t ?? '—'}</dd>
-        <dt>Влажность</dt>
-        <dd>{h ?? '—'}</dd>
-        {food && (
-          <>
-            <dt>Плод</dt>
-            <dd>
-              сытость {food.hunger || '—'} · порча ×{food.decay}
-            </dd>
-          </>
-        )}
-        {seedName && (
-          <>
-            <dt>Семена</dt>
-            <dd className="botany-seed">
-              <ItemIcon id={p.seed} size={18} tip={false} /> {seedName}
-            </dd>
-          </>
-        )}
-        {p.drops && (
-          <>
-            <dt>Урожай</dt>
-            <dd>
-              {p.drops
-                .map((d) => {
-                  const what =
-                    d.item === p.seed
-                      ? 'семена'
-                      : d.item === p.product
-                        ? 'плод'
-                        : itemName(items?.byId.get(d.item), d.item);
-                  const n = d.min === d.max ? String(d.max) : `${d.min}–${d.max}`;
-                  return `${what} ${n}${d.byYield ? ' (от ухода)' : ''}`;
-                })
-                .join(' · ')}
-            </dd>
-          </>
-        )}
-        {p.wild && (
-          <>
-            <dt>В природе</dt>
-            <dd>
-              {[
-                rangeLabel(p.wild.minT, p.wild.maxT, '°C'),
-                rangeLabel(p.wild.minW, p.wild.maxW, 'мм влаги'),
-                p.wild.rarity ? `редкость 1/${p.wild.rarity}` : null,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-            </dd>
-          </>
-        )}
-        {p.npk && (
-          <>
-            <dt>Удобрения</dt>
-            <dd className="botany-npk">
-              {p.npk.map((v, i) => (
-                <span
-                  key={i}
-                  className={cx(v > 0 && 'takes', v < 0 && 'gives')}
-                  title={v > 0 ? 'берёт из почвы' : v < 0 ? 'возвращает в почву' : 'не влияет'}
-                >
-                  {NPK_LABEL[i]} {signed(v)}
-                </span>
-              ))}
-            </dd>
-          </>
-        )}
-        {p.block && (
-          <>
-            <dt>Тип</dt>
-            <dd>
-              {CROP_BLOCK_LABEL[p.block] ?? p.block}
-              {p.stages?.length ? ` · стадий ${p.stages.join(' + ')}` : ''}
-            </dd>
-          </>
-        )}
-        {p.growDays !== undefined && (
-          <>
-            <dt>Саженец</dt>
-            <dd>растёт {p.growDays} сут.</dd>
-          </>
-        )}
-        {p.maxHeight !== undefined && (
-          <>
-            <dt>Куст</dt>
-            <dd>раскидистый, до {p.maxHeight} блоков в высоту</dd>
-          </>
-        )}
-      </dl>
+        {p.block && <span className="botany-chip">{CROP_BLOCK_LABEL[p.block] ?? p.block}</span>}
+        {p.spreading && <span className="botany-chip">раскидистый{p.maxHeight ? `, до ${p.maxHeight} бл.` : ''}</span>}
+      </header>
+
+      <section>
+        <h4>Где растёт</h4>
+        <div className="botany-range">
+          <span>Температура</span>
+          <RangeBar min={p.r.minT} max={p.r.maxT} lo={scale.minT} hi={scale.maxT} kind="temp" />
+          <b>{rangeLabel(p.r.minT, p.r.maxT, '°C') ?? '—'}</b>
+        </div>
+        <div className="botany-range">
+          <span>Влажность</span>
+          <RangeBar min={p.r.minH} max={p.r.maxH} lo={0} hi={100} kind="water" />
+          <b>{rangeLabel(p.r.minH, p.r.maxH, '%') ?? '—'}</b>
+        </div>
+      </section>
+
+      {p.npk && (
+        <section>
+          <h4>Удобрения</h4>
+          <div className="botany-npk">
+            {p.npk.map((v, i) => (
+              <div key={i} className={cx(v > 0 && 'takes', v < 0 && 'gives')}>
+                <b>{NPK_LETTER[i]}</b>
+                <span>{NPK_NAME[i]}</span>
+                <em>{v > 0 ? `берёт ${ru(v, 2)}` : v < 0 ? `возвращает ${ru(-v, 2)}` : 'не влияет'}</em>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {(p.drops || food || seedName) && (
+        <section>
+          <h4>{p.k === 'crop' ? 'Урожай' : 'Плод'}</h4>
+          <dl className="botany-stats">
+            {p.drops?.map((d) => (
+              <div key={d.item}>
+                <dt>
+                  {d.item === p.seed
+                    ? 'Семена'
+                    : d.item === p.product
+                      ? 'Плоды'
+                      : itemName(items?.byId.get(d.item), d.item)}
+                </dt>
+                <dd>
+                  {d.min === d.max ? d.max : `${d.min}–${d.max}`} шт.{d.byYield && ' — зависит от ухода'}
+                </dd>
+              </div>
+            ))}
+            {pick && (
+              <div>
+                <dt>За один сбор</dt>
+                <dd>
+                  {pick[0] === pick[1] ? pick[0] : `${pick[0]}–${pick[1]}`} шт.
+                  {p.k === 'tree' && pick[0] === pick[1] ? ' с блока листвы' : p.k === 'bush' ? ' с блока куста' : ''}
+                </dd>
+              </div>
+            )}
+            {food && (
+              <div>
+                <dt>Еда</dt>
+                <dd>
+                  сытость {food.hunger || '—'}, портится ×{ru(food.decay, 2)}
+                </dd>
+              </div>
+            )}
+            {seedName && (
+              <div>
+                <dt>Сажать</dt>
+                <dd className="botany-seed">
+                  <ItemIcon id={p.seed} size={18} tip={false} /> {seedName}
+                </dd>
+              </div>
+            )}
+            {sapling && (
+              <div>
+                <dt>Саженец</dt>
+                <dd>
+                  растёт {ru(sapling.days)} игровых суток <span className="faint small">· {sapling.origin}</span>
+                </dd>
+              </div>
+            )}
+            {p.stages && (
+              <div>
+                <dt>Стадий роста</dt>
+                <dd>{p.stages.join(' + ')}</dd>
+              </div>
+            )}
+          </dl>
+        </section>
+      )}
+
       {p.life && (
-        <ol className="botany-life" aria-label="Календарь по месяцам">
-          {p.life.map((l, i) => (
-            <li
-              key={i}
-              className={cx(l && `life-${l.toLowerCase()}`)}
-              title={`${monthLabel(meta.months?.[i], i)}: ${l ? LIFE_LABEL[l] : '—'}`}
-            >
-              {monthLabel(meta.months?.[i], i).slice(0, 1).toUpperCase()}
-            </li>
-          ))}
-        </ol>
+        <section>
+          <h4>
+            Календарь
+            {fruiting.length > 0 && <span className="faint"> · плодоносит: {fruiting.join(', ')}</span>}
+          </h4>
+          <ol className="botany-life">
+            {p.life.map((l, i) => (
+              <li
+                key={i}
+                className={cx(l && `life-${l.toLowerCase()}`)}
+                title={`${monthLabel(months[i], i)}: ${l ? LIFE_LABEL[l] : '—'}`}
+              >
+                {monthLabel(months[i], i)}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {p.wild && (
+        <section>
+          <h4>В природе</h4>
+          <p className="botany-wild">
+            {[
+              rangeLabel(p.wild.minT, p.wild.maxT, '°C'),
+              rangeLabel(p.wild.minW, p.wild.maxW, 'мм грунтовой влаги'),
+              p.wild.rarity ? `редкость 1 из ${p.wild.rarity}` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+        </section>
       )}
     </li>
   );

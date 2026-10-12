@@ -62,31 +62,3 @@ export const CONFIG_ORIGIN_LABEL: Record<ConfigOrigin, string> = {
   config: 'конфиг сервера (config/)',
   default: 'значение мода по умолчанию, конфиг не импортирован',
 };
-
-/**
- * Число из конфига по слоям, как их читает игра: serverconfig/ (scope server) перекрывает config/ (scope config),
- * а если файл не импортирован — значение по умолчанию из кода мода (public/botany.json → meta.config).
- * world — где то же значение лежит в сохранении мира (scripts/world.mjs), оно перекрывает всё.
- */
-export function useLayeredNumber(
-  file: string | null | undefined,
-  key: string | undefined,
-  fallback: number,
-  world?: { file: string; key: string },
-): { value: number; origin: ConfigOrigin } {
-  const server = useModConfig(file ?? '', 'server');
-  const pack = useModConfig(file ?? '', 'config');
-  // То, что мир хранит сам (длина месяца после команды), важнее любого конфига
-  const saved = useModConfig(world?.file ?? '', 'world');
-  if (world) {
-    const w = configValue(saved, world.key, 'number');
-    if (w !== undefined) return { value: w, origin: 'world' };
-  }
-  if (file && key) {
-    const s = configValue(server, key, 'number');
-    if (s !== undefined) return { value: s, origin: 'server' };
-    const c = configValue(pack, key, 'number');
-    if (c !== undefined) return { value: c, origin: 'config' };
-  }
-  return { value: fallback, origin: 'default' };
-}

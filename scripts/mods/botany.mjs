@@ -24,7 +24,17 @@ import { configDefaults } from './config-defaults.mjs';
 const FIELDS = { min_temperature: 'minT', max_temperature: 'maxT', min_hydration: 'minH', max_hydration: 'maxH' };
 const NPK = ['nitrogen', 'phosphorous', 'potassium'];
 /** Настройки модов, влияющие на сроки роста (имя поля в классе конфига) */
-const CONFIG_KEYS = ['cropGrowthModifier', 'cropExpiryModifier', 'defaultMonthLength'];
+const CONFIG_KEYS = [
+  'cropGrowthModifier',
+  'cropExpiryModifier',
+  'wildCropMaturityStartMonth',
+  'wildCropMaturityEndMonth',
+  'saplingGrowthModifier',
+  'bananaSaplingGrowthTicks',
+  'fruitPickBloomDelayTicks',
+  'defaultMonthLength',
+  'defaultCalendarDayLength',
+];
 
 /** Какие классы jar сохранять в кеш для разбора (вызывается из build-items при распаковке) */
 export function isBotanyClass(entryName, data) {
@@ -142,7 +152,21 @@ function readCode(classDirs, warnings) {
       if (/\/calendar\/Calendar$/.test(cls.name)) {
         const strings = cls.cp.filter((c) => c?.tag === 8).map((c) => cls.utf(c.a));
         if (strings.includes('daysInMonth')) meta.calendarKey = 'daysInMonth';
+        if (strings.includes('calendarTickRate')) meta.calendarRateKey = 'calendarTickRate';
         continue;
+      }
+      // Сколько плодов даёт один сбор: getProductItem() — «new ItemStack(плод)» или «…, Mth.nextInt(rand, a, b)»
+      const product = cls.methods.find((m) => m.name === 'getProductItem' && m.code);
+      if (product) {
+        const nums = [];
+        let ranged = false;
+        for (const ins of instructions(product.code)) {
+          if (ins.op >= 0x02 && ins.op <= 0x08) nums.push(ins.op - 0x03);
+          else if (ins.op === 0x10 || ins.op === 0x11) nums.push(ins.index);
+          else if (ins.op === 0xb8 && cls.ref(ins.index).name === 'nextInt') ranged = true;
+        }
+        (meta.pick ??= {})[cls.name.split('/').pop()] =
+          ranged && nums.length >= 2 ? [nums.at(-2), nums.at(-1)] : [nums.at(-1) ?? 1, nums.at(-1) ?? 1];
       }
       if (!isEnum(cls)) {
         // Сезоны вне перечислений: «static final Lifecycle[] BANANA_STAGES» → banana
@@ -379,18 +403,46 @@ export function buildBotany(dataDirs, parse, items) {
     }
     if (!config[name]) warnings.push(`настройка ${name} в коде модов не найдена`);
   }
+  // Срок роста саженца задаётся отдельным ключом на каждое дерево: «<имя>SaplingGrowthTicks» в том же разделе,
+  // что и общий множитель (в коде ключ собирается из имени дерева, поэтому здесь — шаблон)
+  for (const c of code.configs) {
+    const perTree = c.keys.find((k) => /^SaplingGrowthTicks$/.test(k.key.split('.').pop()) && /%s/.test(k.comment));
+    const section = config.saplingGrowthModifier?.key.split('.').slice(0, -1).join('.');
+    if (perTree && section && !config.saplingGrowthTicks)
+      config.saplingGrowthTicks = {
+        key: `${section}.{name}SaplingGrowthTicks`,
+        default: null,
+        file: config.saplingGrowthModifier.file,
+        type: c.type,
+      };
+  }
   // Длина месяца в уже созданном мире хранится в сохранении (npm run world): SavedData → data.calendar.<ключ>
   if (config.defaultMonthLength) {
     if (code.meta.calendarFile && code.meta.calendarKey)
       config.defaultMonthLength.world = { file: code.meta.calendarFile, key: `data.calendar.${code.meta.calendarKey}` };
     else warnings.push('где календарь лежит в сохранении мира (CalendarWorldData / daysInMonth) — не найдено');
   }
+  // Скорость календаря в мире: calendarTickRate = 20 / длина календарных суток в минутах (Calendar.resetToDefault)
+  if (code.meta.calendarFile && code.meta.calendarRateKey)
+    config.calendarTickRate = {
+      key: '',
+      default: null,
+      file: null,
+      type: 'world',
+      world: { file: code.meta.calendarFile, key: `data.calendar.${code.meta.calendarRateKey}` },
+    };
 
   const pick = (o, keys) => Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));
   return {
     meta: {
       ...(code.meta.months ? { months: code.meta.months } : {}),
-      ...pick(code.meta, ['GROWTH_FACTOR', 'NUTRIENT_CONSUMPTION', 'NUTRIENT_GROWTH_FACTOR', 'UPDATE_INTERVAL']),
+      ...pick(code.meta, [
+        'GROWTH_FACTOR',
+        'NUTRIENT_CONSUMPTION',
+        'NUTRIENT_GROWTH_FACTOR',
+        'UPDATE_INTERVAL',
+        'pick',
+      ]),
       config,
     },
     configs: code.configs,

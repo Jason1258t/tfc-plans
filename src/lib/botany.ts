@@ -74,6 +74,8 @@ export interface BotanyMeta {
   /** Насколько удобрения ускоряют рост (доля сверху) */
   NUTRIENT_GROWTH_FACTOR?: number;
   UPDATE_INTERVAL?: number;
+  /** Сколько плодов даёт один сбор, по классу блока растения: { SeasonalPlantBlock: [1, 1], BananaPlantBlock: [3, 6] } */
+  pick?: Record<string, [number, number]>;
   /** Настройки модов, от которых зависят сроки: ключ в TOML и значение по умолчанию из кода */
   config?: Record<string, ConfigKey | undefined>;
 }
