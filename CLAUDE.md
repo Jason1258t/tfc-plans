@@ -65,6 +65,8 @@ npm run kubejs -- <zip|папка> [--layer world]  # скрипты KubeJS → 
   Этим же способом удобно читать базу из node, когда нужно найти задачу или датапак.
 - `src/lib/recipeFilter.ts` и `recipeRefs.ts` — **без импортов, только стираемый синтаксис TS**: их запускает и сайт, и Node
   (`import '../src/lib/x.ts'` из `.mjs`, Node 24). В `tsconfig` включён `erasableSyntaxOnly` — никаких enum и parameter properties.
+- То, что мод задаёт кодом (перечисления, константы), читай скриптом через `scripts/classfile.mjs`, а не вписывай руками:
+  данные сайта должны пересобираться из jar текущей сборки. Пример — `scripts/botany.mjs`.
 - При изменении формата кеша jar поднимай маркер `.done-vN` в `build-items.mjs`, иначе старый кеш не пересоберётся.
 
 ## Firestore

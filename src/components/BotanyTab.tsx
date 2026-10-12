@@ -1,6 +1,18 @@
 import { Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { inRange, PLANT_KIND_LABEL, rangeLabel, useBotany, type Plant, type PlantKind } from '../lib/botany';
+import {
+  CROP_BLOCK_LABEL,
+  growthDays,
+  inRange,
+  LIFE_LABEL,
+  monthLabel,
+  PLANT_KIND_LABEL,
+  rangeLabel,
+  useBotany,
+  type BotanyMeta,
+  type Plant,
+  type PlantKind,
+} from '../lib/botany';
 import { itemName, useItems, type ItemIndex } from '../lib/items';
 import type { Food } from '../lib/reference';
 import { cx } from '../lib/util';
@@ -15,7 +27,9 @@ const prettyName = (n: string) => n.replaceAll('_', ' ');
 
 /** Ботаника: культуры, ягодные кусты, фруктовые деревья — диапазоны температуры и влажности из данных TFC */
 export function BotanyTab({ foods, sub, onSub }: { foods: Food[]; sub: PlantKind; onSub: (k: PlantKind) => void }) {
-  const plants = useBotany();
+  const botany = useBotany();
+  const plants = botany === undefined ? undefined : (botany?.entries ?? null);
+  const meta = botany?.meta ?? {};
   const items = useItems();
   const [query, setQuery] = useState('');
   const [temp, setTemp] = useState('');
@@ -113,8 +127,9 @@ export function BotanyTab({ foods, sub, onSub }: { foods: Food[]; sub: PlantKind
         </div>
         <p className="faint small ref-note">
           Диапазоны — из данных мода (<code>climate_range</code>): вне них растение не растёт или чахнет. Если границы
-          нет в данных, она не показана. Рост, удобрения и сезоны пока не разобраны. {list.length} из {counts[sub]}.
+          нет в данных, она не показана. {list.length} из {counts[sub]}.
         </p>
+        <GrowthNote meta={meta} sub={sub} />
 
         {list.length === 0 ? (
           <div className="empty">Ничего не подходит.</div>
@@ -127,6 +142,7 @@ export function BotanyTab({ foods, sub, onSub }: { foods: Food[]; sub: PlantKind
                 name={nameOf(p)}
                 food={p.product ? foodBy.get(p.product) : undefined}
                 items={items}
+                meta={meta}
               />
             ))}
           </ul>
@@ -136,7 +152,41 @@ export function BotanyTab({ foods, sub, onSub }: { foods: Food[]; sub: PlantKind
   );
 }
 
-function PlantCard({ p, name, food, items }: { p: Plant; name: string; food?: Food; items: ItemIndex | null }) {
+/** Общие для раздела числа из кода мода: срок созревания, смысл знаков у удобрений */
+function GrowthNote({ meta, sub }: { meta: BotanyMeta; sub: PlantKind }) {
+  const days = growthDays(meta);
+  if (sub === 'crop')
+    return days ? (
+      <p className="faint small ref-note">
+        Срок созревания у всех культур один: около {Math.round(days.base)} игровых суток без удобрений и до{' '}
+        {Math.round(days.best)} с полными (константы из кода мода, множитель роста сервера = 1). Удобрения: «+» —
+        культура берёт элемент из почвы, «−» — возвращает его. В игре не проверялось.
+      </p>
+    ) : null;
+  return (
+    <p className="faint small ref-note">
+      Календарь — состояние растения по месяцам из кода мода: плоды собирают в месяцы «плодоносит». В игре не
+      проверялось.
+    </p>
+  );
+}
+
+const NPK_LABEL = ['N', 'P', 'K'];
+const signed = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${String(Math.abs(v)).replace('.', ',')}`;
+
+function PlantCard({
+  p,
+  name,
+  food,
+  items,
+  meta,
+}: {
+  p: Plant;
+  name: string;
+  food?: Food;
+  items: ItemIndex | null;
+  meta: BotanyMeta;
+}) {
   const t = rangeLabel(p.r.minT, p.r.maxT, '°C');
   const h = rangeLabel(p.r.minH, p.r.maxH, '%');
   const icon = p.product ?? p.plant ?? p.seed;
@@ -171,7 +221,57 @@ function PlantCard({ p, name, food, items }: { p: Plant; name: string; food?: Fo
             </dd>
           </>
         )}
+        {p.npk && (
+          <>
+            <dt>Удобрения</dt>
+            <dd className="botany-npk">
+              {p.npk.map((v, i) => (
+                <span
+                  key={i}
+                  className={cx(v > 0 && 'takes', v < 0 && 'gives')}
+                  title={v > 0 ? 'берёт из почвы' : v < 0 ? 'возвращает в почву' : 'не влияет'}
+                >
+                  {NPK_LABEL[i]} {signed(v)}
+                </span>
+              ))}
+            </dd>
+          </>
+        )}
+        {p.block && (
+          <>
+            <dt>Тип</dt>
+            <dd>
+              {CROP_BLOCK_LABEL[p.block] ?? p.block}
+              {p.stages?.length ? ` · стадий ${p.stages.join(' + ')}` : ''}
+            </dd>
+          </>
+        )}
+        {p.growDays !== undefined && (
+          <>
+            <dt>Саженец</dt>
+            <dd>растёт {p.growDays} сут.</dd>
+          </>
+        )}
+        {p.maxHeight !== undefined && (
+          <>
+            <dt>Куст</dt>
+            <dd>раскидистый, до {p.maxHeight} блоков в высоту</dd>
+          </>
+        )}
       </dl>
+      {p.life && (
+        <ol className="botany-life" aria-label="Календарь по месяцам">
+          {p.life.map((l, i) => (
+            <li
+              key={i}
+              className={cx(l && `life-${l.toLowerCase()}`)}
+              title={`${monthLabel(meta.months?.[i], i)}: ${l ? LIFE_LABEL[l] : '—'}`}
+            >
+              {monthLabel(meta.months?.[i], i).slice(0, 1).toUpperCase()}
+            </li>
+          ))}
+        </ol>
+      )}
     </li>
   );
 }

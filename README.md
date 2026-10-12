@@ -202,8 +202,11 @@ node scripts/seed-recipe-hints.mjs
 
 ### Ботаника (вкладка справочника)
 
-`public/botany.json` собирает `scripts/botany.mjs` из `data/*/tfc/climate_range/{crop,plant}/`: диапазоны температуры и
-влажности культур, кустов и деревьев. Что ещё надо разобрать (рост, удобрения, сезоны) — в `docs/plans/botany.md`.
+`public/botany.json` собирает `scripts/botany.mjs`: диапазоны температуры и влажности — из
+`data/*/tfc/climate_range/{crop,plant}/`, а расход N/P/K, тип культуры, сезоны кустов и деревьев по месяцам, дни роста
+саженца и константы скорости роста — из кода модов. Классы читает `scripts/classfile.mjs` (свой разбор `.class`, JDK не
+нужен): константы перечислений, статические массивы, значения `static final`, цели лямбд. Что ещё не разобрано —
+в `docs/plans/botany.md`.
 
 ### Теги (страница «Теги»)
 

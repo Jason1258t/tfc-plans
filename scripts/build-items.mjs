@@ -23,7 +23,7 @@ import { writeManifest } from './manifest.mjs';
 import { writeGeo } from './geo.mjs';
 import { buildReference } from './reference.mjs';
 import { writeTags } from './tags.mjs';
-import { writeBotany } from './botany.mjs';
+import { isBotanyClass, writeBotany } from './botany.mjs';
 
 const MC_VERSION = '1.21.1';
 
@@ -159,8 +159,8 @@ function prepareJar(file) {
   const st = fs.statSync(file);
   const key = `${path.basename(file, '.jar')}-${st.size}-${Math.round(st.mtimeMs)}`.replace(/[^\w.+-]/g, '_');
   const dir = path.join(CACHE, 'jars', key);
-  // v7 — плюс климатические диапазоны растений TFC; v6 — плюс теги, жилы, данные TFC для справочника, география TFC Real World и жидкое топливо; теги блоков и сущностей
-  const done = path.join(dir, '.done-v7');
+  // v8 — плюс классы растений (classes/) для ботаники; v7 — плюс климатические диапазоны растений TFC; v6 — плюс теги, жилы, данные TFC для справочника, география TFC Real World и жидкое топливо; теги блоков и сущностей
+  const done = path.join(dir, '.done-v8');
   if (!fs.existsSync(done) || fresh) {
     fs.rmSync(dir, { recursive: true, force: true });
     let zip;
@@ -174,11 +174,24 @@ function prepareJar(file) {
     // Для справочника: теги предметов, конфиги жил, данные TFC (топливо, еда, нагрев).
     const wanted =
       /^(assets\/[a-z0-9_.-]+\/(models\/.+\.json|textures\/.+\.png|lang\/(en_us|ru_ru)\.json)|data\/[a-z0-9_.-]+\/(recipe\/.+|tags\/(item|fluid|block|entity_type)\/.+|createdieselgenerators\/fuel_type\/.+|createliquidfuel\/compat\/.+|worldgen\/configured_feature\/(vein\/.+|[^/]*vein[^/]*)|tfc\/(fuel|food|fluid_heat|climate_range)\/.+|geography\/.+|profiles\/.+\/settings)\.json|data\/[a-z0-9_.-]+\/profiles\/.+\/maps\/(continent|altitude|koppen|temperature|rainfall)\.png)$/;
-    for (const entry of zip.getEntries()) {
+    const entries = zip.getEntries();
+    for (const entry of entries) {
       if (entry.isDirectory || !wanted.test(entry.entryName)) continue;
       const target = path.join(dir, entry.entryName);
       fs.mkdirSync(path.dirname(target), { recursive: true });
       fs.writeFileSync(target, entry.getData());
+    }
+    // Ботаника: расход удобрений, сезоны и скорость роста моды задают кодом. Классы читаем только у jar,
+    // которые описывают растения TFC (есть climate_range), и только те, что про растения (scripts/botany.mjs).
+    if (entries.some((e) => /^data\/[a-z0-9_.-]+\/tfc\/climate_range\//.test(e.entryName))) {
+      for (const entry of entries) {
+        if (entry.isDirectory || !entry.entryName.endsWith('.class')) continue;
+        const data = entry.getData();
+        if (!isBotanyClass(entry.entryName, data)) continue;
+        const target = path.join(dir, 'classes', entry.entryName);
+        fs.mkdirSync(path.dirname(target), { recursive: true });
+        fs.writeFileSync(target, data);
+      }
     }
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(done, new Date().toISOString());
@@ -505,7 +518,11 @@ async function main() {
   const tags = writeTags(dataDirs, parseLooseJson, fluidNames, path.join(ROOT, 'public', 'tags.json'));
   log(`теги: ${tags.tags} (${tags.entries} значений), жидкостей ${tags.fluids} — tags.json ${tags.kb}KB`);
   const botany = writeBotany(dataDirs, parseLooseJson, items, path.join(ROOT, 'public', 'botany.json'));
-  log(`ботаника: культур ${botany.crops}, кустов ${botany.bushes}, деревьев ${botany.trees}, прочих ${botany.other}`);
+  log(
+    `ботаника: культур ${botany.crops}, кустов ${botany.bushes}, деревьев ${botany.trees}, прочих ${botany.other}; ` +
+      `из кода: удобрения у ${botany.npk}, сезоны у ${botany.life}`,
+  );
+  for (const w of botany.warnings) log(`  ботаника: ${w}`);
   const geo = writeGeo(dataDirs, parseLooseJson, path.join(ROOT, 'public'));
   if (geo) log(`география: ${geo.profiles} профилей, ${geo.waypoints} городов, ${geo.maps} карт`);
   const manifest = writeManifest({

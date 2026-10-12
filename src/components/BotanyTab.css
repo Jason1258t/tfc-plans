@@ -124,3 +124,59 @@
   align-items: center;
   gap: 6px;
 }
+
+.botany-npk {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.botany-npk .takes {
+  color: var(--danger);
+}
+
+.botany-npk .gives {
+  color: var(--accent);
+}
+
+.botany-life {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 2px;
+}
+
+.botany-life li {
+  padding: 3px 0;
+  border-radius: 3px;
+  background: var(--surface-2);
+  color: var(--text-3);
+  font-size: 10px;
+  text-align: center;
+}
+
+.botany-life .life-healthy {
+  background: var(--accent-soft);
+  color: var(--text-2);
+}
+
+.botany-life .life-flowering {
+  background: var(--amethyst-soft);
+  color: var(--amethyst);
+}
+
+.botany-life .life-fruiting {
+  background: var(--imp-2);
+  color: #fff;
+  font-weight: 700;
+}
+
+.botany-legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 0 8px;
+}
