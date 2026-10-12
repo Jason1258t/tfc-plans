@@ -40,7 +40,8 @@ npm run world -- <мир|world/data|tfc_calendar.dat|zip>  # сохранени�
 
 ## Проверка в браузере
 
-- Сервер превью: конфигурация **`dev-alt`** (порт 5176) из `.claude/launch.json`. Порт 5173 часто занят другой сессией.
+- Сервер превью: конфигурация **`dev-alt`** (порт 5176) из `.claude/launch.json`. Порт 5173 часто занят другой сессией;
+  если занят и 5176 — `dev-alt2` (5177).
 - Dev-сервер ходит в **боевой Firestore** (App Check debug-токен из `.env.local`). Тестовые записи в общих коллекциях
   не оставляй: либо удаляй за собой, либо проверяй логику без записи.
 - В браузере превью ник — `ClaudeTest` (кука `tfc_nick`). Если пишешь данные от своего имени осознанно
@@ -89,7 +90,8 @@ npm run world -- <мир|world/data|tfc_calendar.dat|zip>  # сохранени�
 ## Карта кода
 
 ```
-src/pages/        TasksPage, DocsPage/DocPage, SchematicsPage, DatapacksPage, RecipesPage, TagsPage, ReferencePage, UpdatesPage, MapPage
+src/pages/        TasksPage (+ раздел документов DocsSection), DocPage, FilesPage, SchematicsPage,
+                  DatapacksPage/RecipesPage/TagsPage (один раздел, слева PackNav), ReferencePage (вкладка «Карта» — MapPage), UpdatesPage
 src/components/   Modal, ItemPicker/ItemIcon, RecipeCatalog (RecipeBrowser), KubejsConstructor, SchematicLibrary, WorldMap, …
 src/lib/
   items.ts fuzzy.ts            библиотека предметов, поиск (fuse.js — только подбор замен в схемах)

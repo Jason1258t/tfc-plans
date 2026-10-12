@@ -1,6 +1,7 @@
 import { FilePen, FilePlus2, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { PackSection } from '../components/PackNav';
 import { Member, TagEditor } from '../components/TagEditor';
 import { useData } from '../data/DataContext';
 import { datapacksStore } from '../data/store';
@@ -83,119 +84,122 @@ export function TagsPage() {
   const shown = all ? found : found.slice(0, SHOWN);
 
   return (
-    <main className="tags-page">
-      <div className="tags-head">
-        <div className="grow">
-          <h1>Теги сборки</h1>
-          <p className="faint small">
-            Состав каждого тега по модам и скриптам KubeJS. Поиск идёт по id тега и по тому, что в него входит
-            (по-русски тоже). Править можно датапаком: добавить, убрать, заменить состав.
-          </p>
-        </div>
-        <button className="btn" onClick={() => setEditing({ kind: kind === 'all' ? 'item' : kind, id: null })}>
-          <FilePlus2 size={15} /> Новый тег
-        </button>
-      </div>
-
-      {pack && (
-        <p className="tags-pack small">
-          Правка пойдёт в датапак <b>{pack.name}</b>.{' '}
-          <button className="link" onClick={() => set({ pack: null })}>
-            Выбирать при сохранении
+    <PackSection>
+      <main className="tags-page">
+        <div className="tags-head">
+          <div className="grow">
+            <h1>Теги сборки</h1>
+            <p className="faint small">
+              Состав каждого тега по модам и скриптам KubeJS. Поиск идёт по id тега и по тому, что в него входит
+              (по-русски тоже). Править можно датапаком: добавить, убрать, заменить состав.
+            </p>
+          </div>
+          <button className="btn" onClick={() => setEditing({ kind: kind === 'all' ? 'item' : kind, id: null })}>
+            <FilePlus2 size={15} /> Новый тег
           </button>
-        </p>
-      )}
-
-      <div className="tags-bar">
-        <div className="tags-search">
-          <Search size={15} className="faint" />
-          <input
-            className="input"
-            autoFocus
-            value={q}
-            placeholder="Тег или что в нём: plantoil, оливковое масло, ingots/steel…"
-            onChange={(e) => {
-              setQ(e.target.value);
-              setAll(false);
-            }}
-          />
         </div>
-        <span className="seg">
-          <button aria-pressed={kind === 'all'} onClick={() => set({ kind: null })}>
-            Все
-          </button>
-          {TAG_KINDS.map((k) => (
-            <button key={k} aria-pressed={kind === k} onClick={() => set({ kind: k })}>
-              {TAG_KIND_LABEL[k]}
+
+        {pack && (
+          <p className="tags-pack small">
+            Правка пойдёт в датапак <b>{pack.name}</b>.{' '}
+            <button className="link" onClick={() => set({ pack: null })}>
+              Выбирать при сохранении
             </button>
-          ))}
-        </span>
-      </div>
+          </p>
+        )}
 
-      {!cat ? (
-        <p className="faint">Загружаю теги…</p>
-      ) : cat.list.length === 0 ? (
-        <p className="empty">
-          Тегов нет: пересоберите библиотеку (<code>npm run mods</code>) — она создаёт <code>public/tags.json</code>.
-        </p>
-      ) : (
-        <div className="tags-body">
-          <aside className="tags-list">
-            <div className="faint small tags-count">
-              Найдено {found.length}
-              {found.length > shown.length && `, показано ${shown.length}`}
-            </div>
-            <ul>
-              {shown.map((t) => (
-                <li key={t.key}>
-                  <button className={cx(t.key === selectedKey && 'active')} onClick={() => set({ tag: t.key })}>
-                    <code>{t.i}</code>
-                    <span className="faint small">
-                      {TAG_KIND_LABEL[t.k]} · {directMembers(t).length}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-            {found.length > shown.length && (
-              <button className="btn ghost sm" onClick={() => setAll(true)}>
-                Показать все {found.length}
+        <div className="tags-bar">
+          <div className="tags-search">
+            <Search size={15} className="faint" />
+            <input
+              className="input"
+              autoFocus
+              value={q}
+              placeholder="Тег или что в нём: plantoil, оливковое масло, ingots/steel…"
+              onChange={(e) => {
+                setQ(e.target.value);
+                setAll(false);
+              }}
+            />
+          </div>
+          <span className="seg">
+            <button aria-pressed={kind === 'all'} onClick={() => set({ kind: null })}>
+              Все
+            </button>
+            {TAG_KINDS.map((k) => (
+              <button key={k} aria-pressed={kind === k} onClick={() => set({ kind: k })}>
+                {TAG_KIND_LABEL[k]}
               </button>
-            )}
-          </aside>
-
-          <section className="tags-detail">
-            {tag ? (
-              <TagDetail
-                key={tag.key}
-                tag={tag}
-                onEdit={() => setEditing({ kind: tag.k, id: tag.i })}
-                hasEntry={Boolean(pack?.entries.some((e) => e.path === tagPath(tag.k, tag.i)))}
-                onOpenTag={(id) => set({ tag: tagKey(tag.k, id) })}
-              />
-            ) : (
-              <div className="tags-hint faint">
-                Выберите тег слева. Например <code>c:plantoil</code> — масла для биодизеля, или найдите тег по предмету.
-              </div>
-            )}
-          </section>
+            ))}
+          </span>
         </div>
-      )}
 
-      {editing && cat && (
-        <TagEditor
-          key={`${editing.kind}|${editing.id}`}
-          cat={cat}
-          kind={editing.kind}
-          tagId={editing.id}
-          existing={existingEntry?.content}
-          saveLabel={pack ? `В датапак «${pack.name}»` : 'Выбрать датапак…'}
-          onSave={save}
-          onClose={() => setEditing(null)}
-        />
-      )}
-      {pending && <PackPicker make={pending} onClose={() => setPending(null)} />}
-    </main>
+        {!cat ? (
+          <p className="faint">Загружаю теги…</p>
+        ) : cat.list.length === 0 ? (
+          <p className="empty">
+            Тегов нет: пересоберите библиотеку (<code>npm run mods</code>) — она создаёт <code>public/tags.json</code>.
+          </p>
+        ) : (
+          <div className="tags-body">
+            <aside className="tags-list">
+              <div className="faint small tags-count">
+                Найдено {found.length}
+                {found.length > shown.length && `, показано ${shown.length}`}
+              </div>
+              <ul>
+                {shown.map((t) => (
+                  <li key={t.key}>
+                    <button className={cx(t.key === selectedKey && 'active')} onClick={() => set({ tag: t.key })}>
+                      <code>{t.i}</code>
+                      <span className="faint small">
+                        {TAG_KIND_LABEL[t.k]} · {directMembers(t).length}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {found.length > shown.length && (
+                <button className="btn ghost sm" onClick={() => setAll(true)}>
+                  Показать все {found.length}
+                </button>
+              )}
+            </aside>
+
+            <section className="tags-detail">
+              {tag ? (
+                <TagDetail
+                  key={tag.key}
+                  tag={tag}
+                  onEdit={() => setEditing({ kind: tag.k, id: tag.i })}
+                  hasEntry={Boolean(pack?.entries.some((e) => e.path === tagPath(tag.k, tag.i)))}
+                  onOpenTag={(id) => set({ tag: tagKey(tag.k, id) })}
+                />
+              ) : (
+                <div className="tags-hint faint">
+                  Выберите тег слева. Например <code>c:plantoil</code> — масла для биодизеля, или найдите тег по
+                  предмету.
+                </div>
+              )}
+            </section>
+          </div>
+        )}
+
+        {editing && cat && (
+          <TagEditor
+            key={`${editing.kind}|${editing.id}`}
+            cat={cat}
+            kind={editing.kind}
+            tagId={editing.id}
+            existing={existingEntry?.content}
+            saveLabel={pack ? `В датапак «${pack.name}»` : 'Выбрать датапак…'}
+            onSave={save}
+            onClose={() => setEditing(null)}
+          />
+        )}
+        {pending && <PackPicker make={pending} onClose={() => setPending(null)} />}
+      </main>
+    </PackSection>
   );
 }
 

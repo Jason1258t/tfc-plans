@@ -1,8 +1,9 @@
-import { Plus, Scale, Search } from 'lucide-react';
+import { BookOpen, ListChecks, Plus, Scale, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArtifactPane } from '../components/ArtifactPane';
 import { CompareDialog } from '../components/CompareDialog';
+import { DocsSection } from '../components/DocsSection';
 import { GroupDialog } from '../components/GroupDialog';
 import { ItemIcon } from '../components/ItemIcon';
 import { TaskDialog, type TaskDialogMode } from '../components/TaskDialog';
@@ -39,6 +40,8 @@ export function TasksPage() {
   const tab = params.get('tab') === 'done' ? 'done' : 'active';
   const editId = params.get('task');
   const docId = params.get('doc');
+  // Раздел «Документы» живёт здесь же, вместо списка задач
+  const docsView = params.get('view') === 'docs';
 
   const [sort, setSort] = useState<SortMode>(() => readPref('tfc-tm:sort', 'priority'));
   const [search, setSearch] = useState('');
@@ -107,6 +110,26 @@ export function TasksPage() {
   return (
     <div className={cx('tasks-layout', docId && 'with-doc')}>
       <aside className="groups">
+        <ul className="groups-sections">
+          <li>
+            <button className={cx('group-item', !docsView && 'active')} onClick={() => setParam({ view: null })}>
+              <span className="group-icon">
+                <ListChecks size={16} />
+              </span>
+              <span className="grow group-name">Задачи</span>
+              <span className="group-count">{countFor(ALL) || ''}</span>
+            </button>
+          </li>
+          <li>
+            <button className={cx('group-item', docsView && 'active')} onClick={() => setParam({ view: 'docs' })}>
+              <span className="group-icon">
+                <BookOpen size={16} />
+              </span>
+              <span className="grow group-name">Документы</span>
+              <span className="group-count">{artifacts.length || ''}</span>
+            </button>
+          </li>
+        </ul>
         <div className="groups-head">
           <span>Группы</span>
           <button className="btn ghost sm icon" onClick={() => setEditingGroup('new')} aria-label="Новая группа">
@@ -117,8 +140,8 @@ export function TasksPage() {
           {groupItems.map((g) => (
             <li key={g.id}>
               <button
-                className={cx('group-item', groupFilter === g.id && 'active')}
-                onClick={() => setParam({ group: g.id === ALL ? null : g.id })}
+                className={cx('group-item', !docsView && groupFilter === g.id && 'active')}
+                onClick={() => setParam({ group: g.id === ALL ? null : g.id, view: null })}
                 onDoubleClick={() => g.group && setEditingGroup(g.group)}
                 title={g.group ? 'Двойной клик — настроить группу' : undefined}
               >
@@ -141,103 +164,109 @@ export function TasksPage() {
       </aside>
 
       <main className="tasks-main">
-        <div className="tasks-top">
-          <div className="seg" role="tablist">
-            <button aria-pressed={tab === 'active'} onClick={() => setParam({ tab: null })}>
-              Активные <span className="count">{inScope.filter((t) => t.status !== 'done').length}</span>
-            </button>
-            <button aria-pressed={tab === 'done'} onClick={() => setParam({ tab: 'done' })}>
-              Выполненные <span className="count">{done.length}</span>
-            </button>
-          </div>
-          <span className="grow" />
-          <button className="btn" onClick={() => setComparing(true)} title="Попарно сравнить задачи по важности">
-            <Scale size={15} />
-            <span className="hide-sm">Что важнее?</span>
-          </button>
-          <button className="btn primary" onClick={() => setCreating(true)}>
-            <Plus size={16} />
-            Задача
-          </button>
-        </div>
-
-        <div className="tasks-filters">
-          <label className="search">
-            <Search size={15} className="faint" />
-            <input
-              placeholder="Поиск по задачам"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              aria-label="Поиск по задачам"
-            />
-          </label>
-          {tab === 'active' && (
-            <>
-              <select
-                className="input"
-                value={minImp}
-                onChange={(e) => setMinImp(Number(e.target.value) as Priority)}
-                aria-label="Минимальная важность"
-              >
-                <option value={0}>Любая важность</option>
-                {PRIORITIES.slice(1).map((p) => (
-                  <option key={p.value} value={p.value}>
-                    {p.label} и выше
-                  </option>
-                ))}
-              </select>
-              <select
-                className="input"
-                value={sort}
-                onChange={(e) => {
-                  setSort(e.target.value as SortMode);
-                  writePref('tfc-tm:sort', e.target.value);
-                }}
-                aria-label="Сортировка"
-              >
-                {SORTS.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </>
-          )}
-          <label className="toggle">
-            <input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} />
-            Мои
-          </label>
-        </div>
-
-        {error && <div className="error-box">Ошибка базы данных: {error}</div>}
-
-        {loading ? (
-          <div className="empty">Загрузка…</div>
-        ) : list.length === 0 ? (
-          <div className="empty">
-            {tab === 'done' ? (
-              'Выполненных задач пока нет'
-            ) : (
-              <>
-                Задач нет.{' '}
-                <button className="link-btn" onClick={() => setCreating(true)}>
-                  Создать первую
-                </button>
-              </>
-            )}
-          </div>
+        {docsView ? (
+          <DocsSection openId={docId} onOpen={(id) => setParam({ doc: id })} />
         ) : (
-          <ul className="task-list">
-            {list.map((t) => (
-              <TaskRow
-                key={t.id}
-                task={t}
-                selected={openDocTaskId === t.id}
-                onOpen={() => setParam({ task: t.id })}
-                onOpenDoc={(id) => setParam({ doc: id })}
-              />
-            ))}
-          </ul>
+          <>
+            <div className="tasks-top">
+              <div className="seg" role="tablist">
+                <button aria-pressed={tab === 'active'} onClick={() => setParam({ tab: null })}>
+                  Активные <span className="count">{inScope.filter((t) => t.status !== 'done').length}</span>
+                </button>
+                <button aria-pressed={tab === 'done'} onClick={() => setParam({ tab: 'done' })}>
+                  Выполненные <span className="count">{done.length}</span>
+                </button>
+              </div>
+              <span className="grow" />
+              <button className="btn" onClick={() => setComparing(true)} title="Попарно сравнить задачи по важности">
+                <Scale size={15} />
+                <span className="hide-sm">Что важнее?</span>
+              </button>
+              <button className="btn primary" onClick={() => setCreating(true)}>
+                <Plus size={16} />
+                Задача
+              </button>
+            </div>
+
+            <div className="tasks-filters">
+              <label className="search">
+                <Search size={15} className="faint" />
+                <input
+                  placeholder="Поиск по задачам"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  aria-label="Поиск по задачам"
+                />
+              </label>
+              {tab === 'active' && (
+                <>
+                  <select
+                    className="input"
+                    value={minImp}
+                    onChange={(e) => setMinImp(Number(e.target.value) as Priority)}
+                    aria-label="Минимальная важность"
+                  >
+                    <option value={0}>Любая важность</option>
+                    {PRIORITIES.slice(1).map((p) => (
+                      <option key={p.value} value={p.value}>
+                        {p.label} и выше
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="input"
+                    value={sort}
+                    onChange={(e) => {
+                      setSort(e.target.value as SortMode);
+                      writePref('tfc-tm:sort', e.target.value);
+                    }}
+                    aria-label="Сортировка"
+                  >
+                    {SORTS.map((s) => (
+                      <option key={s.value} value={s.value}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
+              <label className="toggle">
+                <input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} />
+                Мои
+              </label>
+            </div>
+
+            {error && <div className="error-box">Ошибка базы данных: {error}</div>}
+
+            {loading ? (
+              <div className="empty">Загрузка…</div>
+            ) : list.length === 0 ? (
+              <div className="empty">
+                {tab === 'done' ? (
+                  'Выполненных задач пока нет'
+                ) : (
+                  <>
+                    Задач нет.{' '}
+                    <button className="link-btn" onClick={() => setCreating(true)}>
+                      Создать первую
+                    </button>
+                  </>
+                )}
+              </div>
+            ) : (
+              <ul className="task-list">
+                {list.map((t) => (
+                  <TaskRow
+                    key={t.id}
+                    task={t}
+                    selected={openDocTaskId === t.id}
+                    onOpen={() => setParam({ task: t.id })}
+                    onOpenDoc={(id) => setParam({ doc: id })}
+                  />
+                ))}
+              </ul>
+            )}
+          </>
         )}
       </main>
 

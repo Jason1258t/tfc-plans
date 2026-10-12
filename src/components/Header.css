@@ -110,12 +110,26 @@
   }
 }
 
+.updates-btn {
+  position: relative;
+  flex: none;
+  margin: 0 -12px;
+  color: var(--text-2);
+  text-decoration: none;
+}
+
+.updates-btn.active {
+  color: var(--text);
+  background: var(--surface-3);
+}
+
 .nav-dot {
-  display: inline-block;
+  position: absolute;
+  top: 4px;
+  right: 4px;
   width: 7px;
   height: 7px;
-  margin-left: 5px;
   border-radius: 50%;
   background: var(--accent);
-  vertical-align: 2px;
+  box-shadow: 0 0 0 2px var(--bg);
 }

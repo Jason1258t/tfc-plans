@@ -1,8 +1,5 @@
 .map-page {
   width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 16px 16px 24px;
   min-height: 0;
 }
 
@@ -27,7 +24,7 @@
   flex-wrap: wrap;
 }
 
-.map-title h1 {
+.map-title h2 {
   margin: 0;
   font-size: 22px;
   font-weight: 650;

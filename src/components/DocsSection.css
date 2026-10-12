@@ -1,31 +1,5 @@
-.docs-page {
-  width: 100%;
-  max-width: 860px;
-  margin: 0 auto;
-  padding: 24px 16px 40px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.docs-top {
-  display: flex;
-  align-items: center;
-}
-
-.docs-top h1 {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 650;
-}
-
 .docs-lead {
   margin: 0;
-}
-
-.docs-page .search {
-  flex: none;
-  height: 36px;
 }
 
 .docs-list {
@@ -56,6 +30,11 @@
 
 .doc-item:hover {
   background: var(--surface-2);
+}
+
+.doc-item.active {
+  background: var(--amethyst-soft);
+  box-shadow: inset 3px 0 0 var(--amethyst);
 }
 
 .doc-item-icon {

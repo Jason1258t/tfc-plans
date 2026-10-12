@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { BotanyTab } from '../components/BotanyTab';
 import { ItemIcon } from '../components/ItemIcon';
 import { LiquidFuelTab } from '../components/LiquidFuelTab';
+import { MapPage } from './MapPage';
 import type { BotanySub } from '../lib/botany';
 import { itemName, useItems, type ItemIndex } from '../lib/items';
 import {
@@ -25,7 +26,7 @@ import {
 import { cx } from '../lib/util';
 import './ReferencePage.css';
 
-type Tab = 'ores' | 'fuel' | 'liquid' | 'food' | 'metals' | 'botany';
+type Tab = 'ores' | 'fuel' | 'liquid' | 'food' | 'metals' | 'botany' | 'map';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'ores', label: 'Руды' },
   { id: 'fuel', label: 'Топливо' },
@@ -33,6 +34,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'food', label: 'Еда' },
   { id: 'metals', label: 'Металлы' },
   { id: 'botany', label: 'Ботаника' },
+  { id: 'map', label: 'Карта' },
 ];
 
 /** Справочник по данным сборки: жилы руд, топливо, еда, температуры металлов */
@@ -43,7 +45,7 @@ export function ReferencePage() {
   const items = useItems();
 
   return (
-    <main className="ref-page">
+    <main className={cx('ref-page', tab === 'map' && 'wide')}>
       <div className="ref-head">
         <div className="grow">
           <h1>Справочник</h1>
@@ -65,7 +67,9 @@ export function ReferencePage() {
           </button>
         ))}
       </div>
-      {ref === undefined ? (
+      {tab === 'map' ? (
+        <MapPage />
+      ) : ref === undefined ? (
         <div className="empty">Загружаю справочник…</div>
       ) : ref === null ? (
         <div className="empty">Справочник не собран — выполните npm run mods</div>

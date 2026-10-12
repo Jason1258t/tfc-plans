@@ -63,7 +63,7 @@ export function PlaceField({ value, onChange }: Props) {
               e.target.value !== (value.label ?? '') && onChange({ ...value, label: e.target.value || undefined })
             }
           />
-          <Link className="btn sm" to={`/map?x=${value.x}&z=${value.z}`}>
+          <Link className="btn sm" to={`/reference?tab=map&x=${value.x}&z=${value.z}`}>
             На карте
           </Link>
           <button className="btn ghost sm icon" aria-label="Убрать место" onClick={() => onChange(null)}>

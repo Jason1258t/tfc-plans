@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { KubejsConstructor } from '../components/KubejsConstructor';
 import { Modal } from '../components/Modal';
+import { PackSection } from '../components/PackNav';
 import { recipeActions, RecipeBrowser } from '../components/RecipeCatalog';
 import { useData } from '../data/DataContext';
 import { datapacksStore } from '../data/store';
@@ -23,66 +24,69 @@ export function RecipesPage() {
   const kubejs = catalog?.kubejs;
 
   return (
-    <main className="recipes-page">
-      <div className="recipes-head">
-        <div className="grow">
-          <h1>Рецепты сборки</h1>
-          <p className="faint small">
-            Рецепты из модов, датапака <code>kubejs/data</code> и скриптов KubeJS. Удалённые и изменённые скриптами
-            отмечены — по ним можно открыть конструктор.
-          </p>
+    <PackSection>
+      <main className="recipes-page">
+        <div className="recipes-head">
+          <div className="grow">
+            <h1>Рецепты сборки</h1>
+            <p className="faint small">
+              Рецепты из модов, датапака <code>kubejs/data</code> и скриптов KubeJS. Удалённые и изменённые скриптами
+              отмечены — по ним можно открыть конструктор.
+            </p>
+          </div>
+          <span className="seg">
+            <button aria-pressed={mode === 'template'} onClick={() => setMode('template')}>
+              Шаблон
+            </button>
+            <button aria-pressed={mode === 'existing'} onClick={() => setMode('existing')}>
+              Заменить / удалить
+            </button>
+          </span>
         </div>
-        <span className="seg">
-          <button aria-pressed={mode === 'template'} onClick={() => setMode('template')}>
-            Шаблон
-          </button>
-          <button aria-pressed={mode === 'existing'} onClick={() => setMode('existing')}>
-            Заменить / удалить
-          </button>
-        </span>
-      </div>
 
-      {kubejs ? (
-        <p className="recipes-kjs faint small">
-          KubeJS:{' '}
-          {kubejs.layers
-            .map((l) => `${l.name} — ${l.scripts} скриптов, ${l.rules} удалений/замен, +${l.added} рецептов`)
-            .join('; ')}
-          . Импорт {timeAgo(kubejs.generatedAt)}
-          {kubejs.errors.length > 0 && `, не выполнились: ${kubejs.errors.map((e) => e.file).join(', ')}`}.
-        </p>
-      ) : (
-        catalog && (
+        {kubejs ? (
           <p className="recipes-kjs faint small">
-            Скрипты KubeJS не импортированы — удаления сборки не учитываются: <code>npm run kubejs -- kubejs.zip</code>.
+            KubeJS:{' '}
+            {kubejs.layers
+              .map((l) => `${l.name} — ${l.scripts} скриптов, ${l.rules} удалений/замен, +${l.added} рецептов`)
+              .join('; ')}
+            . Импорт {timeAgo(kubejs.generatedAt)}
+            {kubejs.errors.length > 0 && `, не выполнились: ${kubejs.errors.map((e) => e.file).join(', ')}`}.
           </p>
-        )
-      )}
-
-      <RecipeBrowser
-        catalog={catalog}
-        autoFocus
-        actions={recipeActions(mode, (kind, r) =>
-          setPending(() => (pack: Parameters<Pending>[0]) => entryFromRecipe(kind, r, pack)),
+        ) : (
+          catalog && (
+            <p className="recipes-kjs faint small">
+              Скрипты KubeJS не импортированы — удаления сборки не учитываются:{' '}
+              <code>npm run kubejs -- kubejs.zip</code>.
+            </p>
+          )
         )}
-        onConstructor={setConstructing}
-      />
 
-      {constructing && kubejs && (
-        <KubejsConstructor
-          recipeId={constructing.i}
-          json={constructing.j}
-          rules={kubejs.rules}
-          namespace="tfc_plans"
-          onNewEntry={(id, json) => {
-            setConstructing(null);
-            setPending(() => () => entryWithId(JSON.stringify(json, null, 2), id, constructing.i));
-          }}
-          onClose={() => setConstructing(null)}
+        <RecipeBrowser
+          catalog={catalog}
+          autoFocus
+          actions={recipeActions(mode, (kind, r) =>
+            setPending(() => (pack: Parameters<Pending>[0]) => entryFromRecipe(kind, r, pack)),
+          )}
+          onConstructor={setConstructing}
         />
-      )}
-      {pending && <PackPicker make={pending} onClose={() => setPending(null)} />}
-    </main>
+
+        {constructing && kubejs && (
+          <KubejsConstructor
+            recipeId={constructing.i}
+            json={constructing.j}
+            rules={kubejs.rules}
+            namespace="tfc_plans"
+            onNewEntry={(id, json) => {
+              setConstructing(null);
+              setPending(() => () => entryWithId(JSON.stringify(json, null, 2), id, constructing.i));
+            }}
+            onClose={() => setConstructing(null)}
+          />
+        )}
+        {pending && <PackPicker make={pending} onClose={() => setPending(null)} />}
+      </main>
+    </PackSection>
   );
 }
 

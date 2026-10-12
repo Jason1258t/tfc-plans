@@ -31,6 +31,7 @@ import {
   validatePack,
   zipName,
 } from '../lib/datapack';
+import { PackNav } from '../components/PackNav';
 import { filesEnabled, uploadFile } from '../lib/files';
 import { useItems } from '../lib/items';
 import { entryRecipeId, kubejsScript, scriptFileName } from '../lib/kubejsFix';
@@ -86,6 +87,7 @@ export function DatapacksPage() {
   return (
     <div className="dp-layout">
       <aside className="dp-list">
+        <PackNav />
         <div className="dp-list-head">
           <span>Датапаки</span>
           <button className="btn ghost sm icon" onClick={create} aria-label="Новый датапак" title="Новый датапак">

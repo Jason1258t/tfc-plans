@@ -1,14 +1,19 @@
 import { BookOpen, Plus, Search } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useData } from '../data/DataContext';
 import { artifactsStore } from '../data/store';
-import { timeAgo } from '../lib/util';
-import './DocsPage.css';
+import { cx, timeAgo } from '../lib/util';
+import './DocsSection.css';
 
-export function DocsPage() {
+interface Props {
+  /** Документ, открытый справа */
+  openId: string | null;
+  onOpen: (id: string) => void;
+}
+
+/** Раздел «Документы» на странице задач: все Markdown-планы, с задачей и без */
+export function DocsSection({ openId, onOpen }: Props) {
   const { artifacts, tasks, nick, loading } = useData();
-  const navigate = useNavigate();
   const [q, setQ] = useState('');
 
   const list = artifacts
@@ -23,30 +28,33 @@ export function DocsPage() {
       author: nick,
       updatedBy: nick,
     });
-    navigate(`/docs/${id}`);
+    onOpen(id);
   };
 
   return (
-    <div className="docs-page">
-      <div className="docs-top">
-        <h1>Документы</h1>
-        <span className="grow" />
+    <>
+      <div className="tasks-top">
+        <label className="search">
+          <Search size={15} className="faint" />
+          <input
+            placeholder="Поиск по документам"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            aria-label="Поиск по документам"
+          />
+        </label>
         <button className="btn primary" onClick={create}>
           <Plus size={16} />
           Документ
         </button>
       </div>
       <p className="muted docs-lead">
-        Markdown-планы для сложных задач. Обычно создаются из задачи и открываются справа от списка.
+        Markdown-планы для сложных задач. Обычно создаются из задачи; здесь — все сразу, включая документы без задачи.
       </p>
-      <label className="search">
-        <Search size={15} className="faint" />
-        <input placeholder="Поиск по документам" value={q} onChange={(e) => setQ(e.target.value)} />
-      </label>
       {loading ? (
         <div className="empty">Загрузка…</div>
       ) : list.length === 0 ? (
-        <div className="empty">Документов пока нет</div>
+        <div className="empty">{q.trim() ? 'Ничего не найдено' : 'Документов пока нет'}</div>
       ) : (
         <ul className="docs-list">
           {list.map((a) => {
@@ -54,7 +62,7 @@ export function DocsPage() {
             const firstLine = a.content.replace(/^#.*$/m, '').trim().split('\n')[0]?.slice(0, 140);
             return (
               <li key={a.id}>
-                <button className="doc-item" onClick={() => navigate(task ? `/?doc=${a.id}` : `/docs/${a.id}`)}>
+                <button className={cx('doc-item', a.id === openId && 'active')} onClick={() => onOpen(a.id)}>
                   <BookOpen size={18} className="doc-item-icon" />
                   <span className="grow">
                     <span className="doc-item-title">{a.title || 'Без названия'}</span>
@@ -69,6 +77,6 @@ export function DocsPage() {
           })}
         </ul>
       )}
-    </div>
+    </>
   );
 }

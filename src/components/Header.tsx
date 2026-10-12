@@ -1,6 +1,6 @@
-import { Search } from 'lucide-react';
+import { Bell, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { firebaseEnabled } from '../firebase';
 import { lastSeenUpdate, usePackUpdates } from '../lib/packUpdates';
 import './Header.css';
@@ -16,6 +16,8 @@ interface Props {
 
 export function Header({ nick, onChangeNick }: Props) {
   const [searching, setSearching] = useState(false);
+  // Датапаки, рецепты и теги — один раздел с тремя вкладками
+  const inPacks = /^\/(datapacks|recipes|tags)\b/.test(useLocation().pathname);
   const updates = usePackUpdates();
   const [seen, setSeen] = useState(lastSeenUpdate);
   useEffect(() => {
@@ -46,16 +48,12 @@ export function Header({ nick, onChangeNick }: Props) {
         <NavLink to="/" end>
           Задачи
         </NavLink>
-        <NavLink to="/docs">Документы</NavLink>
+        <NavLink to="/files">Файлы</NavLink>
         <NavLink to="/schematics">Схемы</NavLink>
-        <NavLink to="/datapacks">Датапаки</NavLink>
-        <NavLink to="/recipes">Рецепты</NavLink>
-        <NavLink to="/tags">Теги</NavLink>
-        <NavLink to="/map">Карта</NavLink>
-        <NavLink to="/reference">Справочник</NavLink>
-        <NavLink to="/updates" title={fresh ? 'Есть новое обновление сборки' : undefined}>
-          Обновления{fresh && <span className="nav-dot" aria-label="новое" />}
+        <NavLink to="/datapacks" className={inPacks ? 'active' : undefined}>
+          Датапаки
         </NavLink>
+        <NavLink to="/reference">Справочник</NavLink>
       </nav>
       <span className="grow" />
       {!firebaseEnabled && (
@@ -79,6 +77,15 @@ export function Header({ nick, onChangeNick }: Props) {
           <ItemIdSearch autoFocus />
         </Modal>
       )}
+      <NavLink
+        to="/updates"
+        className="btn ghost sm icon updates-btn"
+        aria-label="Обновления сборки"
+        {...tooltipHandlers('Обновления сборки', fresh ? 'Есть новое обновление' : undefined)}
+      >
+        <Bell size={16} />
+        {fresh && <span className="nav-dot" aria-label="новое" />}
+      </NavLink>
       <button className="nick" onClick={onChangeNick} {...tooltipHandlers('Сменить ник')}>
         <span className="avatar" aria-hidden>
           {nick.slice(0, 1).toUpperCase()}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Header } from './components/Header';
 import { NickDialog } from './components/NickDialog';
 import { TooltipLayer } from './components/Tooltip';
@@ -10,12 +10,19 @@ import { DocPage } from './pages/DocPage';
 import { DatapacksPage } from './pages/DatapacksPage';
 import { RecipesPage } from './pages/RecipesPage';
 import { TagsPage } from './pages/TagsPage';
-import { DocsPage } from './pages/DocsPage';
+import { FilesPage } from './pages/FilesPage';
 import { ReferencePage } from './pages/ReferencePage';
 import { UpdatesPage } from './pages/UpdatesPage';
-import { MapPage } from './pages/MapPage';
 import { SchematicsPage } from './pages/SchematicsPage';
 import { TasksPage } from './pages/TasksPage';
+
+/** Старые ссылки на карту (в том числе с точками в адресе) ведут во вкладку справочника */
+function MapRedirect() {
+  const { search } = useLocation();
+  const params = new URLSearchParams(search);
+  params.set('tab', 'map');
+  return <Navigate to={`/reference?${params}`} replace />;
+}
 
 export default function App() {
   const [nick, setNick] = useState(readNick);
@@ -36,7 +43,8 @@ export default function App() {
         <ErrorBoundary>
           <Routes>
             <Route path="/" element={<TasksPage />} />
-            <Route path="/docs" element={<DocsPage />} />
+            <Route path="/docs" element={<Navigate to="/?view=docs" replace />} />
+            <Route path="/files" element={<FilesPage />} />
             <Route path="/docs/:id" element={<DocPage />} />
             <Route path="/schematics" element={<SchematicsPage />} />
             <Route path="/datapacks" element={<DatapacksPage />} />
@@ -44,7 +52,7 @@ export default function App() {
             <Route path="/tags" element={<TagsPage />} />
             <Route path="/reference" element={<ReferencePage />} />
             <Route path="/updates" element={<UpdatesPage />} />
-            <Route path="/map" element={<MapPage />} />
+            <Route path="/map" element={<MapRedirect />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </ErrorBoundary>

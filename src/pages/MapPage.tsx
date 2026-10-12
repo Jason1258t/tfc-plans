@@ -37,14 +37,14 @@ const LAYERS: { id: MapLayer; label: string }[] = [
   { id: 'rainfall', label: 'Осадки' },
 ];
 
-/** Карта мира TFC Real World: координаты ↔ города, расстояния, места задач */
+/** Карта мира TFC Real World (вкладка справочника): координаты ↔ города, расстояния, места задач */
 export function MapPage() {
   const geo = useGeo();
   const world = useWorldSettings();
   const profile = useMemo(() => (geo ? worldProjection(geo, world) : null), [geo, world]);
 
   return (
-    <main className="map-page">
+    <div className="map-page">
       {geo === undefined ? (
         <div className="empty">Загружаю географию…</div>
       ) : !geo || !profile ? (
@@ -52,7 +52,7 @@ export function MapPage() {
       ) : (
         <MapView geo={geo} profile={profile} world={world} />
       )}
-    </main>
+    </div>
   );
 }
 
@@ -132,7 +132,7 @@ function MapView({ geo, profile, world }: { geo: GeoData; profile: GeoProfile; w
     <div className="map-layout">
       <aside className="map-side">
         <div className="map-title">
-          <h1>Карта мира</h1>
+          <h2>Карта мира</h2>
           <button className="btn ghost sm" onClick={() => setSettingsOpen(true)} title="Профиль и масштаб мира">
             <Settings size={14} /> {geoName(profile.name)}
           </button>

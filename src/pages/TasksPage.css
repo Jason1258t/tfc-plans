@@ -41,6 +41,14 @@
   gap: 1px;
 }
 
+.groups-sections {
+  margin-bottom: 14px !important;
+}
+
+.group-icon svg {
+  color: var(--text-3);
+}
+
 .groups li {
   position: relative;
   display: flex;
@@ -403,6 +411,9 @@
   }
   .groups-head {
     display: none;
+  }
+  .groups-sections {
+    margin-bottom: 6px !important;
   }
   .groups ul {
     flex-direction: row;
