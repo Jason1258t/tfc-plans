@@ -67,7 +67,8 @@ function UpdateCard({
 }) {
   const { nick, groups, tasks } = useData();
   const risks = useMemo(() => datapackRisks(u, packs), [u, packs]);
-  const [open, setOpen] = useState(latest);
+  // Список изменений свёрнут у всех обновлений, включая последнее: сверху и так патчноут
+  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
