@@ -14,7 +14,7 @@ import { Gallery } from './Gallery';
 import { Checklist } from './Checklist';
 import { ItemIcon } from './ItemIcon';
 import { ItemPicker } from './ItemPicker';
-import { Markdown, itemToken } from './Markdown';
+import { Markdown, itemToken, toggleTaskLine } from './Markdown';
 import { Modal } from './Modal';
 import { PlaceField } from './PlaceField';
 import { SchematicImport } from './SchematicImport';
@@ -571,7 +571,13 @@ function TaskFields({ value, onPatch, live, autoFocusTitle, checklistExtra, chec
           />
         ) : (
           <div className="tf-desc" onDoubleClick={() => setDescMode('edit')}>
-            <Markdown source={value.description} />
+            <Markdown
+              source={value.description}
+              onToggleTask={(line) => {
+                const next = toggleTaskLine(value.description, line);
+                if (next !== null) onPatch({ description: next });
+              }}
+            />
           </div>
         )}
         {gallery && <div className="tf-gallery">{gallery}</div>}
