@@ -36,7 +36,12 @@ export async function openFromLibrary(
   entry: SavedSchematic,
 ): Promise<{ schematic: Schematic; replace: Map<string, string> }> {
   const blob = await fileBlob(entry.fileId);
-  const schematic = await loadSchematic(new File([blob], entry.fileName));
+  // Имя файла — по названию схемы: его могли поменять после загрузки, а скачивается файл под ним
+  const safe = entry.name
+    .replace(/\.nbt$/i, '')
+    .replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_')
+    .trim();
+  const schematic = await loadSchematic(new File([blob], `${safe || entry.fileName.replace(/\.nbt$/i, '')}.nbt`));
   schematic.key = `lib:${entry.id}`;
   schematic.libraryId = entry.id;
   return { schematic, replace: new Map(entry.replace.map((r) => [r.from, r.to])) };
