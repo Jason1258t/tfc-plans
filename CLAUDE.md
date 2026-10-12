@@ -56,7 +56,7 @@ npm run kubejs -- <zip|папка> [--layer world]  # скрипты KubeJS → 
 
 | Источник (не в git)           | Скрипт                                               | Результат                                                                                                 |
 | ----------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `mods/*.jar`                  | `build-items.mjs` (+ `reference`, `manifest`, `geo`, `tags`) | `public/items.json`, `icons/`, `recipes.json`, `reference.json`, `pack-manifest.json`, `geo.json`, `geo/`, `tags.json` |
+| `mods/*.jar`                  | `build-items.mjs` (+ `reference`, `manifest`, `geo`, `tags`, `botany`) | `public/items.json`, `icons/`, `recipes.json`, `reference.json`, `pack-manifest.json`, `geo.json`, `geo/`, `tags.json`, `botany.json` |
 | `instance/kubejs/<слой>/`     | `kubejs.mjs`                                         | `public/kubejs.json`                                                                                      |
 | zip/папка конфигов сервера    | `import-config.mjs`                                  | Firestore `config/{scope}__{путь}`                                                                        |
 | разница манифестов при деплое | `pack-release.mjs` (predeploy)                       | Firestore `packUpdates/{id}`                                                                              |

@@ -1,8 +1,10 @@
 import { ArrowRight, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { BotanyTab } from '../components/BotanyTab';
 import { ItemIcon } from '../components/ItemIcon';
 import { LiquidFuelTab } from '../components/LiquidFuelTab';
+import type { PlantKind } from '../lib/botany';
 import { itemName, useItems, type ItemIndex } from '../lib/items';
 import {
   formatTicks,
@@ -23,13 +25,14 @@ import {
 import { cx } from '../lib/util';
 import './ReferencePage.css';
 
-type Tab = 'ores' | 'fuel' | 'liquid' | 'food' | 'metals';
+type Tab = 'ores' | 'fuel' | 'liquid' | 'food' | 'metals' | 'botany';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'ores', label: 'Руды' },
   { id: 'fuel', label: 'Топливо' },
   { id: 'liquid', label: 'Жидкое топливо' },
   { id: 'food', label: 'Еда' },
   { id: 'metals', label: 'Металлы' },
+  { id: 'botany', label: 'Ботаника' },
 ];
 
 /** Справочник по данным сборки: жилы руд, топливо, еда, температуры металлов */
@@ -78,6 +81,14 @@ export function ReferencePage() {
         )
       ) : tab === 'food' ? (
         <FoodTab foods={ref.foods} items={items} />
+      ) : tab === 'botany' ? (
+        <BotanyTab
+          foods={ref.foods}
+          sub={(['crop', 'bush', 'tree', 'plant'] as const).find((k) => k === params.get('sub')) ?? 'crop'}
+          onSub={(k: PlantKind) =>
+            setParams(k === 'crop' ? { tab: 'botany' } : { tab: 'botany', sub: k }, { replace: true })
+          }
+        />
       ) : (
         <MetalsTab ref_={ref} items={items} />
       )}

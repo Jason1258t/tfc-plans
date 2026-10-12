@@ -38,6 +38,7 @@ public/pack-manifest.json
 public/geo.json
 public/geo/
 public/tags.json
+public/botany.json
 
 # Jar модов сборки — источник библиотеки предметов, в git не храним
 mods/*

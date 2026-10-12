@@ -200,6 +200,11 @@ node scripts/seed-recipe-hints.mjs
 (блок → °C; файл заменяется целиком, читается при запуске сервера). Горелка Create — из
 `config/woodencog-common.toml` (`blaze_burner_kindled` = 1350 °C по умолчанию; чугун плавится при 1535 °C).
 
+### Ботаника (вкладка справочника)
+
+`public/botany.json` собирает `scripts/botany.mjs` из `data/*/tfc/climate_range/{crop,plant}/`: диапазоны температуры и
+влажности культур, кустов и деревьев. Что ещё надо разобрать (рост, удобрения, сезоны) — в `docs/plans/botany.md`.
+
 ### Теги (страница «Теги»)
 
 `npm run items` собирает `public/tags.json`: теги предметов, жидкостей, блоков и сущностей из `data/*/tags/` ванили и всех

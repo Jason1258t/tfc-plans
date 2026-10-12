@@ -1,0 +1,126 @@
+.botany {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .botany {
+    grid-template-columns: 1fr;
+  }
+}
+
+.botany-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  position: sticky;
+  top: calc(var(--header-h) + 12px);
+}
+
+@media (max-width: 760px) {
+  .botany-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    position: static;
+  }
+}
+
+.botany-nav button {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.botany-nav button:hover {
+  background: var(--surface-2);
+}
+
+.botany-nav button.active {
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+
+.botany-main {
+  min-width: 0;
+}
+
+.botany-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 130px;
+}
+
+.botany-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 10px;
+}
+
+.botany-card {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.botany-card-head {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.botany-noicon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.botany-name {
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.botany-stats {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  font-size: 13px;
+}
+
+.botany-stats dt {
+  color: var(--text-3);
+}
+
+.botany-stats dd {
+  margin: 0;
+}
+
+.botany-seed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
