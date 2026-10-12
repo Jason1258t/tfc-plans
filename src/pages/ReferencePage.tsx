@@ -2,6 +2,7 @@ import { ArrowRight, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BotanyTab } from '../components/BotanyTab';
+import { MealsTab } from '../components/MealsTab';
 import { ItemIcon } from '../components/ItemIcon';
 import { LiquidFuelTab } from '../components/LiquidFuelTab';
 import { MapPage } from './MapPage';
@@ -84,7 +85,23 @@ export function ReferencePage() {
           <div className="empty">Справочник собран старой версией — выполните npm run mods</div>
         )
       ) : tab === 'food' ? (
-        <FoodTab foods={ref.foods} items={items} />
+        <>
+          <div className="seg ref-subtabs">
+            <button
+              aria-pressed={params.get('sub') !== 'meals'}
+              onClick={() => setParams({ tab: 'food' }, { replace: true })}
+            >
+              Продукты
+            </button>
+            <button
+              aria-pressed={params.get('sub') === 'meals'}
+              onClick={() => setParams({ tab: 'food', sub: 'meals' }, { replace: true })}
+            >
+              Сборные блюда
+            </button>
+          </div>
+          {params.get('sub') === 'meals' ? <MealsTab items={items} /> : <FoodTab foods={ref.foods} items={items} />}
+        </>
       ) : tab === 'botany' ? (
         <BotanyTab
           foods={ref.foods}

@@ -24,6 +24,7 @@ import { writeGeo } from './mods/geo.mjs';
 import { buildReference } from './mods/reference.mjs';
 import { writeTags } from './mods/tags.mjs';
 import { isBotanyClass, writeBotany } from './mods/botany.mjs';
+import { isMealClass, writeMeals } from './mods/meals.mjs';
 
 const MC_VERSION = '1.21.1';
 
@@ -159,8 +160,8 @@ function prepareJar(file) {
   const st = fs.statSync(file);
   const key = `${path.basename(file, '.jar')}-${st.size}-${Math.round(st.mtimeMs)}`.replace(/[^\w.+-]/g, '_');
   const dir = path.join(CACHE, 'jars', key);
-  // v16 — плюс классы полива теплицы; v15 — плюс классы грядок теплицы; v14 — плюс перечисление черт еды; v13 — плюс уровни теплицы; v12 — плюс растения теплицы Firmalife и классы конфигов аддонов; v11 — плюс loot-таблицы растений и их размещение в мире; v10 — плюс классы календаря; v9 — плюс классы конфигов; v8 — плюс классы растений (classes/) для ботаники; v7 — плюс климатические диапазоны растений TFC; v6 — плюс теги, жилы, данные TFC для справочника, география TFC Real World и жидкое топливо; теги блоков и сущностей
-  const done = path.join(dir, '.done-v16');
+  // v17 — плюс классы сборных блюд; v16 — плюс классы полива теплицы; v15 — плюс классы грядок теплицы; v14 — плюс перечисление черт еды; v13 — плюс уровни теплицы; v12 — плюс растения теплицы Firmalife и классы конфигов аддонов; v11 — плюс loot-таблицы растений и их размещение в мире; v10 — плюс классы календаря; v9 — плюс классы конфигов; v8 — плюс классы растений (classes/) для ботаники; v7 — плюс климатические диапазоны растений TFC; v6 — плюс теги, жилы, данные TFC для справочника, география TFC Real World и жидкое топливо; теги блоков и сущностей
+  const done = path.join(dir, '.done-v17');
   if (!fs.existsSync(done) || fresh) {
     fs.rmSync(dir, { recursive: true, force: true });
     let zip;
@@ -187,7 +188,7 @@ function prepareJar(file) {
       for (const entry of entries) {
         if (entry.isDirectory || !entry.entryName.endsWith('.class')) continue;
         const data = entry.getData();
-        if (!isBotanyClass(entry.entryName, data)) continue;
+        if (!isBotanyClass(entry.entryName, data) && !isMealClass(entry.entryName, data)) continue;
         const target = path.join(dir, 'classes', entry.entryName);
         fs.mkdirSync(path.dirname(target), { recursive: true });
         fs.writeFileSync(target, data);
@@ -535,6 +536,14 @@ async function main() {
       `урожай у ${botany.drops}, дикие формы у ${botany.wild}, применение у ${botany.uses}, в теплице ${botany.greenhouse}`,
   );
   for (const w of botany.warnings) log(`  ботаника: ${w}`);
+  const meals = writeMeals(
+    dataDirs.map((d) => path.join(path.dirname(d.dir), 'classes')),
+    recipes,
+    items,
+    path.join(ROOT, 'public', 'meals.json'),
+  );
+  log(`сборные блюда: семейств ${meals.families}, блюд ${meals.dishes}; из кода: ${meals.computed.join(', ') || '—'}`);
+  for (const w of meals.warnings) log(`  сборные блюда: ${w}`);
   const geo = writeGeo(dataDirs, parseLooseJson, path.join(ROOT, 'public'));
   if (geo) log(`география: ${geo.profiles} профилей, ${geo.waypoints} городов, ${geo.maps} карт`);
   const manifest = writeManifest({

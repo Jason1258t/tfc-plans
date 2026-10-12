@@ -422,3 +422,7 @@
   flex-direction: column;
   gap: 8px;
 }
+
+.ref-subtabs {
+  margin-bottom: 10px;
+}
