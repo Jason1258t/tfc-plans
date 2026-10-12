@@ -57,6 +57,10 @@ export interface Plant {
   /** Качество урожая: что считается вокруг лозы (радиус) и при каких условиях плод получает черту еды */
   quality?: {
     radius: number | null;
+    /** Сколько слоёв по высоте осматривает растение (уровень лозы и ниже) */
+    layers?: number;
+    /** Ряд: счётчики складываются по растениям, стоящим через step блоков вдоль шпагата */
+    row?: { step: number; unbounded: boolean };
     traits: { trait: string; when: { l: string; op: string; r: string | number }[] }[];
   };
   /** Что падает со спелой культуры (loot-таблица): byYield — количество зависит от ухода */
@@ -282,6 +286,8 @@ export const QUALITY_COUNT_LABEL: Record<string, string> = {
   'c:gravels': 'гравия',
   air_below: 'пустых блоков уровнем ниже лозы',
   air_level: 'пустых блоков на уровне лозы',
+  solid_below: 'занятых блоков уровнем ниже лозы',
+  solid_level: 'занятых блоков на уровне лозы',
 };
 
 export const FOOD_TRAIT_LABEL: Record<string, string> = {

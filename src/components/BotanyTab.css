@@ -358,6 +358,11 @@
   align-items: flex-end;
 }
 
+.botany-quality-note {
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+
 .botany-quality {
   margin: 0;
   display: flex;

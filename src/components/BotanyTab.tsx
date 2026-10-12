@@ -593,6 +593,17 @@ function PlantCard({
               <span className="faint"> · считается в {p.quality.radius} блоках вокруг лозы</span>
             ) : null}
           </h4>
+          {p.quality.radius && p.quality.row ? (
+            <p className="small botany-quality-note">
+              Каждое растение лозы осматривает квадрат {p.quality.radius * 2 + 1}×{p.quality.radius * 2 + 1} вокруг себя
+              {p.quality.layers === 2 ? ' на своём уровне и уровнем ниже' : ''} ({(p.quality.radius * 2 + 1) ** 2}{' '}
+              блоков в слое). Счётчики складываются по всему ряду: по растениям, стоящим через каждые{' '}
+              {p.quality.row.step} блока вдоль шпагата, пока ряд не прервётся
+              {p.quality.row.unbounded ? '; длина ряда не ограничена' : ''}. Пороги-числа сравниваются с суммой по ряду
+              и с длиной не растут, а области соседних растений перекрываются, так что общие блоки считаются несколько
+              раз.
+            </p>
+          ) : null}
           <dl className="botany-quality">
             {p.quality.traits.map((t) => {
               // Имя ключа конфига: «Dirt_grown» из DIRT_GROWN

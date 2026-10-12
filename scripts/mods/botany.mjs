@@ -316,7 +316,14 @@ function qualityRules(cls) {
   let lastLocal = null;
   let radius = null;
   let bees = false;
+  let prevIndex = null;
+  // «isAir(); ifne» — счётчик пропускает воздух, то есть считает занятые блоки; «ifeq» — наоборот, пустые
+  let counts = 'air';
+  let prevOp = null;
   for (const ins of instructions(scan.code)) {
+    if (prevOp === 0xb6 && cls.ref(prevIndex).name === 'isAir' && ins.op === 0x9a) counts = 'solid';
+    prevOp = ins.op;
+    prevIndex = ins.index;
     if (ins.op === 0xb2 && isTag(cls.ref(ins.index))) tag = tagIdOf(cls.ref(ins.index));
     else if (ins.op === 0x84) {
       const local = ins.index >> 8;
@@ -331,14 +338,15 @@ function qualityRules(cls) {
     }
     if (localOf(ins) !== null) lastLocal = localOf(ins);
   }
-  // Счётчики без тега — пустые блоки: сначала уровнем ниже лозы, потом на её уровне (так идёт проверка высоты)
+  // Счётчики без тега — пустые или занятые блоки (см. counts): сначала уровнем ниже лозы, потом на её уровне
   const counted = [...slot.values()];
   const air = untagged.filter((l) => counted.includes(l));
   const slotLabel = new Map();
   for (const [idx, local] of slot)
     slotLabel.set(
       idx,
-      label.get(local) ?? (air.indexOf(local) === 0 ? 'air_below' : air.indexOf(local) === 1 ? 'air_level' : null),
+      label.get(local) ??
+        (air.indexOf(local) === 0 ? `${counts}_below` : air.indexOf(local) === 1 ? `${counts}_level` : null),
     );
 
   // 2. Условия черт: переменная суммирует слот массива («x += data[k]»), затем сравнения перед каждой чертой
@@ -381,7 +389,18 @@ function qualityRules(cls) {
       stack = [];
     } else stack = [];
   }
-  return out.length ? { radius, traits: out } : null;
+  // 3. Ряд: метод выдачи черт идёт от крайнего растения с шагом «move(направление, N)» и складывает счётчики
+  // соседей; если в цикле нет своего счётчика (iinc), длина ряда не ограничена
+  const tr = instructions(traits.code);
+  let step = null;
+  tr.forEach((ins, i) => {
+    if (ins.op === 0xb6 && cls.ref(ins.index).name === 'move' && i > 0 && intOf(tr[i - 1]) > 0) step = intOf(tr[i - 1]);
+  });
+  const row =
+    step && tr.some((i) => i.op === 0xa7 && i.index > 0x7fff)
+      ? { step, unbounded: !tr.some((i) => i.op === 0x84) }
+      : undefined;
+  return out.length ? { radius, layers: air.length || undefined, row, traits: out } : null;
 }
 
 function readCode(classDirs, warnings) {
