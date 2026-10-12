@@ -1,10 +1,11 @@
-import { Download, File as FileIcon, FileArchive, Paperclip, Trash2, X } from 'lucide-react';
+import { Download, Paperclip, Trash2, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useData } from '../data/DataContext';
 import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, type FileMeta } from '../lib/files';
 import { dismissUpload, isImage, useUploads } from '../lib/uploads';
 import { cx, timeAgo } from '../lib/util';
 import './Attachments.css';
+import { FileBadge } from './FileBadge';
 
 interface Props {
   /** Существующая задача; без него — черновик новой задачи */
@@ -16,8 +17,6 @@ interface Props {
   onAdd: (files: File[]) => void;
   error?: string | null;
 }
-
-const isArchive = (name: string) => /\.(zip|jar|rar|7z|gz|tar)$/i.test(name);
 
 /** Список вложений, кроме картинок — те показываются галереей */
 export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: Props) {
@@ -71,14 +70,13 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
         <ul className="attach-list">
           {attached.map((f) => (
             <li key={f.id} className="attach-row">
-              {isArchive(f.name) ? (
-                <FileArchive size={18} className="attach-ico" />
-              ) : (
-                <FileIcon size={18} className="attach-ico" />
-              )}
-              <button className="attach-name" onClick={() => run(f.id, () => downloadFile(f))} title="Скачать">
-                {f.name}
-              </button>
+              <FileBadge
+                compact
+                name={f.name}
+                type={f.type}
+                onOpen={() => run(f.id, () => downloadFile(f))}
+                disabled={busyId === f.id}
+              />
               <span className="faint small attach-meta">
                 {formatSize(f.size)} · {f.author} · {timeAgo(f.createdAt)}
               </span>
@@ -104,8 +102,7 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
           ))}
           {pendingFiles.map((f, i) => (
             <li key={`${f.name}-${i}`} className="attach-row">
-              <FileIcon size={18} className="attach-ico" />
-              <span className="attach-name static">{f.name}</span>
+              <FileBadge compact name={f.name} type={f.type} />
               <span className="faint small attach-meta">{formatSize(f.size)} · загрузится при создании</span>
               <button
                 className="btn ghost sm icon"
@@ -118,8 +115,7 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
           ))}
           {uploads.map((u) => (
             <li key={u.key} className="attach-row uploading">
-              <FileIcon size={18} className="attach-ico" />
-              <span className="attach-name static">{u.name}</span>
+              <FileBadge compact name={u.name} />
               {u.error ? (
                 <>
                   <span className="small attach-meta" style={{ color: 'var(--danger)' }}>

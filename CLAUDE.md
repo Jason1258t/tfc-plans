@@ -92,7 +92,7 @@ npm run world -- <мир|world/data|tfc_calendar.dat|zip>  # сохранени�
 ```
 src/pages/        TasksPage (+ раздел документов DocsSection), DocPage, FilesPage, SchematicsPage,
                   DatapacksPage/RecipesPage/TagsPage (один раздел, слева PackNav), ReferencePage (вкладка «Карта» — MapPage), UpdatesPage
-src/components/   Modal, ItemPicker/ItemIcon, RecipeCatalog (RecipeBrowser), KubejsConstructor, SchematicLibrary, WorldMap, …
+src/components/   Modal, ItemPicker/ItemIcon, FileBadge (значок вида файла + имя; виды — lib/fileKinds.ts), RecipeCatalog (RecipeBrowser), KubejsConstructor, SchematicLibrary, WorldMap, …
 src/lib/
   items.ts fuzzy.ts            библиотека предметов, поиск (fuse.js — только подбор замен в схемах)
   recipes.ts recipeFilter.ts   каталог рецептов + KubeJS: статусы, фильтры

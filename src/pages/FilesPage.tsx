@@ -1,73 +1,24 @@
-import {
-  Download,
-  File as FileIcon,
-  FileArchive,
-  FileBox,
-  FileCode,
-  FileText,
-  Image,
-  Package,
-  Search,
-  Trash2,
-  Upload,
-} from 'lucide-react';
+import { Download, Search, Trash2, Upload } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { FileBadge, FileKindDot } from '../components/FileBadge';
 import { useData } from '../data/DataContext';
 import { schematicsStore } from '../data/store';
-import {
-  downloadFile,
-  filesEnabled,
-  formatSize,
-  MAX_FILE_SIZE,
-  removeFile,
-  uploadFile,
-  type FileMeta,
-} from '../lib/files';
-import { isImage, prepareFile, validateFiles } from '../lib/uploads';
+import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, uploadFile } from '../lib/files';
+import { FILE_KINDS, fileKind, type FileKind } from '../lib/fileKinds';
+import { prepareFile, validateFiles } from '../lib/uploads';
 import { timeAgo } from '../lib/util';
 import type { SavedSchematic } from '../types';
 import './FilesPage.css';
 
-type Kind = 'image' | 'schematic' | 'archive' | 'mod' | 'code' | 'text' | 'other';
-const KINDS: { id: Kind | 'all'; label: string }[] = [
-  { id: 'all', label: 'Все' },
-  { id: 'image', label: 'Картинки' },
-  { id: 'schematic', label: 'Схемы' },
-  { id: 'archive', label: 'Архивы' },
-  { id: 'mod', label: 'Моды' },
-  { id: 'code', label: 'Скрипты и данные' },
-  { id: 'text', label: 'Тексты' },
-  { id: 'other', label: 'Остальное' },
-];
-
-const BY_EXT: [RegExp, Kind][] = [
-  [/\.(nbt|schem|litematic)$/i, 'schematic'],
-  [/\.jar$/i, 'mod'],
-  [/\.(zip|rar|7z|gz|tar)$/i, 'archive'],
-  [/\.(js|ts|json5?|toml|ya?ml|cfg|properties|mcfunction|mcmeta|snbt|csv|xml)$/i, 'code'],
-  [/\.(txt|md|pdf|docx?|rtf|log)$/i, 'text'],
-];
-
-const kindOf = (f: FileMeta): Kind => (isImage(f) ? 'image' : (BY_EXT.find(([re]) => re.test(f.name))?.[1] ?? 'other'));
-
-/** Значок вида файла; цвет задаётся классом files-ico.<вид> */
-const ICONS = {
-  image: Image,
-  schematic: FileBox,
-  archive: FileArchive,
-  mod: Package,
-  code: FileCode,
-  text: FileText,
-  other: FileIcon,
-};
+const KINDS: { id: FileKind | 'all'; label: string }[] = [{ id: 'all', label: 'Все' }, ...FILE_KINDS];
 
 /** Всё файловое хранилище сайта: вложения задач, исходники библиотеки схем, файлы без привязки */
 export function FilesPage() {
   const { files, tasks, nick, loading } = useData();
   const [schematics, setSchematics] = useState<SavedSchematic[]>([]);
   const [q, setQ] = useState('');
-  const [kind, setKind] = useState<Kind | 'all'>('all');
+  const [kind, setKind] = useState<FileKind | 'all'>('all');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState<{ name: string; progress: number } | null>(null);
@@ -84,7 +35,7 @@ export function FilesPage() {
         const schematic = schemByFile.get(f.id);
         return {
           file: f,
-          kind: kindOf(f),
+          kind: fileKind(f),
           task,
           schematic,
           hay: `${f.name}\n${f.author}\n${task?.title ?? ''}\n${schematic?.name ?? ''}`.toLowerCase(),
@@ -179,7 +130,7 @@ export function FilesPage() {
             if (!count && k.id !== 'all' && k.id !== kind) return null;
             return (
               <button key={k.id} aria-pressed={kind === k.id} onClick={() => setKind(k.id)}>
-                {k.id !== 'all' && <span className={`files-dot ${k.id}`} aria-hidden />}
+                {k.id !== 'all' && <FileKindDot kind={k.id} />}
                 {k.label}
                 <span className="count">{count}</span>
               </button>
@@ -201,56 +152,45 @@ export function FilesPage() {
         <div className="empty">{rows.length ? 'Ничего не найдено' : 'Файлов пока нет'}</div>
       ) : (
         <ul className="files-list">
-          {shown.map(({ file: f, kind: k, task, schematic }) => {
-            const Icon = ICONS[k];
-            return (
-              <li key={f.id} className="files-row">
-                <span className={`files-ico ${k}`}>
-                  <Icon size={18} />
-                </span>
-                <span className="files-main">
-                  <button
-                    className="files-name"
-                    onClick={() => run(f.id, () => downloadFile(f))}
-                    disabled={busyId === f.id}
-                    title="Скачать"
-                  >
-                    {f.name}
-                  </button>
-                  <span className="files-meta">
-                    {formatSize(f.size)} · {f.author}, {timeAgo(f.createdAt)} ·{' '}
-                    {schematic ? (
-                      <Link to="/schematics">библиотека схем: {schematic.name}</Link>
-                    ) : task ? (
-                      <Link to={`/?task=${task.id}`}>↳ {task.title}</Link>
-                    ) : f.taskId ? (
-                      'задача удалена'
-                    ) : (
-                      'без привязки'
-                    )}
-                  </span>
-                </span>
-                <button
-                  className="btn ghost sm icon"
-                  onClick={() => run(f.id, () => downloadFile(f))}
-                  disabled={busyId === f.id}
-                  aria-label={`Скачать ${f.name}`}
-                  title="Скачать"
-                >
-                  <Download size={15} />
-                </button>
-                <button
-                  className="btn ghost sm icon"
-                  onClick={() => confirm(`Удалить файл «${f.name}»?`) && run(f.id, () => removeFile(f))}
-                  disabled={busyId === f.id || Boolean(schematic)}
-                  aria-label={`Удалить ${f.name}`}
-                  title={schematic ? 'Исходник схемы — удаляется вместе со схемой в библиотеке' : 'Удалить'}
-                >
-                  <Trash2 size={15} />
-                </button>
-              </li>
-            );
-          })}
+          {shown.map(({ file: f, task, schematic }) => (
+            <li key={f.id} className="files-row">
+              <FileBadge
+                name={f.name}
+                type={f.type}
+                onOpen={() => run(f.id, () => downloadFile(f))}
+                disabled={busyId === f.id}
+              >
+                {formatSize(f.size)} · {f.author}, {timeAgo(f.createdAt)} ·{' '}
+                {schematic ? (
+                  <Link to="/schematics">библиотека схем: {schematic.name}</Link>
+                ) : task ? (
+                  <Link to={`/?task=${task.id}`}>↳ {task.title}</Link>
+                ) : f.taskId ? (
+                  'задача удалена'
+                ) : (
+                  'без привязки'
+                )}
+              </FileBadge>
+              <button
+                className="btn ghost sm icon"
+                onClick={() => run(f.id, () => downloadFile(f))}
+                disabled={busyId === f.id}
+                aria-label={`Скачать ${f.name}`}
+                title="Скачать"
+              >
+                <Download size={15} />
+              </button>
+              <button
+                className="btn ghost sm icon"
+                onClick={() => confirm(`Удалить файл «${f.name}»?`) && run(f.id, () => removeFile(f))}
+                disabled={busyId === f.id || Boolean(schematic)}
+                aria-label={`Удалить ${f.name}`}
+                title={schematic ? 'Исходник схемы — удаляется вместе со схемой в библиотеке' : 'Удалить'}
+              >
+                <Trash2 size={15} />
+              </button>
+            </li>
+          ))}
         </ul>
       )}
       <p className="faint small files-note">Один файл — до {formatSize(MAX_FILE_SIZE)}.</p>
