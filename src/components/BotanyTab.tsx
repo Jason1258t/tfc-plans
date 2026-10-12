@@ -127,6 +127,7 @@ export function BotanyTab({
           tiers={meta.greenhouseTiers ?? []}
           growth={meta.greenhouseGrowth}
           reasons={meta.greenhouseReasons ?? []}
+          water={meta.greenhouseWater}
         />
       ) : (
         <div className="botany-main">
@@ -638,6 +639,7 @@ function Greenhouse({
   tiers,
   growth,
   reasons,
+  water,
 }: {
   list: GreenhousePlant[];
   items: ItemIndex | null;
@@ -646,6 +648,7 @@ function Greenhouse({
   tiers: NonNullable<BotanyMeta['greenhouseTiers']>;
   growth?: BotanyMeta['greenhouseGrowth'];
   reasons: NonNullable<BotanyMeta['greenhouseReasons']>;
+  water?: BotanyMeta['greenhouseWater'];
 }) {
   /** Самый простой материал стен, дающий нужный уровень */
   const wallsFor = (tier: number) => tiers.find((t) => t.tier >= tier);
@@ -695,6 +698,82 @@ function Greenhouse({
     });
   fact('greenhouseRadius', 'Стены от станции климата', (v) => `не дальше ${ru(v)} блоков`);
 
+  // Полив: вода в грядке — доля от 0 до 1; растущее растение расходует 1 / (суток × 24000) за тик
+  const waterDays = config.num('greenhouseWaterDays')?.value;
+  const pct = (v: number) => `${ru(v * 100)}%`;
+  const itemLabel = (id: string | undefined, fallback: string) => (id ? itemName(items?.byId.get(id), id) : fallback);
+  const watering: { key: string; title: string; text: string }[] = [];
+  if (water && waterDays) {
+    watering.push({
+      key: 'use',
+      title: 'Расход',
+      text:
+        `полной грядки хватает одному растению на ${ru(waterDays)} игровых суток роста` +
+        (water.perSlot
+          ? `; каждое растущее растение пьёт отдельно, поэтому четыре растения в одной грядке осушат её за ${ru(waterDays / 4)} суток. Созревшее растение воду не расходует`
+          : ''),
+    });
+    const can = water.can;
+    if (can?.add) {
+      const side = can.radius !== undefined ? can.radius * 2 + 1 : null;
+      watering.push({
+        key: 'can',
+        title: itemLabel(can.item, 'Лейка'),
+        text: [
+          `одно применение добавляет ${pct(can.add)} воды` +
+            (side
+              ? ` всем грядкам в кубе ${side}×${(can.radiusY ?? can.radius ?? 0) * 2 + 1}×${side} вокруг игрока`
+              : ''),
+          `этого хватает одному растению на ${ru(can.add * waterDays)} суток, с сухой до полной — ${Math.ceil(1 / can.add)} применения`,
+          can.useTicks ? `держать ${ru(can.useTicks / 20)} с` : '',
+          can.durability ? `одной заправки хватает на ${can.durability} применений` : '',
+          can.refill ? 'заправляется кликом по воде' : '',
+        ]
+          .filter(Boolean)
+          .join('; '),
+      });
+    }
+    const sp = water.sprinkler;
+    if (sp?.add && sp.interval) {
+      const fillMin = (sp.interval / sp.add / 20 / 60) * 1;
+      const drink = sp.interval / (waterDays * TICKS_PER_DAY);
+      const zones = (water.zones ?? [])
+        .map((z) => {
+          const side = z.radius * 2 + 1;
+          const [a, b] = z.y.map(Math.abs).sort((x, y) => x - y);
+          return z.y[1] < 0
+            ? `под потолком — квадрат ${side}×${side}, от ${a} до ${b} блоков ниже себя`
+            : `на полу — квадрат ${side}×${side}, от ${a} до ${b} блоков выше себя`;
+        })
+        .join('; ');
+      const pipes = sp.pipeConfig ? config.get(sp.pipeConfig) : null;
+      const sources = (sp.sources ?? []).map((id) => itemLabel(id, id).toLowerCase()).join(' или ');
+      const byPipes = `вода идёт по трубам${sp.pipeMax ? ` (не длиннее ${sp.pipeMax} блоков)` : ''}${sources ? `, в конце нужны ${sources}` : ''}`;
+      const byTank = `вода берётся из ёмкости с пресной водой вплотную к оросителю${sp.tankDrain ? `, по ${sp.tankDrain} мБ за раз` : ''}`;
+      watering.push({
+        key: 'sprinkler',
+        title: itemLabel(water.zones?.find((z) => z.item)?.item, 'Ороситель'),
+        text: [
+          `каждые ${ru(sp.interval / 20)} с добавляет ${pct(sp.add)} воды всем грядкам своей зоны: сухая грядка наполняется за ${ru(fillMin)} мин`,
+          `растение за это время выпивает ${ru(drink * 100, 3)}%, так что под работающим оросителем грядка всегда полная`,
+          zones ? `зона: ${zones}` : '',
+          pipes
+            ? `${pipes.value === false ? byTank : byPipes} (${CONFIG_ORIGIN_LABEL[pipes.origin]})`
+            : `${byPipes}; если трубы отключены настройкой — ${byTank}`,
+        ]
+          .filter(Boolean)
+          .join('; '),
+      });
+    }
+    const special = [
+      ...(water.notFromBelow ?? []).map((k) => `${PLANTER_LABEL[k] ?? k} не принимает воду от оросителя снизу`),
+      ...(water.noWatering ?? []).map(
+        (k) => `${PLANTER_LABEL[k] ?? k} не поливается и воду не расходует — ей нужна подведённая снизу труба с водой`,
+      ),
+    ];
+    if (special.length) watering.push({ key: 'special', title: 'Особые грядки', text: special.join('; ') });
+  }
+
   return (
     <div className="botany-main">
       <div className="ref-filters">
@@ -732,6 +811,19 @@ function Greenhouse({
               ))}
             </ul>
             <span className="faint">Формулировки — из перевода самого мода.</span>
+          </div>
+        )}
+        {watering.length > 0 && (
+          <div className="botany-reasons small">
+            <b>Полив</b>
+            <ul>
+              {watering.map((w) => (
+                <li key={w.key}>
+                  <b>{w.title}:</b> {w.text}.
+                </li>
+              ))}
+            </ul>
+            <span className="faint">Числа — из кода Firmalife, формулировки наши.</span>
           </div>
         )}
         <p className="faint small">

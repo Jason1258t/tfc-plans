@@ -113,6 +113,8 @@ export interface BotanyMeta {
   /** Почему грядка теплицы не растёт — сообщения самого мода */
   greenhouseReasons?: { key: string; e: string; r?: string }[];
   greenhouseTiers?: { i: string; tier: number; e: string; r?: string; walls?: string }[];
+  /** Полив теплицы из кода аддона: вода в грядке — доля от 0 до 1 */
+  greenhouseWater?: GreenhouseWater;
   /** Настройки модов, от которых зависят сроки: ключ в TOML и значение по умолчанию из кода */
   config?: Record<string, ConfigKey | undefined>;
 }
@@ -129,6 +131,36 @@ export interface ConfigKey {
 }
 
 /** Растение теплицы Firmalife (data/<ns>/firmalife/plantable) */
+export interface GreenhouseWater {
+  /** Лейка: сколько добавляет одно применение, куб вокруг игрока (блоков в стороны и по высоте), прочность */
+  can?: {
+    add: number;
+    radius?: number;
+    radiusY?: number;
+    useTicks?: number;
+    durability?: number;
+    refill?: string;
+    item?: string;
+  };
+  /** Разбрызгиватель: добавка раз в interval тиков; источник — трубы (настройка pipeConfig) или бак вплотную */
+  sprinkler?: {
+    add?: number;
+    interval?: number;
+    pipeMax?: number;
+    pipeConfig?: string;
+    tankDrain?: number;
+    fluidTag?: string;
+    sources?: string[];
+  };
+  /** Зоны полива: квадрат ±radius по горизонтали, по высоте — от y[0] до y[1] относительно блока */
+  zones?: { id: string; radius: number; y: [number, number]; item?: string }[];
+  /** Каждое растущее растение в грядке расходует воду отдельно */
+  perSlot?: boolean;
+  /** Грядки, которые не принимают воду снизу / не поливаются вовсе */
+  notFromBelow?: string[];
+  noWatering?: string[];
+}
+
 export interface GreenhousePlant {
   i: string;
   n: string;

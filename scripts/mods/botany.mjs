@@ -48,6 +48,7 @@ const CONFIG_KEYS = [
   'greenhouseWaterDays',
   'greenhouseNutrientDays',
   'greenhouseRadius',
+  'usePipesForSprinklers',
 ];
 
 /** Какие классы jar сохранять в кеш для разбора (вызывается из build-items при распаковке) */
@@ -59,6 +60,9 @@ export function isBotanyClass(entryName, data) {
   )
     return true;
   if (/FoodTraits\$Default\.class$/.test(entryName)) return true;
+  // Полив теплицы: всё, что вызывает addWater (лейка, разбрызгиватель, грядки), блоки с зоной полива и реестр предметов
+  // с прочностью лейки
+  if (data.includes('addWater') || data.includes('SprinklerBlock') || data.includes('WateringCan')) return true;
   return data.includes('plant/fruit/Lifecycle') || data.includes('phosphorous') || data.includes('getInvalidReason');
 }
 
@@ -68,6 +72,113 @@ const isEnum = (cls) => cls.superName === 'java/lang/Enum';
 const isLifecycle = (v) => v?.array && /\/Lifecycle$/.test(v.type ?? '');
 const fieldName = (v) => (v && typeof v === 'object' && v.field ? v.field.name : null);
 const round = (x) => Math.round(x * 1000) / 1000;
+
+/** Инструкции метода с раскрытыми операндами: число (константа на стеке) или ссылка на поле/метод */
+function decoded(cls, method) {
+  if (!method?.code) return [];
+  return instructions(method.code).map((ins) => {
+    const { op } = ins;
+    if (op >= 0x02 && op <= 0x08) return { op, num: op - 0x03 };
+    if (op >= 0x0b && op <= 0x0d) return { op, num: op - 0x0b };
+    if (op === 0x10 || op === 0x11) return { op, num: ins.index };
+    if (op === 0x12 || op === 0x13) {
+      const v = cls.constant(ins.index);
+      return typeof v === 'number' ? { op, num: v } : { op, str: typeof v === 'string' ? v : undefined };
+    }
+    if (op >= 0xb2 && op <= 0xb9) return { op, ref: cls.ref(ins.index) };
+    if (op === 0xbb || op === 0xc1) return { op, cls: cls.className(ins.index) };
+    return { op };
+  });
+}
+
+/** Последнее число, положенное на стек перед инструкцией i (не дальше back шагов) */
+function numBefore(list, i, back = 4) {
+  for (let j = i - 1; j >= Math.max(0, i - back); j--) if (list[j].num !== undefined) return list[j].num;
+  return undefined;
+}
+
+/**
+ * Полив теплицы из кода аддона. Опорная точка — вызовы addWater(количество): у предмета это лейка, у блока-сущности
+ * с serverTick — разбрызгиватель; грядка, переопределившая addWater, принимает воду не со всех сторон или не принимает.
+ */
+function greenhouseWater(cls, water) {
+  const methods = cls.methods.map((m) => ({ m, list: decoded(cls, m) }));
+  const calls = (list, name) => list.findIndex((x) => x.ref?.name === name && (x.op === 0xb6 || x.op === 0xb9));
+  const short = cls.name.split('/').pop();
+  for (const { m, list } of methods) {
+    const at = calls(list, 'addWater');
+    // Лейка: onUseTick → всем грядкам в кубе вокруг игрока
+    if (at >= 0 && m.name === 'onUseTick') {
+      const can = (water.can ??= { cls: cls.name });
+      can.add = round(numBefore(list, at));
+      const box = list.findIndex((x) => x.ref && /positions/i.test(x.ref.name) && x.ref.desc.includes('II)'));
+      if (box >= 2 && list[box - 1].num !== undefined && list[box - 2].num !== undefined)
+        [can.radius, can.radiusY] = [list[box - 2].num, list[box - 1].num];
+      const dur = cls.methods.find((x) => x.name === 'getUseDuration');
+      const ticks = decoded(cls, dur).find((x) => x.num !== undefined)?.num;
+      if (ticks) can.useTicks = ticks;
+      const use = methods.find((x) => x.m.name === 'useOn')?.list ?? [];
+      const fluid = use.find((x) => x.op === 0xb2 && /Fluids$/.test(x.ref.owner))?.ref.name;
+      if (fluid && use.some((x) => x.ref?.name === 'setDamageValue')) can.refill = fluid.toLowerCase();
+    }
+    // Разбрызгиватель: раз в N тиков добавляет воду всем грядкам своей зоны, если нашёл источник
+    if (at >= 0 && /tick/i.test(m.name) && m.name !== 'onUseTick' && !water.sprinkler?.add) {
+      const sp = (water.sprinkler ??= {});
+      sp.add = round(numBefore(list, at, 12));
+      const rem = list.findIndex((x) => x.op === 0x71 || x.op === 0x70);
+      const every = list.slice(0, Math.max(rem, 0)).find((x) => x.op === 0x10)?.num;
+      if (every) sp.interval = every;
+      const max = cls.fields.find((f) => f.name === 'MAX_COST' && typeof f.constant === 'number');
+      if (max) sp.pipeMax = max.constant;
+      // Источник: поиск жидкости по трубам или из бака вплотную — выбирается настройкой
+      for (const x of methods) {
+        const cfg = x.list.find((i) => i.op === 0xb4 && /Config$/.test(i.ref.owner));
+        const drain = x.list.findIndex((i) => i.ref?.name === 'drain' && /IFluidHandler$/.test(i.ref.owner));
+        if (!cfg || drain < 0) continue;
+        sp.pipeConfig = cfg.ref.name;
+        sp.tankDrain = numBefore(x.list, drain, 3);
+        const tag = x.list.find((i) => i.op === 0xb2 && /Tags\$Fluids$/.test(i.ref.owner))?.ref.name;
+        if (tag) sp.fluidTag = tag.toLowerCase();
+      }
+      const all = methods.flatMap((x) => x.list);
+      sp.sources = [
+        ...new Set(
+          all
+            .filter((i) => i.op === 0xb2 && /Blocks$/.test(i.ref.owner) && /TANK|PUMP/.test(i.ref.name))
+            .map((i) => i.ref.name.toLowerCase()),
+        ),
+      ];
+    }
+    // Зона разбрызгивателя: лямбда «позиция → betweenClosed(pos.offset(a), pos.offset(b))»
+    if (m.name.startsWith('lambda$') && list.some((x) => x.ref?.name === 'betweenClosed')) {
+      const n = list.filter((x) => x.num !== undefined).map((x) => x.num);
+      if (n.length === 6 && cls.methods.every((x) => x.name !== 'onUseTick')) {
+        const id = short
+          .replace(/Block$/, '')
+          .replace(/([a-z])([A-Z])/g, '$1_$2')
+          .toLowerCase();
+        (water.zones ??= []).push({ id, radius: Math.max(Math.abs(n[0]), Math.abs(n[3])), y: [n[1], n[4]] });
+      }
+    }
+    // Расход воды: вычитается в цикле по ячейкам грядки — каждое растущее растение пьёт отдельно
+    if (calls(list, 'drainWater') >= 0 && list.some((x) => x.ref?.name === 'slots')) water.perSlot = true;
+    // Грядки с особым правилом приёма воды
+    if (m.name === 'addWater' && m.code) {
+      const kind = /^(\w+?)PlanterBlockEntity$/.exec(short)?.[1].toLowerCase();
+      if (!kind) continue;
+      const first = list.filter((x) => x.op !== 0x00);
+      if (first.length === 2 && first[0].num === 0) (water.noWatering ??= []).push(kind);
+      else if (list.some((x) => x.op === 0xb2 && x.ref.name === 'DOWN')) (water.notFromBelow ??= []).push(kind);
+    }
+  }
+  // Прочность лейки: «new Лейка(new Properties().durability(N))» в реестре предметов
+  for (const { list } of methods) {
+    const i = list.findIndex((x) => x.op === 0xbb && /WateringCan/.test(x.cls ?? ''));
+    if (i < 0) continue;
+    const d = list.findIndex((x, j) => j > i && x.ref?.name === 'durability');
+    if (d > 0) (water.can ??= {}).durability = numBefore(list, d, 2);
+  }
+}
 
 /**
  * Какой параметр конструктора в какое поле попадает: «load n … putfield X» (с учётом «× константа»,
@@ -393,6 +504,7 @@ function readCode(classDirs, warnings) {
         }
         if (keys.length) meta.greenhouseReasons = { ns: cls.name.split('/')[2], keys };
       }
+      greenhouseWater(cls, (meta.greenhouseWater ??= {}));
       // Лоза (виноград): блоки, реализующие общий интерфейс роста, — сколько стадий у ростка, куда растёт, сколько
       // ягод за сбор. Признаки берутся из инструкций методов advance() и useWithoutItem()
       if (cls.fields.some((f) => f.name === 'LIFECYCLE') && cls.methods.some((m) => m.name === 'advance' && m.code)) {
@@ -869,6 +981,25 @@ export function buildBotany(dataDirs, parse, items, recipes, translate = () => (
     })
     .filter(Boolean);
 
+  // Полив: названия предметов — из библиотеки, причина «нужна труба» — из перевода мода
+  let water = null;
+  const gw = code.meta.greenhouseWater;
+  if (gw && (gw.can?.add || gw.sprinkler?.add)) {
+    const ns = code.meta.greenhouseReasons?.ns;
+    const itemOf = (id) => (ns && have.has(`${ns}:${id}`) ? `${ns}:${id}` : undefined);
+    const { cls: _cls, ...can } = gw.can ?? {};
+    water = {
+      ...gw,
+      ...(gw.can?.add ? { can: { ...can, item: itemOf('watering_can') } } : { can: undefined }),
+      zones: (gw.zones ?? []).map((z) => ({ ...z, item: itemOf(z.id) })),
+      ...(gw.sprinkler
+        ? { sprinkler: { ...gw.sprinkler, sources: gw.sprinkler.sources.map((x) => itemOf(x) ?? x) } }
+        : {}),
+    };
+    if (!gw.can?.add) warnings.push('полив теплицы: лейка (onUseTick → addWater) не найдена');
+    if (!gw.sprinkler?.add) warnings.push('полив теплицы: разбрызгиватель (serverTick → addWater) не найден');
+  }
+
   const pick = (o, keys) => Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));
   return {
     meta: {
@@ -884,6 +1015,7 @@ export function buildBotany(dataDirs, parse, items, recipes, translate = () => (
         'greenhouseGrowth',
         'foodTraits',
       ]),
+      ...(water ? { greenhouseWater: water } : {}),
       ...(soil.length ? { soil } : {}),
       ...(greenhouseTiers.length ? { greenhouseTiers } : {}),
       ...(reasons.length ? { greenhouseReasons: reasons } : {}),
