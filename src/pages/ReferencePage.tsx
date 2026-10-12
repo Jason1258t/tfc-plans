@@ -100,7 +100,11 @@ export function ReferencePage() {
               Сборные блюда
             </button>
           </div>
-          {params.get('sub') === 'meals' ? <MealsTab items={items} /> : <FoodTab foods={ref.foods} items={items} />}
+          {params.get('sub') === 'meals' ? (
+            <MealsTab items={items} initialQuery={params.get('q') ?? ''} />
+          ) : (
+            <FoodTab foods={ref.foods} items={items} />
+          )}
         </>
       ) : tab === 'botany' ? (
         <BotanyTab

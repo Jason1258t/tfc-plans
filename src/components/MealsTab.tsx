@@ -2,7 +2,9 @@ import { Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { itemName, type ItemIndex } from '../lib/items';
 import {
+  COMPUTED_TITLE,
   familyTitle,
+  tagItems,
   useMeals,
   type ComputedMeal,
   type MealFamily,
@@ -11,7 +13,7 @@ import {
   type MealSlot,
 } from '../lib/meals';
 import { NUTRIENTS, type Nutrient } from '../lib/reference';
-import { directMembers, flattenTag, tagKey, useTags, type TagCatalog } from '../lib/tags';
+import { useTags, type TagCatalog } from '../lib/tags';
 import { ItemIcon } from './ItemIcon';
 import './MealsTab.css';
 
@@ -22,7 +24,6 @@ const NUTRIENT_LABEL: Record<Nutrient, string> = {
   protein: 'белок',
   dairy: 'молочное',
 };
-const COMPUTED_TITLE: Record<string, string> = { soups: 'Суп', salads: 'Салат' };
 
 const ru = (v: number, digits = 3) => String(Math.round(v * 10 ** digits) / 10 ** digits).replace('.', ',');
 const lower = (s: string) => s.toLowerCase().replaceAll('ё', 'е');
@@ -30,11 +31,7 @@ const plural = (n: number, one: string, few: string, many: string) =>
   n % 10 === 1 && n % 100 !== 11 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? few : many;
 const range = (min: number, max: number) => (min === max ? `${max}` : `${min}–${max}`);
 
-/** Предметы тега со всеми вложенными тегами, с учётом правок KubeJS */
-function membersOf(cat: TagCatalog | null, tag: string): string[] {
-  if (!cat) return [];
-  return flattenTag(cat, 'item', directMembers(cat.byKey.get(tagKey('item', tag))));
-}
+const membersOf = tagItems;
 
 function useNames(items: ItemIndex | null) {
   return (id: string) => itemName(items?.byId.get(id), id);
@@ -296,10 +293,10 @@ function ComputedCard({ c, cat, items }: { c: ComputedMeal; cat: TagCatalog | nu
 }
 
 /** Подвкладка «Сборные блюда»: семейства из рецептов tfc:meal, суп и салат */
-export function MealsTab({ items }: { items: ItemIndex | null }) {
+export function MealsTab({ items, initialQuery = '' }: { items: ItemIndex | null; initialQuery?: string }) {
   const meals = useMeals();
   const cat = useTags();
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery);
   const name = useNames(items);
 
   /** Строка поиска семейства: названия блюд, основы, начинок и всех предметов из тегов начинок */

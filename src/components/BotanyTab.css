@@ -353,6 +353,14 @@
   align-items: center;
 }
 
+.botany-dishes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
 /* Поля с подписью сверху выше соседних — ровняем строку фильтров по нижнему краю */
 .botany .ref-filters {
   align-items: flex-end;

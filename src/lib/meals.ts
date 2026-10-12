@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Nutrient } from './reference';
+import { directMembers, flattenTag, tagKey, type TagCatalog } from './tags';
 
 /**
  * Сборные блюда (public/meals.json, собирает scripts/mods/meals.mjs): еда, питательность которой зависит от того,
@@ -117,4 +118,44 @@ export function familyTitle(names: string[]): string {
   if (!head && !tail) return names[0];
   const first = words[0];
   return [...first.slice(0, head), '…', ...first.slice(first.length - tail)].join(' ');
+}
+
+export const COMPUTED_TITLE: Record<string, string> = { soups: 'Суп', salads: 'Салат' };
+
+/** Предметы тега со всеми вложенными тегами, с учётом правок KubeJS */
+export function tagItems(cat: TagCatalog | null, tag: string): string[] {
+  if (!cat) return [];
+  return flattenTag(cat, 'item', directMembers(cat.byKey.get(tagKey('item', tag))));
+}
+
+export interface MealRef {
+  key: string;
+  title: string;
+}
+
+/**
+ * В какие сборные блюда годится продукт: предмет → блюда, где он стоит в слоте сам или через тег начинки.
+ * Основа (хлеб) и инструменты не считаются. name — название предмета для заголовка семейства.
+ */
+export function mealsByItem(meals: Meals, cat: TagCatalog, name: (id: string) => string): Map<string, MealRef[]> {
+  const out = new Map<string, MealRef[]>();
+  const add = (id: string, ref: MealRef) => {
+    const list = out.get(id) ?? [];
+    if (!list.some((r) => r.title === ref.title)) list.push(ref);
+    out.set(id, list);
+  };
+  for (const c of meals.computed) {
+    const ref = { key: c.kind, title: COMPUTED_TITLE[c.kind] ?? c.kind };
+    const tags = [...(c.tags ?? []), ...(c.pots ?? []).flatMap((p) => p.tags)].filter((t) => !/bowl/.test(t));
+    for (const t of new Set(tags)) for (const id of tagItems(cat, t)) add(id, ref);
+  }
+  for (const f of meals.families) {
+    const ref = { key: f.id, title: familyTitle(f.dishes.map((d) => name(d.item))) };
+    for (const s of f.slots) {
+      if (!s.food) continue;
+      for (const id of s.items) add(id, ref);
+      for (const t of s.tags) for (const id of tagItems(cat, t)) add(id, ref);
+    }
+  }
+  return out;
 }

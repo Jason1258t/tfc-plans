@@ -1,5 +1,6 @@
 import { Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   CROP_BLOCK_LABEL,
   expiryDays,
@@ -22,7 +23,9 @@ import {
 import { useBotanyConfig, type BotanyConfig } from '../lib/botanyConfig';
 import { CONFIG_ORIGIN_LABEL } from '../lib/config';
 import { itemName, useItems, type ItemIndex } from '../lib/items';
+import { mealsByItem, useMeals, type MealRef } from '../lib/meals';
 import type { Food } from '../lib/reference';
+import { useTags } from '../lib/tags';
 import { cx } from '../lib/util';
 import { ItemIcon } from './ItemIcon';
 import './BotanyTab.css';
@@ -65,6 +68,14 @@ export function BotanyTab({
     for (const f of foods) for (const id of f.items) if (!m.has(id)) m.set(id, f);
     return m;
   }, [foods]);
+
+  // Сборные блюда, куда годится плод: по слотам блюд и составу тегов начинок (с правками KubeJS)
+  const meals = useMeals();
+  const tagCat = useTags();
+  const mealsBy = useMemo(
+    () => (meals && tagCat ? mealsByItem(meals, tagCat, (id) => itemName(items?.byId.get(id), id)) : null),
+    [meals, tagCat, items],
+  );
 
   const nameOf = (p: Plant) => (p.product ? itemName(items?.byId.get(p.product), p.product) : prettyName(p.n));
 
@@ -186,6 +197,7 @@ export function BotanyTab({
                   p={p}
                   name={nameOf(p)}
                   food={p.product ? foodBy.get(p.product) : undefined}
+                  dishes={mealsBy ? (p.product && mealsBy.get(p.product)) || [] : undefined}
                   items={items}
                   meta={meta}
                   config={config}
@@ -373,6 +385,7 @@ function PlantCard({
   p,
   name,
   food,
+  dishes,
   items,
   meta,
   config,
@@ -381,6 +394,8 @@ function PlantCard({
   p: Plant;
   name: string;
   food?: Food;
+  /** Сборные блюда, куда годится плод; undefined — блюда или теги ещё не загружены */
+  dishes?: MealRef[];
   items: ItemIndex | null;
   meta: BotanyMeta;
   config: BotanyConfig;
@@ -550,7 +565,7 @@ function PlantCard({
         </section>
       )}
 
-      {p.uses && (p.uses.items.length > 0 || p.uses.generic) && (
+      {p.uses && (p.uses.items.length > 0 || p.uses.generic || dishes?.length) && (
         <section>
           <h4>
             Куда идёт <span className="faint">· рецептов: {p.uses.recipes}</span>
@@ -562,8 +577,18 @@ function PlantCard({
             {p.uses.items.length > USES_SHOWN && (
               <span className="faint small">и ещё {p.uses.items.length - USES_SHOWN}</span>
             )}
-            {p.uses.generic ? <span className="faint small">+ сборные блюда: {p.uses.generic}</span> : null}
+            {!dishes && p.uses.generic ? <span className="faint small">+ сборные блюда: {p.uses.generic}</span> : null}
           </div>
+          {dishes && dishes.length > 0 && (
+            <div className="botany-dishes small">
+              <span className="faint">В сборные блюда:</span>
+              {dishes.map((d) => (
+                <Link key={d.key + d.title} to={`/reference?tab=food&sub=meals&q=${encodeURIComponent(name)}`}>
+                  {d.title}
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
       )}
 
