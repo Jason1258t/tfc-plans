@@ -3,6 +3,7 @@ import type { Datapack, DatapackEntry } from '../types';
 import { recipeHash } from './hash';
 import type { ItemIndex } from './items';
 import { entryRecipeId, recipePathOf, targetFromJson } from './kubejsFix';
+import { tagFromPath } from './tags';
 import { itemRefsOf, kubejsHits, recipePath, type Recipe, type RecipeCatalog } from './recipes';
 import { uid } from './util';
 
@@ -143,7 +144,7 @@ export function staleIssues(pack: Datapack, catalog: RecipeCatalog | null, items
           message: `${e.kind === 'add' ? 'шаблон' : 'оригинал'} ${e.sourceRecipe} изменился в сборке — сверьте с новой версией`,
         });
     }
-    if (items?.list.length && e.path.endsWith('.json')) {
+    if (items?.list.length && e.path.endsWith('.json') && !tagFromPath(e.path)) {
       try {
         // Жидкости (tfc:metal/copper, …fluid…) и ваниль не проверяем: их нет в библиотеке предметов
         const missing = itemRefsOf(JSON.parse(e.content)).filter(

@@ -11,7 +11,7 @@ import { timeAgo } from '../lib/util';
 import type { Datapack, DatapackEntry } from '../types';
 import './RecipesPage.css';
 
-type Pending = (pack: Pick<Datapack, 'namespace' | 'entries'>) => DatapackEntry;
+export type Pending = (pack: Pick<Datapack, 'namespace' | 'entries'>) => DatapackEntry;
 
 /** Каталог рецептов сборки отдельной страницей: с учётом KubeJS, без лимита выдачи */
 export function RecipesPage() {
@@ -62,7 +62,9 @@ export function RecipesPage() {
       <RecipeBrowser
         catalog={catalog}
         autoFocus
-        actions={recipeActions(mode, (kind, r) => setPending(() => (pack: Parameters<Pending>[0]) => entryFromRecipe(kind, r, pack)))}
+        actions={recipeActions(mode, (kind, r) =>
+          setPending(() => (pack: Parameters<Pending>[0]) => entryFromRecipe(kind, r, pack)),
+        )}
         onConstructor={setConstructing}
       />
 
@@ -85,7 +87,7 @@ export function RecipesPage() {
 }
 
 /** Куда положить рецепт: существующий датапак или новый */
-function PackPicker({ make, onClose }: { make: Pending; onClose: () => void }) {
+export function PackPicker({ make, onClose }: { make: Pending; onClose: () => void }) {
   const { nick } = useData();
   const navigate = useNavigate();
   const [packs, setPacks] = useState<Datapack[] | null>(null);
@@ -96,7 +98,10 @@ function PackPicker({ make, onClose }: { make: Pending; onClose: () => void }) {
 
   const put = async (pack: Datapack | null) => {
     if (pack) {
-      await datapacksStore.update(pack.id, { entries: [...pack.entries, make(pack)], updatedBy: nick });
+      // Файл с тем же путём (повторная правка тега) заменяется, а не дублируется
+      const entry = make(pack);
+      const rest = pack.entries.filter((e) => e.path !== entry.path);
+      await datapacksStore.update(pack.id, { entries: [...rest, entry], updatedBy: nick });
       navigate(`/datapacks?pack=${pack.id}`);
       return;
     }

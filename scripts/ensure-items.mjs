@@ -9,6 +9,7 @@ const recipesJson = fileURLToPath(new URL('../public/recipes.json', import.meta.
 const referenceJson = fileURLToPath(new URL('../public/reference.json', import.meta.url));
 const manifestJson = fileURLToPath(new URL('../public/pack-manifest.json', import.meta.url));
 const geoJson = fileURLToPath(new URL('../public/geo.json', import.meta.url));
+const tagsJson = fileURLToPath(new URL('../public/tags.json', import.meta.url));
 const current = JSON.stringify(modsSignature());
 let previous = null;
 try {
@@ -23,6 +24,7 @@ else if (!fs.existsSync(recipesJson)) reason = 'каталог рецептов 
 else if (!fs.existsSync(referenceJson)) reason = 'справочник не найден';
 else if (!fs.existsSync(manifestJson)) reason = 'снимок сборки не найден';
 else if (!fs.existsSync(geoJson)) reason = 'география не найдена';
+else if (!fs.existsSync(tagsJson)) reason = 'теги не найдены';
 else if (previous !== null && previous !== current) reason = 'набор модов в mods/ изменился';
 else if (previous === null && current !== '[]') reason = 'в mods/ появились моды';
 

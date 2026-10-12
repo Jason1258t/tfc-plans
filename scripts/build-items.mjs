@@ -22,6 +22,7 @@ import AdmZip from 'adm-zip';
 import { writeManifest } from './manifest.mjs';
 import { writeGeo } from './geo.mjs';
 import { buildReference } from './reference.mjs';
+import { writeTags } from './tags.mjs';
 
 const MC_VERSION = '1.21.1';
 
@@ -87,8 +88,8 @@ async function fetchBuffer(url) {
 /** Скачивает client.jar и вытаскивает models/textures/lang en_us; ru_ru берёт из asset index */
 async function prepareVanilla() {
   const dir = path.join(CACHE, `minecraft-${MC_VERSION}`);
-  // .done-v3 — кеш с рецептами и тегами (v1 — только ассеты, v2 — без тегов)
-  const done = path.join(dir, '.done-v3');
+  // .done-v4 — кеш с рецептами и тегами предметов/жидкостей/блоков (v1 — только ассеты, v2 — без тегов, v3 — только item)
+  const done = path.join(dir, '.done-v4');
   if (fs.existsSync(done) && !fresh) return dir;
   fs.rmSync(dir, { recursive: true, force: true });
   log(`vanilla ${MC_VERSION}: читаю манифест версий`);
@@ -100,7 +101,7 @@ async function prepareVanilla() {
   log('vanilla: качаю client.jar (~25MB)');
   const zip = new AdmZip(await fetchBuffer(meta.downloads.client.url));
   const wanted =
-    /^(assets\/minecraft\/(models\/(item|block)\/|textures\/(item|block)\/|lang\/en_us\.json)|data\/minecraft\/(recipe|tags\/item)\/.+\.json$)/;
+    /^(assets\/minecraft\/(models\/(item|block)\/|textures\/(item|block)\/|lang\/en_us\.json)|data\/minecraft\/(recipe|tags\/(item|fluid|block|entity_type))\/.+\.json$)/;
   for (const entry of zip.getEntries()) {
     if (entry.isDirectory || !wanted.test(entry.entryName)) continue;
     const target = path.join(dir, entry.entryName);
@@ -157,8 +158,8 @@ function prepareJar(file) {
   const st = fs.statSync(file);
   const key = `${path.basename(file, '.jar')}-${st.size}-${Math.round(st.mtimeMs)}`.replace(/[^\w.+-]/g, '_');
   const dir = path.join(CACHE, 'jars', key);
-  // v5 — плюс теги, жилы, данные TFC для справочника, география TFC Real World и жидкое топливо
-  const done = path.join(dir, '.done-v5');
+  // v6 — плюс теги, жилы, данные TFC для справочника, география TFC Real World и жидкое топливо; теги блоков и сущностей
+  const done = path.join(dir, '.done-v6');
   if (!fs.existsSync(done) || fresh) {
     fs.rmSync(dir, { recursive: true, force: true });
     let zip;
@@ -171,7 +172,7 @@ function prepareJar(file) {
     // Рецепты — только папка recipe/ (1.21); recipes/ в некоторых jar — остатки 1.20, игра их не читает.
     // Для справочника: теги предметов, конфиги жил, данные TFC (топливо, еда, нагрев).
     const wanted =
-      /^(assets\/[a-z0-9_.-]+\/(models\/.+\.json|textures\/.+\.png|lang\/(en_us|ru_ru)\.json)|data\/[a-z0-9_.-]+\/(recipe\/.+|tags\/(item|fluid)\/.+|createdieselgenerators\/fuel_type\/.+|createliquidfuel\/compat\/.+|worldgen\/configured_feature\/(vein\/.+|[^/]*vein[^/]*)|tfc\/(fuel|food|fluid_heat)\/.+|geography\/.+|profiles\/.+\/settings)\.json|data\/[a-z0-9_.-]+\/profiles\/.+\/maps\/(continent|altitude|koppen|temperature|rainfall)\.png)$/;
+      /^(assets\/[a-z0-9_.-]+\/(models\/.+\.json|textures\/.+\.png|lang\/(en_us|ru_ru)\.json)|data\/[a-z0-9_.-]+\/(recipe\/.+|tags\/(item|fluid|block|entity_type)\/.+|createdieselgenerators\/fuel_type\/.+|createliquidfuel\/compat\/.+|worldgen\/configured_feature\/(vein\/.+|[^/]*vein[^/]*)|tfc\/(fuel|food|fluid_heat)\/.+|geography\/.+|profiles\/.+\/settings)\.json|data\/[a-z0-9_.-]+\/profiles\/.+\/maps\/(continent|altitude|koppen|temperature|rainfall)\.png)$/;
     for (const entry of zip.getEntries()) {
       if (entry.isDirectory || !wanted.test(entry.entryName)) continue;
       const target = path.join(dir, entry.entryName);
@@ -450,7 +451,10 @@ async function main() {
     const en = readLang(root, ns, 'en_us');
     const ru = readLang(root, ns, 'ru_ru');
     // Ключи переводов жидкостей у модов разные (fluid.* / fluid_type.*), и в en и ru они могут не совпадать
-    for (const [lang, dict] of [['en', en], ['ru', ru]]) {
+    for (const [lang, dict] of [
+      ['en', en],
+      ['ru', ru],
+    ]) {
       for (const [key, name] of Object.entries(dict)) {
         const f = key.match(/^fluid(?:_type)?\.([a-z0-9_]+)\.([a-z0-9_.]+)$/);
         if (!f) continue;
@@ -497,6 +501,8 @@ async function main() {
   log(
     `справочник: ${ref.veins.length} жил, ${ref.fuels.length} топлива, ${ref.foods.length} еды, ${ref.metals.length} металлов, ${ref.tagCount} тегов — ${Math.round(fs.statSync(OUT_REFERENCE).size / 1024)}KB`,
   );
+  const tags = writeTags(dataDirs, parseLooseJson, fluidNames, path.join(ROOT, 'public', 'tags.json'));
+  log(`теги: ${tags.tags} (${tags.entries} значений), жидкостей ${tags.fluids} — tags.json ${tags.kb}KB`);
   const geo = writeGeo(dataDirs, parseLooseJson, path.join(ROOT, 'public'));
   if (geo) log(`география: ${geo.profiles} профилей, ${geo.waypoints} городов, ${geo.maps} карт`);
   const manifest = writeManifest({

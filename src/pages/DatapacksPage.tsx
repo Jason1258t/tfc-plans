@@ -5,6 +5,7 @@ import {
   FilePen,
   FilePlus2,
   FileTerminal,
+  Hash,
   Package,
   Paperclip,
   Plus,
@@ -34,6 +35,7 @@ import { filesEnabled, uploadFile } from '../lib/files';
 import { useItems } from '../lib/items';
 import { entryRecipeId, kubejsScript, scriptFileName } from '../lib/kubejsFix';
 import { useRecipes, type Recipe } from '../lib/recipes';
+import { tagFromPath, tagKey } from '../lib/tags';
 import { cx, timeAgo, uid } from '../lib/util';
 import type { Datapack, DatapackEntry } from '../types';
 import './DatapacksPage.css';
@@ -142,6 +144,7 @@ export function DatapacksPage() {
 
 function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void }) {
   const { nick } = useData();
+  const navigate = useNavigate();
   const catalog = useRecipes();
   const [name, setName] = useState(pack.name);
   const [namespace, setNamespace] = useState(pack.namespace);
@@ -280,6 +283,9 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
         <button className="btn" onClick={() => setCatalogMode('existing')}>
           <FilePen size={15} /> Заменить / удалить рецепт
         </button>
+        <button className="btn" onClick={() => navigate(`/tags?pack=${pack.id}`)}>
+          <Hash size={15} /> Тег
+        </button>
         <button
           className="btn"
           onClick={() =>
@@ -331,6 +337,18 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
                   {[e.recipeType, e.sourceRecipe && `из ${e.sourceRecipe}`, e.note].filter(Boolean).join(' · ')}
                 </span>
               </button>
+              {tagFromPath(e.path) && (
+                <button
+                  className="btn sm"
+                  onClick={() => {
+                    const t = tagFromPath(e.path)!;
+                    navigate(`/tags?pack=${pack.id}&kind=${t.kind}&tag=${encodeURIComponent(tagKey(t.kind, t.id))}`);
+                  }}
+                  title="Открыть в редакторе тегов"
+                >
+                  <Hash size={13} /> Тег
+                </button>
+              )}
               {kjsHits.has(e.id) && (
                 <button
                   className="btn sm dp-kjs"

@@ -56,7 +56,7 @@ npm run kubejs -- <zip|папка> [--layer world]  # скрипты KubeJS → 
 
 | Источник (не в git)           | Скрипт                                               | Результат                                                                                                 |
 | ----------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `mods/*.jar`                  | `build-items.mjs` (+ `reference`, `manifest`, `geo`) | `public/items.json`, `icons/`, `recipes.json`, `reference.json`, `pack-manifest.json`, `geo.json`, `geo/` |
+| `mods/*.jar`                  | `build-items.mjs` (+ `reference`, `manifest`, `geo`, `tags`) | `public/items.json`, `icons/`, `recipes.json`, `reference.json`, `pack-manifest.json`, `geo.json`, `geo/`, `tags.json` |
 | `instance/kubejs/<слой>/`     | `kubejs.mjs`                                         | `public/kubejs.json`                                                                                      |
 | zip/папка конфигов сервера    | `import-config.mjs`                                  | Firestore `config/{scope}__{путь}`                                                                        |
 | разница манифестов при деплое | `pack-release.mjs` (predeploy)                       | Firestore `packUpdates/{id}`                                                                              |
@@ -80,12 +80,13 @@ npm run kubejs -- <zip|папка> [--layer world]  # скрипты KubeJS → 
 ## Карта кода
 
 ```
-src/pages/        TasksPage, DocsPage/DocPage, SchematicsPage, DatapacksPage, RecipesPage, ReferencePage, UpdatesPage, MapPage
+src/pages/        TasksPage, DocsPage/DocPage, SchematicsPage, DatapacksPage, RecipesPage, TagsPage, ReferencePage, UpdatesPage, MapPage
 src/components/   Modal, ItemPicker/ItemIcon, RecipeCatalog (RecipeBrowser), KubejsConstructor, SchematicLibrary, WorldMap, …
 src/lib/
   items.ts fuzzy.ts            библиотека предметов, поиск (fuse.js — только подбор замен в схемах)
   recipes.ts recipeFilter.ts   каталог рецептов + KubeJS: статусы, фильтры
   recipeRefs.ts kubejsFix.ts   входы/выходы рецепта; конструктор обхода удалений KubeJS
+  tags.ts                      теги: слияние источников и KubeJS, поиск, файл правки датапака (UI — TagEditor)
   datapack.ts                  записи датапака, zip, проверки
   nbt.ts schematic.ts materials.ts schematicLibrary.ts   схемы .nbt: замена/удаление блоков, материалы, библиотека
   reference.ts                 справочник (руды, топливо, жидкое топливо, еда, металлы)

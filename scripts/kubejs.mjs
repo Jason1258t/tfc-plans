@@ -148,7 +148,9 @@ function runLayer(layer) {
   const rules = [];
   const added = [];
   const errors = [];
-  if (!fs.existsSync(dir)) return { rules, added, errors, files: 0 };
+  /** Операции ServerEvents.tags: { k: вид, tag, op: add|remove|removeAll, v: [id…], re: [«/regex/»…] } */
+  const tagOps = [];
+  if (!fs.existsSync(dir)) return { rules, added, errors, tagOps, files: 0 };
 
   const files = [];
   const walk = (d) => {
@@ -276,6 +278,33 @@ function runLayer(layer) {
   });
 
   const recipeCallbacks = [];
+  const tagCallbacks = [];
+  /** event из ServerEvents.tags(вид, …): add/remove/removeAll и get(тег).add/remove… */
+  const tagEvent = (kind) => {
+    const isRegex = (x) => Object.prototype.toString.call(x) === '[object RegExp]';
+    const rec = (op, tag, values) => {
+      const flat = values.flat(Infinity).map((x) => (isRegex(x) ? x : ser(x)));
+      tagOps.push({
+        k: kind,
+        tag: String(tag).replace(/^#/, ''),
+        op,
+        v: flat.filter((x) => typeof x === 'string'),
+        ...(flat.some(isRegex) ? { re: flat.filter(isRegex).map(String) } : {}),
+        ...where(),
+      });
+    };
+    const handle = (tag) => ({
+      add: (...v) => (rec('add', tag, v), handle(tag)),
+      remove: (...v) => (rec('remove', tag, v), handle(tag)),
+      removeAll: () => (rec('removeAll', tag, []), handle(tag)),
+    });
+    return {
+      add: (tag, ...v) => rec('add', tag, v),
+      remove: (tag, ...v) => rec('remove', tag, v),
+      removeAll: (tag) => rec('removeAll', tag, []),
+      get: (tag) => handle(tag),
+    };
+  };
   const known = {
     ServerEvents: new Proxy(
       {},
@@ -283,9 +312,11 @@ function runLayer(layer) {
         get: (_, k) =>
           k === 'recipes'
             ? (cb) => typeof cb === 'function' && recipeCallbacks.push(cb)
-            : typeof k === 'symbol'
-              ? undefined
-              : () => {},
+            : k === 'tags'
+              ? (kind, cb) => typeof cb === 'function' && tagCallbacks.push({ kind: String(kind), cb })
+              : typeof k === 'symbol'
+                ? undefined
+                : () => {},
       },
     ),
     console: { log: () => {}, info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
@@ -347,7 +378,15 @@ function runLayer(layer) {
       errors.push({ file: at ? `${at[1]}:${at[2]}` : '?', message: String(e?.message ?? e).split('\n')[0] });
     }
   }
-  return { rules, added, errors, files: files.length };
+  for (const { kind, cb } of tagCallbacks) {
+    try {
+      cb(tagEvent(kind));
+    } catch (e) {
+      const at = /kubejs:\/\/(.+?):(\d+)/.exec(String(e?.stack));
+      errors.push({ file: at ? `${at[1]}:${at[2]}` : '?', message: String(e?.message ?? e).split('\n')[0] });
+    }
+  }
+  return { rules, added, errors, tagOps, files: files.length };
 }
 
 // ---------------------------------------------------------------- kubejs/data — датапак
@@ -400,6 +439,7 @@ function analyze() {
   const rules = [];
   const recipes = [];
   const errors = [];
+  const tags = [];
   const layerInfo = [];
   for (const layer of layers) {
     const r = runLayer(layer);
@@ -407,6 +447,7 @@ function analyze() {
     rules.push(...r.rules.map((x) => ({ ...x, layer })));
     errors.push(...r.errors.map((x) => ({ ...x, layer })));
     recipes.push(...data);
+    tags.push(...r.tagOps.map((x) => ({ ...x, layer })));
     let n = 0;
     for (const a of r.added) {
       n++;
@@ -431,10 +472,11 @@ function analyze() {
       rules: r.rules.length,
       added: r.added.length,
       data: data.length,
+      tags: r.tagOps.length,
     });
     log(
       `слой ${layer}: скриптов ${r.files}, удалений/замен ${r.rules.length}, добавлено ${r.added.length}, ` +
-        `рецептов в data ${data.length}, ошибок ${r.errors.length}`,
+        `рецептов в data ${data.length}, операций с тегами ${r.tagOps.length}, ошибок ${r.errors.length}`,
     );
   }
   for (const e of errors) log(`  ошибка в ${e.file}: ${e.message}`);
@@ -459,7 +501,7 @@ function analyze() {
     log(`каталог: удалено KubeJS ${removed} рецептов из ${original.length}, неоднозначно ${maybe}`);
   }
 
-  fs.writeFileSync(OUT, JSON.stringify({ generatedAt: Date.now(), layers: layerInfo, rules, recipes, errors }));
+  fs.writeFileSync(OUT, JSON.stringify({ generatedAt: Date.now(), layers: layerInfo, rules, recipes, tags, errors }));
   log(`записан public/kubejs.json (${(fs.statSync(OUT).size / 1024).toFixed(0)} КБ)`);
 }
 

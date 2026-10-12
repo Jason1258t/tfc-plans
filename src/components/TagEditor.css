@@ -1,0 +1,155 @@
+.tag-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tag-modes {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tag-modes p {
+  margin: 0;
+  min-width: 240px;
+}
+
+.tag-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 760px) {
+  .tag-cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tag-cols h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.tag-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  max-height: 340px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.tag-list:empty {
+  display: none;
+}
+
+.tag-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 4px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tag-list li:last-child {
+  border-bottom: 0;
+}
+
+.tag-list li.removed .tag-member {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.tag-member {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.tag-member-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tag-member-name {
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.tag-member-id {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
+  overflow-wrap: anywhere;
+}
+
+.tag-add {
+  position: relative;
+}
+
+.tag-add-list {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  max-height: 320px;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+}
+
+.tag-add-list button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.tag-add-list button:hover {
+  background: var(--surface-2);
+}
+
+.tag-warn {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--danger-soft);
+}
+
+.tag-preview summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.tag-preview pre {
+  margin: 8px 0 0;
+  padding: 10px;
+  max-height: 220px;
+  overflow: auto;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
