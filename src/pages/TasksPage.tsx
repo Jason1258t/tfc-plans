@@ -276,7 +276,7 @@ export function TasksPage() {
           artifactId={docId}
           variant="side"
           onClose={() => setParam({ doc: null })}
-          onToggleSize={() => navigate(`/docs/${docId}`)}
+          onToggleSize={() => navigate(`/doc/${docId}`)}
           onOpenTask={(id) => setParam({ task: id })}
           onDeleted={() => setParam({ doc: null })}
         />

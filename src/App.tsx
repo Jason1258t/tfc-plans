@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { Header } from './components/Header';
 import { NickDialog } from './components/NickDialog';
 import { TooltipLayer } from './components/Tooltip';
@@ -24,6 +24,12 @@ function MapRedirect() {
   return <Navigate to={`/reference?${params}`} replace />;
 }
 
+/** Прежний адрес документа на всю страницу: /docs теперь — страница файлов */
+function OldDocRedirect() {
+  const { id = '' } = useParams();
+  return <Navigate to={`/doc/${id}`} replace />;
+}
+
 export default function App() {
   const [nick, setNick] = useState(readNick);
   const [changingNick, setChangingNick] = useState(false);
@@ -43,9 +49,10 @@ export default function App() {
         <ErrorBoundary>
           <Routes>
             <Route path="/" element={<TasksPage />} />
-            <Route path="/docs" element={<Navigate to="/?view=docs" replace />} />
-            <Route path="/files" element={<FilesPage />} />
-            <Route path="/docs/:id" element={<DocPage />} />
+            <Route path="/docs" element={<FilesPage />} />
+            <Route path="/files" element={<Navigate to="/docs" replace />} />
+            <Route path="/doc/:id" element={<DocPage />} />
+            <Route path="/docs/:id" element={<OldDocRedirect />} />
             <Route path="/schematics" element={<SchematicsPage />} />
             <Route path="/datapacks" element={<DatapacksPage />} />
             <Route path="/recipes" element={<RecipesPage />} />
