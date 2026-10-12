@@ -159,8 +159,8 @@ function prepareJar(file) {
   const st = fs.statSync(file);
   const key = `${path.basename(file, '.jar')}-${st.size}-${Math.round(st.mtimeMs)}`.replace(/[^\w.+-]/g, '_');
   const dir = path.join(CACHE, 'jars', key);
-  // v12 — плюс растения теплицы Firmalife и классы конфигов аддонов; v11 — плюс loot-таблицы растений и их размещение в мире; v10 — плюс классы календаря; v9 — плюс классы конфигов; v8 — плюс классы растений (classes/) для ботаники; v7 — плюс климатические диапазоны растений TFC; v6 — плюс теги, жилы, данные TFC для справочника, география TFC Real World и жидкое топливо; теги блоков и сущностей
-  const done = path.join(dir, '.done-v12');
+  // v13 — плюс уровни теплицы; v12 — плюс растения теплицы Firmalife и классы конфигов аддонов; v11 — плюс loot-таблицы растений и их размещение в мире; v10 — плюс классы календаря; v9 — плюс классы конфигов; v8 — плюс классы растений (classes/) для ботаники; v7 — плюс климатические диапазоны растений TFC; v6 — плюс теги, жилы, данные TFC для справочника, география TFC Real World и жидкое топливо; теги блоков и сущностей
+  const done = path.join(dir, '.done-v13');
   if (!fs.existsSync(done) || fresh) {
     fs.rmSync(dir, { recursive: true, force: true });
     let zip;
@@ -173,7 +173,7 @@ function prepareJar(file) {
     // Рецепты — только папка recipe/ (1.21); recipes/ в некоторых jar — остатки 1.20, игра их не читает.
     // Для справочника: теги предметов, конфиги жил, данные TFC (топливо, еда, нагрев).
     const wanted =
-      /^(assets\/[a-z0-9_.-]+\/(models\/.+\.json|textures\/.+\.png|lang\/(en_us|ru_ru)\.json)|data\/[a-z0-9_.-]+\/(recipe\/.+|tags\/(item|fluid|block|entity_type)\/.+|createdieselgenerators\/fuel_type\/.+|createliquidfuel\/compat\/.+|worldgen\/configured_feature\/(vein\/.+|[^/]*vein[^/]*)|tfc\/(fuel|food|fluid_heat|climate_range)\/.+|firmalife\/plantable\/.+|loot_table\/blocks\/(crop|plant)\/.+|worldgen\/placed_feature\/plant\/.+|geography\/.+|profiles\/.+\/settings)\.json|data\/[a-z0-9_.-]+\/profiles\/.+\/maps\/(continent|altitude|koppen|temperature|rainfall)\.png)$/;
+      /^(assets\/[a-z0-9_.-]+\/(models\/.+\.json|textures\/.+\.png|lang\/(en_us|ru_ru)\.json)|data\/[a-z0-9_.-]+\/(recipe\/.+|tags\/(item|fluid|block|entity_type)\/.+|createdieselgenerators\/fuel_type\/.+|createliquidfuel\/compat\/.+|worldgen\/configured_feature\/(vein\/.+|[^/]*vein[^/]*)|tfc\/(fuel|food|fluid_heat|climate_range)\/.+|firmalife\/(plantable|greenhouse)\/.+|loot_table\/blocks\/(crop|plant)\/.+|worldgen\/placed_feature\/plant\/.+|geography\/.+|profiles\/.+\/settings)\.json|data\/[a-z0-9_.-]+\/profiles\/.+\/maps\/(continent|altitude|koppen|temperature|rainfall)\.png)$/;
     const entries = zip.getEntries();
     for (const entry of entries) {
       if (entry.isDirectory || !wanted.test(entry.entryName)) continue;
@@ -461,9 +461,13 @@ async function main() {
   const perNs = new Map();
   /** Названия жидкостей (fluid_type.<ns>.<path>) — для справочника топлива */
   const fluidNames = new Map();
+  /** Все переводы подряд — для ключей, которые не привязаны к предмету (названия уровней теплицы) */
+  const dict = { en: {}, ru: {} };
   for (const { ns, root } of sources) {
     const en = readLang(root, ns, 'en_us');
     const ru = readLang(root, ns, 'ru_ru');
+    Object.assign(dict.en, en);
+    Object.assign(dict.ru, ru);
     // Ключи переводов жидкостей у модов разные (fluid.* / fluid_type.*), и в en и ru они могут не совпадать
     for (const [lang, dict] of [
       ['en', en],
@@ -517,7 +521,14 @@ async function main() {
   );
   const tags = writeTags(dataDirs, parseLooseJson, fluidNames, path.join(ROOT, 'public', 'tags.json'));
   log(`теги: ${tags.tags} (${tags.entries} значений), жидкостей ${tags.fluids} — tags.json ${tags.kb}KB`);
-  const botany = writeBotany(dataDirs, parseLooseJson, items, recipes, path.join(ROOT, 'public', 'botany.json'));
+  const botany = writeBotany(
+    dataDirs,
+    parseLooseJson,
+    items,
+    recipes,
+    (key) => ({ en: dict.en[key], ru: dict.ru[key] }),
+    path.join(ROOT, 'public', 'botany.json'),
+  );
   log(
     `ботаника: культур ${botany.crops}, кустов ${botany.bushes}, деревьев ${botany.trees}, прочих ${botany.other}; ` +
       `из кода: удобрения у ${botany.npk}, сезоны у ${botany.life}, настроек модов ${botany.configKeys}; ` +

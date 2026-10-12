@@ -230,6 +230,43 @@ function readCode(classDirs, warnings) {
         (meta.pick ??= {})[cls.name.split('/').pop()] =
           ranged && nums.length >= 2 ? [nums.at(-2), nums.at(-1)] : [nums.at(-1) ?? 1, nums.at(-1) ?? 1];
       }
+      // Растение со своим счётчиком роста (виноград Firmalife): сезоны заданы кодом «если месяц X — состояние Y»,
+      // прирост за обновление — константами, климат — ссылкой на диапазон (FLClimateRanges.GRAPES)
+      const tick = cls.methods.find((m) => m.name === 'updateTick' && m.code);
+      if (tick) {
+        const g = { byMonth: {}, base: null, floats: [], range: null, tempOnly: false };
+        let month = null;
+        for (const ins of instructions(tick.code)) {
+          if (ins.op === 0xb2) {
+            const r = cls.ref(ins.index);
+            if (/\/calendar\/Month$/.test(r.owner)) month = r.name;
+            else if (/\/Lifecycle$/.test(r.owner)) {
+              if (month) g.byMonth[month] = r.name;
+              else if (r.name !== 'DORMANT') g.base = r.name;
+              month = null;
+            } else if (/ClimateRanges$/.test(r.owner)) g.range = r.name.toLowerCase();
+          } else if (ins.op === 0x12 || ins.op === 0x13) {
+            const v = cls.constant(ins.index);
+            if (typeof v === 'number') g.floats.push(round(v));
+          } else if (ins.op === 0xb6 && cls.ref(ins.index).name === 'checkTemperature') g.tempOnly = true;
+        }
+        if (g.range && Object.keys(g.byMonth).length) {
+          const interval = cls.fields.find((f) => f.name === 'UPDATE_INTERVAL')?.constant;
+          life.set(g.range, {
+            lifeByMonth: g.byMonth,
+            lifeBase: g.base ?? 'HEALTHY',
+            kind: null,
+            // Прирост за одно обновление: постоянная часть + случайная (rand × второй коэффициент)
+            grow:
+              g.floats.length >= 2 && typeof interval === 'number'
+                ? { min: g.floats[0], max: round(g.floats[0] + g.floats[1]), interval }
+                : undefined,
+            tempOnly: g.tempOnly || undefined,
+            code: source,
+          });
+        }
+        continue;
+      }
       if (!isEnum(cls)) {
         // Сезоны вне перечислений: «static final Lifecycle[] BANANA_STAGES» → banana
         for (const [field, value] of clinitValues(cls).statics) {
@@ -401,9 +438,36 @@ function readPlantables(dataDirs, parse, have) {
   return [...out.values()].sort((a, b) => a.i.localeCompare(b.i));
 }
 
+/** Уровни теплицы Firmalife: data/<ns>/firmalife/greenhouse/<материал>.json — { tier, ingredient: тег блоков стен } */
+function readGreenhouseTiers(dataDirs, parse, translate) {
+  const out = new Map();
+  for (const { dir } of dataDirs) {
+    if (!fs.existsSync(dir)) continue;
+    for (const ns of fs.readdirSync(dir)) {
+      const base = path.join(dir, ns, 'firmalife', 'greenhouse');
+      if (!fs.existsSync(base)) continue;
+      for (const file of fs.readdirSync(base)) {
+        if (!file.endsWith('.json')) continue;
+        const j = parse(fs.readFileSync(path.join(base, file), 'utf8'));
+        if (typeof j?.tier !== 'number') continue;
+        const key = typeof j.translation_key === 'string' ? j.translation_key : j.translation_key?.translate;
+        const name = key ? translate(key) : {};
+        out.set(`${ns}:${file.slice(0, -5)}`, {
+          i: `${ns}:${file.slice(0, -5)}`,
+          tier: j.tier,
+          e: name.en ?? file.slice(0, -5).replaceAll('_', ' '),
+          ...(name.ru && name.ru !== name.en ? { r: name.ru } : {}),
+          ...(typeof j.ingredient === 'string' ? { walls: j.ingredient } : {}),
+        });
+      }
+    }
+  }
+  return [...out.values()].sort((a, b) => a.tier - b.tier);
+}
+
 // ---------------------------------------------------------------- сборка
 
-export function buildBotany(dataDirs, parse, items, recipes) {
+export function buildBotany(dataDirs, parse, items, recipes, translate = () => ({})) {
   const have = new Set(items.map((i) => i.i));
   const first = (...ids) => ids.find((id) => have.has(id));
   const warnings = [];
@@ -444,6 +508,12 @@ export function buildBotany(dataDirs, parse, items, recipes) {
     dataDirs.map((d) => ({ dir: path.join(d.dir, '..', 'classes'), source: d.source })),
     warnings,
   );
+  for (const l of code.life.values()) {
+    if (!l.lifeByMonth) continue;
+    if (code.meta.months) l.life = code.meta.months.map((m) => l.lifeByMonth[m] ?? l.lifeBase);
+    delete l.lifeByMonth;
+    delete l.lifeBase;
+  }
   const usedCrops = new Set();
   const usedLife = new Set();
   for (const e of out.values()) {
@@ -486,9 +556,10 @@ export function buildBotany(dataDirs, parse, items, recipes) {
 
   // Теплица Firmalife; заодно плод тем растениям, у которых он не нашёлся по id (какао → какао-бобы)
   const greenhouse = readPlantables(dataDirs, parse, have);
+  const greenhouseTiers = readGreenhouseTiers(dataDirs, parse, translate);
   for (const e of out.values()) {
     if (e.product) continue;
-    const g = greenhouse.find((x) => x.n === e.n && x.crop && have.has(x.crop));
+    const g = greenhouse.find((x) => (x.n === e.n || x.n.endsWith(`_${e.n}`)) && x.crop && have.has(x.crop));
     if (g) e.product = g.crop;
   }
 
@@ -618,6 +689,7 @@ export function buildBotany(dataDirs, parse, items, recipes) {
         'minLight',
       ]),
       ...(soil.length ? { soil } : {}),
+      ...(greenhouseTiers.length ? { greenhouseTiers } : {}),
       config,
     },
     configs: code.configs,
@@ -627,8 +699,8 @@ export function buildBotany(dataDirs, parse, items, recipes) {
   };
 }
 
-export function writeBotany(dataDirs, parse, items, recipes, outFile) {
-  const { warnings, configs, ...data } = buildBotany(dataDirs, parse, items, recipes);
+export function writeBotany(dataDirs, parse, items, recipes, translate, outFile) {
+  const { warnings, configs, ...data } = buildBotany(dataDirs, parse, items, recipes, translate);
   fs.writeFileSync(outFile, JSON.stringify(data));
   // Все настройки модов по умолчанию — отдельным файлом (сайту пока нужны только три, они продублированы в meta.config)
   fs.writeFileSync(path.join(path.dirname(outFile), 'config-defaults.json'), JSON.stringify(configs));

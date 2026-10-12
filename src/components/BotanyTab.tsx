@@ -117,7 +117,13 @@ export function BotanyTab({
       </nav>
 
       {subtab === 'greenhouse' ? (
-        <Greenhouse list={botany?.greenhouse ?? []} items={items} config={config} foodBy={foodBy} />
+        <Greenhouse
+          list={botany?.greenhouse ?? []}
+          items={items}
+          config={config}
+          foodBy={foodBy}
+          tiers={meta.greenhouseTiers ?? []}
+        />
       ) : (
         <div className="botany-main">
           <div className="ref-filters">
@@ -394,7 +400,7 @@ function PlantCard({
 
   // Сколько плодов за один сбор: свой класс растения (BananaPlantBlock) или общий для кустов и листвы
   const pickClass = Object.keys(meta.pick ?? {}).find((c) => c.toLowerCase().startsWith(p.n.replace(/_/g, '')));
-  const pick = p.life ? (meta.pick?.[pickClass ?? 'SeasonalPlantBlock'] ?? null) : null;
+  const pick = p.life && p.k !== 'plant' ? (meta.pick?.[pickClass ?? 'SeasonalPlantBlock'] ?? null) : null;
   const fruiting = (p.life ?? []).flatMap((l, i) => (l === 'FRUITING' ? [monthLabel(months[i], i)] : []));
 
   return (
@@ -421,9 +427,13 @@ function PlantCard({
         </div>
         <div className="botany-range">
           <span>Влажность</span>
-          <RangeBar min={p.r.minH} max={p.r.maxH} lo={0} hi={100} kind="water" />
+          {p.tempOnly ? (
+            <span className="faint">на рост не влияет</span>
+          ) : (
+            <RangeBar min={p.r.minH} max={p.r.maxH} lo={0} hi={100} kind="water" />
+          )}
           <b>
-            {rangeLabel(p.r.minH, p.r.maxH, '%') ?? '—'}
+            {p.tempOnly ? '' : (rangeLabel(p.r.minH, p.r.maxH, '%') ?? '—')}
             {p.r.wigH ? ` ±${ru(p.r.wigH)}` : ''}
           </b>
         </div>
@@ -444,7 +454,7 @@ function PlantCard({
         </section>
       )}
 
-      {(p.drops || food || seedName) && (
+      {(p.drops || food || seedName || p.grow) && (
         <section>
           <h4>{p.k === 'crop' ? 'Урожай' : 'Плод'}</h4>
           <dl className="botany-stats">
@@ -492,6 +502,16 @@ function PlantCard({
                 <dt>Саженец</dt>
                 <dd>
                   растёт {ru(sapling.days)} игровых суток <span className="faint small">· {sapling.origin}</span>
+                </dd>
+              </div>
+            )}
+            {p.grow && (
+              <div>
+                <dt>Рост</dt>
+                <dd>
+                  новая стадия раз в {ru(p.grow.interval / TICKS_PER_DAY / p.grow.max)}–
+                  {ru(p.grow.interval / TICKS_PER_DAY / p.grow.min)} игровых суток, пока температура в диапазоне; вне
+                  его — покой
                 </dd>
               </div>
             )}
@@ -566,12 +586,16 @@ function Greenhouse({
   items,
   config,
   foodBy,
+  tiers,
 }: {
   list: GreenhousePlant[];
   items: ItemIndex | null;
   config: BotanyConfig;
   foodBy: Map<string, Food>;
+  tiers: NonNullable<BotanyMeta['greenhouseTiers']>;
 }) {
+  /** Самый простой материал стен, дающий нужный уровень */
+  const wallsFor = (tier: number) => tiers.find((t) => t.tier >= tier);
   const [query, setQuery] = useState('');
   const [planter, setPlanter] = useState('');
   const planters = useMemo(() => [...new Set(list.flatMap((g) => (g.planter ? [g.planter] : [])))].sort(), [list]);
@@ -595,6 +619,11 @@ function Greenhouse({
   fact('greenhouseGrowthModifier', 'Множитель роста', (v) => ru(v, 2));
   fact('greenhouseWaterDays', 'Вода в грядке', (v) => `расходуется в среднем за ${ru(v)} суток`);
   fact('greenhouseNutrientDays', 'Элемент удобрения', (v) => `расходуется в среднем за ${ru(v)} суток`);
+  if (tiers.length)
+    facts.push({
+      label: 'Уровни теплицы по материалу стен',
+      value: tiers.map((t) => `${t.r ?? t.e} — ${t.tier}`).join(' · '),
+    });
   fact('greenhouseRadius', 'Стены от станции климата', (v) => `не дальше ${ru(v)} блоков`);
 
   return (
@@ -627,9 +656,9 @@ function Greenhouse({
         </dl>
         <p className="faint small">
           Теплица Firmalife — отдельная механика: растения сажают в грядки внутри теплицы, климат и сезоны снаружи на
-          них не действуют. «Уровень» — минимальный уровень теплицы, в которой растение приживётся. Настройки описаны по
-          комментариям мода к ним, формула роста в теплице не разобрана. В игре не проверялось. Показано {shown.length}{' '}
-          из {list.length}.
+          них не действуют. На карточке указан самый простой материал стен, в теплице из которого растение приживётся.
+          Настройки описаны по комментариям мода к ним, формула роста в теплице не разобрана. В игре не проверялось.
+          Показано {shown.length} из {list.length}.
         </p>
       </section>
       {shown.length === 0 ? (
@@ -669,7 +698,12 @@ function Greenhouse({
                     {g.tier !== undefined && (
                       <div>
                         <dt>Теплица</dt>
-                        <dd>уровень не ниже {g.tier}</dd>
+                        <dd>
+                          {wallsFor(g.tier)
+                            ? `${(wallsFor(g.tier)!.r ?? wallsFor(g.tier)!.e).toLowerCase()} и лучше`
+                            : 'нет подходящей'}{' '}
+                          <span className="faint small">· уровень {g.tier}</span>
+                        </dd>
                       </div>
                     )}
                     {seedName && (

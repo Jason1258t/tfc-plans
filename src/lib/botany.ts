@@ -41,6 +41,10 @@ export interface Plant {
   /** Высота раскидистого куста, блоков */
   maxHeight?: number;
   spreading?: boolean;
+  /** Свой счётчик роста (виноград): прирост за обновление от min до max, обновление раз в interval тиков; стадия — при 1 */
+  grow?: { min: number; max: number; interval: number };
+  /** Проверяется только температура, влажность на рост не влияет */
+  tempOnly?: boolean;
   /** Что падает со спелой культуры (loot-таблица): byYield — количество зависит от ухода */
   drops?: { item: string; min: number; max: number; byYield?: boolean }[];
   /** Где используется плод: число рецептов и предметы на выходе (сначала того же мода) */
@@ -87,6 +91,8 @@ export interface BotanyMeta {
   minLight?: number;
   /** Почвы: тег пашни и множитель из кода (применяется к возврату элементов в почву) */
   soil?: { tag: string; mul: number; blocks: string[] }[];
+  /** Уровни теплицы Firmalife по возрастанию: материал стен → уровень */
+  greenhouseTiers?: { i: string; tier: number; e: string; r?: string; walls?: string }[];
   /** Настройки модов, от которых зависят сроки: ключ в TOML и значение по умолчанию из кода */
   config?: Record<string, ConfigKey | undefined>;
 }
@@ -178,7 +184,7 @@ export const PLANT_KIND_LABEL: Record<PlantKind, string> = {
   crop: 'Культуры',
   bush: 'Ягодные кусты',
   tree: 'Фруктовые деревья',
-  plant: 'Прочее',
+  plant: 'Виноград и прочее',
 };
 
 let promise: Promise<Botany | null> | null = null;
