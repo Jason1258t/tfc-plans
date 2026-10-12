@@ -44,7 +44,7 @@ export interface Plant {
   /** Что падает со спелой культуры (loot-таблица): byYield — количество зависит от ухода */
   drops?: { item: string; min: number; max: number; byYield?: boolean }[];
   /** Где используется плод: число рецептов и предметы на выходе (сначала того же мода) */
-  uses?: { recipes: number; items: string[] };
+  uses?: { recipes: number; items: string[]; generic?: number };
   /** Где растёт в природе: температура, грунтовая влага, лесистость (0–4), редкость «1 из N» */
   wild?: { minT?: number; maxT?: number; minW?: number; maxW?: number; minF?: number; maxF?: number; rarity?: number };
 }
@@ -79,6 +79,8 @@ export interface BotanyMeta {
   /** Насколько удобрения ускоряют рост (доля сверху) */
   NUTRIENT_GROWTH_FACTOR?: number;
   UPDATE_INTERVAL?: number;
+  /** Предел счётчика порчи спелой культуры (в долях полного роста) */
+  EXPIRY_LIMIT?: number;
   /** Сколько плодов даёт один сбор, по классу блока растения: { SeasonalPlantBlock: [1, 1], BananaPlantBlock: [3, 6] } */
   pick?: Record<string, [number, number]>;
   /** Минимальная яркость для роста культуры (CropHelpers.lightValid) */
@@ -100,9 +102,39 @@ export interface ConfigKey {
   world?: { file: string; key: string };
 }
 
+/** Растение теплицы Firmalife (data/<ns>/firmalife/plantable) */
+export interface GreenhousePlant {
+  i: string;
+  n: string;
+  src: string;
+  crop?: string;
+  cropCount?: number;
+  seed?: string;
+  /** Тип грядки: large, quad, trellis, bonsai, hanging, hydroponic */
+  planter?: string;
+  /** Минимальный уровень теплицы */
+  tier?: number;
+  stages?: number;
+  /** Шанс лишнего семени при сборе, 0–1 */
+  extraSeed?: number;
+  npk?: [number, number, number];
+}
+
+export const PLANTER_LABEL: Record<string, string> = {
+  large: 'большая грядка',
+  quad: 'грядка на четыре',
+  trellis: 'шпалера',
+  bonsai: 'горшок для дерева',
+  hanging: 'подвесная грядка',
+  hydroponic: 'гидропоника',
+};
+
+export type BotanySub = PlantKind | 'greenhouse';
+
 export interface Botany {
   meta: BotanyMeta;
   entries: Plant[];
+  greenhouse: GreenhousePlant[];
 }
 
 const MONTH_RU: Record<string, string> = {
@@ -124,9 +156,22 @@ export const monthLabel = (m: string | undefined, i: number) => (m && MONTH_RU[m
 /** Дней до созревания культуры без удобрений и с полными (24000 тиков в сутках) */
 export function growthDays(meta: BotanyMeta, modifier = 1): { base: number; best: number } | null {
   if (!meta.GROWTH_FACTOR) return null;
-  // Множитель из конфига умножает время роста: 2 — вдвое дольше
-  const base = (1 / meta.GROWTH_FACTOR / 24000) * modifier;
-  return { base, best: base / (1 + (meta.NUTRIENT_GROWTH_FACTOR ?? 0)) };
+  // Рост за тик (CropHelpers.growthTickStep): GROWTH_FACTOR / множитель конфига — всегда, плюс
+  // NUTRIENT_CONSUMPTION × NUTRIENT_GROWTH_FACTOR, если почва даёт всё, что культура просит.
+  // Множитель из конфига замедляет только первую часть: 2 — вдвое дольше без удобрений.
+  const rate = meta.GROWTH_FACTOR / modifier;
+  const bonus = (meta.NUTRIENT_CONSUMPTION ?? 0) * (meta.NUTRIENT_GROWTH_FACTOR ?? 0);
+  return { base: 1 / rate / 24000, best: 1 / (rate + bonus) / 24000 };
+}
+
+/**
+ * Сколько суток спелая культура простоит до гибели без удобрений: после созревания прирост копится в счётчик
+ * порчи до предела EXPIRY_LIMIT × множитель порчи / множитель роста, а копится он со скоростью роста.
+ * Вне диапазона климата в этот же счётчик уходит весь прирост — культура не растёт и стареет.
+ */
+export function expiryDays(meta: BotanyMeta, expiryModifier = 1): number | null {
+  if (!meta.GROWTH_FACTOR || !meta.EXPIRY_LIMIT) return null;
+  return (meta.EXPIRY_LIMIT * expiryModifier) / meta.GROWTH_FACTOR / 24000;
 }
 
 export const PLANT_KIND_LABEL: Record<PlantKind, string> = {
@@ -142,7 +187,9 @@ let loaded: Botany | null | undefined;
 export function loadBotany(): Promise<Botany | null> {
   promise ??= fetch(`${import.meta.env.BASE_URL}botany.json`)
     .then((r) => (r.ok ? (r.json() as Promise<Partial<Botany>>) : null))
-    .then((d) => (loaded = d?.entries ? { meta: d.meta ?? {}, entries: d.entries } : null))
+    .then(
+      (d) => (loaded = d?.entries ? { meta: d.meta ?? {}, entries: d.entries, greenhouse: d.greenhouse ?? [] } : null),
+    )
     .catch(() => (loaded = null));
   return promise;
 }

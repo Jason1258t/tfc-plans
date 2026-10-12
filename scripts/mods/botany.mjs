@@ -44,12 +44,16 @@ const CONFIG_KEYS = [
   'fruitPickBloomDelayTicks',
   'defaultMonthLength',
   'defaultCalendarDayLength',
+  'greenhouseGrowthModifier',
+  'greenhouseWaterDays',
+  'greenhouseNutrientDays',
+  'greenhouseRadius',
 ];
 
 /** Какие классы jar сохранять в кеш для разбора (вызывается из build-items при распаковке) */
 export function isBotanyClass(entryName, data) {
   if (
-    /\/crop\/CropHelpers\.class$|\/calendar\/(Month|Calendar|CalendarWorldData)\.class$|\/config\/(Server|Common)Config\.class$/.test(
+    /\/crop\/CropHelpers\.class$|\/calendar\/(Month|Calendar|CalendarWorldData)\.class$|\/config\/\w*(Server|Common)Config\.class$/.test(
       entryName,
     )
   )
@@ -111,19 +115,51 @@ function namedArgs(cls, constant) {
 /** Класс блока культуры: что создаёт фабрика из конструктора (XCropBlock.create), без мёртвых и диких форм */
 function cropBlock(cls, constant) {
   const ctor = cls.methods.find((m) => m.name === '<init>' && m.desc === constant.desc);
-  const blocks = [
-    ...new Set(
-      lambdaTargets(cls, ctor)
-        .filter((t) => t.name === 'create' && /CropBlock$/.test(t.owner))
-        .map((t) => t.owner.split('/').pop())
-        .filter((n) => !/^(Dead|Wild)|Dead|Wild/.test(n)),
-    ),
-  ];
+  const isBlock = (t) => /CropBlock(\$\w+)?$/.test(t.owner) && ['create', '<new>', '<init>'].includes(t.name);
+  const alive = (t) => !/Dead|Wild/.test(t.owner.split('/').pop());
+  const simple = (t) => t.owner.split('/').pop().replace(/\$.*$/, '');
+  let targets = lambdaTargets(cls, ctor);
+  // Фабрика блока — первая лямбда конструктора; create(...) надёжнее, чем new (так создаются и мёртвые формы)
+  let blocks = [...new Set(targets.filter((t) => t.name === 'create' && isBlock(t) && alive(t)).map(simple))];
+  if (!blocks.length) {
+    // Аддоны заворачивают создание блока в свой статический метод (IECrop.createDoubleCrop) — заглядываем в него
+    const own = targets.filter((t) => t.owner === cls.name && !['dead', 'getClimateRange'].includes(t.name));
+    for (const t of own) {
+      const m = cls.methods.find((x) => x.name === t.name && x.desc === t.desc);
+      if (!m?.code) continue;
+      const inner = [];
+      for (const ins of instructions(m.code)) {
+        if (ins.op === 0xb8 || ins.op === 0xb7) inner.push(cls.ref(ins.index));
+        else if (ins.op === 0xbb) inner.push({ owner: cls.className(ins.index), name: '<new>', desc: '' });
+        else if (ins.op === 0xba) inner.push(...lambdaTargetsOf(cls, ins));
+      }
+      blocks = [...new Set(inner.filter((x) => isBlock(x) && alive(x)).map(simple))];
+      // Анонимный наследник (IECrop$1 extends DoubleCropBlock) — тип берём по имени метода-фабрики
+      if (!blocks.length) {
+        const hint = /(Double|Climbing|Flooded|Spreading|Pickable|Default)/.exec(t.name)?.[1];
+        if (hint) blocks = [`${hint === 'Default' ? 'Default' : hint}CropBlock`];
+      }
+      if (blocks.length) break;
+    }
+  }
   if (blocks.length <= 1) return blocks[0] ?? null;
   // Две фабрики на выбор по булеву аргументу конструктора (нужна ли опора): истина — первая
   const types = argTypes(constant.desc).slice(2);
   const flag = constant.args[types.indexOf('Z')];
   return flag === 0 ? blocks[1] : blocks[0];
+}
+
+/** Цели одной лямбды (invokedynamic) — тело её метода */
+function lambdaTargetsOf(cls, ins) {
+  const impl = cls.bootstrap[cls.cp[ins.index].a]?.find((a) => a?.handle)?.handle;
+  if (!impl || impl.owner !== cls.name) return impl ? [impl] : [];
+  const body = cls.methods.find((m) => m.name === impl.name && m.desc === impl.desc);
+  const out = [];
+  for (const i of body?.code ? instructions(body.code) : []) {
+    if (i.op === 0xb8 || i.op === 0xb7 || i.op === 0xb6) out.push(cls.ref(i.index));
+    else if (i.op === 0xbb) out.push({ owner: cls.className(i.index), name: '<new>', desc: '' });
+  }
+  return out;
 }
 
 function readCode(classDirs, warnings) {
@@ -163,7 +199,7 @@ function readCode(classDirs, warnings) {
         }
         continue;
       }
-      const cfg = /\/config\/(Server|Common)Config$/.exec(cls.name);
+      const cfg = /\/config\/\w*(Server|Common)Config$/.exec(cls.name);
       if (cfg) {
         const keys = configDefaults(cls);
         if (keys.length) configs.push({ src: source, type: cfg[1].toLowerCase(), keys });
@@ -327,6 +363,44 @@ function readLoot(dataDirs, parse, ns, rel) {
   return null;
 }
 
+/**
+ * Растения теплицы Firmalife: data/<ns>/firmalife/plantable/<имя>.json — что сажать, в какую грядку, какой нужен
+ * уровень теплицы, расход N/P/K и что вырастет. Это отдельная механика: климат и сезоны на неё не действуют.
+ */
+function readPlantables(dataDirs, parse, have) {
+  const out = new Map();
+  const id = (v) => (typeof v === 'string' ? v : (v?.id ?? v?.item ?? null));
+  for (const { dir, source } of dataDirs) {
+    if (!fs.existsSync(dir)) continue;
+    for (const ns of fs.readdirSync(dir)) {
+      const base = path.join(dir, ns, 'firmalife', 'plantable');
+      if (!fs.existsSync(base)) continue;
+      for (const file of fs.readdirSync(base)) {
+        if (!file.endsWith('.json')) continue;
+        const j = parse(fs.readFileSync(path.join(base, file), 'utf8'));
+        if (!j || typeof j !== 'object') continue;
+        const n = j.nutrient ?? {};
+        const crop = id(j.crop);
+        const seed = id(j.seed) ?? id(j.ingredient);
+        out.set(`${ns}:${file.slice(0, -5)}`, {
+          i: `${ns}:${file.slice(0, -5)}`,
+          n: file.slice(0, -5),
+          src: source,
+          crop: crop && have.has(crop) ? crop : (crop ?? undefined),
+          cropCount: typeof j.crop?.count === 'number' ? j.crop.count : undefined,
+          seed: seed ?? undefined,
+          planter: typeof j.planter === 'string' ? j.planter : undefined,
+          tier: typeof j.tier === 'number' ? j.tier : undefined,
+          stages: typeof j.stages === 'number' ? j.stages : undefined,
+          extraSeed: typeof j.extra_seed_chance === 'number' ? j.extra_seed_chance : undefined,
+          npk: NPK.every((k) => typeof n[k] === 'number') ? NPK.map((k) => round(n[k])) : undefined,
+        });
+      }
+    }
+  }
+  return [...out.values()].sort((a, b) => a.i.localeCompare(b.i));
+}
+
 // ---------------------------------------------------------------- сборка
 
 export function buildBotany(dataDirs, parse, items, recipes) {
@@ -410,6 +484,14 @@ export function buildBotany(dataDirs, parse, items, recipes) {
     }
   }
 
+  // Теплица Firmalife; заодно плод тем растениям, у которых он не нашёлся по id (какао → какао-бобы)
+  const greenhouse = readPlantables(dataDirs, parse, have);
+  for (const e of out.values()) {
+    if (e.product) continue;
+    const g = greenhouse.find((x) => x.n === e.n && x.crop && have.has(x.crop));
+    if (g) e.product = g.crop;
+  }
+
   // Почва: поле TagKey из кода (VERY_RICH_FARMLAND) → тег блоков с тем же именем в данных и его состав
   const soil = [];
   for (const sc of code.meta.soilCode ?? []) {
@@ -453,14 +535,21 @@ export function buildBotany(dataDirs, parse, items, recipes) {
       uses.set(product, u);
     }
   }
+  // Блюда-конструкторы (сэндвичи, супы, салаты) принимают почти любую еду через тег и засоряют список:
+  // предмет, который получается из многих разных растений, не считаем «продуктом из этого плода»
+  const GENERIC_FROM = 5;
+  const madeFrom = new Map();
+  for (const u of uses.values()) for (const o of u.outs.keys()) madeFrom.set(o, (madeFrom.get(o) ?? 0) + 1);
   for (const [product, u] of uses) {
     const e = byProduct.get(product);
     // Сначала продукты того же мода, что и растение (мука, масло, волокно), блюда других модов — следом
     const ns = product.split(':')[0];
     const own = (id) => (id.startsWith(`${ns}:`) ? 0 : 1);
+    const specific = [...u.outs].filter(([id]) => madeFrom.get(id) < GENERIC_FROM);
     e.uses = {
       recipes: u.count,
-      items: [...u.outs]
+      generic: u.outs.size - specific.length,
+      items: specific
         .sort((a, b) => own(a[0]) - own(b[0]) || b[1] - a[1] || a[0].localeCompare(b[0]))
         .map(([id]) => id)
         .slice(0, 24),
@@ -524,6 +613,7 @@ export function buildBotany(dataDirs, parse, items, recipes) {
         'NUTRIENT_CONSUMPTION',
         'NUTRIENT_GROWTH_FACTOR',
         'UPDATE_INTERVAL',
+        'EXPIRY_LIMIT',
         'pick',
         'minLight',
       ]),
@@ -532,6 +622,7 @@ export function buildBotany(dataDirs, parse, items, recipes) {
     },
     configs: code.configs,
     entries: [...out.values()].sort((a, b) => a.i.localeCompare(b.i)),
+    greenhouse,
     warnings,
   };
 }
@@ -553,6 +644,7 @@ export function writeBotany(dataDirs, parse, items, recipes, outFile) {
     drops: data.entries.filter((e) => e.drops).length,
     wild: data.entries.filter((e) => e.wild).length,
     uses: data.entries.filter((e) => e.uses).length,
+    greenhouse: data.greenhouse.length,
     warnings,
   };
 }

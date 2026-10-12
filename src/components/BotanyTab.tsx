@@ -2,14 +2,18 @@ import { Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import {
   CROP_BLOCK_LABEL,
+  expiryDays,
   growthDays,
   inRange,
   LIFE_LABEL,
   monthLabel,
   PLANT_KIND_LABEL,
+  PLANTER_LABEL,
   rangeLabel,
   useBotany,
   type BotanyMeta,
+  type BotanySub,
+  type GreenhousePlant,
   type Plant,
   type PlantKind,
 } from '../lib/botany';
@@ -28,7 +32,17 @@ const lower = (s: string) => s.toLowerCase().replaceAll('ё', 'е');
 const prettyName = (n: string) => n.replaceAll('_', ' ');
 
 /** Ботаника: культуры, ягодные кусты, фруктовые деревья — диапазоны температуры и влажности из данных TFC */
-export function BotanyTab({ foods, sub, onSub }: { foods: Food[]; sub: PlantKind; onSub: (k: PlantKind) => void }) {
+export function BotanyTab({
+  foods,
+  sub: subtab,
+  onSub,
+}: {
+  foods: Food[];
+  sub: BotanySub;
+  onSub: (k: BotanySub) => void;
+}) {
+  // Теплица — отдельная механика со своим списком; остальные подвкладки — растения открытого грунта
+  const sub: PlantKind = subtab === 'greenhouse' ? 'crop' : subtab;
   const botany = useBotany();
   const plants = botany === undefined ? undefined : (botany?.entries ?? null);
   const meta = botany?.meta ?? {};
@@ -89,73 +103,88 @@ export function BotanyTab({ foods, sub, onSub }: { foods: Food[]; sub: PlantKind
     <div className="botany">
       <nav className="botany-nav" aria-label="Разделы ботаники">
         {SUBTABS.filter((k) => k !== 'plant' || counts.plant > 0).map((k) => (
-          <button key={k} className={cx(sub === k && 'active')} onClick={() => onSub(k)}>
+          <button key={k} className={cx(subtab === k && 'active')} onClick={() => onSub(k)}>
             <span>{PLANT_KIND_LABEL[k]}</span>
             <span className="faint small">{counts[k]}</span>
           </button>
         ))}
+        {(botany?.greenhouse.length ?? 0) > 0 && (
+          <button className={cx(subtab === 'greenhouse' && 'active')} onClick={() => onSub('greenhouse')}>
+            <span>Теплица</span>
+            <span className="faint small">{botany!.greenhouse.length}</span>
+          </button>
+        )}
       </nav>
 
-      <div className="botany-main">
-        <div className="ref-filters">
-          <label className="search grow">
-            <Search size={15} className="faint" />
-            <input
-              placeholder={
-                sub === 'crop' ? 'Пшеница, картофель…' : sub === 'bush' ? 'Малина, черника…' : 'Яблоня, олива…'
-              }
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </label>
-          <label className="botany-field">
-            <span className="faint small">Температура, °C</span>
-            <input
-              className="input"
-              inputMode="decimal"
-              placeholder="напр. 12"
-              value={temp}
-              onChange={(e) => setTemp(e.target.value)}
-            />
-          </label>
-          <label className="botany-field">
-            <span className="faint small">Влажность, %</span>
-            <input
-              className="input"
-              inputMode="decimal"
-              placeholder="напр. 40"
-              value={hydr}
-              onChange={(e) => setHydr(e.target.value)}
-            />
-          </label>
-          <select className="input" value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Порядок">
-            <option value="name">По названию</option>
-            <option value="minT">Сначала холодостойкие</option>
-            <option value="maxT">Сначала жаростойкие</option>
-          </select>
-        </div>
-
-        <Summary meta={meta} sub={sub} config={config} shown={list.length} total={counts[sub]} items={items} />
-
-        {list.length === 0 ? (
-          <div className="empty">Ничего не подходит.</div>
-        ) : (
-          <ul className="botany-grid">
-            {list.map((p) => (
-              <PlantCard
-                key={p.i}
-                p={p}
-                name={nameOf(p)}
-                food={p.product ? foodBy.get(p.product) : undefined}
-                items={items}
-                meta={meta}
-                config={config}
-                scale={scale}
+      {subtab === 'greenhouse' ? (
+        <Greenhouse list={botany?.greenhouse ?? []} items={items} config={config} foodBy={foodBy} />
+      ) : (
+        <div className="botany-main">
+          <div className="ref-filters">
+            <label className="search grow">
+              <Search size={15} className="faint" />
+              <input
+                placeholder={
+                  sub === 'crop' ? 'Пшеница, картофель…' : sub === 'bush' ? 'Малина, черника…' : 'Яблоня, олива…'
+                }
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
               />
-            ))}
-          </ul>
-        )}
-      </div>
+            </label>
+            <label className="botany-field">
+              <span className="faint small">Температура, °C</span>
+              <input
+                className="input"
+                inputMode="decimal"
+                placeholder="напр. 12"
+                value={temp}
+                onChange={(e) => setTemp(e.target.value)}
+              />
+            </label>
+            <label className="botany-field">
+              <span className="faint small">Влажность, %</span>
+              <input
+                className="input"
+                inputMode="decimal"
+                placeholder="напр. 40"
+                value={hydr}
+                onChange={(e) => setHydr(e.target.value)}
+              />
+            </label>
+            <select
+              className="input"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as Sort)}
+              aria-label="Порядок"
+            >
+              <option value="name">По названию</option>
+              <option value="minT">Сначала холодостойкие</option>
+              <option value="maxT">Сначала жаростойкие</option>
+            </select>
+          </div>
+
+          <Summary meta={meta} sub={sub} config={config} shown={list.length} total={counts[sub]} items={items} />
+
+          {list.length === 0 ? (
+            <div className="empty">Ничего не подходит.</div>
+          ) : (
+            <ul className="botany-grid">
+              {list.map((p) => (
+                <PlantCard
+                  key={p.i}
+                  p={p}
+                  name={nameOf(p)}
+                  food={p.product ? foodBy.get(p.product) : undefined}
+                  items={items}
+                  meta={meta}
+                  config={config}
+                  scale={scale}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -206,8 +235,18 @@ function Summary({
       facts.push({
         label: 'Созревание',
         value: `${Math.round(days.best)}–${Math.round(days.base)} игровых суток`,
-        note: `с удобрениями быстрее; это ${hours(days.best * DAY_MINUTES)}–${hours(days.base * DAY_MINUTES)} игры`,
+        note: `быстрее — на почве, где хватает всех нужных элементов; это ${hours(days.best * DAY_MINUTES)}–${hours(days.base * DAY_MINUTES)} игры`,
       });
+      const expiryMod = config.num('cropExpiryModifier');
+      const rot = expiryDays(meta, expiryMod?.value ?? 1);
+      if (rot)
+        facts.push({
+          label: 'Перестоявшая культура',
+          value: `гибнет через ~${Math.round(rot)} игровых суток после созревания`,
+          note: `на удобренной почве быстрее; вне диапазона климата культура не растёт и стареет с той же скоростью${
+            expiryMod ? `; множитель порчи ${ru(expiryMod.value, 2)} — ${CONFIG_ORIGIN_LABEL[expiryMod.origin]}` : ''
+          }`,
+        });
       if (modifier)
         facts.push({
           label: 'Множитель роста',
@@ -486,7 +525,7 @@ function PlantCard({
         </section>
       )}
 
-      {p.uses && p.uses.items.length > 0 && (
+      {p.uses && (p.uses.items.length > 0 || p.uses.generic) && (
         <section>
           <h4>
             Куда идёт <span className="faint">· рецептов: {p.uses.recipes}</span>
@@ -498,6 +537,7 @@ function PlantCard({
             {p.uses.items.length > USES_SHOWN && (
               <span className="faint small">и ещё {p.uses.items.length - USES_SHOWN}</span>
             )}
+            {p.uses.generic ? <span className="faint small">+ сборные блюда: {p.uses.generic}</span> : null}
           </div>
         </section>
       )}
@@ -517,5 +557,157 @@ function PlantCard({
         </section>
       )}
     </li>
+  );
+}
+
+/** Теплица Firmalife: что сажать, в какую грядку, какой уровень теплицы нужен */
+function Greenhouse({
+  list,
+  items,
+  config,
+  foodBy,
+}: {
+  list: GreenhousePlant[];
+  items: ItemIndex | null;
+  config: BotanyConfig;
+  foodBy: Map<string, Food>;
+}) {
+  const [query, setQuery] = useState('');
+  const [planter, setPlanter] = useState('');
+  const planters = useMemo(() => [...new Set(list.flatMap((g) => (g.planter ? [g.planter] : [])))].sort(), [list]);
+  const nameOf = (g: GreenhousePlant) => (g.crop ? itemName(items?.byId.get(g.crop), g.crop) : prettyName(g.n));
+  const shown = list
+    .filter((g) => !planter || g.planter === planter)
+    .filter((g) => {
+      const hay = lower(`${nameOf(g)} ${g.i} ${items?.byId.get(g.crop ?? '')?.e ?? ''}`);
+      return lower(query)
+        .split(/\s+/)
+        .filter(Boolean)
+        .every((w) => hay.includes(w));
+    })
+    .sort((a, b) => nameOf(a).localeCompare(nameOf(b), 'ru'));
+
+  const facts: { label: string; value: string; note?: string }[] = [];
+  const fact = (name: string, label: string, fmt: (v: number) => string) => {
+    const r = config.num(name);
+    if (r) facts.push({ label, value: fmt(r.value), note: CONFIG_ORIGIN_LABEL[r.origin] });
+  };
+  fact('greenhouseGrowthModifier', 'Множитель роста', (v) => ru(v, 2));
+  fact('greenhouseWaterDays', 'Вода в грядке', (v) => `расходуется в среднем за ${ru(v)} суток`);
+  fact('greenhouseNutrientDays', 'Элемент удобрения', (v) => `расходуется в среднем за ${ru(v)} суток`);
+  fact('greenhouseRadius', 'Стены от станции климата', (v) => `не дальше ${ru(v)} блоков`);
+
+  return (
+    <div className="botany-main">
+      <div className="ref-filters">
+        <label className="search grow">
+          <Search size={15} className="faint" />
+          <input placeholder="Томат, ваниль, виноград…" value={query} onChange={(e) => setQuery(e.target.value)} />
+        </label>
+        <select className="input" value={planter} onChange={(e) => setPlanter(e.target.value)} aria-label="Грядка">
+          <option value="">Любая грядка</option>
+          {planters.map((p) => (
+            <option key={p} value={p}>
+              {PLANTER_LABEL[p] ?? p}
+            </option>
+          ))}
+        </select>
+      </div>
+      <section className="botany-summary">
+        <dl>
+          {facts.map((f) => (
+            <div key={f.label}>
+              <dt>{f.label}</dt>
+              <dd>
+                <b>{f.value}</b>
+                {f.note && <span className="faint small"> · {f.note}</span>}
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <p className="faint small">
+          Теплица Firmalife — отдельная механика: растения сажают в грядки внутри теплицы, климат и сезоны снаружи на
+          них не действуют. «Уровень» — минимальный уровень теплицы, в которой растение приживётся. Настройки описаны по
+          комментариям мода к ним, формула роста в теплице не разобрана. В игре не проверялось. Показано {shown.length}{' '}
+          из {list.length}.
+        </p>
+      </section>
+      {shown.length === 0 ? (
+        <div className="empty">Ничего не подходит.</div>
+      ) : (
+        <ul className="botany-grid">
+          {shown.map((g) => {
+            const food = g.crop ? foodBy.get(g.crop) : undefined;
+            const seedName = g.seed ? itemName(items?.byId.get(g.seed), g.seed) : null;
+            return (
+              <li key={g.i} className="botany-card">
+                <header className="botany-card-head">
+                  {g.crop ? <ItemIcon id={g.crop} size={40} tip={false} /> : <span className="botany-noicon" />}
+                  <div className="grow">
+                    <div className="botany-name">{nameOf(g)}</div>
+                    <code className="faint small">{g.i}</code>
+                  </div>
+                  {g.planter && <span className="botany-chip">{PLANTER_LABEL[g.planter] ?? g.planter}</span>}
+                </header>
+                {g.npk && (
+                  <section>
+                    <h4>Удобрения</h4>
+                    <div className="botany-npk">
+                      {g.npk.map((v, i) => (
+                        <div key={i} className={cx(v > 0 && 'takes', v < 0 && 'gives')}>
+                          <b>{NPK_LETTER[i]}</b>
+                          <span>{NPK_NAME[i]}</span>
+                          <em>{v > 0 ? `берёт ${ru(v, 2)}` : v < 0 ? `возвращает ${ru(-v, 2)}` : 'не влияет'}</em>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+                <section>
+                  <h4>Посадка и урожай</h4>
+                  <dl className="botany-stats">
+                    {g.tier !== undefined && (
+                      <div>
+                        <dt>Теплица</dt>
+                        <dd>уровень не ниже {g.tier}</dd>
+                      </div>
+                    )}
+                    {seedName && (
+                      <div>
+                        <dt>Сажать</dt>
+                        <dd className="botany-seed">
+                          <ItemIcon id={g.seed} size={18} tip={false} /> {seedName}
+                        </dd>
+                      </div>
+                    )}
+                    <div>
+                      <dt>Урожай</dt>
+                      <dd>
+                        {g.cropCount ?? 1} шт. за сбор
+                        {g.extraSeed ? `, шанс лишнего семени ${ru(g.extraSeed * 100)} %` : ''}
+                      </dd>
+                    </div>
+                    {food && (
+                      <div>
+                        <dt>Еда</dt>
+                        <dd>
+                          сытость {food.hunger || '—'}, портится ×{ru(food.decay, 2)}
+                        </dd>
+                      </div>
+                    )}
+                    {g.stages !== undefined && (
+                      <div>
+                        <dt>Стадий роста</dt>
+                        <dd>{g.stages}</dd>
+                      </div>
+                    )}
+                  </dl>
+                </section>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }

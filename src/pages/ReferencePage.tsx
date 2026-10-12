@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { BotanyTab } from '../components/BotanyTab';
 import { ItemIcon } from '../components/ItemIcon';
 import { LiquidFuelTab } from '../components/LiquidFuelTab';
-import type { PlantKind } from '../lib/botany';
+import type { BotanySub } from '../lib/botany';
 import { itemName, useItems, type ItemIndex } from '../lib/items';
 import {
   formatTicks,
@@ -84,8 +84,10 @@ export function ReferencePage() {
       ) : tab === 'botany' ? (
         <BotanyTab
           foods={ref.foods}
-          sub={(['crop', 'bush', 'tree', 'plant'] as const).find((k) => k === params.get('sub')) ?? 'crop'}
-          onSub={(k: PlantKind) =>
+          sub={
+            (['crop', 'bush', 'tree', 'plant', 'greenhouse'] as const).find((k) => k === params.get('sub')) ?? 'crop'
+          }
+          onSub={(k: BotanySub) =>
             setParams(k === 'crop' ? { tab: 'botany' } : { tab: 'botany', sub: k }, { replace: true })
           }
         />

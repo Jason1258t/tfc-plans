@@ -15,13 +15,17 @@ export function useBotanyConfig(meta: BotanyMeta) {
   const cfg = meta.config ?? {};
   const serverFile = cfg.cropGrowthModifier?.file ?? '';
   const commonFile = cfg.defaultMonthLength?.file ?? '';
+  // Конфиг аддона (теплица Firmalife)
+  const addonFile = cfg.greenhouseGrowthModifier?.file ?? '';
   const worldFile = cfg.defaultMonthLength?.world?.file ?? cfg.calendarTickRate?.world?.file ?? '';
-  // Число хуков постоянно: два файла конфига в двух слоях и сохранение мира
+  // Число хуков постоянно: три файла конфига в двух слоях и сохранение мира
   const docs: Record<string, ModConfig | null | undefined> = {
     [`server|${serverFile}`]: useModConfig(serverFile, 'server'),
     [`config|${serverFile}`]: useModConfig(serverFile, 'config'),
     [`server|${commonFile}`]: useModConfig(commonFile, 'server'),
     [`config|${commonFile}`]: useModConfig(commonFile, 'config'),
+    [`server|${addonFile}`]: useModConfig(addonFile, 'server'),
+    [`config|${addonFile}`]: useModConfig(addonFile, 'config'),
     [`world|${worldFile}`]: useModConfig(worldFile, 'world'),
   };
   const read = (scope: string, file: string, key: string): unknown => {
