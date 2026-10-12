@@ -63,9 +63,67 @@
   background: var(--surface-2);
 }
 
+/* Цвет вида файла: значок на подложке того же тона, точка в фильтре */
+.files-ico,
+.files-dot {
+  --kind: var(--imp-0);
+}
+
+.files-ico.image,
+.files-dot.image {
+  --kind: var(--amethyst);
+}
+
+.files-ico.schematic,
+.files-dot.schematic {
+  --kind: var(--diamond);
+}
+
+.files-ico.archive,
+.files-dot.archive {
+  --kind: var(--imp-2);
+}
+
+.files-ico.mod,
+.files-dot.mod {
+  --kind: var(--imp-3);
+}
+
+.files-ico.code,
+.files-dot.code {
+  --kind: var(--imp-1);
+}
+
+.files-ico.text,
+.files-dot.text {
+  --kind: var(--accent);
+}
+
 .files-ico {
   flex: none;
-  color: var(--text-3);
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--kind);
+  background: color-mix(in srgb, var(--kind) 14%, transparent);
+}
+
+.files-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--kind);
+}
+
+.files-bar .seg {
+  flex-wrap: wrap;
+}
+
+.files-bar .seg button {
+  gap: 6px;
 }
 
 .files-main {

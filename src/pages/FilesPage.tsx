@@ -1,4 +1,16 @@
-import { Download, File as FileIcon, FileArchive, FileBox, Image, Search, Trash2, Upload } from 'lucide-react';
+import {
+  Download,
+  File as FileIcon,
+  FileArchive,
+  FileBox,
+  FileCode,
+  FileText,
+  Image,
+  Package,
+  Search,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../data/DataContext';
@@ -17,25 +29,38 @@ import { timeAgo } from '../lib/util';
 import type { SavedSchematic } from '../types';
 import './FilesPage.css';
 
-type Kind = 'image' | 'schematic' | 'archive' | 'other';
+type Kind = 'image' | 'schematic' | 'archive' | 'mod' | 'code' | 'text' | 'other';
 const KINDS: { id: Kind | 'all'; label: string }[] = [
   { id: 'all', label: 'Все' },
   { id: 'image', label: 'Картинки' },
   { id: 'schematic', label: 'Схемы' },
   { id: 'archive', label: 'Архивы' },
+  { id: 'mod', label: 'Моды' },
+  { id: 'code', label: 'Скрипты и данные' },
+  { id: 'text', label: 'Тексты' },
   { id: 'other', label: 'Остальное' },
 ];
 
-const kindOf = (f: FileMeta): Kind =>
-  isImage(f)
-    ? 'image'
-    : /\.(nbt|schem|litematic)$/i.test(f.name)
-      ? 'schematic'
-      : /\.(zip|jar|rar|7z|gz|tar)$/i.test(f.name)
-        ? 'archive'
-        : 'other';
+const BY_EXT: [RegExp, Kind][] = [
+  [/\.(nbt|schem|litematic)$/i, 'schematic'],
+  [/\.jar$/i, 'mod'],
+  [/\.(zip|rar|7z|gz|tar)$/i, 'archive'],
+  [/\.(js|ts|json5?|toml|ya?ml|cfg|properties|mcfunction|mcmeta|snbt|csv|xml)$/i, 'code'],
+  [/\.(txt|md|pdf|docx?|rtf|log)$/i, 'text'],
+];
 
-const ICONS = { image: Image, schematic: FileBox, archive: FileArchive, other: FileIcon };
+const kindOf = (f: FileMeta): Kind => (isImage(f) ? 'image' : (BY_EXT.find(([re]) => re.test(f.name))?.[1] ?? 'other'));
+
+/** Значок вида файла; цвет задаётся классом files-ico.<вид> */
+const ICONS = {
+  image: Image,
+  schematic: FileBox,
+  archive: FileArchive,
+  mod: Package,
+  code: FileCode,
+  text: FileText,
+  other: FileIcon,
+};
 
 /** Всё файловое хранилище сайта: вложения задач, исходники библиотеки схем, файлы без привязки */
 export function FilesPage() {
@@ -148,12 +173,18 @@ export function FilesPage() {
           />
         </label>
         <span className="seg">
-          {KINDS.map((k) => (
-            <button key={k.id} aria-pressed={kind === k.id} onClick={() => setKind(k.id)}>
-              {k.label}
-              <span className="count">{k.id === 'all' ? rows.length : rows.filter((r) => r.kind === k.id).length}</span>
-            </button>
-          ))}
+          {KINDS.map((k) => {
+            const count = k.id === 'all' ? rows.length : rows.filter((r) => r.kind === k.id).length;
+            // Виды, которых в хранилище нет, не показываем — кроме выбранного
+            if (!count && k.id !== 'all' && k.id !== kind) return null;
+            return (
+              <button key={k.id} aria-pressed={kind === k.id} onClick={() => setKind(k.id)}>
+                {k.id !== 'all' && <span className={`files-dot ${k.id}`} aria-hidden />}
+                {k.label}
+                <span className="count">{count}</span>
+              </button>
+            );
+          })}
         </span>
       </div>
 
@@ -174,7 +205,9 @@ export function FilesPage() {
             const Icon = ICONS[k];
             return (
               <li key={f.id} className="files-row">
-                <Icon size={18} className="files-ico" />
+                <span className={`files-ico ${k}`}>
+                  <Icon size={18} />
+                </span>
                 <span className="files-main">
                   <button
                     className="files-name"
