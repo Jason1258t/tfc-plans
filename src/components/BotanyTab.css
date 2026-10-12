@@ -345,3 +345,10 @@
   font-size: 13px;
   line-height: 1.45;
 }
+
+.botany-uses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}

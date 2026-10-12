@@ -27,7 +27,7 @@ function collect(dataDirs, sub, parse, filter = () => true) {
 }
 
 /** Теги (предметов или жидкостей): складываем значения по всем источникам, раскрываем вложенные #теги */
-function itemTags(dataDirs, parse, kind = 'item') {
+export function itemTags(dataDirs, parse, kind = 'item') {
   const raw = new Map();
   for (const { dir } of dataDirs) {
     if (!fs.existsSync(dir)) continue;

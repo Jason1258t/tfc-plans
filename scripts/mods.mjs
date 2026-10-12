@@ -517,11 +517,11 @@ async function main() {
   );
   const tags = writeTags(dataDirs, parseLooseJson, fluidNames, path.join(ROOT, 'public', 'tags.json'));
   log(`теги: ${tags.tags} (${tags.entries} значений), жидкостей ${tags.fluids} — tags.json ${tags.kb}KB`);
-  const botany = writeBotany(dataDirs, parseLooseJson, items, path.join(ROOT, 'public', 'botany.json'));
+  const botany = writeBotany(dataDirs, parseLooseJson, items, recipes, path.join(ROOT, 'public', 'botany.json'));
   log(
     `ботаника: культур ${botany.crops}, кустов ${botany.bushes}, деревьев ${botany.trees}, прочих ${botany.other}; ` +
       `из кода: удобрения у ${botany.npk}, сезоны у ${botany.life}, настроек модов ${botany.configKeys}; ` +
-      `урожай у ${botany.drops}, дикие формы у ${botany.wild}`,
+      `урожай у ${botany.drops}, дикие формы у ${botany.wild}, применение у ${botany.uses}`,
   );
   for (const w of botany.warnings) log(`  ботаника: ${w}`);
   const geo = writeGeo(dataDirs, parseLooseJson, path.join(ROOT, 'public'));

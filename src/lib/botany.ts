@@ -10,6 +10,9 @@ export interface PlantRange {
   /** Влажность, % */
   minH?: number;
   maxH?: number;
+  /** Допуск за границей (°C и %): там растение уже не растёт, но ещё не гибнет */
+  wigT?: number;
+  wigH?: number;
 }
 
 export interface Plant {
@@ -40,6 +43,8 @@ export interface Plant {
   spreading?: boolean;
   /** Что падает со спелой культуры (loot-таблица): byYield — количество зависит от ухода */
   drops?: { item: string; min: number; max: number; byYield?: boolean }[];
+  /** Где используется плод: число рецептов и предметы на выходе (сначала того же мода) */
+  uses?: { recipes: number; items: string[] };
   /** Где растёт в природе: температура, грунтовая влага, лесистость (0–4), редкость «1 из N» */
   wild?: { minT?: number; maxT?: number; minW?: number; maxW?: number; minF?: number; maxF?: number; rarity?: number };
 }
@@ -76,6 +81,10 @@ export interface BotanyMeta {
   UPDATE_INTERVAL?: number;
   /** Сколько плодов даёт один сбор, по классу блока растения: { SeasonalPlantBlock: [1, 1], BananaPlantBlock: [3, 6] } */
   pick?: Record<string, [number, number]>;
+  /** Минимальная яркость для роста культуры (CropHelpers.lightValid) */
+  minLight?: number;
+  /** Почвы: тег пашни и множитель из кода (применяется к возврату элементов в почву) */
+  soil?: { tag: string; mul: number; blocks: string[] }[];
   /** Настройки модов, от которых зависят сроки: ключ в TOML и значение по умолчанию из кода */
   config?: Record<string, ConfigKey | undefined>;
 }

@@ -20,8 +20,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { argTypes, clinitValues, enumConstants, instructions, lambdaTargets, parseClass } from './classfile.mjs';
 import { configDefaults } from './config-defaults.mjs';
+import { itemTags } from './reference.mjs';
+import { recipeRefs } from '../../src/lib/recipeRefs.ts';
 
-const FIELDS = { min_temperature: 'minT', max_temperature: 'maxT', min_hydration: 'minH', max_hydration: 'maxH' };
+const FIELDS = {
+  min_temperature: 'minT',
+  max_temperature: 'maxT',
+  min_hydration: 'minH',
+  max_hydration: 'maxH',
+  // Допуск за границей диапазона (по умолчанию 0): растение там уже не растёт, но ещё не гибнет
+  temperature_wiggle_range: 'wigT',
+  hydration_wiggle_range: 'wigH',
+};
 const NPK = ['nitrogen', 'phosphorous', 'potassium'];
 /** Настройки модов, влияющие на сроки роста (имя поля в классе конфига) */
 const CONFIG_KEYS = [
@@ -135,6 +145,22 @@ function readCode(classDirs, warnings) {
       }
       if (/\/crop\/CropHelpers$/.test(cls.name)) {
         for (const f of cls.fields) if (typeof f.constant === 'number') meta[f.name] = f.constant;
+        // lightValid: «яркость >= N»; getSoilModifier: пары «тег почвы → множитель»
+        const light = cls.methods.find((m) => m.name === 'lightValid' && m.code);
+        const lv = light && instructions(light.code).find((i) => i.op === 0x10 || i.op === 0x11);
+        if (lv) meta.minLight = lv.index;
+        const soil = cls.methods.find((m) => m.name === 'getSoilModifier' && m.code);
+        if (soil) {
+          meta.soilCode = [];
+          let tag = null;
+          for (const ins of instructions(soil.code)) {
+            if (ins.op === 0xb2) tag = cls.ref(ins.index).name;
+            else if ((ins.op === 0x12 || ins.op === 0x13) && tag && typeof cls.constant(ins.index) === 'number') {
+              meta.soilCode.push({ field: tag, mul: round(cls.constant(ins.index)) });
+              tag = null;
+            }
+          }
+        }
         continue;
       }
       const cfg = /\/config\/(Server|Common)Config$/.exec(cls.name);
@@ -303,7 +329,7 @@ function readLoot(dataDirs, parse, ns, rel) {
 
 // ---------------------------------------------------------------- сборка
 
-export function buildBotany(dataDirs, parse, items) {
+export function buildBotany(dataDirs, parse, items, recipes) {
   const have = new Set(items.map((i) => i.i));
   const first = (...ids) => ids.find((id) => have.has(id));
   const warnings = [];
@@ -384,6 +410,63 @@ export function buildBotany(dataDirs, parse, items) {
     }
   }
 
+  // Почва: поле TagKey из кода (VERY_RICH_FARMLAND) → тег блоков с тем же именем в данных и его состав
+  const soil = [];
+  for (const sc of code.meta.soilCode ?? []) {
+    const tagName = sc.field.toLowerCase();
+    for (const { dir } of dataDirs) {
+      if (!fs.existsSync(dir)) continue;
+      for (const ns of fs.readdirSync(dir)) {
+        const file = path.join(dir, ns, 'tags', 'block', `${tagName}.json`);
+        if (!fs.existsSync(file)) continue;
+        const j = parse(fs.readFileSync(file, 'utf8'));
+        const blocks = (j?.values ?? []).map((v) => (typeof v === 'string' ? v : v?.id)).filter(Boolean);
+        const cur = soil.find((x) => x.tag === `${ns}:${tagName}`);
+        if (cur) cur.blocks.push(...blocks.filter((b) => !cur.blocks.includes(b)));
+        else soil.push({ tag: `${ns}:${tagName}`, mul: sc.mul, blocks });
+      }
+    }
+  }
+  if (code.meta.soilCode?.length && !soil.length) warnings.push('теги почв из getSoilModifier не найдены в данных');
+
+  // Куда идёт урожай: рецепты, где плод стоит на входе — сам или через тег предметов
+  const tags = itemTags(dataDirs, parse);
+  const byProduct = new Map();
+  for (const e of out.values()) if (e.product) byProduct.set(e.product, e);
+  const inTags = new Map();
+  for (const [tag, members] of tags)
+    for (const m of members) if (byProduct.has(m)) inTags.set(`#${tag}`, [...(inTags.get(`#${tag}`) ?? []), m]);
+  const uses = new Map();
+  for (const [, r] of recipes ?? []) {
+    const { inputs, outputs } = recipeRefs(r.json);
+    const hit = new Set();
+    for (const i of inputs) {
+      if (byProduct.has(i)) hit.add(i);
+      for (const m of inTags.get(i) ?? []) hit.add(m);
+    }
+    if (!hit.size) continue;
+    const outs = outputs.filter((o) => !o.startsWith('#') && have.has(o));
+    for (const product of hit) {
+      const u = uses.get(product) ?? { count: 0, outs: new Map() };
+      u.count++;
+      for (const o of outs) if (o !== product) u.outs.set(o, (u.outs.get(o) ?? 0) + 1);
+      uses.set(product, u);
+    }
+  }
+  for (const [product, u] of uses) {
+    const e = byProduct.get(product);
+    // Сначала продукты того же мода, что и растение (мука, масло, волокно), блюда других модов — следом
+    const ns = product.split(':')[0];
+    const own = (id) => (id.startsWith(`${ns}:`) ? 0 : 1);
+    e.uses = {
+      recipes: u.count,
+      items: [...u.outs]
+        .sort((a, b) => own(a[0]) - own(b[0]) || b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([id]) => id)
+        .slice(0, 24),
+    };
+  }
+
   const lostCrops = [...code.crops.keys()].filter((n) => !usedCrops.has(n));
   const lostLife = [...code.life.keys()].filter((n) => !usedLife.has(n));
   if (lostCrops.length) warnings.push(`в коде есть культуры без climate_range: ${lostCrops.join(', ')}`);
@@ -442,7 +525,9 @@ export function buildBotany(dataDirs, parse, items) {
         'NUTRIENT_GROWTH_FACTOR',
         'UPDATE_INTERVAL',
         'pick',
+        'minLight',
       ]),
+      ...(soil.length ? { soil } : {}),
       config,
     },
     configs: code.configs,
@@ -451,8 +536,8 @@ export function buildBotany(dataDirs, parse, items) {
   };
 }
 
-export function writeBotany(dataDirs, parse, items, outFile) {
-  const { warnings, configs, ...data } = buildBotany(dataDirs, parse, items);
+export function writeBotany(dataDirs, parse, items, recipes, outFile) {
+  const { warnings, configs, ...data } = buildBotany(dataDirs, parse, items, recipes);
   fs.writeFileSync(outFile, JSON.stringify(data));
   // Все настройки модов по умолчанию — отдельным файлом (сайту пока нужны только три, они продублированы в meta.config)
   fs.writeFileSync(path.join(path.dirname(outFile), 'config-defaults.json'), JSON.stringify(configs));
@@ -467,6 +552,7 @@ export function writeBotany(dataDirs, parse, items, outFile) {
     configKeys: configs.reduce((n, c) => n + c.keys.length, 0),
     drops: data.entries.filter((e) => e.drops).length,
     wild: data.entries.filter((e) => e.wild).length,
+    uses: data.entries.filter((e) => e.uses).length,
     warnings,
   };
 }

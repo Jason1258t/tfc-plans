@@ -135,7 +135,7 @@ export function BotanyTab({ foods, sub, onSub }: { foods: Food[]; sub: PlantKind
           </select>
         </div>
 
-        <Summary meta={meta} sub={sub} config={config} shown={list.length} total={counts[sub]} />
+        <Summary meta={meta} sub={sub} config={config} shown={list.length} total={counts[sub]} items={items} />
 
         {list.length === 0 ? (
           <div className="empty">Ничего не подходит.</div>
@@ -183,13 +183,20 @@ function Summary({
   config,
   shown,
   total,
+  items,
 }: {
   meta: BotanyMeta;
   sub: PlantKind;
   config: BotanyConfig;
   shown: number;
   total: number;
+  items: ItemIndex | null;
 }) {
+  // Пашня — блок без предмета; название почвы берём у земли того же вида (farmland/x → dirt/x)
+  const soilName = (block: string) => {
+    const it = items?.byId.get(block.replace('farmland/', 'dirt/'));
+    return it ? itemName(it) : (block.split('/').pop() ?? block);
+  };
   const cal = calendar(config);
   const facts: { label: string; value: string; note?: string }[] = [];
   if (sub === 'crop') {
@@ -208,6 +215,14 @@ function Summary({
           note: CONFIG_ORIGIN_LABEL[modifier.origin],
         });
     }
+    if (meta.minLight !== undefined)
+      facts.push({ label: 'Свет', value: `яркость не ниже ${meta.minLight}`, note: 'иначе культура не растёт' });
+    if (meta.soil?.length)
+      facts.push({
+        label: 'Почва',
+        value: meta.soil.map((x) => `${x.blocks.map(soilName).join(', ')} ×${ru(x.mul, 2)}`).join(' · '),
+        note: 'множитель к тому, сколько элементов культура возвращает в почву; остальные почвы ×1',
+      });
     const from = config.get('wildCropMaturityStartMonth');
     const to = config.get('wildCropMaturityEndMonth');
     const months = meta.months ?? [];
@@ -273,6 +288,7 @@ function Summary({
   );
 }
 
+const USES_SHOWN = 10;
 const NPK_NAME = ['Азот', 'Фосфор', 'Калий'];
 const NPK_LETTER = ['N', 'P', 'K'];
 
@@ -359,12 +375,18 @@ function PlantCard({
         <div className="botany-range">
           <span>Температура</span>
           <RangeBar min={p.r.minT} max={p.r.maxT} lo={scale.minT} hi={scale.maxT} kind="temp" />
-          <b>{rangeLabel(p.r.minT, p.r.maxT, '°C') ?? '—'}</b>
+          <b>
+            {rangeLabel(p.r.minT, p.r.maxT, '°C') ?? '—'}
+            {p.r.wigT ? ` ±${ru(p.r.wigT)}` : ''}
+          </b>
         </div>
         <div className="botany-range">
           <span>Влажность</span>
           <RangeBar min={p.r.minH} max={p.r.maxH} lo={0} hi={100} kind="water" />
-          <b>{rangeLabel(p.r.minH, p.r.maxH, '%') ?? '—'}</b>
+          <b>
+            {rangeLabel(p.r.minH, p.r.maxH, '%') ?? '—'}
+            {p.r.wigH ? ` ±${ru(p.r.wigH)}` : ''}
+          </b>
         </div>
       </section>
 
@@ -461,6 +483,22 @@ function PlantCard({
               </li>
             ))}
           </ol>
+        </section>
+      )}
+
+      {p.uses && p.uses.items.length > 0 && (
+        <section>
+          <h4>
+            Куда идёт <span className="faint">· рецептов: {p.uses.recipes}</span>
+          </h4>
+          <div className="botany-uses">
+            {p.uses.items.slice(0, USES_SHOWN).map((id) => (
+              <ItemIcon key={id} id={id} size={28} />
+            ))}
+            {p.uses.items.length > USES_SHOWN && (
+              <span className="faint small">и ещё {p.uses.items.length - USES_SHOWN}</span>
+            )}
+          </div>
         </section>
       )}
 
