@@ -23,7 +23,7 @@ export const configId = (path: string, scope = 'server') => `${scope}__${path.re
 export function useModConfig(path: string, scope = 'server'): ModConfig | null | undefined {
   const [c, setC] = useState<ModConfig | null | undefined>(db ? undefined : null);
   useEffect(() => {
-    if (!db) return;
+    if (!db || !path) return;
     let unsub = () => {};
     let cancelled = false;
     authReady.then(() => {
@@ -51,4 +51,33 @@ export function configValue<T extends 'number' | 'string' | 'boolean'>(
   let v: unknown = c?.values;
   for (const k of key.split('.')) v = v && typeof v === 'object' ? (v as Record<string, unknown>)[k] : undefined;
   return typeof v === type ? (v as never) : undefined;
+}
+
+/** Откуда взято значение настройки: переопределение сервера, конфиг сборки или значение мода по умолчанию */
+export type ConfigOrigin = 'server' | 'config' | 'default';
+
+export const CONFIG_ORIGIN_LABEL: Record<ConfigOrigin, string> = {
+  server: 'переопределение сервера (serverconfig/)',
+  config: 'конфиг сборки (config/)',
+  default: 'значение мода по умолчанию, конфиг не импортирован',
+};
+
+/**
+ * Число из конфига по слоям, как их читает игра: serverconfig/ (scope server) перекрывает config/ (scope config),
+ * а если файл не импортирован — значение по умолчанию из кода мода (public/botany.json → meta.config).
+ */
+export function useLayeredNumber(
+  file: string | null | undefined,
+  key: string | undefined,
+  fallback: number,
+): { value: number; origin: ConfigOrigin } {
+  const server = useModConfig(file ?? '', 'server');
+  const pack = useModConfig(file ?? '', 'config');
+  if (file && key) {
+    const s = configValue(server, key, 'number');
+    if (s !== undefined) return { value: s, origin: 'server' };
+    const c = configValue(pack, key, 'number');
+    if (c !== undefined) return { value: c, origin: 'config' };
+  }
+  return { value: fallback, origin: 'default' };
 }

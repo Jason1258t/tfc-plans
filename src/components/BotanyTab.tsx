@@ -13,7 +13,7 @@ import {
   type Plant,
   type PlantKind,
 } from '../lib/botany';
-import { configValue, useModConfig } from '../lib/config';
+import { CONFIG_ORIGIN_LABEL, useLayeredNumber } from '../lib/config';
 import { itemName, useItems, type ItemIndex } from '../lib/items';
 import type { Food } from '../lib/reference';
 import { cx } from '../lib/util';
@@ -153,31 +153,28 @@ export function BotanyTab({ foods, sub, onSub }: { foods: Food[]; sub: PlantKind
   );
 }
 
-/** Общие для раздела числа из кода мода: срок созревания, смысл знаков у удобрений */
+/** Общие для раздела числа: срок созревания и длина месяца — из кода мода с поправкой на конфиг сервера */
 function GrowthNote({ meta, sub }: { meta: BotanyMeta; sub: PlantKind }) {
   const growth = meta.config?.cropGrowthModifier;
   const month = meta.config?.defaultMonthLength;
-  // Конфиг сервера (npm run serverconfig) переопределяет значение по умолчанию из кода мода
-  const server = useModConfig(growth?.file ?? 'tfc-server.toml');
-  const fromServer = growth ? configValue(server, growth.key, 'number') : undefined;
-  const modifier = fromServer ?? (typeof growth?.default === 'number' ? growth.default : 1);
-  const days = growthDays(meta, modifier);
+  const num = (v: unknown, d: number) => (typeof v === 'number' ? v : d);
+  const modifier = useLayeredNumber(growth?.file, growth?.key, num(growth?.default, 1));
+  const monthLen = useLayeredNumber(month?.file, month?.key, num(month?.default, 0));
+  const days = growthDays(meta, modifier.value);
+  const ru = (v: number) => String(Math.round(v * 100) / 100).replace('.', ',');
   if (sub === 'crop')
     return days ? (
       <p className="faint small ref-note">
         Срок созревания у всех культур один: около {Math.round(days.base)} игровых суток без удобрений и до{' '}
-        {Math.round(days.best)} с полными. Множитель роста {String(modifier).replace('.', ',')} —{' '}
-        {fromServer !== undefined
-          ? 'из конфига сервера'
-          : `значение мода по умолчанию: ${growth?.file ?? 'конфиг TFC'} сервера не импортирован`}
+        {Math.round(days.best)} с полными. Множитель роста {ru(modifier.value)} — {CONFIG_ORIGIN_LABEL[modifier.origin]}
         . Удобрения: «+» — культура берёт элемент из почвы, «−» — возвращает его. В игре не проверялось.
       </p>
     ) : null;
   return (
     <p className="faint small ref-note">
       Календарь — состояние растения по месяцам из кода мода: плоды собирают в месяцы «плодоносит».
-      {typeof month?.default === 'number' &&
-        ` Месяц по умолчанию — ${month.default} игровых суток (на сервере длину могли поменять командой).`}{' '}
+      {monthLen.value > 0 &&
+        ` Месяц — ${ru(monthLen.value)} игровых суток (${CONFIG_ORIGIN_LABEL[monthLen.origin]}; в уже созданном мире длину могли поменять командой).`}{' '}
       В игре не проверялось.
     </p>
   );

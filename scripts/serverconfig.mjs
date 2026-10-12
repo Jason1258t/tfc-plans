@@ -5,12 +5,19 @@
  *
  *   npm run serverconfig -- ~/Downloads/serverconfig.zip           — zip с папкой serverconfig/ или config/
  *   npm run serverconfig -- <папка инстанса>/serverconfig            — или папка
- *   … --scope <имя>   — чьи это настройки (по умолчанию server; например, клиентские конфиги игрока)
+ *   … --scope <имя>   — чьи это настройки. По умолчанию — по папке: serverconfig/ → server (переопределения
+ *                       сервера), config/ и defaultconfigs/ → config (конфиг сборки). Сайт ищет значение сначала
+ *                       в server, потом в config, потом берёт значение мода по умолчанию из кода.
+ *   … --all           — импортировать и клиентские конфиги, и файлы с нестандартными именами (по умолчанию берутся
+ *                       только <мод>-server.toml / -common.toml и <мод>/server.toml / common.toml)
  *   … --only <подстрока пути>   — импортировать только подходящие файлы (можно несколько раз)
  *   … --dry-run       — показать, что будет записано, без записи
  *
  * Один файл = один документ config/{scope}__{путь, где / → __}:
  *   { scope, path, mod, values (разобранный TOML), sha1, source, importedBy, importedAt }
+ * Коллекцию config читает любой посетитель сайта, поэтому в неё не попадают: клиентские конфиги (*-client.toml,
+ * client.toml), резервные копии (.bak) и любые файлы, где есть непустой ключ, похожий на секрет
+ * (token, secret, password, webhook, api key) — такие файлы пропускаются целиком, с сообщением.
  * Комментарии из TOML не сохраняются. Повторный импорт перезаписывает документ целиком.
  * Писать в config может только этот скрипт (правила Firestore закрывают коллекцию для сайта).
  */
@@ -25,17 +32,19 @@ const log = (...a) => console.log('[config]', ...a);
 
 function args() {
   const argv = process.argv.slice(2);
-  const opts = { input: null, scope: 'server', only: [], dryRun: false };
+  const opts = { input: null, scope: null, only: [], dryRun: false, all: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--dry-run') opts.dryRun = true;
+    else if (a === '--all') opts.all = true;
     else if (a === '--scope') opts.scope = argv[++i];
     else if (a === '--only') opts.only.push(argv[++i]);
     else if (!a.startsWith('--')) opts.input = a;
     else throw new Error(`неизвестный флаг ${a}`);
   }
   if (!opts.input) throw new Error('укажите zip или папку с конфигами: npm run serverconfig -- <путь>');
-  if (!/^[a-z0-9_-]{1,40}$/i.test(opts.scope)) throw new Error('--scope: латиница, цифры, _ и -');
+  if (opts.scope !== null && !/^[a-z0-9_-]{1,40}$/i.test(opts.scope))
+    throw new Error('--scope: латиница, цифры, _ и -');
   return opts;
 }
 
@@ -45,6 +54,19 @@ function configPath(p) {
   const i = parts.findLastIndex((x) => x === 'serverconfig' || x === 'config' || x === 'defaultconfigs');
   return (i >= 0 ? parts.slice(i + 1) : parts).join('/');
 }
+
+/** Чьи настройки по папке: serverconfig/ — переопределения сервера, config/ — конфиг сборки */
+function scopeOf(p, input) {
+  const parts = `${input}/${p}`.replaceAll('\\', '/').split('/').filter(Boolean);
+  const root = parts.findLast((x) => x === 'serverconfig' || x === 'config' || x === 'defaultconfigs');
+  return root === 'serverconfig' || !root ? 'server' : 'config';
+}
+
+/** Конфиги модов по соглашению NeoForge: <мод>-server.toml, <мод>-common.toml, <мод>/server.toml, <мод>/common.toml */
+const MOD_CONFIG = /(^|[-_/])(server|common)\.toml$/i;
+const CLIENT = /(^|[-_/])client(-\d+)?\.toml$/i;
+const SECRET =
+  /^\s*"?[\w.-]*(token|secret|password|passwd|webhook|cookie|api[_-]?key)[\w.-]*"?\s*=\s*(?!""|''|false|true|\d)\S/im;
 
 function readInput(input) {
   const files = [];
@@ -80,14 +102,30 @@ async function main() {
   const source = path.basename(opts.input);
   const by = deployer('import');
   const docs = [];
+  const skipped = { other: 0, client: 0, secret: [], unusual: [] };
   for (const f of readInput(opts.input)) {
     const p = configPath(f.name);
     if (!p.endsWith('.toml')) {
-      if (!/readme|\.txt$/i.test(p)) log(`пропущен ${p}: пока поддерживается только TOML`);
+      skipped.other++;
       continue;
     }
-    if (opts.only.length && !opts.only.some((o) => p.includes(o))) continue;
+    const forced = opts.only.some((o) => p.includes(o));
+    if (opts.only.length && !forced) continue;
+    if (!opts.all && CLIENT.test(p)) {
+      skipped.client++;
+      continue;
+    }
+    // Файлы с нестандартными именами (coldsweat/item.toml, c2me.toml…) — только по явной просьбе: --only или --all
+    if (!opts.all && !forced && !MOD_CONFIG.test(p)) {
+      skipped.unusual.push(p);
+      continue;
+    }
     const text = new TextDecoder().decode(f.data);
+    if (SECRET.test(text)) {
+      skipped.secret.push(p);
+      continue;
+    }
+    const scope = opts.scope ?? scopeOf(f.name, opts.input);
     let values;
     try {
       values = clean(parse(text));
@@ -96,9 +134,9 @@ async function main() {
       continue;
     }
     docs.push({
-      id: `${opts.scope}__${p.replaceAll('/', '__')}`,
+      id: `${scope}__${p.replaceAll('/', '__')}`,
       data: {
-        scope: opts.scope,
+        scope,
         path: p,
         // Мод — по папке (tfc_real_world/server.toml) или по имени файла (tfc_eratosthenes-server.toml)
         mod: p.includes('/') ? p.split('/')[0] : p.replace(/(-(server|common|client))?\.toml$/, ''),
@@ -112,8 +150,21 @@ async function main() {
   }
   if (!docs.length) throw new Error('не найдено ни одного .toml');
 
-  for (const d of docs)
-    log(`${d.data.path} → config/${d.id} (ключей верхнего уровня: ${Object.keys(d.data.values).length})`);
+  if (docs.length <= 12)
+    for (const d of docs)
+      log(`${d.data.path} → config/${d.id} (ключей верхнего уровня: ${Object.keys(d.data.values).length})`);
+  const scopes = [...new Set(docs.map((d) => d.data.scope))];
+  log(
+    `к импорту: ${docs.length} файлов (${scopes.map((x) => `${x}: ${docs.filter((d) => d.data.scope === x).length}`).join(', ')})`,
+  );
+  log(
+    `пропущено: не TOML ${skipped.other}, клиентских ${skipped.client}, с похожим на секрет ключом ${skipped.secret.length}`,
+  );
+  for (const p of skipped.secret) log(`  не импортирован (секрет?): ${p}`);
+  if (skipped.unusual.length)
+    log(
+      `не похожи на конфиг мода (нужен --only <путь> или --all): ${skipped.unusual.length} — ${skipped.unusual.slice(0, 8).join(', ')}${skipped.unusual.length > 8 ? '…' : ''}`,
+    );
   const world = docs.find((d) => d.data.path === 'tfc_real_world/server.toml')?.data.values;
   if (world) {
     const g = world.generation_modes ?? {};
