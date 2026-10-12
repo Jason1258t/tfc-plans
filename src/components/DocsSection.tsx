@@ -11,7 +11,7 @@ interface Props {
   onOpen: (id: string) => void;
 }
 
-/** Раздел «Документы» на странице задач: все Markdown-планы, с задачей и без */
+/** Раздел «Планы» на странице задач: все Markdown-планы, с задачей и без */
 export function DocsSection({ openId, onOpen }: Props) {
   const { artifacts, tasks, nick, loading } = useData();
   const [q, setQ] = useState('');
@@ -37,24 +37,24 @@ export function DocsSection({ openId, onOpen }: Props) {
         <label className="search">
           <Search size={15} className="faint" />
           <input
-            placeholder="Поиск по документам"
+            placeholder="Поиск по планам"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            aria-label="Поиск по документам"
+            aria-label="Поиск по планам"
           />
         </label>
         <button className="btn primary" onClick={create}>
           <Plus size={16} />
-          Документ
+          План
         </button>
       </div>
       <p className="muted docs-lead">
-        Markdown-планы для сложных задач. Обычно создаются из задачи; здесь — все сразу, включая документы без задачи.
+        Markdown-планы для сложных задач. Обычно создаются из задачи; здесь — все сразу, включая планы без задачи.
       </p>
       {loading ? (
         <div className="empty">Загрузка…</div>
       ) : list.length === 0 ? (
-        <div className="empty">{q.trim() ? 'Ничего не найдено' : 'Документов пока нет'}</div>
+        <div className="empty">{q.trim() ? 'Ничего не найдено' : 'Планов пока нет'}</div>
       ) : (
         <ul className="docs-list">
           {list.map((a) => {

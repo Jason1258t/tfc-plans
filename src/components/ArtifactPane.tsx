@@ -28,7 +28,7 @@ export function ArtifactPane(props: Props) {
     return (
       <section className={cx('apane', props.variant)}>
         <div className="apane-head">
-          <span className="grow faint">{loading ? 'Загрузка…' : 'Документ не найден — возможно, его удалили.'}</span>
+          <span className="grow faint">{loading ? 'Загрузка…' : 'План не найден — возможно, его удалили.'}</span>
           {props.onClose && (
             <button className="btn ghost icon" onClick={props.onClose} aria-label="Закрыть">
               <X size={18} />
@@ -118,7 +118,7 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
   const append = (text: string) => change(`${content.trimEnd()}${content.trim() ? '\n\n' : ''}${text.trim()}\n`);
 
   const remove = async () => {
-    if (!confirm(`Удалить документ «${artifact.title}»?`)) return;
+    if (!confirm(`Удалить план «${artifact.title}»?`)) return;
     await artifactsStore.remove(artifact.id);
     onDeleted?.();
   };
@@ -126,15 +126,15 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
   const selectedText = view === 'preview' ? '' : content.slice(selection[0], selection[1]);
 
   return (
-    <section className={cx('apane', variant)} aria-label="Документ">
+    <section className={cx('apane', variant)} aria-label="План">
       <header className="apane-head">
         <BookOpen size={18} className="apane-book" />
         <input
           id="apane-title"
           className="apane-title"
           value={title}
-          placeholder="Название документа"
-          aria-label="Название документа"
+          placeholder="Название плана"
+          aria-label="Название плана"
           onChange={(e) => setTitle(e.target.value)}
           onBlur={() =>
             title.trim() !== artifact.title &&
@@ -153,7 +153,7 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
           </button>
         )}
         {onClose && (
-          <button className="btn ghost sm icon" onClick={onClose} aria-label="Закрыть документ">
+          <button className="btn ghost sm icon" onClick={onClose} aria-label="Закрыть план">
             <X size={17} />
           </button>
         )}
@@ -196,7 +196,7 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
           </div>
         )}
         <span className="grow" />
-        <button className="btn ghost sm icon danger" onClick={remove} aria-label="Удалить документ" title="Удалить">
+        <button className="btn ghost sm icon danger" onClick={remove} aria-label="Удалить план" title="Удалить">
           <Trash2 size={15} />
         </button>
       </div>

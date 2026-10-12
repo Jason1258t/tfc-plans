@@ -40,7 +40,7 @@ export function TasksPage() {
   const tab = params.get('tab') === 'done' ? 'done' : 'active';
   const editId = params.get('task');
   const docId = params.get('doc');
-  // Раздел «Документы» живёт здесь же, вместо списка задач
+  // Раздел «Планы» (Markdown-документы) живёт здесь же, вместо списка задач
   const docsView = params.get('view') === 'docs';
 
   const [sort, setSort] = useState<SortMode>(() => readPref('tfc-tm:sort', 'priority'));
@@ -125,7 +125,7 @@ export function TasksPage() {
               <span className="group-icon">
                 <BookOpen size={16} />
               </span>
-              <span className="grow group-name">Документы</span>
+              <span className="grow group-name">Планы</span>
               <span className="group-count">{artifacts.length || ''}</span>
             </button>
           </li>

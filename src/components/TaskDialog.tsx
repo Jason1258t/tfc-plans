@@ -196,7 +196,7 @@ function EditTask({
   const remove = async () => {
     const taskFiles = files.filter((f) => f.taskId === task.id);
     const extras = [
-      linked.length && `${linked.length} документ(ов)`,
+      linked.length && `${linked.length} план(ов)`,
       taskFiles.length && `${taskFiles.length} файл(ов)`,
     ].filter(Boolean);
     const extra = extras.length ? ` вместе с ${extras.join(' и ')}` : '';
@@ -267,7 +267,7 @@ function EditTask({
 
         <section className="tf-section">
           <div className="tf-section-head">
-            <h3>Документы</h3>
+            <h3>Планы</h3>
             <button className="btn sm" onClick={createDoc}>
               <FilePlus2 size={14} />
               Новый план

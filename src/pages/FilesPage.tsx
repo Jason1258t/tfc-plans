@@ -104,7 +104,7 @@ export function FilesPage() {
   if (!filesEnabled)
     return (
       <main className="files-page">
-        <h1>Файлы</h1>
+        <h1>Документы</h1>
         <div className="empty">Хранилище файлов доступно, когда подключён Firebase.</div>
       </main>
     );
@@ -113,7 +113,7 @@ export function FilesPage() {
     <main className="files-page">
       <div className="files-head">
         <div className="grow">
-          <h1>Файлы</h1>
+          <h1>Документы</h1>
           <p className="faint small">
             Всё, что лежит в хранилище сайта: вложения задач, исходники библиотеки схем и файлы без привязки.
             {files.length > 0 && ` Всего ${files.length}, ${formatSize(total)}.`}

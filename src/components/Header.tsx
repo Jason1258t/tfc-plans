@@ -48,7 +48,7 @@ export function Header({ nick, onChangeNick }: Props) {
         <NavLink to="/" end>
           Задачи
         </NavLink>
-        <NavLink to="/docs">Файлы</NavLink>
+        <NavLink to="/docs">Документы</NavLink>
         <NavLink to="/schematics">Схемы</NavLink>
         <NavLink to="/datapacks" className={inPacks ? 'active' : undefined}>
           Датапаки

@@ -111,8 +111,8 @@ export function TaskRow({ task, selected, onOpen, onOpenDoc }: Props) {
           <button
             className="doc-btn"
             onClick={() => onOpenDoc(docs[0].id)}
-            {...tooltipHandlers(docs.length > 1 ? `Документов: ${docs.length}` : docs[0].title)}
-            aria-label={`Открыть документ ${docs[0].title}`}
+            {...tooltipHandlers(docs.length > 1 ? `Планов: ${docs.length}` : docs[0].title)}
+            aria-label={`Открыть план ${docs[0].title}`}
           >
             <FileText size={14} />
             {docs.length > 1 && <span>{docs.length}</span>}
