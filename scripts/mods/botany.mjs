@@ -58,6 +58,7 @@ export function isBotanyClass(entryName, data) {
     )
   )
     return true;
+  if (/FoodTraits\$Default\.class$/.test(entryName)) return true;
   return data.includes('plant/fruit/Lifecycle') || data.includes('phosphorous');
 }
 
@@ -162,6 +163,116 @@ function lambdaTargetsOf(cls, ins) {
   return out;
 }
 
+/** Поле TagKey из кода → id тега: BlockTags.DIRT → minecraft:dirt, TFCTags.Blocks.GRASS → tfc:grass, Tags.Blocks.GRAVELS → c:gravels */
+function tagIdOf(ref) {
+  const ns = /^net\/minecraft\//.test(ref.owner)
+    ? 'minecraft'
+    : /^net\/neoforged\//.test(ref.owner)
+      ? 'c'
+      : ref.owner.split('/')[2];
+  return `${ns}:${ref.name.toLowerCase()}`;
+}
+
+const localOf = (ins) => (ins.op === 0x15 ? ins.index : ins.op >= 0x1a && ins.op <= 0x1d ? ins.op - 0x1a : null);
+const storeOf = (ins) => (ins.op === 0x36 ? ins.index : ins.op >= 0x3b && ins.op <= 0x3e ? ins.op - 0x3b : null);
+const intOf = (ins) =>
+  ins.op >= 0x02 && ins.op <= 0x08 ? ins.op - 0x03 : ins.op === 0x10 || ins.op === 0x11 ? ins.index : null;
+
+/**
+ * Качество урожая (виноград Firmalife): один метод считает, что вокруг лозы (блоки по тегам, пустоты, улей),
+ * другой по этим счётчикам выдаёт черты еды. Достаём: радиус, что считается, и условия каждой черты
+ * в виде сравнений «счётчик А больше счётчика Б» / «счётчик меньше числа».
+ */
+function qualityRules(cls) {
+  const isTag = (r) => /TagKey;$/.test(r.desc);
+  const scan = cls.methods.find(
+    (m) =>
+      m.code &&
+      instructions(m.code).some((i) => i.op === 0x84) &&
+      instructions(m.code).some((i) => i.op === 0xb2 && isTag(cls.ref(i.index))),
+  );
+  const traits = cls.methods.find(
+    (m) => m.code && instructions(m.code).some((i) => i.op === 0xb2 && /FoodTraits$/.test(cls.ref(i.index).owner)),
+  );
+  if (!scan || !traits) return null;
+
+  // 1. Что считает обход: локальная переменная → подпись, индекс массива → локальная переменная
+  const label = new Map();
+  const untagged = [];
+  const slot = new Map();
+  let tag = null;
+  let lastInt = null;
+  let lastLocal = null;
+  let radius = null;
+  let bees = false;
+  for (const ins of instructions(scan.code)) {
+    if (ins.op === 0xb2 && isTag(cls.ref(ins.index))) tag = tagIdOf(cls.ref(ins.index));
+    else if (ins.op === 0x84) {
+      const local = ins.index >> 8;
+      if (tag) label.set(local, tag);
+      else if (!untagged.includes(local)) untagged.push(local);
+      tag = null;
+    } else if (ins.op === 0xc1 && /Beehive/.test(cls.className(ins.index))) bees = true;
+    else if (ins.op === 0x4f && lastInt !== null && lastLocal !== null) slot.set(lastInt, lastLocal);
+    if (intOf(ins) !== null) {
+      lastInt = intOf(ins);
+      if (lastInt < 0 && radius === null) radius = -lastInt;
+    }
+    if (localOf(ins) !== null) lastLocal = localOf(ins);
+  }
+  // Счётчики без тега — пустые блоки: сначала уровнем ниже лозы, потом на её уровне (так идёт проверка высоты)
+  const counted = [...slot.values()];
+  const air = untagged.filter((l) => counted.includes(l));
+  const slotLabel = new Map();
+  for (const [idx, local] of slot)
+    slotLabel.set(
+      idx,
+      label.get(local) ?? (air.indexOf(local) === 0 ? 'air_below' : air.indexOf(local) === 1 ? 'air_level' : null),
+    );
+
+  // 2. Условия черт: переменная суммирует слот массива («x += data[k]»), затем сравнения перед каждой чертой
+  const sums = new Map();
+  let idx = null;
+  let stack = [];
+  let pending = [];
+  const out = [];
+  const operand = (o) => ('num' in o ? o.num : (sums.get(o.local) ?? null));
+  for (const ins of instructions(traits.code)) {
+    const { op } = ins;
+    if (localOf(ins) !== null) stack.push({ local: localOf(ins) });
+    else if (intOf(ins) !== null) {
+      idx = intOf(ins);
+      stack.push({ num: idx });
+    } else if (op === 0x2e) {
+      // iaload: индекс слота — последнее целое
+    } else if (op === 0x60) {
+      // iadd
+    } else if (storeOf(ins) !== null) {
+      if (idx !== null && slotLabel.get(idx)) sums.set(storeOf(ins), slotLabel.get(idx));
+      idx = null;
+      stack = [];
+    } else if (op >= 0xa1 && op <= 0xa4) {
+      const [a, b] = stack.splice(-2);
+      // Переход — это «пропустить черту»: условие черты обратное
+      const cmp = { 0xa4: '>', 0xa2: '<', 0xa1: '>=', 0xa3: '<=' }[op];
+      const l = a && operand(a);
+      const r = b && operand(b);
+      if (l !== null && r !== null && l !== undefined && r !== undefined && typeof l === 'string')
+        pending.push({ l, op: cmp, r });
+      stack = [];
+    } else if (op === 0x99) {
+      const [a] = stack.splice(-1);
+      if (a && 'local' in a && !sums.has(a.local) && bees) pending.push({ l: 'bees', op: 'is', r: 1 });
+      stack = [];
+    } else if (op === 0xb2 && /FoodTraits$/.test(cls.ref(ins.index).owner)) {
+      if (pending.length) out.push({ trait: cls.ref(ins.index).name, when: pending });
+      pending = [];
+      stack = [];
+    } else stack = [];
+  }
+  return out.length ? { radius, traits: out } : null;
+}
+
 function readCode(classDirs, warnings) {
   const crops = new Map();
   const life = new Map();
@@ -201,6 +312,9 @@ function readCode(classDirs, warnings) {
       }
       const cfg = /\/config\/\w*(Server|Common)Config$/.exec(cls.name);
       if (cfg) {
+        // Множители черт еды задаются ключами «trait<Имя>Modifier» в разделе foodTraits (ключ собирается из имени)
+        const strings = cls.cp.filter((c) => c?.tag === 8).map((c) => cls.utf(c.a));
+        if (strings.includes('foodTraits') && cfg[1] === 'Server') meta.traitConfigSource ??= source;
         const keys = configDefaults(cls);
         if (keys.length) configs.push({ src: source, type: cfg[1].toLowerCase(), keys });
         continue;
@@ -262,8 +376,25 @@ function readCode(classDirs, warnings) {
                 ? { min: g.floats[0], max: round(g.floats[0] + g.floats[1]), interval }
                 : undefined,
             tempOnly: g.tempOnly || undefined,
+            quality: qualityRules(cls) ?? undefined,
             code: source,
           });
+        }
+        continue;
+      }
+      // Теплица: класс с теми же константами роста, что CropHelpers, но свой (Firmalife Mechanics)
+      const gf = cls.fields.find((f) => f.name === 'GROWTH_FACTOR' && typeof f.constant === 'number');
+      const ngf = cls.fields.find((f) => f.name === 'NUTRIENT_GROWTH_FACTOR' && typeof f.constant === 'number');
+      if (gf && ngf) {
+        meta.greenhouseGrowth = { GROWTH_FACTOR: gf.constant, NUTRIENT_GROWTH_FACTOR: ngf.constant };
+        continue;
+      }
+      // Черты еды и их множитель порчи по умолчанию: перечисление FoodTraits.Default(имя, множитель)
+      if (/FoodTraits\$Default$/.test(cls.name) && isEnum(cls)) {
+        meta.foodTraits = {};
+        for (const c of enumConstants(cls)) {
+          const mod = c.args.find((a) => typeof a === 'number');
+          if (typeof mod === 'number') meta.foodTraits[c.name] = round(mod);
         }
         continue;
       }
@@ -665,6 +796,14 @@ export function buildBotany(dataDirs, parse, items, recipes, translate = () => (
       config.defaultMonthLength.world = { file: code.meta.calendarFile, key: `data.calendar.${code.meta.calendarKey}` };
     else warnings.push('где календарь лежит в сохранении мира (CalendarWorldData / daysInMonth) — не найдено');
   }
+  // Множитель порчи черты еды аддона: foodTraits.trait<Имя>Modifier в его серверном конфиге
+  if (code.meta.traitConfigSource && config.greenhouseGrowthModifier)
+    config.foodTraitModifier = {
+      key: 'foodTraits.trait{name}Modifier',
+      default: null,
+      file: config.greenhouseGrowthModifier.file,
+      type: 'server',
+    };
   // Скорость календаря в мире: calendarTickRate = 20 / длина календарных суток в минутах (Calendar.resetToDefault)
   if (code.meta.calendarFile && code.meta.calendarRateKey)
     config.calendarTickRate = {
@@ -687,6 +826,8 @@ export function buildBotany(dataDirs, parse, items, recipes, translate = () => (
         'EXPIRY_LIMIT',
         'pick',
         'minLight',
+        'greenhouseGrowth',
+        'foodTraits',
       ]),
       ...(soil.length ? { soil } : {}),
       ...(greenhouseTiers.length ? { greenhouseTiers } : {}),

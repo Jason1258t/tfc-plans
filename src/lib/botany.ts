@@ -45,6 +45,11 @@ export interface Plant {
   grow?: { min: number; max: number; interval: number };
   /** Проверяется только температура, влажность на рост не влияет */
   tempOnly?: boolean;
+  /** Качество урожая: что считается вокруг лозы (радиус) и при каких условиях плод получает черту еды */
+  quality?: {
+    radius: number | null;
+    traits: { trait: string; when: { l: string; op: string; r: string | number }[] }[];
+  };
   /** Что падает со спелой культуры (loot-таблица): byYield — количество зависит от ухода */
   drops?: { item: string; min: number; max: number; byYield?: boolean }[];
   /** Где используется плод: число рецептов и предметы на выходе (сначала того же мода) */
@@ -92,6 +97,10 @@ export interface BotanyMeta {
   /** Почвы: тег пашни и множитель из кода (применяется к возврату элементов в почву) */
   soil?: { tag: string; mul: number; blocks: string[] }[];
   /** Уровни теплицы Firmalife по возрастанию: материал стен → уровень */
+  /** Константы роста в теплице (Firmalife Mechanics) — та же формула, что у культур */
+  greenhouseGrowth?: { GROWTH_FACTOR: number; NUTRIENT_GROWTH_FACTOR: number };
+  /** Черты еды и множитель порчи по умолчанию (меньше 1 — хранится дольше) */
+  foodTraits?: Record<string, number>;
   greenhouseTiers?: { i: string; tier: number; e: string; r?: string; walls?: string }[];
   /** Настройки модов, от которых зависят сроки: ключ в TOML и значение по умолчанию из кода */
   config?: Record<string, ConfigKey | undefined>;
@@ -221,4 +230,28 @@ export function rangeLabel(min: number | undefined, max: number | undefined, uni
   if (min !== undefined) return `от ${num(min)} ${unit}`;
   if (max !== undefined) return `до ${num(max)} ${unit}`;
   return null;
+}
+
+/** Что считает обход вокруг лозы: теги блоков и служебные счётчики → слово в родительном падеже */
+export const QUALITY_COUNT_LABEL: Record<string, string> = {
+  'minecraft:dirt': 'земли',
+  'tfc:grass': 'травы',
+  'c:gravels': 'гравия',
+  air_below: 'пустых блоков уровнем ниже лозы',
+  air_level: 'пустых блоков на уровне лозы',
+};
+
+export const FOOD_TRAIT_LABEL: Record<string, string> = {
+  BEE_POLLINATED: 'Опылено пчёлами',
+  DIRT_GROWN: 'Выращено на земле',
+  GRAVEL_GROWN: 'Выращено на гравии',
+  SLOPE_GROWN: 'Выращено на склоне',
+};
+
+/** Условие черты словами: «земли больше, чем гравия», «пустых блоков … меньше 33», «рядом улей с маткой» */
+export function qualityCondition(c: { l: string; op: string; r: string | number }): string {
+  if (c.l === 'bees') return 'рядом улей с маткой';
+  const left = QUALITY_COUNT_LABEL[c.l] ?? c.l;
+  const word = c.op === '>' ? 'больше' : c.op === '<' ? 'меньше' : c.op === '>=' ? 'не меньше' : 'не больше';
+  return typeof c.r === 'number' ? `${left} ${word} ${c.r}` : `${left} ${word}, чем ${QUALITY_COUNT_LABEL[c.r] ?? c.r}`;
 }

@@ -3,12 +3,14 @@ import { useMemo, useState } from 'react';
 import {
   CROP_BLOCK_LABEL,
   expiryDays,
+  FOOD_TRAIT_LABEL,
   growthDays,
   inRange,
   LIFE_LABEL,
   monthLabel,
   PLANT_KIND_LABEL,
   PLANTER_LABEL,
+  qualityCondition,
   rangeLabel,
   useBotany,
   type BotanyMeta,
@@ -123,6 +125,7 @@ export function BotanyTab({
           config={config}
           foodBy={foodBy}
           tiers={meta.greenhouseTiers ?? []}
+          growth={meta.greenhouseGrowth}
         />
       ) : (
         <div className="botany-main">
@@ -562,6 +565,33 @@ function PlantCard({
         </section>
       )}
 
+      {p.quality && (
+        <section>
+          <h4>
+            Качество урожая
+            {p.quality.radius ? (
+              <span className="faint"> · считается в {p.quality.radius} блоках вокруг лозы</span>
+            ) : null}
+          </h4>
+          <dl className="botany-quality">
+            {p.quality.traits.map((t) => {
+              // Имя ключа конфига: «Dirt_grown» из DIRT_GROWN
+              const cap = t.trait.charAt(0) + t.trait.slice(1).toLowerCase();
+              const mod = config.num('foodTraitModifier', { name: cap })?.value ?? meta.foodTraits?.[t.trait];
+              return (
+                <div key={t.trait}>
+                  <dt>
+                    {FOOD_TRAIT_LABEL[t.trait] ?? t.trait.toLowerCase().replaceAll('_', ' ')}
+                    {mod !== undefined && <span className="faint small"> · порча ×{ru(mod, 2)}</span>}
+                  </dt>
+                  <dd>{t.when.map(qualityCondition).join('; ')}</dd>
+                </div>
+              );
+            })}
+          </dl>
+        </section>
+      )}
+
       {p.wild && (
         <section>
           <h4>В природе</h4>
@@ -587,12 +617,14 @@ function Greenhouse({
   config,
   foodBy,
   tiers,
+  growth,
 }: {
   list: GreenhousePlant[];
   items: ItemIndex | null;
   config: BotanyConfig;
   foodBy: Map<string, Food>;
   tiers: NonNullable<BotanyMeta['greenhouseTiers']>;
+  growth?: BotanyMeta['greenhouseGrowth'];
 }) {
   /** Самый простой материал стен, дающий нужный уровень */
   const wallsFor = (tier: number) => tiers.find((t) => t.tier >= tier);
@@ -616,6 +648,22 @@ function Greenhouse({
     const r = config.num(name);
     if (r) facts.push({ label, value: fmt(r.value), note: CONFIG_ORIGIN_LABEL[r.origin] });
   };
+  // Та же формула, что у культур в поле (проверено по байткоду): прирост за тик = GROWTH_FACTOR / множитель,
+  // плюс расход удобрения × NUTRIENT_GROWTH_FACTOR; расход = 1 / (суток на элемент × 24000)
+  const g = growth;
+  const modifier = config.num('greenhouseGrowthModifier')?.value ?? 1;
+  const nutrientDays = config.num('greenhouseNutrientDays')?.value;
+  if (g) {
+    const rate = g.GROWTH_FACTOR / modifier;
+    const bonus = nutrientDays ? (1 / (nutrientDays * TICKS_PER_DAY)) * g.NUTRIENT_GROWTH_FACTOR : 0;
+    const base = 1 / rate / TICKS_PER_DAY;
+    const best = 1 / (rate + bonus) / TICKS_PER_DAY;
+    facts.push({
+      label: 'Созревание',
+      value: `${Math.round(best)}–${Math.round(base)} игровых суток`,
+      note: `быстрее — когда в грядке хватает всех нужных элементов; это ${hours(best * DAY_MINUTES)}–${hours(base * DAY_MINUTES)} игры`,
+    });
+  }
   fact('greenhouseGrowthModifier', 'Множитель роста', (v) => ru(v, 2));
   fact('greenhouseWaterDays', 'Вода в грядке', (v) => `расходуется в среднем за ${ru(v)} суток`);
   fact('greenhouseNutrientDays', 'Элемент удобрения', (v) => `расходуется в среднем за ${ru(v)} суток`);
@@ -657,8 +705,7 @@ function Greenhouse({
         <p className="faint small">
           Теплица Firmalife — отдельная механика: растения сажают в грядки внутри теплицы, климат и сезоны снаружи на
           них не действуют. На карточке указан самый простой материал стен, в теплице из которого растение приживётся.
-          Настройки описаны по комментариям мода к ним, формула роста в теплице не разобрана. В игре не проверялось.
-          Показано {shown.length} из {list.length}.
+          Настройки описаны по комментариям мода к ним. В игре не проверялось. Показано {shown.length} из {list.length}.
         </p>
       </section>
       {shown.length === 0 ? (
