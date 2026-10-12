@@ -81,6 +81,8 @@ export interface ConfigKey {
   /** Имя файла конфига, как его называет NeoForge: tfc-server.toml */
   file: string | null;
   type: string;
+  /** Где значение лежит в сохранении мира, если мир его хранит сам (npm run world) */
+  world?: { file: string; key: string };
 }
 
 export interface Botany {

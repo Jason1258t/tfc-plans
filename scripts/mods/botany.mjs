@@ -26,7 +26,11 @@ const CONFIG_KEYS = ['cropGrowthModifier', 'cropExpiryModifier', 'defaultMonthLe
 
 /** Какие классы jar сохранять в кеш для разбора (вызывается из build-items при распаковке) */
 export function isBotanyClass(entryName, data) {
-  if (/\/crop\/CropHelpers\.class$|\/calendar\/Month\.class$|\/config\/(Server|Common)Config\.class$/.test(entryName))
+  if (
+    /\/crop\/CropHelpers\.class$|\/calendar\/(Month|Calendar|CalendarWorldData)\.class$|\/config\/(Server|Common)Config\.class$/.test(
+      entryName,
+    )
+  )
     return true;
   return data.includes('plant/fruit/Lifecycle') || data.includes('phosphorous');
 }
@@ -125,6 +129,17 @@ function readCode(classDirs, warnings) {
       if (cfg) {
         const keys = configDefaults(cls);
         if (keys.length) configs.push({ src: source, type: cfg[1].toLowerCase(), keys });
+        continue;
+      }
+      // Где календарь лежит в сохранении мира: имя файла и ключ длины месяца (её меняют командой, не конфигом)
+      if (/\/calendar\/CalendarWorldData$/.test(cls.name)) {
+        const name = cls.fields.find((f) => f.name === 'NAME')?.constant;
+        if (typeof name === 'string') meta.calendarFile = `${name}.dat`;
+        continue;
+      }
+      if (/\/calendar\/Calendar$/.test(cls.name)) {
+        const strings = cls.cp.filter((c) => c?.tag === 8).map((c) => cls.utf(c.a));
+        if (strings.includes('daysInMonth')) meta.calendarKey = 'daysInMonth';
         continue;
       }
       if (!isEnum(cls)) {
@@ -256,6 +271,12 @@ export function buildBotany(dataDirs, parse, items) {
       config[name] = { key: k.key, default: k.default, file: ns ? `${ns}-${c.type}.toml` : null, type: c.type };
     }
     if (!config[name]) warnings.push(`настройка ${name} в коде модов не найдена`);
+  }
+  // Длина месяца в уже созданном мире хранится в сохранении (npm run world): SavedData → data.calendar.<ключ>
+  if (config.defaultMonthLength) {
+    if (code.meta.calendarFile && code.meta.calendarKey)
+      config.defaultMonthLength.world = { file: code.meta.calendarFile, key: `data.calendar.${code.meta.calendarKey}` };
+    else warnings.push('где календарь лежит в сохранении мира (CalendarWorldData / daysInMonth) — не найдено');
   }
 
   const pick = (o, keys) => Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));

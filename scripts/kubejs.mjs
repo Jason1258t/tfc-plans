@@ -12,6 +12,10 @@
  * файлом и строкой; custom / shaped / shapeless / recipes.<мод>.<тип> — как добавленные рецепты.
  * Всё остальное API (Item, Java.loadClass, события игроков…) — заглушки, которые ничего не делают.
  *
+ * startup_scripts тоже выполняются в песочнице: StartupEvents.registry('item', …) даёт предметы, которые сборка
+ * регистрирует сама (kubejs:hot_iron_bloom, tfcr:…). Их имена берутся из kubejs/assets/<ns>/lang, иконки — из
+ * kubejs/assets/<ns>/textures → public/kubejs-items.json и public/icons-kubejs/ (сайт добавляет их к библиотеке).
+ *
  * kubejs/data — обычный датапак (KubeJS грузит его вместе с остальными): его рецепты идут в каталог
  * как переопределения/добавления. Удаления KubeJS применяются и к ним, и к нашим датапакам — так же, как в игре:
  * RecipesKubeEvent.remove перебирает только рецепты из датапаков (originalRecipes), не добавленные скриптами.
@@ -56,7 +60,7 @@ function importLayer(input, layer) {
   };
   const kept = files
     .map((f) => ({ ...f, rel: rel(f.name) }))
-    .filter((f) => f.rel && /^(server_scripts|startup_scripts|data)\//.test(f.rel));
+    .filter((f) => f.rel && /^(server_scripts|startup_scripts|data|assets)\//.test(f.rel));
   if (!kept.length) throw new Error(`в ${input} нет server_scripts/ или data/ — это не папка kubejs`);
   fs.rmSync(dest, { recursive: true, force: true });
   for (const f of kept) {
@@ -389,6 +393,133 @@ function runLayer(layer) {
   return { rules, added, errors, tagOps, files: files.length };
 }
 
+// ---------------------------------------------------------------- startup_scripts — свои предметы сборки
+
+/** Предметы из StartupEvents.registry('item', …): [{ id, texture, displayName, type, file, line }] */
+function runStartup(layer) {
+  const dir = path.join(INSTANCE, layer, 'startup_scripts');
+  const items = [];
+  const errors = [];
+  if (!fs.existsSync(dir)) return { items, errors };
+  const files = fs
+    .readdirSync(dir, { recursive: true })
+    .filter((f) => String(f).endsWith('.js'))
+    .map((f) => path.join(dir, String(f)))
+    .sort();
+  const callbacks = [];
+  const known = {
+    StartupEvents: new Proxy(
+      {},
+      {
+        get: (_, k) =>
+          k === 'registry'
+            ? (kind, cb) => typeof cb === 'function' && callbacks.push({ kind: String(kind), cb })
+            : typeof k === 'symbol'
+              ? undefined
+              : () => {},
+      },
+    ),
+    console: { log: () => {}, info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+    global: {},
+  };
+  const builtins = new Set(Object.getOwnPropertyNames(globalThis));
+  const sandbox = new Proxy(known, {
+    has: (t, k) => typeof k === 'string' && (k in t || !builtins.has(k)),
+    get: (t, k) =>
+      k in t ? t[k] : typeof k === 'symbol' ? undefined : builtins.has(k) ? globalThis[k] : anything(String(k)),
+    set: (t, k, v) => ((t[k] = v), true),
+  });
+  const ctx = vm.createContext(sandbox);
+  const rel = (f) => `${layer}/${path.relative(path.join(INSTANCE, layer), f).replaceAll('\\', '/')}`;
+  for (const f of files) {
+    try {
+      new vm.Script(fs.readFileSync(f, 'utf8'), { filename: `kubejs://${rel(f)}` }).runInContext(ctx, {
+        timeout: 2000,
+      });
+    } catch (e) {
+      errors.push({ file: rel(f), message: String(e?.message ?? e).split('\n')[0] });
+    }
+  }
+  for (const { kind, cb } of callbacks) {
+    if (kind !== 'item') continue;
+    const event = {
+      create: (id, type) => {
+        const at = /kubejs:\/\/(.+?):(\d+)/.exec(new Error().stack.split('\n').slice(2).join('\n'));
+        const rec = {
+          id: String(id).includes(':') ? String(id) : `kubejs:${id}`,
+          type: typeof type === 'string' ? type : null,
+          texture: null,
+          displayName: null,
+          file: at?.[1] ?? '?',
+          line: Number(at?.[2] ?? 0),
+        };
+        items.push(rec);
+        const chain = new Proxy(function () {}, {
+          get(_, k) {
+            // texture('ns:path') или texture('layer0', 'ns:path')
+            if (k === 'texture') return (...a) => ((rec.texture ??= String(a.at(-1))), chain);
+            if (k === 'displayName') return (n) => ((rec.displayName = String(n)), chain);
+            if (typeof k === 'symbol' || k === 'then') return undefined;
+            return () => chain;
+          },
+          apply: () => chain,
+        });
+        return chain;
+      },
+    };
+    try {
+      cb(
+        new Proxy(event, {
+          get: (t, k) => (k in t ? t[k] : typeof k === 'symbol' ? undefined : anything(`event.${String(k)}`)),
+        }),
+      );
+    } catch (e) {
+      errors.push({ file: '?', message: String(e?.message ?? e).split('\n')[0] });
+    }
+  }
+  return { items, errors };
+}
+
+/** Имена и иконки своих предметов сборки → записи библиотеки { i, e, r?, t? } */
+function libraryItems(registered) {
+  const OUT_ICONS = path.join(ROOT, 'public', 'icons-kubejs');
+  fs.rmSync(OUT_ICONS, { recursive: true, force: true });
+  const langs = new Map();
+  const lang = (layer, ns, code) => {
+    const key = `${layer}|${ns}|${code}`;
+    if (!langs.has(key)) {
+      let data = {};
+      try {
+        data = JSON.parse(fs.readFileSync(path.join(INSTANCE, layer, 'assets', ns, 'lang', `${code}.json`), 'utf8'));
+      } catch {
+        /* перевода нет */
+      }
+      langs.set(key, data);
+    }
+    return langs.get(key);
+  };
+  const out = new Map();
+  for (const it of registered) {
+    const [ns, p] = it.id.split(':');
+    const key = `item.${ns}.${p.replaceAll('/', '.')}`;
+    // Перевод может лежать и в своём namespace, и в kubejs
+    const find = (code) => lang(it.layer, ns, code)[key] ?? lang(it.layer, 'kubejs', code)[key];
+    const en = find('en_us') ?? it.displayName ?? p.split('/').pop().replaceAll('_', ' ');
+    const ru = find('ru_ru');
+    const [tns, tp] = (it.texture ?? `${ns}:item/${p}`).split(':');
+    let t;
+    const own = path.join(INSTANCE, it.layer, 'assets', tns, 'textures', `${tp}.png`);
+    if (fs.existsSync(own)) {
+      const target = path.join(OUT_ICONS, tns, `${tp}.png`);
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.copyFileSync(own, target);
+      t = `@kubejs/${tns}/${tp}`;
+    } else if (fs.existsSync(path.join(ROOT, 'public', 'icons', tns, `${tp}.png`))) t = `${tns}/${tp}`;
+    out.set(it.id, { i: it.id, e: en, ...(ru && ru !== en ? { r: ru } : {}), ...(t ? { t } : {}) });
+  }
+  return [...out.values()];
+}
+
 // ---------------------------------------------------------------- kubejs/data — датапак
 
 function dataRecipes(layer) {
@@ -440,6 +571,7 @@ function analyze() {
   const recipes = [];
   const errors = [];
   const tags = [];
+  const registered = [];
   const layerInfo = [];
   for (const layer of layers) {
     const r = runLayer(layer);
@@ -448,6 +580,9 @@ function analyze() {
     errors.push(...r.errors.map((x) => ({ ...x, layer })));
     recipes.push(...data);
     tags.push(...r.tagOps.map((x) => ({ ...x, layer })));
+    const st = runStartup(layer);
+    registered.push(...st.items.map((x) => ({ ...x, layer })));
+    errors.push(...st.errors.map((x) => ({ ...x, layer })));
     let n = 0;
     for (const a of r.added) {
       n++;
@@ -473,10 +608,12 @@ function analyze() {
       added: r.added.length,
       data: data.length,
       tags: r.tagOps.length,
+      items: st.items.length,
     });
     log(
       `слой ${layer}: скриптов ${r.files}, удалений/замен ${r.rules.length}, добавлено ${r.added.length}, ` +
-        `рецептов в data ${data.length}, операций с тегами ${r.tagOps.length}, ошибок ${r.errors.length}`,
+        `рецептов в data ${data.length}, операций с тегами ${r.tagOps.length}, своих предметов ${st.items.length}, ` +
+        `ошибок ${r.errors.length + st.errors.length}`,
     );
   }
   for (const e of errors) log(`  ошибка в ${e.file}: ${e.message}`);
@@ -501,7 +638,16 @@ function analyze() {
     log(`каталог: удалено KubeJS ${removed} рецептов из ${original.length}, неоднозначно ${maybe}`);
   }
 
-  fs.writeFileSync(OUT, JSON.stringify({ generatedAt: Date.now(), layers: layerInfo, rules, recipes, tags, errors }));
+  const lib = libraryItems(registered);
+  fs.writeFileSync(path.join(ROOT, 'public', 'kubejs-items.json'), JSON.stringify(lib));
+  log(
+    `свои предметы сборки: ${lib.length}, с иконкой ${lib.filter((i) => i.t).length}, ` +
+      `с русским названием ${lib.filter((i) => i.r).length} → public/kubejs-items.json`,
+  );
+  fs.writeFileSync(
+    OUT,
+    JSON.stringify({ generatedAt: Date.now(), layers: layerInfo, rules, recipes, tags, items: registered, errors }),
+  );
   log(`записан public/kubejs.json (${(fs.statSync(OUT).size / 1024).toFixed(0)} КБ)`);
 }
 

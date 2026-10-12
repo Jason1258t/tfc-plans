@@ -32,7 +32,8 @@ npx firebase deploy --only hosting           # сборка + pack-release + в�
 npx firebase deploy --only firestore:rules
 npm run mods          # пересобрать библиотеку из mods/ (долго, кеш в .cache/)
 npm run serverconfig -- <zip|папка>                # конфиги сервера → Firestore config
-npm run kubejs -- <zip|папка> [--layer world]  # скрипты KubeJS → public/kubejs.json
+npm run kubejs -- <zip|папка> [--layer world]  # скрипты KubeJS → public/kubejs.json, свои предметы → kubejs-items.json
+npm run world -- <мир|world/data|tfc_calendar.dat|zip>  # сохранение мира → Firestore config (scope world)
 ```
 
 Тестов нет. Проверка — руками в браузере (см. ниже) и разовыми node-скриптами в scratchpad.
@@ -52,7 +53,8 @@ npm run kubejs -- <zip|папка> [--layer world]  # скрипты KubeJS → 
 ## Данные: что откуда берётся
 
 Скрипты разложены **по источнику, который разбирают**, а не по разделам сайта: `scripts/mods.mjs` (+ части в
-`scripts/mods/`) — папка `mods/`; `scripts/serverconfig.mjs` — конфиги сервера; `scripts/kubejs.mjs` — скрипты KubeJS.
+`scripts/mods/`) — папка `mods/`; `scripts/serverconfig.mjs` — конфиги (`config/`, `serverconfig/`); `scripts/kubejs.mjs` — папка `kubejs/`;
+`scripts/world.mjs` — сохранение мира.
 Новый раздел сайта = новая часть в `scripts/mods/`, а не отдельная команда. Старые `npm run items` / `config` — синонимы.
 
 Сайт — статический SPA. Всё «знание о сборке» собирается локально скриптами и деплоится как статика из `public/`
@@ -61,7 +63,8 @@ npm run kubejs -- <zip|папка> [--layer world]  # скрипты KubeJS → 
 | Источник (не в git)           | Скрипт                                               | Результат                                                                                                 |
 | ----------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `mods/*.jar`                  | `mods.mjs` (+ `reference`, `manifest`, `geo`, `tags`, `botany`) | `public/items.json`, `icons/`, `recipes.json`, `reference.json`, `pack-manifest.json`, `geo.json`, `geo/`, `tags.json`, `botany.json` |
-| `instance/kubejs/<слой>/`     | `kubejs.mjs`                                         | `public/kubejs.json`                                                                                      |
+| `instance/kubejs/<слой>/`     | `kubejs.mjs`                                         | `public/kubejs.json`, `kubejs-items.json`, `icons-kubejs/` (свои предметы сборки из startup_scripts + assets) |
+| сохранение мира (`<мир>/data/`) | `world.mjs`                                        | Firestore `config/world__{файл}` — календарь TFC (длина месяца, заданная командой)                          |
 | zip/папка конфигов сервера    | `serverconfig.mjs`                                  | Firestore `config/{scope}__{путь}`                                                                        |
 | разница манифестов при деплое | `pack-release.mjs` (predeploy)                       | Firestore `packUpdates/{id}`                                                                              |
 

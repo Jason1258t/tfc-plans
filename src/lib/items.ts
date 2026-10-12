@@ -20,16 +20,20 @@ export interface ItemIndex {
 let indexPromise: Promise<ItemIndex> | null = null;
 let loaded: ItemIndex | null = null;
 
-export function loadItems(): Promise<ItemIndex> {
-  indexPromise ??= fetch(`${import.meta.env.BASE_URL}items.json`)
+const fetchList = (name: string): Promise<McItem[]> =>
+  fetch(`${import.meta.env.BASE_URL}${name}`)
     .then((r) => (r.ok ? r.json() : []))
-    .catch(() => [])
-    .then((list: McItem[]) => {
-      // Подавляем «технические» предметы
-      list = list.filter((it) => it.i !== 'minecraft:air');
-      loaded = { list, byId: new Map(list.map((it) => [it.i, it])) };
-      return loaded;
-    });
+    .catch(() => []);
+
+export function loadItems(): Promise<ItemIndex> {
+  // kubejs-items.json — предметы, которые сборка регистрирует скриптами KubeJS (scripts/kubejs.mjs); в jar их нет
+  indexPromise ??= Promise.all([fetchList('items.json'), fetchList('kubejs-items.json')]).then(([mods, kjs]) => {
+    const have = new Set(mods.map((it) => it.i));
+    // Подавляем «технические» предметы
+    const list = [...mods, ...kjs.filter((it) => !have.has(it.i))].filter((it) => it.i !== 'minecraft:air');
+    loaded = { list, byId: new Map(list.map((it) => [it.i, it])) };
+    return loaded;
+  });
   return indexPromise;
 }
 
@@ -43,9 +47,13 @@ export function useItems(): ItemIndex | null {
 
 export const itemName = (it: McItem | undefined, fallbackId?: string) => (it ? (it.r ?? it.e) : (fallbackId ?? '?'));
 
-export const iconUrl = (it: McItem | undefined) => (it?.t ? `${import.meta.env.BASE_URL}icons/${it.t}.png` : null);
+/** Иконки из jar лежат в /icons, иконки своих предметов сборки («@kubejs/…») — в /icons-kubejs */
+export const textureUrl = (path: string) =>
+  path.startsWith('@kubejs/')
+    ? `${import.meta.env.BASE_URL}icons-kubejs/${path.slice(8)}.png`
+    : `${import.meta.env.BASE_URL}icons/${path}.png`;
 
-export const textureUrl = (path: string) => `${import.meta.env.BASE_URL}icons/${path}.png`;
+export const iconUrl = (it: McItem | undefined) => (it?.t ? textureUrl(it.t) : null);
 
 const norm = (s: string) => s.toLowerCase().replaceAll('ё', 'е');
 

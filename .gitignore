@@ -51,3 +51,5 @@ mods/*
 # Папки инстанса (kubejs и т. п.) — импортируются npm run kubejs, в git не храним
 instance/
 public/kubejs.json
+public/kubejs-items.json
+public/icons-kubejs/

@@ -159,7 +159,7 @@ function GrowthNote({ meta, sub }: { meta: BotanyMeta; sub: PlantKind }) {
   const month = meta.config?.defaultMonthLength;
   const num = (v: unknown, d: number) => (typeof v === 'number' ? v : d);
   const modifier = useLayeredNumber(growth?.file, growth?.key, num(growth?.default, 1));
-  const monthLen = useLayeredNumber(month?.file, month?.key, num(month?.default, 0));
+  const monthLen = useLayeredNumber(month?.file, month?.key, num(month?.default, 0), month?.world);
   const days = growthDays(meta, modifier.value);
   const ru = (v: number) => String(Math.round(v * 100) / 100).replace('.', ',');
   if (sub === 'crop')
@@ -174,7 +174,11 @@ function GrowthNote({ meta, sub }: { meta: BotanyMeta; sub: PlantKind }) {
     <p className="faint small ref-note">
       Календарь — состояние растения по месяцам из кода мода: плоды собирают в месяцы «плодоносит».
       {monthLen.value > 0 &&
-        ` Месяц — ${ru(monthLen.value)} игровых суток (${CONFIG_ORIGIN_LABEL[monthLen.origin]}; в уже созданном мире длину могли поменять командой).`}{' '}
+        ` Месяц — ${ru(monthLen.value)} игровых суток (${CONFIG_ORIGIN_LABEL[monthLen.origin]}${
+          monthLen.origin === 'world'
+            ? ''
+            : '; если длину меняли командой, она хранится в сохранении мира — npm run world'
+        }).`}{' '}
       В игре не проверялось.
     </p>
   );

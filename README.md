@@ -181,6 +181,10 @@ npm run kubejs                                            # пересобрат
   рецепты из датапаков (`originalRecipes`), добавленные в событии — отдельный список. Кнопка «KubeJS-скрипт»
   в редакторе выгружает так весь датапак.
 
+Свои предметы сборки (`StartupEvents.registry('item', …)` в `startup_scripts`) попадают в библиотеку предметов: имена — из
+`kubejs/assets/<ns>/lang`, иконки — из `kubejs/assets/<ns>/textures` (`public/kubejs-items.json`, `public/icons-kubejs/`).
+Поэтому импортировать нужно папку `kubejs` целиком, вместе с `assets`.
+
 ### Подсказки по типам рецептов
 
 Коллекция `recipeHints` (id = тип, где `:` → `__`, `/` → `--`). Первичное наполнение — `scripts/recipe-hints.json`
@@ -290,6 +294,12 @@ npm run serverconfig -- ~/Downloads/serverconfig.zip
 Что сейчас используется: `tfc_real_world/server.toml` — карта мира (`map_settings.map_profile`,
 `generation_modes.horizontal_scale`/`vertical_scale`, `spawn_settings`). `tfc_eratosthenes-server.toml` сохранён
 для справки: Eratosthenes берёт масштаб у TFC Real World и проецирует так же (`TFC_REAL_WORLD_FULL_WORLD`).
+
+### Сохранение мира
+
+`npm run world -- <папка мира | world/data | tfc_calendar.dat | zip>` кладёт в `config` (scope `world`) то, что мир
+хранит сам: календарь TFC. Длину месяца на сервере меняют командой, и в конфиге её нет; сайт берёт значение из мира,
+если оно импортировано, иначе из конфига. Из сохранения читаются только файлы из списка в скрипте.
 
 ## Модель данных (Firestore)
 
