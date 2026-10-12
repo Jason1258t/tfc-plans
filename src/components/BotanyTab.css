@@ -375,3 +375,23 @@
   color: var(--text-2);
   line-height: 1.4;
 }
+
+.botany-notes {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.botany-reasons {
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+
+.botany-reasons ul {
+  margin: 4px 0;
+  padding-left: 18px;
+}

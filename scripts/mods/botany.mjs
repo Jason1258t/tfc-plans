@@ -59,7 +59,7 @@ export function isBotanyClass(entryName, data) {
   )
     return true;
   if (/FoodTraits\$Default\.class$/.test(entryName)) return true;
-  return data.includes('plant/fruit/Lifecycle') || data.includes('phosphorous');
+  return data.includes('plant/fruit/Lifecycle') || data.includes('phosphorous') || data.includes('getInvalidReason');
 }
 
 // ---------------------------------------------------------------- код модов
@@ -382,6 +382,48 @@ function readCode(classDirs, warnings) {
         }
         continue;
       }
+      // Почему грядка теплицы не растёт: getInvalidReason() возвращает ключи сообщений мода
+      const reason = cls.methods.find((m) => m.name === 'getInvalidReason' && m.code);
+      if (reason && !meta.greenhouseReasons) {
+        const keys = [];
+        for (const ins of instructions(reason.code)) {
+          if (ins.op !== 0x12 && ins.op !== 0x13) continue;
+          const v = cls.constant(ins.index);
+          if (typeof v === 'string' && /^[a-z_]+$/.test(v) && !keys.includes(v)) keys.push(v);
+        }
+        if (keys.length) meta.greenhouseReasons = { ns: cls.name.split('/')[2], keys };
+      }
+      // Лоза (виноград): блоки, реализующие общий интерфейс роста, — сколько стадий у ростка, куда растёт, сколько
+      // ягод за сбор. Признаки берутся из инструкций методов advance() и useWithoutItem()
+      if (cls.fields.some((f) => f.name === 'LIFECYCLE') && cls.methods.some((m) => m.name === 'advance' && m.code)) {
+        const vine = (meta.vine ??= {});
+        const adv = instructions(cls.methods.find((m) => m.name === 'advance').code);
+        const refs = adv
+          .filter((i) => [0xb2, 0xb4, 0xb6, 0xb7, 0xb8, 0xb9].includes(i.op))
+          .map((i) => cls.ref(i.index));
+        const stageInit = instructions(cls.methods.find((m) => m.name === '<clinit>')?.code ?? Buffer.alloc(0))
+          .filter((i) => i.op === 0xb2)
+          .map((i) => /^STAGE_(\d+)$/.exec(cls.ref(i.index).name)?.[1])
+          .find(Boolean);
+        if (stageInit) vine.stages = Number(stageInit) + 1;
+        if (
+          refs.some((r) => r.name === 'above') &&
+          adv.some((i) => i.op === 0xc1 && /String/.test(cls.className(i.index)))
+        )
+          vine.up = true;
+        if (refs.some((r) => r.name === 'relative') && refs.some((r) => /convert/i.test(r.name))) vine.sideways = true;
+        if (refs.some((r) => /fluff/i.test(r.name))) vine.canopy = true;
+        const use = cls.methods.find((m) => m.name === 'useWithoutItem' && m.code);
+        if (use) {
+          const u = instructions(use.code)
+            .filter((i) => [0xb2, 0xb6, 0xb8, 0xb9].includes(i.op))
+            .map((i) => cls.ref(i.index));
+          // «плодоносит → выдать предмет → вернуть в обычное состояние»: один плод с блока за сезон
+          if (u.some((r) => r.name === 'FRUITING') && u.some((r) => r.name === 'getDefaultInstance')) vine.pick = 1;
+          if (u.some((r) => r.name === 'FRUITING') && u.some((r) => r.name === 'HEALTHY')) vine.oncePerSeason = true;
+        }
+        continue;
+      }
       // Теплица: класс с теми же константами роста, что CropHelpers, но свой (Firmalife Mechanics)
       const gf = cls.fields.find((f) => f.name === 'GROWTH_FACTOR' && typeof f.constant === 'number');
       const ngf = cls.fields.find((f) => f.name === 'NUTRIENT_GROWTH_FACTOR' && typeof f.constant === 'number');
@@ -645,6 +687,8 @@ export function buildBotany(dataDirs, parse, items, recipes, translate = () => (
     delete l.lifeByMonth;
     delete l.lifeBase;
   }
+  // Признаки лозы относятся к растению со своим счётчиком роста из того же мода
+  if (code.meta.vine) for (const l of code.life.values()) if (l.grow) l.vine = code.meta.vine;
   const usedCrops = new Set();
   const usedLife = new Set();
   for (const e of out.values()) {
@@ -814,6 +858,17 @@ export function buildBotany(dataDirs, parse, items, recipes, translate = () => (
       world: { file: code.meta.calendarFile, key: `data.calendar.${code.meta.calendarRateKey}` },
     };
 
+  // Причины простоя грядки — словами самого мода (перевод из его lang), без цветовых кодов
+  const reasons = (code.meta.greenhouseReasons?.keys ?? [])
+    .map((k) => {
+      const t = translate(`${code.meta.greenhouseReasons.ns}.greenhouse.${k}`);
+      const clean = (x) => x?.replace(/\u00a7./g, '');
+      return t.en || t.ru
+        ? { key: k, e: clean(t.en ?? t.ru), ...(t.ru && t.ru !== t.en ? { r: clean(t.ru) } : {}) }
+        : null;
+    })
+    .filter(Boolean);
+
   const pick = (o, keys) => Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));
   return {
     meta: {
@@ -831,6 +886,7 @@ export function buildBotany(dataDirs, parse, items, recipes, translate = () => (
       ]),
       ...(soil.length ? { soil } : {}),
       ...(greenhouseTiers.length ? { greenhouseTiers } : {}),
+      ...(reasons.length ? { greenhouseReasons: reasons } : {}),
       config,
     },
     configs: code.configs,

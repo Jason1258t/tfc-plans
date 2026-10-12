@@ -126,6 +126,7 @@ export function BotanyTab({
           foodBy={foodBy}
           tiers={meta.greenhouseTiers ?? []}
           growth={meta.greenhouseGrowth}
+          reasons={meta.greenhouseReasons ?? []}
         />
       ) : (
         <div className="botany-main">
@@ -565,6 +566,24 @@ function PlantCard({
         </section>
       )}
 
+      {p.vine && (
+        <section>
+          <h4>Лоза</h4>
+          <ul className="botany-notes">
+            {p.vine.stages && <li>Росток у земли проходит {p.vine.stages} стадии.</li>}
+            {p.vine.up && <li>Взрослый росток поднимается на шпагат над собой — без шпагата выше он не растёт.</li>}
+            {p.vine.sideways && <li>Дальше лоза расходится вдоль шпагата в обе стороны и на столбы шпалеры.</li>}
+            {p.vine.canopy && <li>Над лозой вырастает крона, если блок сверху свободен.</li>}
+            {p.vine.pick && (
+              <li>
+                Сбор: {p.vine.pick} шт. с каждого плодоносящего блока лозы
+                {p.vine.oncePerSeason && ', после сбора блок снова просто растёт до следующего сезона'}.
+              </li>
+            )}
+          </ul>
+        </section>
+      )}
+
       {p.quality && (
         <section>
           <h4>
@@ -618,6 +637,7 @@ function Greenhouse({
   foodBy,
   tiers,
   growth,
+  reasons,
 }: {
   list: GreenhousePlant[];
   items: ItemIndex | null;
@@ -625,6 +645,7 @@ function Greenhouse({
   foodBy: Map<string, Food>;
   tiers: NonNullable<BotanyMeta['greenhouseTiers']>;
   growth?: BotanyMeta['greenhouseGrowth'];
+  reasons: NonNullable<BotanyMeta['greenhouseReasons']>;
 }) {
   /** Самый простой материал стен, дающий нужный уровень */
   const wallsFor = (tier: number) => tiers.find((t) => t.tier >= tier);
@@ -702,6 +723,17 @@ function Greenhouse({
             </div>
           ))}
         </dl>
+        {reasons.length > 0 && (
+          <div className="botany-reasons small">
+            <b>Грядка не растёт, если</b>
+            <ul>
+              {reasons.map((r) => (
+                <li key={r.key}>{r.r ?? r.e}</li>
+              ))}
+            </ul>
+            <span className="faint">Формулировки — из перевода самого мода.</span>
+          </div>
+        )}
         <p className="faint small">
           Теплица Firmalife — отдельная механика: растения сажают в грядки внутри теплицы, климат и сезоны снаружи на
           них не действуют. На карточке указан самый простой материал стен, в теплице из которого растение приживётся.

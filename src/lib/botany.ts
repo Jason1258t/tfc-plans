@@ -45,6 +45,15 @@ export interface Plant {
   grow?: { min: number; max: number; interval: number };
   /** Проверяется только температура, влажность на рост не влияет */
   tempOnly?: boolean;
+  /** Лоза: стадий у ростка, растёт ли вверх на шпагат и вдоль него, даёт ли крону, сколько ягод за сбор */
+  vine?: {
+    stages?: number;
+    up?: boolean;
+    sideways?: boolean;
+    canopy?: boolean;
+    pick?: number;
+    oncePerSeason?: boolean;
+  };
   /** Качество урожая: что считается вокруг лозы (радиус) и при каких условиях плод получает черту еды */
   quality?: {
     radius: number | null;
@@ -101,6 +110,8 @@ export interface BotanyMeta {
   greenhouseGrowth?: { GROWTH_FACTOR: number; NUTRIENT_GROWTH_FACTOR: number };
   /** Черты еды и множитель порчи по умолчанию (меньше 1 — хранится дольше) */
   foodTraits?: Record<string, number>;
+  /** Почему грядка теплицы не растёт — сообщения самого мода */
+  greenhouseReasons?: { key: string; e: string; r?: string }[];
   greenhouseTiers?: { i: string; tier: number; e: string; r?: string; walls?: string }[];
   /** Настройки модов, от которых зависят сроки: ключ в TOML и значение по умолчанию из кода */
   config?: Record<string, ConfigKey | undefined>;
