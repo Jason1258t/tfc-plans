@@ -3,8 +3,8 @@
  * Импорт конфигов модов в Firestore (коллекция config) — чтобы сайт брал настройки из того, что реально стоит
  * на сервере, а не из ручного ввода. Сейчас из них читается карта мира (tfc_real_world/server.toml).
  *
- *   npm run config -- ~/Downloads/serverconfig.zip           — zip с папкой serverconfig/ или config/
- *   npm run config -- <папка инстанса>/serverconfig            — или папка
+ *   npm run serverconfig -- ~/Downloads/serverconfig.zip           — zip с папкой serverconfig/ или config/
+ *   npm run serverconfig -- <папка инстанса>/serverconfig            — или папка
  *   … --scope <имя>   — чьи это настройки (по умолчанию server; например, клиентские конфиги игрока)
  *   … --only <подстрока пути>   — импортировать только подходящие файлы (можно несколько раз)
  *   … --dry-run       — показать, что будет записано, без записи
@@ -34,7 +34,7 @@ function args() {
     else if (!a.startsWith('--')) opts.input = a;
     else throw new Error(`неизвестный флаг ${a}`);
   }
-  if (!opts.input) throw new Error('укажите zip или папку с конфигами: npm run config -- <путь>');
+  if (!opts.input) throw new Error('укажите zip или папку с конфигами: npm run serverconfig -- <путь>');
   if (!/^[a-z0-9_-]{1,40}$/i.test(opts.scope)) throw new Error('--scope: латиница, цифры, _ и -');
   return opts;
 }

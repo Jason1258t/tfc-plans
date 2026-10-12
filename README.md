@@ -39,7 +39,7 @@ npm install
 npm run dev
 ```
 
-При первом `dev`/`build` автоматически собирается библиотека предметов (`npm run items`, около минуты):
+При первом `dev`/`build` автоматически собирается библиотека предметов (`npm run mods`, около минуты):
 скачивается `client.jar` 1.21.1 с серверов Mojang и делается sparse-клон репозитория TFC.
 Нужны `git` и интернет.
 
@@ -92,7 +92,7 @@ AI Logic и в код не попадает.
 
 ## Библиотека предметов
 
-`scripts/build-items.mjs` создаёт:
+`scripts/mods.mjs` создаёт:
 
 - `public/items.json` — `[{ i: id, e: имя en, r: имя ru, t: путь иконки }]`;
 - `public/icons/**.png` — текстуры, которые используются как иконки.
@@ -103,7 +103,7 @@ AI Logic и в код не попадает.
 пород, жидкости в вёдрах), заменяются базовыми.
 
 Сгенерированные файлы **не коммитятся**: это ассеты Mojang и авторов модов. Пересобрать заново:
-`npm run items -- --fresh`.
+`npm run mods -- --fresh`.
 
 ### Моды сборки (Create, Immersive Engineering и др.)
 
@@ -115,7 +115,7 @@ npm run deploy
 
 Перед сборкой скрипт сверяет список jar с прошлым запуском. Если он изменился, библиотека пересобирается
 сама: вытаскиваются названия (`en_us`, `ru_ru`), модели и иконки всех модов. jar-файлы в git не попадают.
-Для локальной проверки: `npm run items`, потом `npm run dev`.
+Для локальной проверки: `npm run mods`, потом `npm run dev`.
 
 Если jar TerraFirmaCraft в `mods/` нет, TFC берётся с GitHub (`MOD_SOURCES` в скрипте).
 
@@ -144,7 +144,7 @@ npm run deploy:rules
 - **Файл** — произвольный путь (реестры, теги, конфиги модов в датапаке).
 - zip можно скачать или сразу приложить к задаче.
 
-Каталог рецептов (`public/recipes.json`, ~21 тыс.) собирается тем же `npm run items` из папок `data/*/recipe/` в jar
+Каталог рецептов (`public/recipes.json`, ~21 тыс.) собирается тем же `npm run mods` из папок `data/*/recipe/` в jar
 и `client.jar`. Рецепты, которые KubeJS сборки меняет скриптами, в каталоге будут в исходном виде.
 
 ### KubeJS сборки
@@ -202,15 +202,16 @@ node scripts/seed-recipe-hints.mjs
 
 ### Ботаника (вкладка справочника)
 
-`public/botany.json` собирает `scripts/botany.mjs`: диапазоны температуры и влажности — из
+`public/botany.json` собирает `scripts/mods/botany.mjs`: диапазоны температуры и влажности — из
 `data/*/tfc/climate_range/{crop,plant}/`, а расход N/P/K, тип культуры, сезоны кустов и деревьев по месяцам, дни роста
-саженца и константы скорости роста — из кода модов. Классы читает `scripts/classfile.mjs` (свой разбор `.class`, JDK не
-нужен): константы перечислений, статические массивы, значения `static final`, цели лямбд. Что ещё не разобрано —
+саженца и константы скорости роста — из кода модов. Классы читает `scripts/mods/classfile.mjs` (свой разбор `.class`, JDK не
+нужен): константы перечислений, статические массивы, значения `static final`, цели лямбд. Оттуда же —
+значения настроек модов по умолчанию (`public/config-defaults.json`); импортированный конфиг сервера их переопределяет. Что ещё не разобрано —
 в `docs/plans/botany.md`.
 
 ### Теги (страница «Теги»)
 
-`npm run items` собирает `public/tags.json`: теги предметов, жидкостей, блоков и сущностей из `data/*/tags/` ванили и всех
+`npm run mods` собирает `public/tags.json`: теги предметов, жидкостей, блоков и сущностей из `data/*/tags/` ванили и всех
 jar с порядком источников. Скрипты KubeJS (`ServerEvents.tags`: `add` / `remove` / `removeAll` / `get(тег)…`) разбирает
 `npm run kubejs` — операции лежат в `public/kubejs.json` (`tags`); шаблоны `/regex/` по реестру игры не раскрываются.
 
@@ -222,7 +223,7 @@ jar с порядком источников. Скрипты KubeJS (`ServerEven
 
 ## Справочник
 
-Страница «Справочник» собирается из jar сборки скриптом `scripts/reference.mjs` (часть `npm run items`):
+Страница «Справочник» собирается из jar сборки скриптом `scripts/mods/reference.mjs` (часть `npm run mods`):
 
 - **Руды** — конфиги жил (`worldgen/configured_feature/vein`): породы, высоты, редкость, доли сортов, признак
   на поверхности.
@@ -239,7 +240,7 @@ jar с порядком источников. Скрипты KubeJS (`ServerEven
 
 ## Обновления сборки
 
-`npm run items` пишет снимок `public/pack-manifest.json`: моды с версиями и sha1 jar, id предметов,
+`npm run mods` пишет снимок `public/pack-manifest.json`: моды с версиями и sha1 jar, id предметов,
 отпечатки рецептов (FNV-1a JSON). При деплое хостинга (`predeploy` в `firebase.json`) `scripts/pack-release.mjs`
 сравнивает его с опубликованным на сайте и, если сборка изменилась, создаёт в Firestore `packUpdates/{id}`:
 
@@ -255,7 +256,7 @@ jar с порядком источников. Скрипты KubeJS (`ServerEven
 
 Формулы проекции перенесены из мода TFC Real World один в один (`src/lib/projection.ts`): Equal Earth,
 `horizontal_scale`/`vertical_scale` — радиус карты в блоках, за краями мир повторяется зеркально.
-Города, регионы и карты-картинки профилей берутся из jar мода (`scripts/geo.mjs` → `public/geo.json`, `public/geo/`).
+Города, регионы и карты-картинки профилей берутся из jar мода (`scripts/mods/geo.mjs` → `public/geo.json`, `public/geo/`).
 
 Профиль, масштабы и центр спавна нашего мира берутся из **импортированного конфига сервера**
 (`config/server__tfc_real_world__server.toml`, см. ниже). Сейчас на сервере `horizontal_scale = 100000`,
@@ -264,11 +265,11 @@ jar с порядком источников. Скрипты KubeJS (`ServerEven
 
 ## Конфиги сервера
 
-Скрипт `scripts/import-config.mjs` разбирает TOML-конфиги модов и сохраняет их в Firestore, в коллекцию `config` —
+Скрипт `scripts/serverconfig.mjs` разбирает TOML-конфиги модов и сохраняет их в Firestore, в коллекцию `config` —
 сайт читает настройки оттуда, а не из ручного ввода.
 
 ```bash
-npm run config -- ~/Downloads/serverconfig.zip
+npm run serverconfig -- ~/Downloads/serverconfig.zip
 ```
 
 - Вход — zip или папка. Путь конфига считается от `serverconfig/`, `config/` или `defaultconfigs/`
@@ -277,7 +278,7 @@ npm run config -- ~/Downloads/serverconfig.zip
   `{ scope, path, mod, values, sha1, source, importedBy, importedAt }`, `values` — разобранный TOML без комментариев.
   Повторный импорт перезаписывает документ целиком.
 - `--scope <имя>` — чьи это настройки (по умолчанию `server`). Например, клиентские конфиги конкретного игрока:
-  `npm run config -- ~/instance/config --scope jason --only cold_sweat`.
+  `npm run serverconfig -- ~/instance/config --scope jason --only cold_sweat`.
 - `--only <подстрока пути>` — только подходящие файлы (можно несколько раз), `--dry-run` — показать без записи.
 - Пишет от имени залогиненного `firebase login` (как `pack-release`); сайту коллекция доступна только на чтение.
 - Чтение на сайте: `useModConfig(path, scope)` и `configValue(c, 'раздел.ключ', 'number')` из `src/lib/config.ts`.
@@ -298,7 +299,7 @@ npm run config -- ~/Downloads/serverconfig.zip
 | `schematics`  | библиотека схем: `name`, `fileName`, `fileId` (исходник в `files`), `replace[]` ({from, to}, `#remove` — удалить)                                                                |
 | `recipeHints` | подсказки по типам рецептов: `title`, `body`, `source`                                                                                                                           |
 | `packUpdates` | записи об обновлениях сборки (создаёт деплой), `notes` — патчноут                                                                                                                |
-| `config`      | конфиги модов из `npm run config`: `scope`, `path`, `mod`, `values` (TOML), `importedBy`, `importedAt`                                                                           |
+| `config`      | конфиги модов из `npm run serverconfig`: `scope`, `path`, `mod`, `values` (TOML), `importedBy`, `importedAt`                                                                           |
 | `settings`    | `world`: профиль и масштабы мира TFC Real World                                                                                                                                  |
 
 Пункт чеклиста: `{ id, text, itemId?, qty?, got?, done? }`. Если есть `itemId`, это ресурс «собрано got из qty»,

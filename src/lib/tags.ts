@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { itemName, searchItems, type ItemIndex } from './items';
 
 /**
- * Теги сборки (public/tags.json, собирает scripts/tags.mjs) и их правки KubeJS (public/kubejs.json → tags).
+ * Теги сборки (public/tags.json, собирает scripts/mods/tags.mjs) и их правки KubeJS (public/kubejs.json → tags).
  * Слияние как в игре: источники идут в порядке загрузки, replace обнуляет накопленное, remove убирает значения;
  * KubeJS применяется после датапаков.
  */

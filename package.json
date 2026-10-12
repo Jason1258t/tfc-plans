@@ -6,16 +6,18 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "prebuild": "node scripts/ensure-items.mjs",
-    "predev": "node scripts/ensure-items.mjs",
-    "items": "node scripts/build-items.mjs",
+    "prebuild": "node scripts/ensure-mods.mjs",
+    "predev": "node scripts/ensure-mods.mjs",
+    "mods": "node scripts/mods.mjs",
+    "items": "node scripts/mods.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "deploy": "firebase deploy",
     "deploy:rules": "firebase deploy --only firestore:rules",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" scripts/*.mjs",
     "rules:files": "firestore-files rules --config src/lib/files.config.ts --write firestore.rules",
-    "config": "node scripts/import-config.mjs",
+    "serverconfig": "node scripts/serverconfig.mjs",
+    "config": "node scripts/serverconfig.mjs",
     "kubejs": "node scripts/kubejs.mjs"
   },
   "dependencies": {

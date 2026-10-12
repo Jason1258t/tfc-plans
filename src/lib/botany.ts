@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-/** Ботаника (public/botany.json, собирает scripts/botany.mjs): климатические диапазоны растений TFC и аддонов */
+/** Ботаника (public/botany.json, собирает scripts/mods/botany.mjs): климатические диапазоны растений TFC и аддонов */
 export type PlantKind = 'crop' | 'bush' | 'tree' | 'plant';
 
 export interface PlantRange {
@@ -70,6 +70,17 @@ export interface BotanyMeta {
   /** Насколько удобрения ускоряют рост (доля сверху) */
   NUTRIENT_GROWTH_FACTOR?: number;
   UPDATE_INTERVAL?: number;
+  /** Настройки модов, от которых зависят сроки: ключ в TOML и значение по умолчанию из кода */
+  config?: Record<string, ConfigKey | undefined>;
+}
+
+export interface ConfigKey {
+  /** Путь в TOML: blocks.crops.cropGrowthModifier */
+  key: string;
+  default: number | string | boolean | null;
+  /** Имя файла конфига, как его называет NeoForge: tfc-server.toml */
+  file: string | null;
+  type: string;
 }
 
 export interface Botany {
@@ -93,10 +104,11 @@ const MONTH_RU: Record<string, string> = {
 };
 export const monthLabel = (m: string | undefined, i: number) => (m && MONTH_RU[m]) ?? String(i + 1);
 
-/** Дней до созревания культуры без удобрений и с полными, при множителе роста 1 (24000 тиков в сутках) */
-export function growthDays(meta: BotanyMeta): { base: number; best: number } | null {
+/** Дней до созревания культуры без удобрений и с полными (24000 тиков в сутках) */
+export function growthDays(meta: BotanyMeta, modifier = 1): { base: number; best: number } | null {
   if (!meta.GROWTH_FACTOR) return null;
-  const base = 1 / meta.GROWTH_FACTOR / 24000;
+  // Множитель из конфига умножает время роста: 2 — вдвое дольше
+  const base = (1 / meta.GROWTH_FACTOR / 24000) * modifier;
   return { base, best: base / (1 + (meta.NUTRIENT_GROWTH_FACTOR ?? 0)) };
 }
 

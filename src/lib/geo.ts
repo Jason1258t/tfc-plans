@@ -4,7 +4,7 @@ import { authReady, db } from '../firebase';
 import { configValue, useModConfig, type ModConfig } from './config';
 import { blockToGeo, geoToBlock, greatCircleKm, insideMap, type WorldProjection } from './projection';
 
-/** География TFC Real World из сборки (public/geo.json, scripts/geo.mjs) */
+/** География TFC Real World из сборки (public/geo.json, scripts/mods/geo.mjs) */
 export interface GeoName {
   ru: string | null;
   en: string | null;

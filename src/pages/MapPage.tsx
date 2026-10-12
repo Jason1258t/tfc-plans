@@ -48,7 +48,7 @@ export function MapPage() {
       {geo === undefined ? (
         <div className="empty">Загружаю географию…</div>
       ) : !geo || !profile ? (
-        <div className="empty">Данных TFC Real World нет — нужен jar мода в mods/ и npm run items</div>
+        <div className="empty">Данных TFC Real World нет — нужен jar мода в mods/ и npm run mods</div>
       ) : (
         <MapView geo={geo} profile={profile} world={world} />
       )}
@@ -485,12 +485,12 @@ function WorldSettingsDialog({ geo, world, onClose }: { geo: GeoData; world: Wor
         <p className="map-config-note small">
           Профиль и масштабы взяты из импортированного конфига сервера <code>tfc_real_world/server.toml</code> (
           {world.fromConfig.source}, {world.fromConfig.importedBy}, {timeAgo(world.fromConfig.importedAt)}) и здесь не
-          меняются. Обновить: <code>npm run config -- serverconfig.zip</code> (см. README, «Конфиги сервера»).
+          меняются. Обновить: <code>npm run serverconfig -- serverconfig.zip</code> (см. README, «Конфиги сервера»).
         </p>
       ) : (
         <p className="faint small" style={{ margin: 0 }}>
           Берутся из серверного конфига TFC Real World: профиль карты и масштабы. Пустое поле масштаба — как в профиле.
-          Надёжнее импортировать сам конфиг: <code>npm run config -- serverconfig.zip</code>.
+          Надёжнее импортировать сам конфиг: <code>npm run serverconfig -- serverconfig.zip</code>.
         </p>
       )}
       <fieldset className="map-fieldset" disabled={!!world.fromConfig}>

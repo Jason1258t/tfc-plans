@@ -68,7 +68,7 @@ export function ReferencePage() {
       {ref === undefined ? (
         <div className="empty">Загружаю справочник…</div>
       ) : ref === null ? (
-        <div className="empty">Справочник не собран — выполните npm run items</div>
+        <div className="empty">Справочник не собран — выполните npm run mods</div>
       ) : tab === 'ores' ? (
         <OresTab ref_={ref} items={items} />
       ) : tab === 'fuel' ? (
@@ -77,7 +77,7 @@ export function ReferencePage() {
         ref.liquid ? (
           <LiquidFuelTab families={ref.liquid.families} items={items} />
         ) : (
-          <div className="empty">Справочник собран старой версией — выполните npm run items</div>
+          <div className="empty">Справочник собран старой версией — выполните npm run mods</div>
         )
       ) : tab === 'food' ? (
         <FoodTab foods={ref.foods} items={items} />

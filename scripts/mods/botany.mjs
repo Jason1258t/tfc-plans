@@ -2,7 +2,7 @@
  * Ботаника → public/botany.json: культуры, ягодные кусты и фруктовые деревья TFC и аддонов.
  *
  * Из данных (data/<ns>/tfc/climate_range/{crop,plant}/<имя>.json): диапазоны температуры и влажности.
- * Из кода модов (.class, разбор — scripts/classfile.mjs, без JDK):
+ * Из кода модов (.class, разбор — scripts/mods/classfile.mjs, без JDK):
  *   - перечисление культур (поля nitrogen/phosphorous/potassium): расход N/P/K, число стадий, класс блока культуры;
  *   - перечисления с массивом Lifecycle по месяцам (кусты, деревья): сезоны, дни роста саженца, высота куста;
  *   - CropHelpers: константы скорости роста и расхода удобрений; calendar/Month: порядок месяцев.
@@ -17,13 +17,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { argTypes, clinitValues, enumConstants, instructions, lambdaTargets, parseClass } from './classfile.mjs';
+import { configDefaults } from './config-defaults.mjs';
 
 const FIELDS = { min_temperature: 'minT', max_temperature: 'maxT', min_hydration: 'minH', max_hydration: 'maxH' };
 const NPK = ['nitrogen', 'phosphorous', 'potassium'];
+/** Настройки модов, влияющие на сроки роста (имя поля в классе конфига) */
+const CONFIG_KEYS = ['cropGrowthModifier', 'cropExpiryModifier', 'defaultMonthLength'];
 
 /** Какие классы jar сохранять в кеш для разбора (вызывается из build-items при распаковке) */
 export function isBotanyClass(entryName, data) {
-  if (/\/crop\/CropHelpers\.class$|\/calendar\/Month\.class$/.test(entryName)) return true;
+  if (/\/crop\/CropHelpers\.class$|\/calendar\/Month\.class$|\/config\/(Server|Common)Config\.class$/.test(entryName))
+    return true;
   return data.includes('plant/fruit/Lifecycle') || data.includes('phosphorous');
 }
 
@@ -100,6 +104,8 @@ function readCode(classDirs, warnings) {
   const crops = new Map();
   const life = new Map();
   const meta = {};
+  /** Настройки модов по умолчанию: { src, type: server|common, keys: [...] } */
+  const configs = [];
   for (const { dir, source } of classDirs) {
     if (!fs.existsSync(dir)) continue;
     for (const rel of fs.readdirSync(dir, { recursive: true })) {
@@ -113,6 +119,12 @@ function readCode(classDirs, warnings) {
       }
       if (/\/crop\/CropHelpers$/.test(cls.name)) {
         for (const f of cls.fields) if (typeof f.constant === 'number') meta[f.name] = f.constant;
+        continue;
+      }
+      const cfg = /\/config\/(Server|Common)Config$/.exec(cls.name);
+      if (cfg) {
+        const keys = configDefaults(cls);
+        if (keys.length) configs.push({ src: source, type: cfg[1].toLowerCase(), keys });
         continue;
       }
       if (!isEnum(cls)) {
@@ -165,7 +177,7 @@ function readCode(classDirs, warnings) {
       }
     }
   }
-  return { crops, life, meta };
+  return { crops, life, meta, configs };
 }
 
 // ---------------------------------------------------------------- сборка
@@ -234,20 +246,36 @@ export function buildBotany(dataDirs, parse, items) {
   if (!code.life.size) warnings.push('перечисления с сезонами (Lifecycle[]) не найдены');
   if (!code.meta.months) warnings.push('порядок месяцев (calendar/Month) не найден');
 
+  // Настройки, от которых зависят сроки: ключ и значение по умолчанию из кода; сервер может их переопределить
+  const config = {};
+  for (const name of CONFIG_KEYS) {
+    for (const c of code.configs) {
+      const k = c.keys.find((x) => x.field === name || x.key.split('.').pop() === name);
+      if (!k || config[name]) continue;
+      const ns = [...out.values()].find((e) => e.src === c.src)?.i.split(':')[0];
+      config[name] = { key: k.key, default: k.default, file: ns ? `${ns}-${c.type}.toml` : null, type: c.type };
+    }
+    if (!config[name]) warnings.push(`настройка ${name} в коде модов не найдена`);
+  }
+
   const pick = (o, keys) => Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));
   return {
     meta: {
       ...(code.meta.months ? { months: code.meta.months } : {}),
       ...pick(code.meta, ['GROWTH_FACTOR', 'NUTRIENT_CONSUMPTION', 'NUTRIENT_GROWTH_FACTOR', 'UPDATE_INTERVAL']),
+      config,
     },
+    configs: code.configs,
     entries: [...out.values()].sort((a, b) => a.i.localeCompare(b.i)),
     warnings,
   };
 }
 
 export function writeBotany(dataDirs, parse, items, outFile) {
-  const { warnings, ...data } = buildBotany(dataDirs, parse, items);
+  const { warnings, configs, ...data } = buildBotany(dataDirs, parse, items);
   fs.writeFileSync(outFile, JSON.stringify(data));
+  // Все настройки модов по умолчанию — отдельным файлом (сайту пока нужны только три, они продублированы в meta.config)
+  fs.writeFileSync(path.join(path.dirname(outFile), 'config-defaults.json'), JSON.stringify(configs));
   const by = (k) => data.entries.filter((e) => e.k === k).length;
   return {
     crops: by('crop'),
@@ -256,6 +284,7 @@ export function writeBotany(dataDirs, parse, items, outFile) {
     other: by('plant'),
     npk: data.entries.filter((e) => e.npk).length,
     life: data.entries.filter((e) => e.life).length,
+    configKeys: configs.reduce((n, c) => n + c.keys.length, 0),
     warnings,
   };
 }

@@ -148,7 +148,7 @@ const strip = (m) => ({ id: m.id, name: m.name, version: m.version, ...(m.from ?
 
 async function main() {
   const localFile = path.join(ROOT, 'public', 'pack-manifest.json');
-  if (!fs.existsSync(localFile)) throw new Error('нет public/pack-manifest.json — сначала npm run items');
+  if (!fs.existsSync(localFile)) throw new Error('нет public/pack-manifest.json — сначала npm run mods');
   const next = JSON.parse(fs.readFileSync(localFile, 'utf8'));
 
   let prev = null;

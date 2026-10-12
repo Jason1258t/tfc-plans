@@ -152,7 +152,7 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
       {!catalog ? (
         <div className="empty">Загружаю рецепты сборки…</div>
       ) : catalog.list.length === 0 ? (
-        <div className="empty">Каталог рецептов пуст — пересоберите библиотеку: npm run items</div>
+        <div className="empty">Каталог рецептов пуст — пересоберите библиотеку: npm run mods</div>
       ) : !hasFilter ? (
         <div className="empty">
           {catalog.list.length.toLocaleString('ru-RU')} рецептов, {catalog.types.length} типов

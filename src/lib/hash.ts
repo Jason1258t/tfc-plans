@@ -1,4 +1,4 @@
-/** FNV-1a 32 бита — тот же, что в scripts/manifest.mjs: отпечатки рецептов сайта и сборки сравнимы */
+/** FNV-1a 32 бита — тот же, что в scripts/mods/manifest.mjs: отпечатки рецептов сайта и сборки сравнимы */
 export function fnv1a(str: string): string {
   let h = 0x811c9dc5;
   for (let i = 0; i < str.length; i++) {

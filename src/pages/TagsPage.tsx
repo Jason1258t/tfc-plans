@@ -136,7 +136,7 @@ export function TagsPage() {
         <p className="faint">Загружаю теги…</p>
       ) : cat.list.length === 0 ? (
         <p className="empty">
-          Тегов нет: пересоберите библиотеку (<code>npm run items</code>) — она создаёт <code>public/tags.json</code>.
+          Тегов нет: пересоберите библиотеку (<code>npm run mods</code>) — она создаёт <code>public/tags.json</code>.
         </p>
       ) : (
         <div className="tags-body">

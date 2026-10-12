@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ItemIndex } from './items';
 
-/** Справочник сборки: public/reference.json, собирается scripts/reference.mjs вместе с библиотекой предметов */
+/** Справочник сборки: public/reference.json, собирается scripts/mods/reference.mjs вместе с библиотекой предметов */
 export type Grade = 'poor' | 'normal' | 'rich' | 'single' | 'deposit';
 
 export interface VeinItem {

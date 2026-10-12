@@ -9,7 +9,7 @@ import { ItemIcon } from './ItemIcon';
 
 /**
  * Жидкое топливо: нефть и её переработка, бензин, дизель, этанол, растительное масло, биодизель.
- * Данные из jar (scripts/reference.mjs): типы топлива Create: Diesel Generators, генератор IE,
+ * Данные из jar (scripts/mods/reference.mjs): типы топлива Create: Diesel Generators, генератор IE,
  * горелки Create Liquid Fuel и рецепты получения. Семейства — по тегам c:*, поэтому одноимённые
  * жидкости разных модов (этанол IE и CDG) взаимозаменяемы там, где рецепт принимает тег.
  */

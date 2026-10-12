@@ -24,14 +24,14 @@
 ## Команды
 
 ```bash
-npm run dev            # Vite; перед стартом сам дособерёт библиотеку (scripts/ensure-items.mjs)
+npm run dev            # Vite; перед стартом сам дособерёт библиотеку (scripts/ensure-mods.mjs)
 npx tsc -b             # типы (в build входит)
 npx oxlint src scripts # линтер; предупреждения set-state-in-effect и only-export-components — старые, не чинить попутно
 npx prettier --write <файлы>   # singleQuote, printWidth 120; не запускай на весь src без нужды — шум в диффе
 npx firebase deploy --only hosting           # сборка + pack-release + выкладка
 npx firebase deploy --only firestore:rules
-npm run items          # пересобрать библиотеку из mods/ (долго, кеш в .cache/)
-npm run config -- <zip|папка>                # конфиги сервера → Firestore config
+npm run mods          # пересобрать библиотеку из mods/ (долго, кеш в .cache/)
+npm run serverconfig -- <zip|папка>                # конфиги сервера → Firestore config
 npm run kubejs -- <zip|папка> [--layer world]  # скрипты KubeJS → public/kubejs.json
 ```
 
@@ -51,23 +51,27 @@ npm run kubejs -- <zip|папка> [--layer world]  # скрипты KubeJS → 
 
 ## Данные: что откуда берётся
 
+Скрипты разложены **по источнику, который разбирают**, а не по разделам сайта: `scripts/mods.mjs` (+ части в
+`scripts/mods/`) — папка `mods/`; `scripts/serverconfig.mjs` — конфиги сервера; `scripts/kubejs.mjs` — скрипты KubeJS.
+Новый раздел сайта = новая часть в `scripts/mods/`, а не отдельная команда. Старые `npm run items` / `config` — синонимы.
+
 Сайт — статический SPA. Всё «знание о сборке» собирается локально скриптами и деплоится как статика из `public/`
 (в git не хранится), живые данные — в Firestore.
 
 | Источник (не в git)           | Скрипт                                               | Результат                                                                                                 |
 | ----------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `mods/*.jar`                  | `build-items.mjs` (+ `reference`, `manifest`, `geo`, `tags`, `botany`) | `public/items.json`, `icons/`, `recipes.json`, `reference.json`, `pack-manifest.json`, `geo.json`, `geo/`, `tags.json`, `botany.json` |
+| `mods/*.jar`                  | `mods.mjs` (+ `reference`, `manifest`, `geo`, `tags`, `botany`) | `public/items.json`, `icons/`, `recipes.json`, `reference.json`, `pack-manifest.json`, `geo.json`, `geo/`, `tags.json`, `botany.json` |
 | `instance/kubejs/<слой>/`     | `kubejs.mjs`                                         | `public/kubejs.json`                                                                                      |
-| zip/папка конфигов сервера    | `import-config.mjs`                                  | Firestore `config/{scope}__{путь}`                                                                        |
+| zip/папка конфигов сервера    | `serverconfig.mjs`                                  | Firestore `config/{scope}__{путь}`                                                                        |
 | разница манифестов при деплое | `pack-release.mjs` (predeploy)                       | Firestore `packUpdates/{id}`                                                                              |
 
 - Запись в Firestore из скриптов — REST от имени `firebase login` (`scripts/firestore-rest.mjs`), правила на неё не действуют.
   Этим же способом удобно читать базу из node, когда нужно найти задачу или датапак.
 - `src/lib/recipeFilter.ts` и `recipeRefs.ts` — **без импортов, только стираемый синтаксис TS**: их запускает и сайт, и Node
   (`import '../src/lib/x.ts'` из `.mjs`, Node 24). В `tsconfig` включён `erasableSyntaxOnly` — никаких enum и parameter properties.
-- То, что мод задаёт кодом (перечисления, константы), читай скриптом через `scripts/classfile.mjs`, а не вписывай руками:
-  данные сайта должны пересобираться из jar текущей сборки. Пример — `scripts/botany.mjs`.
-- При изменении формата кеша jar поднимай маркер `.done-vN` в `build-items.mjs`, иначе старый кеш не пересоберётся.
+- То, что мод задаёт кодом (перечисления, константы), читай скриптом через `scripts/mods/classfile.mjs`, а не вписывай руками:
+  данные сайта должны пересобираться из jar текущей сборки. Пример — `scripts/mods/botany.mjs`.
+- При изменении формата кеша jar поднимай маркер `.done-vN` в `mods.mjs`, иначе старый кеш не пересоберётся.
 
 ## Firestore
 
@@ -95,7 +99,8 @@ src/lib/
   projection.ts geo.ts atlas.ts config.ts   карта TFC Real World, настройки мира из конфига сервера
   packUpdates.ts gemini.ts     обновления сборки, запросы к Gemini (цепочки моделей с запасными, таймаут 90 с)
   files.ts files.config.ts     вложения через firestore-files
-scripts/          сборщики (см. таблицу выше), firestore-rest.mjs — общий доступ к Firestore
+scripts/          mods.mjs + mods/{reference,tags,botany,geo,manifest,classfile,config-defaults}.mjs, serverconfig.mjs,
+                  kubejs.mjs, pack-release.mjs; firestore-rest.mjs — общий доступ к Firestore
 docs/plans/       планы фич со статусами; docs/STATE.md — текущее состояние
 ```
 

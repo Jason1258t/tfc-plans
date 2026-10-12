@@ -17,13 +17,13 @@
 
 ## Как устроено сейчас
 
-- `npm run items` (`scripts/build-items.mjs`) собирает из jar `public/items.json`, `public/recipes.json` и иконки. Файлы в git не хранятся, собираются у того, кто деплоит.
+- `npm run mods` (`scripts/mods.mjs`) собирает из jar `public/items.json`, `public/recipes.json` и иконки. Файлы в git не хранятся, собираются у того, кто деплоит.
 - `ensure-items` перед `dev` и `build` пересобирает библиотеку, если поменялись jar. Подпись jar лежит в `.cache/items-signature.json`, это имя, размер и дата файла.
 - Подсказки по рецептам, датапаки и файлы лежат в Firestore. Агент — Gemini через AI Logic в браузере.
 
 ## Этап 1. Снимок сборки
 
-`build-items.mjs` дополнительно пишет `public/pack-manifest.json` — компактный отпечаток сборки:
+`mods.mjs` дополнительно пишет `public/pack-manifest.json` — компактный отпечаток сборки:
 
 ```jsonc
 {

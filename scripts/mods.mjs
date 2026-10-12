@@ -11,19 +11,19 @@
  *
  * Сгенерированные файлы не коммитятся (это ассеты Mojang/авторов модов).
  *
- * Использование:  npm run items          (пересобрать, используя кеш)
- *                 npm run items -- --fresh  (скачать всё заново)
+ * Использование:  npm run mods          (пересобрать, используя кеш)
+ *                 npm run mods -- --fresh  (скачать всё заново)
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import AdmZip from 'adm-zip';
-import { writeManifest } from './manifest.mjs';
-import { writeGeo } from './geo.mjs';
-import { buildReference } from './reference.mjs';
-import { writeTags } from './tags.mjs';
-import { isBotanyClass, writeBotany } from './botany.mjs';
+import { writeManifest } from './mods/manifest.mjs';
+import { writeGeo } from './mods/geo.mjs';
+import { buildReference } from './mods/reference.mjs';
+import { writeTags } from './mods/tags.mjs';
+import { isBotanyClass, writeBotany } from './mods/botany.mjs';
 
 const MC_VERSION = '1.21.1';
 
@@ -159,8 +159,8 @@ function prepareJar(file) {
   const st = fs.statSync(file);
   const key = `${path.basename(file, '.jar')}-${st.size}-${Math.round(st.mtimeMs)}`.replace(/[^\w.+-]/g, '_');
   const dir = path.join(CACHE, 'jars', key);
-  // v8 — плюс классы растений (classes/) для ботаники; v7 — плюс климатические диапазоны растений TFC; v6 — плюс теги, жилы, данные TFC для справочника, география TFC Real World и жидкое топливо; теги блоков и сущностей
-  const done = path.join(dir, '.done-v8');
+  // v9 — плюс классы конфигов; v8 — плюс классы растений (classes/) для ботаники; v7 — плюс климатические диапазоны растений TFC; v6 — плюс теги, жилы, данные TFC для справочника, география TFC Real World и жидкое топливо; теги блоков и сущностей
+  const done = path.join(dir, '.done-v9');
   if (!fs.existsSync(done) || fresh) {
     fs.rmSync(dir, { recursive: true, force: true });
     let zip;
@@ -182,7 +182,7 @@ function prepareJar(file) {
       fs.writeFileSync(target, entry.getData());
     }
     // Ботаника: расход удобрений, сезоны и скорость роста моды задают кодом. Классы читаем только у jar,
-    // которые описывают растения TFC (есть climate_range), и только те, что про растения (scripts/botany.mjs).
+    // которые описывают растения TFC (есть climate_range), и только те, что про растения (scripts/mods/botany.mjs).
     if (entries.some((e) => /^data\/[a-z0-9_.-]+\/tfc\/climate_range\//.test(e.entryName))) {
       for (const entry of entries) {
         if (entry.isDirectory || !entry.entryName.endsWith('.class')) continue;
@@ -520,7 +520,7 @@ async function main() {
   const botany = writeBotany(dataDirs, parseLooseJson, items, path.join(ROOT, 'public', 'botany.json'));
   log(
     `ботаника: культур ${botany.crops}, кустов ${botany.bushes}, деревьев ${botany.trees}, прочих ${botany.other}; ` +
-      `из кода: удобрения у ${botany.npk}, сезоны у ${botany.life}`,
+      `из кода: удобрения у ${botany.npk}, сезоны у ${botany.life}, настроек модов ${botany.configKeys}`,
   );
   for (const w of botany.warnings) log(`  ботаника: ${w}`);
   const geo = writeGeo(dataDirs, parseLooseJson, path.join(ROOT, 'public'));

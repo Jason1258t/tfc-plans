@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-/** Запись библиотеки предметов (см. scripts/build-items.mjs) */
+/** Запись библиотеки предметов (см. scripts/mods.mjs) */
 export interface McItem {
   /** id: tfc:metal/ingot/copper */
   i: string;

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { authReady, db } from '../firebase';
 
 /**
- * Конфиги модов, импортированные скриптом scripts/import-config.mjs (коллекция config, только чтение).
+ * Конфиги модов, импортированные скриптом scripts/serverconfig.mjs (коллекция config, только чтение).
  * Документ config/{scope}__{путь с / → __}: values — разобранный TOML.
  */
 export interface ModConfig {
