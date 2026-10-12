@@ -7,7 +7,7 @@ import type { Artifact } from '../types';
 import { AgentPanel } from './AgentPanel';
 import './ArtifactPane.css';
 import { ItemPicker } from './ItemPicker';
-import { Markdown, itemToken } from './Markdown';
+import { Markdown, itemToken, toggleTaskLine } from './Markdown';
 
 type View = 'edit' | 'split' | 'preview';
 
@@ -222,7 +222,13 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
         {view !== 'edit' && (
           <div className="apane-preview" onDoubleClick={() => setView(variant === 'full' ? 'split' : 'edit')}>
             {content.trim() ? (
-              <Markdown source={content} />
+              <Markdown
+                source={content}
+                onToggleTask={(line) => {
+                  const next = toggleTaskLine(content, line);
+                  if (next !== null) change(next);
+                }}
+              />
             ) : (
               <div className="empty">Пусто. Начните писать или попросите агента.</div>
             )}

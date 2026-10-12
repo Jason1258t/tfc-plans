@@ -1,3 +1,4 @@
+import { createContext, useContext } from 'react';
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { itemName, useItems } from '../lib/items';
@@ -28,7 +29,42 @@ function ItemChip({ href }: { href: string }) {
   );
 }
 
-export function Markdown({ source, className }: { source: string; className?: string }) {
+const TASK_BOX = /^((?:\s*>)*\s*(?:[-*+]|\d+[.)])\s+)\[([ xX])\]/;
+
+/** Переключает чекбокс `- [ ]` в строке исходника (нумерация с 1); null — в строке чекбокса нет */
+export function toggleTaskLine(source: string, line: number): string | null {
+  const lines = source.split('\n');
+  const text = lines[line - 1];
+  if (text === undefined || !TASK_BOX.test(text)) return null;
+  lines[line - 1] = text.replace(TASK_BOX, (_, head: string, mark: string) => `${head}[${mark === ' ' ? 'x' : ' '}]`);
+  return lines.join('\n');
+}
+
+/** Строка исходника, с которой начинается текущий пункт списка, — чтобы чекбокс знал, что править */
+const TaskLine = createContext<number | null>(null);
+
+function TaskBox({ checked, onToggle }: { checked: boolean; onToggle?: (line: number) => void }) {
+  const line = useContext(TaskLine);
+  if (!onToggle || line === null) return <input type="checkbox" checked={checked} disabled readOnly />;
+  return (
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={() => onToggle(line)}
+      // Двойной клик по просмотру открывает редактор — быстрые клики по чекбоксу не должны
+      onDoubleClick={(e) => e.stopPropagation()}
+    />
+  );
+}
+
+interface Props {
+  source: string;
+  className?: string;
+  /** Клик по чекбоксу списка задач; без него чекбоксы только показываются */
+  onToggleTask?: (line: number) => void;
+}
+
+export function Markdown({ source, className, onToggleTask }: Props) {
   return (
     <div className={`md ${className ?? ''}`}>
       <ReactMarkdown
@@ -43,6 +79,13 @@ export function Markdown({ source, className }: { source: string; className?: st
                 {children}
               </a>
             ),
+          li: ({ node, children, ...rest }) => (
+            <li {...rest}>
+              <TaskLine.Provider value={node?.position?.start.line ?? null}>{children}</TaskLine.Provider>
+            </li>
+          ),
+          input: ({ type, checked }) =>
+            type === 'checkbox' ? <TaskBox checked={Boolean(checked)} onToggle={onToggleTask} /> : null,
         }}
       >
         {preprocess(source)}

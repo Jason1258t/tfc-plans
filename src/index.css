@@ -552,6 +552,10 @@ select.input {
   margin-left: -1.3em;
 }
 
+.md li.task-list-item input:not(:disabled) {
+  cursor: pointer;
+}
+
 .md li.task-list-item input {
   margin: 0 6px 0 0;
   accent-color: var(--accent);
