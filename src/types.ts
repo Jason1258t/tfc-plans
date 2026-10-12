@@ -139,6 +139,8 @@ export interface SavedSchematic {
   blocks: number;
   /** Замены: to = '#remove' — блок удаляется из схемы */
   replace: { from: string; to: string }[];
+  /** Обрезка и отступы при скачивании; нет у схем, сохранённых раньше */
+  shape?: { crop: boolean; sides: number; bottom: number; top: number; clearAir: boolean };
   author: string;
   updatedBy: string;
   createdAt: number;

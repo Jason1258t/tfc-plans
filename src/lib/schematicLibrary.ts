@@ -1,7 +1,7 @@
 import { schematicsStore } from '../data/store';
 import type { SavedSchematic } from '../types';
 import { fileBlob, removeFile, uploadFile } from './files';
-import { loadSchematic, type Schematic } from './schematic';
+import { DEFAULT_SHAPE, loadSchematic, type Schematic } from './schematic';
 
 /**
  * Библиотека схем. Исходник .nbt — в хранилище файлов без привязки к задаче, в записи — имя и замены.
@@ -14,7 +14,7 @@ const replaceList = (s: Schematic, replace: Map<string, string>) =>
 
 export async function saveToLibrary(s: Schematic, replace: Map<string, string>, nick: string): Promise<string> {
   if (s.libraryId) {
-    await schematicsStore.update(s.libraryId, { replace: replaceList(s, replace), updatedBy: nick });
+    await schematicsStore.update(s.libraryId, { replace: replaceList(s, replace), shape: s.shape, updatedBy: nick });
     return s.libraryId;
   }
   const fileId = await uploadFile(s.file, { taskId: null, author: nick });
@@ -26,6 +26,7 @@ export async function saveToLibrary(s: Schematic, replace: Map<string, string>, 
     size: s.size,
     blocks: [...s.counts.values()].reduce((a, n) => a + n, 0),
     replace: replaceList(s, replace),
+    shape: s.shape,
     author: nick,
     updatedBy: nick,
   });
@@ -44,6 +45,7 @@ export async function openFromLibrary(
   const schematic = await loadSchematic(new File([blob], `${safe || entry.fileName.replace(/\.nbt$/i, '')}.nbt`));
   schematic.key = `lib:${entry.id}`;
   schematic.libraryId = entry.id;
+  schematic.shape = { ...DEFAULT_SHAPE, ...entry.shape };
   return { schematic, replace: new Map(entry.replace.map((r) => [r.from, r.to])) };
 }
 

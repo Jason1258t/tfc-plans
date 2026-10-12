@@ -24,6 +24,7 @@ import { itemName, useItems } from '../lib/items';
 import {
   applyRules,
   changesIn,
+  shapedSize,
   exportSchematic,
   invalidTargets,
   loadSchematic,
@@ -97,7 +98,9 @@ const outName = (name: string) => name.replace(/(\.nbt)?$/i, '_tfc.nbt');
 
 /** Отпечаток замен одной схемы — понять, отличаются ли они от сохранённых в библиотеке */
 const replaceSig = (s: Schematic, replace: Map<string, string>) =>
-  JSON.stringify([...replace].filter(([from]) => s.counts.has(from)).sort());
+  JSON.stringify([[...replace].filter(([from]) => s.counts.has(from)).sort(), s.shape]);
+
+const clampPad = (v: string) => Math.min(64, Math.max(0, Math.floor(Number(v)) || 0));
 
 /** Мод предмета — у одноимённых предметов (TFC и ванильный «Медный люк») различается только он */
 const modOf = (id: string) => id.split(':')[0];
@@ -237,8 +240,15 @@ export function SchematicsPage() {
       return;
     }
     setExportError(null);
-    download(await exportSchematic(s, rep), outName(s.fileName));
+    try {
+      download(await exportSchematic(s, rep), outName(s.fileName));
+    } catch (e) {
+      setExportError(`Не скачано: ${e instanceof Error ? e.message : e}`);
+    }
   };
+
+  const setShape = (key: string, patch: Partial<Schematic['shape']>) =>
+    setSchematics((list) => list.map((x) => (x.key === key ? { ...x, shape: { ...x.shape, ...patch } } : x)));
 
   const save = async (s: Schematic) => {
     setSaving((m) => ({ ...m, [s.key]: 'saving' }));
@@ -324,6 +334,7 @@ export function SchematicsPage() {
           <ul className="schem-files">
             {schematics.map((s) => {
               const ch = changesIn(s, replace);
+              const shaped = shapedSize(s, replace);
               return (
                 <li key={s.key} className="schem-file">
                   <FileBox size={18} className="faint" />
@@ -331,7 +342,8 @@ export function SchematicsPage() {
                     <span className="schem-file-name">{s.fileName}</span>
                     <span className="faint small">
                       {formatSize(s.fileSize)}
-                      {s.size && ` · ${s.size.join('×')}`} · {s.counts.size} типов блоков
+                      {s.size && ` · ${s.size.join('×')}`}
+                      {shaped && ` → ${shaped.join('×')}`} · {s.counts.size} типов блоков
                       {ch.types > 0 && ` · изменено ${ch.types} (${ch.blocks} шт.)`}
                       {ch.removed > 0 && ` · удаляется ${ch.removed} шт.`}
                     </span>
@@ -378,6 +390,49 @@ export function SchematicsPage() {
                   >
                     <X size={15} />
                   </button>
+                  <div className="schem-shape">
+                    <label
+                      className="toggle sm-toggle"
+                      title="Убрать пустое место по краям: габарит — по крайним блокам, воздух не считается"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={s.shape.crop}
+                        onChange={(e) => setShape(s.key, { crop: e.target.checked })}
+                      />
+                      Обрезать края
+                    </label>
+                    {(
+                      [
+                        ['sides', 'по бокам'],
+                        ['bottom', 'снизу'],
+                        ['top', 'сверху'],
+                      ] as const
+                    ).map(([k, label]) => (
+                      <label key={k} className="schem-pad small">
+                        <span className="faint">Отступ {label}</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={64}
+                          value={s.shape[k]}
+                          disabled={!s.shape.crop}
+                          onChange={(e) => setShape(s.key, { [k]: clampPad(e.target.value) })}
+                        />
+                      </label>
+                    ))}
+                    <label
+                      className="toggle sm-toggle"
+                      title="Записать воздух во все свободные клетки итогового объёма (и в отступы), чтобы при вставке схема расчищала место, а не оставляла то, что там было"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={s.shape.clearAir}
+                        onChange={(e) => setShape(s.key, { clearAir: e.target.checked })}
+                      />
+                      Очистить пространство
+                    </label>
+                  </div>
                 </li>
               );
             })}

@@ -59,12 +59,33 @@
 
 .schem-file {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   padding: 8px 8px 8px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
+}
+
+.schem-shape {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border);
+}
+
+.schem-pad {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.schem-pad input {
+  width: 56px;
 }
 
 .schem-file-name {

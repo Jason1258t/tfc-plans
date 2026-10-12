@@ -26,7 +26,29 @@ export interface Schematic {
   /** id блока → сколько раз встречается */
   counts: Map<string, number>;
   size: [number, number, number] | null;
+  /** Обрезка и отступы при скачивании */
+  shape: Shape;
 }
+
+/**
+ * Форма схемы при скачивании. crop — обрезать по крайним непустым блокам (воздух и структурная пустота
+ * не считаются), sides/bottom/top — сколько пустых блоков оставить вокруг (sides — по X и Z).
+ * clearAir — записать воздух во все свободные клетки итогового объёма, чтобы при вставке он расчищал место.
+ */
+export interface Shape {
+  crop: boolean;
+  sides: number;
+  bottom: number;
+  top: number;
+  clearAir: boolean;
+}
+
+export const DEFAULT_SHAPE: Shape = { crop: false, sides: 0, bottom: 0, top: 1, clearAir: false };
+
+/** Не больше стольких клеток при записи воздуха: каждая — отдельная запись в файле и в памяти браузера */
+const MAX_CLEAR_CELLS = 2_000_000;
+
+const EMPTY_BLOCKS = new Set(['minecraft:air', 'minecraft:cave_air', 'minecraft:void_air', 'minecraft:structure_void']);
 
 function paletteLists(root: Compound): Tag[][] {
   const single = root.get('palette');
@@ -81,7 +103,75 @@ export async function loadSchematic(file: File): Promise<Schematic> {
     parsed,
     counts,
     size,
+    shape: { ...DEFAULT_SHAPE },
   };
+}
+
+type Vec = [number, number, number];
+
+const posOf = (b: Tag): Vec | null => {
+  if (b.type !== T.Compound) return null;
+  const p = b.value.get('pos');
+  if (p?.type !== T.List || p.value.length !== 3) return null;
+  const v = p.value.map((x) => (x.type === T.Int ? x.value : NaN));
+  return v.some(Number.isNaN) ? null : (v as Vec);
+};
+
+/** Индексы палитры, которые после замен — воздух/пустота или удаляются */
+function emptyStates(palette: Tag[], replace: Map<string, string>) {
+  const out = new Set<number>();
+  palette.forEach((entry, i) => {
+    const name = nameOf(entry);
+    if (!name) return;
+    const to = replace.get(name) ?? name;
+    if (to === REMOVE || EMPTY_BLOCKS.has(to)) out.add(i);
+  });
+  return out;
+}
+
+/** Итоговый объём: начало в координатах исходника и размер. null — менять нечего */
+function shapeBox(s: Schematic, replace: Map<string, string>): { min: Vec; size: Vec } | null {
+  const { shape } = s;
+  if (!shape.crop && !shape.clearAir) return null;
+  const root = s.parsed.root.value;
+  const palette = paletteLists(root)[0] ?? [];
+  const blocks = root.get('blocks');
+  const list = blocks?.type === T.List ? blocks.value : [];
+  const empty = emptyStates(palette, replace);
+
+  const lo: Vec = [Infinity, Infinity, Infinity];
+  const hi: Vec = [-Infinity, -Infinity, -Infinity];
+  const all = { lo: [...lo] as Vec, hi: [...hi] as Vec };
+  for (const b of list) {
+    const p = posOf(b);
+    if (!p || b.type !== T.Compound) continue;
+    const st = b.value.get('state');
+    const solid = !(st?.type === T.Int && empty.has(st.value));
+    for (let i = 0; i < 3; i++) {
+      all.lo[i] = Math.min(all.lo[i], p[i]);
+      all.hi[i] = Math.max(all.hi[i], p[i]);
+      if (solid) {
+        lo[i] = Math.min(lo[i], p[i]);
+        hi[i] = Math.max(hi[i], p[i]);
+      }
+    }
+  }
+  if (shape.crop && Number.isFinite(lo[0])) {
+    const pad: Vec = [shape.sides, shape.bottom, shape.sides];
+    const padHi: Vec = [shape.sides, shape.top, shape.sides];
+    return {
+      min: lo.map((v, i) => v - pad[i]) as Vec,
+      size: lo.map((v, i) => hi[i] - v + 1 + pad[i] + padHi[i]) as Vec,
+    };
+  }
+  // Без обрезки — исходный объём (из size, а если его нет — по блокам)
+  const size: Vec = s.size ?? (all.hi.map((v, i) => (Number.isFinite(v) ? v - Math.min(0, all.lo[i]) + 1 : 0)) as Vec);
+  return { min: [0, 0, 0], size };
+}
+
+/** Размер файла после обрезки — для показа в списке; null, если форма не меняется */
+export function shapedSize(s: Schematic, replace: Map<string, string>): Vec | null {
+  return shapeBox(s, replace)?.size ?? null;
 }
 
 /** Значение в карте замен: блок убирается из схемы целиком (позиции удаляются, а не заменяются воздухом) */
@@ -97,6 +187,15 @@ export function invalidTargets(replace: Map<string, string>, items: ItemIndex) {
 
 /** Новый файл с заменами (исходник в памяти не меняется) */
 export async function exportSchematic(s: Schematic, replace: Map<string, string>): Promise<Uint8Array> {
+  // Объём считаем по исходнику и исходным именам: в клоне палитра уже с заменами
+  const box = shapeBox(s, replace);
+  if (box && s.shape.clearAir) {
+    const cells = box.size[0] * box.size[1] * box.size[2];
+    if (cells > MAX_CLEAR_CELLS)
+      throw new Error(`Очистка пространства: ${box.size.join('×')} — слишком большой объём (${cells} клеток)`);
+    if (paletteLists(s.parsed.root.value).length > 1)
+      throw new Error('Очистка пространства не поддерживается для схем с несколькими палитрами');
+  }
   const root = structuredClone(s.parsed.root);
   const palettes = paletteLists(root.value);
   // Индексы удаляемых блоков — по первой палитре (по ней же считаются блоки в loadSchematic)
@@ -123,7 +222,81 @@ export async function exportSchematic(s: Schematic, replace: Map<string, string>
       return !(state?.type === T.Int && removed.has(state.value));
     });
   }
+  if (box) reshape(root.value, box, s.shape.clearAir);
   return writeNbt(root, s.parsed.gzipped);
+}
+
+const intList = (v: Vec): Tag => ({ type: T.List, elemType: T.Int, value: v.map((x) => ({ type: T.Int, value: x })) });
+
+/** Сдвиг блоков и сущностей в новый объём; блоки вне объёма отбрасываются, свободные клетки — воздух */
+function reshape(root: Compound, box: { min: Vec; size: Vec }, clearAir: boolean) {
+  const { min, size } = box;
+  const inside = (p: Vec) => p.every((v, i) => v >= 0 && v < size[i]);
+  const shift = (p: Vec) => p.map((v, i) => v - min[i]) as Vec;
+
+  const blocks = root.get('blocks');
+  const kept: Tag[] = [];
+  const occupied = new Set<number>();
+  if (blocks?.type === T.List) {
+    for (const b of blocks.value) {
+      const p = posOf(b);
+      if (!p || b.type !== T.Compound) continue;
+      const q = shift(p);
+      if (!inside(q)) continue;
+      b.value.set('pos', intList(q));
+      kept.push(b);
+      occupied.add((q[1] * size[2] + q[2]) * size[0] + q[0]);
+    }
+  }
+
+  if (clearAir) {
+    const palette = paletteLists(root)[0];
+    let air = palette.findIndex(
+      (e) => nameOf(e) === 'minecraft:air' && e.type === T.Compound && !e.value.has('Properties'),
+    );
+    if (air < 0) {
+      palette.push({ type: T.Compound, value: new Map([['Name', { type: T.String, value: 'minecraft:air' }]]) });
+      air = palette.length - 1;
+    }
+    for (let y = 0; y < size[1]; y++)
+      for (let z = 0; z < size[2]; z++)
+        for (let x = 0; x < size[0]; x++) {
+          if (occupied.has((y * size[2] + z) * size[0] + x)) continue;
+          kept.push({
+            type: T.Compound,
+            value: new Map<string, Tag>([
+              ['pos', intList([x, y, z])],
+              ['state', { type: T.Int, value: air }],
+            ]),
+          });
+        }
+  }
+  if (blocks?.type === T.List) blocks.value = kept;
+  else root.set('blocks', { type: T.List, elemType: T.Compound, value: kept });
+
+  root.set('size', intList(size));
+
+  const entities = root.get('entities');
+  if (entities?.type === T.List) {
+    entities.value = entities.value.filter((e) => {
+      if (e.type !== T.Compound) return true;
+      const bp = e.value.get('blockPos');
+      const pos = e.value.get('pos');
+      if (bp?.type === T.List && bp.value.length === 3) {
+        const q = shift(bp.value.map((x) => (x.type === T.Int ? x.value : 0)) as Vec);
+        if (!inside(q)) return false;
+        e.value.set('blockPos', intList(q));
+      }
+      if (pos?.type === T.List && pos.value.length === 3) {
+        e.value.set('pos', {
+          type: T.List,
+          elemType: T.Double,
+          value: pos.value.map((x, i) => ({ type: T.Double, value: (x.type === T.Double ? x.value : 0) - min[i] })),
+        });
+      }
+      return true;
+    });
+  }
 }
 
 export function changesIn(s: Schematic, replace: Map<string, string>) {
