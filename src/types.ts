@@ -140,7 +140,17 @@ export interface SavedSchematic {
   /** Замены: to = '#remove' — блок удаляется из схемы */
   replace: { from: string; to: string }[];
   /** Обрезка и отступы при скачивании; нет у схем, сохранённых раньше */
-  shape?: { crop: boolean; sides: number; bottom: number; top: number; clearAir: boolean };
+  shape?: {
+    crop: boolean;
+    sides: number;
+    bottom: number;
+    top: number;
+    clearAir: boolean;
+    platform?: boolean;
+    platformHeight?: number;
+    platformBlock?: string;
+    platformHollow?: boolean;
+  };
   author: string;
   updatedBy: string;
   createdAt: number;

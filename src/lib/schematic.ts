@@ -41,9 +41,27 @@ export interface Shape {
   bottom: number;
   top: number;
   clearAir: boolean;
+  /**
+   * Площадка: platformHeight слоёв блока platformBlock под всей схемой, ниже нижнего отступа.
+   * platformHollow: сплошной только верхний слой, ниже — стенки по периметру, без дна («перевёрнутая коробка»).
+   */
+  platform: boolean;
+  platformHeight: number;
+  platformBlock: string;
+  platformHollow: boolean;
 }
 
-export const DEFAULT_SHAPE: Shape = { crop: false, sides: 0, bottom: 0, top: 1, clearAir: false };
+export const DEFAULT_SHAPE: Shape = {
+  crop: false,
+  sides: 0,
+  bottom: 0,
+  top: 1,
+  clearAir: false,
+  platform: false,
+  platformHeight: 1,
+  platformBlock: 'minecraft:stone',
+  platformHollow: false,
+};
 
 /** Не больше стольких клеток при записи воздуха: каждая — отдельная запись в файле и в памяти браузера */
 const MAX_CLEAR_CELLS = 2_000_000;
@@ -132,7 +150,7 @@ function emptyStates(palette: Tag[], replace: Map<string, string>) {
 /** Итоговый объём: начало в координатах исходника и размер. null — менять нечего */
 function shapeBox(s: Schematic, replace: Map<string, string>): { min: Vec; size: Vec } | null {
   const { shape } = s;
-  if (!shape.crop && !shape.clearAir) return null;
+  if (!shape.crop && !shape.clearAir && !shape.platform) return null;
   const root = s.parsed.root.value;
   const palette = paletteLists(root)[0] ?? [];
   const blocks = root.get('blocks');
@@ -156,17 +174,23 @@ function shapeBox(s: Schematic, replace: Map<string, string>): { min: Vec; size:
       }
     }
   }
+  // Площадка — ещё H слоёв под низом: начало уходит вниз, размер по Y растёт
+  const base = shape.platform ? shape.platformHeight : 0;
+  const withPlatform = (min: Vec, size: Vec) => ({
+    min: [min[0], min[1] - base, min[2]] as Vec,
+    size: [size[0], size[1] + base, size[2]] as Vec,
+  });
   if (shape.crop && Number.isFinite(lo[0])) {
     const pad: Vec = [shape.sides, shape.bottom, shape.sides];
     const padHi: Vec = [shape.sides, shape.top, shape.sides];
-    return {
-      min: lo.map((v, i) => v - pad[i]) as Vec,
-      size: lo.map((v, i) => hi[i] - v + 1 + pad[i] + padHi[i]) as Vec,
-    };
+    return withPlatform(
+      lo.map((v, i) => v - pad[i]) as Vec,
+      lo.map((v, i) => hi[i] - v + 1 + pad[i] + padHi[i]) as Vec,
+    );
   }
   // Без обрезки — исходный объём (из size, а если его нет — по блокам)
   const size: Vec = s.size ?? (all.hi.map((v, i) => (Number.isFinite(v) ? v - Math.min(0, all.lo[i]) + 1 : 0)) as Vec);
-  return { min: [0, 0, 0], size };
+  return withPlatform([0, 0, 0], size);
 }
 
 /** Размер файла после обрезки — для показа в списке; null, если форма не меняется */
@@ -189,12 +213,12 @@ export function invalidTargets(replace: Map<string, string>, items: ItemIndex) {
 export async function exportSchematic(s: Schematic, replace: Map<string, string>): Promise<Uint8Array> {
   // Объём считаем по исходнику и исходным именам: в клоне палитра уже с заменами
   const box = shapeBox(s, replace);
-  if (box && s.shape.clearAir) {
+  if (box && (s.shape.clearAir || s.shape.platform)) {
     const cells = box.size[0] * box.size[1] * box.size[2];
     if (cells > MAX_CLEAR_CELLS)
-      throw new Error(`Очистка пространства: ${box.size.join('×')} — слишком большой объём (${cells} клеток)`);
+      throw new Error(`Площадка или очистка: ${box.size.join('×')} — слишком большой объём (${cells} клеток)`);
     if (paletteLists(s.parsed.root.value).length > 1)
-      throw new Error('Очистка пространства не поддерживается для схем с несколькими палитрами');
+      throw new Error('Площадка и очистка пространства не поддерживаются для схем с несколькими палитрами');
   }
   const root = structuredClone(s.parsed.root);
   const palettes = paletteLists(root.value);
@@ -222,14 +246,14 @@ export async function exportSchematic(s: Schematic, replace: Map<string, string>
       return !(state?.type === T.Int && removed.has(state.value));
     });
   }
-  if (box) reshape(root.value, box, s.shape.clearAir);
+  if (box) reshape(root.value, box, s.shape);
   return writeNbt(root, s.parsed.gzipped);
 }
 
 const intList = (v: Vec): Tag => ({ type: T.List, elemType: T.Int, value: v.map((x) => ({ type: T.Int, value: x })) });
 
 /** Сдвиг блоков и сущностей в новый объём; блоки вне объёма отбрасываются, свободные клетки — воздух */
-function reshape(root: Compound, box: { min: Vec; size: Vec }, clearAir: boolean) {
+function reshape(root: Compound, box: { min: Vec; size: Vec }, shape: Shape) {
   const { min, size } = box;
   const inside = (p: Vec) => p.every((v, i) => v >= 0 && v < size[i]);
   const shift = (p: Vec) => p.map((v, i) => v - min[i]) as Vec;
@@ -249,26 +273,47 @@ function reshape(root: Compound, box: { min: Vec; size: Vec }, clearAir: boolean
     }
   }
 
-  if (clearAir) {
-    const palette = paletteLists(root)[0];
-    let air = palette.findIndex(
-      (e) => nameOf(e) === 'minecraft:air' && e.type === T.Compound && !e.value.has('Properties'),
-    );
-    if (air < 0) {
-      palette.push({ type: T.Compound, value: new Map([['Name', { type: T.String, value: 'minecraft:air' }]]) });
-      air = palette.length - 1;
+  const cellKey = (x: number, y: number, z: number) => (y * size[2] + z) * size[0] + x;
+  const newBlock = (x: number, y: number, z: number, state: number): Tag => ({
+    type: T.Compound,
+    value: new Map<string, Tag>([
+      ['pos', intList([x, y, z])],
+      ['state', { type: T.Int, value: state }],
+    ]),
+  });
+  const palette = paletteLists(root)[0];
+  /** Индекс блока без свойств в палитре; нет — добавляется в конец */
+  const stateOf = (name: string) => {
+    let i = palette.findIndex((e) => nameOf(e) === name && e.type === T.Compound && !e.value.has('Properties'));
+    if (i < 0) {
+      palette.push({ type: T.Compound, value: new Map([['Name', { type: T.String, value: name }]]) });
+      i = palette.length - 1;
     }
+    return i;
+  };
+
+  // Площадка: слои снизу вверх, верхний сплошной, остальные при «пустой» — только периметр.
+  // Она ниже всего блока схемы (начало объёма опущено на её высоту), поэтому с блоками не пересекается
+  if (shape.platform && shape.platformHeight > 0) {
+    const st = stateOf(shape.platformBlock);
+    for (let y = 0; y < shape.platformHeight; y++) {
+      const solid = !shape.platformHollow || y === shape.platformHeight - 1;
+      for (let z = 0; z < size[2]; z++)
+        for (let x = 0; x < size[0]; x++) {
+          const edge = x === 0 || z === 0 || x === size[0] - 1 || z === size[2] - 1;
+          if (!solid && !edge) continue;
+          kept.push(newBlock(x, y, z, st));
+          occupied.add(cellKey(x, y, z));
+        }
+    }
+  }
+
+  if (shape.clearAir) {
+    const air = stateOf('minecraft:air');
     for (let y = 0; y < size[1]; y++)
       for (let z = 0; z < size[2]; z++)
         for (let x = 0; x < size[0]; x++) {
-          if (occupied.has((y * size[2] + z) * size[0] + x)) continue;
-          kept.push({
-            type: T.Compound,
-            value: new Map<string, Tag>([
-              ['pos', intList([x, y, z])],
-              ['state', { type: T.Int, value: air }],
-            ]),
-          });
+          if (!occupied.has(cellKey(x, y, z))) kept.push(newBlock(x, y, z, air));
         }
   }
   if (blocks?.type === T.List) blocks.value = kept;

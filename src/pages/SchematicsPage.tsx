@@ -119,6 +119,8 @@ export function SchematicsPage() {
   const [dragging, setDragging] = useState(false);
   const [filter, setFilter] = useState('');
   const [picking, setPicking] = useState<string | null>(null);
+  /** key схемы, у которой выбирают материал площадки */
+  const [pickingPlatform, setPickingPlatform] = useState<string | null>(null);
   const [rules, setRules] = useState<Rule[]>(loadRules);
   const [overwrite, setOverwrite] = useState(false);
   const [result, setResult] = useState<SmartResult | null>(null);
@@ -237,6 +239,10 @@ export function SchematicsPage() {
       setExportError(
         `Не скачано: замены на предметы, которых нет в сборке — ${bad.map((b) => `${b.from} → ${b.to}`).join(', ')}`,
       );
+      return;
+    }
+    if (s.shape.platform && !items.byId.has(s.shape.platformBlock)) {
+      setExportError(`Не скачано: материала площадки ${s.shape.platformBlock} нет в сборке — выберите другой`);
       return;
     }
     setExportError(null);
@@ -421,6 +427,72 @@ export function SchematicsPage() {
                         />
                       </label>
                     ))}
+                    <label className="toggle sm-toggle" title="Слои блока под всей схемой, ниже нижнего отступа">
+                      <input
+                        type="checkbox"
+                        checked={s.shape.platform}
+                        onChange={(e) => setShape(s.key, { platform: e.target.checked })}
+                      />
+                      Площадка
+                    </label>
+                    {s.shape.platform && (
+                      <>
+                        <label className="schem-pad small">
+                          <span className="faint">Высота</span>
+                          <input
+                            type="number"
+                            min={1}
+                            max={32}
+                            value={s.shape.platformHeight}
+                            onChange={(e) =>
+                              setShape(s.key, {
+                                platformHeight: Math.min(32, Math.max(1, Math.floor(Number(e.target.value)) || 1)),
+                              })
+                            }
+                          />
+                        </label>
+                        {pickingPlatform === s.key ? (
+                          <span className="schem-platform-pick">
+                            <ItemPicker
+                              small
+                              autoFocus
+                              placeholder="Материал площадки…"
+                              onPick={(it) => {
+                                setShape(s.key, { platformBlock: it.i });
+                                setPickingPlatform(null);
+                              }}
+                            />
+                            <button
+                              className="btn ghost sm icon"
+                              onClick={() => setPickingPlatform(null)}
+                              aria-label="Отмена"
+                            >
+                              <X size={15} />
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            className="btn sm"
+                            onClick={() => setPickingPlatform(s.key)}
+                            title={s.shape.platformBlock}
+                          >
+                            <ItemIcon id={s.shape.platformBlock} size={18} tip={false} />
+                            {itemName(items?.byId.get(s.shape.platformBlock), s.shape.platformBlock)}
+                          </button>
+                        )}
+                        <label
+                          className="toggle sm-toggle"
+                          title="При высоте больше 1: сплошной только верхний слой, ниже — стенки по периметру, пустота внутри и без дна"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={s.shape.platformHollow}
+                            onChange={(e) => setShape(s.key, { platformHollow: e.target.checked })}
+                          />
+                          Пустая
+                        </label>
+                      </>
+                    )}
                     <label
                       className="toggle sm-toggle"
                       title="Записать воздух во все свободные клетки итогового объёма (и в отступы), чтобы при вставке схема расчищала место, а не оставляла то, что там было"

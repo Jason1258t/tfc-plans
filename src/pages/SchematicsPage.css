@@ -84,6 +84,13 @@
   gap: 6px;
 }
 
+.schem-platform-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 220px;
+}
+
 .schem-pad input {
   width: 56px;
 }
