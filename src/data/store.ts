@@ -7,8 +7,10 @@ import type {
   NewArtifact,
   NewDatapack,
   NewGroup,
+  NewReplaceFavorite,
   NewSavedSchematic,
   NewTask,
+  ReplaceFavorite,
   SavedSchematic,
   Task,
 } from '../types';
@@ -111,3 +113,4 @@ export const groupsStore = make<Group, NewGroup>('groups');
 export const artifactsStore = make<Artifact, NewArtifact>('artifacts');
 export const datapacksStore = make<Datapack, NewDatapack>('datapacks');
 export const schematicsStore = make<SavedSchematic, NewSavedSchematic>('schematics');
+export const replaceFavoritesStore = make<ReplaceFavorite, NewReplaceFavorite>('replaceFavorites');

@@ -311,6 +311,7 @@ npm run serverconfig -- ~/Downloads/serverconfig.zip
 | `files`       | вложения — пакет firestore-files (метаданные + `chunks/{n}`)                                                                                                                     |
 | `datapacks`   | `name`, `namespace`, `description`, `entries[]` (`path`, `content`, `kind`, `sourceRecipe`, `sourceHash`)                                                                        |
 | `schematics`  | библиотека схем: `name`, `fileName`, `fileId` (исходник в `files`), `replace[]` ({from, to}, `#remove` — удалить)                                                                |
+| `replaceFavorites` | избранные замены блоков в схемах: `from`, `to`, `updatedBy` (у одного `from` может быть несколько) |
 | `recipeHints` | подсказки по типам рецептов: `title`, `body`, `source`                                                                                                                           |
 | `packUpdates` | записи об обновлениях сборки (создаёт деплой), `notes` — патчноут                                                                                                                |
 | `config`      | конфиги модов из `npm run serverconfig`: `scope`, `path`, `mod`, `values` (TOML), `importedBy`, `importedAt`                                                                           |

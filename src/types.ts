@@ -158,3 +158,15 @@ export interface SavedSchematic {
 }
 
 export type NewSavedSchematic = Omit<SavedSchematic, 'id' | 'createdAt' | 'updatedAt'>;
+
+/** Избранная замена блока в схемах: общая для группы, у одного блока может быть несколько вариантов */
+export interface ReplaceFavorite {
+  id: string;
+  from: string;
+  to: string;
+  updatedBy: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type NewReplaceFavorite = Omit<ReplaceFavorite, 'id' | 'createdAt' | 'updatedAt'>;

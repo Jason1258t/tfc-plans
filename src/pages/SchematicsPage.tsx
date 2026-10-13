@@ -8,6 +8,7 @@ import {
   RotateCcw,
   Search,
   Sparkles,
+  Star,
   Trash2,
   Upload,
   Wand2,
@@ -16,6 +17,15 @@ import {
 import { useMemo, useRef, useState } from 'react';
 import { ItemIcon } from '../components/ItemIcon';
 import { ItemPicker } from '../components/ItemPicker';
+import {
+  ApplyFavoritesDialog,
+  FavoritesPanel,
+  SmartAddDialog,
+  type Pair,
+  type PlanRow,
+} from '../components/SchematicFavorites';
+import { replaceFavoritesStore } from '../data/store';
+import { useFavorites } from '../lib/replaceFavorites';
 import { SchematicLibrary } from '../components/SchematicLibrary';
 import { useData } from '../data/DataContext';
 import { filesEnabled, formatSize } from '../lib/files';
@@ -120,6 +130,10 @@ export function SchematicsPage() {
   const [filter, setFilter] = useState('');
   const [picking, setPicking] = useState<string | null>(null);
   /** key схемы, у которой выбирают материал площадки */
+  const favorites = useFavorites();
+  /** Пара, для которой открыто «добавить в избранное» с умным дополнением */
+  const [smartFor, setSmartFor] = useState<Pair | null>(null);
+  const [applyFavsOpen, setApplyFavsOpen] = useState(false);
   const [pickingPlatform, setPickingPlatform] = useState<string | null>(null);
   const [rules, setRules] = useState<Rule[]>(loadRules);
   const [overwrite, setOverwrite] = useState(false);
@@ -203,6 +217,17 @@ export function SchematicsPage() {
     });
   };
 
+  /** Пакетно записать замены (из избранного); цели вне библиотеки сборки пропускаются */
+  const applyPairs = (pairs: Pair[]) => {
+    const ok = pairs.filter((p) => p.to !== p.from && items?.byId.has(p.to));
+    if (!ok.length) return;
+    const ids = new Set(ok.map((p) => p.from));
+    const drop = (m: Map<string, unknown>) => new Map([...m].filter(([k]) => !ids.has(k)));
+    setReasons((m) => drop(m) as Map<string, string>);
+    setAlts((m) => drop(m) as Map<string, string[]>);
+    setReplace((m) => new Map([...m, ...ok.map((p) => [p.from, p.to] as const)]));
+  };
+
   const updateRules = (next: Rule[]) => {
     setRules(next);
     saveRules(next);
@@ -229,6 +254,22 @@ export function SchematicsPage() {
       setProgress(null);
     }
   };
+
+  /** Что можно подставить из избранного: блоки без замены, у которых есть избранные цели из сборки */
+  const favPlan = useMemo<PlanRow[]>(() => {
+    if (!items || !favorites?.length) return [];
+    const by = new Map<string, string[]>();
+    for (const f of favorites) {
+      if (!items.byId.has(f.to)) continue;
+      const list = by.get(f.from) ?? [];
+      if (!list.includes(f.to)) list.push(f.to);
+      by.set(f.from, list);
+    }
+    return blocks
+      .filter((b) => !replace.has(b.id) && by.has(b.id))
+      .map((b) => ({ from: b.id, count: b.count, options: by.get(b.id)! }));
+  }, [items, favorites, blocks, replace]);
+  const presentIds = useMemo(() => new Set(blocks.map((b) => b.id)), [blocks]);
 
   const replacedTypes = blocks.filter((b) => replace.has(b.id)).length;
 
@@ -646,6 +687,15 @@ export function SchematicsPage() {
             )}
           </section>
 
+          {favorites && (
+            <FavoritesPanel
+              favorites={favorites}
+              items={items}
+              applicable={favPlan.length}
+              onApply={() => setApplyFavsOpen(true)}
+            />
+          )}
+
           <div className="schem-toolbar">
             <label className="search">
               <Search size={15} className="faint" />
@@ -734,6 +784,21 @@ export function SchematicsPage() {
                           </span>
                           {reasons.get(id) && <Sparkles size={13} className="ai-ico" aria-label="Выбрано агентом" />}
                         </button>
+                        {(() => {
+                          const fav = favorites?.find((f) => f.from === id && f.to === to);
+                          return (
+                            <button
+                              className="btn ghost sm icon"
+                              onClick={() =>
+                                fav ? replaceFavoritesStore.remove(fav.id) : setSmartFor({ from: id, to })
+                              }
+                              aria-label={fav ? 'Убрать из избранного' : 'В избранное'}
+                              title={fav ? 'В избранном — нажмите, чтобы убрать' : 'В избранное (с умным дополнением)'}
+                            >
+                              <Star size={15} className={cx('fav-star', fav && 'on')} />
+                            </button>
+                          );
+                        })()}
                         <button
                           className="btn ghost sm icon"
                           onClick={() => setTarget(id, null)}
@@ -761,6 +826,27 @@ export function SchematicsPage() {
                       </>
                     ) : (
                       <>
+                        {(() => {
+                          const opts = [
+                            ...new Set((favorites ?? []).filter((f) => f.from === id).map((f) => f.to)),
+                          ].filter((t) => items?.byId.has(t));
+                          return opts.length > 0 ? (
+                            <span className="schem-fav-chips">
+                              {opts.map((t) => (
+                                <button
+                                  key={t}
+                                  className="fav-chip"
+                                  onClick={() => setTarget(id, t)}
+                                  title={`Из избранного: ${t}`}
+                                >
+                                  <Star size={12} className="fav-star on" />
+                                  <ItemIcon id={t} size={18} tip={false} />
+                                  <span>{itemName(items?.byId.get(t), t)}</span>
+                                </button>
+                              ))}
+                            </span>
+                          ) : null;
+                        })()}
                         <button className="btn ghost sm schem-choose" onClick={() => setPicking(id)}>
                           Выбрать замену…
                         </button>
@@ -780,6 +866,27 @@ export function SchematicsPage() {
             })}
           </ul>
         </>
+      )}
+
+      {smartFor && items && (
+        <SmartAddDialog
+          pair={smartFor}
+          items={items}
+          present={presentIds}
+          replace={replace}
+          favorites={favorites ?? []}
+          nick={nick}
+          onClose={() => setSmartFor(null)}
+          onApply={applyPairs}
+        />
+      )}
+      {applyFavsOpen && (
+        <ApplyFavoritesDialog
+          plan={favPlan}
+          items={items}
+          onClose={() => setApplyFavsOpen(false)}
+          onApply={applyPairs}
+        />
       )}
 
       {filesEnabled && (
