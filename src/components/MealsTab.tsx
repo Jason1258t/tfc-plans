@@ -5,6 +5,7 @@ import {
   COMPUTED_TITLE,
   dynamicTitle,
   familyTitle,
+  skilletHay,
   tagItems,
   useMeals,
   type ComputedMeal,
@@ -20,6 +21,7 @@ import { useTags, type TagCatalog } from '../lib/tags';
 import { CONFIG_ORIGIN_LABEL, useModConfig, type ConfigOrigin } from '../lib/config';
 import { ItemIcon } from './ItemIcon';
 import { ComputedCalc, DynamicCalc, FamilyCalc, type FoodLookup } from './MealCalc';
+import { SkilletCard } from './SkilletCard';
 import './MealsTab.css';
 
 const NUTRIENT_LABEL: Record<Nutrient, string> = {
@@ -511,6 +513,7 @@ export function MealsTab({
       const ids = [...d.results.map((r) => r.item), ...(d.ingredientTag ? membersOf(cat, d.ingredientTag) : [])];
       out.set(d.id, lower(`${dynamicTitle(d, name)} ${ids.map((id) => `${name(id)} ${id}`).join(' ')}`));
     }
+    if (meals?.skillet) out.set(meals.skillet.id, lower(skilletHay(meals.skillet, cat, name)));
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meals, cat, items]);
@@ -523,7 +526,8 @@ export function MealsTab({
   const families = meals.families.filter((f) => match(f.id));
   const computed = meals.computed.filter((c) => match(c.kind));
   const dynamic = (meals.dynamic ?? []).filter((d) => match(d.id));
-  const shownCount = families.length + computed.length + dynamic.length;
+  const skillet = meals.skillet && match(meals.skillet.id) ? meals.skillet : null;
+  const shownCount = families.length + computed.length + dynamic.length + (skillet ? 1 : 0);
 
   return (
     <>
@@ -541,7 +545,7 @@ export function MealsTab({
         Сборное блюдо — еда, питательность которой складывается из того, что в неё положили: к значениям самого блюда
         прибавляется доля от каждого ингредиента. Поиск по продукту показывает блюда, в которые он годится. Состав тегов
         — с учётом правок KubeJS. В игре не проверялось. Показано {shownCount} из{' '}
-        {meals.families.length + meals.computed.length + (meals.dynamic?.length ?? 0)}.
+        {meals.families.length + meals.computed.length + (meals.dynamic?.length ?? 0) + (meals.skillet ? 1 : 0)}.
       </p>
       {shownCount === 0 ? (
         <div className="empty">Ничего не подходит.</div>
@@ -561,6 +565,16 @@ export function MealsTab({
               setting={setting}
             />
           ))}
+          {skillet && (
+            <SkilletCard
+              s={skillet}
+              order={meals.nutrients ?? [...NUTRIENTS]}
+              cat={cat}
+              items={items}
+              food={food}
+              Shell={MealShell}
+            />
+          )}
           {families.map((f) => (
             <FamilyCard key={f.id + f.slots.map((s) => s.key).join()} f={f} cat={cat} items={items} food={food} />
           ))}

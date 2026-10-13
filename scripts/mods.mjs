@@ -25,6 +25,7 @@ import { buildReference } from './mods/reference.mjs';
 import { writeTags } from './mods/tags.mjs';
 import { isBotanyClass, writeBotany } from './mods/botany.mjs';
 import { isMealClass, writeMeals } from './mods/meals.mjs';
+import { isCuisineClass, isCuisineData } from './mods/cuisine.mjs';
 
 const MC_VERSION = '1.21.1';
 
@@ -160,8 +161,8 @@ function prepareJar(file) {
   const st = fs.statSync(file);
   const key = `${path.basename(file, '.jar')}-${st.size}-${Math.round(st.mtimeMs)}`.replace(/[^\w.+-]/g, '_');
   const dir = path.join(CACHE, 'jars', key);
-  // v19 — плюс классы тегов модов; v18 — плюс помощники и конфиги блюд аддонов; v17 — плюс классы сборных блюд; v16 — плюс классы полива теплицы; v15 — плюс классы грядок теплицы; v14 — плюс перечисление черт еды; v13 — плюс уровни теплицы; v12 — плюс растения теплицы Firmalife и классы конфигов аддонов; v11 — плюс loot-таблицы растений и их размещение в мире; v10 — плюс классы календаря; v9 — плюс классы конфигов; v8 — плюс классы растений (classes/) для ботаники; v7 — плюс климатические диапазоны растений TFC; v6 — плюс теги, жилы, данные TFC для справочника, география TFC Real World и жидкое топливо; теги блоков и сущностей
-  const done = path.join(dir, '.done-v19');
+  // v20 — плюс данные и классы сковороды Cuisine Delight; v19 — плюс классы тегов модов; v18 — плюс помощники и конфиги блюд аддонов; v17 — плюс классы сборных блюд; v16 — плюс классы полива теплицы; v15 — плюс классы грядок теплицы; v14 — плюс перечисление черт еды; v13 — плюс уровни теплицы; v12 — плюс растения теплицы Firmalife и классы конфигов аддонов; v11 — плюс loot-таблицы растений и их размещение в мире; v10 — плюс классы календаря; v9 — плюс классы конфигов; v8 — плюс классы растений (classes/) для ботаники; v7 — плюс климатические диапазоны растений TFC; v6 — плюс теги, жилы, данные TFC для справочника, география TFC Real World и жидкое топливо; теги блоков и сущностей
+  const done = path.join(dir, '.done-v20');
   if (!fs.existsSync(done) || fresh) {
     fs.rmSync(dir, { recursive: true, force: true });
     let zip;
@@ -174,7 +175,7 @@ function prepareJar(file) {
     // Рецепты — только папка recipe/ (1.21); recipes/ в некоторых jar — остатки 1.20, игра их не читает.
     // Для справочника: теги предметов, конфиги жил, данные TFC (топливо, еда, нагрев).
     const wanted =
-      /^(assets\/[a-z0-9_.-]+\/(models\/.+\.json|textures\/.+\.png|lang\/(en_us|ru_ru)\.json)|data\/[a-z0-9_.-]+\/(recipe\/.+|tags\/(item|fluid|block|entity_type)\/.+|createdieselgenerators\/fuel_type\/.+|createliquidfuel\/compat\/.+|worldgen\/configured_feature\/(vein\/.+|[^/]*vein[^/]*)|tfc\/(fuel|food|fluid_heat|climate_range)\/.+|firmalife\/(plantable|greenhouse)\/.+|loot_table\/blocks\/(crop|plant)\/.+|worldgen\/placed_feature\/plant\/.+|geography\/.+|profiles\/.+\/settings)\.json|data\/[a-z0-9_.-]+\/profiles\/.+\/maps\/(continent|altitude|koppen|temperature|rainfall)\.png)$/;
+      /^(assets\/[a-z0-9_.-]+\/(models\/.+\.json|textures\/.+\.png|lang\/(en_us|ru_ru)\.json)|data\/[a-z0-9_.-]+\/(recipe\/.+|tags\/(item|fluid|block|entity_type)\/.+|createdieselgenerators\/fuel_type\/.+|createliquidfuel\/compat\/.+|worldgen\/configured_feature\/(vein\/.+|[^/]*vein[^/]*)|tfc\/(fuel|food|fluid_heat|climate_range)\/.+|cuisinedelight_config\/ingredient\/.+|cuisinetfc\/cooked_food\/.+|firmalife\/(plantable|greenhouse)\/.+|loot_table\/blocks\/(crop|plant)\/.+|worldgen\/placed_feature\/plant\/.+|geography\/.+|profiles\/.+\/settings)\.json|data\/[a-z0-9_.-]+\/profiles\/.+\/maps\/(continent|altitude|koppen|temperature|rainfall)\.png)$/;
     const entries = zip.getEntries();
     for (const entry of entries) {
       if (entry.isDirectory || !wanted.test(entry.entryName)) continue;
@@ -184,11 +185,18 @@ function prepareJar(file) {
     }
     // Ботаника: расход удобрений, сезоны и скорость роста моды задают кодом. Классы читаем только у jar,
     // которые описывают растения TFC (есть climate_range), и только те, что про растения (scripts/mods/botany.mjs).
-    if (entries.some((e) => /^data\/[a-z0-9_.-]+\/tfc\/climate_range\//.test(e.entryName))) {
+    // Сковорода Cuisine Delight: у jar с её данными нужны ещё классы готовки и настроек (scripts/mods/cuisine.mjs).
+    const cuisine = entries.some((e) => isCuisineData(e.entryName));
+    if (cuisine || entries.some((e) => /^data\/[a-z0-9_.-]+\/tfc\/climate_range\//.test(e.entryName))) {
       for (const entry of entries) {
         if (entry.isDirectory || !entry.entryName.endsWith('.class')) continue;
         const data = entry.getData();
-        if (!isBotanyClass(entry.entryName, data) && !isMealClass(entry.entryName, data)) continue;
+        if (
+          !isBotanyClass(entry.entryName, data) &&
+          !isMealClass(entry.entryName, data) &&
+          !(cuisine && isCuisineClass(entry.entryName, data))
+        )
+          continue;
         const target = path.join(dir, 'classes', entry.entryName);
         fs.mkdirSync(path.dirname(target), { recursive: true });
         fs.writeFileSync(target, data);
@@ -542,6 +550,8 @@ async function main() {
     items,
     path.join(ROOT, 'public', 'meals.json'),
     jars.map((j) => path.join(MODS_DIR, j)),
+    dataDirs,
+    parseLooseJson,
   );
   log(`сборные блюда: семейств ${meals.families}, блюд ${meals.dishes}; из кода: ${meals.computed.join(', ') || '—'}`);
   for (const w of meals.warnings) log(`  сборные блюда: ${w}`);

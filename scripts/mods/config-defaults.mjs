@@ -8,7 +8,8 @@
  */
 import { argTypes, instructions } from './classfile.mjs';
 
-const isBuilder = (owner) => /ConfigBuilder$|ModConfigSpec\$Builder$/.test(owner);
+// ConfigInit$Builder — обёртка L2Core (Cuisine Delight): text(описание) вместо comment, те же define*
+const isBuilder = (owner) => /ConfigBuilder$|ModConfigSpec\$Builder$|ConfigInit\$Builder$/.test(owner);
 
 export function configDefaults(cls) {
   const out = [];

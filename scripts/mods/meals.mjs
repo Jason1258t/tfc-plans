@@ -12,6 +12,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { clinitValues, enumConstants, instructions, parseClass } from './classfile.mjs';
 import { configDefaults } from './config-defaults.mjs';
+import { buildSkillet } from './cuisine.mjs';
 
 const DYNAMIC_FOOD = 'setFoodForDynamicItemOnCreate';
 const round = (x) => Math.round(x * 1000) / 1000;
@@ -34,7 +35,7 @@ export function isMealClass(entryName, data) {
 // ---------------------------------------------------------------- код
 
 /** Инструкции с раскрытыми операндами: число, строка, ссылка, номер локальной переменной (load/store) */
-function decoded(cls, method) {
+export function decoded(cls, method) {
   if (!method?.code) return [];
   return instructions(method.code).map((ins) => {
     const { op } = ins;
@@ -123,7 +124,7 @@ function computedDish(cls, classes) {
  * «помощник("path")» — пространство имён из строки внутри помощника (commonTag → "c"), иначе это тег самого мода.
  * Если класс тегов не прочитан — по имени поля.
  */
-function tagOf(ref, classes) {
+export function tagOf(ref, classes) {
   const ns = ref.owner.split('/')[2];
   const owner = classes?.get(ref.owner);
   let v = null;
@@ -156,7 +157,23 @@ function tagOf(ref, classes) {
  *   порча      = помощник(продукты) — наибольшая порча среди продуктов × число.
  * Всё читается из инструкций между «new FoodData» и вызовом конструктора.
  */
-function addonDish(cls, list, at, map, classes) {
+/** Тело метода другого класса из кеша — по ссылке вызова */
+export function helperCode(ref, classes) {
+  const owner = classes.get(ref.owner);
+  return owner
+    ? decoded(
+        owner,
+        owner.methods.find((x) => x.name === ref.name && x.desc === ref.desc),
+      )
+    : [];
+}
+
+/**
+ * Аргументы «new FoodData(сытость, вода, насыщение, 0, группы, порча)», когда они — выражения:
+ * вода = сумма выбранных групп [× число] [+ число]; насыщение = число × количество продуктов;
+ * порча = помощник(продукты) — наибольшая порча среди продуктов × число.
+ */
+export function foodDataArgs(cls, list, at, classes) {
   let start = at;
   while (start > 0 && list[start].op !== 0xbb) start--;
   const invoke = (x) => x.ref && x.op >= 0xb6;
@@ -164,8 +181,7 @@ function addonDish(cls, list, at, map, classes) {
     .slice(start + 1, at)
     .filter((x) => x.num !== undefined || invoke(x) || [0x30, 0x62, 0x6a, 0x86].includes(x.op));
   if (args[0]?.num === undefined) return null;
-  const out = { kind: map.ref.name.toLowerCase(), ns: cls.name.split('/')[2], itemNs: map.ref.owner.split('/')[2] };
-  out.hunger = args[0].num;
+  const out = { start, hunger: args[0].num };
   let j = 1;
   // Вода: «группы[a] + группы[b]», затем необязательные «× число» и «+ число»
   const waterFrom = [];
@@ -182,20 +198,26 @@ function addonDish(cls, list, at, map, classes) {
     out.saturationPerItem = round(args[j].num);
   // Порча: помощник (список) → число: «наибольшая порча × число»
   const decayRef = args.findLast((x) => invoke(x) && /\)F$/.test(x.ref.desc) && x.ref.owner !== cls.name)?.ref;
-  const helper = (ref) => {
-    const owner = classes.get(ref.owner);
-    return owner
-      ? decoded(
-          owner,
-          owner.methods.find((x) => x.name === ref.name && x.desc === ref.desc),
-        )
-      : [];
-  };
   if (decayRef) {
-    const h = helper(decayRef);
+    const h = helperCode(decayRef, classes);
     const mul = h.findLast((x, i) => x.num !== undefined && h[i + 1]?.op === 0x6a);
     if (h.some((x) => x.ref?.name === 'max')) out.decay = { of: 'max', mul: mul ? round(mul.num) : 1 };
   }
+  return out;
+}
+
+function addonDish(cls, list, at, map, classes) {
+  const fd = foodDataArgs(cls, list, at, classes);
+  if (!fd) return null;
+  const { start, ...values } = fd;
+  const invoke = (x) => x.ref && x.op >= 0xb6;
+  const helper = (ref) => helperCode(ref, classes);
+  const out = {
+    kind: map.ref.name.toLowerCase(),
+    ns: cls.name.split('/')[2],
+    itemNs: map.ref.owner.split('/')[2],
+    ...values,
+  };
   // Питательные группы: помощник (список, множитель, предел) → массив
   const before = list.slice(0, start);
   const nutRef = before.findLast((x) => invoke(x) && /\)\[F$/.test(x.ref.desc))?.ref;
@@ -298,7 +320,7 @@ function readCode(classDirs) {
     const dish = computedDish(cls, classes);
     if (dish) computed.push(dish);
   }
-  return { computed, defaults, nutrients };
+  return { computed, defaults, nutrients, classes };
 }
 
 // ---------------------------------------------------------------- рецепты
@@ -364,7 +386,7 @@ function classFromJars(jarPaths, name) {
   return null;
 }
 
-export function buildMeals(classDirs, recipeMap, items, jarPaths = []) {
+export function buildMeals(classDirs, recipeMap, items, jarPaths = [], dataDirs = [], parse = JSON.parse) {
   let recipes = recipeMap;
   const warnings = [];
   const have = new Set(items.map((i) => i.i));
@@ -375,7 +397,7 @@ export function buildMeals(classDirs, recipeMap, items, jarPaths = []) {
     j: r.json,
     t: typeof r.json.type === 'string' ? r.json.type : '',
   }));
-  const { computed, defaults, nutrients: order } = readCode(classDirs);
+  const { computed, defaults, nutrients: order, classes } = readCode(classDirs);
   if (!order) warnings.push('порядок питательных групп (перечисление Nutrient) не найден');
   const NUTRIENTS = order ?? [];
   if (!defaults) warnings.push('значения по умолчанию у долей блюда (кодек MealPortion) не найдены');
@@ -549,8 +571,12 @@ export function buildMeals(classDirs, recipeMap, items, jarPaths = []) {
   if (!computedOut.some((c) => c.kind === 'soups')) warnings.push('формула супа (класс рецепта с SOUPS) не найдена');
   if (!computedOut.some((c) => c.kind === 'salads')) warnings.push('формула салата (контейнер с SALADS) не найдена');
 
+  // 4. Сковорода Cuisine Delight: своя готовка, питательность TFC считает аддон совместимости (cuisine.mjs)
+  const skillet = buildSkillet({ classes, recipes, have, dataDirs, parse, nutrients: NUTRIENTS, warnings });
+
   return {
     data: {
+      ...(skillet ? { skillet } : {}),
       families: [...families.values()]
         .map((f) => ({ ...f, types: [...f.types], sources: [...f.sources] }))
         .sort((a, b) => b.dishes.length - a.dishes.length || a.id.localeCompare(b.id)),
@@ -562,13 +588,17 @@ export function buildMeals(classDirs, recipeMap, items, jarPaths = []) {
   };
 }
 
-export function writeMeals(classDirs, recipes, items, outFile, jarPaths) {
-  const { data, warnings } = buildMeals(classDirs, recipes, items, jarPaths);
+export function writeMeals(classDirs, recipes, items, outFile, jarPaths, dataDirs, parse) {
+  const { data, warnings } = buildMeals(classDirs, recipes, items, jarPaths, dataDirs, parse);
   fs.writeFileSync(outFile, JSON.stringify(data));
   return {
     families: data.families.length,
     dishes: data.families.reduce((n, f) => n + f.dishes.length, 0),
-    computed: [...data.computed.map((c) => c.kind), ...data.dynamic.map((c) => c.id)],
+    computed: [
+      ...data.computed.map((c) => c.kind),
+      ...data.dynamic.map((c) => c.id),
+      ...(data.skillet ? [data.skillet.id] : []),
+    ],
     warnings,
   };
 }

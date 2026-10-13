@@ -119,10 +119,79 @@ export interface DynamicMeal {
   results: { nutrient: Nutrient; item: string }[];
 }
 
+/** Запись продукта для сковороды Cuisine Delight: время в тиках, штрафы — доля оценки */
+export interface SkilletEntry {
+  items: string[];
+  tags: string[];
+  /** Вид продукта: meat, seafood, veg, carb, none */
+  type: string;
+  /** Жарить не меньше min и не больше max */
+  min: number;
+  max: number;
+  /** Наибольший перерыв между помешиваниями */
+  stir: number;
+  /** Штраф за недожаренное и за пережаренное/пригоревшее */
+  raw: number;
+  over: number;
+  /** Вес продукта в оценке и в долях рецепта */
+  size: number;
+}
+
+export interface SkilletMatch {
+  items: string[];
+  tags: string[];
+  /** Любой продукт этого вида */
+  foodType?: string;
+  min: number;
+  max: number;
+  score: number;
+  bonus: number;
+}
+
+/**
+ * Сковорода Cuisine Delight (meals.json → skillet, собирает scripts/mods/cuisine.mjs): продукты жарят и снимают
+ * тарелкой, питательность TFC считает аддон совместимости из продуктов и оценки готовки.
+ */
+export interface SkilletMeal {
+  id: string;
+  ns: string;
+  hunger: number;
+  saturationPerItem: number;
+  decay: { of: 'max'; mul: number };
+  nutrients: {
+    dropMin: boolean;
+    /** Оценка делится на это число (проценты) */
+    scoreDivisor: number | null;
+    /** Сумма делится на число порций */
+    servingsConfig: MealConfigKey | null;
+    capConfig: MealConfigKey | null;
+  };
+  /** В блюде столько же порций, на сколько делится сумма */
+  servingsInDish: boolean;
+  water: { from: Nutrient[]; mul: number; add: number };
+  entries: SkilletEntry[];
+  /** Питательность продукта «в жареном виде» (по порядку групп) — заменяет его собственную */
+  cooked: { items: string[]; tags: string[]; nutrients: number[] }[];
+  dishes: { recipe: string; item: string; list: SkilletMatch[] }[];
+  /** Блюдо, у которого группы дополнительно умножаются на настройку */
+  penalty?: { item: string; config: MealConfigKey | null };
+  /** Оценка ниже — блюдо несъедобно */
+  minScore?: number;
+  /** На блоках из тега время идёт медленнее */
+  slow?: { speed: number; tag: string };
+  heatTag?: string;
+  capacityConfig?: MealConfigKey | null;
+  /** Какие способы снять блюдо аддон подменил (useOn — по стоящей сковороде), а какие нет (use — сковорода в руке) */
+  hook?: { hooked: string[]; missed: string[] };
+  block?: string;
+  plate?: string;
+}
+
 export interface Meals {
   families: MealFamily[];
   computed: ComputedMeal[];
   dynamic?: DynamicMeal[];
+  skillet?: SkilletMeal;
   /** Порядок питательных групп в игре (перечисление Nutrient) */
   nutrients?: Nutrient[];
 }
@@ -199,6 +268,10 @@ export function mealsByItem(meals: Meals, cat: TagCatalog, name: (id: string) =>
     const ref = { key: d.id, title: dynamicTitle(d, name) };
     if (d.ingredientTag) for (const id of tagItems(cat, d.ingredientTag)) add(id, ref);
   }
+  if (meals.skillet) {
+    const ref = { key: meals.skillet.id, title: skilletTitle(meals.skillet, name) };
+    for (const id of skilletProducts(meals.skillet, cat).keys()) add(id, ref);
+  }
   for (const f of meals.families) {
     const ref = { key: f.id, title: familyTitle(f.dishes.map((d) => name(d.item))) };
     for (const s of f.slots) {
@@ -208,6 +281,39 @@ export function mealsByItem(meals: Meals, cat: TagCatalog, name: (id: string) =>
     }
   }
   return out;
+}
+
+/** Заголовок карточки сковороды: название посуды */
+export const skilletTitle = (s: SkilletMeal, name: (id: string) => string) =>
+  `${s.block ? name(s.block) : s.id}: блюдо на тарелке`;
+
+/** Строка поиска карточки сковороды: названия продуктов и блюд */
+export function skilletHay(s: SkilletMeal, cat: TagCatalog | null, name: (id: string) => string): string {
+  const ids = [...skilletProducts(s, cat).keys(), ...s.dishes.map((d) => d.item)];
+  return `${skilletTitle(s, name)} сковорода ${ids.map((id) => `${name(id)} ${id}`).join(' ')}`;
+}
+
+/** Продукт → его запись для сковороды; предмет, названный прямо, важнее попавшего через тег */
+export function skilletProducts(s: SkilletMeal, cat: TagCatalog | null): Map<string, SkilletEntry> {
+  const out = new Map<string, SkilletEntry>();
+  for (const e of s.entries) for (const id of e.items) if (!out.has(id)) out.set(id, e);
+  for (const e of s.entries)
+    for (const t of e.tags) for (const id of tagItems(cat, t)) if (!out.has(id)) out.set(id, e);
+  return out;
+}
+
+/** Питательность продукта на сковороде: запись «в жареном виде», иначе его собственная еда TFC */
+export function skilletNutrients(
+  s: SkilletMeal,
+  order: Nutrient[],
+  id: string,
+  food: (id: string) => FoodValues | undefined,
+  cat: TagCatalog | null,
+): { values: number[]; cooked: boolean } | null {
+  const c = s.cooked.find((x) => x.items.includes(id) || x.tags.some((t) => tagItems(cat, t).includes(id)));
+  if (c) return { values: c.nutrients, cooked: true };
+  const v = food(id);
+  return v ? { values: order.map((n) => v.nutrients[n] ?? 0), cooked: false } : null;
 }
 
 // ---------------------------------------------------------------- калькулятор
@@ -335,5 +441,120 @@ export function calcDynamic(
     water: d.water.from.reduce((a, n) => a + (nutrients[n] ?? 0), 0) * d.water.mul + d.water.add,
     nutrients,
     item: d.results.find((r) => r.nutrient === order[best])?.item,
+  };
+}
+
+export type SkilletState = 'ok' | 'raw' | 'over' | 'both';
+
+export interface SkilletPick {
+  id: string;
+  count: number;
+  state: SkilletState;
+}
+
+export interface SkilletResult extends MealResult {
+  /** Оценка готовки, % */
+  score: number;
+  edible: boolean;
+  /** Подходящие блюда с наибольшим счётом: больше одного — в игре возьмётся первое по порядку загрузки рецептов */
+  dishes: string[];
+  penalized: boolean;
+}
+
+/**
+ * Блюдо со сковороды (как CookedFoodData.of + BaseCuisineRecipe.findBestMatch в Cuisine Delight и подмена выдачи
+ * тарелкой в cuisinetfc). Оценка = 100 × (1 − Σ размер × штраф / Σ размер); группы = Σ питательность × штук,
+ * самая малая обнуляется, × оценка / 100 / число порций, не больше предела; у штрафного блюда — ещё × множитель.
+ */
+export function calcSkillet(
+  s: SkilletMeal,
+  order: Nutrient[],
+  picked: SkilletPick[],
+  food: (id: string) => FoodValues | undefined,
+  cat: TagCatalog | null,
+  set: { servings: number; cap: number; penalty: number },
+): SkilletResult {
+  const products = skilletProducts(s, cat);
+  const list = picked.flatMap((p) => {
+    const entry = products.get(p.id);
+    return entry && p.count > 0 ? [{ ...p, entry }] : [];
+  });
+  let total = 0;
+  let lost = 0;
+  let count = 0;
+  let decay = 0;
+  const sum = order.map(() => 0);
+  for (const p of list) {
+    const size = p.entry.size * p.count;
+    const penalty =
+      (p.state === 'raw' || p.state === 'both' ? p.entry.raw : 0) +
+      (p.state === 'over' || p.state === 'both' ? p.entry.over : 0);
+    total += size;
+    lost += size * penalty;
+    count += p.count;
+    const n = skilletNutrients(s, order, p.id, food, cat);
+    if (n) n.values.forEach((v, i) => (sum[i] += v * p.count));
+    decay = Math.max(decay, food(p.id)?.decay ?? 0);
+  }
+  const score = total ? Math.round(100 * Math.min(1, Math.max(0, 1 - lost / total))) : 0;
+
+  // Название блюда: доля продуктов (по размеру) должна попасть в [min, max] у каждого условия рецепта
+  const share = (m: SkilletMatch) => {
+    let hit = 0;
+    for (const p of list) {
+      const ok =
+        m.items.includes(p.id) ||
+        m.tags.some((t) => tagItems(cat, t).includes(p.id)) ||
+        (m.foodType !== undefined && m.foodType === p.entry.type);
+      if (ok) hit += p.entry.size * p.count;
+    }
+    return total ? hit / total : 0;
+  };
+  let best = -1;
+  let dishes: string[] = [];
+  for (const d of s.dishes) {
+    let value = 0;
+    let ok = true;
+    for (const m of d.list) {
+      const x = share(m);
+      const half = (m.max - m.min) / 2;
+      const one =
+        !total || x < m.min || x > m.max
+          ? 0
+          : half > 0 && m.bonus > 0
+            ? m.score + (m.bonus * Math.abs(x - (m.min + m.max) / 2)) / half
+            : m.score;
+      if (one === 0) ok = false;
+      value += one;
+    }
+    if (!ok) continue;
+    if (value > best + 1e-9) [best, dishes] = [value, [d.item]];
+    else if (Math.abs(value - best) <= 1e-9 && !dishes.includes(d.item)) dishes.push(d.item);
+  }
+  const penalized = !!s.penalty && dishes.length === 1 && dishes[0] === s.penalty.item;
+
+  if (s.nutrients.dropMin) {
+    const min = Math.min(...sum);
+    sum[sum.lastIndexOf(min)] = 0;
+  }
+  const final = sum.map((v) => {
+    const x = Math.min((v * score) / (s.nutrients.scoreDivisor ?? 100) / set.servings, set.cap);
+    return penalized ? x * set.penalty : x;
+  });
+  const nutrients: Partial<Record<Nutrient, number>> = {};
+  order.forEach((n, i) => {
+    if (final[i]) nutrients[n] = final[i];
+  });
+  return {
+    hunger: s.hunger,
+    decay: decay * s.decay.mul,
+    saturation: s.saturationPerItem * count,
+    water: s.water.from.reduce((a, n) => a + (nutrients[n] ?? 0), 0) * s.water.mul + s.water.add,
+    nutrients,
+    servings: s.servingsInDish ? set.servings : undefined,
+    score,
+    edible: total > 0 && score >= (s.minScore ?? 0),
+    dishes,
+    penalized,
   };
 }
