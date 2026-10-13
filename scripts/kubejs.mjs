@@ -15,6 +15,7 @@
  * startup_scripts тоже выполняются в песочнице: StartupEvents.registry('item', …) даёт предметы, которые сборка
  * регистрирует сама (kubejs:hot_iron_bloom, tfcr:…). Их имена берутся из kubejs/assets/<ns>/lang, иконки — из
  * kubejs/assets/<ns>/textures → public/kubejs-items.json и public/icons-kubejs/ (сайт добавляет их к библиотеке).
+ * kubejs/data/<ns>/tfc/food, …/cuisinedelight_config/ingredient → public/kubejs-data.json (сайт заменяет ими данные модов).
  *
  * kubejs/data — обычный датапак (KubeJS грузит его вместе с остальными): его рецепты идут в каталог
  * как переопределения/добавления. Удаления KubeJS применяются и к ним, и к нашим датапакам — так же, как в игре:
@@ -27,6 +28,7 @@ import { unzipSync } from 'fflate';
 import { ROOT } from './firestore-rest.mjs';
 import { matchFilter } from '../src/lib/recipeFilter.ts';
 import { recipeRefs } from '../src/lib/recipeRefs.ts';
+import { ingredientOf, skilletEntryValues } from './mods/cuisine.mjs';
 
 const INSTANCE = path.join(ROOT, 'instance', 'kubejs');
 const OUT = path.join(ROOT, 'public', 'kubejs.json');
@@ -554,6 +556,105 @@ function dataRecipes(layer) {
   return out;
 }
 
+/**
+ * Данные датапака kubejs/data, которые разбирает сайт: файл с тем же id заменяет файл мода, новый — добавляется.
+ * → public/kubejs-data.json: { foods, skillet: { entries, cooked } }. Формат записей — как в reference.json
+ * и meals.json, слияние делает сайт (src/lib/reference.ts, src/lib/meals.ts).
+ */
+const NUTRIENTS = ['grain', 'fruit', 'vegetables', 'protein', 'dairy'];
+function dataFilesOf(layer, sub) {
+  const base = path.join(INSTANCE, layer, 'data');
+  const out = [];
+  if (!fs.existsSync(base)) return out;
+  for (const ns of fs.readdirSync(base)) {
+    const dir = path.join(base, ns, sub);
+    if (!fs.existsSync(dir)) continue;
+    for (const rel of fs.readdirSync(dir, { recursive: true })) {
+      if (!String(rel).endsWith('.json')) continue;
+      try {
+        const json = JSON.parse(fs.readFileSync(path.join(dir, String(rel)), 'utf8'));
+        out.push({ ns, rel: String(rel).replaceAll('\\', '/'), json });
+      } catch {
+        /* битый JSON игра тоже пропустит */
+      }
+    }
+  }
+  return out;
+}
+
+function dataOverrides(layers) {
+  const foods = [];
+  const entries = [];
+  const cooked = [];
+  const notes = [];
+  for (const layer of layers) {
+    const source = `kubejs/${layer}/data`;
+    for (const { ns, rel, json } of dataFilesOf(layer, 'tfc/food')) {
+      const ing = ingredientOf(json.ingredient);
+      if (ing.tags.length) notes.push(`${source}: еда ${ns}:${rel} задана тегом — состав тега на сайте не раскрыт`);
+      foods.push({
+        id: `${ns}:${rel.replace(/\.json$/, '')}`,
+        source,
+        ingredient: ing.tags[0] ? `#${ing.tags[0]}` : (ing.items[0] ?? null),
+        items: ing.items,
+        hunger: json.hunger ?? 0,
+        saturation: json.saturation ?? 0,
+        water: json.water ?? 0,
+        decay: json.decay_modifier ?? 1,
+        nutrients: Object.fromEntries(NUTRIENTS.filter((n) => json[n]).map((n) => [n, json[n]])),
+      });
+    }
+    for (const { ns, rel, json } of dataFilesOf(layer, 'cuisinedelight_config/ingredient'))
+      for (const e of json?.entries ?? []) {
+        const ing = ingredientOf(e.ingredient);
+        entries.push({ file: `${ns}:${rel}`, source, items: ing.items, tags: ing.tags, ...skilletEntryValues(e) });
+      }
+    // Папку «жареной» питательности называет аддон совместимости — берём её из собранного meals.json
+    let cookedDir = null;
+    try {
+      cookedDir = JSON.parse(fs.readFileSync(path.join(ROOT, 'public', 'meals.json'), 'utf8')).skillet?.cookedDir;
+    } catch {
+      /* библиотека ещё не собрана */
+    }
+    if (cookedDir)
+      for (const { ns, rel, json } of dataFilesOf(layer, cookedDir)) {
+        const ing = ingredientOf(json?.ingredient);
+        cooked.push({
+          file: `${ns}:${rel}`,
+          source,
+          items: ing.items,
+          tags: ing.tags,
+          values: Object.fromEntries(NUTRIENTS.filter((n) => json[n]).map((n) => [n, json[n]])),
+        });
+      }
+  }
+  return { data: { foods, skillet: { entries, cooked } }, notes };
+}
+
+/**
+ * Прочие данные kubejs/data, которые сайт берёт только из модов (scripts/mods.mjs): если сборка их переопределяет,
+ * цифры на сайте расходятся с игрой — предупреждаем при импорте.
+ */
+const MOD_ONLY_DATA = [
+  ['tfc/fuel', 'топливо'],
+  ['tfc/fluid_heat', 'плавление металлов'],
+  ['tfc/climate_range', 'климат растений'],
+  ['firmalife/plantable', 'растения теплицы'],
+  ['firmalife/greenhouse', 'уровни теплицы'],
+  ['createdieselgenerators/fuel_type', 'жидкое топливо'],
+  ['createliquidfuel/compat', 'жидкое топливо'],
+];
+function unhandledData(layer) {
+  const base = path.join(INSTANCE, layer, 'data');
+  if (!fs.existsSync(base)) return [];
+  const out = [];
+  for (const [sub, what] of MOD_ONLY_DATA) {
+    const where = fs.readdirSync(base).filter((ns) => fs.existsSync(path.join(base, ns, sub)));
+    if (where.length) out.push(`${layer}/data: ${what} (${where.map((ns) => `${ns}/${sub}`).join(', ')})`);
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------- main
 
 function analyze() {
@@ -617,6 +718,16 @@ function analyze() {
     );
   }
   for (const e of errors) log(`  ошибка в ${e.file}: ${e.message}`);
+  const overrides = dataOverrides(layers);
+  fs.writeFileSync(path.join(ROOT, 'public', 'kubejs-data.json'), JSON.stringify(overrides.data));
+  log(
+    `данные kubejs/data: еды ${overrides.data.foods.length}, продуктов сковороды ${overrides.data.skillet.entries.length}, ` +
+      `«жареной» питательности ${overrides.data.skillet.cooked.length} → public/kubejs-data.json`,
+  );
+  for (const n of overrides.notes) log(`  ${n}`);
+  for (const layer of layers)
+    for (const w of unhandledData(layer))
+      log(`  сборка переопределяет данные, которые сайт читает только из модов — ${w}`);
 
   // Сводка по каталогу: сколько рецептов сборки задевают удаления (сайт считает то же самое у себя)
   const catalogFile = path.join(ROOT, 'public', 'recipes.json');

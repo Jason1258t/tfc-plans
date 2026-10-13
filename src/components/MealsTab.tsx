@@ -1,5 +1,6 @@
 import { Search } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { itemName, type ItemIndex } from '../lib/items';
 import {
   computedTitle,
@@ -18,6 +19,7 @@ import {
 } from '../lib/meals';
 import { NUTRIENTS, type Food, type Nutrient } from '../lib/reference';
 import { useTags, type TagCatalog } from '../lib/tags';
+import { hasStatus, useRecipes } from '../lib/recipes';
 import { CONFIG_ORIGIN_LABEL, useModConfig, type ConfigOrigin } from '../lib/config';
 import { ItemIcon } from './ItemIcon';
 import { ComputedCalc, DynamicCalc, FamilyCalc, type FoodLookup } from './MealCalc';
@@ -166,6 +168,7 @@ function FamilyCard({
   const foods = f.slots.filter((s) => s.food);
   const tools = f.slots.filter((s) => !s.food);
   const next = f.dishes.find((d) => d.next)?.next;
+  const recipeCount = f.dishes.reduce((n, d) => n + d.recipes.length, 0);
   return (
     <MealShell
       icons={f.dishes.slice(0, 2).map((d) => (
@@ -175,7 +178,7 @@ function FamilyCard({
       sub={
         <>
           {f.dishes.length > 1 ? `${f.dishes.length} ${plural(f.dishes.length, 'вид', 'вида', 'видов')} · ` : ''}
-          {f.recipes} {plural(f.recipes, 'рецепт', 'рецепта', 'рецептов')} ·{' '}
+          {recipeCount} {plural(recipeCount, 'рецепт', 'рецепта', 'рецептов')} ·{' '}
           {f.types.some((t) => /shaped/.test(t) && !/shapeless/.test(t))
             ? 'верстак, по узору'
             : 'верстак, в любом порядке'}
@@ -249,6 +252,17 @@ function FamilyCard({
           </p>
         )}
       </section>
+      <p className="small meal-recipes">
+        <span className="faint">Рецепты в каталоге: </span>
+        {f.dishes.map((d, i) => (
+          <span key={d.item}>
+            {i > 0 && ', '}
+            <Link to={`/recipes?item=${encodeURIComponent(d.item)}`}>
+              {name(d.item)} ({d.recipes.length})
+            </Link>
+          </span>
+        ))}
+      </p>
       <FamilyCalc f={f} cat={cat} items={items} food={food} />
     </MealShell>
   );
@@ -496,8 +510,34 @@ export function MealsTab({
     for (const f of foods) for (const id of f.items) if (!m.has(id)) m.set(id, f);
     return (id) => m.get(id);
   }, [foods]);
-  const meals = useMeals();
+  const loadedMeals = useMeals();
   const cat = useTags();
+  // Рецепты, удалённые KubeJS или отключённые заглушкой, в игре не работают — такие блюда не показываем
+  const catalog = useRecipes();
+  const { meals, hiddenRecipes } = useMemo(() => {
+    if (!loadedMeals || !catalog) return { meals: loadedMeals, hiddenRecipes: 0 };
+    let hidden = 0;
+    const alive = (id: string) => {
+      const r = catalog.byId.get(id);
+      const ok = !r || hasStatus(r, 'active');
+      if (!ok) hidden++;
+      return ok;
+    };
+    const families = loadedMeals.families
+      .map((f) => ({
+        ...f,
+        dishes: f.dishes.map((d) => ({ ...d, recipes: d.recipes.filter(alive) })).filter((d) => d.recipes.length > 0),
+      }))
+      .filter((f) => f.dishes.length > 0);
+    const computed = loadedMeals.computed
+      .map((c) => (c.pots ? { ...c, pots: c.pots.filter((p) => alive(p.recipe)) } : c))
+      .filter((c) => !c.pots || c.pots.length > 0);
+    const skillet = loadedMeals.skillet && {
+      ...loadedMeals.skillet,
+      dishes: loadedMeals.skillet.dishes.filter((d) => alive(d.recipe)),
+    };
+    return { meals: { ...loadedMeals, families, computed, skillet }, hiddenRecipes: hidden };
+  }, [loadedMeals, catalog]);
   // Настройки мода, от которых зависят блюда аддонов: конфиг сервера → конфиг сборки → значение из кода
   const cfgFile =
     meals?.dynamic?.map((d) => d.nutrients.multConfig?.file ?? d.nutrients.capConfig?.file).find(Boolean) ?? '';
@@ -572,7 +612,8 @@ export function MealsTab({
       <p className="faint small ref-note">
         Сборное блюдо — еда, питательность которой складывается из того, что в неё положили: к значениям самого блюда
         прибавляется доля от каждого ингредиента. Поиск по продукту показывает блюда, в которые он годится. Состав тегов
-        — с учётом правок KubeJS. В игре не проверялось. Показано {shownCount} из{' '}
+        — с учётом правок KubeJS{hiddenRecipes > 0 ? `; рецептов, удалённых KubeJS, скрыто: ${hiddenRecipes}` : ''}. В
+        игре не проверялось. Показано {shownCount} из{' '}
         {meals.families.length + meals.computed.length + (meals.dynamic?.length ?? 0) + (meals.skillet ? 1 : 0)}.
       </p>
       {shownCount === 0 ? (

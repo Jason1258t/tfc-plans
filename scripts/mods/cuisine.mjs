@@ -61,7 +61,7 @@ function dataFiles(dataDirs, parse, sub) {
 }
 
 /** Ингредиент рецепта/данных → предметы и теги; «food_type» — свой тип Cuisine Delight (по виду продукта) */
-function ingredientOf(raw) {
+export function ingredientOf(raw) {
   const items = [];
   const tags = [];
   let foodType;
@@ -223,6 +223,17 @@ function skilletCode(classes) {
   return out;
 }
 
+/** Запись продукта сковороды из данных «cuisinedelight_config/ingredient» (её же читает scripts/kubejs.mjs) */
+export const skilletEntryValues = (e) => ({
+  type: String(e.type ?? 'NONE').toLowerCase(),
+  min: e.min_time ?? 0,
+  max: e.max_time ?? 0,
+  stir: e.stir_time ?? 0,
+  raw: round(e.raw_penalty ?? 0),
+  over: round(e.overcook_penalty ?? 0),
+  size: e.size ?? 1,
+});
+
 export function buildSkillet({ classes, recipes, have, dataDirs, parse, nutrients, warnings }) {
   const list = recipes.filter((r) => r.t === RECIPE_TYPE);
   if (!list.length) return null;
@@ -243,15 +254,7 @@ export function buildSkillet({ classes, recipes, have, dataDirs, parse, nutrient
       const ing = ingredientOf(e.ingredient);
       const items = ing.items.filter((i) => have.has(i));
       if (!items.length && !ing.tags.length) continue;
-      const values = {
-        type: String(e.type ?? 'NONE').toLowerCase(),
-        min: e.min_time ?? 0,
-        max: e.max_time ?? 0,
-        stir: e.stir_time ?? 0,
-        raw: round(e.raw_penalty ?? 0),
-        over: round(e.overcook_penalty ?? 0),
-        size: e.size ?? 1,
-      };
+      const values = skilletEntryValues(e);
       // Продукт описан дважды — действует первая запись; предупреждаем, только если записи расходятся
       const fresh = items.filter((i) => {
         const prev = seen.get(i);
@@ -264,17 +267,18 @@ export function buildSkillet({ classes, recipes, have, dataDirs, parse, nutrient
       });
       for (const i of fresh) seen.set(i, { file, values });
       if (!fresh.length && !ing.tags.length) continue;
-      entries.push({ items: fresh, tags: ing.tags, ...values });
+      // file — «ns:имя.json»: датапак сборки (kubejs/data) с тем же файлом заменяет запись целиком, это делает сайт
+      entries.push({ file, items: fresh, tags: ing.tags, ...values });
     }
   }
   // Питательность «в жареном виде»: запись заменяет еду TFC самого продукта
   const cooked = [];
   if (plate.cookedOverride)
-    for (const [, json] of dataFiles(dataDirs, parse, `${plate.ns}/cooked_food`)) {
+    for (const [file, json] of dataFiles(dataDirs, parse, `${plate.ns}/cooked_food`)) {
       const ing = ingredientOf(json?.ingredient);
       const items = ing.items.filter((i) => have.has(i));
       if (!items.length && !ing.tags.length) continue;
-      cooked.push({ items, tags: ing.tags, nutrients: nutrients.map((n) => round(json[n] ?? 0)) });
+      cooked.push({ file, items, tags: ing.tags, nutrients: nutrients.map((n) => round(json[n] ?? 0)) });
     }
   const { cookedOverride: _cookedOverride, water, penalty, ...rest } = plate;
 
@@ -297,6 +301,8 @@ export function buildSkillet({ classes, recipes, have, dataDirs, parse, nutrient
   const out = {
     id: RECIPE_TYPE,
     ...rest,
+    // Папка данных «жареной» питательности: data/<ns>/<cookedDir>/…
+    cookedDir: `${plate.ns}/cooked_food`,
     water: { ...water, from: water.from.map((i) => nutrients[i]) },
     entries,
     cooked,

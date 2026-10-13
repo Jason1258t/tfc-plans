@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { KubejsConstructor } from '../components/KubejsConstructor';
 import { Modal } from '../components/Modal';
 import { PackSection } from '../components/PackNav';
@@ -22,6 +22,8 @@ export function RecipesPage() {
   const [pending, setPending] = useState<Pending | null>(null);
   const [constructing, setConstructing] = useState<Recipe | null>(null);
   const kubejs = catalog?.kubejs;
+  // Ссылки из справочника: /recipes?item=<id>[&usage=1][&type=<тип>][&q=<поиск>]
+  const [params] = useSearchParams();
 
   return (
     <PackSection>
@@ -65,6 +67,12 @@ export function RecipesPage() {
         <RecipeBrowser
           catalog={catalog}
           autoFocus
+          initial={{
+            query: params.get('q') ?? undefined,
+            type: params.get('type') ?? undefined,
+            itemId: params.get('item') ?? undefined,
+            usage: params.get('usage') === '1',
+          }}
           actions={recipeActions(mode, (kind, r) =>
             setPending(() => (pack: Parameters<Pending>[0]) => entryFromRecipe(kind, r, pack)),
           )}

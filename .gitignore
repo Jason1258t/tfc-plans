@@ -53,4 +53,5 @@ mods/*
 instance/
 public/kubejs.json
 public/kubejs-items.json
+public/kubejs-data.json
 public/icons-kubejs/

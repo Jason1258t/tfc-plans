@@ -28,6 +28,8 @@ interface BrowserProps {
   /** Список с собственной прокруткой (в модалке) */
   scroll?: boolean;
   autoFocus?: boolean;
+  /** Начальные фильтры — для ссылок из справочника (/recipes?item=…&type=…) */
+  initial?: { query?: string; type?: string; itemId?: string; usage?: boolean };
 }
 
 /** Значки: удалён / изменён / добавлен KubeJS, из kubejs/data */
@@ -48,13 +50,13 @@ function StatusBadges({ r }: { r: Recipe }) {
 }
 
 /** Поиск по каталогу рецептов сборки: по названию/id/типу, по предмету и по статусу в игре */
-export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFocus }: BrowserProps) {
+export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFocus, initial }: BrowserProps) {
   const items = useItems();
-  const [query, setQuery] = useState('');
-  const [type, setType] = useState('');
+  const [query, setQuery] = useState(initial?.query ?? '');
+  const [type, setType] = useState(initial?.type ?? '');
   const [status, setStatus] = useState<RecipeStatus | ''>('');
-  const [itemId, setItemId] = useState<string | null>(null);
-  const [usage, setUsage] = useState(false);
+  const [itemId, setItemId] = useState<string | null>(initial?.itemId ?? null);
+  const [usage, setUsage] = useState(initial?.usage ?? false);
   const [open, setOpen] = useState<string | null>(null);
   const [limit, setLimit] = useState(PAGE);
 

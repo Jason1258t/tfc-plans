@@ -1,9 +1,11 @@
 import { ArrowRight, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { BotanyTab } from '../components/BotanyTab';
+import { DishesTab } from '../components/DishesTab';
 import { MealsTab } from '../components/MealsTab';
-import { useMeals } from '../lib/meals';
+import { mealsByItem, useMeals, type Meals } from '../lib/meals';
+import { useTags } from '../lib/tags';
 import { ItemIcon } from '../components/ItemIcon';
 import { LiquidFuelTab } from '../components/LiquidFuelTab';
 import { MapPage } from './MapPage';
@@ -48,7 +50,9 @@ export function ReferencePage() {
   const ref = useReference();
   const items = useItems();
   const meals = useMeals();
-  const mealCount = meals ? meals.families.length + meals.computed.length + (meals.dynamic?.length ?? 0) : 0;
+  const mealCount = meals
+    ? meals.families.length + meals.computed.length + (meals.dynamic?.length ?? 0) + (meals.skillet ? 1 : 0)
+    : 0;
 
   return (
     <main className={cx('ref-page', tab === 'map' && 'wide')}>
@@ -110,7 +114,7 @@ export function ReferencePage() {
         <div className="botany">
           <nav className="botany-nav" aria-label="Разделы еды">
             <button
-              className={cx(params.get('sub') !== 'meals' && 'active')}
+              className={cx(params.get('sub') !== 'meals' && params.get('sub') !== 'dishes' && 'active')}
               onClick={() => setParams({ tab: 'food' }, { replace: true })}
             >
               <span>Продукты</span>
@@ -123,12 +127,20 @@ export function ReferencePage() {
               <span>Сборные блюда</span>
               <span className="faint small">{mealCount || ''}</span>
             </button>
+            <button
+              className={cx(params.get('sub') === 'dishes' && 'active')}
+              onClick={() => setParams({ tab: 'food', sub: 'dishes' }, { replace: true })}
+            >
+              <span>Готовые блюда</span>
+            </button>
           </nav>
           <div className="botany-main ref-fuel-main">
             {params.get('sub') === 'meals' ? (
               <MealsTab items={items} foods={ref.foods} initialQuery={params.get('q') ?? ''} />
+            ) : params.get('sub') === 'dishes' ? (
+              <DishesTab items={items} foods={ref.foods} />
             ) : (
-              <FoodTab foods={ref.foods} items={items} />
+              <FoodTab foods={ref.foods} items={items} meals={meals ?? null} />
             )}
           </div>
         </div>
@@ -530,7 +542,14 @@ const NUTRIENT_LABEL: Record<Nutrient, string> = {
   dairy: 'Молочное',
 };
 
-function FoodTab({ foods, items }: { foods: Food[]; items: ItemIndex | null }) {
+function FoodTab({ foods, items, meals }: { foods: Food[]; items: ItemIndex | null; meals: Meals | null }) {
+  // В какие сборные блюда годится продукт — те же связи, что в ботанике
+  const tags = useTags();
+  const fits = useMemo(
+    () => (meals && tags ? mealsByItem(meals, tags, (id) => itemName(items?.byId.get(id), id)) : null),
+    [meals, tags, items],
+  );
+  const mealsOf = (f: Food) => [...new Set(f.items.flatMap((id) => (fits?.get(id) ?? []).map((r) => r.title)))];
   const [query, setQuery] = useState('');
   const [nutrient, setNutrient] = useState<Nutrient | ''>('');
   const { sort, th } = useSort({ key: 'hunger', desc: true });
@@ -581,6 +600,9 @@ function FoodTab({ foods, items }: { foods: Food[]; items: ItemIndex | null }) {
               {th('water', 'Вода', 'hide-sm')}
               {NUTRIENTS.map((n) => th(n, NUTRIENT_LABEL[n], `nut nut-${n}`))}
               {th('decay', 'Порча')}
+              <th className="hide-sm" title="В какие сборные блюда годится продукт">
+                В блюда
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -598,6 +620,18 @@ function FoodTab({ foods, items }: { foods: Food[]; items: ItemIndex | null }) {
                   </td>
                 ))}
                 <td className={cx('num', f.decay > 1.5 && 'warn')}>×{f.decay}</td>
+                <td className="num hide-sm">
+                  {mealsOf(f).length > 0 ? (
+                    <Link
+                      to={`/reference?tab=food&sub=meals&q=${encodeURIComponent(name(f))}`}
+                      title={mealsOf(f).join('\n')}
+                    >
+                      {mealsOf(f).length}
+                    </Link>
+                  ) : (
+                    <span className="zero">·</span>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

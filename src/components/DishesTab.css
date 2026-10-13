@@ -1,0 +1,25 @@
+/* Подвкладка «Готовые блюда»: таблица справочника (ReferencePage.css) плюс свои ячейки */
+.dishes-type span,
+.dishes-type code {
+  display: block;
+  white-space: nowrap;
+}
+
+.dishes-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  align-items: center;
+  min-width: 180px;
+}
+
+.dishes-inputs code {
+  overflow-wrap: anywhere;
+}
+
+.dishes-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}

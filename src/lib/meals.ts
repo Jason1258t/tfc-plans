@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Nutrient } from './reference';
+import { loadKubejsData, type Nutrient } from './reference';
 import { directMembers, flattenTag, tagKey, type TagCatalog } from './tags';
 
 /**
@@ -135,6 +135,8 @@ export interface DynamicMeal {
 
 /** Запись продукта для сковороды Cuisine Delight: время в тиках, штрафы — доля оценки */
 export interface SkilletEntry {
+  /** Файл данных «ns:имя.json» — по нему датапак сборки заменяет записи мода */
+  file?: string;
   items: string[];
   tags: string[];
   /** Вид продукта: meat, seafood, veg, carb, none */
@@ -185,7 +187,7 @@ export interface SkilletMeal {
   water: { from: Nutrient[]; mul: number; add: number };
   entries: SkilletEntry[];
   /** Питательность продукта «в жареном виде» (по порядку групп) — заменяет его собственную */
-  cooked: { items: string[]; tags: string[]; nutrients: number[] }[];
+  cooked: { file?: string; items: string[]; tags: string[]; nutrients: number[] }[];
   dishes: { recipe: string; item: string; list: SkilletMatch[] }[];
   /** Блюдо, у которого группы дополнительно умножаются на настройку */
   penalty?: { item: string; config: MealConfigKey | null };
@@ -218,10 +220,35 @@ let promise: Promise<Meals | null> | null = null;
 let loaded: Meals | null | undefined;
 
 export function loadMeals(): Promise<Meals | null> {
-  promise ??= fetch(`${import.meta.env.BASE_URL}meals.json`)
-    .then((r) => (r.ok ? (r.json() as Promise<Meals>) : null))
-    .catch(() => null)
-    .then((d) => (loaded = d?.families ? d : null));
+  promise ??= Promise.all([
+    fetch(`${import.meta.env.BASE_URL}meals.json`)
+      .then((r) => (r.ok ? (r.json() as Promise<Meals>) : null))
+      .catch(() => null),
+    loadKubejsData(),
+  ]).then(([d, kjs]) => {
+    // Сковорода: файл продуктов из датапака сборки (kubejs/data) заменяет одноимённый файл мода целиком
+    const s = d?.skillet;
+    if (s && kjs?.skillet) {
+      const files = new Set(kjs.skillet.entries.map((e) => e.file));
+      if (files.size)
+        s.entries = [
+          ...s.entries.filter((e) => !e.file || !files.has(e.file)),
+          ...(kjs.skillet.entries as unknown as SkilletEntry[]),
+        ];
+      const cookedFiles = new Set(kjs.skillet.cooked.map((c) => c.file));
+      if (cookedFiles.size)
+        s.cooked = [
+          ...s.cooked.filter((c) => !c.file || !cookedFiles.has(c.file)),
+          ...kjs.skillet.cooked.map((c) => ({
+            file: c.file,
+            items: c.items,
+            tags: c.tags,
+            nutrients: (d.nutrients ?? []).map((n) => c.values[n] ?? 0),
+          })),
+        ];
+    }
+    return (loaded = d?.families ? d : null);
+  });
   return promise;
 }
 

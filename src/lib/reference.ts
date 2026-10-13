@@ -135,14 +135,43 @@ export interface Reference {
   foods: Food[];
 }
 
+/**
+ * Данные датапака сборки (public/kubejs-data.json, scripts/kubejs.mjs): то, что kubejs/data переопределяет
+ * поверх модов. Записи того же вида, что в reference.json и meals.json.
+ */
+export interface KubejsDataFile {
+  foods?: Food[];
+  skillet?: {
+    entries: ({ file: string } & Record<string, unknown>)[];
+    cooked: { file: string; items: string[]; tags: string[]; values: Partial<Record<Nutrient, number>> }[];
+  };
+}
+
+let kubejsData: Promise<KubejsDataFile | null> | null = null;
+export function loadKubejsData(): Promise<KubejsDataFile | null> {
+  kubejsData ??= fetch(`${import.meta.env.BASE_URL}kubejs-data.json`)
+    .then((r) => (r.ok ? (r.json() as Promise<KubejsDataFile>) : null))
+    .catch(() => null);
+  return kubejsData;
+}
+
 let promise: Promise<Reference | null> | null = null;
 let loaded: Reference | null = null;
 
 export function loadReference(): Promise<Reference | null> {
-  promise ??= fetch(`${import.meta.env.BASE_URL}reference.json`)
-    .then((r) => (r.ok ? (r.json() as Promise<Reference>) : null))
-    .catch(() => null)
-    .then((ref) => (loaded = ref));
+  promise ??= Promise.all([
+    fetch(`${import.meta.env.BASE_URL}reference.json`)
+      .then((r) => (r.ok ? (r.json() as Promise<Reference>) : null))
+      .catch(() => null),
+    loadKubejsData(),
+  ]).then(([ref, kjs]) => {
+    // Еда из датапака сборки (kubejs/data): файл с тем же id заменяет запись мода, новый — добавляется
+    if (ref && kjs?.foods?.length) {
+      const own = new Set(kjs.foods.map((f) => f.id));
+      ref.foods = [...kjs.foods, ...ref.foods.filter((f) => !own.has(f.id))];
+    }
+    return (loaded = ref);
+  });
   return promise;
 }
 

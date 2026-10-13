@@ -64,7 +64,7 @@ npm run world -- <мир|world/data|tfc_calendar.dat|zip>  # сохранени�
 | Источник (не в git)           | Скрипт                                               | Результат                                                                                                 |
 | ----------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `mods/*.jar`                  | `mods.mjs` (+ `reference`, `manifest`, `geo`, `tags`, `botany`, `meals`, `cuisine`) | `public/items.json`, `icons/`, `recipes.json`, `reference.json`, `pack-manifest.json`, `geo.json`, `geo/`, `tags.json`, `botany.json`, `meals.json` |
-| `instance/kubejs/<слой>/`     | `kubejs.mjs`                                         | `public/kubejs.json`, `kubejs-items.json`, `icons-kubejs/` (свои предметы сборки из startup_scripts + assets) |
+| `instance/kubejs/<слой>/`     | `kubejs.mjs`                                         | `public/kubejs.json`, `kubejs-items.json`, `icons-kubejs/` (свои предметы сборки из startup_scripts + assets), `kubejs-data.json` (еда и сковорода из `kubejs/data` — сайт заменяет ими данные модов) |
 | сохранение мира (`<мир>/data/`) | `world.mjs`                                        | Firestore `config/world__{файл}` — календарь TFC (длина месяца, заданная командой)                          |
 | zip/папка конфигов сервера    | `serverconfig.mjs`                                  | Firestore `config/{scope}__{путь}`                                                                        |
 | разница манифестов при деплое | `pack-release.mjs` (predeploy)                       | Firestore `packUpdates/{id}`                                                                              |
@@ -75,6 +75,8 @@ npm run world -- <мир|world/data|tfc_calendar.dat|zip>  # сохранени�
   (`import '../src/lib/x.ts'` из `.mjs`, Node 24). В `tsconfig` включён `erasableSyntaxOnly` — никаких enum и parameter properties.
 - То, что мод задаёт кодом (перечисления, константы), читай скриптом через `scripts/mods/classfile.mjs`, а не вписывай руками:
   данные сайта должны пересобираться из jar текущей сборки. Пример — `scripts/mods/botany.mjs`.
+- `kubejs/data` — датапак: он переопределяет не только рецепты, но и данные (`tfc/food` и т. п.). Что сайт показывает
+  из данных модов, должно иметь слияние с `kubejs-data.json` или хотя бы предупреждение в `kubejs.mjs` (`MOD_ONLY_DATA`).
 - При изменении формата кеша jar поднимай маркер `.done-vN` в `mods.mjs`, иначе старый кеш не пересоберётся.
 
 ## Firestore
@@ -100,7 +102,7 @@ src/lib/
   tags.ts                      теги: слияние источников и KubeJS, поиск, файл правки датапака (UI — TagEditor)
   datapack.ts                  записи датапака, zip, проверки
   nbt.ts schematic.ts materials.ts schematicLibrary.ts   схемы .nbt: замена/удаление блоков, материалы, библиотека
-  reference.ts                 справочник (руды, топливо, жидкое топливо, еда, металлы)
+  reference.ts meals.ts        справочник (руды, топливо, жидкое топливо, еда, металлы); сборные блюда и калькуляторы
   projection.ts geo.ts atlas.ts config.ts   карта TFC Real World, настройки мира из конфига сервера
   packUpdates.ts gemini.ts     обновления сборки, запросы к Gemini (цепочки моделей с запасными, таймаут 90 с)
   files.ts files.config.ts     вложения через firestore-files
