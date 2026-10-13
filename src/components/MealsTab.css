@@ -2,38 +2,31 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
+/* Карточки одного размера: шапка стоит, остальное прокручивается внутри */
 .meal-card {
+  height: 440px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
-  min-width: 0;
+  overflow: hidden;
 }
 
-.meal-card.open {
-  border-color: var(--border-strong);
-}
-
-/* Свёрнутая строка — одна высота у всех блюд */
 .meal-head {
-  width: 100%;
-  min-height: 52px;
+  flex: none;
+  height: 64px;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 12px;
-  border: 0;
-  border-radius: var(--radius);
-  background: transparent;
-  cursor: pointer;
-  text-align: left;
-}
-
-.meal-head:hover {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
   background: var(--surface-2);
 }
 
@@ -45,43 +38,58 @@
   gap: 1px;
 }
 
-.meal-title b,
 .meal-title span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* Название — до двух строк: «Бутерброд на … хлебе с вареньем» в одну не помещается */
 .meal-title b {
   font-size: 15px;
   font-weight: 600;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .meal-amount {
   flex: none;
   padding: 2px 8px;
   border-radius: 10px;
-  background: var(--surface-2);
+  background: var(--surface-3);
   color: var(--text-2);
   white-space: nowrap;
 }
 
-/* Раскрытое блюдо: «что класть» и «что получится» рядом, калькулятор — на всю ширину */
 .meal-body {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 12px 28px;
-  align-items: start;
-  padding: 10px 14px 14px;
-  border-top: 1px solid var(--border);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 14px 14px;
 }
 
 .meal-body > * {
   min-width: 0;
 }
 
-.meal-body .meal-calc {
-  grid-column: 1 / -1;
+@media (max-width: 900px) {
+  .meal-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* В одну колонку вложенная прокрутка только мешает — карточка растёт по содержимому */
+  .meal-card {
+    height: auto;
+  }
+  .meal-body {
+    overflow-y: visible;
+  }
 }
 
 .meal-card h4 {
@@ -99,7 +107,6 @@
 
 .meal-icons {
   flex: none;
-  width: 118px;
   display: flex;
   gap: 2px;
 }
@@ -234,7 +241,6 @@
 
 @media (max-width: 560px) {
   .meal-icons {
-    width: auto;
     max-width: 60px;
     overflow: hidden;
   }

@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { itemName, type ItemIndex } from '../lib/items';
 import {
@@ -114,8 +114,8 @@ const portionLine = (p: MealPortion) =>
     : `питательные группы ×${ru(p.nutrient)}, вода ×${ru(p.water)}, насыщение ×${ru(p.saturation)}`;
 
 /**
- * Строка блюда: в свёрнутом виде все одного размера (значки, название, сколько продуктов),
- * по клику раскрывается на всю ширину списка — туда помещаются и длинные id тегов, и калькулятор.
+ * Карточка блюда фиксированного размера: шапка (значки, название, сколько продуктов) всегда на месте,
+ * состав, формула и калькулятор прокручиваются внутри — сетка остаётся ровной при любом объёме текста.
  */
 function MealShell({
   icons,
@@ -127,23 +127,21 @@ function MealShell({
   icons: ReactNode;
   title: string;
   sub: ReactNode;
-  /** Сколько продуктов кладётся — видно, не раскрывая */
+  /** Сколько продуктов кладётся */
   amount?: string;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
   return (
-    <li className={`meal-card${open ? ' open' : ''}`}>
-      <button type="button" className="meal-head" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+    <li className="meal-card">
+      <header className="meal-head">
         <span className="meal-icons">{icons}</span>
         <span className="meal-title">
-          <b>{title}</b>
+          <b title={title}>{title}</b>
           <span className="faint small">{sub}</span>
         </span>
         {amount && <span className="meal-amount small">{amount}</span>}
-        {open ? <ChevronDown size={16} className="faint" /> : <ChevronRight size={16} className="faint" />}
-      </button>
-      {open && <div className="meal-body">{children}</div>}
+      </header>
+      <div className="meal-body">{children}</div>
     </li>
   );
 }
@@ -168,7 +166,7 @@ function FamilyCard({
   const next = f.dishes.find((d) => d.next)?.next;
   return (
     <MealShell
-      icons={f.dishes.slice(0, 4).map((d) => (
+      icons={f.dishes.slice(0, 2).map((d) => (
         <ItemIcon key={d.item} id={d.item} size={28} />
       ))}
       title={title}
@@ -276,7 +274,7 @@ function ComputedCard({
   const scale = c.scale ?? 1;
   return (
     <MealShell
-      icons={c.results.slice(0, 4).map((r) => (
+      icons={c.results.slice(0, 2).map((r) => (
         <ItemIcon key={r.item} id={r.item} size={28} />
       ))}
       title={COMPUTED_TITLE[c.kind] ?? c.kind}
@@ -542,8 +540,8 @@ export function MealsTab({
       <p className="faint small ref-note">
         Сборное блюдо — еда, питательность которой складывается из того, что в неё положили: к значениям самого блюда
         прибавляется доля от каждого ингредиента. Поиск по продукту показывает блюда, в которые он годится. Состав тегов
-        — с учётом правок KubeJS. Клик по блюду раскрывает состав, формулу и калькулятор. В игре не проверялось.
-        Показано {shownCount} из {meals.families.length + meals.computed.length + (meals.dynamic?.length ?? 0)}.
+        — с учётом правок KubeJS. В игре не проверялось. Показано {shownCount} из{' '}
+        {meals.families.length + meals.computed.length + (meals.dynamic?.length ?? 0)}.
       </p>
       {shownCount === 0 ? (
         <div className="empty">Ничего не подходит.</div>
