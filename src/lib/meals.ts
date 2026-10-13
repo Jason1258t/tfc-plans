@@ -159,3 +159,82 @@ export function mealsByItem(meals: Meals, cat: TagCatalog, name: (id: string) =>
   }
   return out;
 }
+
+// ---------------------------------------------------------------- калькулятор
+
+/** Питательность продукта из справочника еды — то, что складывается в блюдо */
+export interface FoodValues {
+  saturation: number;
+  water: number;
+  nutrients: Partial<Record<Nutrient, number>>;
+}
+
+export interface MealResult extends MealFood {
+  /** Суп: сколько порций получится; значения result — на одну порцию */
+  servings?: number;
+  /** Суп и салат: какой предмет получится (по самой большой питательной группе) */
+  item?: string;
+}
+
+const NUTRIENT_ORDER: Nutrient[] = ['grain', 'fruit', 'vegetables', 'protein', 'dairy'];
+
+/**
+ * Блюдо из рецепта tfc:meal (как MealModifier.apply): значения блюда + по каждому продукту
+ * «его значение × множитель доли × количество». Долю выбирает первая подходящая по ингредиенту,
+ * доля без ингредиента — для остальных; продукт без доли ничего не добавляет.
+ */
+export function calcMeal(
+  f: MealFamily,
+  picked: { id: string; base?: boolean }[],
+  food: (id: string) => FoodValues | undefined,
+  cat: TagCatalog | null,
+): MealResult {
+  const out: MealResult = { ...f.base, nutrients: { ...f.base.nutrients } };
+  const portionFor = (p: { id: string; base?: boolean }) =>
+    f.portions.find((x) => {
+      if (x.base) return !!p.base;
+      if (!x.items?.length && !x.tags?.length) return true;
+      return !!x.items?.includes(p.id) || !!x.tags?.some((t) => tagItems(cat, t).includes(p.id));
+    });
+  for (const p of picked) {
+    const v = food(p.id);
+    const portion = portionFor(p);
+    if (!v || !portion) continue;
+    out.water += v.water * portion.water;
+    out.saturation += v.saturation * portion.saturation;
+    for (const n of NUTRIENT_ORDER)
+      if (v.nutrients[n]) out.nutrients[n] = (out.nutrients[n] ?? 0) + (v.nutrients[n] ?? 0) * portion.nutrient;
+  }
+  return out;
+}
+
+/** Суп и салат (как SoupPotRecipe / SaladContainer): сумма по продуктам × scale, у супа — ещё / число порций */
+export function calcComputed(
+  c: ComputedMeal,
+  picked: string[],
+  food: (id: string) => FoodValues | undefined,
+): MealResult {
+  const servings = c.servings ? Math.floor(picked.length / c.servings.div) + c.servings.add : undefined;
+  const k = (c.scale ?? 1) / (servings ?? 1);
+  const out: MealResult = {
+    hunger: c.hunger,
+    decay: c.decay,
+    water: c.baseWater ?? 0,
+    saturation: c.baseSaturation ?? 0,
+    nutrients: {},
+    servings,
+  };
+  for (const id of picked) {
+    const v = food(id);
+    if (!v) continue;
+    out.water += v.water * k;
+    out.saturation += v.saturation * k;
+    for (const n of NUTRIENT_ORDER)
+      if (v.nutrients[n]) out.nutrients[n] = (out.nutrients[n] ?? 0) + (v.nutrients[n] ?? 0) * k;
+  }
+  // Вид блюда — первая из самых больших групп (сравнение строгое, порядок групп как в игре)
+  let best: Nutrient | null = null;
+  for (const n of NUTRIENT_ORDER) if ((out.nutrients[n] ?? 0) > (best ? (out.nutrients[best] ?? 0) : 0)) best = n;
+  out.item = c.results.find((r) => r.nutrient === best)?.item;
+  return out;
+}

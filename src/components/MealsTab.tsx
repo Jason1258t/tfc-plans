@@ -12,9 +12,10 @@ import {
   type MealPortion,
   type MealSlot,
 } from '../lib/meals';
-import { NUTRIENTS, type Nutrient } from '../lib/reference';
+import { NUTRIENTS, type Food, type Nutrient } from '../lib/reference';
 import { useTags, type TagCatalog } from '../lib/tags';
 import { ItemIcon } from './ItemIcon';
+import { ComputedCalc, FamilyCalc, type FoodLookup } from './MealCalc';
 import './MealsTab.css';
 
 const NUTRIENT_LABEL: Record<Nutrient, string> = {
@@ -108,7 +109,17 @@ const portionLine = (p: MealPortion) =>
     ? `×${ru(p.nutrient)} от его питательных групп, воды и насыщения`
     : `питательные группы ×${ru(p.nutrient)}, вода ×${ru(p.water)}, насыщение ×${ru(p.saturation)}`;
 
-function FamilyCard({ f, cat, items }: { f: MealFamily; cat: TagCatalog | null; items: ItemIndex | null }) {
+function FamilyCard({
+  f,
+  cat,
+  items,
+  food,
+}: {
+  f: MealFamily;
+  cat: TagCatalog | null;
+  items: ItemIndex | null;
+  food: FoodLookup;
+}) {
   const name = useNames(items);
   const title = familyTitle(f.dishes.map((d) => name(d.item)));
   const foods = f.slots.filter((s) => s.food);
@@ -197,11 +208,22 @@ function FamilyCard({ f, cat, items }: { f: MealFamily; cat: TagCatalog | null; 
           </p>
         )}
       </section>
+      <FamilyCalc f={f} cat={cat} items={items} food={food} />
     </li>
   );
 }
 
-function ComputedCard({ c, cat, items }: { c: ComputedMeal; cat: TagCatalog | null; items: ItemIndex | null }) {
+function ComputedCard({
+  c,
+  cat,
+  items,
+  food,
+}: {
+  c: ComputedMeal;
+  cat: TagCatalog | null;
+  items: ItemIndex | null;
+  food: FoodLookup;
+}) {
   const pots = c.pots ?? [];
   const counts = pots.map((p) => p.count);
   const servings = (n: number) => (c.servings ? Math.floor(n / c.servings.div) + c.servings.add : 1);
@@ -288,12 +310,27 @@ function ComputedCard({ c, cat, items }: { c: ComputedMeal; cat: TagCatalog | nu
           </li>
         </ul>
       </section>
+      <ComputedCalc c={c} cat={cat} items={items} food={food} />
     </li>
   );
 }
 
 /** Подвкладка «Сборные блюда»: семейства из рецептов tfc:meal, суп и салат */
-export function MealsTab({ items, initialQuery = '' }: { items: ItemIndex | null; initialQuery?: string }) {
+export function MealsTab({
+  items,
+  foods,
+  initialQuery = '',
+}: {
+  items: ItemIndex | null;
+  foods: Food[];
+  initialQuery?: string;
+}) {
+  // Питательность продуктов для калькулятора — из справочника еды
+  const food = useMemo<FoodLookup>(() => {
+    const m = new Map<string, Food>();
+    for (const f of foods) for (const id of f.items) if (!m.has(id)) m.set(id, f);
+    return (id) => m.get(id);
+  }, [foods]);
   const meals = useMeals();
   const cat = useTags();
   const [query, setQuery] = useState(initialQuery);
@@ -351,10 +388,10 @@ export function MealsTab({ items, initialQuery = '' }: { items: ItemIndex | null
       ) : (
         <ul className="meal-grid">
           {computed.map((c) => (
-            <ComputedCard key={c.kind} c={c} cat={cat} items={items} />
+            <ComputedCard key={c.kind} c={c} cat={cat} items={items} food={food} />
           ))}
           {families.map((f) => (
-            <FamilyCard key={f.id + f.slots.map((s) => s.key).join()} f={f} cat={cat} items={items} />
+            <FamilyCard key={f.id + f.slots.map((s) => s.key).join()} f={f} cat={cat} items={items} food={food} />
           ))}
         </ul>
       )}

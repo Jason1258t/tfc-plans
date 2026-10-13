@@ -123,3 +123,44 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.meal-calc {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.meal-calc summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.meal-calc-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 6px 8px;
+  margin: 8px 0;
+}
+
+.meal-calc-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.meal-calc-fields select {
+  width: 100%;
+  min-width: 0;
+}
+
+.meal-result {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  line-height: 1.6;
+}

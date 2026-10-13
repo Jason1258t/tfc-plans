@@ -101,7 +101,7 @@ export function ReferencePage() {
             </button>
           </div>
           {params.get('sub') === 'meals' ? (
-            <MealsTab items={items} initialQuery={params.get('q') ?? ''} />
+            <MealsTab items={items} foods={ref.foods} initialQuery={params.get('q') ?? ''} />
           ) : (
             <FoodTab foods={ref.foods} items={items} />
           )}
