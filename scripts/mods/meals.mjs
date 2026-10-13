@@ -46,6 +46,10 @@ export function decoded(cls, method) {
       const v = cls.constant(ins.index);
       return typeof v === 'number' ? { op, num: v } : { op, str: typeof v === 'string' ? v : undefined };
     }
+    if (op === 0x15) return { op, iload: ins.index };
+    if (op >= 0x1a && op <= 0x1d) return { op, iload: op - 0x1a };
+    if (op === 0x36) return { op, istore: ins.index };
+    if (op >= 0x3b && op <= 0x3e) return { op, istore: op - 0x3b };
     if (op === 0x17) return { op, fload: ins.index };
     if (op >= 0x22 && op <= 0x25) return { op, fload: op - 0x22 };
     if (op === 0x38) return { op, fstore: ins.index };
@@ -66,7 +70,11 @@ function computedDish(cls, classes) {
     if (at < 6 || !list.some((x) => x.ref?.name === DYNAMIC_FOOD)) continue;
     // Блюда по главной питательной группе лежат в статической карте предметов (SOUPS, SALADS)
     const map = list.find((x) => x.op === 0xb2 && /Map;$/.test(x.ref.desc) && /Items$/.test(x.ref.owner));
-    if (!map) continue;
+    if (!map) {
+      const single = singleDish(cls, list, at);
+      if (single) return single;
+      continue;
+    }
     // Аргументы конструктора — шесть инструкций перед вызовом
     const [hunger, water, saturation, , , decay] = list.slice(at - 6, at);
     // Аргументы — выражения, а не готовые переменные: блюдо аддона со своей формулой
@@ -98,6 +106,20 @@ function computedDish(cls, classes) {
       baseSaturation: saturation.fload !== undefined ? initial(saturation.fload) : undefined,
       scale: scale !== undefined ? round(scale) : undefined,
     };
+    // Сколько блюд собирается за раз: счётчик начинается с числа (размер стопки) и уменьшается до наименьшей
+    // стопки среди продуктов и посуды, им же задаётся количество в «new ItemStack(предмет, количество)»
+    const made = list.findIndex(
+      (x) => x.ref?.name === '<init>' && /ItemStack$/.test(x.ref.owner) && /I\)V$/.test(x.ref.desc),
+    );
+    const counter = made > 0 ? list[made - 1].iload : undefined;
+    if (counter !== undefined) {
+      const init = list.findIndex((x) => x.istore === counter);
+      const shrinks = list.some((x, i) => x.istore === counter && i > init && list[i - 1]?.ref?.name === 'getCount');
+      if (init > 0 && list[init - 1].int && shrinks) out.batch = list[init - 1].num;
+      // «если продуктов ≤ 0 — блюда нет»: хватит одного
+      if (out.batch && list.some((x, i) => x.iload !== undefined && x.iload !== counter && list[i + 1]?.op === 0x9e))
+        out.minItems = 1;
+    }
     // Число порций из числа ингредиентов: «n / делитель + добавка»
     const servings = cls.methods.find((x) => /servings/i.test(x.name) && x.desc === '(I)I');
     if (perServing && servings) {
@@ -117,6 +139,56 @@ function computedDish(cls, classes) {
     return out;
   }
   return null;
+}
+
+/**
+ * Блюдо одного вида (вонючий суп Firmalife): тот же подсчёт, что у супа, но предмет один, а множитель —
+ * «1 − число × количество продуктов»; порции считаются тут же: «n / делитель + добавка».
+ */
+function singleDish(cls, list, at) {
+  const [hunger, water, saturation, , , decay] = list.slice(at - 6, at);
+  if (hunger.num === undefined || water.fload === undefined || decay.num === undefined) return null;
+  const item = list.find((x, i) => i > at && x.op === 0xb2 && /Items$/.test(x.ref.owner));
+  const serializer = cls.methods
+    .filter((m) => m.name === 'getSerializer')
+    .flatMap((m) => decoded(cls, m))
+    .find((x) => x.op === 0xb2)?.ref;
+  if (!item || !serializer) return null;
+  const initial = (local) => {
+    const i = list.findIndex((x) => x.fstore === local);
+    return i > 0 && list[i - 1].num !== undefined ? list[i - 1].num : undefined;
+  };
+  const ns = cls.name.split('/')[2];
+  const out = {
+    kind: serializer.name.toLowerCase(),
+    ns,
+    itemField: item.ref.name.toLowerCase(),
+    recipeType: `${ns}:${serializer.name.toLowerCase()}`,
+    hunger: hunger.num,
+    decay: round(decay.num),
+    baseWater: initial(water.fload),
+    baseSaturation: saturation.fload !== undefined ? initial(saturation.fload) : undefined,
+  };
+  // «1 − k × n»: единица, число, счётчик продуктов, умножение, вычитание
+  list.forEach((x, i) => {
+    const [k, n, f, mul, sub] = list.slice(i + 1, i + 6);
+    if (
+      x.num === 1 &&
+      k?.num !== undefined &&
+      n?.iload !== undefined &&
+      f?.op === 0x86 &&
+      mul?.op === 0x6a &&
+      sub?.op === 0x66
+    )
+      out.fade = round(k.num);
+  });
+  // «(int) (n / делитель) + добавка» после создания еды
+  list.forEach((x, i) => {
+    const [div, cast, add, plus] = list.slice(i + 1, i + 5);
+    if (i > at && x.num !== undefined && div?.op === 0x6e && cast?.op === 0x8b && add?.int && plus?.op === 0x60)
+      out.servings = { div: x.num, add: add.num };
+  });
+  return out.fade !== undefined ? out : null;
 }
 
 /**
@@ -467,6 +539,20 @@ export function buildMeals(classDirs, recipeMap, items, jarPaths = [], dataDirs 
       dishes: [],
       slots: rest.map(({ key: k, items: it, tags, food, min, max }) => ({ key: k, items: it, tags, food, min, max })),
       baseCount: baseSlots.length ? Math.max(...baseSlots.map((s) => s.max)) : 0,
+      // Какие наборы начинок бывают на самом деле: по одному на вариант рецепта (слот → сколько штук)
+      combos: [
+        ...new Map(
+          d.variants.map((v) => {
+            const combo = Object.fromEntries(
+              rest
+                .filter((x) => x.food)
+                .map((x) => [x.key, v.find((y) => y.key === x.key)?.count ?? 0])
+                .filter(([, n]) => n > 0),
+            );
+            return [JSON.stringify(Object.entries(combo).sort()), combo];
+          }),
+        ).values(),
+      ],
       base: d.base,
       portions: d.portions.map((p) => {
         // Доля основы у каждого блюда семейства своя (свой хлеб) — в семействе оставляем только признак
@@ -546,9 +632,13 @@ export function buildMeals(classDirs, recipeMap, items, jarPaths = [], dataDirs 
   const computedOut = computed
     .filter((c) => c.hunger !== undefined && !c.nutrients)
     .map((c) => {
-      const results = nutrientsOf(c.kind, c.itemNs);
-      if (!results.length) warnings.push(`${c.kind}: предметы блюда по питательным группам не найдены`);
-      const type = `${c.ns}:pot_${c.kind.replace(/s$/, '')}`;
+      // Блюдо одного вида: предмет — в моде блюда, последний сегмент id совпадает с именем поля
+      const single = c.itemField
+        ? [...have].filter((id) => id.startsWith(`${c.ns}:`) && id.split(/[:/]/).pop() === c.itemField)
+        : [];
+      const results = c.itemField ? [] : nutrientsOf(c.kind, c.itemNs);
+      if (c.itemField ? single.length !== 1 : !results.length) warnings.push(`${c.kind}: предметы блюда не найдены`);
+      const type = c.recipeType ?? `${c.ns}:pot_${c.kind.replace(/s$/, '')}`;
       const pots = recipes
         .filter((r) => r.t === type)
         .map((r) => {
@@ -557,6 +647,8 @@ export function buildMeals(classDirs, recipeMap, items, jarPaths = [], dataDirs 
             recipe: r.i,
             count: ings.length,
             tags: [...new Set(ings.flatMap((i) => i.tags))],
+            // Обязательные продукты, названные прямо (паслён в вонючем супе), — кладутся всегда
+            fixed: ings.filter((i) => !i.tags.length).flatMap((i) => i.items.slice(0, 1)),
             fluid: r.j.fluid_ingredient?.fluid ?? r.j.fluid_ingredient?.tag ?? null,
             amount: r.j.fluid_ingredient?.amount ?? null,
             duration: r.j.duration ?? null,
@@ -564,9 +656,16 @@ export function buildMeals(classDirs, recipeMap, items, jarPaths = [], dataDirs 
           };
         })
         .sort((a, b) => a.count - b.count);
-      const { tagFields, ns: _ns, itemNs: _itemNs, ...rest } = c;
+      const { tagFields, ns, itemNs: _itemNs, itemField: _itemField, recipeType: _recipeType, ...rest } = c;
       const tags = tagFields ?? [];
-      return { ...rest, results, ...(pots.length ? { pots } : {}), ...(tags.length ? { tags } : {}) };
+      return {
+        ...rest,
+        mod: ns,
+        results,
+        ...(single.length === 1 ? { item: single[0] } : {}),
+        ...(pots.length ? { pots } : {}),
+        ...(tags.length ? { tags } : {}),
+      };
     });
   if (!computedOut.some((c) => c.kind === 'soups')) warnings.push('формула супа (класс рецепта с SOUPS) не найдена');
   if (!computedOut.some((c) => c.kind === 'salads')) warnings.push('формула салата (контейнер с SALADS) не найдена');

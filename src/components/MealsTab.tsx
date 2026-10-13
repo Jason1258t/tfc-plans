@@ -2,7 +2,7 @@ import { Search } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { itemName, type ItemIndex } from '../lib/items';
 import {
-  COMPUTED_TITLE,
+  computedTitle,
   dynamicTitle,
   familyTitle,
   skilletHay,
@@ -274,13 +274,18 @@ function ComputedCard({
   const bowls = all.filter((t) => /bowl/.test(t));
   const pot = pots[0];
   const scale = c.scale ?? 1;
+  const name = useNames(items);
+  const fixed = pot?.fixed ?? [];
+  // Множитель: постоянный (суп, салат) или убывающий с числом продуктов (вонючий суп)
+  const factor = c.fade !== undefined ? `(1 − ${ru(c.fade)} × число продуктов)` : ru(scale);
+  const perServing = c.servings && c.fade === undefined;
   return (
     <MealShell
-      icons={c.results.slice(0, 2).map((r) => (
-        <ItemIcon key={r.item} id={r.item} size={28} />
+      icons={(c.item ? [c.item] : c.results.slice(0, 2).map((r) => r.item)).map((id) => (
+        <ItemIcon key={id} id={id} size={28} />
       ))}
-      title={COMPUTED_TITLE[c.kind] ?? c.kind}
-      sub={`${pot ? 'кастрюля' : 'окно сборки салата'} · формула из кода TFC`}
+      title={computedTitle(c, name)}
+      sub={`${pot ? 'кастрюля' : 'окно сборки салата'} · формула из кода ${!c.mod || c.mod === 'tfc' ? 'TFC' : `мода ${c.mod}`}`}
       amount={
         counts.length
           ? products(Math.min(...counts), Math.max(...counts))
@@ -294,7 +299,10 @@ function ComputedCard({
         <ul className="meal-slots">
           <li>
             <b className="meal-count">
-              ×{counts.length ? range(Math.min(...counts), Math.max(...counts)) : `до ${c.slots ?? '?'}`}
+              ×
+              {counts.length
+                ? range(Math.min(...counts) - fixed.length, Math.max(...counts) - fixed.length)
+                : `1–${c.slots ?? '?'}`}
             </b>
             <div className="grow">
               {tags.map((t) => (
@@ -303,6 +311,17 @@ function ComputedCard({
             </div>
           </li>
         </ul>
+        {fixed.length > 0 && (
+          <ul className="meal-slots">
+            <li>
+              <b className="meal-count">×{fixed.length}</b>
+              <div className="grow">
+                <span className="faint small">обязательно: </span>
+                <ItemChips ids={fixed} items={items} />
+              </div>
+            </li>
+          </ul>
+        )}
         {bowls.length > 0 && (
           <ul className="meal-slots">
             <li>
@@ -331,23 +350,31 @@ function ComputedCard({
             </li>
           )}
           <li>
-            <b>Питательные группы:</b> сумма по всем продуктам × {ru(scale)}
-            {c.servings ? ' и делится на число порций' : ''}
+            <b>Питательные группы:</b> сумма по всем продуктам × {factor}
+            {perServing ? ' и делится на число порций' : ''}
+            {c.servings && !perServing ? ' — в каждой порции целиком, на порции не делится' : ''}
           </li>
           <li>
             <b>Вода и насыщение:</b>{' '}
             {c.baseWater || c.baseSaturation
               ? `вода ${ru(c.baseWater ?? 0)} и насыщение ${ru(c.baseSaturation ?? 0)} у самого блюда плюс `
               : ''}
-            сумма по продуктам × {ru(scale)}
-            {c.servings ? ' / число порций' : ''}
+            сумма по продуктам × {factor}
+            {perServing ? ' / число порций' : ''}
           </li>
-          <li>
-            <b>Вид блюда</b> — по самой большой питательной группе:{' '}
-            {c.results
-              .map((r) => `${NUTRIENT_LABEL[r.nutrient]} → ${itemName(items?.byId.get(r.item), r.item)}`)
-              .join('; ')}
-          </li>
+          {c.results.length > 0 && (
+            <li>
+              <b>Вид блюда</b> — по самой большой питательной группе:{' '}
+              {c.results.map((r) => `${NUTRIENT_LABEL[r.nutrient]} → ${name(r.item)}`).join('; ')}
+            </li>
+          )}
+          {c.batch && (
+            <li>
+              <b>За раз:</b> столько блюд, сколько штук в самой маленькой стопке среди продуктов и посуды (до {c.batch}
+              ); с каждым взятым блюдом уходит по одной штуке каждого продукта и одна посуда.
+              {c.minItems === 1 ? ' Хватит и одного продукта.' : ''}
+            </li>
+          )}
           <li>
             <b>Всегда:</b> сытость {c.hunger}, порча ×{ru(c.decay)}
           </li>
@@ -505,9 +532,10 @@ export function MealsTab({
     for (const c of meals?.computed ?? []) {
       const ids = [
         ...c.results.map((r) => r.item),
+        ...(c.pots ?? []).flatMap((p) => p.fixed ?? []),
         ...[...(c.tags ?? []), ...(c.pots ?? []).flatMap((p) => p.tags)].flatMap((t) => membersOf(cat, t)),
       ];
-      out.set(c.kind, lower(`${COMPUTED_TITLE[c.kind] ?? ''} ${ids.map((id) => `${name(id)} ${id}`).join(' ')}`));
+      out.set(c.kind, lower(`${computedTitle(c, name)} ${ids.map((id) => `${name(id)} ${id}`).join(' ')}`));
     }
     for (const d of meals?.dynamic ?? []) {
       const ids = [...d.results.map((r) => r.item), ...(d.ingredientTag ? membersOf(cat, d.ingredientTag) : [])];

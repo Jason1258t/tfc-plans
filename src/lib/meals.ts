@@ -49,6 +49,8 @@ export interface MealFamily {
   slots: MealSlot[];
   /** Сколько штук основы идёт в блюдо (0 — основы нет) */
   baseCount: number;
+  /** Наборы начинок, для которых есть рецепт: ключ слота → сколько штук */
+  combos?: Record<string, number>[];
   base: MealFood;
   portions: MealPortion[];
   types: string[];
@@ -64,6 +66,16 @@ export interface ComputedMeal {
   baseWater?: number;
   baseSaturation?: number;
   scale?: number;
+  /** Вместо scale: множитель «1 − fade × число продуктов», на порции не делится (вонючий суп Firmalife) */
+  fade?: number;
+  /** Мод, в коде которого формула */
+  mod?: string;
+  /** Блюдо одного вида — предмет на выходе */
+  item?: string;
+  /** За раз собирается столько блюд, сколько в наименьшей стопке продуктов и посуды, но не больше batch */
+  batch?: number;
+  /** Наименьшее число продуктов для блюда из окна сборки */
+  minItems?: number;
   /** Порций из n ингредиентов: floor(n / div) + add */
   servings?: { div: number; add: number };
   slots?: number;
@@ -73,6 +85,8 @@ export interface ComputedMeal {
     recipe: string;
     count: number;
     tags: string[];
+    /** Обязательные продукты рецепта, названные прямо; входят в count */
+    fixed?: string[];
     fluid: string | null;
     amount: number | null;
     duration: number | null;
@@ -237,6 +251,10 @@ export function familyTitle(names: string[]): string {
 
 export const COMPUTED_TITLE: Record<string, string> = { soups: 'Суп', salads: 'Салат' };
 
+/** Заголовок блюда из кода: суп и салат — по виду, блюдо одного вида — название предмета */
+export const computedTitle = (c: ComputedMeal, name: (id: string) => string) =>
+  COMPUTED_TITLE[c.kind] ?? (c.item ? name(c.item) : c.kind);
+
 /** Предметы тега со всеми вложенными тегами, с учётом правок KubeJS */
 export function tagItems(cat: TagCatalog | null, tag: string): string[] {
   if (!cat) return [];
@@ -260,7 +278,7 @@ export function mealsByItem(meals: Meals, cat: TagCatalog, name: (id: string) =>
     out.set(id, list);
   };
   for (const c of meals.computed) {
-    const ref = { key: c.kind, title: COMPUTED_TITLE[c.kind] ?? c.kind };
+    const ref = { key: c.kind, title: computedTitle(c, name) };
     const tags = [...(c.tags ?? []), ...(c.pots ?? []).flatMap((p) => p.tags)].filter((t) => !/bowl/.test(t));
     for (const t of new Set(tags)) for (const id of tagItems(cat, t)) add(id, ref);
   }
@@ -373,7 +391,7 @@ export function calcComputed(
   food: (id: string) => FoodValues | undefined,
 ): MealResult {
   const servings = c.servings ? Math.floor(picked.length / c.servings.div) + c.servings.add : undefined;
-  const k = (c.scale ?? 1) / (servings ?? 1);
+  const k = c.fade !== undefined ? 1 - c.fade * picked.length : (c.scale ?? 1) / (servings ?? 1);
   const out: MealResult = {
     hunger: c.hunger,
     decay: c.decay,
@@ -393,7 +411,7 @@ export function calcComputed(
   // Вид блюда — первая из самых больших групп (сравнение строгое, порядок групп как в игре)
   let best: Nutrient | null = null;
   for (const n of NUTRIENT_ORDER) if ((out.nutrients[n] ?? 0) > (best ? (out.nutrients[best] ?? 0) : 0)) best = n;
-  out.item = c.results.find((r) => r.nutrient === best)?.item;
+  out.item = c.item ?? c.results.find((r) => r.nutrient === best)?.item;
   return out;
 }
 
