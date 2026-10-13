@@ -27,13 +27,12 @@ import {
 import { cx } from '../lib/util';
 import './ReferencePage.css';
 
-type Tab = 'ores' | 'fuel' | 'liquid' | 'food' | 'metals' | 'botany' | 'map';
+type Tab = 'ores' | 'fuel' | 'metals' | 'food' | 'botany' | 'map';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'ores', label: 'Руды' },
   { id: 'fuel', label: 'Топливо' },
-  { id: 'liquid', label: 'Жидкое топливо' },
-  { id: 'food', label: 'Еда' },
   { id: 'metals', label: 'Металлы' },
+  { id: 'food', label: 'Еда' },
   { id: 'botany', label: 'Ботаника' },
   { id: 'map', label: 'Карта' },
 ];
@@ -41,7 +40,10 @@ const TABS: { id: Tab; label: string }[] = [
 /** Справочник по данным сборки: жилы руд, топливо, еда, температуры металлов */
 export function ReferencePage() {
   const [params, setParams] = useSearchParams();
-  const tab = (TABS.find((t) => t.id === params.get('tab'))?.id ?? 'ores') as Tab;
+  // tab=liquid — прежний адрес жидкого топлива, теперь это подраздел «Топлива»
+  const oldLiquid = params.get('tab') === 'liquid';
+  const tab = oldLiquid ? 'fuel' : ((TABS.find((t) => t.id === params.get('tab'))?.id ?? 'ores') as Tab);
+  const liquid = oldLiquid || (tab === 'fuel' && params.get('sub') === 'liquid');
   const ref = useReference();
   const items = useItems();
 
@@ -77,13 +79,30 @@ export function ReferencePage() {
       ) : tab === 'ores' ? (
         <OresTab ref_={ref} items={items} />
       ) : tab === 'fuel' ? (
-        <FuelTab fuels={ref.fuels} items={items} />
-      ) : tab === 'liquid' ? (
-        ref.liquid ? (
-          <LiquidFuelTab families={ref.liquid.families} items={items} />
-        ) : (
-          <div className="empty">Справочник собран старой версией — выполните npm run mods</div>
-        )
+        <div className="botany">
+          <nav className="botany-nav" aria-label="Разделы топлива">
+            <button className={cx(!liquid && 'active')} onClick={() => setParams({ tab: 'fuel' }, { replace: true })}>
+              <span>Твёрдое</span>
+              <span className="faint small">{ref.fuels.length}</span>
+            </button>
+            <button
+              className={cx(liquid && 'active')}
+              onClick={() => setParams({ tab: 'fuel', sub: 'liquid' }, { replace: true })}
+            >
+              <span>Жидкое</span>
+              <span className="faint small">{ref.liquid?.families.length ?? ''}</span>
+            </button>
+          </nav>
+          <div className="botany-main ref-fuel-main">
+            {!liquid ? (
+              <FuelTab fuels={ref.fuels} items={items} />
+            ) : ref.liquid ? (
+              <LiquidFuelTab families={ref.liquid.families} items={items} />
+            ) : (
+              <div className="empty">Справочник собран старой версией — выполните npm run mods</div>
+            )}
+          </div>
+        </div>
       ) : tab === 'food' ? (
         <>
           <div className="seg ref-subtabs">
