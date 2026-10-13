@@ -258,6 +258,39 @@ function buildChains(starts, recipes, tags, smelt) {
   return chains;
 }
 
+/**
+ * Плавка руд и цепочки «руда → … → то, что плавится» по набору рецептов. Вынесено отдельно: scripts/kubejs.mjs
+ * пересчитывает то же самое по каталогу с рецептами датапака сборки (kubejs/data).
+ * recipes — пары [id, { json }], tags — Map("ns:tag" → предметы).
+ */
+export function oreChains(veins, recipes, tags) {
+  // Плавка руд и других предметов: heating с жидким результатом
+  const smelt = {};
+  for (const [, r] of recipes) {
+    const j = r.json;
+    if (j?.type !== 'tfc:heating' || !j.result_fluid) continue;
+    for (const item of ingredientItems(j.ingredient, tags)) {
+      smelt[item] = {
+        fluid: j.result_fluid.id ?? j.result_fluid.fluid,
+        mb: j.result_fluid.amount,
+        temp: j.temperature,
+      };
+    }
+  }
+
+  // Цепочки строим только для сортовых руд: у прочих (графит, самоцветы) «путь до металла» бессмыслен
+  const oreItems = new Set(
+    veins.flatMap((v) =>
+      v.minerals.flatMap((m) => m.items.filter((i) => GRADES.indexOf(i.grade) < 3).map((i) => i.item)),
+    ),
+  );
+  const chains = buildChains(oreItems, recipes, tags, smelt);
+  // В smelt оставляем только то, что нужно справочнику: руды и концы цепочек
+  const needed = new Set([...oreItems, ...Object.values(chains).map((c) => c.at(-1).item)]);
+  const smeltUsed = Object.fromEntries(Object.entries(smelt).filter(([k]) => needed.has(k)));
+  return { smelt: smeltUsed, chains };
+}
+
 export function buildReference(dataDirs, recipes, parse, fluidNames = new Map()) {
   const tags = itemTags(dataDirs, parse);
 
@@ -272,19 +305,7 @@ export function buildReference(dataDirs, recipes, parse, fluidNames = new Map())
     .filter(([, v]) => Array.isArray(v.json?.config?.blocks) || v.json?.config?.indicator)
     .map(([id, v]) => veinRecord(id, v));
 
-  // Плавка руд и других предметов: heating с жидким результатом
-  const smelt = {};
-  for (const [, r] of recipes) {
-    const j = r.json;
-    if (j?.type !== 'tfc:heating' || !j.result_fluid) continue;
-    for (const item of ingredientItems(j.ingredient, tags)) {
-      smelt[item] = {
-        fluid: j.result_fluid.id ?? j.result_fluid.fluid,
-        mb: j.result_fluid.amount,
-        temp: j.temperature,
-      };
-    }
-  }
+  const { smelt: smeltUsed, chains } = oreChains(veins, recipes, tags);
 
   const metals = [...collect(dataDirs, 'tfc/fluid_heat', parse)].map(([id, { json, source }]) => ({
     id,
@@ -320,17 +341,6 @@ export function buildReference(dataDirs, recipes, parse, fluidNames = new Map())
     decay: json.decay_modifier ?? 1,
     nutrients: Object.fromEntries(NUTRIENTS.filter((n) => json[n]).map((n) => [n, json[n]])),
   }));
-
-  // Цепочки строим только для сортовых руд: у прочих (графит, самоцветы) «путь до металла» бессмыслен
-  const oreItems = new Set(
-    veins.flatMap((v) =>
-      v.minerals.flatMap((m) => m.items.filter((i) => GRADES.indexOf(i.grade) < 3).map((i) => i.item)),
-    ),
-  );
-  const chains = buildChains(oreItems, recipes, tags, smelt);
-  // В smelt оставляем только то, что нужно справочнику: руды и концы цепочек
-  const needed = new Set([...oreItems, ...Object.values(chains).map((c) => c.at(-1).item)]);
-  const smeltUsed = Object.fromEntries(Object.entries(smelt).filter(([k]) => needed.has(k)));
 
   const liquid = buildLiquidFuels(dataDirs, recipes, parse, tags, fluidNames);
 

@@ -60,8 +60,8 @@ export function ReferencePage() {
         <div className="grow">
           <h1>Справочник</h1>
           <p className="faint small">
-            Данные из jar сборки; еда и металлы — с учётом датапака сборки (kubejs/data). Остальное, что сервер
-            переопределяет датапаком или KubeJS, здесь не видно.
+            Данные из jar сборки; еда, металлы и плавка руд — с учётом датапака и скриптов KubeJS сборки. Остальное, что
+            сервер переопределяет датапаком или KubeJS, здесь не видно.
           </p>
         </div>
       </div>
@@ -294,6 +294,8 @@ function MineralCard({
   const smelt = ref_.smelt[end];
   const ingot = smelt ? ingotOf(smelt.fluid, items) : null;
   const grades = group.veins[0].minerals.find((m) => m.mineral === group.mineral)?.items ?? [];
+  // Руда плавится сама (без цепочки): выход металла зависит от сорта
+  const direct = chain ? [] : grades.filter((i) => ref_.smelt[i.item]);
 
   return (
     <section className="ref-card">
@@ -321,10 +323,10 @@ function MineralCard({
         )}
       </header>
 
-      {chain && (
+      {(chain || (smelt && direct.length > 0)) && (
         <div className="ref-chain" aria-label="Путь до металла">
           <ItemIcon id={group.main} size={22} />
-          {chain.map((s) => (
+          {(chain ?? []).map((s) => (
             <span key={s.item} className="ref-step">
               <span className="ref-step-arrow">
                 <ArrowRight size={14} />
@@ -337,8 +339,16 @@ function MineralCard({
             <span className="ref-step">
               <span className="ref-step-arrow">
                 <ArrowRight size={14} />
-                <span className="faint small">
-                  нагрев {Math.round(smelt.temp)} °C, {smelt.mb} mB
+                <span
+                  className="faint small"
+                  title={
+                    direct.length > 1
+                      ? direct.map((i) => `${GRADE_LABEL[i.grade]} — ${ref_.smelt[i.item].mb} mB`).join(', ')
+                      : undefined
+                  }
+                >
+                  нагрев {Math.round(smelt.temp)} °C,{' '}
+                  {direct.length > 1 ? direct.map((i) => ref_.smelt[i.item].mb).join(' / ') : smelt.mb} mB
                 </span>
               </span>
               {ingot ? <ItemIcon id={ingot} size={22} /> : <code className="small">{smelt.fluid}</code>}

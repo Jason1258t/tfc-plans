@@ -30,6 +30,7 @@ import { ROOT } from './firestore-rest.mjs';
 import { matchFilter } from '../src/lib/recipeFilter.ts';
 import { recipeRefs } from '../src/lib/recipeRefs.ts';
 import { ingredientOf, skilletEntryValues } from './mods/cuisine.mjs';
+import { oreChains } from './mods/reference.mjs';
 
 const INSTANCE = path.join(ROOT, 'instance', 'kubejs');
 const OUT = path.join(ROOT, 'public', 'kubejs.json');
@@ -150,6 +151,31 @@ const ingJson = (v) => {
   return s;
 };
 
+const fluidJson = (v) => {
+  const s = ser(v);
+  return typeof s === 'string' ? { id: s, amount: v?.__amount ?? 1000 } : s;
+};
+/**
+ * Хелперы модов, у которых JSON собирается целиком: по ним сайт считает справочник (плавка руд).
+ * tfc.heating — по схеме KubeJS TFC (data/tfc/kubejs/recipe_schema/heating.json): конструктор
+ * (ingredient, temperature), выходы — .resultFluid/.fluidOutput, .resultItem/.itemOutput, .results/.outputs(предмет, жидкость).
+ */
+const HELPERS = {
+  'tfc:heating': (addRecipe, ingredient, temperature) => {
+    const fluid = (j, f) => (j.result_fluid = fluidJson(f));
+    const item = (j, i) => (j.result_item = stackJson(i));
+    const both = (j, i, f) => {
+      if (i != null) item(j, i);
+      if (f != null) fluid(j, f);
+    };
+    return addRecipe(
+      'tfc:heating',
+      { type: 'tfc:heating', ingredient: ingJson(ingredient), temperature: ser(temperature) },
+      { resultFluid: fluid, fluidOutput: fluid, resultItem: item, itemOutput: item, results: both, outputs: both },
+    );
+  },
+};
+
 function runLayer(layer) {
   const dir = path.join(INSTANCE, layer, 'server_scripts');
   const rules = [];
@@ -189,13 +215,14 @@ function runLayer(layer) {
   };
 
   /** Добавленный рецепт: цепочка .id('…') и любые настройки (.xp(), .heated()…) */
-  const addRecipe = (type, json) => {
+  const addRecipe = (type, json, setters = {}) => {
     const rec = { type, json, id: null, ...where() };
     added.push(rec);
     const chain = new Proxy(function () {}, {
       get(_, k) {
         if (k === 'id') return (id) => ((rec.id = String(id)), chain);
         if (typeof k === 'symbol' || k === 'then') return undefined;
+        if (Object.hasOwn(setters, k)) return (...a) => (setters[k](json, ...a), chain);
         return () => chain;
       },
       apply: () => chain,
@@ -264,6 +291,7 @@ function runLayer(layer) {
                     typeof type === 'symbol'
                       ? undefined
                       : (...args) =>
+                          HELPERS[`${ns}:${String(type)}`]?.(addRecipe, ...args) ??
                           addRecipe(`${ns}:${String(type).replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)}`, {
                             type: `${ns}:${String(type)}`,
                             // Соглашение хелперов KubeJS: (выход, вход…) — так их различит разбор входов/выходов
@@ -351,7 +379,16 @@ function runLayer(layer) {
     { get: (t, k) => (k in t ? t[k] : anything(`Ingredient.${String(k)}`)) },
   );
   const FluidApi = new Proxy(
-    { of: (id) => itemOf(id), water: () => itemOf('minecraft:water'), lava: () => itemOf('minecraft:lava') },
+    {
+      // Количество (mB) держим отдельно от __count: жидкость на выходе обычных рецептов считается как раньше
+      of: (id, amount) => {
+        const f = itemOf(id);
+        if (f && typeof f === 'object' && typeof amount === 'number') f.__amount = amount;
+        return f;
+      },
+      water: () => itemOf('minecraft:water'),
+      lava: () => itemOf('minecraft:lava'),
+    },
     { get: (t, k) => (k in t ? t[k] : anything(`Fluid.${String(k)}`)) },
   );
   Object.assign(known, { Item: ItemApi, Ingredient: IngredientApi, Fluid: FluidApi });
@@ -559,7 +596,7 @@ function dataRecipes(layer) {
 
 /**
  * Данные датапака kubejs/data, которые разбирает сайт: файл с тем же id заменяет файл мода, новый — добавляется.
- * → public/kubejs-data.json: { foods, metals, skillet: { entries, cooked } }. Формат записей — как в reference.json
+ * → public/kubejs-data.json: { foods, metals, ores, skillet: { entries, cooked } }. Формат записей — как в reference.json
  * и meals.json, слияние делает сайт (src/lib/reference.ts, src/lib/meals.ts).
  */
 const NUTRIENTS = ['grain', 'fruit', 'vegetables', 'protein', 'dairy'];
@@ -639,6 +676,61 @@ function dataOverrides(layers) {
       }
   }
   return { data: { foods, metals, skillet: { entries, cooked } }, notes };
+}
+
+/**
+ * Плавка руд и цепочки переработки по рецептам, которые остаются в игре: моды + kubejs/data − удалённое KubeJS
+ * + добавленное скриптами. Тот же расчёт, что в reference.json (scripts/mods/reference.mjs), сайт заменяет им данные модов.
+ * Замены входов/выходов (replaceInput/replaceOutput) и правки тегов скриптами не учитываются.
+ */
+function oreOverrides(catalog, recipes, rules) {
+  const read = (name) => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(ROOT, 'public', name), 'utf8'));
+    } catch {
+      return null;
+    }
+  };
+  const ref = read('reference.json');
+  const tagFile = read('tags.json');
+  if (!ref?.veins || !tagFile?.tags) return null;
+
+  const raw = new Map();
+  for (const t of tagFile.tags)
+    if (t.k === 'item')
+      raw.set(
+        t.i,
+        t.s.flatMap((src) => src.v),
+      );
+  const tags = new Map();
+  const resolve = (id, stack = new Set()) => {
+    if (tags.has(id)) return tags.get(id);
+    if (stack.has(id)) return [];
+    stack.add(id);
+    const out = new Set();
+    for (const v of raw.get(id) ?? []) {
+      if (v.startsWith('#')) for (const x of resolve(v.slice(1), stack)) out.add(x);
+      else out.add(v);
+    }
+    tags.set(id, [...out]);
+    return tags.get(id);
+  };
+  for (const id of raw.keys()) resolve(id);
+
+  // Как в игре: kubejs/data перекрывает рецепт мода, удаления действуют на рецепты датапаков, скриптовые остаются
+  const byId = new Map(catalog.map((r) => [r.i, r]));
+  for (const r of recipes) if (!r.k) byId.set(r.i, r);
+  const removes = rules.filter((r) => r.kind === 'remove');
+  const alive = [...byId.values()].filter((r) => {
+    const target = { id: r.i, type: r.t, group: r.j?.group, ...recipeRefs(r.j) };
+    return !removes.some((rule) => matchFilter(rule.filter, target) === true);
+  });
+  for (const r of recipes) if (r.k) alive.push(r);
+  return oreChains(
+    ref.veins,
+    alive.map((r) => [r.i, { json: r.j }]),
+    tags,
+  );
 }
 
 /**
@@ -728,7 +820,6 @@ function analyze() {
   }
   for (const e of errors) log(`  ошибка в ${e.file}: ${e.message}`);
   const overrides = dataOverrides(layers);
-  fs.writeFileSync(path.join(ROOT, 'public', 'kubejs-data.json'), JSON.stringify(overrides.data));
   log(
     `данные kubejs/data: еды ${overrides.data.foods.length}, металлов ${overrides.data.metals.length}, продуктов сковороды ${overrides.data.skillet.entries.length}, ` +
       `«жареной» питательности ${overrides.data.skillet.cooked.length} → public/kubejs-data.json`,
@@ -742,6 +833,13 @@ function analyze() {
   const catalogFile = path.join(ROOT, 'public', 'recipes.json');
   if (fs.existsSync(catalogFile)) {
     const catalog = JSON.parse(fs.readFileSync(catalogFile, 'utf8'));
+    const ores = oreOverrides(catalog, recipes, rules);
+    if (ores) {
+      overrides.data.ores = ores;
+      log(
+        `руды по рецептам сборки: плавится ${Object.keys(ores.smelt).length} предметов, цепочек ${Object.keys(ores.chains).length}`,
+      );
+    } else log('руды: справочник или теги не собраны (npm run mods) — плавка руд останется по данным модов');
     // Как на сайте: kubejs/data переопределяет рецепт мода, рецепт скрипта с тем же id — заменяет его
     const byId = new Map(catalog.map((r) => [r.i, r]));
     for (const r of recipes) byId.set(r.i, r);
@@ -757,6 +855,8 @@ function analyze() {
     }
     log(`каталог: удалено KubeJS ${removed} рецептов из ${original.length}, неоднозначно ${maybe}`);
   }
+
+  fs.writeFileSync(path.join(ROOT, 'public', 'kubejs-data.json'), JSON.stringify(overrides.data));
 
   const lib = libraryItems(registered);
   fs.writeFileSync(path.join(ROOT, 'public', 'kubejs-items.json'), JSON.stringify(lib));

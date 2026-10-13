@@ -144,6 +144,8 @@ export interface Reference {
 export interface KubejsDataFile {
   foods?: Food[];
   metals?: Metal[];
+  /** Плавка руд и цепочки, пересчитанные по рецептам сборки (моды + kubejs/data − удалённое + скрипты) */
+  ores?: { smelt: Record<string, Smelt>; chains: Record<string, ChainStep[]> };
   skillet?: {
     entries: ({ file: string } & Record<string, unknown>)[];
     cooked: { file: string; items: string[]; tags: string[]; values: Partial<Record<Nutrient, number>> }[];
@@ -181,6 +183,11 @@ export function loadReference(): Promise<Reference | null> {
         return was && was.melt !== m.melt ? { ...m, modMelt: was.melt } : m;
       });
       ref.metals = [...own, ...ref.metals.filter((m) => !own.some((o) => o.id === m.id))];
+    }
+    // Руды: плавку и цепочки сборка меняет и датапаком, и скриптами — берём пересчёт целиком
+    if (ref && kjs?.ores) {
+      ref.smelt = kjs.ores.smelt;
+      ref.chains = kjs.ores.chains;
     }
     return (loaded = ref);
   });
