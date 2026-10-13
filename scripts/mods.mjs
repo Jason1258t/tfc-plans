@@ -160,8 +160,8 @@ function prepareJar(file) {
   const st = fs.statSync(file);
   const key = `${path.basename(file, '.jar')}-${st.size}-${Math.round(st.mtimeMs)}`.replace(/[^\w.+-]/g, '_');
   const dir = path.join(CACHE, 'jars', key);
-  // v17 — плюс классы сборных блюд; v16 — плюс классы полива теплицы; v15 — плюс классы грядок теплицы; v14 — плюс перечисление черт еды; v13 — плюс уровни теплицы; v12 — плюс растения теплицы Firmalife и классы конфигов аддонов; v11 — плюс loot-таблицы растений и их размещение в мире; v10 — плюс классы календаря; v9 — плюс классы конфигов; v8 — плюс классы растений (classes/) для ботаники; v7 — плюс климатические диапазоны растений TFC; v6 — плюс теги, жилы, данные TFC для справочника, география TFC Real World и жидкое топливо; теги блоков и сущностей
-  const done = path.join(dir, '.done-v17');
+  // v19 — плюс классы тегов модов; v18 — плюс помощники и конфиги блюд аддонов; v17 — плюс классы сборных блюд; v16 — плюс классы полива теплицы; v15 — плюс классы грядок теплицы; v14 — плюс перечисление черт еды; v13 — плюс уровни теплицы; v12 — плюс растения теплицы Firmalife и классы конфигов аддонов; v11 — плюс loot-таблицы растений и их размещение в мире; v10 — плюс классы календаря; v9 — плюс классы конфигов; v8 — плюс классы растений (classes/) для ботаники; v7 — плюс климатические диапазоны растений TFC; v6 — плюс теги, жилы, данные TFC для справочника, география TFC Real World и жидкое топливо; теги блоков и сущностей
+  const done = path.join(dir, '.done-v19');
   if (!fs.existsSync(done) || fresh) {
     fs.rmSync(dir, { recursive: true, force: true });
     let zip;
@@ -541,6 +541,7 @@ async function main() {
     recipes,
     items,
     path.join(ROOT, 'public', 'meals.json'),
+    jars.map((j) => path.join(MODS_DIR, j)),
   );
   log(`сборные блюда: семейств ${meals.families}, блюд ${meals.dishes}; из кода: ${meals.computed.join(', ') || '—'}`);
   for (const w of meals.warnings) log(`  сборные блюда: ${w}`);

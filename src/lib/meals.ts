@@ -80,10 +80,56 @@ export interface ComputedMeal {
   }[];
 }
 
+/** Настройка мода, от которой зависит формула: ключ в TOML, значение по умолчанию из кода, файл конфига */
+export interface MealConfigKey {
+  key: string;
+  default: number | null;
+  file: string | null;
+}
+
+/**
+ * Блюдо аддона без рецепта (вок и кастрюля Kaleidoscope через ktfcc): если набор продуктов не подошёл ни под один
+ * рецепт посуды, а все продукты входят в тег, питательность считается формулой из кода аддона.
+ */
+export interface DynamicMeal {
+  id: string;
+  kind: string;
+  ns: string;
+  hunger: number;
+  /** Насыщение за каждый положенный продукт */
+  saturationPerItem: number;
+  /** Порча: наибольшая среди продуктов × mul */
+  decay: { of: 'max'; mul: number };
+  /** Группы: сумма по продуктам; dropMin — самая малая обнуляется; × множитель; cap — не больше предела */
+  nutrients: {
+    dropMin: boolean;
+    mult: boolean;
+    cap: boolean;
+    multConfig?: MealConfigKey | null;
+    capConfig?: MealConfigKey | null;
+  };
+  /** Вода: сумма итоговых групп from × mul + add */
+  water: { from: Nutrient[]; mul: number; add: number };
+  ingredientTag?: string;
+  carrierTag?: string;
+  ticks?: number;
+  slots?: number;
+  /** Предмет посуды */
+  block?: string;
+  results: { nutrient: Nutrient; item: string }[];
+}
+
 export interface Meals {
   families: MealFamily[];
   computed: ComputedMeal[];
+  dynamic?: DynamicMeal[];
+  /** Порядок питательных групп в игре (перечисление Nutrient) */
+  nutrients?: Nutrient[];
 }
+
+/** Заголовок блюда аддона: название посуды */
+export const dynamicTitle = (d: DynamicMeal, name: (id: string) => string) =>
+  `${d.block ? name(d.block) : d.id}: блюдо без рецепта`;
 
 let promise: Promise<Meals | null> | null = null;
 let loaded: Meals | null | undefined;
@@ -149,6 +195,10 @@ export function mealsByItem(meals: Meals, cat: TagCatalog, name: (id: string) =>
     const tags = [...(c.tags ?? []), ...(c.pots ?? []).flatMap((p) => p.tags)].filter((t) => !/bowl/.test(t));
     for (const t of new Set(tags)) for (const id of tagItems(cat, t)) add(id, ref);
   }
+  for (const d of meals.dynamic ?? []) {
+    const ref = { key: d.id, title: dynamicTitle(d, name) };
+    if (d.ingredientTag) for (const id of tagItems(cat, d.ingredientTag)) add(id, ref);
+  }
   for (const f of meals.families) {
     const ref = { key: f.id, title: familyTitle(f.dishes.map((d) => name(d.item))) };
     for (const s of f.slots) {
@@ -164,6 +214,8 @@ export function mealsByItem(meals: Meals, cat: TagCatalog, name: (id: string) =>
 
 /** Питательность продукта из справочника еды — то, что складывается в блюдо */
 export interface FoodValues {
+  /** Множитель порчи продукта — нужен блюдам аддонов */
+  decay?: number;
   saturation: number;
   water: number;
   nutrients: Partial<Record<Nutrient, number>>;
@@ -237,4 +289,51 @@ export function calcComputed(
   for (const n of NUTRIENT_ORDER) if ((out.nutrients[n] ?? 0) > (best ? (out.nutrients[best] ?? 0) : 0)) best = n;
   out.item = c.results.find((r) => r.nutrient === best)?.item;
   return out;
+}
+
+/**
+ * Блюдо аддона (как ktfcc Utils.getFinalNutrients + setDynamicNutrientRecipe): группы складываются, самая малая
+ * обнуляется (при равных — последняя по порядку групп), остальные × множитель и обрезаются по пределу;
+ * вода — из итоговых групп, насыщение — по числу продуктов, порча — наибольшая среди продуктов × коэффициент.
+ */
+export function calcDynamic(
+  d: DynamicMeal,
+  order: Nutrient[],
+  picked: string[],
+  food: (id: string) => FoodValues | undefined,
+  mult: number,
+  cap: number,
+): MealResult {
+  const sum = order.map(() => 0);
+  let decay = 0;
+  for (const id of picked) {
+    const v = food(id);
+    if (!v) continue;
+    order.forEach((n, i) => (sum[i] += v.nutrients[n] ?? 0));
+    decay = Math.max(decay, v.decay ?? 0);
+  }
+  if (d.nutrients.dropMin) {
+    const min = Math.min(...sum);
+    sum[sum.lastIndexOf(min)] = 0;
+  }
+  const final = sum.map((v) => {
+    const x = d.nutrients.mult ? v * mult : v;
+    return d.nutrients.cap ? Math.min(x, cap) : x;
+  });
+  const nutrients: Partial<Record<Nutrient, number>> = {};
+  order.forEach((n, i) => {
+    if (final[i]) nutrients[n] = final[i];
+  });
+  let best = 0;
+  final.forEach((v, i) => {
+    if (v > final[best]) best = i;
+  });
+  return {
+    hunger: d.hunger,
+    decay: decay * d.decay.mul,
+    saturation: d.saturationPerItem * picked.length,
+    water: d.water.from.reduce((a, n) => a + (nutrients[n] ?? 0), 0) * d.water.mul + d.water.add,
+    nutrients,
+    item: d.results.find((r) => r.nutrient === order[best])?.item,
+  };
 }

@@ -9,14 +9,26 @@
 // (FoodCapability.setFoodForDynamicItemOnCreate + new FoodData), и запись доли (MealPortion) со значениями по умолчанию.
 import fs from 'node:fs';
 import path from 'node:path';
-import { instructions, parseClass } from './classfile.mjs';
+import { spawnSync } from 'node:child_process';
+import { clinitValues, enumConstants, instructions, parseClass } from './classfile.mjs';
+import { configDefaults } from './config-defaults.mjs';
 
 const DYNAMIC_FOOD = 'setFoodForDynamicItemOnCreate';
 const round = (x) => Math.round(x * 1000) / 1000;
 
 /** Какие классы jar сохранять в кеш для разбора (вызывается из mods.mjs при распаковке) */
 export function isMealClass(entryName, data) {
-  return data.includes(DYNAMIC_FOOD) || data.includes('nutrient_modifier');
+  // Порядок питательных групп — перечисление Nutrient; формулы аддонов лежат в помощниках (FoodData) и зависят
+  // от настроек мода (ModConfigSpec, тип конфига — ModConfig$Type)
+  // …а настоящий id тега — в инициализации поля класса тегов (tag("x") — тег мода, commonTag("x") — c:x)
+  if (/\/food\/Nutrient\.class$|Tags\$Items\.class$/.test(entryName)) return true;
+  return (
+    data.includes(DYNAMIC_FOOD) ||
+    data.includes('nutrient_modifier') ||
+    data.includes('component/food/FoodData') ||
+    data.includes('ModConfigSpec$Builder') ||
+    data.includes('ModConfig$Type')
+  );
 }
 
 // ---------------------------------------------------------------- код
@@ -46,7 +58,7 @@ function decoded(cls, method) {
  * Блюдо с вычисляемой питательностью: метод складывает воду, насыщение и питательные группы ингредиентов,
  * умножает на коэффициент и создаёт FoodData(сытость, вода, насыщение, 0, группы, порча).
  */
-function computedDish(cls) {
+function computedDish(cls, classes) {
   for (const m of cls.methods) {
     const list = decoded(cls, m);
     const at = list.findIndex((x) => x.ref?.name === '<init>' && /FoodData$/.test(x.ref.owner));
@@ -56,6 +68,12 @@ function computedDish(cls) {
     if (!map) continue;
     // Аргументы конструктора — шесть инструкций перед вызовом
     const [hunger, water, saturation, , , decay] = list.slice(at - 6, at);
+    // Аргументы — выражения, а не готовые переменные: блюдо аддона со своей формулой
+    if (water.fload === undefined || decay.num === undefined) {
+      const dish = addonDish(cls, list, at, map, classes);
+      if (dish) return dish;
+      return { kind: map.ref.name.toLowerCase(), ns: cls.name.split('/')[2] };
+    }
     const initial = (local) => {
       const i = list.findIndex((x) => x.fstore === local);
       return i > 0 && list[i - 1].num !== undefined ? list[i - 1].num : undefined;
@@ -72,6 +90,7 @@ function computedDish(cls) {
     const out = {
       kind: map.ref.name.toLowerCase(),
       ns: cls.name.split('/')[2],
+      itemNs: map.ref.owner.split('/')[2],
       hunger: hunger.num,
       decay: round(decay.num),
       baseWater: water.fload !== undefined ? initial(water.fload) : undefined,
@@ -92,11 +111,152 @@ function computedDish(cls) {
     if (typeof start === 'number' && typeof end === 'number') out.slots = end - start + 1;
     const tags = new Set();
     for (const x of cls.methods.flatMap((mm) => decoded(cls, mm)))
-      if (x.op === 0xb2 && /Tags\$Items$/.test(x.ref.owner)) tags.add(x.ref.name.toLowerCase());
+      if (x.op === 0xb2 && /Tags\$Items$/.test(x.ref.owner)) tags.add(tagOf(x.ref, classes));
     if (tags.size) out.tagFields = [...tags];
     return out;
   }
   return null;
+}
+
+/**
+ * Поле тега в коде (TFCTags$Items.BOWLS) → id тега. Берём из инициализации поля: «create(ns, path)» — готовый id;
+ * «помощник("path")» — пространство имён из строки внутри помощника (commonTag → "c"), иначе это тег самого мода.
+ * Если класс тегов не прочитан — по имени поля.
+ */
+function tagOf(ref, classes) {
+  const ns = ref.owner.split('/')[2];
+  const owner = classes?.get(ref.owner);
+  let v = null;
+  try {
+    v = owner ? clinitValues(owner).statics.get(ref.name) : null;
+  } catch {
+    v = null;
+  }
+  const strings = [];
+  const walk = (x) => {
+    if (typeof x === 'string') strings.push(x);
+    else if (x?.args) x.args.forEach(walk);
+  };
+  walk(v);
+  if (strings.length >= 2) return `${strings[0]}:${strings[1]}`;
+  if (strings.length === 1 && v?.call?.owner === ref.owner) {
+    const helper = owner.methods.find((m) => m.name === v.call.name && m.desc === v.call.desc);
+    const literal = decoded(owner, helper).find((x) => x.str)?.str;
+    return `${literal ?? ns}:${strings[0]}`;
+  }
+  return `${ns}:${ref.name.toLowerCase()}`;
+}
+
+/**
+ * Блюдо аддона: когда ни один рецепт посуды не подошёл, а все продукты входят в тег, еда считается формулой.
+ * FoodData(сытость, вода, насыщение, 0, группы, порча), где
+ *   группы     = помощник(продукты, множитель, предел) — сумма по продуктам, обнуление самой малой группы и т. д.;
+ *   вода       = сумма выбранных групп [× число] [+ число];
+ *   насыщение  = число × количество продуктов;
+ *   порча      = помощник(продукты) — наибольшая порча среди продуктов × число.
+ * Всё читается из инструкций между «new FoodData» и вызовом конструктора.
+ */
+function addonDish(cls, list, at, map, classes) {
+  let start = at;
+  while (start > 0 && list[start].op !== 0xbb) start--;
+  const invoke = (x) => x.ref && x.op >= 0xb6;
+  const args = list
+    .slice(start + 1, at)
+    .filter((x) => x.num !== undefined || invoke(x) || [0x30, 0x62, 0x6a, 0x86].includes(x.op));
+  if (args[0]?.num === undefined) return null;
+  const out = { kind: map.ref.name.toLowerCase(), ns: cls.name.split('/')[2], itemNs: map.ref.owner.split('/')[2] };
+  out.hunger = args[0].num;
+  let j = 1;
+  // Вода: «группы[a] + группы[b]», затем необязательные «× число» и «+ число»
+  const waterFrom = [];
+  while (args[j]?.int && args[j + 1]?.op === 0x30) {
+    waterFrom.push(args[j].num);
+    j += 2;
+    if (args[j]?.op === 0x62) j++;
+  }
+  out.water = { from: waterFrom, mul: 1, add: 0 };
+  if (args[j]?.num !== undefined && args[j + 1]?.op === 0x6a) [out.water.mul, j] = [round(args[j].num), j + 2];
+  if (args[j]?.num !== undefined && args[j + 1]?.op === 0x62) [out.water.add, j] = [round(args[j].num), j + 2];
+  // Насыщение: «число × количество продуктов»
+  if (args[j]?.num !== undefined && invoke(args[j + 1] ?? {}) && /\)I$/.test(args[j + 1].ref.desc))
+    out.saturationPerItem = round(args[j].num);
+  // Порча: помощник (список) → число: «наибольшая порча × число»
+  const decayRef = args.findLast((x) => invoke(x) && /\)F$/.test(x.ref.desc) && x.ref.owner !== cls.name)?.ref;
+  const helper = (ref) => {
+    const owner = classes.get(ref.owner);
+    return owner
+      ? decoded(
+          owner,
+          owner.methods.find((x) => x.name === ref.name && x.desc === ref.desc),
+        )
+      : [];
+  };
+  if (decayRef) {
+    const h = helper(decayRef);
+    const mul = h.findLast((x, i) => x.num !== undefined && h[i + 1]?.op === 0x6a);
+    if (h.some((x) => x.ref?.name === 'max')) out.decay = { of: 'max', mul: mul ? round(mul.num) : 1 };
+  }
+  // Питательные группы: помощник (список, множитель, предел) → массив
+  const before = list.slice(0, start);
+  const nutRef = before.findLast((x) => invoke(x) && /\)\[F$/.test(x.ref.desc))?.ref;
+  if (!nutRef || !out.decay || out.saturationPerItem === undefined) return null;
+  const h = helper(nutRef);
+  const clone = h.findIndex((x) => x.ref?.name === 'clone');
+  out.nutrients = {
+    // После копии массива одна ячейка обнуляется — это найденная перед тем самая малая группа
+    dropMin: clone > 0 && h.slice(clone).some((x, i, a) => x.op === 0x0b && a[i + 1]?.op === 0x51),
+    mult: h.some((x, i) => x.fload === 1 && h[i + 1]?.op === 0x6a),
+    cap: h.some((x, i) => x.fload === 2 && h[i + 1]?.op === 0x95),
+  };
+  // Множитель и предел приходят из настроек мода: свои методы-геттеры, читающие статические поля конфига
+  const getters = before
+    .filter((x) => invoke(x) && x.ref.owner === cls.name && x.ref.desc === '()F')
+    .map(
+      (x) =>
+        decoded(
+          cls,
+          cls.methods.find((mm) => mm.name === x.ref.name && mm.desc === '()F'),
+        ).find((y) => y.op === 0xb2)?.ref,
+    )
+    .filter(Boolean);
+  const [multRef, capRef] = getters;
+  const configOf = (ref) => {
+    const owner = ref && classes.get(ref.owner);
+    const key = owner && configDefaults(owner).find((k) => k.key.split('.').pop() === ref.name);
+    if (!key) return null;
+    // Тип конфига — из регистрации: registerConfig(ModConfig.Type.COMMON, …) в том же моде
+    let type = null;
+    for (const c of classes.values()) {
+      if (c.name.split('/')[2] !== out.ns) continue;
+      for (const mm of c.methods)
+        for (const x of decoded(c, mm))
+          if (x.op === 0xb2 && /ModConfig\$Type$/.test(x.ref.owner)) type ??= x.ref.name.toLowerCase();
+    }
+    return { key: key.key, default: key.default, file: type ? `${out.ns}-${type}.toml` : null };
+  };
+  if (out.nutrients.mult) out.nutrients.multConfig = configOf(multRef);
+  if (out.nutrients.cap) out.nutrients.capConfig = configOf(capRef);
+  // Что можно класть (тег в проверке продуктов), посуда (Ingredient.of(тег)), время, блок-цель подмешивания
+  const all = cls.methods.flatMap((mm) => decoded(cls, mm));
+  const tagBefore = (name) => {
+    const i = all.findIndex(
+      (x) => x.ref?.name === name && x.op === 0xb8 && (name !== 'of' || /Ingredient$/.test(x.ref.owner)),
+    );
+    const t =
+      i > 0 ? all.slice(Math.max(0, i - 3), i).findLast((x) => x.op === 0xb2 && /TagKey;$/.test(x.ref.desc)) : null;
+    return t ? tagOf(t.ref, classes) : undefined;
+  };
+  const valid = all.find(
+    (x) => x.op === 0xb8 && /\(Ljava\/util\/List;Lnet\/minecraft\/tags\/TagKey;\)Z$/.test(x.ref.desc),
+  );
+  if (valid) out.ingredientTag = tagBefore(valid.ref.name);
+  out.carrierTag = tagBefore('of');
+  const tick = list.findIndex((x, i) => i > at && x.op === 0xb5 && /tick/i.test(x.ref.name));
+  if (tick > 0 && list[tick - 1].num !== undefined) out.ticks = list[tick - 1].num;
+  // Посуда — первый параметр подменённого вызова: addDishRecipe(PotBlockEntity)
+  const target = cls.methods.map((mm) => /^\(L([^;]+BlockEntity);\)V$/.exec(mm.desc)?.[1]).find(Boolean);
+  if (target) out.target = target;
+  return out;
 }
 
 /** Значения по умолчанию у доли: «"имя_modifier"; константа; optionalFieldOf» в кодеке записи */
@@ -115,6 +275,8 @@ function portionDefaults(cls) {
 function readCode(classDirs) {
   const computed = [];
   let defaults = null;
+  let nutrients = null;
+  const classes = new Map();
   for (const dir of classDirs) {
     if (!fs.existsSync(dir)) continue;
     for (const rel of fs.readdirSync(dir, { recursive: true })) {
@@ -125,12 +287,18 @@ function readCode(classDirs) {
       } catch {
         continue;
       }
-      defaults ??= portionDefaults(cls);
-      const dish = computedDish(cls);
-      if (dish) computed.push(dish);
+      classes.set(cls.name, cls);
     }
   }
-  return { computed, defaults };
+  for (const cls of classes.values()) {
+    defaults ??= portionDefaults(cls);
+    // Порядок питательных групп в массивах — порядок перечисления Nutrient
+    if (/\/food\/Nutrient$/.test(cls.name) && cls.superName === 'java/lang/Enum')
+      nutrients = enumConstants(cls).map((c) => c.name.toLowerCase());
+    const dish = computedDish(cls, classes);
+    if (dish) computed.push(dish);
+  }
+  return { computed, defaults, nutrients };
 }
 
 // ---------------------------------------------------------------- рецепты
@@ -181,7 +349,22 @@ function foodData(f = {}) {
 /** «barley_bread_sandwich» и «barley_flatbread» делят первое слово — это вид основы (ячмень) */
 const head = (id) => id.split(':')[1].split('/').pop().split('_')[0];
 
-export function buildMeals(classDirs, recipeMap, items) {
+/** Класс из jar, который не попал в кеш (посуда чужого мода): ищем по всем jar, первый найденный */
+function classFromJars(jarPaths, name) {
+  for (const jar of jarPaths) {
+    const r = spawnSync('unzip', ['-p', jar, `${name}.class`], { maxBuffer: 16 << 20 });
+    if (r.status === 0 && r.stdout?.length) {
+      try {
+        return parseClass(r.stdout);
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
+}
+
+export function buildMeals(classDirs, recipeMap, items, jarPaths = []) {
   let recipes = recipeMap;
   const warnings = [];
   const have = new Set(items.map((i) => i.i));
@@ -192,7 +375,9 @@ export function buildMeals(classDirs, recipeMap, items) {
     j: r.json,
     t: typeof r.json.type === 'string' ? r.json.type : '',
   }));
-  const { computed, defaults } = readCode(classDirs);
+  const { computed, defaults, nutrients: order } = readCode(classDirs);
+  if (!order) warnings.push('порядок питательных групп (перечисление Nutrient) не найден');
+  const NUTRIENTS = order ?? [];
   if (!defaults) warnings.push('значения по умолчанию у долей блюда (кодек MealPortion) не найдены');
   const def = (v, name) => round(v ?? defaults?.[name] ?? 1);
 
@@ -284,17 +469,62 @@ export function buildMeals(classDirs, recipeMap, items) {
   }
 
   // 3. Суп и салат: формула из кода, рецепты супа — из каталога (сколько ингредиентов, жидкость, время, жар)
-  const nutrientsOf = (kind, ns) =>
-    ['grain', 'fruit', 'vegetables', 'protein', 'dairy']
-      .map((n) => ({ nutrient: n, item: `${ns}:food/${n}_${kind.replace(/s$/, '')}` }))
-      .filter((x) => have.has(x.item));
+  // Предмет блюда для каждой группы: в пространстве имён мода, в id есть и группа, и вид блюда
+  // (tfc:food/grain_soup, ktfcc:dish/grain)
+  const nutrientsOf = (kind, ns) => {
+    const one = kind.replace(/(es|s)$/, (m0) => (kind.endsWith('shes') ? '' : m0 === 's' ? '' : m0));
+    const mine = [...have].filter((id) => id.startsWith(`${ns}:`));
+    return NUTRIENTS.map((n) => ({
+      nutrient: n,
+      item: mine.find((id) => {
+        const parts = id.split(':')[1].split(/[/_]/);
+        return parts.includes(n) && parts.includes(one);
+      }),
+    })).filter((x) => x.item);
+  };
   // Класс считает еду по-своему, не по образцу TFC (нет сытости в конструкторе) — пока не разобран
   for (const c of computed.filter((x) => x.hunger === undefined))
     warnings.push(`${c.ns}: блюда «${c.kind}» считаются своим кодом, формула не разобрана`);
-  const computedOut = computed
-    .filter((c) => c.hunger !== undefined)
+  // Блюда аддонов со своей формулой: посуда чужого мода, в которую аддон подмешал расчёт
+  const snake = (x) => x.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
+  const dynamic = computed
+    .filter((c) => c.nutrients)
     .map((c) => {
-      const results = nutrientsOf(c.kind, c.ns);
+      const { itemNs, target, water, ...rest } = c;
+      const results = nutrientsOf(c.kind, itemNs);
+      if (!results.length) warnings.push(`${c.ns}/${c.kind}: предметы блюда по питательным группам не найдены`);
+      const out = {
+        id: `${c.ns}:${c.kind}`,
+        ...rest,
+        water: { ...water, from: water.from.map((i) => NUTRIENTS[i]) },
+        results,
+      };
+      if (target) {
+        // Вместимость посуды — размер списка продуктов в её классе; сам предмет посуды — по имени класса
+        const cls = classFromJars(jarPaths, target);
+        const list = cls ? cls.methods.flatMap((m) => decoded(cls, m)) : [];
+        const size = list.findIndex((x) => x.ref?.name === 'withSize');
+        const n = size > 0 ? list.slice(Math.max(0, size - 3), size).findLast((x) => x.int)?.num : undefined;
+        if (n) out.slots = n;
+        else warnings.push(`${c.ns}/${c.kind}: вместимость посуды (${target}) не найдена`);
+        const short = snake(
+          target
+            .split('/')
+            .pop()
+            .replace(/BlockEntity$/, ''),
+        );
+        // Предмет посуды — в том же моде, что и её класс (пространство имён совпадает с корнем id предметов мода)
+        const block = [...have].filter(
+          (id) => id.split(':')[1] === short && target.includes(id.split(':')[0].replace(/_/g, '')),
+        );
+        if (block.length === 1) out.block = block[0];
+      }
+      return out;
+    });
+  const computedOut = computed
+    .filter((c) => c.hunger !== undefined && !c.nutrients)
+    .map((c) => {
+      const results = nutrientsOf(c.kind, c.itemNs);
       if (!results.length) warnings.push(`${c.kind}: предметы блюда по питательным группам не найдены`);
       const type = `${c.ns}:pot_${c.kind.replace(/s$/, '')}`;
       const pots = recipes
@@ -312,9 +542,8 @@ export function buildMeals(classDirs, recipeMap, items) {
           };
         })
         .sort((a, b) => a.count - b.count);
-      const { tagFields, ns, ...rest } = c;
-      // Поля тегов из кода (USABLE_IN_SALAD) → id тега: имя поля в нижнем регистре в пространстве имён мода
-      const tags = (tagFields ?? []).map((t) => `${ns}:${t}`);
+      const { tagFields, ns: _ns, itemNs: _itemNs, ...rest } = c;
+      const tags = tagFields ?? [];
       return { ...rest, results, ...(pots.length ? { pots } : {}), ...(tags.length ? { tags } : {}) };
     });
   if (!computedOut.some((c) => c.kind === 'soups')) warnings.push('формула супа (класс рецепта с SOUPS) не найдена');
@@ -326,18 +555,20 @@ export function buildMeals(classDirs, recipeMap, items) {
         .map((f) => ({ ...f, types: [...f.types], sources: [...f.sources] }))
         .sort((a, b) => b.dishes.length - a.dishes.length || a.id.localeCompare(b.id)),
       computed: computedOut,
+      dynamic,
+      nutrients: NUTRIENTS,
     },
     warnings,
   };
 }
 
-export function writeMeals(classDirs, recipes, items, outFile) {
-  const { data, warnings } = buildMeals(classDirs, recipes, items);
+export function writeMeals(classDirs, recipes, items, outFile, jarPaths) {
+  const { data, warnings } = buildMeals(classDirs, recipes, items, jarPaths);
   fs.writeFileSync(outFile, JSON.stringify(data));
   return {
     families: data.families.length,
     dishes: data.families.reduce((n, f) => n + f.dishes.length, 0),
-    computed: data.computed.map((c) => c.kind),
+    computed: [...data.computed.map((c) => c.kind), ...data.dynamic.map((c) => c.id)],
     warnings,
   };
 }

@@ -2,9 +2,11 @@ import { useMemo, useState } from 'react';
 import { itemName, type ItemIndex } from '../lib/items';
 import {
   calcComputed,
+  calcDynamic,
   calcMeal,
   tagItems,
   type ComputedMeal,
+  type DynamicMeal,
   type FoodValues,
   type MealFamily,
   type MealResult,
@@ -199,6 +201,46 @@ export function ComputedCalc({
         </p>
       ) : (
         <Result r={calcComputed(c, picked, food)} items={items} />
+      )}
+    </details>
+  );
+}
+
+/** Калькулятор блюда аддона: до N продуктов из тега, множитель и предел — из настроек мода */
+export function DynamicCalc({
+  d,
+  order,
+  cat,
+  items,
+  food,
+  mult,
+  cap,
+}: {
+  d: DynamicMeal;
+  order: Nutrient[];
+  cat: TagCatalog | null;
+  items: ItemIndex | null;
+  food: FoodLookup;
+  mult: number;
+  cap: number;
+}) {
+  const [value, setValue] = useState<Record<string, string>>({});
+  const options = useSorted(d.ingredientTag ? tagItems(cat, d.ingredientTag) : [], items, food);
+  const fields: Field[] = Array.from({ length: d.slots ?? 1 }, (_, i) => ({
+    key: String(i),
+    label: `Продукт ${i + 1}`,
+    options,
+    required: i === 0,
+  }));
+  const picked = fields.map((fl) => value[fl.key]).filter(Boolean);
+  return (
+    <details className="meal-calc">
+      <summary>Калькулятор</summary>
+      <Fields fields={fields} value={value} onChange={(k, id) => setValue((v) => ({ ...v, [k]: id }))} items={items} />
+      {picked.length === 0 ? (
+        <p className="faint small">Выберите хотя бы один продукт.</p>
+      ) : (
+        <Result r={calcDynamic(d, order, picked, food, mult, cap)} items={items} />
       )}
     </details>
   );

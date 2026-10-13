@@ -3,10 +3,13 @@ import { useMemo, useState } from 'react';
 import { itemName, type ItemIndex } from '../lib/items';
 import {
   COMPUTED_TITLE,
+  dynamicTitle,
   familyTitle,
   tagItems,
   useMeals,
   type ComputedMeal,
+  type DynamicMeal,
+  type MealConfigKey,
   type MealFamily,
   type MealFood,
   type MealPortion,
@@ -14,8 +17,9 @@ import {
 } from '../lib/meals';
 import { NUTRIENTS, type Food, type Nutrient } from '../lib/reference';
 import { useTags, type TagCatalog } from '../lib/tags';
+import { CONFIG_ORIGIN_LABEL, useModConfig, type ConfigOrigin } from '../lib/config';
 import { ItemIcon } from './ItemIcon';
-import { ComputedCalc, FamilyCalc, type FoodLookup } from './MealCalc';
+import { ComputedCalc, DynamicCalc, FamilyCalc, type FoodLookup } from './MealCalc';
 import './MealsTab.css';
 
 const NUTRIENT_LABEL: Record<Nutrient, string> = {
@@ -315,6 +319,103 @@ function ComputedCard({
   );
 }
 
+type Setting = { value: number; origin: ConfigOrigin } | null;
+
+function DynamicCard({
+  d,
+  order,
+  cat,
+  items,
+  food,
+  setting,
+}: {
+  d: DynamicMeal;
+  order: Nutrient[];
+  cat: TagCatalog | null;
+  items: ItemIndex | null;
+  food: FoodLookup;
+  setting: (k?: MealConfigKey | null) => Setting;
+}) {
+  const name = useNames(items);
+  const mult = d.nutrients.mult ? setting(d.nutrients.multConfig) : null;
+  const cap = d.nutrients.cap ? setting(d.nutrients.capConfig) : null;
+  const waterFrom = d.water.from.map((n) => NUTRIENT_LABEL[n]).join(' + ');
+  return (
+    <li className="meal-card">
+      <header>
+        <span className="meal-icons">{d.block && <ItemIcon id={d.block} size={28} />}</span>
+        <div className="grow">
+          <h3>{dynamicTitle(d, name)}</h3>
+          <span className="faint small">формула из кода мода {d.ns}</span>
+        </div>
+      </header>
+      <section>
+        <h4>Что класть</h4>
+        <ul className="meal-slots">
+          {d.ingredientTag && (
+            <li>
+              <b className="meal-count">×1–{d.slots ?? '?'}</b>
+              <div className="grow">
+                <TagMembers tag={d.ingredientTag} cat={cat} items={items} />
+              </div>
+            </li>
+          )}
+          {d.carrierTag && (
+            <li>
+              <b className="meal-count">посуда</b>
+              <div className="grow">
+                <TagMembers tag={d.carrierTag} cat={cat} items={items} />
+              </div>
+            </li>
+          )}
+        </ul>
+        <p className="small">
+          Срабатывает, когда набор продуктов не подошёл ни под один рецепт этой посуды, а все продукты входят в тег выше
+          {d.ticks ? `; готовится ${d.ticks} тиков (${ru(d.ticks / 20, 1)} с)` : ''}. Если хоть один продукт не из тега,
+          получится обычное «подозрительное» блюдо мода.
+        </p>
+      </section>
+      <section>
+        <h4>Что получится</h4>
+        <ul className="meal-portions small">
+          <li>
+            <b>Питательные группы:</b> сумма по всем продуктам
+            {d.nutrients.dropMin ? '; самая маленькая группа обнуляется' : ''}
+            {mult ? `; остальное × ${ru(mult.value)} (${CONFIG_ORIGIN_LABEL[mult.origin]})` : ''}
+            {cap ? `; не больше ${ru(cap.value)} на группу (${CONFIG_ORIGIN_LABEL[cap.origin]})` : ''}
+          </li>
+          <li>
+            <b>Вода:</b> ({waterFrom}){d.water.mul !== 1 ? ` × ${ru(d.water.mul)}` : ''}
+            {d.water.add ? ` + ${ru(d.water.add)}` : ''} — от итоговых групп
+          </li>
+          <li>
+            <b>Насыщение:</b> {ru(d.saturationPerItem)} за каждый продукт
+          </li>
+          <li>
+            <b>Порча:</b> наибольшая среди продуктов × {ru(d.decay.mul)}
+          </li>
+          <li>
+            <b>Вид блюда</b> — по самой большой питательной группе:{' '}
+            {d.results.map((r) => `${NUTRIENT_LABEL[r.nutrient]} → ${name(r.item)}`).join('; ')}
+          </li>
+          <li>
+            <b>Всегда:</b> сытость {d.hunger}
+          </li>
+        </ul>
+      </section>
+      <DynamicCalc
+        d={d}
+        order={order}
+        cat={cat}
+        items={items}
+        food={food}
+        mult={mult?.value ?? 1}
+        cap={cap?.value ?? Infinity}
+      />
+    </li>
+  );
+}
+
 /** Подвкладка «Сборные блюда»: семейства из рецептов tfc:meal, суп и салат */
 export function MealsTab({
   items,
@@ -333,6 +434,24 @@ export function MealsTab({
   }, [foods]);
   const meals = useMeals();
   const cat = useTags();
+  // Настройки мода, от которых зависят блюда аддонов: конфиг сервера → конфиг сборки → значение из кода
+  const cfgFile =
+    meals?.dynamic?.map((d) => d.nutrients.multConfig?.file ?? d.nutrients.capConfig?.file).find(Boolean) ?? '';
+  const cfgServer = useModConfig(cfgFile, 'server');
+  const cfgCommon = useModConfig(cfgFile, 'config');
+  const setting = (k?: MealConfigKey | null): Setting => {
+    if (!k) return null;
+    for (const [doc, origin] of [
+      [cfgServer, 'server'],
+      [cfgCommon, 'config'],
+    ] as const) {
+      let v: unknown = k.file === cfgFile ? doc?.values : undefined;
+      for (const part of k.key.split('.'))
+        v = v && typeof v === 'object' ? (v as Record<string, unknown>)[part] : undefined;
+      if (typeof v === 'number') return { value: v, origin };
+    }
+    return typeof k.default === 'number' ? { value: k.default, origin: 'default' } : null;
+  };
   const [query, setQuery] = useState(initialQuery);
   const name = useNames(items);
 
@@ -353,6 +472,10 @@ export function MealsTab({
       ];
       out.set(c.kind, lower(`${COMPUTED_TITLE[c.kind] ?? ''} ${ids.map((id) => `${name(id)} ${id}`).join(' ')}`));
     }
+    for (const d of meals?.dynamic ?? []) {
+      const ids = [...d.results.map((r) => r.item), ...(d.ingredientTag ? membersOf(cat, d.ingredientTag) : [])];
+      out.set(d.id, lower(`${dynamicTitle(d, name)} ${ids.map((id) => `${name(id)} ${id}`).join(' ')}`));
+    }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meals, cat, items]);
@@ -364,6 +487,8 @@ export function MealsTab({
   const match = (key: string) => words.every((w) => hay.get(key)?.includes(w));
   const families = meals.families.filter((f) => match(f.id));
   const computed = meals.computed.filter((c) => match(c.kind));
+  const dynamic = (meals.dynamic ?? []).filter((d) => match(d.id));
+  const shownCount = families.length + computed.length + dynamic.length;
 
   return (
     <>
@@ -380,15 +505,26 @@ export function MealsTab({
       <p className="faint small ref-note">
         Сборное блюдо — еда, питательность которой складывается из того, что в неё положили: к значениям самого блюда
         прибавляется доля от каждого ингредиента. Поиск по продукту показывает блюда, в которые он годится. Состав тегов
-        — с учётом правок KubeJS. В игре не проверялось. Показано {families.length + computed.length} из{' '}
-        {meals.families.length + meals.computed.length}.
+        — с учётом правок KubeJS. В игре не проверялось. Показано {shownCount} из{' '}
+        {meals.families.length + meals.computed.length + (meals.dynamic?.length ?? 0)}.
       </p>
-      {families.length + computed.length === 0 ? (
+      {shownCount === 0 ? (
         <div className="empty">Ничего не подходит.</div>
       ) : (
         <ul className="meal-grid">
           {computed.map((c) => (
             <ComputedCard key={c.kind} c={c} cat={cat} items={items} food={food} />
+          ))}
+          {dynamic.map((d) => (
+            <DynamicCard
+              key={d.id}
+              d={d}
+              order={meals.nutrients ?? [...NUTRIENTS]}
+              cat={cat}
+              items={items}
+              food={food}
+              setting={setting}
+            />
           ))}
           {families.map((f) => (
             <FamilyCard key={f.id + f.slots.map((s) => s.key).join()} f={f} cat={cat} items={items} food={food} />
