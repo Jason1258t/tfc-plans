@@ -55,3 +55,6 @@ public/kubejs.json
 public/kubejs-items.json
 public/kubejs-data.json
 public/icons-kubejs/
+
+# Серверные ресурспаки (чужие треки и т. п.) — только на хостинг, не в репозиторий
+public/packs/

@@ -67,6 +67,10 @@
   на `ResistiveHeaterBlockEntity.calculateHeatLevel` — при нагреве ≥ 0,9 (~6,8 кВт) отдаёт SEETHING, и superheated-рецепты
   Create идут на нагревателе EE. **В игре не проверялся.** Ставится в `mods/` сервера и клиентов. С ним дубль
   `steel_heated.js` не нужен (но не мешает).
+- **Серверный ресурспак `arc-furnace-matadora`** (https://tfc-plans-fd2c.web.app/packs/arc-furnace-matadora.zip,
+  исходник в `instance/resourcepacks/`, в git не хранится — `public/packs/` в `.gitignore`): звук дуговой печи IE
+  переопределён через `sounds.json` (`replace: true`) на трек из своего namespace `tfc_sounds`. На сервере нужно
+  прописать `resource-pack` и `resource-pack-sha1` в `server.properties`; при пересборке zip SHA-1 меняется.
 
 ## Отложено по решению пользователя
 
