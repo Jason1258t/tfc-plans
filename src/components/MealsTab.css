@@ -2,32 +2,86 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 12px;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .meal-card {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
   min-width: 0;
 }
 
-.meal-card header {
-  display: flex;
-  gap: 10px;
-  align-items: center;
+.meal-card.open {
+  border-color: var(--border-strong);
 }
 
-.meal-card h3 {
-  margin: 0;
+/* Свёрнутая строка — одна высота у всех блюд */
+.meal-head {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.meal-head:hover {
+  background: var(--surface-2);
+}
+
+.meal-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.meal-title b,
+.meal-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meal-title b {
   font-size: 15px;
+  font-weight: 600;
+}
+
+.meal-amount {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+/* Раскрытое блюдо: «что класть» и «что получится» рядом, калькулятор — на всю ширину */
+.meal-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px 28px;
+  align-items: start;
+  padding: 10px 14px 14px;
+  border-top: 1px solid var(--border);
+}
+
+.meal-body > * {
+  min-width: 0;
+}
+
+.meal-body .meal-calc {
+  grid-column: 1 / -1;
 }
 
 .meal-card h4 {
@@ -44,10 +98,10 @@
 }
 
 .meal-icons {
+  flex: none;
+  width: 118px;
   display: flex;
-  flex-wrap: wrap;
   gap: 2px;
-  max-width: 96px;
 }
 
 .meal-slots,
@@ -101,6 +155,12 @@
 
 .meal-tag code {
   font-size: 12px;
+  /* Длинный id тега переносится внутри строки, а не уезжает под маркер и не вылезает за карточку */
+  word-break: break-all;
+}
+
+.meal-slots li > .grow {
+  min-width: 0;
 }
 
 .meal-members {
@@ -149,6 +209,13 @@
   min-width: 0;
 }
 
+/* Подпись поля — id тега — бывает длиннее самого поля */
+.meal-calc-fields label > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .meal-calc-fields select {
   width: 100%;
   min-width: 0;
@@ -163,4 +230,15 @@
   border-radius: var(--radius-sm);
   background: var(--surface-2);
   line-height: 1.6;
+}
+
+@media (max-width: 560px) {
+  .meal-icons {
+    width: auto;
+    max-width: 60px;
+    overflow: hidden;
+  }
+  .meal-amount {
+    display: none;
+  }
 }

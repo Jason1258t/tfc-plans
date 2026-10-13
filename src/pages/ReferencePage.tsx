@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BotanyTab } from '../components/BotanyTab';
 import { MealsTab } from '../components/MealsTab';
+import { useMeals } from '../lib/meals';
 import { ItemIcon } from '../components/ItemIcon';
 import { LiquidFuelTab } from '../components/LiquidFuelTab';
 import { MapPage } from './MapPage';
@@ -46,6 +47,8 @@ export function ReferencePage() {
   const liquid = oldLiquid || (tab === 'fuel' && params.get('sub') === 'liquid');
   const ref = useReference();
   const items = useItems();
+  const meals = useMeals();
+  const mealCount = meals ? meals.families.length + meals.computed.length + (meals.dynamic?.length ?? 0) : 0;
 
   return (
     <main className={cx('ref-page', tab === 'map' && 'wide')}>
@@ -104,27 +107,31 @@ export function ReferencePage() {
           </div>
         </div>
       ) : tab === 'food' ? (
-        <>
-          <div className="seg ref-subtabs">
+        <div className="botany">
+          <nav className="botany-nav" aria-label="Разделы еды">
             <button
-              aria-pressed={params.get('sub') !== 'meals'}
+              className={cx(params.get('sub') !== 'meals' && 'active')}
               onClick={() => setParams({ tab: 'food' }, { replace: true })}
             >
-              Продукты
+              <span>Продукты</span>
+              <span className="faint small">{ref.foods.length}</span>
             </button>
             <button
-              aria-pressed={params.get('sub') === 'meals'}
+              className={cx(params.get('sub') === 'meals' && 'active')}
               onClick={() => setParams({ tab: 'food', sub: 'meals' }, { replace: true })}
             >
-              Сборные блюда
+              <span>Сборные блюда</span>
+              <span className="faint small">{mealCount || ''}</span>
             </button>
+          </nav>
+          <div className="botany-main ref-fuel-main">
+            {params.get('sub') === 'meals' ? (
+              <MealsTab items={items} foods={ref.foods} initialQuery={params.get('q') ?? ''} />
+            ) : (
+              <FoodTab foods={ref.foods} items={items} />
+            )}
           </div>
-          {params.get('sub') === 'meals' ? (
-            <MealsTab items={items} foods={ref.foods} initialQuery={params.get('q') ?? ''} />
-          ) : (
-            <FoodTab foods={ref.foods} items={items} />
-          )}
-        </>
+        </div>
       ) : tab === 'botany' ? (
         <BotanyTab
           foods={ref.foods}

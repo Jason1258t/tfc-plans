@@ -423,10 +423,6 @@
   gap: 8px;
 }
 
-.ref-subtabs {
-  margin-bottom: 10px;
-}
-
 /* Подразделы топлива: содержимое — как у обычной вкладки, столбиком */
 .ref-fuel-main {
   display: flex;
