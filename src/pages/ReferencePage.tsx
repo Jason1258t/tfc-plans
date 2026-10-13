@@ -60,7 +60,8 @@ export function ReferencePage() {
         <div className="grow">
           <h1>Справочник</h1>
           <p className="faint small">
-            Данные из jar сборки. Если сервер что-то переопределяет датапаком или KubeJS — здесь этого не видно.
+            Данные из jar сборки; еда и металлы — с учётом датапака сборки (kubejs/data). Остальное, что сервер
+            переопределяет датапаком или KubeJS, здесь не видно.
           </p>
         </div>
       </div>
@@ -679,6 +680,18 @@ function MetalsTab({ ref_, items }: { ref_: Reference; items: ItemIndex | null }
                   <div className="ref-ing">
                     {m.ingot ? <ItemIcon id={m.ingot} size={24} /> : <span className="ref-ing-blank" />}
                     <span>{m.name}</span>
+                    {m.source.startsWith('kubejs/') && (
+                      <span
+                        className="kjs-badge added"
+                        title={
+                          m.modMelt != null
+                            ? `Изменено датапаком сборки (${m.source}); в моде — ${Math.round(m.modMelt)} °C`
+                            : `Из датапака сборки (${m.source})`
+                        }
+                      >
+                        kubejs/data
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="num">{m.melt != null ? `${Math.round(m.melt)} °C` : '—'}</td>

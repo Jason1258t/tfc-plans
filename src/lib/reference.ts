@@ -73,6 +73,8 @@ export interface Metal {
   fluid: string | null;
   melt: number | null;
   specificHeat: number | null;
+  /** Запись заменена датапаком сборки (kubejs/data): температура плавления из мода, если она была другой */
+  modMelt?: number | null;
 }
 
 /** Вход/выход рецепта: жидкость (amount в mB), тег жидкости, предмет или тег предметов */
@@ -141,6 +143,7 @@ export interface Reference {
  */
 export interface KubejsDataFile {
   foods?: Food[];
+  metals?: Metal[];
   skillet?: {
     entries: ({ file: string } & Record<string, unknown>)[];
     cooked: { file: string; items: string[]; tags: string[]; values: Partial<Record<Nutrient, number>> }[];
@@ -169,6 +172,15 @@ export function loadReference(): Promise<Reference | null> {
     if (ref && kjs?.foods?.length) {
       const own = new Set(kjs.foods.map((f) => f.id));
       ref.foods = [...kjs.foods, ...ref.foods.filter((f) => !own.has(f.id))];
+    }
+    // Металлы — так же; у заменённой записи помним температуру мода, чтобы показать расхождение
+    if (ref && kjs?.metals?.length) {
+      const mod = new Map(ref.metals.map((m) => [m.id, m]));
+      const own = kjs.metals.map((m) => {
+        const was = mod.get(m.id);
+        return was && was.melt !== m.melt ? { ...m, modMelt: was.melt } : m;
+      });
+      ref.metals = [...own, ...ref.metals.filter((m) => !own.some((o) => o.id === m.id))];
     }
     return (loaded = ref);
   });

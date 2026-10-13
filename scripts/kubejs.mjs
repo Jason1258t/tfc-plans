@@ -15,7 +15,8 @@
  * startup_scripts тоже выполняются в песочнице: StartupEvents.registry('item', …) даёт предметы, которые сборка
  * регистрирует сама (kubejs:hot_iron_bloom, tfcr:…). Их имена берутся из kubejs/assets/<ns>/lang, иконки — из
  * kubejs/assets/<ns>/textures → public/kubejs-items.json и public/icons-kubejs/ (сайт добавляет их к библиотеке).
- * kubejs/data/<ns>/tfc/food, …/cuisinedelight_config/ingredient → public/kubejs-data.json (сайт заменяет ими данные модов).
+ * kubejs/data/<ns>/tfc/food, …/tfc/fluid_heat, …/cuisinedelight_config/ingredient → public/kubejs-data.json
+ * (сайт заменяет ими данные модов).
  *
  * kubejs/data — обычный датапак (KubeJS грузит его вместе с остальными): его рецепты идут в каталог
  * как переопределения/добавления. Удаления KubeJS применяются и к ним, и к нашим датапакам — так же, как в игре:
@@ -558,7 +559,7 @@ function dataRecipes(layer) {
 
 /**
  * Данные датапака kubejs/data, которые разбирает сайт: файл с тем же id заменяет файл мода, новый — добавляется.
- * → public/kubejs-data.json: { foods, skillet: { entries, cooked } }. Формат записей — как в reference.json
+ * → public/kubejs-data.json: { foods, metals, skillet: { entries, cooked } }. Формат записей — как в reference.json
  * и meals.json, слияние делает сайт (src/lib/reference.ts, src/lib/meals.ts).
  */
 const NUTRIENTS = ['grain', 'fruit', 'vegetables', 'protein', 'dairy'];
@@ -584,6 +585,7 @@ function dataFilesOf(layer, sub) {
 
 function dataOverrides(layers) {
   const foods = [];
+  const metals = [];
   const entries = [];
   const cooked = [];
   const notes = [];
@@ -604,6 +606,14 @@ function dataOverrides(layers) {
         nutrients: Object.fromEntries(NUTRIENTS.filter((n) => json[n]).map((n) => [n, json[n]])),
       });
     }
+    for (const { ns, rel, json } of dataFilesOf(layer, 'tfc/fluid_heat'))
+      metals.push({
+        id: `${ns}:${rel.replace(/\.json$/, '')}`,
+        source,
+        fluid: json.fluid ?? null,
+        melt: json.melt_temperature ?? json.temperature ?? null,
+        specificHeat: json.specific_heat_capacity ?? null,
+      });
     for (const { ns, rel, json } of dataFilesOf(layer, 'cuisinedelight_config/ingredient'))
       for (const e of json?.entries ?? []) {
         const ing = ingredientOf(e.ingredient);
@@ -628,7 +638,7 @@ function dataOverrides(layers) {
         });
       }
   }
-  return { data: { foods, skillet: { entries, cooked } }, notes };
+  return { data: { foods, metals, skillet: { entries, cooked } }, notes };
 }
 
 /**
@@ -637,7 +647,6 @@ function dataOverrides(layers) {
  */
 const MOD_ONLY_DATA = [
   ['tfc/fuel', 'топливо'],
-  ['tfc/fluid_heat', 'плавление металлов'],
   ['tfc/climate_range', 'климат растений'],
   ['firmalife/plantable', 'растения теплицы'],
   ['firmalife/greenhouse', 'уровни теплицы'],
@@ -721,7 +730,7 @@ function analyze() {
   const overrides = dataOverrides(layers);
   fs.writeFileSync(path.join(ROOT, 'public', 'kubejs-data.json'), JSON.stringify(overrides.data));
   log(
-    `данные kubejs/data: еды ${overrides.data.foods.length}, продуктов сковороды ${overrides.data.skillet.entries.length}, ` +
+    `данные kubejs/data: еды ${overrides.data.foods.length}, металлов ${overrides.data.metals.length}, продуктов сковороды ${overrides.data.skillet.entries.length}, ` +
       `«жареной» питательности ${overrides.data.skillet.cooked.length} → public/kubejs-data.json`,
   );
   for (const n of overrides.notes) log(`  ${n}`);
