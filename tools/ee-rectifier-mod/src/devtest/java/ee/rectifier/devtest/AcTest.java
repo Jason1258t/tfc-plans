@@ -95,6 +95,26 @@ final class AcTest {
         return 1;
     }
 
+    /** Короткое замыкание выхода схемы i: провод между контактами её нагревателя */
+    static int shortOut(CommandSourceStack src, int i) {
+        DevTest.wire(src.getLevel(), heater(i), 0, heater(i), 1);
+        src.sendSuccess(() -> Component.literal("выход " + i + " замкнут"), false);
+        return 1;
+    }
+
+    /** Ещё n нагревателей параллельно на выход схемы 0 (перегрузка) */
+    static int moreLoad(CommandSourceStack src, int n) {
+        ServerLevel level = src.getLevel();
+        for (int k = 0; k < n; k++) {
+            BlockPos h = heater(0).offset(-2 - k % 8, 0, 2 + k / 8);
+            DevTest.place(level, h, CEEBlocks.RESISTIVE_HEATER.getDefaultState());
+            DevTest.wire(level, heater(0), 0, h, 0);
+            DevTest.wire(level, heater(0), 1, h, 1);
+        }
+        src.sendSuccess(() -> Component.literal("нагревателей ещё " + n), false);
+        return 1;
+    }
+
     static void load(ServerLevel level, int i, BlockPos plus, int np, BlockPos minus, int nm) {
         DevTest.place(level, heater(i), CEEBlocks.RESISTIVE_HEATER.getDefaultState());
         DevTest.place(level, meter(i), CEEBlocks.VOLTMETER.getDefaultState());

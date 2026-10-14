@@ -128,6 +128,19 @@ def faces(uv):
     return {f: {'texture': '#0', 'uv': uv} for f in ('north', 'east', 'south', 'west', 'up', 'down')}
 
 
+# Как держать блок в руке и показывать в инвентаре — как у преобразователя EE (иконка — объёмная, под 30° / −135°)
+DISPLAY = {
+    'thirdperson_righthand': {'rotation': [75, 45, 0], 'translation': [0, 2.5, 0], 'scale': [0.375, 0.375, 0.375]},
+    'thirdperson_lefthand': {'rotation': [75, 45, 0], 'translation': [0, 2.5, 0], 'scale': [0.375, 0.375, 0.375]},
+    'firstperson_righthand': {'rotation': [0, 45, 0], 'scale': [0.4, 0.4, 0.4]},
+    'firstperson_lefthand': {'rotation': [0, -135, 0], 'scale': [0.4, 0.4, 0.4]},
+    'ground': {'translation': [0, 3, 0], 'scale': [0.25, 0.25, 0.25]},
+    'gui': {'rotation': [30, -135, 0], 'scale': [0.625, 0.625, 0.625]},
+    'head': {'translation': [0, 18, 0], 'scale': [1.5, 1.5, 1.5]},
+    'fixed': {'scale': [0.5, 0.5, 0.5]},
+}
+
+
 def model(name, terminals, kinds, rolled):
     tex = f'{NS}:block/{name}'
     els = []
@@ -150,7 +163,7 @@ def model(name, terminals, kinds, rolled):
             'down': {'texture': '#0', 'uv': [8, 8, 16, 16], 'cullface': 'down'},
         },
     })
-    return {'credit': 'ee_rectifier', 'textures': {'0': tex, 'particle': tex}, 'elements': els}
+    return {'credit': 'ee_rectifier', 'textures': {'0': tex, 'particle': tex}, 'elements': els, 'display': DISPLAY}
 
 
 def dump(obj, *path):

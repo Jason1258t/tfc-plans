@@ -68,6 +68,14 @@ public class DevTest {
                         .then(Commands.argument("rpm", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 256))
                                 .executes(c -> AcTest.rpm(c.getSource(),
                                         com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "rpm")))))
+                .then(Commands.literal("acshort")
+                        .then(Commands.argument("i", com.mojang.brigadier.arguments.IntegerArgumentType.integer(0, 2))
+                                .executes(c -> AcTest.shortOut(c.getSource(),
+                                        com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "i")))))
+                .then(Commands.literal("acload")
+                        .then(Commands.argument("n", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 64))
+                                .executes(c -> AcTest.moreLoad(c.getSource(),
+                                        com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "n")))))
                 .then(Commands.literal("acreport").executes(c -> AcTest.report(c.getSource())))
                 .then(Commands.literal("genreport").executes(c -> Generator.report(c.getSource()))));
     }

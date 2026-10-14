@@ -13,5 +13,5 @@ rm -f ee-rectifier-*.jar
 cp "build/libs/ee-rectifier-$VERSION.jar" .
 mkdir -p ../../public/addons
 cp "build/libs/ee-rectifier-$VERSION.jar" ../../public/addons/
-(cd art && python3 preview.py ../../../public/addons >/dev/null)
+(cd art && python3 iso.py ../../../public/addons >/dev/null)
 echo "готово: ee-rectifier-$VERSION.jar → tools/ee-rectifier-mod и public/addons"
