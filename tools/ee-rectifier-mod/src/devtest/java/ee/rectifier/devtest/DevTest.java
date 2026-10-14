@@ -56,6 +56,19 @@ public class DevTest {
                 .then(Commands.literal("genshort").then(Commands.argument("heaters", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 64))
                         .executes(c -> Generator.parallel(c.getSource(), com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "heaters")))))
                 .then(Commands.literal("genshortwire").executes(c -> Generator.shortWire(c.getSource())))
+                .then(Commands.literal("ac")
+                        .then(Commands.argument("rpm", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 256))
+                                .executes(c -> AcTest.build(c.getSource(),
+                                        com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "rpm")))))
+                .then(Commands.literal("acwatch")
+                        .then(Commands.argument("ticks", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 2000))
+                                .executes(c -> AcTest.watch(c.getSource(),
+                                        com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "ticks")))))
+                .then(Commands.literal("acrpm")
+                        .then(Commands.argument("rpm", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 256))
+                                .executes(c -> AcTest.rpm(c.getSource(),
+                                        com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "rpm")))))
+                .then(Commands.literal("acreport").executes(c -> AcTest.report(c.getSource())))
                 .then(Commands.literal("genreport").executes(c -> Generator.report(c.getSource()))));
     }
 

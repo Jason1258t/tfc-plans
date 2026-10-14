@@ -46,4 +46,9 @@
 Тот же тестовый мод проверяет генератор EE для справочника (`/rectest gen|genload|genshortwire|genreport`, файл
 `src/devtest/.../Generator.java`): `./test-server.sh 'rectest gen 64' 'sleep 4' 'rectest genreport'`.
 
+**С настоящим трёхфазным генератором** (`/rectest ac <об/мин>`, `acrpm`, `acwatch <тиков>`, `acreport`;
+`MICROTICKS=N ./test-server.sh …` — настройка EE `simulation.microTicks`): блоки ведут себя ровно как мост из шести
+отдельных диодов EE, а сами диоды EE при microTicks = 1 успевают за фазой только до ~4 об/мин — выше выход скачет. При
+microTicks = 32 ровно до 100 об/мин, на 256 — ±4 %. Подробности — `docs/plans/electricity.md`, «Диоды EE и переменный ток».
+
 Не проверено: в игре с игроком (вид, установка катушкой, рецепт в JEI/EMI).

@@ -19,6 +19,11 @@ enable-rcon=true
 rcon.port=25599
 rcon.password=check
 P
+# MICROTICKS=N — настройка EE simulation.microTicks (сколько расчётов цепи за тик) для мира разработки
+if [ -n "${MICROTICKS:-}" ]; then
+  mkdir -p run/world/serverconfig
+  printf '[simulation]\n\tmicroTicks = %s\n' "$MICROTICKS" > run/world/serverconfig/electroenergetics-server.toml
+fi
 ./gradlew runServer --console=plain > run/check.log 2>&1 &
 GRADLE=$!
 if [ $# -gt 0 ]; then
