@@ -213,6 +213,47 @@ export function alternator(
 export const statorsFor = (volts: number, rpm: number, p: AlternatorParams) =>
   Math.max(1, Math.ceil((volts * p.fullLoadCurrent) / (p.magnetsPerStator * Math.abs(rpm) * p.powerMult)));
 
+export type LoadRegime = 'idle' | 'normal' | 'overload' | 'unstable';
+
+export interface AlternatorLoad {
+  regime: LoadRegime;
+  /** Напряжение на контактах, В */
+  volts: number;
+  /** Отдаёт в нагрузку, Вт */
+  delivered: number;
+  current: number;
+  /** Запас энергии в установившемся режиме, Вт·тик */
+  stored: number;
+}
+
+/**
+ * Генератор под нагрузкой R (Ом). По коду EE это источник ЭДС с внутренним сопротивлением ЭДС² / (4 × запас)
+ * (BridgeCollector.energyLimitedSource), запас пополняется выработкой каждый тик, не больше bufferTicks × выработка.
+ * Пока нагрузка берёт меньше выработки, запас полный и напряжение почти равно ЭДС. Больше — запас садится, пока
+ * генератор не отдаёт ровно выработку: U = √(P × R). Если R меньше четверти «согласованного» ЭДС² / P (ток больше
+ * 2 × ток полной нагрузки), модель не сходится с замером: на сервере разработки 2212 В / 221 кВт на 5 Ом дали 1193 В
+ * и ~285 кВт — запас обнуляется и пополняется, учёт мода уходит в плюс. Это помечается как 'unstable'.
+ */
+export function alternatorLoad(emf: number, power: number, r: number, bufferTicks: number): AlternatorLoad {
+  if (power <= 0 || emf <= 0) return { regime: 'idle', volts: 0, delivered: 0, current: 0, stored: 0 };
+  if (!(r > 0) || !Number.isFinite(r))
+    return { regime: 'idle', volts: emf, delivered: 0, current: 0, stored: bufferTicks * power };
+  const full = bufferTicks * power;
+  const ri0 = (emf * emf) / (4 * full);
+  const v0 = (emf * r) / (r + ri0);
+  if ((v0 * v0) / r <= power)
+    return { regime: 'normal', volts: v0, delivered: (v0 * v0) / r, current: v0 / r, stored: full };
+  const volts = Math.sqrt(power * r);
+  const ri = emf * Math.sqrt(r / power) - r;
+  return {
+    regime: r >= (emf * emf) / power / 4 ? 'overload' : 'unstable',
+    volts,
+    delivered: power,
+    current: volts / r,
+    stored: ri > 0 ? (emf * emf) / (4 * ri) : 0,
+  };
+}
+
 export interface Motor {
   running: boolean;
   /** Сколько SU выдаёт в сеть Create */

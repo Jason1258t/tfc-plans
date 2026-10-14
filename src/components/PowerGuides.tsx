@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { CONFIG_ORIGIN_LABEL } from '../lib/config';
 import {
   alternator,
+  alternatorLoad,
+  type AlternatorLoad,
   IE_WIRE,
   statorsFor,
   type AlternatorParams,
@@ -34,6 +36,7 @@ import { ItemIcon } from './ItemIcon';
 
 const GUIDES = [
   { id: 'generator', title: 'Первый генератор: статоры, обороты, напряжение', Body: GeneratorGuide },
+  { id: 'optimal', title: 'Оптимальный режим генератора: обороты, напряжение, мощность', Body: OptimalGuide },
   { id: 'ac-pump', title: 'Помпа на переменном токе: выпрямитель', Body: AcPumpGuide },
   { id: 'line', title: 'Линия на дальнее расстояние через трансформаторы', Body: LineGuide },
   { id: 'converter', title: 'Из EE в IE и обратно: преобразователь', Body: ConverterGuide },
@@ -1398,6 +1401,359 @@ function ConverterPlanner({
             {tooHigh
               ? `шкала преобразователя — до ${num(vMax)} В: выше — повышающим трансформатором`
               : 'по нему выбирайте провод (гайд про линию)'}
+          </span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------- оптимальный режим генератора
+
+const REGIME: Record<AlternatorLoad['regime'], string> = {
+  idle: 'без нагрузки',
+  normal: 'нормальный: напряжение почти полное',
+  overload: 'перегрузка: отдаёт всю выработку, напряжение просело',
+  unstable: 'ток больше двух полных: режим вне модели, считать нельзя',
+};
+
+/** Подобрать трансформатор: соотношение «выход / вход», при котором потребители получат нужное напряжение */
+function matchRatio(emf: number, power: number, consumerR: number, want: number, buffer: number) {
+  let k = want / emf;
+  for (let i = 0; i < 30; i++) {
+    const l = alternatorLoad(emf, power, consumerR / (k * k), buffer);
+    if (l.volts <= 0) break;
+    k = want / l.volts;
+  }
+  return k;
+}
+
+function OptimalGuide({ data, ee }: { data: PowerData; ee: Get }) {
+  const p = useAlternatorParams(data, ee);
+  const fullLoad = ee('rotor.rotorFullLoadCurrent');
+  const buffer = data.ee?.generator?.bufferTicks ?? 10;
+  const I = fullLoad?.value ?? 100;
+  const perRotor = [1, 2, 3, 4].map((n) => {
+    const g = p ? alternator(n, 1, p, 1) : null;
+    return { n, wPerSu: g ? g.power / g.stress : null };
+  });
+
+  return (
+    <article className="ref-card power-article">
+      <h2 className="power-h">Оптимальный режим генератора: обороты, напряжение, мощность</h2>
+      <div className="power-note">
+        <b>Коротко.</b>
+        <ol>
+          <li>
+            Вал платит за <b>всю выработку</b>, даже если её никто не берёт. Генератор подбирают под потребление, а не
+            «с запасом»: лишние статоры — впустую потраченные SU.
+          </li>
+          <li>
+            <b>Обороты на КПД не влияют</b>: 1 SU ≈ 1 Вт на любой скорости. Чем быстрее вал, тем меньше статоров нужно
+            на ту же мощность. Берите быстрый вал и подгоняйте обороты под потребление: статор целый, а обороты
+            выставляются любые (до 256).
+          </li>
+          <li>
+            <b>Напряжение отдельно не выбирается</b>: ЭДС = выработка / <Val s={fullLoad} unit="А" />. Та же мощность —
+            то же напряжение на любых оборотах. Нужно другое — трансформатор.
+          </li>
+          <li>
+            <b>Лучшая нагрузка — ток около {num(I)} А</b> на стороне генератора: он отдаёт почти всю выработку при 97 %
+            напряжения. Меньше тока — недогруз, до {num(2 * I)} А — отдаёт всю выработку, но напряжение проседает;
+            больше {num(2 * I)} А — не рассчитывайте.
+          </li>
+        </ol>
+      </div>
+
+      <h3>Как генератор держит нагрузку</h3>
+      <p>
+        По коду щёточный узел — источник с внутренним сопротивлением, которое зависит от запаса энергии: запас — до{' '}
+        {buffer} тиков выработки, каждый тик пополняется на выработку и тратится на то, что забрали потребители. Пока
+        берут меньше выработки, запас полный и внутреннее сопротивление крошечное (1/{4 * buffer} от «согласованной»
+        нагрузки ЭДС² / выработку) — напряжение почти не проседает. Берут больше — запас садится, сопротивление растёт,
+        и генератор отдаёт ровно выработку при напряжении √(выработка × R).
+      </p>
+      <LoadChart buffer={buffer} fullLoad={I} />
+
+      <h3>Обороты</h3>
+      <p>
+        Выработка и нагрузка на вал растут с оборотами одинаково, поэтому SU за ватт от скорости не зависит. В Create
+        шестерни и коробки меняют обороты, не меняя запаса SU источника (SU = влияние × об/мин), значит быстрее — всегда
+        выгоднее по статорам. Ограничения: 256 об/мин у Create; на трёхфазном узле частота растёт с оборотами, и для
+        помп на 128 об/мин есть «одинаковые снимки» (гайд про помпу).
+      </p>
+      <h3>Статоры на роторе</h3>
+      <p>
+        Каждый ротор, даже без статоров, берёт {p ? num(p.baseMagnets * p.powerMult * p.stressMult, 2) : '—'} SU за 1
+        об/мин. Полный ротор (4 статора) почти не теряет, одиночный статор на роторе — заметно:
+      </p>
+      <div className="ref-table-wrap">
+        <table className="ref-table">
+          <thead>
+            <tr>
+              <th>Статоров на роторе</th>
+              {perRotor.map((r) => (
+                <th key={r.n} className="num">
+                  {r.n}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Вт с 1 SU</td>
+              {perRotor.map((r) => (
+                <td key={r.n} className="num">
+                  {r.wPerSu ? num(r.wPerSu, 3) : '—'}
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Напряжение и трансформатор</h3>
+      <p>
+        Генератор на 20 кВт даёт {p ? num(20000 / p.fullLoadCurrent) : '—'} В, на 200 кВт —{' '}
+        {p ? num(200000 / p.fullLoadCurrent) : '—'} В, на каких бы оборотах ни крутился. Потребителям нужно своё:
+        двигателю — больше <Val s={ee('Voltages.motorMinVoltage')} unit="В" />, обычной изоляции — не больше{' '}
+        <Val s={ee('Voltages.wireMaxVoltage')} unit="В" />. Трансформатор между генератором и потребителями заодно{' '}
+        <b>согласует нагрузку</b>: повышая напряжение для потребителей в k раз, он делает их для генератора в k² раз
+        «тяжелее» — так маленькую нагрузку можно довести до тока {num(I)} А на стороне генератора.
+      </p>
+
+      {p && <OptimalPlanner p={p} data={data} buffer={buffer} />}
+      {p && <LoadCheck p={p} buffer={buffer} />}
+
+      <h3>Что проверено</h3>
+      <ul className="faint small">
+        <li>
+          По коду EE: щёточный узел — источник с запасом энергии (до {buffer} тиков выработки) и внутренним
+          сопротивлением ЭДС² / (4 × запас); нагрузка ротора на вал не зависит от потребления.
+        </li>
+        <li>
+          На тестовом сервере (4 + 2 статора, творческий мотор): 64 об/мин, 45 Ом — 551,27 В при ЭДС 552,96 В (модель:
+          551,27); 256 об/мин, 45 Ом — 2185,0 В (модель 2185,0); 15 Ом (перегрузка) — 1822,6 В и запас 381 тыс. (модель
+          1821,5 В и 380 тыс.). На 5 Ом (ток больше двух полных) — 1193 В и около 285 кВт при выработке 221 кВт: учёт
+          мода уходит в плюс, модель здесь не работает, полагаться на это не стоит.
+        </li>
+        <li>
+          Не проверено: в игре — ничего; потери в проводах и трансформаторах калькулятор не считает (их — в гайде про
+          линию); двигатели EE меняют сопротивление от нагрузки — считайте их по потреблению на полной нагрузке.
+        </li>
+      </ul>
+    </article>
+  );
+}
+
+/** Отдача и напряжение генератора в зависимости от того, сколько хотят взять потребители */
+function LoadChart({ buffer, fullLoad }: { buffer: number; fullLoad: number }) {
+  const w = 420;
+  const h = 150;
+  const maxD = 5;
+  const emf = 100;
+  const power = emf * fullLoad;
+  const pts = Array.from({ length: 101 }, (_, i) => {
+    const d = (i / 100) * maxD + 1e-6;
+    const l = alternatorLoad(emf, power, (emf * emf) / power / d, buffer);
+    return { d, out: l.delivered / power, v: l.volts / emf };
+  });
+  const x = (d: number) => 46 + (d / maxD) * (w - 72);
+  const y = (f: number) => 10 + (1 - Math.min(f, 1.1) / 1.1) * (h - 30);
+  const path = (k: 'out' | 'v') =>
+    pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.d).toFixed(1)},${y(p[k]).toFixed(1)}`).join(' ');
+  return (
+    <figure className="power-figure">
+      <svg viewBox={`0 0 ${w} ${h + 18}`} role="img" aria-label="Отдача и напряжение генератора от нагрузки">
+        <rect x={x(4)} y={10} width={x(maxD) - x(4)} height={h - 30} className="power-zone-bad" />
+        <line x1={46} y1={y(1)} x2={w - 26} y2={y(1)} className="power-axis" />
+        <line x1={46} y1={h - 20} x2={w - 26} y2={h - 20} className="power-axis" />
+        <line x1={x(1)} y1={10} x2={x(1)} y2={h - 20} className="power-axis" strokeDasharray="3 3" />
+        <path d={path('out')} className="power-line" />
+        <path d={path('v')} className="power-line power-line-2" />
+        <text x={42} y={y(1) + 4} textAnchor="end" className="power-svg-text">
+          100 %
+        </text>
+        {[0, 1, 2, 3, 4, 5].map((d) => (
+          <text key={d} x={x(d)} y={h - 6} textAnchor="middle" className="power-svg-text">
+            {d * 100} %
+          </text>
+        ))}
+        <text x={x(4.5)} y={y(0.15)} textAnchor="middle" className="power-svg-text">
+          вне модели
+        </text>
+      </svg>
+      <figcaption className="faint small">
+        По горизонтали — сколько взяли бы потребители при полном напряжении, в % выработки (100 % — ток {num(fullLoad)}{' '}
+        А). <span className="power-key">Сплошная</span> — сколько генератор реально отдаёт, в % выработки;{' '}
+        <span className="power-key power-key-2">пунктир</span> — напряжение, в % ЭДС. Лучшая точка — у 100 %: отдаёт
+        всё, напряжение около 97 %. Левее — SU впустую, правее — просадка напряжения.
+      </figcaption>
+    </figure>
+  );
+}
+
+/** Подбор генератора под потребителей */
+function OptimalPlanner({ p, data, buffer }: { p: AlternatorParams; data: PowerData; buffer: number }) {
+  const [kw, setKw] = useState(20);
+  const [want, setWant] = useState(400);
+  const [rpm, setRpm] = useState(256);
+  const [su, setSu] = useState(0);
+  const need = kw * 1000;
+  const per = p.magnetsPerStator * p.powerMult;
+  const stators = Math.max(1, Math.ceil(need / (per * rpm)));
+  const rotors = Math.ceil(stators / 4);
+  const maxRotors = data.ee?.rotor?.maxRotors ?? null;
+  const g = alternator(stators, rpm, p, rotors);
+  const consumerR = (want * want) / need;
+  const k = matchRatio(g.emf, g.power, consumerR, want, buffer);
+  const ratios = data.ee?.transformer ? transformerRatios(data.ee.transformer.ratios) : [];
+  const best = ratios.length
+    ? ratios.reduce((a, b) => (Math.abs(Math.log(b.k / k)) < Math.abs(Math.log(a.k / k)) ? b : a))
+    : null;
+  const withBest = best ? alternatorLoad(g.emf, g.power, consumerR / (best.k * best.k), buffer) : null;
+  const suShort = su > 0 && g.stress > su;
+  const suMax = su > 0 ? (su * g.power) / g.stress : null;
+  // Статоров целое число: обороты, при которых выработка ровно равна потреблению
+  const exactRpm = need / (per * stators);
+  return (
+    <section className="power-calc">
+      <h3>Калькулятор: подобрать генератор</h3>
+      <div className="power-form">
+        <NumField label="Потребители берут" value={kw} onChange={setKw} min={0.1} max={100000} step={0.5} unit="кВт" />
+        <NumField label="при напряжении" value={want} onChange={setWant} min={1} max={50000} step={10} unit="В" />
+        <NumField label="Обороты вала" value={rpm} onChange={setRpm} min={1} max={256} unit="об/мин" />
+        <NumField label="Запас SU источника (0 — не знаю)" value={su} onChange={setSu} min={0} max={1e9} step={100} />
+      </div>
+      <div className="power-outs">
+        <div className="power-out">
+          <span className="faint small">Статоров</span>
+          <b>{num(stators)}</b>
+          <span className="faint small">
+            на {num(rotors)} {rotors === 1 ? 'роторе' : 'роторах'}
+            {stators >= 4 ? ' по 4' : ''}
+            {maxRotors && rotors > maxRotors
+              ? ` — ${Math.ceil(rotors / maxRotors)} генератора (до ${maxRotors} роторов на узел)`
+              : ''}
+          </span>
+        </div>
+        <div className="power-out">
+          <span className="faint small">Выработка и ЭДС</span>
+          <b>{watts(g.power)}</b>
+          <span className="faint small">
+            {num(g.emf)} В; потребители займут {num((need / g.power) * 100)} %
+          </span>
+        </div>
+        <div className="power-out">
+          <span className="faint small">Нагрузка на вал</span>
+          <b>{num(g.stress)} SU</b>
+          <span className={cx('small', suShort ? 'power-bad' : 'faint')}>
+            {suShort
+              ? `источник не потянет: с ${num(su)} SU — не больше ${watts(suMax!)}`
+              : su > 0
+                ? `из ${num(su)} SU`
+                : 'всегда, даже без потребителей'}
+          </span>
+        </div>
+        <div className="power-out">
+          <span className="faint small">Трансформатор (выход / вход)</span>
+          <b>{Math.abs(k - 1) < 0.03 ? 'не нужен' : `≈ ${num(k, 2)}×`}</b>
+          {best && withBest && Math.abs(k - 1) >= 0.03 && (
+            <span className="faint small">
+              ближайшее на одноблочном {best.label}: у потребителей {num(withBest.volts * best.k)} В
+            </span>
+          )}
+        </div>
+      </div>
+      {need / g.power < 0.9 && (
+        <p className="power-note small">
+          Статор — целый: на {num(rpm)} об/мин {num(stators)} {stators === 1 ? 'статор даёт' : 'статора дают'} больше,
+          чем нужно. Замедлите вал до <b>{num(Math.ceil(exactRpm))} об/мин</b> (регулятор скорости вращения Create) — та
+          же мощность, вал не переплачивает.
+        </p>
+      )}
+      <p className="faint small">
+        Сколько статоров нужно на других оборотах:{' '}
+        {[32, 64, 128, 256].map((r) => `${r} об/мин — ${Math.max(1, Math.ceil(need / (per * r)))}`).join(', ')}.
+      </p>
+    </section>
+  );
+}
+
+/** Проверка готового генератора с нагрузкой */
+function LoadCheck({ p, buffer }: { p: AlternatorParams; buffer: number }) {
+  const [stators, setStators] = useState(8);
+  const [rpm, setRpm] = useState(64);
+  const [kw, setKw] = useState(20);
+  const [nominal, setNominal] = useState(400);
+  const [k, setK] = useState(1);
+  const g = alternator(stators, rpm, p);
+  const consumerR = (nominal * nominal) / (kw * 1000);
+  const l = alternatorLoad(g.emf, g.power, consumerR / (k * k), buffer);
+  const atConsumers = l.volts * k;
+  const used = g.power > 0 ? l.delivered / g.power : 0;
+  const over = atConsumers > nominal * 1.1;
+  const fix = over ? matchRatio(g.emf, g.power, consumerR, nominal, buffer) : null;
+  // С правильным напряжением потребители возьмут свою мощность — по ней и судим о загрузке вала
+  const share = over ? Math.min(1, (kw * 1000) / g.power) : used;
+  return (
+    <section className="power-calc">
+      <h3>Калькулятор: как работает мой генератор</h3>
+      <div className="power-form">
+        <NumField label="Статоров" value={stators} onChange={setStators} min={1} max={400} />
+        <NumField label="Обороты" value={rpm} onChange={setRpm} min={1} max={256} unit="об/мин" />
+        <NumField
+          label="Потребители: мощность"
+          value={kw}
+          onChange={setKw}
+          min={0.01}
+          max={100000}
+          step={0.5}
+          unit="кВт"
+        />
+        <NumField label="при напряжении" value={nominal} onChange={setNominal} min={1} max={50000} step={10} unit="В" />
+        <NumField
+          label="Трансформатор: выход / вход"
+          value={k}
+          onChange={setK}
+          min={0.02}
+          max={50}
+          step={0.1}
+          unit="×"
+        />
+      </div>
+      <div className="power-outs">
+        <div className="power-out">
+          <span className="faint small">Режим</span>
+          <b className={cx(l.regime === 'unstable' && 'power-bad')}>{REGIME[l.regime]}</b>
+        </div>
+        <div className="power-out">
+          <span className="faint small">Напряжение</span>
+          <b>{num(l.volts)} В</b>
+          <span className="faint small">
+            ЭДС {num(g.emf)} В{k !== 1 ? `; у потребителей ${num(atConsumers)} В` : ''}
+          </span>
+          {over && fix && (
+            <span className="small power-bad">
+              выше номинала потребителей — трансформатор ≈ {num(fix, 2)}× (выход / вход), тогда они возьмут свои{' '}
+              {num(kw, 1)} кВт
+            </span>
+          )}
+        </div>
+        <div className="power-out">
+          <span className="faint small">Отдаёт</span>
+          <b>{watts(l.delivered)}</b>
+          <span className="faint small">
+            из {watts(g.power)} — {num(used * 100)} %; ток {num(l.current, 1)} А
+          </span>
+        </div>
+        <div className="power-out">
+          <span className="faint small">Вал</span>
+          <b>{num(g.stress)} SU</b>
+          <span className={cx('small', share < 0.7 ? 'power-bad' : 'faint')}>
+            {share < 0.7
+              ? `${over ? 'при номинальном напряжении ' : ''}впустую около ${num(g.stress * (1 - share))} SU — генератор великоват`
+              : 'загружен хорошо'}
           </span>
         </div>
       </div>
