@@ -16,6 +16,7 @@ import {
 } from '../lib/power';
 import { cx } from '../lib/util';
 import { ItemIcon } from './ItemIcon';
+import { IeConsumers } from './PowerIeLoads';
 import { PowerGuides } from './PowerGuides';
 import './PowerTab.css';
 
@@ -93,9 +94,11 @@ function Body({
 }) {
   const ee = useSettings(data.ee?.file, data.ee?.keys);
   const ie = useSettings(data.ie?.file, data.ie?.keys);
+  const att = useSettings(data.att?.file, data.att?.keys);
   if (sub === 'ee') return <EeLoads data={data} s={ee.get} />;
-  if (sub === 'ie') return <IeNet data={data} s={ie.get} ee={ee.get} />;
-  if (sub === 'guides') return <PowerGuides data={data} ee={ee.get} ie={ie.get} guide={guide} onGuide={onGuide} />;
+  if (sub === 'ie') return <IeNet data={data} s={ie.get} ee={ee.get} att={att.get} />;
+  if (sub === 'guides')
+    return <PowerGuides data={data} ee={ee.get} ie={ie.get} att={att.get} guide={guide} onGuide={onGuide} />;
   return <Link_ data={data} ee={ee.get} ie={ie.get} />;
 }
 
@@ -557,7 +560,7 @@ function EeLoads({ data, s }: { data: PowerData; s: Get }) {
 
 // ---------------------------------------------------------------- сеть IE
 
-function IeNet({ data, s, ee }: { data: PowerData; s: Get; ee: Get }) {
+function IeNet({ data, s, ee, att }: { data: PowerData; s: Get; ee: Get; att: Get }) {
   const rate = ee('wattFeTConversionRate');
   const div = data.ie?.connectorDivisor;
   return (
@@ -638,6 +641,7 @@ function IeNet({ data, s, ee }: { data: PowerData; s: Get; ee: Get }) {
           датапак сборки).
         </p>
       </section>
+      <IeConsumers data={data} ie={s} att={att} rate={rate?.value ?? null} />
     </>
   );
 }

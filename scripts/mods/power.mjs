@@ -424,12 +424,242 @@ function buildCreate(jar, warnings) {
   return { file: 'create-server.toml', pumpImpact };
 }
 
-export function buildPower(jarPaths) {
+// ---------------------------------------------------------------- потребители IE и Advanced TFC Tech
+
+const ATT = 'com/hermitowo/advancedtfctech';
+const IE_ART = `${IE}/api/crafting`;
+const IE_LOGIC = `${IE}/common/blocks/multiblocks/logic`;
+
+/**
+ * Мультиблоки и машины с рецептами: какой тип рецептов, класс рецепта (время/энергия по умолчанию — из конструктора),
+ * класс логики (сколько операций идёт одновременно — из конструктора MultiblockProcessor), раздел настроек
+ * (energyModifier / timeModifier). Соответствия — таблица, числа — из кода и рецептов.
+ */
+const RECIPE_MACHINES = [
+  { id: 'crusher', mod: 'ie', type: 'crusher', recipe: 'CrusherRecipe', logic: 'CrusherLogic' },
+  { id: 'metal_press', mod: 'ie', type: 'metal_press', recipe: 'MetalPressRecipe', logic: 'MetalPressLogic' },
+  {
+    id: 'arc_furnace',
+    mod: 'ie',
+    type: 'arc_furnace',
+    recipe: 'ArcFurnaceRecipe',
+    logic: 'arcfurnace/ArcFurnaceLogic',
+  },
+  { id: 'squeezer', mod: 'ie', type: 'squeezer', recipe: 'SqueezerRecipe', logic: 'SqueezerLogic' },
+  { id: 'fermenter', mod: 'ie', type: 'fermenter', recipe: 'FermenterRecipe', logic: 'FermenterLogic' },
+  { id: 'refinery', mod: 'ie', type: 'refinery', recipe: 'RefineryRecipe', logic: 'RefineryLogic' },
+  { id: 'mixer', mod: 'ie', type: 'mixer', recipe: 'MixerRecipe', logic: 'mixer/MixerLogic' },
+  { id: 'sawmill', mod: 'ie', type: 'sawmill', recipe: 'SawmillRecipe', logic: null },
+  {
+    id: 'bottling_machine',
+    mod: 'ie',
+    type: 'bottling_machine',
+    recipe: 'BottlingMachineRecipe',
+    logic: 'bottling_machine/BottlingMachineLogic',
+  },
+  {
+    id: 'auto_workbench',
+    mod: 'ie',
+    type: 'blueprint',
+    recipe: 'BlueprintCraftingRecipe',
+    logic: 'AutoWorkbenchLogic',
+  },
+  { id: 'thresher', mod: 'att', type: 'thresher', logic: 'ThresherLogic' },
+  { id: 'grist_mill', mod: 'att', type: 'grist_mill', logic: 'GristMillLogic' },
+  { id: 'power_loom', mod: 'att', type: 'power_loom', logic: 'PowerLoomLogic' },
+  { id: 'beamhouse', mod: 'att', type: 'beamhouse', logic: 'BeamhouseLogic' },
+  { id: 'fleshing_machine', mod: 'att', type: 'fleshing_machine', logic: null, single: true },
+];
+
+/**
+ * Приборы и машины без рецептов: потребление — ключи конфига IE (значения сайт берёт с сервера поверх кода).
+ * kind: tick — FE/t, пока работает; action — FE за действие; max — до стольких FE/t (зарядка).
+ */
+const IE_DEVICES = [
+  { id: 'electric_lantern', keys: [['machines.lantern.energyDraw', 'tick']] },
+  { id: 'floodlight', keys: [['machines.floodlight.energyDraw', 'tick']] },
+  { id: 'cloche', keys: [['machines.garden_cloche.consumption', 'tick']] },
+  {
+    id: 'furnace_heater',
+    keys: [
+      ['machines.external_heater.consumption', 'tick', 'держит нагрев'],
+      ['machines.external_heater.speedupConsumption', 'tick', 'ускоряет печь вдвое'],
+    ],
+  },
+  { id: 'blastfurnace_preheater', keys: [['machines.preheater_consumption', 'tick']] },
+  { id: 'sample_drill', keys: [['machines.coredrill.consumption', 'tick', 'пока бурит']] },
+  {
+    id: 'fluid_pump',
+    keys: [
+      ['machines.pump.consumption', 'action', 'за блок жидкости из мира'],
+      ['machines.pump.consumption_accelerate', 'action', 'ускорение подачи'],
+    ],
+  },
+  { id: 'charging_station', keys: [['machines.charger_consumption', 'max', 'пока заряжает']] },
+  {
+    id: 'tesla_coil',
+    keys: [
+      ['machines.teslacoil.consumption', 'tick', 'включена'],
+      ['machines.teslacoil.consumption_active', 'action', 'за разряд'],
+    ],
+  },
+  {
+    id: 'turret_gun',
+    keys: [
+      ['machines.turret.consumption', 'tick', 'следит'],
+      ['machines.turret.gun_consumption', 'tick', 'стреляет'],
+    ],
+  },
+  {
+    id: 'turret_chem',
+    keys: [
+      ['machines.turret.consumption', 'tick', 'следит'],
+      ['machines.turret.chem_consumption', 'tick', 'стреляет'],
+    ],
+  },
+  { id: 'assembler', multiblock: true, keys: [['machines.assembler_consumption', 'action', 'за предмет']] },
+  { id: 'excavator', multiblock: true, keys: [['machines.excavator.consumption', 'tick', 'пока копает']] },
+];
+
+function langOf(jar, mod) {
+  const r = spawnSync('unzip', ['-p', jar, `assets/${mod}/lang/ru_ru.json`], { maxBuffer: 16 << 20 });
+  try {
+    return JSON.parse(r.stdout.toString());
+  } catch {
+    return {};
+  }
+}
+
+/** Время и энергия рецепта по умолчанию — аргументы super(…, время, энергия, множители) в конструкторе рецепта */
+function recipeBase(cls) {
+  for (const m of cls?.methods ?? []) {
+    if (m.name !== '<init>' || !m.code) continue;
+    const tokens = [];
+    for (const ins of instructions(m.code)) {
+      const { op } = ins;
+      if (op >= 0x02 && op <= 0x08) tokens.push(op - 0x03);
+      else if (op === 0x10 || op === 0x11) tokens.push(ins.index);
+      else if (op === 0x12 || op === 0x13) tokens.push(cls.constant(ins.index));
+      else if ((op >= 0x15 && op <= 0x19) || (op >= 0x1a && op <= 0x2d)) tokens.push('arg');
+      else if (op === 0xb2) tokens.push('static');
+      else if (op === 0xb6) tokens.push(cls.ref(ins.index).name === 'getAmount' ? 'fluid' : 'call');
+      else if (op === 0xb7) {
+        const r = cls.ref(ins.index);
+        if (r.name === '<init>' && /\/MultiblockRecipe$/.test(r.owner)) {
+          const [time, energy] = tokens.slice(-3, -1);
+          return { time, energy };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/** Сколько операций мультиблок ведёт одновременно: последний int в new MultiblockProcessor(очередь, …, за тик, …) */
+function parallelOf(jar, base) {
+  const r = spawnSync('unzip', ['-Z1', jar], { maxBuffer: 64 << 20 });
+  const names = r.stdout
+    .toString()
+    .split('\n')
+    .filter((f) => f === `${base}.class` || f.startsWith(`${base}$`));
+  for (const f of names) {
+    const cls = classFrom(jar, f.replace(/\.class$/, ''));
+    for (const m of cls?.methods ?? []) {
+      let ints = null;
+      for (const ins of instructions(m.code ?? Buffer.alloc(0))) {
+        const { op } = ins;
+        if (op === 0xbb && /MultiblockProcessor/.test(cls.className(ins.index))) ints = [];
+        else if (ints && op >= 0x02 && op <= 0x08) ints.push(op - 0x03);
+        else if (ints && (op === 0x10 || op === 0x11)) ints.push(ins.index);
+        else if (ints && op === 0xb7 && /MultiblockProcessor/.test(cls.ref(ins.index).owner))
+          return ints.at(-1) ?? null;
+      }
+    }
+  }
+  return null;
+}
+
+function sawmillParallel(jar) {
+  const cls = classFrom(jar, `${IE_LOGIC}/sawmill/SawmillLogic`);
+  const m = cls?.methods.find((x) => x.name === 'tickServer' && x.code);
+  const list = m ? instructions(m.code) : [];
+  for (let i = 0; i + 1 < list.length; i++) if (list[i].op === 0x10 && list[i + 1].op === 0xa2) return list[i].index; // bipush N; if_icmpge
+  return null;
+}
+
+function buildConsumers(ieJar, attJar, recipes, warnings) {
+  const lang = {
+    ie: ieJar ? langOf(ieJar, 'immersiveengineering') : {},
+    att: attJar ? langOf(attJar, 'advancedtfctech') : {},
+  };
+  const modId = { ie: 'immersiveengineering', att: 'advancedtfctech' };
+  const machines = [];
+  for (const m of RECIPE_MACHINES) {
+    const jar = m.mod === 'ie' ? ieJar : attJar;
+    if (!jar) continue;
+    const ns = modId[m.mod];
+    const base = m.recipe ? recipeBase(classFrom(jar, `${IE_ART}/${m.recipe}`)) : null;
+    if (m.recipe && !base) warnings.push(`IE: время/энергия рецепта ${m.recipe} не найдены`);
+    // Лесопилка без MultiblockProcessor: в tickServer цикл по предметам на ленте «пока i < N»
+    const sawmill = m.id === 'sawmill' ? sawmillParallel(jar) : null;
+    if (m.id === 'sawmill' && !sawmill) warnings.push('IE: сколько предметов лесопилка пилит разом — не найдено');
+    const parallel =
+      sawmill ??
+      (m.single
+        ? 1
+        : m.logic
+          ? parallelOf(jar, m.mod === 'ie' ? `${IE_LOGIC}/${m.logic}` : `${ATT}/common/multiblocks/logic/${m.logic}`)
+          : null);
+    if (m.logic && !parallel) warnings.push(`IE: параллельные операции ${m.logic} не найдены`);
+    const perTick = [];
+    for (const r of recipes?.values() ?? []) {
+      const j = r.json;
+      if (j?.type !== `${ns}:${m.type}`) continue;
+      const energy = typeof base?.energy === 'number' ? base.energy : j.energy;
+      const time =
+        j.time ??
+        (typeof base?.time === 'number'
+          ? base.time
+          : base?.time === 'fluid'
+            ? (j.result?.amount ?? j.fluid?.amount)
+            : null);
+      if (typeof energy === 'number' && typeof time === 'number' && time > 0) perTick.push(energy / time);
+    }
+    perTick.sort((a, b) => a - b);
+    if (!perTick.length && recipes) warnings.push(`IE: нет рецептов ${ns}:${m.type}`);
+    const sec = m.mod === 'ie' ? `machines.${m.id}` : `general.${m.id}`;
+    machines.push({
+      id: m.id,
+      mod: m.mod,
+      block: `${ns}:${m.id}`,
+      name: lang[m.mod][`block.${ns}.${m.id}`] ?? m.id,
+      single: !!m.single,
+      parallel,
+      recipes: perTick.length,
+      min: perTick[0] ?? null,
+      median: perTick.length ? perTick[Math.floor(perTick.length / 2)] : null,
+      max: perTick.at(-1) ?? null,
+      energyKey: m.id === 'fleshing_machine' ? null : `${sec}.energyModifier`,
+      timeKey: m.id === 'fleshing_machine' || m.id === 'refinery' ? null : `${sec}.timeModifier`,
+    });
+  }
+  const devices = IE_DEVICES.map((d) => ({
+    id: d.id,
+    block: `immersiveengineering:${d.id}`,
+    name: lang.ie[`block.immersiveengineering.${d.id}`] ?? d.id,
+    multiblock: !!d.multiblock,
+    draws: d.keys.map(([key, kind, note]) => ({ key, kind, note: note ?? null })),
+  }));
+  return { machines, devices };
+}
+
+export function buildPower(jarPaths, recipes) {
   const warnings = [];
   const find = (re) => jarPaths.find((j) => re.test(path.basename(j)));
   const eeJar = find(/^electroenergetics-/i);
   const ieJar = find(/^ImmersiveEngineering-/i);
   const createJar = find(/^create-1\./i);
+  const attJar = find(/^AdvancedTFCTech-/i);
   if (!createJar) warnings.push('нет jar Create');
   if (!eeJar) warnings.push('нет jar Create Electro Energetics');
   if (!ieJar) warnings.push('нет jar Immersive Engineering');
@@ -437,12 +667,22 @@ export function buildPower(jarPaths) {
     ee: eeJar ? { jar: path.basename(eeJar), ...buildEE(eeJar, warnings) } : null,
     ie: ieJar ? { jar: path.basename(ieJar), ...buildIE(ieJar, warnings) } : null,
     create: createJar ? { jar: path.basename(createJar), ...buildCreate(createJar, warnings) } : null,
+    att: attJar ? { jar: path.basename(attJar), ...buildAtt(attJar) } : null,
   };
+  if (data.ie) data.ie.consumers = buildConsumers(ieJar, attJar, recipes, warnings);
   return { data, warnings };
 }
 
-export function writePower(jarPaths, outFile) {
-  const { data, warnings } = buildPower(jarPaths);
+/** Настройки Advanced TFC Tech (множители энергии и времени машин) */
+function buildAtt(jar) {
+  const cls = classFrom(jar, `${ATT}/config/ATTServerConfig`);
+  const keys = cls ? configDefaults(cls).filter((k) => !k.key.includes('?')) : [];
+  return { file: 'advancedtfctech-server.toml', keys: keys.map(({ key, default: d }) => ({ key, default: d })) };
+}
+
+/** recipes — Map id → { type, json } рецептов модов (из mods.mjs), для расхода мультиблоков */
+export function writePower(jarPaths, outFile, recipes) {
+  const { data, warnings } = buildPower(jarPaths, recipes);
   fs.writeFileSync(outFile, JSON.stringify(data));
   return { ee: data.ee?.keys.length ?? 0, ieWires: data.ie?.wires.length ?? 0, warnings };
 }

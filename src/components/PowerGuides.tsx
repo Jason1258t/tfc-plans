@@ -28,6 +28,7 @@ import {
 } from '../lib/power';
 import { cx } from '../lib/util';
 import { ItemIcon } from './ItemIcon';
+import { IeLoadPicker } from './PowerIeLoads';
 
 /**
  * Справочник → Электричество → Гайды. Статья — компонент: в ней калькуляторы на тех же формулах, что и
@@ -54,12 +55,14 @@ export function PowerGuides({
   data,
   ee,
   ie,
+  att,
   guide,
   onGuide,
 }: {
   data: PowerData;
   ee: Get;
   ie: Get;
+  att: Get;
   guide: string | null;
   onGuide: (id: string | null) => void;
 }) {
@@ -70,7 +73,7 @@ export function PowerGuides({
         <button className="btn ghost small power-back" onClick={() => onGuide(null)}>
           ← Все гайды
         </button>
-        <g.Body data={data} ee={ee} ie={ie} />
+        <g.Body data={data} ee={ee} ie={ie} att={att} />
       </>
     );
   return (
@@ -1428,7 +1431,10 @@ function matchRatio(emf: number, power: number, consumerR: number, want: number,
   return k;
 }
 
-function OptimalGuide({ data, ee }: { data: PowerData; ee: Get }) {
+function OptimalGuide({ data, ee, ie, att }: { data: PowerData; ee: Get; ie: Get; att: Get }) {
+  const [kw, setKw] = useState(20);
+  const [want, setWant] = useState(400);
+  const convMinR = data.ee?.converter?.minResistance ?? null;
   const p = useAlternatorParams(data, ee);
   const fullLoad = ee('rotor.rotorFullLoadCurrent');
   const buffer = data.ee?.generator?.bufferTicks ?? 10;
@@ -1522,7 +1528,24 @@ function OptimalGuide({ data, ee }: { data: PowerData; ee: Get }) {
         «тяжелее» — так маленькую нагрузку можно довести до тока {num(I)} А на стороне генератора.
       </p>
 
-      {p && <OptimalPlanner p={p} data={data} buffer={buffer} />}
+      <h3>Сколько берут потребители</h3>
+      <p>
+        Для машин IE (через преобразователь EE → FE) нагрузку можно набрать ниже: сколько каких машин и приборов — и
+        подставить в калькулятор. Таблица расхода каждой машины — во вкладке «Сеть IE». Напряжение подтянется до
+        минимума преобразователя: из сети EE он берёт не больше U² / {convMinR ?? '—'} Ом (гайд «Из EE в IE»).
+      </p>
+      <IeLoadPicker
+        data={data}
+        ie={ie}
+        att={att}
+        rate={ee('wattFeTConversionRate')?.value ?? null}
+        onApply={(w) => {
+          setKw(Math.round(w / 100) / 10);
+          // Преобразователь как потребитель — не меньше minResistance Ом: мощность P он возьмёт от √(P × R) вольт
+          if (convMinR) setWant((v) => Math.max(v, Math.ceil(Math.sqrt(w * convMinR) / 10) * 10));
+        }}
+      />
+      {p && <OptimalPlanner p={p} data={data} buffer={buffer} kw={kw} setKw={setKw} want={want} setWant={setWant} />}
       {p && <LoadCheck p={p} buffer={buffer} />}
 
       <h3>Что проверено</h3>
@@ -1594,9 +1617,23 @@ function LoadChart({ buffer, fullLoad }: { buffer: number; fullLoad: number }) {
 }
 
 /** Подбор генератора под потребителей */
-function OptimalPlanner({ p, data, buffer }: { p: AlternatorParams; data: PowerData; buffer: number }) {
-  const [kw, setKw] = useState(20);
-  const [want, setWant] = useState(400);
+function OptimalPlanner({
+  p,
+  data,
+  buffer,
+  kw,
+  setKw,
+  want,
+  setWant,
+}: {
+  p: AlternatorParams;
+  data: PowerData;
+  buffer: number;
+  kw: number;
+  setKw: (v: number) => void;
+  want: number;
+  setWant: (v: number) => void;
+}) {
   const [rpm, setRpm] = useState(256);
   const [su, setSu] = useState(0);
   const need = kw * 1000;

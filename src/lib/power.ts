@@ -104,15 +104,58 @@ export interface PowerData {
     groundRod?: { resistance: number } | null;
   } | null;
   create?: { jar: string; file: string; pumpImpact: number | null } | null;
+  /** Advanced TFC Tech: множители энергии и времени машин */
+  att?: { jar: string; file: string; keys: PowerKey[] } | null;
   ie: {
     jar: string;
     file: string;
     wires: { name: string; maxLength: number; transferRate: number; distanceLoss: number }[];
+    /** Потребители: мультиблоки и машины с рецептами (расход — из рецептов сборки) и приборы (из конфига) */
+    consumers?: { machines: IeMachine[]; devices: IeDevice[] };
     /** Ввод коннектора = пропускная способность провода / connectorDivisor */
     connectorDivisor: number | null;
     keys: PowerKey[];
   } | null;
 }
+
+/**
+ * Машина с рецептами: расход одной операции = энергия рецепта / время (по рецептам модов сборки, без KubeJS), до
+ * parallel операций одновременно (null — не разобрано). energyKey / timeKey — множители из конфига.
+ */
+export interface IeMachine {
+  id: string;
+  mod: 'ie' | 'att';
+  block: string;
+  name: string;
+  single: boolean;
+  parallel: number | null;
+  recipes: number;
+  min: number | null;
+  median: number | null;
+  max: number | null;
+  energyKey: string | null;
+  timeKey: string | null;
+}
+
+/** Прибор: потребление — ключи конфига IE; kind: tick — FE/t в работе, action — FE за действие, max — до FE/t */
+export interface IeDevice {
+  id: string;
+  block: string;
+  name: string;
+  multiblock: boolean;
+  draws: { key: string; kind: 'tick' | 'action' | 'max'; note: string | null }[];
+}
+
+/** Расход машины на одну операцию, FE/t, с множителями сервера */
+export function machineRates(m: IeMachine, get: (key: string) => Setting | null) {
+  const k = (m.energyKey ? (get(m.energyKey)?.value ?? 1) : 1) / (m.timeKey ? (get(m.timeKey)?.value ?? 1) : 1);
+  const f = (v: number | null) => (v === null ? null : v * k);
+  return { min: f(m.min), median: f(m.median), max: f(m.max) };
+}
+
+/** Постоянный расход прибора в работе (все «tick» и «max» вместе), FE/t */
+export const deviceTick = (d: IeDevice, get: (key: string) => Setting | null) =>
+  d.draws.filter((x) => x.kind !== 'action').reduce((a, x) => a + (get(x.key)?.value ?? 0), 0);
 
 let loaded: PowerData | null | undefined;
 let promise: Promise<PowerData | null> | null = null;

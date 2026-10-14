@@ -559,6 +559,7 @@ async function main() {
   const power = writePower(
     jars.map((j) => path.join(MODS_DIR, j)),
     path.join(ROOT, 'public', 'power.json'),
+    recipes,
   );
   log(`электричество: настроек EE ${power.ee}, проводов IE ${power.ieWires}`);
   for (const w of power.warnings) log(`  электричество: ${w}`);
