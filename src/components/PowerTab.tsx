@@ -3,6 +3,8 @@ import { useState, type ReactNode } from 'react';
 import { CONFIG_ORIGIN_LABEL } from '../lib/config';
 import {
   alternator,
+  type AlternatorParams,
+  IE_WIRE,
   motor,
   POWER_SUBS,
   resistive,
@@ -93,7 +95,7 @@ function Body({
   const ie = useSettings(data.ie?.file, data.ie?.keys);
   if (sub === 'ee') return <EeLoads data={data} s={ee.get} />;
   if (sub === 'ie') return <IeNet data={data} s={ie.get} ee={ee.get} />;
-  if (sub === 'guides') return <PowerGuides data={data} ee={ee.get} guide={guide} onGuide={onGuide} />;
+  if (sub === 'guides') return <PowerGuides data={data} ee={ee.get} ie={ie.get} guide={guide} onGuide={onGuide} />;
   return <Link_ data={data} ee={ee.get} ie={ie.get} />;
 }
 
@@ -178,8 +180,9 @@ function Link_({ data, ee, ie }: { data: PowerData; ee: Get; ie: Get }) {
   const rotor = data.ee?.rotor;
   const m = data.ee?.motor;
   const conv = data.ee?.converter;
-  // Сколько ватт стоит 1 SU у генератора и у двигателя на полной нагрузке
-  const wPerSuGen = rotor && stressMult ? 1 / (rotor.stressFactor * stressMult.value) : null;
+  // Сколько ватт даёт 1 SU у генератора (ротор с полным набором статоров) и сколько стоит 1 SU у двигателя
+  const fullRotor = rotor ? rotor.sides * rotor.magnetsPerStator : 0;
+  const wPerSuGen = rotor && stressMult ? fullRotor / ((fullRotor + rotor.baseMagnets) * stressMult.value) : null;
   const wPerSuMotor = m ? 1 / m.loadedFactor : null;
 
   return (
@@ -240,11 +243,14 @@ function Link_({ data, ee, ie }: { data: PowerData; ee: Get; ie: Get }) {
         <h2 className="power-h">Переходы и курсы</h2>
         <div className="power-chain">
           <ChainStep icons={[EE_BLOCK.rotor, EE_BLOCK.stator, EE_BLOCK.brushes]} title="Вал Create → электричество">
-            Генератор: роторы, вокруг каждого до {rotor?.sides ?? 4} статоров, по краям щёточный узел. Выработка =
-            статоры × об/мин × <Cfg s={powerMult} unit="Вт" />, вал нагружается на{' '}
-            {rotor && powerMult && stressMult ? num(rotor.stressFactor * powerMult.value * stressMult.value, 2) : '—'}{' '}
-            SU на статор за 1 об/мин — <b>1 SU = {wPerSuGen ? num(wPerSuGen, 2) : '—'} Вт</b>. Напряжение без нагрузки =
-            выработка / <Cfg s={fullLoad} unit="А" />.
+            Генератор: роторы, вокруг каждого до {rotor?.sides ?? 4} статоров, на конце щёточный узел (собирает до{' '}
+            {rotor?.maxRotors ?? '—'} роторов подряд). Каждый статор даёт{' '}
+            {rotor && powerMult ? num(rotor.magnetsPerStator * powerMult.value) : '—'} Вт за 1 об/мин (
+            {rotor?.magnetsPerStator ?? '—'} × <Cfg s={powerMult} unit="Вт" />
+            ), вал нагружается на столько же SU и ещё{' '}
+            {rotor && powerMult && stressMult ? num(rotor.baseMagnets * powerMult.value * stressMult.value, 2) : '—'} SU
+            за 1 об/мин на каждый ротор — <b>1 SU ≈ {wPerSuGen ? num(wPerSuGen, 2) : '—'} Вт</b>. Напряжение без
+            нагрузки = выработка / <Cfg s={fullLoad} unit="А" />.
           </ChainStep>
           <ArrowDown size={16} className="faint" />
           <ChainStep icons={[EE_BLOCK.converter]} title="Электричество ↔ FE (Immersive Engineering)">
@@ -252,8 +258,9 @@ function Link_({ data, ee, ie }: { data: PowerData; ee: Get; ie: Get }) {
             <b>
               1 FE/t = <Cfg s={rate} unit="Вт" />
             </b>
-            . Режим (приём FE или отдача) переключается ключом Create; FE-сторона — блок за его задней гранью. Буфер —{' '}
-            <Cfg s={convKw} unit="кВт" /> (в ватт-тиках), отдавая в сеть EE, держит выставленное напряжение (0–
+            . Режим (приём FE или отдача) переключается ключом Create по боковой грани; FE-сторона — блок за его задней
+            гранью. Буфер — <Cfg s={convKw} unit="кВт" /> (в ватт-тиках), отдавая в сеть EE, держит выставленное
+            напряжение (0–
             {num(conv?.voltageMax ?? 0)} В, шаг {conv?.voltageStep ?? '—'}, по умолчанию {conv?.voltageDefault ?? '—'}{' '}
             В). Принимая из сети EE, ведёт себя как сопротивление не меньше {conv?.minResistance ?? '—'} Ом.
           </ChainStep>
@@ -266,11 +273,12 @@ function Link_({ data, ee, ie }: { data: PowerData; ee: Get; ie: Get }) {
             {m?.idleFactor ?? '—'} × R)).
           </ChainStep>
         </div>
-        {wPerSuGen && wPerSuMotor && wPerSuGen > wPerSuMotor && (
+        {wPerSuGen && wPerSuMotor && (
           <p className="power-note">
-            По коду генератор берёт с вала {num(wPerSuGen, 2)} Вт за 1 SU, а двигатель отдаёт 1 SU за{' '}
-            {num(wPerSuMotor, 2)} Вт — цепочка «вал → генератор → двигатель → вал» выходит в плюс, если напряжения
-            хватает. Сколько именно — зависит от напряжения (см. калькулятор). <b>В игре не проверялось.</b>
+            Генератор даёт около {num(wPerSuGen, 2)} Вт с 1 SU, а двигатель берёт {num(wPerSuMotor, 2)} Вт за 1 SU —
+            цепочка «вал → генератор → двигатель → вал» возвращает не больше {num((wPerSuGen / wPerSuMotor) * 100)} %
+            SU, вечного двигателя нет. Электричество выгодно для передачи на расстояние и в IE, а не для умножения
+            вращения. Проверено на тестовом сервере (генератор) и по коду (двигатель); в игре не проверялось.
           </p>
         )}
       </section>
@@ -282,8 +290,10 @@ function Link_({ data, ee, ie }: { data: PowerData; ee: Get; ie: Get }) {
             powerMult: powerMult.value,
             stressMult: stressMult.value,
             fullLoadCurrent: fullLoad.value,
-            stressFactor: rotor.stressFactor,
+            magnetsPerStator: rotor.magnetsPerStator,
+            baseMagnets: rotor.baseMagnets,
           }}
+          maxRotors={rotor.maxRotors}
           rate={rate?.value ?? null}
           motorR={motorR?.value ?? null}
           bufferTicks={data.ee?.generator?.bufferTicks ?? null}
@@ -314,19 +324,23 @@ function ChainStep({ icons, title, children }: { icons: string[]; title: string;
 function GeneratorCalc({
   p,
   maxRpm,
+  maxRotors,
   rate,
   motorR,
   bufferTicks,
 }: {
-  p: Parameters<typeof alternator>[2];
+  p: AlternatorParams;
   maxRpm: number;
+  maxRotors: number | null;
   rate: number | null;
   motorR: number | null;
   bufferTicks: number | null;
 }) {
   const [stators, setStators] = useState(8);
+  const [rotorsIn, setRotors] = useState(2);
   const [rpm, setRpm] = useState(128);
-  const g = alternator(stators, rpm, p);
+  const rotors = Math.max(rotorsIn, Math.ceil(stators / 4));
+  const g = alternator(stators, rpm, p, rotors);
   // Двигатель прямо на генераторе: U = ЭДС, пока его потребление не превышает выработку
   const motorSu = motorR ? (g.emf * g.emf) / motorR : null;
   return (
@@ -334,6 +348,7 @@ function GeneratorCalc({
       <h2 className="power-h">Калькулятор генератора</h2>
       <div className="power-form">
         <Field label="Статоров всего (по всем роторам)" value={stators} onChange={setStators} min={1} max={400} />
+        <Field label="Роторов" value={rotors} onChange={setRotors} min={1} max={400} />
         <Field label="Скорость вала" value={rpm} onChange={setRpm} min={1} max={maxRpm} unit="об/мин" />
       </div>
       <div className="power-outs">
@@ -351,8 +366,10 @@ function GeneratorCalc({
         )}
       </div>
       <p className="faint small">
-        Генератор — источник напряжения с запасом энергии на {bufferTicks ?? '—'} тиков выработки. Вал нагружается
-        одинаково, сколько бы ни потребляли. Поднять напряжение без потери мощности — трансформатором.
+        Генератор — источник напряжения с запасом энергии на {bufferTicks ?? '—'} тиков выработки; ток больше{' '}
+        {num(p.fullLoadCurrent)} А не держит — напряжение проседает, отдаёт он не больше выработки. Вал нагружается
+        одинаково, сколько бы ни потребляли. На один щёточный узел — до {maxRotors ?? '—'} роторов подряд, больше —
+        второй генератор. Поднять напряжение без потери мощности — трансформатором.
       </p>
     </section>
   );
@@ -539,16 +556,6 @@ function EeLoads({ data, s }: { data: PowerData; s: Get }) {
 }
 
 // ---------------------------------------------------------------- сеть IE
-
-const IE_WIRE: Record<string, { short: string; coil: string; connector: string }> = {
-  copper: { short: 'LV', coil: 'immersiveengineering:wirecoil_copper', connector: 'immersiveengineering:connector_lv' },
-  electrum: {
-    short: 'MV',
-    coil: 'immersiveengineering:wirecoil_electrum',
-    connector: 'immersiveengineering:connector_mv',
-  },
-  hv: { short: 'HV', coil: 'immersiveengineering:wirecoil_steel', connector: 'immersiveengineering:connector_hv' },
-};
 
 function IeNet({ data, s, ee }: { data: PowerData; s: Get; ee: Get }) {
   const rate = ee('wattFeTConversionRate');

@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { CONFIG_ORIGIN_LABEL } from '../lib/config';
 import {
   alternator,
+  IE_WIRE,
+  statorsFor,
+  type AlternatorParams,
   degreesPerStep,
   maxSteadyHeat,
   steadyTemp,
@@ -30,8 +33,10 @@ import { ItemIcon } from './ItemIcon';
  */
 
 const GUIDES = [
+  { id: 'generator', title: 'Первый генератор: статоры, обороты, напряжение', Body: GeneratorGuide },
   { id: 'ac-pump', title: 'Помпа на переменном токе: выпрямитель', Body: AcPumpGuide },
   { id: 'line', title: 'Линия на дальнее расстояние через трансформаторы', Body: LineGuide },
+  { id: 'converter', title: 'Из EE в IE и обратно: преобразователь', Body: ConverterGuide },
 ];
 
 type Get = (key: string) => Setting | null;
@@ -45,11 +50,13 @@ const watts = (w: number) => (Math.abs(w) >= 10000 ? `${num(w / 1000, 1)} кВт
 export function PowerGuides({
   data,
   ee,
+  ie,
   guide,
   onGuide,
 }: {
   data: PowerData;
   ee: Get;
+  ie: Get;
   guide: string | null;
   onGuide: (id: string | null) => void;
 }) {
@@ -60,7 +67,7 @@ export function PowerGuides({
         <button className="btn ghost small power-back" onClick={() => onGuide(null)}>
           ← Все гайды
         </button>
-        <g.Body data={data} ee={ee} />
+        <g.Body data={data} ee={ee} ie={ie} />
       </>
     );
   return (
@@ -269,7 +276,7 @@ function AcPumpCalc({
   hzPerRpm: number;
   microTicks: number;
 }) {
-  const [stators, setStators] = useState(8);
+  const [stators, setStators] = useState(2);
   const [rpm, setRpm] = useState(64);
   const [ratio, setRatio] = useState(1);
   const [pumps, setPumps] = useState(1);
@@ -285,7 +292,8 @@ function AcPumpCalc({
     powerMult: powerMult.value,
     stressMult: stressMult.value,
     fullLoadCurrent: fullLoad.value,
-    stressFactor: rotor.stressFactor,
+    magnetsPerStator: rotor.magnetsPerStator,
+    baseMagnets: rotor.baseMagnets,
   });
   const amp = g.emf * ratio;
   const step = degreesPerStep(rpm, hzPerRpm, microTicks);
@@ -947,5 +955,452 @@ function LineDiagram() {
         {box(544, 'потребители', '300 В')}
       </svg>
     </figure>
+  );
+}
+
+// ---------------------------------------------------------------- первый генератор
+
+function useAlternatorParams(data: PowerData, ee: Get): AlternatorParams | null {
+  const powerMult = ee('rotor.rotorPowerMultiplier');
+  const stressMult = ee('rotor.rotorStressMultiplier');
+  const fullLoad = ee('rotor.rotorFullLoadCurrent');
+  const rotor = data.ee?.rotor;
+  if (!powerMult || !stressMult || !fullLoad || !rotor) return null;
+  return {
+    powerMult: powerMult.value,
+    stressMult: stressMult.value,
+    fullLoadCurrent: fullLoad.value,
+    magnetsPerStator: rotor.magnetsPerStator,
+    baseMagnets: rotor.baseMagnets,
+  };
+}
+
+function GeneratorGuide({ data, ee }: { data: PowerData; ee: Get }) {
+  const p = useAlternatorParams(data, ee);
+  const rotor = data.ee?.rotor;
+  const powerMult = ee('rotor.rotorPowerMultiplier');
+  const fullLoad = ee('rotor.rotorFullLoadCurrent');
+  const perStator = p ? p.magnetsPerStator * p.powerMult : null;
+  const one = p ? alternator(4, 1, p, 1) : null;
+
+  return (
+    <article className="ref-card power-article">
+      <h2 className="power-h">Первый генератор: статоры, обороты, напряжение</h2>
+      <div className="power-note">
+        <b>Коротко.</b> Вал Create крутит роторы, вокруг каждого ротора до {rotor?.sides ?? 4} статоров, на конце —
+        щёточный узел с контактами. Каждый статор даёт <b>{perStator ? num(perStator) : '—'} Вт за 1 об/мин</b>, а вал
+        платит за это примерно <b>1 SU за 1 Вт</b> — всегда, даже если ничего не подключено. Напряжение без нагрузки =
+        выработка / <Val s={fullLoad} unit="А" />: например, ротор с четырьмя статорами на 64 об/мин —{' '}
+        {p ? num(alternator(4, 64, p, 1).emf) : '—'} В и {p ? watts(alternator(4, 64, p, 1).power) : '—'}.
+      </div>
+
+      <GeneratorDiagram />
+
+      <h3>Как собрать</h3>
+      <ol>
+        <li>
+          <span className="power-name">
+            <ItemIcon id="electroenergetics:alternator_rotor" size={20} />
+            Роторы
+          </span>{' '}
+          — на одну ось, вплотную друг к другу, как валы. Вращение подаётся на крайний ротор валом Create.
+        </li>
+        <li>
+          <span className="power-name">
+            <ItemIcon id="electroenergetics:stator" size={20} />
+            Статоры
+          </span>{' '}
+          — по четырём сторонам ротора поперёк оси (сверху, снизу, по бокам), каждый должен <b>смотреть на ротор</b> и
+          быть повёрнут под его ось. По коду статор при установке смотрит в ту сторону, грань которой вы кликнули, —
+          поэтому удобнее ставить его снаружи (кликом по опоре за ним) или доворачивать ключом Create; ключ по той же
+          оси меняет крен. Когда все четыре статора вокруг ротора встали правильно, они меняют вид на сплошной кожух.
+          Неправильно повёрнутый статор ничего не даёт.
+        </li>
+        <li>
+          <span className="power-name">
+            <ItemIcon id="electroenergetics:alternator_brushes" size={20} />
+            Щёточный узел
+          </span>{' '}
+          — на конце ряда роторов, той же осью. Он собирает до {rotor?.maxRotors ?? '—'} роторов подряд за собой; ротор
+          с другой осью обрывает ряд. Второй узел на другом конце ряда по коду объединяется с первым — те же роторы, ещё
+          одна пара контактов, выработка не удваивается. Трёхфазный узел ставится так же и считает выработку так же.
+        </li>
+        <li>Контакты узла (два у обычного, четыре у трёхфазного) — провода к потребителям.</li>
+      </ol>
+
+      <h3>От чего зависит</h3>
+      <ul>
+        <li>
+          <b>Выработка</b> = статоры × {rotor?.magnetsPerStator ?? '—'} × <Val s={powerMult} unit="Вт" /> × об/мин.
+          Статоры можно делить между роторами как угодно — важна сумма. Обороты — сколько даёт вал (до 256 у Create).
+        </li>
+        <li>
+          <b>Нагрузка на вал</b> — почти столько же SU, сколько ватт выработки, плюс{' '}
+          {p ? num(p.baseMagnets * p.powerMult * p.stressMult, 2) : '—'} SU за 1 об/мин на каждый ротор, даже пустой. От
+          потребления не зависит: генератор без потребителей грузит вал так же. Не хватает SU у источника — вал встаёт,
+          и генератор не даёт ничего.
+        </li>
+        <li>
+          <b>Напряжение</b> = выработка / <Val s={fullLoad} unit="А" /> — то есть генератор рассчитан на ток{' '}
+          <Val s={fullLoad} unit="А" />. Потребители берут меньше — напряжение держится. Больше — генератор отдаёт не
+          больше своей выработки, и напряжение проседает: на тестовом сервере короткое замыкание опустило 17,3 В до 8,1
+          В.
+        </li>
+        <li>
+          Нужно напряжение выше, а мощности хватает — не добавляйте статоры, поставьте повышающий трансформатор (гайд
+          «Линия на дальнее расстояние»). Нужна мощность — больше статоров или оборотов.
+        </li>
+      </ul>
+      {one && (
+        <p className="power-note">
+          Вечного двигателя нет: генератор отдаёт около {num(one.power / one.stress, 2)} Вт с 1 SU, а двигатель EE на
+          полной нагрузке берёт {data.ee?.motor ? num(1 / data.ee.motor.loadedFactor, 2) : '—'} Вт за 1 SU — цепочка
+          «вал → генератор → двигатель → вал» теряет около{' '}
+          {data.ee?.motor ? num((1 - (one.power / one.stress) * data.ee.motor.loadedFactor) * 100) : '—'} %.
+        </p>
+      )}
+
+      {p && <GeneratorPlanner p={p} maxRotors={rotor?.maxRotors ?? null} />}
+
+      <h3>Что проверено</h3>
+      <ul className="faint small">
+        <li>
+          На тестовом сервере (без игрока, сборка Create 6.0.10 и Electro Energetics 1.1.2): два ротора, у первого 4
+          статора, у второго 2, творческий мотор 64 об/мин — узел показал 552,96 В и 55 296 Вт, роторы — 582 и 294 SU на
+          1 об/мин, ровно по формулам выше. Под нагрузкой 45 Ом напряжение почти не просело (551 В); короткое замыкание
+          на 2 об/мин — 17,3 → 8,1 В.
+        </li>
+        <li>
+          По коду мода: статор считается, только если смотрит на ротор и повёрнут под его ось; узел собирает до{' '}
+          {rotor?.maxRotors ?? '—'} роторов; второй узел на другом конце объединяется с первым; трёхфазный узел считает
+          так же; как ставится статор.
+        </li>
+        <li>Не проверено: в игре — ничего, в том числе как удобнее ставить статоры.</li>
+      </ul>
+    </article>
+  );
+}
+
+/** Подбор генератора: нужное напряжение и мощность при оборотах вала → статоры, роторы, SU */
+function GeneratorPlanner({ p, maxRotors }: { p: AlternatorParams; maxRotors: number | null }) {
+  const [volts, setVolts] = useState(240);
+  const [rpm, setRpm] = useState(64);
+  const [load, setLoad] = useState(5);
+  const need = load * 1000;
+  // Статоров — чтобы хватило и напряжения, и мощности (мощность при токе полной нагрузки)
+  const byVolts = statorsFor(volts, rpm, p);
+  const byPower = Math.ceil(need / (p.magnetsPerStator * p.powerMult * Math.max(1, rpm)));
+  const stators = Math.max(byVolts, byPower, 1);
+  const rotors = Math.ceil(stators / 4);
+  const g = alternator(stators, rpm, p, rotors);
+  const brushes = maxRotors ? Math.ceil(rotors / maxRotors) : 1;
+  const current = g.emf > 0 ? need / g.emf : 0;
+  // Если по мощности статоров больше, чем по напряжению, — напряжение выше нужного: понизить трансформатором
+  const k = g.emf / volts;
+  return (
+    <section className="power-calc">
+      <h3>Калькулятор: какой генератор нужен</h3>
+      <div className="power-form">
+        <NumField label="Нужное напряжение" value={volts} onChange={setVolts} min={1} max={50000} unit="В" />
+        <NumField
+          label="Потребители берут"
+          value={load}
+          onChange={setLoad}
+          min={0}
+          max={100000}
+          step={0.5}
+          unit="кВт"
+        />
+        <NumField label="Обороты вала" value={rpm} onChange={setRpm} min={1} max={256} unit="об/мин" />
+      </div>
+      <div className="power-outs">
+        <div className="power-out">
+          <span className="faint small">Статоров</span>
+          <b>{num(stators)}</b>
+          <span className="faint small">
+            на {num(rotors)} {rotors === 1 ? 'роторе' : 'роторах'}
+            {brushes > 1 ? ` — это ${brushes} генератора: на узел до ${maxRotors} роторов` : ''}
+          </span>
+        </div>
+        <div className="power-out">
+          <span className="faint small">Напряжение без нагрузки</span>
+          <b>{num(g.emf, 1)} В</b>
+          {k > 1.05 && (
+            <span className="faint small">
+              {byPower > byVolts
+                ? `выше нужного: статоров столько ради мощности — понизьте трансформатором примерно ${num(k, 1)}:1`
+                : `статоров — целое число; ровно ${num(volts)} В даст вал на ${num((volts * p.fullLoadCurrent) / (stators * p.magnetsPerStator * p.powerMult), 1)} об/мин`}
+            </span>
+          )}
+        </div>
+        <div className="power-out">
+          <span className="faint small">Выработка</span>
+          <b>{watts(g.power)}</b>
+          <span className="faint small">
+            ток потребителей {num(current, 1)} А из {num(p.fullLoadCurrent)}
+          </span>
+        </div>
+        <div className="power-out">
+          <span className="faint small">Нагрузка на вал</span>
+          <b>{num(g.stress)} SU</b>
+          <span className="faint small">всегда, даже без потребителей</span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** Вид сбоку: вал → роторы со статорами → щёточный узел → провода */
+function GeneratorDiagram() {
+  const cell = 40;
+  const y = 50;
+  const rotors = [1, 2, 3];
+  return (
+    <figure className="power-figure">
+      <svg viewBox="0 0 420 130" role="img" aria-label="Схема генератора сбоку">
+        <line x1={10} y1={y + cell / 2} x2={80} y2={y + cell / 2} className="power-wire" />
+        <text x={10} y={y + cell / 2 - 8} className="power-svg-text">
+          вал Create
+        </text>
+        {rotors.map((i) => {
+          const x = 40 + i * cell;
+          return (
+            <g key={i}>
+              <rect x={x} y={y - cell} width={cell - 2} height={cell - 4} className="power-box power-box-soft" />
+              <rect x={x} y={y} width={cell - 2} height={cell - 2} className="power-box" />
+              <rect x={x} y={y + cell + 2} width={cell - 2} height={cell - 4} className="power-box power-box-soft" />
+              <text x={x + cell / 2 - 1} y={y + cell / 2 + 4} textAnchor="middle" className="power-svg-text">
+                Р
+              </text>
+              <text x={x + cell / 2 - 1} y={y - cell / 2 + 2} textAnchor="middle" className="power-svg-text">
+                С
+              </text>
+              <text x={x + cell / 2 - 1} y={y + cell * 1.5 + 2} textAnchor="middle" className="power-svg-text">
+                С
+              </text>
+            </g>
+          );
+        })}
+        <rect x={40 + 4 * cell} y={y} width={cell - 2} height={cell - 2} className="power-box" />
+        <text x={40 + 4.5 * cell - 1} y={y + cell / 2 + 4} textAnchor="middle" className="power-svg-text">
+          Щ
+        </text>
+        <line x1={40 + 5 * cell} y1={y + 10} x2={400} y2={y + 10} className="power-wire" />
+        <line x1={40 + 5 * cell} y1={y + 28} x2={400} y2={y + 28} className="power-wire" />
+        <text x={400} y={y + 4} textAnchor="end" className="power-svg-text">
+          к потребителям
+        </text>
+      </svg>
+      <figcaption className="faint small">
+        Р — ротор, С — статоры (ещё по одному с каждой стороны, на рисунке не видны), Щ — щёточный узел. Статоры смотрят
+        на ротор.
+      </figcaption>
+    </figure>
+  );
+}
+
+// ---------------------------------------------------------------- преобразователь EE ↔ FE
+
+function ConverterGuide({ data, ee, ie }: { data: PowerData; ee: Get; ie: Get }) {
+  const rate = ee('wattFeTConversionRate');
+  const convKw = ee('converterMaxPower');
+  const conv = data.ee?.converter;
+  const m = data.ee?.motor;
+  const p = useAlternatorParams(data, ee);
+  const one = p ? alternator(4, 1, p, 1) : null;
+  const suPerFe = rate && one ? (rate.value * one.stress) / one.power : null;
+  const suFromFe = rate && m ? rate.value * m.loadedFactor : null;
+
+  return (
+    <article className="ref-card power-article">
+      <h2 className="power-h">Из EE в IE и обратно: преобразователь</h2>
+      <div className="power-note">
+        <b>Коротко.</b>{' '}
+        <span className="power-name">
+          <ItemIcon id="electroenergetics:converter" size={20} />
+          Преобразователь электроэнергии
+        </span>{' '}
+        — единственный мост между электричеством EE и FE Immersive Engineering. Курс на сервере:{' '}
+        <b>
+          1 FE/t = <Val s={rate} unit="Вт" />
+        </b>
+        . Провода EE — к двум его контактам, FE — <b>только через заднюю грань</b>, и туда удобнее всего ставить
+        коннектор IE. Режим (из EE в FE или из FE в EE) переключается ключом Create по <b>боковой</b> грани; ключ по
+        передней или задней грани поворачивает блок.
+      </div>
+
+      <h3>Как он работает с FE</h3>
+      <ul>
+        <li>
+          Преобразователь сам <b>забирает</b> FE из блока за задней гранью (режим «из IE в EE») или сам <b>отдаёт</b> в
+          него (режим «из EE в IE»). Блоки, которые сами толкают энергию соседям — генераторы IE и т. п., — в него
+          ничего не положат: по коду он не принимает энергию, которую ему отдают.
+        </li>
+        <li>
+          Поэтому за задней гранью — <b>коннектор IE</b> (LV, MV или HV), повешенный на преобразователь: из него
+          преобразователь может и брать, и в него класть. Подходит и конденсатор IE — стороной, настроенной молотом на
+          выход (брать) или на вход (класть). Машина IE прямо за задней гранью тоже будет получать FE.
+        </li>
+        <li>
+          Буфер — <Val s={convKw} unit="кВт" /> за тик: больше этого один преобразователь не пропускает. Коннектор IE
+          пропускает меньше (калькулятор ниже) — обычно узкое место он.
+        </li>
+      </ul>
+
+      <h3>Из EE в IE (генератор Create → машины IE)</h3>
+      <ol>
+        <li>Генератор → провода EE → два контакта преобразователя.</li>
+        <li>Ключом по боковой грани — режим, в котором он берёт энергию из сети EE.</li>
+        <li>На заднюю грань — коннектор IE, от него — провод IE к машинам или конденсатору.</li>
+      </ol>
+      <p>
+        В сети EE преобразователь — нагрузка с сопротивлением не меньше {conv?.minResistance ?? '—'} Ом, поэтому{' '}
+        <b>мощность ограничена напряжением</b>: не больше U² / {conv?.minResistance ?? '—'}. При 240 В — не больше{' '}
+        {conv ? watts((240 * 240) / conv.minResistance) : '—'}, для полного буфера{' '}
+        {convKw && conv ? watts(convKw.value * 1000) : '—'} нужно{' '}
+        {convKw && conv ? num(Math.sqrt(convKw.value * 1000 * conv.minResistance)) : '—'} В. Мало напряжения —
+        повышающий трансформатор перед преобразователем. Когда IE не забирает FE, буфер заполняется, и преобразователь
+        перестаёт брать ток.
+      </p>
+
+      <h3>Из IE в EE (генератор IE → электричество Create)</h3>
+      <ol>
+        <li>Сеть IE → коннектор на задней грани преобразователя.</li>
+        <li>
+          Ключом по боковой грани — режим, в котором он отдаёт энергию в сеть EE; шкалой на преобразователе —
+          напряжение, 0–{num(conv?.voltageMax ?? 0)} В.
+        </li>
+        <li>Контакты преобразователя → провода EE → двигатели, нагреватели, помпы.</li>
+      </ol>
+      <p>
+        Преобразователь держит выставленное напряжение, пока в буфере есть энергия, а буфер пополняет из IE не больше,
+        чем пропускает коннектор. Потребители берут больше — буфер пустеет, и напряжение проседает.
+      </p>
+
+      {(suPerFe || suFromFe) && (
+        <p className="power-note">
+          Через всю цепочку: <b>Create → IE</b> — около {suPerFe ? num(suPerFe, 1) : '—'} SU на вал генератора за 1
+          FE/t; <b>IE → Create</b> — двигатель EE на полной нагрузке даёт около {suFromFe ? num(suFromFe, 1) : '—'} SU
+          за 1 FE/t (берёт {m ? num(1 / m.loadedFactor, 2) : '—'} Вт за 1 SU).
+        </p>
+      )}
+
+      {rate && <ConverterPlanner data={data} ie={ie} rate={rate.value} conv={conv} convKw={convKw?.value ?? null} />}
+
+      <h3>Что проверено</h3>
+      <ul className="faint small">
+        <li>
+          По коду EE: курс FE и буфер — настройки сервера; FE только через заднюю грань, сам забирает или сам отдаёт,
+          чужую отдачу не принимает; режим — ключом по боковой грани (по передней и задней — поворот); сопротивление
+          потребителя не меньше {conv?.minResistance ?? '—'} Ом и растёт, когда буфер полон; источник — шкала 0–
+          {num(conv?.voltageMax ?? 0)} В шагом {conv?.voltageStep ?? '—'}.
+        </li>
+        <li>
+          По коду IE: коннектор отдаёт из своего запаса тому, кто забирает, и принимает от соседа не больше своего
+          предела за тик; конденсатор отдаёт только стороной «выход», принимает — стороной «вход».
+        </li>
+        <li>
+          Не проверено: в игре — ничего; в симуляции на тестовом сервере преобразователь не запускали (там нет IE);
+          какая подсказка у режимов на самом блоке.
+        </li>
+      </ul>
+    </article>
+  );
+}
+
+function ConverterPlanner({
+  data,
+  ie,
+  rate,
+  conv,
+  convKw,
+}: {
+  data: PowerData;
+  ie: Get;
+  rate: number;
+  conv: NonNullable<PowerData['ee']>['converter'] | undefined;
+  convKw: number | null;
+}) {
+  const [dir, setDir] = useState<'toIe' | 'toEe'>('toIe');
+  const [kw, setKw] = useState(10);
+  const [volts, setVolts] = useState(1000);
+  const [wire, setWire] = useState('electrum');
+  const div = data.ie?.connectorDivisor;
+  const wires = data.ie?.wires ?? [];
+  const w = wires.find((x) => x.name === wire) ?? wires[0];
+  const connector = w ? (ie(`wires.${w.name}.wireConnectorInput`)?.value ?? (div ? w.transferRate / div : null)) : null;
+  const p = kw * 1000;
+  const fe = p / rate;
+  const perConv = convKw ? convKw * 1000 : Infinity;
+  // Из EE: ещё и предел U² / minR; в EE — напряжение задаёт сам преобразователь (до voltageMax)
+  const vLimit = dir === 'toIe' && conv ? (volts * volts) / conv.minResistance : Infinity;
+  const perOne = Math.min(perConv, vLimit, connector ? connector * rate : Infinity);
+  const count = perOne > 0 ? Math.ceil(p / perOne) : Infinity;
+  const vMax = conv?.voltageMax ?? Infinity;
+  const tooHigh = dir === 'toEe' && volts > vMax;
+  return (
+    <section className="power-calc">
+      <h3>Калькулятор</h3>
+      <div className="power-form">
+        <label className="power-field">
+          <span className="faint small">Направление</span>
+          <select className="input" value={dir} onChange={(e) => setDir(e.target.value as 'toIe' | 'toEe')}>
+            <option value="toIe">Из EE в IE (преобразователь — потребитель)</option>
+            <option value="toEe">Из IE в EE (преобразователь — источник)</option>
+          </select>
+        </label>
+        <NumField label="Мощность" value={kw} onChange={setKw} min={0.1} max={100000} step={0.5} unit="кВт" />
+        <NumField
+          label={dir === 'toIe' ? 'Напряжение сети EE' : 'Напряжение на шкале'}
+          value={volts}
+          onChange={setVolts}
+          min={10}
+          max={50000}
+          step={10}
+          unit="В"
+        />
+        <label className="power-field">
+          <span className="faint small">Коннектор IE</span>
+          <select className="input" value={wire} onChange={(e) => setWire(e.target.value)}>
+            {wires.map((x) => (
+              <option key={x.name} value={x.name}>
+                {IE_WIRE[x.name]?.short ?? x.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div className="power-outs">
+        <div className="power-out">
+          <span className="faint small">Это в FE</span>
+          <b>{num(fe)} FE/t</b>
+        </div>
+        <div className="power-out">
+          <span className="faint small">Один преобразователь с коннектором</span>
+          <b>{watts(perOne)}</b>
+          <span className="faint small">
+            {perOne === vLimit
+              ? `упирается в напряжение: U² / ${conv?.minResistance} Ом`
+              : connector && perOne === connector * rate
+                ? `упирается в коннектор: ${num(connector)} FE/t`
+                : 'упирается в буфер преобразователя'}
+          </span>
+        </div>
+        <div className="power-out">
+          <span className="faint small">Нужно преобразователей</span>
+          <b>{Number.isFinite(count) ? num(count) : '—'}</b>
+          <span className="faint small">параллельно, у каждого свой коннектор</span>
+        </div>
+        <div className="power-out">
+          <span className="faint small">Ток в проводах EE</span>
+          <b>{num(p / volts, 1)} А</b>
+          <span className={cx('small', tooHigh ? 'power-bad' : 'faint')}>
+            {tooHigh
+              ? `шкала преобразователя — до ${num(vMax)} В: выше — повышающим трансформатором`
+              : 'по нему выбирайте провод (гайд про линию)'}
+          </span>
+        </div>
+      </div>
+    </section>
   );
 }

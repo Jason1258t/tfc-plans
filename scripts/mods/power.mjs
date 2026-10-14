@@ -248,13 +248,24 @@ function buildEE(jar, warnings) {
   const rod = classFrom(jar, `${EE}/content/ground_rod/GroundRodDevice`);
   const rodOk = constants(rod, 'preTick')?.includes(1);
 
-  // Ротор: нагрузка на вал = статоры × 0,125 × rotorPowerMultiplier × rotorStressMultiplier (SU на 1 об/мин)
+  // Ротор: каждый статор вокруг даёт ему «магниты» (iinc в lazyTick, сейчас 3); выработка щёточного узла =
+  // Σ магниты × |об/мин| × rotorPowerMultiplier, нагрузка ротора на вал = (магниты + 0,125) × rotorPowerMultiplier ×
+  // rotorStressMultiplier SU на 1 об/мин. Узел собирает до 16 роторов подряд за собой (getRotors, bipush 16).
+  // Проверено на сервере разработки (tools/ee-rectifier-mod, /rectest gen): 4 + 2 статора, 64 об/мин → 55 296 Вт.
   const rotor = classFrom(jar, `${EE}/content/rotor/AlternatorRotorBlockEntity`);
   const rotorK = constants(rotor, 'calculateStressApplied')?.find((c) => typeof c === 'number' && c > 0 && c < 1);
-  if (rotorK === undefined) warnings.push('EE: множитель нагрузки ротора не найден');
-  // Статоры — соседние блоки по четырём сторонам поперёк оси ротора
-  const rotorTick = constants(rotor, 'lazyTick');
-  if (!rotorTick) warnings.push('EE: подсчёт статоров ротора не найден');
+  if (rotorK === undefined) warnings.push('EE: нагрузка ротора без статоров не найдена');
+  const lazy = rotor?.methods.find((m) => m.name === 'lazyTick' && m.code);
+  const incs = lazy
+    ? instructions(lazy.code)
+        .filter((i) => i.op === 0x84)
+        .map((i) => lazy.code.readInt8(i.pc + 2))
+    : [];
+  const perStator = incs.find((n) => n > 1);
+  if (!perStator) warnings.push('EE: число магнитов на статор (lazyTick) не найдено');
+  const brushesBe = classFrom(jar, `${EE}/content/rotor/AlternatorBrushesBlockEntity`);
+  const maxRotors = constants(brushesBe, 'getRotors')?.find((c) => typeof c === 'number' && c > 1);
+  if (!maxRotors) warnings.push('EE: сколько роторов собирает щёточный узел (getRotors) — не найдено');
 
   // Двигатель: сопротивление 0,8 × min(6R, R / нагрузка), нагрузка не меньше 0,05; отдаёт V² / R (SU)
   const motorDev = classFrom(jar, `${EE}/content/electric_motor/ElectricMotorDevice`);
@@ -328,7 +339,10 @@ function buildEE(jar, warnings) {
     // Точка линеаризации ограничена ±0,8 В: выше неё диод EE — прямая с проводимостью Is/Vt·e^(0,8/Vt) (≈ 5,6 Ом);
     // проверено в симуляции EE (tools/ee-rectifier-mod/test-server.sh): 2,78 А → 16,4 В на диоде
     diode: diodeOk ? { saturation: 1e-9, thermal: 0.05, clamp: 0.8 } : null,
-    rotor: rotorK !== undefined ? { stressFactor: rotorK, sides: 4 } : null,
+    rotor:
+      rotorK !== undefined && perStator
+        ? { magnetsPerStator: perStator, baseMagnets: rotorK, sides: 4, maxRotors: maxRotors ?? null }
+        : null,
     motor: motorOk && capOk ? { minLoad: 0.05, loadedFactor: 0.8, idleFactor: 6 } : null,
     converter: convOk
       ? {

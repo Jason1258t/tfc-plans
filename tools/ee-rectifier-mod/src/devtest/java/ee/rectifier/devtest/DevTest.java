@@ -47,7 +47,16 @@ public class DevTest {
                         .then(Commands.argument("volts", com.mojang.brigadier.arguments.DoubleArgumentType.doubleArg(0))
                                 .executes(c -> power(c.getSource(),
                                         com.mojang.brigadier.arguments.DoubleArgumentType.getDouble(c, "volts")))))
-                .then(Commands.literal("report").executes(c -> report(c.getSource()))));
+                .then(Commands.literal("report").executes(c -> report(c.getSource())))
+                .then(Commands.literal("gen")
+                        .then(Commands.argument("rpm", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 256))
+                                .executes(c -> Generator.build(c.getSource(),
+                                        com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "rpm")))))
+                .then(Commands.literal("genload").executes(c -> Generator.load(c.getSource())))
+                .then(Commands.literal("genshort").then(Commands.argument("heaters", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 64))
+                        .executes(c -> Generator.parallel(c.getSource(), com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "heaters")))))
+                .then(Commands.literal("genshortwire").executes(c -> Generator.shortWire(c.getSource())))
+                .then(Commands.literal("genreport").executes(c -> Generator.report(c.getSource()))));
     }
 
     static BlockPos battery(BlockPos base, int i) {

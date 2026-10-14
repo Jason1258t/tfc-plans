@@ -16,6 +16,17 @@ export const POWER_SUBS: { id: PowerSub; label: string }[] = [
   { id: 'guides', label: 'Гайды' },
 ];
 
+/** Провода IE: короткое имя, катушка и коннектор */
+export const IE_WIRE: Record<string, { short: string; coil: string; connector: string }> = {
+  copper: { short: 'LV', coil: 'immersiveengineering:wirecoil_copper', connector: 'immersiveengineering:connector_lv' },
+  electrum: {
+    short: 'MV',
+    coil: 'immersiveengineering:wirecoil_electrum',
+    connector: 'immersiveengineering:connector_mv',
+  },
+  hv: { short: 'HV', coil: 'immersiveengineering:wirecoil_steel', connector: 'immersiveengineering:connector_hv' },
+};
+
 export type WireValue = { key: string } | { value: number } | null | undefined;
 
 export interface EeWire {
@@ -50,8 +61,12 @@ export interface PowerData {
     jar: string;
     file: string;
     keys: PowerKey[];
-    /** Нагрузка ротора на вал = статоры × stressFactor × rotorPowerMultiplier × rotorStressMultiplier на 1 об/мин */
-    rotor: { stressFactor: number; sides: number } | null;
+    /**
+     * Ротор: каждый статор вокруг даёт magnetsPerStator «магнитов». Выработка = Σ магниты × об/мин ×
+     * rotorPowerMultiplier; нагрузка ротора на вал = (магниты + baseMagnets) × rotorPowerMultiplier ×
+     * rotorStressMultiplier на 1 об/мин. Щёточный узел собирает до maxRotors роторов подряд.
+     */
+    rotor: { magnetsPerStator: number; baseMagnets: number; sides: number; maxRotors: number | null } | null;
     /** Сопротивление двигателя: loadedFactor × min(idleFactor × R, R / нагрузка), нагрузка не меньше minLoad */
     motor: { minLoad: number; loadedFactor: number; idleFactor: number } | null;
     converter: { minResistance: number; voltageStep: number; voltageMax: number; voltageDefault: number } | null;
@@ -163,24 +178,40 @@ export interface Alternator {
   minLoad: number;
 }
 
+export interface AlternatorParams {
+  powerMult: number;
+  stressMult: number;
+  fullLoadCurrent: number;
+  magnetsPerStator: number;
+  baseMagnets: number;
+}
+
 /**
- * Генератор EE (щёточный узел + роторы со статорами). Выработка = статоры × об/мин × rotorPowerMultiplier,
- * ЭДС = выработка / rotorFullLoadCurrent. Вал нагружается одинаково при любом потреблении.
+ * Генератор EE (щёточный узел + роторы со статорами). Выработка = статоры × magnetsPerStator × об/мин ×
+ * rotorPowerMultiplier, ЭДС = выработка / rotorFullLoadCurrent. Вал нагружается одинаково при любом потреблении:
+ * (статоры × magnetsPerStator + роторы × baseMagnets) × rotorPowerMultiplier × rotorStressMultiplier × об/мин.
+ * Роторов по умолчанию — наименьшее число, на которое помещаются статоры (по 4 на ротор).
  */
 export function alternator(
   stators: number,
   rpm: number,
-  p: { powerMult: number; stressMult: number; fullLoadCurrent: number; stressFactor: number },
+  p: AlternatorParams,
+  rotors = Math.ceil(stators / 4),
 ): Alternator {
-  const power = stators * Math.abs(rpm) * p.powerMult;
+  const magnets = stators * p.magnetsPerStator;
+  const power = magnets * Math.abs(rpm) * p.powerMult;
   const emf = power / p.fullLoadCurrent;
   return {
     power,
     emf,
-    stress: stators * p.stressFactor * p.powerMult * p.stressMult * Math.abs(rpm),
+    stress: (magnets + Math.max(rotors, 1) * p.baseMagnets) * p.powerMult * p.stressMult * Math.abs(rpm),
     minLoad: power > 0 ? (emf * emf) / power : Infinity,
   };
 }
+
+/** Сколько статоров нужно, чтобы на rpm оборотах получить напряжение без нагрузки volts */
+export const statorsFor = (volts: number, rpm: number, p: AlternatorParams) =>
+  Math.max(1, Math.ceil((volts * p.fullLoadCurrent) / (p.magnetsPerStator * Math.abs(rpm) * p.powerMult)));
 
 export interface Motor {
   running: boolean;

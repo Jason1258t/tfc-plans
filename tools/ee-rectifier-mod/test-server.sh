@@ -3,6 +3,7 @@
 # плоский мир, через RCON ставим трёхфазный выпрямитель в двух положениях, однофазный и диод EE, смотрим данные устройств
 # (/cee device_data); затем /rectest (тестовый мод src/devtest) собирает цепи «батареи переменного тока → выпрямитель →
 # нагреватель и вольтметр», протягивая провода через API EE, и снимает показания. Потом сервер останавливается.
+# С аргументами — выполняет их вместо этого списка (например ./test-server.sh 'rectest gen 64' 'sleep 3' 'rectest genreport').
 set -euo pipefail
 cd "$(dirname "$0")"
 export JAVA_HOME="${JAVA_HOME:-$HOME/.gradle/local-tools/jdk21/Contents/Home}"
@@ -20,6 +21,12 @@ rcon.password=check
 P
 ./gradlew runServer --console=plain > run/check.log 2>&1 &
 GRADLE=$!
+if [ $# -gt 0 ]; then
+  SERVER_PID=$GRADLE python3 rcon.py 25599 check 'forceload add 0 0 32 32' "$@" 'stop' || true
+  wait $GRADLE || true
+  grep -E "ERROR|Exception|Caused by" run/check.log | grep -v "^\s*at " | head -30 || true
+  exit 0
+fi
 SERVER_PID=$GRADLE python3 rcon.py 25599 check \
   'forceload add 0 0' \
   'setblock 0 -60 0 ee_rectifier:three_phase_rectifier[facing=up,roll=false]' \

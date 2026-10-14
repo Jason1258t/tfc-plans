@@ -71,6 +71,9 @@ tools/<имя>-mod/
   умеют. У `ee-rectifier` — `/rectest build|power|report`: ставит творческие батареи EE, выпрямители, нагреватель и
   вольтметр и протягивает провода через `InfrastructureSavedData.connect` (тот же путь, что у катушки в руке игрока;
   перед этим `ensureNodesExist` — EE регистрирует контакты лениво). Показания — `/cee device_data <x y z>` (команда EE).
+  Там же `/rectest gen <об/мин>`, `genload`, `genshortwire`, `genreport` — генератор EE от творческого мотора (проверка
+  формул справочника). Свои команды: `./test-server.sh 'rectest gen 64' 'sleep 4' 'rectest genreport'` — без аргументов
+  скрипт гоняет проверку выпрямителей.
 - **Проверка кодом мода и Minecraft** (`art/CheckNodes.java`, `./check-nodes.sh`): запускается на пути классов сборки
   (`art/classpath.gradle`). Пример: клеммы модели против точек крепления проводов во всех 12 положениях блока —
   настоящим `NodeConfigurator` EE и `BlockModelRotation` Minecraft. Чтобы убедиться, что проверка что-то ловит,
