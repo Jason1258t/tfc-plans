@@ -1,4 +1,15 @@
-# Сайт-планировщик игровой группы: поисковикам тут нечего показывать.
-# Всё содержимое грузится скриптом из Firestore, а каждый заход робота тратит бесплатную квоту чтений.
+# Поисковикам сайт не нужен: содержимое грузится скриптом из Firestore, а обход тратит квоту чтений.
+# Ботам превью ссылок (мессенджеры, соцсети) разрешено — они читают только заголовок страницы и og.png.
+User-agent: Twitterbot
+User-agent: facebookexternalhit
+User-agent: TelegramBot
+User-agent: Discordbot
+User-agent: Slackbot
+User-agent: Slackbot-LinkExpanding
+User-agent: WhatsApp
+User-agent: vkShare
+User-agent: LinkedInBot
+Allow: /
+
 User-agent: *
 Disallow: /
