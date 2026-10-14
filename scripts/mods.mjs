@@ -26,6 +26,7 @@ import { writeTags } from './mods/tags.mjs';
 import { isBotanyClass, writeBotany } from './mods/botany.mjs';
 import { isMealClass, writeMeals } from './mods/meals.mjs';
 import { isCuisineClass, isCuisineData } from './mods/cuisine.mjs';
+import { writePower } from './mods/power.mjs';
 
 const MC_VERSION = '1.21.1';
 
@@ -555,6 +556,12 @@ async function main() {
   );
   log(`сборные блюда: семейств ${meals.families}, блюд ${meals.dishes}; из кода: ${meals.computed.join(', ') || '—'}`);
   for (const w of meals.warnings) log(`  сборные блюда: ${w}`);
+  const power = writePower(
+    jars.map((j) => path.join(MODS_DIR, j)),
+    path.join(ROOT, 'public', 'power.json'),
+  );
+  log(`электричество: настроек EE ${power.ee}, проводов IE ${power.ieWires}`);
+  for (const w of power.warnings) log(`  электричество: ${w}`);
   const geo = writeGeo(dataDirs, parseLooseJson, path.join(ROOT, 'public'));
   if (geo) log(`география: ${geo.profiles} профилей, ${geo.waypoints} городов, ${geo.maps} карт`);
   const manifest = writeManifest({

@@ -9,6 +9,8 @@ import { useTags } from '../lib/tags';
 import { ItemIcon } from '../components/ItemIcon';
 import { LiquidFuelTab } from '../components/LiquidFuelTab';
 import { MapPage } from './MapPage';
+import { PowerTab } from '../components/PowerTab';
+import { POWER_SUBS, type PowerSub } from '../lib/power';
 import type { BotanySub } from '../lib/botany';
 import { itemName, useItems, type ItemIndex } from '../lib/items';
 import {
@@ -30,13 +32,14 @@ import {
 import { cx } from '../lib/util';
 import './ReferencePage.css';
 
-type Tab = 'ores' | 'fuel' | 'metals' | 'food' | 'botany' | 'map';
+type Tab = 'ores' | 'fuel' | 'metals' | 'food' | 'botany' | 'power' | 'map';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'ores', label: 'Руды' },
   { id: 'fuel', label: 'Топливо' },
   { id: 'metals', label: 'Металлы' },
   { id: 'food', label: 'Еда' },
   { id: 'botany', label: 'Ботаника' },
+  { id: 'power', label: 'Электричество' },
   { id: 'map', label: 'Карта' },
 ];
 
@@ -80,6 +83,13 @@ export function ReferencePage() {
       </div>
       {tab === 'map' ? (
         <MapPage />
+      ) : tab === 'power' ? (
+        <PowerTab
+          sub={POWER_SUBS.find((s) => s.id === params.get('sub'))?.id ?? 'link'}
+          onSub={(k: PowerSub) =>
+            setParams(k === 'link' ? { tab: 'power' } : { tab: 'power', sub: k }, { replace: true })
+          }
+        />
       ) : ref === undefined ? (
         <div className="empty">Загружаю справочник…</div>
       ) : ref === null ? (

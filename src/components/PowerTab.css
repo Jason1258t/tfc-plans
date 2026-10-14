@@ -1,0 +1,110 @@
+.power {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.power-h {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.power p {
+  margin: 0;
+}
+
+.power-chain {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.power-step {
+  align-self: stretch;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.power-step p {
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.power-step-icons {
+  display: flex;
+  gap: 2px;
+  flex: none;
+  min-width: 28px;
+}
+
+.power-note {
+  padding: 8px 12px;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+  line-height: 1.5;
+}
+
+.power-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.power-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.power-field input {
+  width: 120px;
+}
+
+.power-outs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px;
+}
+
+.power-out {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.power-out b {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.power-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.power-cfg {
+  white-space: nowrap;
+}
+
+.power-cfg.changed {
+  color: var(--accent);
+}
+
+.power-cfg sup {
+  margin-left: 2px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+}

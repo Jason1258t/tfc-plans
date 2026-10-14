@@ -11,6 +11,7 @@ const manifestJson = fileURLToPath(new URL('../public/pack-manifest.json', impor
 const geoJson = fileURLToPath(new URL('../public/geo.json', import.meta.url));
 const botanyJson = fileURLToPath(new URL('../public/botany.json', import.meta.url));
 const mealsJson = fileURLToPath(new URL('../public/meals.json', import.meta.url));
+const powerJson = fileURLToPath(new URL('../public/power.json', import.meta.url));
 const tagsJson = fileURLToPath(new URL('../public/tags.json', import.meta.url));
 const current = JSON.stringify(modsSignature());
 let previous = null;
@@ -29,6 +30,7 @@ else if (!fs.existsSync(geoJson)) reason = 'география не найден
 else if (!fs.existsSync(tagsJson)) reason = 'теги не найдены';
 else if (!fs.existsSync(botanyJson)) reason = 'ботаника не найдена';
 else if (!fs.existsSync(mealsJson)) reason = 'сборные блюда не найдены';
+else if (!fs.existsSync(powerJson)) reason = 'данные по электричеству не найдены';
 else if (previous !== null && previous !== current) reason = 'набор модов в mods/ изменился';
 else if (previous === null && current !== '[]') reason = 'в mods/ появились моды';
 

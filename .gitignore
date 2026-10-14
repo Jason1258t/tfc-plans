@@ -40,6 +40,7 @@ public/geo/
 public/tags.json
 public/botany.json
 public/meals.json
+public/power.json
 public/config-defaults.json
 
 # Jar модов сборки — источник библиотеки предметов, в git не храним

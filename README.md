@@ -213,6 +213,13 @@ node scripts/seed-recipe-hints.mjs
 значения настроек модов по умолчанию (`public/config-defaults.json`); импортированный конфиг сервера их переопределяет. Что ещё не разобрано —
 в `docs/plans/botany.md`.
 
+### Электричество (вкладка справочника)
+
+`public/power.json` собирает `scripts/mods/power.mjs`: значения настроек Electro Energetics по умолчанию (конфиг мода
+на ConfigBase из Create, его разбирает сам скрипт), коэффициенты формул генератора, двигателя и преобразователя,
+провода IE — из байткода. Поверх — импортированные `electroenergetics-server.toml` и `immersiveengineering-server.toml`.
+Что сделано и что дальше — `docs/plans/electricity.md`.
+
 ### Теги (страница «Теги»)
 
 `npm run mods` собирает `public/tags.json`: теги предметов, жидкостей, блоков и сущностей из `data/*/tags/` ванили и всех
