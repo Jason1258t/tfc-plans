@@ -38,7 +38,8 @@ import { IeLoadPicker } from './PowerIeLoads';
 const GUIDES = [
   { id: 'generator', title: 'Первый генератор: статоры, обороты, напряжение', Body: GeneratorGuide },
   { id: 'optimal', title: 'Оптимальный режим генератора: обороты, напряжение, мощность', Body: OptimalGuide },
-  { id: 'ac-pump', title: 'Помпа на переменном токе: выпрямитель', Body: AcPumpGuide },
+  { id: 'rectify', title: 'Выпрямление: из переменного тока в постоянный', Body: RectifyGuide },
+  { id: 'ac-pump', title: 'Помпа на переменном токе', Body: AcPumpGuide },
   { id: 'line', title: 'Линия на дальнее расстояние через трансформаторы', Body: LineGuide },
   { id: 'converter', title: 'Из EE в IE и обратно: преобразователь', Body: ConverterGuide },
 ];
@@ -96,7 +97,7 @@ export function PowerGuides({
   );
 }
 
-// ---------------------------------------------------------------- переменный ток → помпа
+// ---------------------------------------------------------------- выпрямление и помпа на переменном токе
 
 const PUMP_IMPACT_KEY = 'kinetics.stressValues.v2.impact.mechanical_pump';
 
@@ -108,29 +109,22 @@ const SCHEMES: { id: Rectifier; label: string }[] = [
   { id: 'bridge1cap', label: 'Однофазный мост + конденсатор' },
 ];
 
-function AcPumpGuide({ data, ee }: { data: PowerData; ee: Get }) {
-  const create = useSettings(data.create?.file, [{ key: PUMP_IMPACT_KEY, default: data.create?.pumpImpact ?? null }]);
-  const impact = create.get(PUMP_IMPACT_KEY);
-  const pumpR = ee('Resistances.pumpResistance');
+function RectifyGuide({ data, ee }: { data: PowerData; ee: Get }) {
   const capV = ee('Voltages.capacitorVoltage');
   const hvCapV = ee('Voltages.highVoltageCapacitorVoltage');
   const micro = ee('simulation.microTicks');
   const ac = data.ee?.ac;
-  const pump = data.ee?.pump;
-  const pp =
-    pumpR && impact && pump ? { resistance: pumpR.value, impact: impact.value, maxSpeed: pump.maxSpeed } : null;
-  const full = pp ? pumpVolts(256, pp) : null;
 
   return (
     <article className="ref-card power-article">
-      <h2 className="power-h">Помпа на переменном токе: выпрямитель</h2>
+      <h2 className="power-h">Выпрямление: из переменного тока в постоянный</h2>
       <div className="power-note">
-        <b>Коротко.</b> Электропомпе нужен постоянный ток: от переменного её скорость скачет. Проще всего запитать помпы
-        от <b>обычного</b> щёточного узла. Если сеть трёхфазная — поставить мост из <b>6 диодов</b> на три фазы, он даёт
-        почти ровное напряжение и без конденсатора — или один блок «Трёхфазный выпрямитель» из аддона сборки (он же мост
-        из шести диодов EE). Для 256 об/мин помпе нужно около <b>{full ? num(full) : '—'} В</b> постоянного. <b>Но:</b>{' '}
-        диоды EE успевают за переменным током только на малых оборотах, пока на сервере не поднята настройка microTicks
-        (сейчас <Val s={micro} />) — см. «Диоды EE не успевают» ниже; надёжнее всего обычный узел.
+        <b>Коротко.</b> Переменный ток даёт только трёхфазный щёточный узел. Двигателям, нагревателям и трансформаторам
+        он не мешает; помпам, лампам, реле и аккумуляторам нужен постоянный. Самый надёжный постоянный ток — с{' '}
+        <b>обычного</b> щёточного узла. Выпрямить переменный можно мостом из диодов EE (шесть на три фазы, четыре на
+        одну) или блоком-выпрямителем аддона, но <b>диоды EE успевают за фазой только на малых оборотах</b>, пока на
+        сервере не поднята настройка microTicks (сейчас <Val s={micro} />
+        ), — подробно ниже.
       </div>
 
       <h3>Откуда переменный ток</h3>
@@ -146,37 +140,42 @@ function AcPumpGuide({ data, ee }: { data: PowerData; ee: Get }) {
         {ac ? num(ac.hzPerRpm * 256) : '—'} Гц).
       </p>
 
-      <h3>Что происходит с помпой</h3>
+      <h3>Кому нужен постоянный ток</h3>
       <p>
-        Помпа на каждом расчёте цепи берёт напряжение <i>в этот момент</i> и крутится со скоростью U² /{' '}
-        <Val s={pumpR} unit="Ом" /> / <Val s={impact} unit="SU" /> (нагрузка механической помпы Create), не больше{' '}
-        {pump?.maxSpeed ?? '—'}. Усреднения нет: на переменном токе скорость то максимальная, то ноль. Направление
-        качания от полярности не зависит.
+        Устройства EE по-разному берут напряжение (по коду мода): одни — мгновенное на каждом расчёте, другие —
+        усреднённое или накопленное. Первым переменный ток мешает.
       </p>
-      <p>
-        Цепь на сервере считается <Val s={micro} /> раз за тик, то есть 20 раз в секунду, а фаза за тик поворачивается
-        на {ac ? num(degreesPerStep(1, ac.hzPerRpm, micro?.value ?? 1), 4) : '—'}° × об/мин. Из-за этого помпа видит не
-        синусоиду, а её редкие «снимки»: при 128 об/мин фаза делает ровно оборот за тик, и помпа каждый раз видит одно и
-        то же напряжение — какое выпадет, хоть ноль. Посмотреть можно на графике в калькуляторе ниже.
-      </p>
-
-      <h3>Кому выпрямлять не нужно</h3>
-      <ul>
-        <li>
-          <b>Двигатель</b> усредняет напряжение (среднеквадратичное) и на переменном токе работает ровно. Но действующее
-          напряжение синусоиды — амплитуда / 1,41, поэтому запас SU у него вдвое меньше, чем на постоянном с той же
-          амплитудой.
-        </li>
-        <li>
-          <b>Трансформатор</b> в этом моде — идеальное соотношение витков без индуктивности: постоянный ток он повышает
-          и понижает так же, как переменный. Ради передачи на расстояние переменный ток не нужен.
-        </li>
-      </ul>
+      <div className="ref-table-wrap">
+        <table className="ref-table">
+          <thead>
+            <tr>
+              <th>Устройство</th>
+              <th>Как берёт напряжение</th>
+              <th>На переменном токе</th>
+            </tr>
+          </thead>
+          <tbody>
+            {AC_DEVICES.map((d) => (
+              <tr key={d.id}>
+                <td>
+                  <span className="power-name">
+                    <ItemIcon id={d.id} size={20} />
+                    {d.name}
+                  </span>
+                </td>
+                <td className="small">{d.how}</td>
+                <td className={cx('small', d.bad && 'power-bad')}>{d.ac}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <h3>Способ 1. Отдельный генератор постоянного тока</h3>
       <p>
-        На тот же вал — ещё ротор со статорами и <b>обычный</b> щёточный узел, от него — отдельная линия к помпам.
-        Ничего выпрямлять не нужно. Нагрузка на вал — по калькулятору генератора во вкладке «Как связаны».
+        На тот же вал — ещё ротор со статорами и <b>обычный</b> щёточный узел, от него — отдельная линия к потребителям
+        постоянного тока. Ничего выпрямлять не нужно. Нагрузка на вал — по калькулятору генератора во вкладке «Как
+        связаны».
       </p>
 
       <h3>Способ 2. Трёхфазный мост (6 диодов)</h3>
@@ -188,7 +187,7 @@ function AcPumpGuide({ data, ee }: { data: PowerData; ee: Get }) {
           Ток идёт через диод от анода (больший потенциал) к катоду — так в понде мода.
         </li>
         <li>Нейтраль не подключайте.</li>
-        <li>Помпы — между шинами «+» и «−», параллельно.</li>
+        <li>Потребители — между шинами «+» и «−», параллельно.</li>
       </ol>
       <p>
         На выходе — разность самой высокой и самой низкой фазы: от 1,5 до 1,73 амплитуды, без провалов в ноль, при любом
@@ -222,29 +221,272 @@ function AcPumpGuide({ data, ee }: { data: PowerData; ee: Get }) {
         </p>
       </div>
 
+      {ac && <RectifierCalc data={data} ee={ee} hzPerRpm={ac.hzPerRpm} serverMicro={micro?.value ?? 1} />}
+
+      <h3>Что проверено</h3>
+      <ul className="faint small">
+        <li>
+          По коду мода: обычный узел — постоянный, трёхфазный — синусоиды, нейтраль и три фазы; частота; как каждое
+          устройство из таблицы берёт напряжение; модель диода (Шокли, линеаризация по прошлому расчёту, не выше 0,8 В);
+          трансформатор без индуктивности; пределы конденсаторов.
+        </li>
+        <li>
+          На тестовом сервере (без игрока): от батарей переменного тока 100 В (1 Гц) на нагреватель 45 Ом трёхфазный
+          выпрямитель дал 125 В, однофазный 79 В; с настоящим трёхфазным генератором при microTicks 1, 8 и 32 — таблица
+          «Диоды EE не успевают»; блоки аддона и мост из отдельных диодов EE дали одинаковые числа.
+        </li>
+        <li>
+          Не проверено: в игре — ничего (игрок увидел нестабильное напряжение — это и разобрали); с какой стороны у
+          блока диода анод (смотрите понд, клавиша W по блоку); как сглаживает конденсатор; цена большого microTicks для
+          TPS; мигание ламп и дребезг реле на переменном токе — вывод по коду.
+        </li>
+      </ul>
+    </article>
+  );
+}
+
+/** Кому мешает переменный ток — по тому, как устройство EE читает напряжение (postTick / свойства, по коду) */
+const AC_DEVICES = [
+  {
+    id: 'electroenergetics:electric_pump',
+    name: 'Электропомпа',
+    how: 'мгновенное, каждый расчёт',
+    ac: 'скорость скачет от нуля до максимума',
+    bad: true,
+  },
+  {
+    id: 'electroenergetics:bulb',
+    name: 'Лампа',
+    how: 'мгновенное, каждый расчёт',
+    ac: 'яркость меняется каждый тик — мигает',
+    bad: true,
+  },
+  {
+    id: 'electroenergetics:relay',
+    name: 'Реле',
+    how: 'мгновенное на катушке, порог',
+    ac: 'размыкается, когда синусоида проходит через ноль — дребезг',
+    bad: true,
+  },
+  {
+    id: 'electroenergetics:accumulator',
+    name: 'Аккумулятор',
+    how: 'ток со знаком: заряд и разряд',
+    ac: 'заряжается и тут же разряжается — копить не будет',
+    bad: true,
+  },
+  {
+    id: 'electroenergetics:gray_electric_motor',
+    name: 'Двигатель',
+    how: 'среднеквадратичное за несколько расчётов',
+    ac: 'работает ровно; запас SU — по действующему напряжению (амплитуда / 1,41)',
+    bad: false,
+  },
+  {
+    id: 'electroenergetics:resistive_heater',
+    name: 'Нагреватель',
+    how: 'копит тепло от U² / R',
+    ac: 'работает по среднему: как на постоянном с амплитудой / 1,41',
+    bad: false,
+  },
+  {
+    id: 'electroenergetics:transformer',
+    name: 'Трансформатор',
+    how: 'идеальное соотношение витков',
+    ac: 'работает одинаково на любом токе',
+    bad: false,
+  },
+  {
+    id: 'electroenergetics:converter',
+    name: 'Преобразователь (из EE в FE)',
+    how: 'мгновенная мощность в буфер',
+    ac: 'работает: буфер сглаживает',
+    bad: false,
+  },
+];
+
+/** Калькулятор выпрямителя: напряжение на выходе по тикам, падение на диодах, успевают ли диоды */
+function RectifierCalc({
+  data,
+  ee,
+  hzPerRpm,
+  serverMicro,
+}: {
+  data: PowerData;
+  ee: Get;
+  hzPerRpm: number;
+  serverMicro: number;
+}) {
+  const [stators, setStators] = useState(4);
+  const [rpm, setRpm] = useState(16);
+  const [ratio, setRatio] = useState(1);
+  const [ohms, setOhms] = useState(45);
+  const [micro, setMicro] = useState(serverMicro);
+  const [kind, setKind] = useState<Rectifier>('bridge3');
+  const [start, setStart] = useState(30);
+  const p = useAlternatorParams(data, ee);
+  const diode = data.ee?.diode;
+  if (!p) return null;
+  const g = alternator(stators, rpm, p);
+  const amp = g.emf * ratio;
+  const perTick = degreesPerStep(rpm, hzPerRpm, 1);
+  const perCalc = degreesPerStep(rpm, hzPerRpm, micro);
+  const at = (theta: number) => {
+    const v = Math.abs(rectified(kind, amp, theta));
+    const n = diodesInPath(kind);
+    if (!n || !diode) return v;
+    // Падение на диодах при токе нагрузки: пара итераций, ток зависит от напряжения
+    let out = v;
+    for (let i = 0; i < 4; i++) out = Math.max(0, v - n * diodeDrop(out / ohms, diode));
+    return out;
+  };
+  const volts = Array.from({ length: 20 }, (_, i) => at(start + i * perTick));
+  const vMin = Math.min(...volts);
+  const vMax = Math.max(...volts);
+  const avg = volts.reduce((a, b) => a + b, 0) / volts.length;
+  const verdict = !kind.startsWith('bridge')
+    ? null
+    : perCalc <= GOOD_STEP
+      ? 'диоды успевают — выход как на графике'
+      : perCalc <= OK_STEP
+        ? 'на грани — возможна просадка или разброс в несколько процентов'
+        : 'диоды не успевают — на деле выход будет скакать, график ниже — идеальный мост';
+  return (
+    <section className="power-calc">
+      <h3>Калькулятор выпрямителя</h3>
+      <div className="power-form">
+        <label className="power-field">
+          <span className="faint small">Схема</span>
+          <select className="input" value={kind} onChange={(e) => setKind(e.target.value as Rectifier)}>
+            {SCHEMES.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <NumField label="Статоров всего" value={stators} onChange={setStators} min={1} max={400} />
+        <NumField label="Скорость вала" value={rpm} onChange={setRpm} min={1} max={256} unit="об/мин" />
+        <NumField
+          label="Трансформатор: выход / вход"
+          value={ratio}
+          onChange={setRatio}
+          min={0.01}
+          max={100}
+          step={0.1}
+          unit="×"
+        />
+        <NumField label="Нагрузка" value={ohms} onChange={setOhms} min={0.1} max={100000} step={1} unit="Ом" />
+        <NumField label="microTicks" value={micro} onChange={setMicro} min={1} max={MAX_MICRO} />
+        <NumField label="Угол ротора в начале" value={start} onChange={setStart} min={0} max={359} unit="°" />
+      </div>
+      <div className="power-outs">
+        <div className="power-out">
+          <span className="faint small">{kind === 'dc' ? 'Напряжение узла' : 'Амплитуда фазы'}</span>
+          <b>{num(amp, 1)} В</b>
+          {kind !== 'dc' && <span className="faint small">частота {num(hzPerRpm * rpm, 1)} Гц</span>}
+        </div>
+        <div className="power-out">
+          <span className="faint small">На выходе за секунду</span>
+          <b>{num(vMin, 1) === num(vMax, 1) ? `${num(vMax, 1)} В` : `${num(vMin, 1)}–${num(vMax, 1)} В`}</b>
+          <span className="faint small">
+            в среднем {num(avg, 1)} В, ток до {num(vMax / ohms, 1)} А
+          </span>
+        </div>
+        <div className="power-out">
+          <span className="faint small">Нагрузка берёт</span>
+          <b>{watts((avg * avg) / ohms)}</b>
+          <span className={cx('small', (vMax * vMax) / ohms > g.power ? 'power-bad' : 'faint')}>
+            {(vMax * vMax) / ohms > g.power
+              ? 'больше выработки — напряжение просядет'
+              : `генератор даёт ${watts(g.power)}`}
+          </span>
+        </div>
+        {verdict && (
+          <div className="power-out">
+            <span className="faint small">Фаза за расчёт</span>
+            <b>{num(perCalc, 1)}°</b>
+            <span className={cx('small', perCalc > OK_STEP ? 'power-bad' : 'faint')}>
+              {verdict}
+              {perCalc > GOOD_STEP ? `; нужно microTicks ≥ ${microTicksFor(rpm, hzPerRpm)}` : ''}
+            </span>
+          </div>
+        )}
+      </div>
+      <TickChart speeds={volts} max={Math.max(vMax, 1)} step={perTick} what="Напряжение на выходе" unit=" В" />
+      <p className="faint small">
+        Модель — идеальный мост с падением на диодах EE (0,8 В + ~5,6 Ом на каждый из двух на пути тока); просадку
+        генератора под нагрузкой и запаздывание диодов график не учитывает. microTicks на сервере — <b>{serverMicro}</b>
+        ; поле выше — чтобы посмотреть, что даст другое значение.
+      </p>
+    </section>
+  );
+}
+
+function AcPumpGuide({ data, ee }: { data: PowerData; ee: Get }) {
+  const create = useSettings(data.create?.file, [{ key: PUMP_IMPACT_KEY, default: data.create?.pumpImpact ?? null }]);
+  const impact = create.get(PUMP_IMPACT_KEY);
+  const pumpR = ee('Resistances.pumpResistance');
+  const micro = ee('simulation.microTicks');
+  const ac = data.ee?.ac;
+  const pump = data.ee?.pump;
+  const pp =
+    pumpR && impact && pump ? { resistance: pumpR.value, impact: impact.value, maxSpeed: pump.maxSpeed } : null;
+  const full = pp ? pumpVolts(256, pp) : null;
+
+  return (
+    <article className="ref-card power-article">
+      <h2 className="power-h">Помпа на переменном токе</h2>
+      <div className="power-note">
+        <b>Коротко.</b> Электропомпе нужен постоянный ток: от переменного её скорость скачет. Проще всего запитать помпы
+        от <b>обычного</b> щёточного узла; если сеть трёхфазная — выпрямить (гайд{' '}
+        <a href="/reference?tab=power&sub=guides&g=rectify">«Выпрямление»</a>), помня, что диоды EE успевают только на
+        малых оборотах при microTicks = <Val s={micro} />. Для 256 об/мин помпе нужно около{' '}
+        <b>{full ? num(full) : '—'} В</b> постоянного.
+      </div>
+
+      <h3>Что происходит с помпой</h3>
+      <p>
+        Помпа на каждом расчёте цепи берёт напряжение <i>в этот момент</i> и крутится со скоростью U² /{' '}
+        <Val s={pumpR} unit="Ом" /> / <Val s={impact} unit="SU" /> (нагрузка механической помпы Create), не больше{' '}
+        {pump?.maxSpeed ?? '—'}. Усреднения нет: на переменном токе скорость то максимальная, то ноль. Направление
+        качания от полярности не зависит.
+      </p>
+      <p>
+        Цепь на сервере считается <Val s={micro} /> раз за тик, то есть 20 раз в секунду, а фаза за тик поворачивается
+        на {ac ? num(degreesPerStep(1, ac.hzPerRpm, micro?.value ?? 1), 4) : '—'}° × об/мин. Из-за этого помпа видит не
+        синусоиду, а её редкие «снимки»: при 128 об/мин фаза делает ровно оборот за тик, и помпа каждый раз видит одно и
+        то же напряжение — какое выпадет, хоть ноль. Посмотреть можно на графике в калькуляторе ниже.
+      </p>
+
+      <h3>Чем питать</h3>
+      <ol>
+        <li>
+          <b>Обычный щёточный узел</b> на том же валу и отдельная линия к помпам — ничего выпрямлять не нужно.
+        </li>
+        <li>
+          <b>Трёхфазный мост</b> из шести диодов или блок «Трёхфазный выпрямитель» — почти ровное напряжение, если диоды
+          успевают за фазой.
+        </li>
+        <li>
+          <b>Однофазный мост с конденсатором</b> — без конденсатора помпа дважды за период стоит.
+        </li>
+      </ol>
+      <p>
+        Схемы, кому ещё нужен постоянный ток, свойства диодов EE и настройка microTicks — в гайде{' '}
+        <a href="/reference?tab=power&sub=guides&g=rectify">«Выпрямление: из переменного тока в постоянный»</a>.
+      </p>
+
       {pp && ac && <AcPumpCalc data={data} ee={ee} pump={pp} hzPerRpm={ac.hzPerRpm} microTicks={micro?.value ?? 1} />}
 
       <h3>Что проверено</h3>
       <ul className="faint small">
         <li>
-          По коду мода: обычный узел — постоянный, трёхфазный — синусоиды, нейтраль и три фазы; частота; формула помпы и
-          её предел; помпа без усреднения, двигатель с усреднением; модель диода (Шокли, точка линеаризации не выше 0,8
-          В); трансформатор без индуктивности; пределы конденсаторов.
+          По коду мода: формула помпы и её предел, помпа без усреднения; нагрузка механической помпы Create — из кода
+          Create и конфига сервера; частота трёхфазного узла.
         </li>
-        <li>
-          В симуляции EE на тестовом сервере (без игрока): мосты из диодов EE в блоках-выпрямителях от батарей
-          переменного тока 100 В на нагреватель 45 Ом — трёхфазный 125 В, однофазный 79 В на выходе; падение на открытом
-          диоде 8,6–16,4 В, как по формуле выше.
-        </li>
-        <li>
-          На тестовом сервере с настоящим трёхфазным генератором (творческий мотор, 4–256 об/мин) и при microTicks 1, 8
-          и 32 — таблица «Диоды EE не успевают» выше; блоки аддона и мост из отдельных диодов EE дали одинаковые числа.
-        </li>
-        <li>
-          Не проверено: в игре — ничего; с какой стороны у блока диода анод (смотрите понд, клавиша W по блоку); сколько
-          раз за тик фаза поворачивается, если в цепи есть диоды (решатель может считать их в несколько проходов); как
-          генератор проседает под нагрузкой на каждой фазе.
-        </li>
+        <li>Выпрямители — см. «Что проверено» в гайде «Выпрямление».</li>
+        <li>Не проверено: в игре — ничего.</li>
       </ul>
     </article>
   );
@@ -529,20 +771,33 @@ function NumField({
 }
 
 /** Скорость помпы на каждом из 20 тиков секунды */
-function TickChart({ speeds, max, step }: { speeds: number[]; max: number; step: number }) {
+function TickChart({
+  speeds,
+  max,
+  step,
+  what = 'Скорость помпы',
+  unit = '',
+}: {
+  speeds: number[];
+  max: number;
+  step: number;
+  what?: string;
+  unit?: string;
+}) {
   const w = 400;
   const h = 90;
   const bw = w / speeds.length;
   return (
     <figure className="power-figure">
-      <svg viewBox={`0 0 ${w} ${h + 16}`} role="img" aria-label="Скорость помпы по тикам">
+      <svg viewBox={`0 0 ${w} ${h + 16}`} role="img" aria-label={`${what} по тикам`}>
         <line x1={0} y1={h} x2={w} y2={h} className="power-axis" />
         {speeds.map((s, i) => {
-          const bh = (s / max) * h;
+          const bh = max > 0 ? (Math.max(0, s) / max) * h : 0;
           return (
             <rect key={i} x={i * bw + 2} y={h - bh} width={bw - 4} height={Math.max(bh, 0.5)} className="power-bar">
               <title>
                 тик {i + 1}: {num(s)}
+                {unit}
               </title>
             </rect>
           );
@@ -555,8 +810,9 @@ function TickChart({ speeds, max, step }: { speeds: number[]; max: number; step:
         </text>
       </svg>
       <figcaption className="faint small">
-        Скорость помпы на каждом тике секунды (столбик во всю высоту — {max}). Фаза за тик поворачивается на{' '}
-        {num(step % 360, 1)}°{step >= 360 ? ` (ещё ${Math.floor(step / 360)} полных оборота)` : ''}.
+        {what} на каждом тике секунды (столбик во всю высоту — {num(max)}
+        {unit}). Фаза за тик поворачивается на {num(step % 360, 1)}°
+        {step >= 360 ? ` (ещё ${Math.floor(step / 360)} полных оборота)` : ''}.
       </figcaption>
     </figure>
   );
@@ -571,7 +827,7 @@ function BridgeDiagram({ legs, cap = false }: { legs: 3 | 1; cap?: boolean }) {
   const mid = (top + bottom) / 2;
   const right = cols[cols.length - 1] + 80;
   const pumpX = right + (cap ? 70 : 0);
-  const width = pumpX + 70;
+  const width = pumpX + 76;
   const diode = (x: number, y: number) => (
     <g className="power-diode">
       <polygon points={`${x - 8},${y + 7} ${x + 8},${y + 7} ${x},${y - 7}`} />
@@ -619,9 +875,9 @@ function BridgeDiagram({ legs, cap = false }: { legs: 3 | 1; cap?: boolean }) {
         )}
         <line x1={pumpX} y1={top} x2={pumpX} y2={mid - 18} className="power-wire" />
         <line x1={pumpX} y1={mid + 18} x2={pumpX} y2={bottom} className="power-wire" />
-        <rect x={pumpX - 26} y={mid - 18} width={52} height={36} rx={4} className="power-load" />
+        <rect x={pumpX - 32} y={mid - 18} width={64} height={36} rx={4} className="power-load" />
         <text x={pumpX} y={mid + 4} textAnchor="middle" className="power-svg-text">
-          помпа
+          нагрузка
         </text>
       </svg>
       <figcaption className="faint small">
