@@ -16,6 +16,30 @@ export const POWER_SUBS: { id: PowerSub; label: string }[] = [
   { id: 'guides', label: 'Гайды' },
 ];
 
+export type WireValue = { key: string } | { value: number } | null | undefined;
+
+export interface EeWire {
+  name: string;
+  resistance?: WireValue;
+  maxInsulationVoltage?: WireValue;
+  maxTemperature?: WireValue;
+  maxLength?: WireValue;
+  insulationResistance?: number;
+  item?: string | null;
+  spool?: string | null;
+  overheated?: string | null;
+  decorative?: boolean;
+  invulnerable?: boolean;
+}
+
+export interface HeatModel {
+  cool: number;
+  base: number;
+  scale: number;
+  warn: number;
+  maxCurrent: number;
+}
+
 export interface PowerKey {
   key: string;
   default: number | boolean | string | null;
@@ -39,6 +63,30 @@ export interface PowerData {
     pump?: { maxSpeed: number } | null;
     /** Диод (модель Шокли): ток насыщения, А, и тепловое напряжение, В */
     diode?: { saturation: number; thermal: number } | null;
+    /** Виды проводов: значение — ключ настройки или число из кода; нет поля — значение строителя по умолчанию */
+    wires?: EeWire[];
+    wireDefault?: { maxInsulationVoltage?: number; maxTemperature?: number };
+    /** Нагрев: T' = max(0, T − cool + (тепло + base) × min(1, 1 / (1 + T / scale))); провод — тепло = ток */
+    wireHeat?: HeatModel | null;
+    /** Одноблочный трансформатор: шкала соотношений (вход, выход), тепло = min(heatCap, |P|) / heatDivisor */
+    transformer?: { ratios: [number, number][]; heatDivisor: number; heatCap: number; breakTemp: number } | null;
+    /** Магнитопровод: теплоотвод = base × (1 + Σ 1/√d) × noOil за каждую сторону без масла */
+    core?: {
+      base: number;
+      noOil: number;
+      radius: number;
+      maxLoad: number;
+      heatPerLoad: number;
+      breakTemp: number;
+      explosion: number;
+      turnsMin: number;
+      turnsMax: number;
+      turnsDefault: number;
+    } | null;
+    /** Блоки и теги, охлаждающие магнитопровод */
+    dissipators?: string[];
+    /** Заземляющий стержень: сопротивление до общей земли, Ом */
+    groundRod?: { resistance: number } | null;
   } | null;
   create?: { jar: string; file: string; pumpImpact: number | null } | null;
   ie: {
@@ -210,3 +258,40 @@ export const pumpVolts = (speed: number, p: { resistance: number; impact: number
 /** На сколько градусов поворачивается фаза между расчётами цепи (расчёт — microTicks раз за тик, 20 тиков в секунду) */
 export const degreesPerStep = (rpm: number, hzPerRpm: number, microTicks: number) =>
   (360 * hzPerRpm * Math.abs(rpm)) / 20 / Math.max(1, microTicks);
+
+// ---------------------------------------------------------------- нагрев, провода, трансформаторы
+
+/** Один шаг нагрева (общая формула устройств EE) */
+export const heatStep = (t: number, heat: number, h: HeatModel) =>
+  Math.max(0, t - h.cool + (heat + h.base) * Math.min(1, 1 / (1 + t / h.scale)));
+
+/** Установившаяся температура при постоянном тепле */
+export const steadyTemp = (heat: number, h: HeatModel) => Math.max(0, h.scale * ((heat + h.base) / h.cool - 1));
+
+/** Наибольшее постоянное тепло, при котором температура не дойдёт до предела */
+export const maxSteadyHeat = (limit: number, h: HeatModel) => h.cool * (limit / h.scale + 1) - h.base;
+
+/** Через сколько расчётов температура дойдёт до предела (null — не дойдёт за maxSteps) */
+export function stepsToTemp(heat: number, limit: number, h: HeatModel, maxSteps = 72000) {
+  if (steadyTemp(heat, h) <= limit) return null;
+  let t = 0;
+  for (let i = 1; i <= maxSteps; i++) {
+    t = heatStep(t, heat, h);
+    if (t > limit) return i;
+  }
+  return null;
+}
+
+/** Значение свойства провода: настройка сервера / число из кода / значение строителя по умолчанию */
+export function wireValue(v: WireValue, get: (key: string) => Setting | null, fallback?: number): number | null {
+  if (v && 'key' in v) return get(v.key)?.value ?? null;
+  if (v && 'value' in v) return v.value;
+  return fallback ?? null;
+}
+
+/** Соотношения одноблочного трансформатора «выход / вход» по возрастанию: понижающие, 1:1, повышающие */
+export function transformerRatios(ratios: [number, number][]) {
+  const down = ratios.map(([a, b]) => ({ label: `${a}:${b}`, k: a / b }));
+  const up = ratios.map(([a, b]) => ({ label: `${b}:${a}`, k: b / a }));
+  return [...down, { label: '1:1', k: 1 }, ...up].sort((x, y) => x.k - y.k);
+}

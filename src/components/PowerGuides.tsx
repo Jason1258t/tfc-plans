@@ -3,6 +3,13 @@ import { CONFIG_ORIGIN_LABEL } from '../lib/config';
 import {
   alternator,
   degreesPerStep,
+  maxSteadyHeat,
+  steadyTemp,
+  stepsToTemp,
+  transformerRatios,
+  wireValue,
+  type EeWire,
+  type HeatModel,
   diodeDrop,
   diodesInPath,
   pumpSpeed,
@@ -21,7 +28,10 @@ import { ItemIcon } from './ItemIcon';
  * в остальном разделе (src/lib/power.ts). Список статей — GUIDES; адрес статьи — ?tab=power&sub=guides&g=<id>.
  */
 
-const GUIDES = [{ id: 'ac-pump', title: 'Помпа на переменном токе: выпрямитель', Body: AcPumpGuide }];
+const GUIDES = [
+  { id: 'ac-pump', title: 'Помпа на переменном токе: выпрямитель', Body: AcPumpGuide },
+  { id: 'line', title: 'Линия на дальнее расстояние через трансформаторы', Body: LineGuide },
+];
 
 type Get = (key: string) => Setting | null;
 
@@ -462,6 +472,441 @@ function BridgeDiagram({ legs, cap = false }: { legs: 3 | 1; cap?: boolean }) {
           ? 'Каждая фаза — в середину пары диодов. Треугольник диода смотрит по направлению тока: снизу вверх, от «−» к «+».'
           : 'Фаза и нейтраль — каждая в середину своей пары диодов; конденсатор параллельно помпе.'}
       </figcaption>
+    </figure>
+  );
+}
+
+// ---------------------------------------------------------------- линия через трансформаторы
+
+/** Названия видов проводов EE; декоративные и творческий в статью не идут */
+const WIRE_LABEL: Record<string, string> = {
+  standard: 'Изолированный медный',
+  copper: 'Медный голый',
+  heavily_insulated: 'Высокоизолированный',
+  bundle_conductor: 'Двухпроводной кабель (жила)',
+  electrum: 'Электрумовый голый',
+  iron: 'Железный кабель',
+  iron_bus: 'Железная шина',
+  iron_rail: 'Контактный рельс',
+};
+
+interface WireRow {
+  w: EeWire;
+  label: string;
+  ohmPerM: number | null;
+  insulation: number;
+  maxTemp: number;
+  span: number | null;
+  /** Длительный ток: дольше — сгорит; с warn — начнёт искрить */
+  maxI: number;
+  warnI: number;
+}
+
+function wireRows(data: PowerData, ee: Get, h: HeatModel): WireRow[] {
+  const d = data.ee?.wireDefault ?? {};
+  return (data.ee?.wires ?? [])
+    .filter((w) => WIRE_LABEL[w.name] && !w.decorative)
+    .map((w) => {
+      const maxTemp = wireValue(w.maxTemperature, ee, d.maxTemperature) ?? 0;
+      const infinite = !Number.isFinite(maxTemp) || maxTemp > 1e12;
+      return {
+        w,
+        label: WIRE_LABEL[w.name],
+        ohmPerM: wireValue(w.resistance, ee),
+        insulation: wireValue(w.maxInsulationVoltage, ee, d.maxInsulationVoltage) ?? 0,
+        maxTemp,
+        // У жилы кабеля длину пролёта задаёт оболочка (кабель двухпроводной) — у жилы её нет
+        span: w.name === 'bundle_conductor' ? (ee('bundledWireLength')?.value ?? null) : wireValue(w.maxLength, ee),
+        maxI: infinite ? Infinity : Math.min(h.maxCurrent, maxSteadyHeat(maxTemp, h)),
+        warnI: infinite ? Infinity : Math.min(h.maxCurrent, maxSteadyHeat(maxTemp * h.warn, h)),
+      };
+    });
+}
+
+function LineGuide({ data, ee }: { data: PowerData; ee: Get }) {
+  const h = data.ee?.wireHeat;
+  const tr = data.ee?.transformer;
+  const core = data.ee?.core;
+  const rod = data.ee?.groundRod;
+  if (!h) return <div className="empty">Данные о проводах не собраны — выполните npm run mods</div>;
+  const rows = wireRows(data, ee, h);
+  const trMax = tr ? Math.min(tr.heatCap, tr.heatDivisor * maxSteadyHeat(tr.breakTemp, h)) : null;
+  const coreLoad = core ? maxSteadyHeat(core.breakTemp, h) / core.heatPerLoad : null;
+  const ratios = tr ? transformerRatios(tr.ratios) : [];
+  const fmtLimit = (v: number) => (Number.isFinite(v) ? `${num(v)} А` : 'не греется');
+
+  return (
+    <article className="ref-card power-article">
+      <h2 className="power-h">Линия на дальнее расстояние через трансформаторы</h2>
+      <div className="power-note">
+        <b>Коротко.</b> Потери в проводе растут как квадрат тока, а провод греется и рвётся тоже от тока. Поэтому
+        мощность далеко везут на высоком напряжении: у генератора — повышающий трансформатор, у потребителей —
+        понижающий. Поднять напряжение в k раз — ток падает в k раз, потери в k² раз. Выше{' '}
+        <Val s={ee('Voltages.wireMaxVoltage')} unit="В" /> обычный изолированный провод не годится: нужен
+        высокоизолированный (до <Val s={ee('Voltages.heavilyInsulatedWireMaxVoltage')} unit="В" />) или голый на опорах.
+      </div>
+
+      <LineDiagram />
+
+      <h3>Почему ток, а не напряжение</h3>
+      <p>
+        Мощность = напряжение × ток. Провод — это сопротивление: на нём теряется I² × R ватт и падает I × R вольт.
+        Сопротивление провода — Ом на метр × длина, а у линии из двух проводов (туда и обратно) — вдвое больше. Та же
+        мощность на вдесятеро большем напряжении идёт вдесятеро меньшим током и теряет в сто раз меньше.
+      </p>
+
+      <h3>Провода</h3>
+      <div className="ref-table-wrap">
+        <table className="ref-table">
+          <thead>
+            <tr>
+              <th>Провод</th>
+              <th className="num">Ом на 100 м</th>
+              <th className="num">Изоляция до</th>
+              <th className="num">Пролёт до</th>
+              <th className="num">Искрит с</th>
+              <th className="num">Длительно до</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.w.name}>
+                <td>
+                  <span className="power-name">
+                    {(r.w.spool || r.w.item) && <ItemIcon id={(r.w.spool || r.w.item)!} size={20} />}
+                    {r.label}
+                  </span>
+                </td>
+                <td className="num">{r.ohmPerM !== null ? num(r.ohmPerM * 100, 2) : '—'}</td>
+                <td className="num">{r.insulation > 0 ? `${num(r.insulation)} В` : 'голый'}</td>
+                <td className="num">{r.span !== null ? `${num(r.span)} м` : '—'}</td>
+                <td className="num">{fmtLimit(r.warnI)}</td>
+                <td className="num">{fmtLimit(r.maxI)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <ul className="small">
+        <li>
+          <b>Греется провод только от тока</b> — длина и сопротивление на нагрев не влияют. С {num(h.warn * 100)} %
+          предела температуры провод искрит, на пределе сгорает. Изолированный медный, перегревшись, превращается в
+          голый медный (изоляция сгорает), высокоизолированный — тоже.
+        </li>
+        <li>
+          <b>Изоляция</b> защищает от удара током, пока напряжение не выше её предела; выше — провод бьёт током так же,
+          как голый. Голый бьёт всегда. От перенапряжения провод не рвётся. Поражение током на сервере включено
+          (настройка enableElectrocution).
+        </li>
+        <li>
+          Жила двухпроводного кабеля по коду не перегревается вообще (предел не задан), но изоляция у неё как у обычного
+          изолированного. В игре не проверялось.
+        </li>
+        <li>Параллельные провода делят ток: два провода вместо одного — каждому вдвое меньше.</li>
+      </ul>
+
+      <h3>Возврат через землю</h3>
+      <p>
+        Заземляющий стержень соединяет контакт с общей землёй через {rod ? num(rod.resistance) : '—'} Ом. Можно вести
+        один провод, а обратно ток пойдёт через землю: стержень у генератора и стержень у потребителей. Это вдвое меньше
+        провода, но добавляет {rod ? num(rod.resistance * 2) : '—'} Ом на двух стержнях. По коду; в игре не проверялось.
+      </p>
+
+      <h3>Трансформаторы</h3>
+      <div className="power-outs">
+        <div className="power-out">
+          <span className="power-name">
+            <ItemIcon id="electroenergetics:transformer" size={20} />
+            <b>Трансформатор (один блок)</b>
+          </span>
+          <span className="small">
+            Соотношение — шкалой, от {ratios[0]?.label ?? '—'} до {ratios.at(-1)?.label ?? '—'}. Длительно держит около{' '}
+            <b>{trMax ? watts(trMax) : '—'}</b>, больше — греется и в итоге сгорает (пропадает).
+          </span>
+        </div>
+        <div className="power-out">
+          <span className="power-name">
+            <ItemIcon id="electroenergetics:transformer_core" size={20} />
+            <b>Магнитопровод (два блока лицом друг к другу)</b>
+          </span>
+          <span className="small">
+            У каждой катушки {core?.turnsMin ?? '—'}–{core?.turnsMax ?? '—'} витков (по умолчанию{' '}
+            {core?.turnsDefault ?? '—'}), напряжения относятся как витки. Мощность задаёт охлаждение:{' '}
+            {core ? watts(core.base) : '—'} × (1 + охладители), × {core ? num(core.noOil, 1) : '—'} за каждую сторону
+            без трансформаторного масла. Выше этого (с запасом {coreLoad ? num((coreLoad - 1) * 100, 1) : '—'} %) —
+            греется и <b>взрывается</b> (сила взрыва {core?.explosion ?? '—'}).
+          </span>
+        </div>
+      </div>
+      {core && (
+        <p className="small">
+          Охладители — блоки в радиусе {core.radius} блоков, связанные с магнитопроводом через воду или масло:
+          радиаторная панель, промышленное и выветренное железо Create, листовые панели CDG, блоки железа, стали, цинка
+          и андезитового сплава (тег из мода). Каждый добавляет 1 / √расстояние: вплотную — +1, через блок — около +0,7.
+          Пример: в масле с обеих сторон и без радиаторов — {watts(core.base)}; без масла —{' '}
+          {watts(core.base * core.noOil * core.noOil)}.
+        </p>
+      )}
+
+      <h3>Как собрать</h3>
+      <ol>
+        <li>У генератора — повышающий трансформатор: вход к щёточному узлу, выход — на линию.</li>
+        <li>
+          Линию — проводом, который выдержит и напряжение (изоляция), и ток (таблица выше). Длинную — через опоры:
+          пролёт не длиннее предела провода.
+        </li>
+        <li>У потребителей — понижающий трансформатор с обратным соотношением.</li>
+        <li>
+          Каждый трансформатор пропускает всю мощность линии: если нужно больше {trMax ? watts(trMax) : '—'} —
+          магнитопровод с маслом и радиаторами.
+        </li>
+        <li>
+          Предохранитель на линию — с током срабатывания ниже предела провода, чтобы при перегрузке сгорел он, а не
+          линия (как предохранитель считает ток, по коду ещё не разбирали).
+        </li>
+      </ol>
+
+      <LineCalc rows={rows} data={data} h={h} trMax={trMax} coreLoad={coreLoad} />
+
+      <h3>Что проверено</h3>
+      <ul className="faint small">
+        <li>
+          По коду мода: сопротивление, пределы изоляции, длины пролётов и пределы температуры каждого провода; нагрев
+          провода током и общая формула нагрева; перегретый провод заменяется голым; поражение током выше предела
+          изоляции; шкала и нагрев одноблочного трансформатора; витки, охлаждение (масло, охладители, радиус) и взрыв
+          магнитопровода; заземляющий стержень 1 Ом.
+        </li>
+        <li>
+          Не проверено: в игре — ничего; какая сторона одноблочного трансформатора вход (смотрите понд); точная формула
+          опасного расстояния у голого провода (по коду от 0,1 до 3 блоков, растёт с напряжением); что нагревом проводов
+          управляет один расчёт за тик, как у остальной цепи.
+        </li>
+      </ul>
+    </article>
+  );
+}
+
+function LineCalc({
+  rows,
+  data,
+  h,
+  trMax,
+  coreLoad,
+}: {
+  rows: WireRow[];
+  data: PowerData;
+  h: HeatModel;
+  trMax: number | null;
+  coreLoad: number | null;
+}) {
+  const [power, setPower] = useState(20);
+  const [volts, setVolts] = useState(300);
+  const [length, setLength] = useState(1000);
+  const [wire, setWire] = useState('heavily_insulated');
+  const [ground, setGround] = useState(false);
+  const [k, setK] = useState(10);
+  const core = data.ee?.core;
+  const rod = data.ee?.groundRod;
+  const row = rows.find((r) => r.w.name === wire) ?? rows[0];
+  if (!row || row.ohmPerM === null) return null;
+
+  const p = power * 1000;
+  const calc = (kk: number) => {
+    const u = volts * kk;
+    const r = length * row.ohmPerM! * (ground ? 1 : 2) + (ground && rod ? rod.resistance * 2 : 0);
+    const i = p / u;
+    const loss = i * i * r;
+    return { u, r, i, loss, drop: i * r };
+  };
+  const c = calc(k);
+  const flat = calc(1);
+  const temp = Number.isFinite(row.maxTemp) && row.maxTemp < 1e12 ? steadyTemp(Math.min(h.maxCurrent, c.i), h) : 0;
+  const burn = row.maxI < Infinity ? stepsToTemp(Math.min(h.maxCurrent, c.i), row.maxTemp, h) : null;
+  const spans = row.span ? Math.ceil(length / row.span) : null;
+  // Наименьшее k: ток без искр, потери ≤ 5 %, напряжение в пределах изоляции (если провод изолирован)
+  const best = (() => {
+    for (let kk = 1; kk <= 100; kk += kk < 10 ? 0.5 : 1) {
+      const x = calc(kk);
+      if (x.i <= row.warnI && x.loss <= p * 0.05 && (row.insulation <= 0 || x.u <= row.insulation)) return kk;
+    }
+    return null;
+  })();
+  const coreNeed = core && coreLoad ? p / (core.base * coreLoad) : null;
+  const overInsulation = row.insulation > 0 && c.u > row.insulation;
+
+  return (
+    <section className="power-calc">
+      <h3>Калькулятор линии</h3>
+      <div className="power-form">
+        <NumField
+          label="Мощность потребителей"
+          value={power}
+          onChange={setPower}
+          min={0.1}
+          max={10000}
+          step={1}
+          unit="кВт"
+        />
+        <NumField
+          label="Напряжение генератора и потребителей"
+          value={volts}
+          onChange={setVolts}
+          min={1}
+          max={20000}
+          unit="В"
+        />
+        <NumField label="Длина линии" value={length} onChange={setLength} min={1} max={100000} unit="м" />
+        <label className="power-field">
+          <span className="faint small">Провод</span>
+          <select className="input" value={row.w.name} onChange={(e) => setWire(e.target.value)}>
+            {rows.map((r) => (
+              <option key={r.w.name} value={r.w.name}>
+                {r.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="power-field">
+          <span className="faint small">Обратный путь</span>
+          <select
+            className="input"
+            value={ground ? 'ground' : 'wire'}
+            onChange={(e) => setGround(e.target.value === 'ground')}
+          >
+            <option value="wire">Второй провод</option>
+            <option value="ground">Земля (два стержня)</option>
+          </select>
+        </label>
+        <NumField label="Повышение напряжения" value={k} onChange={setK} min={1} max={100} step={0.5} unit="×" />
+      </div>
+      <div className="power-outs">
+        <div className="power-out">
+          <span className="faint small">Напряжение линии</span>
+          <b className={cx(overInsulation && 'power-bad')}>{num(c.u)} В</b>
+          <span className={cx('small', overInsulation ? 'power-bad' : 'faint')}>
+            {row.insulation <= 0
+              ? 'голый провод — бьёт током при касании'
+              : overInsulation
+                ? `выше изоляции (${num(row.insulation)} В) — бьёт током`
+                : `изоляция до ${num(row.insulation)} В`}
+          </span>
+        </div>
+        <div className="power-out">
+          <span className="faint small">Ток в проводе</span>
+          <b className={cx(c.i > row.maxI && 'power-bad')}>{num(c.i, 1)} А</b>
+          <span className={cx('small', c.i > row.warnI ? 'power-bad' : 'faint')}>
+            {c.i > row.maxI
+              ? `сгорит${burn ? ` через ~${num(burn / 20)} с` : ''}`
+              : c.i > row.warnI
+                ? 'искрит, но держит'
+                : row.maxI < Infinity
+                  ? `нагрев ${num((temp / row.maxTemp) * 100)} % предела`
+                  : 'не перегревается'}
+          </span>
+        </div>
+        <div className="power-out">
+          <span className="faint small">Потери в линии</span>
+          <b className={cx(c.loss > p * 0.1 && 'power-bad')}>{watts(c.loss)}</b>
+          <span className="faint small">
+            {num((c.loss / (p + c.loss)) * 100, 1)} % · сопротивление {num(c.r, 2)} Ом
+          </span>
+        </div>
+        <div className="power-out">
+          <span className="faint small">Падение напряжения</span>
+          {/* Больше U² / 4R через сопротивление R не передать: напряжение у потребителей падает до нуля */}
+          {p > (c.u * c.u) / (4 * c.r) ? (
+            <>
+              <b className="power-bad">не передаст</b>
+              <span className="small power-bad">
+                линия пропустит не больше {watts((c.u * c.u) / (4 * c.r))} — поднимите напряжение
+              </span>
+            </>
+          ) : (
+            <>
+              <b>{num(c.drop, 1)} В</b>
+              <span className="faint small">у потребителей ≈ {num((c.u - c.drop) / k)} В</span>
+            </>
+          )}
+        </div>
+        <div className="power-out">
+          <span className="faint small">Без трансформаторов было бы</span>
+          <b>{num(flat.i, 1)} А</b>
+          <span className="faint small">
+            потери {watts(flat.loss)} ({num((flat.loss / (p + flat.loss)) * 100, 1)} %)
+          </span>
+        </div>
+        {spans !== null && (
+          <div className="power-out">
+            <span className="faint small">Пролётов (опор)</span>
+            <b>{num(spans)}</b>
+            <span className="faint small">пролёт до {num(row.span!)} м</span>
+          </div>
+        )}
+        <div className="power-out">
+          <span className="faint small">Трансформаторы на {watts(p)}</span>
+          <b>{trMax && p <= trMax ? 'хватит одноблочных' : 'нужен магнитопровод'}</b>
+          <span className="faint small">
+            {trMax && p <= trMax
+              ? `одноблочный держит ~${watts(trMax)}`
+              : coreNeed
+                ? `охлаждение ≥ ${num(coreNeed, 2)} (в масле с обеих сторон без радиаторов — 1)`
+                : ''}
+            {k > 50 ? '; повышение больше 50 — только магнитопроводом' : ''}
+          </span>
+        </div>
+        <div className="power-out">
+          <span className="faint small">Подходит повышение</span>
+          <b>{best !== null ? `от ${num(best, 1)}×` : 'не подобрать'}</b>
+          <span className="faint small">
+            {best !== null
+              ? 'без искр, потери ≤ 5 %, в пределах изоляции'
+              : 'этот провод не выдержит — возьмите другой или второй параллельно'}
+          </span>
+        </div>
+      </div>
+      <p className="faint small">
+        Трансформаторы считаются идеальными (по коду у них нет потерь), нагрузка — постоянной мощностью. Падение
+        напряжения на линии потребители почувствуют: двигатель отдаёт меньше SU, помпа крутится медленнее.
+      </p>
+    </section>
+  );
+}
+
+function LineDiagram() {
+  const box = (x: number, label: string, sub?: string) => (
+    <g>
+      <rect x={x} y={30} width={96} height={40} rx={5} className="power-load" />
+      <text x={x + 48} y={sub ? 47 : 54} textAnchor="middle" className="power-svg-text">
+        {label}
+      </text>
+      {sub && (
+        <text x={x + 48} y={62} textAnchor="middle" className="power-svg-text power-svg-sub">
+          {sub}
+        </text>
+      )}
+    </g>
+  );
+  return (
+    <figure className="power-figure power-figure-wide">
+      <svg
+        viewBox="0 0 640 100"
+        role="img"
+        aria-label="Схема линии: генератор, повышающий трансформатор, линия, понижающий трансформатор, потребители"
+      >
+        <line x1={96} y1={50} x2={140} y2={50} className="power-wire" />
+        <line x1={236} y1={50} x2={404} y2={50} className="power-wire power-hv" />
+        <line x1={500} y1={50} x2={544} y2={50} className="power-wire" />
+        {box(0, 'генератор', '300 В')}
+        {box(140, 'повышающий', '1:10')}
+        <text x={320} y={42} textAnchor="middle" className="power-svg-text">
+          линия, 3000 В, ток ÷10
+        </text>
+        <text x={320} y={68} textAnchor="middle" className="power-svg-text power-svg-sub">
+          потери ÷100
+        </text>
+        {box(404, 'понижающий', '10:1')}
+        {box(544, 'потребители', '300 В')}
+      </svg>
     </figure>
   );
 }

@@ -67,9 +67,97 @@ function catnipDefaults(cls, prefix) {
       if (key && /^\w+$/.test(key) && at > 0) {
         const nums = consts.slice(0, at);
         const bool = /ConfigBool;$/.test(r.desc);
-        out.push({ key: prefix ? `${prefix}.${key}` : key, default: bool ? nums[0] === 1 : nums[0] });
+        out.push({ key: prefix ? `${prefix}.${key}` : key, field: r.name, default: bool ? nums[0] === 1 : nums[0] });
       }
       consts = [];
+    }
+  }
+  return out;
+}
+
+/**
+ * Виды проводов EE: в CEEWireTypes.<clinit> «register("copper", () -> new WireType.Builder(…).resistance(cfg::get)
+ * .maxInsulationVoltage(…).maxTemperature(() -> 3540).maxLength(cfg::get)…build())». Из лямбды-строителя берём
+ * поле конфига или константу для каждого вызова Builder. fieldKey: поле класса конфига → ключ TOML.
+ */
+function wireTypes(cls, fieldKey, warnings) {
+  const method = (name, desc) => cls.methods.find((m) => m.name === name && (!desc || m.desc === desc) && m.code);
+  /** Константа, которую возвращает лямбда «() -> 3540.0» этого же класса */
+  const lambdaConst = (handle) => {
+    if (!handle || handle.owner !== cls.name) return null;
+    return constants(cls, handle.name)?.find((c) => typeof c === 'number') ?? null;
+  };
+  const indyHandle = (ins) => cls.bootstrap[cls.cp[ins.index].a]?.find((a) => a?.handle)?.handle;
+  const out = [];
+  let name = null;
+  let builder = null;
+  for (const ins of instructions(method('<clinit>')?.code ?? Buffer.alloc(0))) {
+    if (ins.op === 0x12 || ins.op === 0x13) {
+      const c = cls.constant(ins.index);
+      if (typeof c === 'string') name = c;
+    } else if (ins.op === 0xba) builder = indyHandle(ins);
+    else if (ins.op === 0xb6 && cls.ref(ins.index).name === 'register' && name && builder) {
+      const body = method(builder.name, builder.desc);
+      if (body) out.push({ name, ...builderProps(body) });
+      name = builder = null;
+    }
+  }
+  function builderProps(body) {
+    const props = {};
+    let field = null;
+    let value = null;
+    let item = null;
+    let own = null;
+    for (const ins of instructions(body.code)) {
+      const { op } = ins;
+      if (op === 0xb4) {
+        const r = cls.ref(ins.index);
+        if (/\/config\/C\w+$/.test(r.owner) && fieldKey.has(r.name)) field = fieldKey.get(r.name);
+      } else if (op === 0xb2) {
+        const r = cls.ref(ins.index);
+        if (/\/CEEItems$/.test(r.owner)) item = `electroenergetics:${r.name.toLowerCase()}`;
+        else if (r.owner === cls.name) own = r.name.toLowerCase();
+      } else if (op === 0x14 || op === 0x13 || op === 0x12) {
+        const c = cls.constant(ins.index);
+        if (typeof c === 'number') value = c;
+      } else if (op === 0xba) {
+        const v = lambdaConst(indyHandle(ins));
+        if (v !== null) value = v;
+      } else if (op === 0xb6) {
+        const r = cls.ref(ins.index);
+        if (!/\$Builder$/.test(r.owner)) continue;
+        const m = r.name;
+        if (m === 'resistance' || m === 'maxInsulationVoltage' || m === 'maxLength' || m === 'maxTemperature')
+          props[m] = field ? { key: field } : value !== null ? { value } : null;
+        else if (m === 'insulationResistance') props[m] = value;
+        else if (m === 'droppedItem') props.item = item;
+        else if (m === 'spoolItem') props.spool = item;
+        else if (m === 'replaceOnOverheated') props.overheated = own;
+        else if (m === 'decorative' || m === 'invulnerable') props[m] = true;
+        field = value = item = own = null;
+      }
+    }
+    return props;
+  }
+  if (!out.length) warnings.push('EE: виды проводов не найдены');
+  return out;
+}
+
+/** Значения строителя провода по умолчанию: в конструкторе «this.maxTemperature = () -> 1000» (лямбда без числа — 0) */
+function wireDefaults(cls) {
+  const out = {};
+  const init = cls?.methods.find((m) => m.name === '<init>' && m.code);
+  let handle = null;
+  for (const ins of instructions(init?.code ?? Buffer.alloc(0))) {
+    if (ins.op === 0xba) handle = cls.bootstrap[cls.cp[ins.index].a]?.find((a) => a?.handle)?.handle;
+    else if (ins.op === 0xb5) {
+      const r = cls.ref(ins.index);
+      if (handle && handle.owner === cls.name && /DoubleSupplier;$/.test(r.desc)) {
+        const body = cls.methods.find((m) => m.name === handle.name && m.desc === handle.desc);
+        const nums = body ? constants(cls, handle.name).filter((c) => typeof c === 'number') : [];
+        out[r.name] = nums[0] ?? 0;
+      }
+      handle = null;
     }
   }
   return out;
@@ -82,7 +170,7 @@ function expect(list, values, what, warnings) {
     return false;
   }
   const nums = list.filter((c) => typeof c === 'number');
-  const ok = values.every((v) => nums.some((n) => Math.abs(n - v) < 1e-9));
+  const ok = values.every((v) => nums.some((n) => Math.abs(n - v) <= Math.abs(v) * 1e-6 + 1e-12));
   if (!ok) warnings.push(`${what}: в коде нет ожидаемых чисел ${values.join(', ')} (есть ${nums.join(', ')})`);
   return ok;
 }
@@ -98,6 +186,67 @@ function buildEE(jar, warnings) {
     }
     keys.push(...catnipDefaults(cls, n === 'CServer' ? '' : sectionName(cls)));
   }
+
+  // Провода: нагрев за расчёт = ток (А, не больше 1000) по общей формуле updateTemp; искрят с 85 % предела, на пределе
+  // заменяются «перегретым» видом (WireLifetimeModule.finishSimulation)
+  const fieldKey = new Map(keys.map((k) => [k.field, k.key]));
+  const wires = wireTypes(classFrom(jar, `${EE}/CEEWireTypes`) ?? { methods: [] }, fieldKey, warnings);
+  const wireDefault = wireDefaults(classFrom(jar, `${EE}/simulation/WireType$Builder`));
+  if (wireDefault.maxTemperature === undefined) warnings.push('EE: предел температуры провода по умолчанию не найден');
+  const life = classFrom(jar, `${EE}/simulation/infrastructure/WireLifetimeModule`);
+  const lifeOk = expect(constants(life, 'finishSimulation'), [1000, 33.3, 0.85], 'EE: нагрев проводов', warnings);
+  // Общая формула нагрева устройств: T' = max(0, T − cool + (тепло + base) × min(1, 1 / (1 + T / scale)))
+  const dev = classFrom(jar, `${EE}/foundation/device/ElectricalDevice`);
+  const heatOk = expect(constants(dev, 'updateTemp'), [30, 1000, 33.3], 'EE: формула нагрева', warnings);
+
+  // Трансформатор (один блок): шкала соотношений — массив Couple(вход, выход) в <clinit>, середина шкалы — 1:1;
+  // нагрев = min(70000, |P|) / 10, разрушается выше 76000 (если componentDamage)
+  const tr = classFrom(jar, `${EE}/content/transmission_distribution/transformer/TransformerBlockEntity`);
+  const ratios = [];
+  {
+    const nums = [];
+    for (const ins of instructions(tr?.methods.find((m) => m.name === '<clinit>')?.code ?? Buffer.alloc(0))) {
+      if (ins.op >= 0x02 && ins.op <= 0x08) nums.push(ins.op - 0x03);
+      else if (ins.op === 0x10 || ins.op === 0x11) nums.push(ins.index);
+      else if (ins.op === 0xb8 && /Couple$/.test(tr.ref(ins.index).owner)) {
+        const [a, b] = nums.slice(-2);
+        ratios.push([a, b]);
+      }
+    }
+  }
+  const trDev = classFrom(jar, `${EE}/content/transmission_distribution/transformer/TransformerDevice`);
+  const trOk = expect(constants(trDev, 'postTick'), [70000, 10, 76000], 'EE: нагрев трансформатора', warnings);
+  if (!ratios.length) warnings.push('EE: соотношения трансформатора не найдены');
+  // Магнитопровод: витки 1…100 (по умолчанию 10); теплоотвод = 60000 × (1 + Σ 1/√расстояния по охладителям в радиусе
+  // √16) × 0,7 за каждую сторону без трансформаторного масла; нагрузка = |P| / теплоотвод (≤ 2,5), нагрев = × 1000,
+  // взрыв (сила 4) выше 31000
+  const core = classFrom(jar, `${EE}/content/transmission_distribution/transformer/TransformerCoreBlockEntity`);
+  const coreLazy = constants(core, 'lazyTick');
+  const coreOk =
+    expect(coreLazy, [0.7, 60000], 'EE: охлаждение магнитопровода', warnings) &&
+    expect(constants(core, 'heatDissipatorsDFS'), [16], 'EE: радиус охлаждения', warnings) &&
+    expect(
+      constants(
+        classFrom(jar, `${EE}/content/transmission_distribution/transformer/TransformerCoreDevice`),
+        'postTick',
+      ),
+      [2.5, 1000, 31000, 4],
+      'EE: перегрев магнитопровода',
+      warnings,
+    );
+  const turns = constants(core, 'addBehaviours')?.filter((c) => typeof c === 'number') ?? [];
+
+  // Охладители магнитопровода — тег блоков из jar (датапак сборки его не трогает — проверить при смене сборки)
+  const tagRaw = spawnSync('unzip', ['-p', jar, 'data/electroenergetics/tags/block/transformer_heat_dissipators.json']);
+  let dissipators = [];
+  try {
+    dissipators = JSON.parse(tagRaw.stdout.toString()).values.map((v) => (typeof v === 'string' ? v : v.id));
+  } catch {
+    warnings.push('EE: тег охладителей магнитопровода не прочитан');
+  }
+  // Заземляющий стержень: контакт 0 → общая земля с проводимостью 1 См (1 Ом)
+  const rod = classFrom(jar, `${EE}/content/ground_rod/GroundRodDevice`);
+  const rodOk = constants(rod, 'preTick')?.includes(1);
 
   // Ротор: нагрузка на вал = статоры × 0,125 × rotorPowerMultiplier × rotorStressMultiplier (SU на 1 об/мин)
   const rotor = classFrom(jar, `${EE}/content/rotor/AlternatorRotorBlockEntity`);
@@ -154,6 +303,26 @@ function buildEE(jar, warnings) {
   return {
     file: 'electroenergetics-server.toml',
     keys,
+    wires,
+    wireDefault,
+    dissipators,
+    groundRod: rodOk ? { resistance: 1 } : null,
+    wireHeat: lifeOk && heatOk ? { cool: 33.3, base: 30, scale: 1000, warn: 0.85, maxCurrent: 1000 } : null,
+    transformer: trOk && ratios.length ? { ratios, heatDivisor: 10, heatCap: 70000, breakTemp: 76000 } : null,
+    core: coreOk
+      ? {
+          base: 60000,
+          noOil: 0.7,
+          radius: 4,
+          maxLoad: 2.5,
+          heatPerLoad: 1000,
+          breakTemp: 31000,
+          explosion: 4,
+          turnsMin: turns[1] ?? 1,
+          turnsMax: turns[2] ?? 100,
+          turnsDefault: turns[3] ?? 10,
+        }
+      : null,
     ac: acOk && phaseOk ? { hzPerRpm: 0.15625, phaseShift: 120 } : null,
     pump: pumpMax ? { maxSpeed: pumpMax } : null,
     diode: diodeOk ? { saturation: 1e-9, thermal: 0.05 } : null,

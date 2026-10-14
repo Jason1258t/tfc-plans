@@ -228,3 +228,17 @@
 .power-link:hover {
   text-decoration: underline;
 }
+
+.power-hv {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.power-svg-sub {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.power-figure-wide svg {
+  max-width: 100%;
+}
