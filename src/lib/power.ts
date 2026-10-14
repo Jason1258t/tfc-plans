@@ -8,11 +8,12 @@ import { useModConfig, type ConfigOrigin, type ModConfig } from './config';
  */
 
 /** Подразделы вкладки «Электричество» */
-export type PowerSub = 'link' | 'ee' | 'ie';
+export type PowerSub = 'link' | 'ee' | 'ie' | 'guides';
 export const POWER_SUBS: { id: PowerSub; label: string }[] = [
   { id: 'link', label: 'Как связаны' },
   { id: 'ee', label: 'Нагрузки EE' },
   { id: 'ie', label: 'Сеть IE' },
+  { id: 'guides', label: 'Гайды' },
 ];
 
 export interface PowerKey {
@@ -32,7 +33,14 @@ export interface PowerData {
     converter: { minResistance: number; voltageStep: number; voltageMax: number; voltageDefault: number } | null;
     /** Запас энергии генератора — столько тиков его мощности */
     generator: { bufferTicks: number } | null;
+    /** Трёхфазный щёточный узел: частота = hzPerRpm × об/мин, фазы через phaseShift градусов */
+    ac?: { hzPerRpm: number; phaseShift: number } | null;
+    /** Электропомпа: скорость = U² / pumpResistance / нагрузка механической помпы, не больше maxSpeed */
+    pump?: { maxSpeed: number } | null;
+    /** Диод (модель Шокли): ток насыщения, А, и тепловое напряжение, В */
+    diode?: { saturation: number; thermal: number } | null;
   } | null;
+  create?: { jar: string; file: string; pumpImpact: number | null } | null;
   ie: {
     jar: string;
     file: string;
@@ -160,3 +168,45 @@ export function motor(
 
 /** Резистивная нагрузка: мощность и ток при напряжении */
 export const resistive = (volts: number, ohms: number) => ({ power: (volts * volts) / ohms, current: volts / ohms });
+
+// ---------------------------------------------------------------- переменный ток и выпрямители
+
+const RAD = Math.PI / 180;
+
+/** Схема питания помпы: от обычного узла, напрямую от фазы, мостом на 6 диодов, мостом на 4 диода с конденсатором */
+export type Rectifier = 'dc' | 'raw' | 'bridge3' | 'bridge1' | 'bridge1cap';
+
+/**
+ * Напряжение на выходе схемы при угле ротора θ (градусы), без падения на диодах. amp — амплитуда фазы.
+ * Мост на 6 диодах отдаёт разность самой высокой и самой низкой фазы: от 1,5 до √3 амплитуды.
+ */
+export function rectified(kind: Rectifier, amp: number, theta: number, shift = 120): number {
+  const ph = [0, shift, 2 * shift].map((o) => amp * Math.sin((theta + o) * RAD));
+  if (kind === 'dc') return amp;
+  if (kind === 'raw') return ph[0];
+  if (kind === 'bridge3') return Math.max(...ph) - Math.min(...ph);
+  if (kind === 'bridge1') return Math.abs(ph[0]);
+  // С конденсатором — до пика; насколько он проседает между пиками, зависит от ёмкости (не считаем)
+  return amp;
+}
+
+/** Сколько диодов на пути тока в схеме */
+export const diodesInPath = (kind: Rectifier) => (kind === 'bridge3' || kind.startsWith('bridge1') ? 2 : 0);
+
+/** Падение на диоде при токе I по модели Шокли: Vt × ln(I / Is + 1) */
+export const diodeDrop = (current: number, d: { saturation: number; thermal: number }) =>
+  current > 0 ? d.thermal * Math.log(current / d.saturation + 1) : 0;
+
+/** Скорость электропомпы: U² / R / нагрузка механической помпы Create, в пределах maxSpeed; |U| ≤ 1 В — стоит */
+export function pumpSpeed(volts: number, p: { resistance: number; impact: number; maxSpeed: number }) {
+  if (Math.abs(volts) <= 1) return 0;
+  return Math.min(p.maxSpeed, (volts * volts) / p.resistance / p.impact);
+}
+
+/** Напряжение для нужной скорости помпы */
+export const pumpVolts = (speed: number, p: { resistance: number; impact: number }) =>
+  Math.sqrt(speed * p.resistance * p.impact);
+
+/** На сколько градусов поворачивается фаза между расчётами цепи (расчёт — microTicks раз за тик, 20 тиков в секунду) */
+export const degreesPerStep = (rpm: number, hzPerRpm: number, microTicks: number) =>
+  (360 * hzPerRpm * Math.abs(rpm)) / 20 / Math.max(1, microTicks);

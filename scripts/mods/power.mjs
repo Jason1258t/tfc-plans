@@ -130,9 +130,33 @@ function buildEE(jar, warnings) {
   const gen = classFrom(jar, `${EE}/foundation/base/GeneratingDevice`);
   const genOk = expect(constants(gen, 'postTick'), [10], 'EE: запас генератора', warnings);
 
+  // Переменный ток (трёхфазный щёточный узел): фаза = амплитуда × sin(угол + 0/120/240°), угол растёт на
+  // 360 × об/мин × 0,15625 / 20 / расчётов за тик градусов за расчёт → частота 0,15625 × об/мин Гц
+  const virtual = classFrom(jar, `${EE}/content/rotor/VirtualRotor`);
+  const acOk = expect(constants(virtual, 'swing'), [360, 0.15625, 20], 'EE: частота переменного тока', warnings);
+  const phases = classFrom(jar, `${EE}/content/rotor/ThreePhaseAlternatorBrushesDevice`);
+  const phaseOk = expect(constants(phases, '<init>'), [120, 240], 'EE: сдвиг фаз', warnings);
+  const simCfg = classFrom(jar, `${EE}/config/CSimulation`);
+  if (simCfg) keys.push(...catnipDefaults(simCfg, sectionName(simCfg)));
+
+  // Помпа: скорость = U² / pumpResistance / нагрузка механической помпы Create, в пределах ±300; напряжение —
+  // мгновенное, в каждом расчёте (без усреднения, в отличие от двигателя)
+  const pumpBe = classFrom(jar, `${EE}/content/electric_pump/ElectricPumpBlockEntity`);
+  const pumpMax = constants(pumpBe, 'getSpeed')?.find((c) => typeof c === 'number' && c > 1);
+  if (!pumpMax) warnings.push('EE: предел скорости помпы не найден');
+
+  // Диод — модель Шокли: I = Is × (e^(U/Vt) − 1), напряжение линеаризации в пределах ±0,8 В
+  const diode = classFrom(jar, `${EE}/foundation/electrical_properties/DiodeProperties`);
+  const diodeOk = expect(constants(diode, 'tickDiode'), [1e-9, 0.05, 0.8], 'EE: модель диода', warnings);
+
+  // Конденсатор: предел напряжения — capacitorVoltage / highVoltageCapacitorVoltage из настроек
+
   return {
     file: 'electroenergetics-server.toml',
     keys,
+    ac: acOk && phaseOk ? { hzPerRpm: 0.15625, phaseShift: 120 } : null,
+    pump: pumpMax ? { maxSpeed: pumpMax } : null,
+    diode: diodeOk ? { saturation: 1e-9, thermal: 0.05 } : null,
     rotor: rotorK !== undefined ? { stressFactor: rotorK, sides: 4 } : null,
     motor: motorOk && capOk ? { minLoad: 0.05, loadedFactor: 0.8, idleFactor: 6 } : null,
     converter: convOk
@@ -185,16 +209,49 @@ function buildIE(jar, warnings) {
   };
 }
 
+/**
+ * Нагрузка механической помпы Create по умолчанию (входит в формулу скорости электропомпы EE): в AllBlocks.<clinit>
+ * «.transform(CStress.setImpact(4.0))» идёт после имени блока. Сервер переопределяет её в create-server.toml →
+ * kinetics.stressValues.v2.impact.mechanical_pump. Остальные блоки так не разобрать: имя не всегда стоит рядом
+ * со значением (у подшипника ветряка оно приписалось бы коробке передач) — для них нужен разбор вызовов block(…).
+ */
+function buildCreate(jar, warnings) {
+  const cls = classFrom(jar, 'com/simibubi/create/AllBlocks');
+  const clinit = cls?.methods.find((m) => m.name === '<clinit>' && m.code);
+  let name = null;
+  let value = null;
+  let pumpImpact = null;
+  for (const ins of instructions(clinit?.code ?? Buffer.alloc(0))) {
+    const { op } = ins;
+    if (op === 0x12 || op === 0x13 || op === 0x14) {
+      const c = cls.constant(ins.index);
+      if (typeof c === 'string' && /^[a-z0-9_]+$/.test(c)) name = c;
+      else if (typeof c === 'number') value = c;
+    } else if (op === 0x0e || op === 0x0f) value = op - 0x0e;
+    else if (op === 0xb8) {
+      const r = cls.ref(ins.index);
+      if (/\/CStress$/.test(r.owner) && r.name === 'setImpact' && name === 'mechanical_pump') pumpImpact = value;
+      if (/\/CStress$/.test(r.owner)) name = null;
+      value = null;
+    }
+  }
+  if (pumpImpact === null) warnings.push('Create: нагрузка механической помпы не найдена');
+  return { file: 'create-server.toml', pumpImpact };
+}
+
 export function buildPower(jarPaths) {
   const warnings = [];
   const find = (re) => jarPaths.find((j) => re.test(path.basename(j)));
   const eeJar = find(/^electroenergetics-/i);
   const ieJar = find(/^ImmersiveEngineering-/i);
+  const createJar = find(/^create-1\./i);
+  if (!createJar) warnings.push('нет jar Create');
   if (!eeJar) warnings.push('нет jar Create Electro Energetics');
   if (!ieJar) warnings.push('нет jar Immersive Engineering');
   const data = {
     ee: eeJar ? { jar: path.basename(eeJar), ...buildEE(eeJar, warnings) } : null,
     ie: ieJar ? { jar: path.basename(ieJar), ...buildIE(ieJar, warnings) } : null,
+    create: createJar ? { jar: path.basename(createJar), ...buildCreate(createJar, warnings) } : null,
   };
   return { data, warnings };
 }

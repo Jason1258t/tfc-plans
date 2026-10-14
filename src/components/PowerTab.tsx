@@ -14,6 +14,7 @@ import {
 } from '../lib/power';
 import { cx } from '../lib/util';
 import { ItemIcon } from './ItemIcon';
+import { PowerGuides } from './PowerGuides';
 import './PowerTab.css';
 
 /**
@@ -42,7 +43,17 @@ const EE_BLOCK = {
   transformer: 'electroenergetics:transformer',
 };
 
-export function PowerTab({ sub, onSub }: { sub: PowerSub; onSub: (s: PowerSub) => void }) {
+export function PowerTab({
+  sub,
+  onSub,
+  guide,
+  onGuide,
+}: {
+  sub: PowerSub;
+  onSub: (s: PowerSub) => void;
+  guide: string | null;
+  onGuide: (id: string | null) => void;
+}) {
   const data = usePower();
   return (
     <div className="botany">
@@ -59,7 +70,7 @@ export function PowerTab({ sub, onSub }: { sub: PowerSub; onSub: (s: PowerSub) =
         ) : data === null ? (
           <div className="empty">Данные по электричеству не собраны — выполните npm run mods</div>
         ) : (
-          <Body data={data} sub={sub} />
+          <Body data={data} sub={sub} guide={guide} onGuide={onGuide} />
         )}
       </div>
     </div>
@@ -67,11 +78,22 @@ export function PowerTab({ sub, onSub }: { sub: PowerSub; onSub: (s: PowerSub) =
 }
 
 /** Все настройки обоих модов — один раз, дальше по разделам */
-function Body({ data, sub }: { data: PowerData; sub: PowerSub }) {
+function Body({
+  data,
+  sub,
+  guide,
+  onGuide,
+}: {
+  data: PowerData;
+  sub: PowerSub;
+  guide: string | null;
+  onGuide: (id: string | null) => void;
+}) {
   const ee = useSettings(data.ee?.file, data.ee?.keys);
   const ie = useSettings(data.ie?.file, data.ie?.keys);
   if (sub === 'ee') return <EeLoads data={data} s={ee.get} />;
   if (sub === 'ie') return <IeNet data={data} s={ie.get} ee={ee.get} />;
+  if (sub === 'guides') return <PowerGuides data={data} ee={ee.get} guide={guide} onGuide={onGuide} />;
   return <Link_ data={data} ee={ee.get} ie={ie.get} />;
 }
 

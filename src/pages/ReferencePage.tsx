@@ -89,6 +89,8 @@ export function ReferencePage() {
           onSub={(k: PowerSub) =>
             setParams(k === 'link' ? { tab: 'power' } : { tab: 'power', sub: k }, { replace: true })
           }
+          guide={params.get('g')}
+          onGuide={(g) => setParams(g ? { tab: 'power', sub: 'guides', g } : { tab: 'power', sub: 'guides' })}
         />
       ) : ref === undefined ? (
         <div className="empty">Загружаю справочник…</div>

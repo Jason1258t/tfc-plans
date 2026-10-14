@@ -108,3 +108,123 @@
   font-weight: 600;
   text-transform: uppercase;
 }
+
+.power-back {
+  align-self: flex-start;
+}
+
+.power-guides {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.power-article h3 {
+  margin: 8px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.power-article p,
+.power-article ul,
+.power-article ol {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.power-article ul,
+.power-article ol {
+  padding-left: 20px;
+}
+
+.power-calc {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.power-calc h3 {
+  margin: 0;
+}
+
+.power-figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.power-figure svg {
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+  color: var(--text);
+}
+
+.power-wire,
+.power-axis {
+  stroke: currentColor;
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.power-axis {
+  opacity: 0.4;
+}
+
+.power-diode polygon {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+
+.power-diode line,
+.power-cap line {
+  stroke: currentColor;
+  stroke-width: 2.5;
+}
+
+.power-dot {
+  fill: currentColor;
+}
+
+.power-term {
+  fill: var(--surface);
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.power-load {
+  fill: var(--surface);
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.power-bar {
+  fill: var(--accent);
+}
+
+.power-svg-text {
+  fill: currentColor;
+  font-size: 12px;
+}
+
+.power-bad {
+  color: var(--danger);
+}
+
+.power-link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.power-link:hover {
+  text-decoration: underline;
+}
