@@ -61,8 +61,8 @@ export interface PowerData {
     ac?: { hzPerRpm: number; phaseShift: number } | null;
     /** Электропомпа: скорость = U² / pumpResistance / нагрузка механической помпы, не больше maxSpeed */
     pump?: { maxSpeed: number } | null;
-    /** Диод (модель Шокли): ток насыщения, А, и тепловое напряжение, В */
-    diode?: { saturation: number; thermal: number } | null;
+    /** Диод (модель Шокли): ток насыщения, А, тепловое напряжение, В, и предел точки линеаризации, В */
+    diode?: { saturation: number; thermal: number; clamp?: number } | null;
     /** Виды проводов: значение — ключ настройки или число из кода; нет поля — значение строителя по умолчанию */
     wires?: EeWire[];
     wireDefault?: { maxInsulationVoltage?: number; maxTemperature?: number };
@@ -242,8 +242,21 @@ export function rectified(kind: Rectifier, amp: number, theta: number, shift = 1
 export const diodesInPath = (kind: Rectifier) => (kind === 'bridge3' || kind.startsWith('bridge1') ? 2 : 0);
 
 /** Падение на диоде при токе I по модели Шокли: Vt × ln(I / Is + 1) */
-export const diodeDrop = (current: number, d: { saturation: number; thermal: number }) =>
-  current > 0 ? d.thermal * Math.log(current / d.saturation + 1) : 0;
+/**
+ * Падение на диоде EE при токе I. До clamp (0,8 В) — Шокли: Vt × ln(I / Is + 1). Выше EE не сдвигает точку
+ * линеаризации, и диод ведёт себя как прямая: V = clamp + (I − I(clamp)) / g, g = Is / Vt × e^(clamp / Vt) ≈ 0,18 См.
+ */
+export function diodeDrop(current: number, d: { saturation: number; thermal: number; clamp?: number }) {
+  if (current <= 0) return 0;
+  const clamp = d.clamp ?? Infinity;
+  const atClamp = d.saturation * (Math.exp(clamp / d.thermal) - 1);
+  if (current <= atClamp) return d.thermal * Math.log(current / d.saturation + 1);
+  return clamp + (current - atClamp) / ((d.saturation / d.thermal) * Math.exp(clamp / d.thermal));
+}
+
+/** Сопротивление открытого диода EE при больших токах, Ом */
+export const diodeResistance = (d: { saturation: number; thermal: number; clamp?: number }) =>
+  d.clamp ? 1 / ((d.saturation / d.thermal) * Math.exp(d.clamp / d.thermal)) : 0;
 
 /** Скорость электропомпы: U² / R / нагрузка механической помпы Create, в пределах maxSpeed; |U| ≤ 1 В — стоит */
 export function pumpSpeed(volts: number, p: { resistance: number; impact: number; maxSpeed: number }) {

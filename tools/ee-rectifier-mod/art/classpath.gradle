@@ -1,0 +1,6 @@
+// Печатает путь классов компиляции (Minecraft, NeoForge, Create, EE) — для art/CheckNodes.java
+allprojects {
+    afterEvaluate {
+        tasks.register('printCompileClasspath') { doLast { println 'CP=' + sourceSets.main.compileClasspath.asPath } }
+    }
+}

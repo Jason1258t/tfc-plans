@@ -242,3 +242,49 @@
 .power-figure-wide svg {
   max-width: 100%;
 }
+
+.power-addon-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.power-addon-row p {
+  flex: 1 1 280px;
+}
+
+.power-pixel {
+  width: 96px;
+  height: 96px;
+  image-rendering: pixelated;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.power-addon-block {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.power-recipe {
+  display: grid;
+  grid-template-columns: repeat(3, 34px);
+  gap: 2px;
+}
+
+.power-recipe-cell {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.power-addon-block > .grow {
+  flex: 1 1 260px;
+  min-width: 0;
+}

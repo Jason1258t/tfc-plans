@@ -7,6 +7,7 @@
 - Firebase-проект `tfc-plans-fd2c`: Firestore (eur3), анонимный вход, App Check (reCAPTCHA Enterprise), AI Logic (Gemini)
 - Что уже сделано и что висит — в [docs/STATE.md](docs/STATE.md). **Обновляй его в конце работы**, если состояние изменилось.
 - Устройство и инструкции для людей — в [README.md](README.md); планы крупных фич — в `docs/plans/`.
+- Свои моды сборки (аддоны) — `tools/<мод>-mod/`; как их собирать и проверять без игры — [docs/addons.md](docs/addons.md).
 
 ## Как работаем
 
@@ -107,6 +108,7 @@ src/lib/
   projection.ts geo.ts atlas.ts config.ts   карта TFC Real World, настройки мира из конфига сервера
   packUpdates.ts gemini.ts     обновления сборки, запросы к Gemini (цепочки моделей с запасными, таймаут 90 с)
   files.ts files.config.ts     вложения через firestore-files
+tools/            аддоны сборки (ee-rectifier-mod, ee-overheat-mod) — docs/addons.md; на сайте — lib/addons.ts, AddonsTab
 scripts/          mods.mjs + mods/{reference,tags,botany,meals,cuisine,power,geo,manifest,classfile,config-defaults}.mjs, serverconfig.mjs,
                   kubejs.mjs, pack-release.mjs; firestore-rest.mjs — общий доступ к Firestore
 docs/plans/       планы фич со статусами; docs/STATE.md — текущее состояние

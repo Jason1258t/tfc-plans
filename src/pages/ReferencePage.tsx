@@ -9,6 +9,7 @@ import { useTags } from '../lib/tags';
 import { ItemIcon } from '../components/ItemIcon';
 import { LiquidFuelTab } from '../components/LiquidFuelTab';
 import { MapPage } from './MapPage';
+import { AddonsTab } from '../components/AddonsTab';
 import { PowerTab } from '../components/PowerTab';
 import { POWER_SUBS, type PowerSub } from '../lib/power';
 import type { BotanySub } from '../lib/botany';
@@ -32,7 +33,7 @@ import {
 import { cx } from '../lib/util';
 import './ReferencePage.css';
 
-type Tab = 'ores' | 'fuel' | 'metals' | 'food' | 'botany' | 'power' | 'map';
+type Tab = 'ores' | 'fuel' | 'metals' | 'food' | 'botany' | 'power' | 'addons' | 'map';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'ores', label: 'Руды' },
   { id: 'fuel', label: 'Топливо' },
@@ -40,6 +41,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'food', label: 'Еда' },
   { id: 'botany', label: 'Ботаника' },
   { id: 'power', label: 'Электричество' },
+  { id: 'addons', label: 'Аддоны' },
   { id: 'map', label: 'Карта' },
 ];
 
@@ -83,6 +85,8 @@ export function ReferencePage() {
       </div>
       {tab === 'map' ? (
         <MapPage />
+      ) : tab === 'addons' ? (
+        <AddonsTab />
       ) : tab === 'power' ? (
         <PowerTab
           sub={POWER_SUBS.find((s) => s.id === params.get('sub'))?.id ?? 'link'}

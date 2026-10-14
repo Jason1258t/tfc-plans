@@ -325,7 +325,9 @@ function buildEE(jar, warnings) {
       : null,
     ac: acOk && phaseOk ? { hzPerRpm: 0.15625, phaseShift: 120 } : null,
     pump: pumpMax ? { maxSpeed: pumpMax } : null,
-    diode: diodeOk ? { saturation: 1e-9, thermal: 0.05 } : null,
+    // Точка линеаризации ограничена ±0,8 В: выше неё диод EE — прямая с проводимостью Is/Vt·e^(0,8/Vt) (≈ 5,6 Ом);
+    // проверено в симуляции EE (tools/ee-rectifier-mod/test-server.sh): 2,78 А → 16,4 В на диоде
+    diode: diodeOk ? { saturation: 1e-9, thermal: 0.05, clamp: 0.8 } : null,
     rotor: rotorK !== undefined ? { stressFactor: rotorK, sides: 4 } : null,
     motor: motorOk && capOk ? { minLoad: 0.05, loadedFactor: 0.8, idleFactor: 6 } : null,
     converter: convOk

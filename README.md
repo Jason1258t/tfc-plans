@@ -213,6 +213,12 @@ node scripts/seed-recipe-hints.mjs
 значения настроек модов по умолчанию (`public/config-defaults.json`); импортированный конфиг сервера их переопределяет. Что ещё не разобрано —
 в `docs/plans/botany.md`.
 
+### Аддоны сборки (вкладка справочника и `tools/`)
+
+Свои моды группы: выпрямители для Electro Energetics (`tools/ee-rectifier-mod`), перегрев нагревателя EE
+(`tools/ee-overheat-mod`). Для игроков — вкладка «Аддоны» справочника (описание, рецепты, скачать jar из
+`/addons/`); как делать и проверять свои — [docs/addons.md](docs/addons.md).
+
 ### Электричество (вкладка справочника)
 
 `public/power.json` собирает `scripts/mods/power.mjs`: значения настроек Electro Energetics по умолчанию (конфиг мода
