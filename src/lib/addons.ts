@@ -90,5 +90,11 @@ export const ADDONS: Addon[] = [
 ];
 
 /** Документация по разработке аддонов — в репозитории */
+export type AddonsSub = 'list' | 'guides';
+export const ADDONS_SUBS: { id: AddonsSub; label: string }[] = [
+  { id: 'list', label: 'Аддоны сборки' },
+  { id: 'guides', label: 'Как написать свой' },
+];
+
 export const ADDONS_DEV_DOC = 'https://github.com/Jason1258t/tfc-plans/blob/main/docs/addons.md';
 export const REPO_TREE = 'https://github.com/Jason1258t/tfc-plans/tree/main/';

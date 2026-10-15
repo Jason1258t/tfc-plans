@@ -68,7 +68,33 @@ export interface PowerData {
      */
     rotor: { magnetsPerStator: number; baseMagnets: number; sides: number; maxRotors: number | null } | null;
     /** Сопротивление двигателя: loadedFactor × min(idleFactor × R, R / нагрузка), нагрузка не меньше minLoad */
-    motor: { minLoad: number; loadedFactor: number; idleFactor: number } | null;
+    motor: {
+      minLoad: number;
+      loadedFactor: number;
+      idleFactor: number;
+      /** Напряжение — среднеквадратичное за rmsWindow × microTicks расчётов; SU меняет не чаще раза в updateTicks */
+      rmsWindow?: number;
+      updateTicks?: number;
+      maxSpeed?: number;
+      defaultSpeed?: number;
+    } | null;
+    /**
+     * Нагреватель: в сети — резистор circuitOhms (константа); нагрев за расчёт: heat += min(1, U² / R / wattsFull) × gain,
+     * heat × keep (R — настройка resistiveHeaterResistance); уровни Create: smouldering / fading / kindled
+     */
+    heater?: {
+      circuitOhms: number;
+      wattsFull: number;
+      gain: number;
+      keep: number;
+      smouldering: number;
+      fading: number;
+      kindled: number;
+    } | null;
+    /** Ячейка аккумулятора: ЭДС = cellVoltage × (lg(1000 × заряд) / 4 + 0,25), внутреннее сопротивление; ячеек в блоке */
+    accumulator?: { cellVoltage: number; internalResistance: number; cellsPerBlock: number } | null;
+    /** Предохранитель/автомат: срабатывает выше perAmp × (номинал − offset) °; автомат — мгновенно выше instantFactor × номинал */
+    fuse?: { perAmp: number; offset: number; coolBelow: number; instantFactor: number; defaultAmps: number } | null;
     converter: { minResistance: number; voltageStep: number; voltageMax: number; voltageDefault: number } | null;
     /** Запас энергии генератора — столько тиков его мощности */
     generator: { bufferTicks: number } | null;

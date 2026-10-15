@@ -1,23 +1,65 @@
 import { Download } from 'lucide-react';
-import { ADDONS, ADDONS_DEV_DOC, REPO_TREE, type AddonBlock } from '../lib/addons';
+import { lazy, Suspense } from 'react';
+import { ADDONS, ADDONS_DEV_DOC, ADDONS_SUBS, REPO_TREE, type AddonBlock, type AddonsSub } from '../lib/addons';
 import { itemName, useItems } from '../lib/items';
+import { cx } from '../lib/util';
 import { ItemIcon } from './ItemIcon';
 import './PowerTab.css';
 
-/** Справочник → Аддоны: свои моды группы — что делают, рецепты, скачать, как поставить, что проверено */
-export function AddonsTab() {
+const AddonsGuidesSection = lazy(() => import('./guides/AddonsGuidesSection'));
+
+/** Справочник → Аддоны: свои моды группы и гайды «как написать свой» */
+export function AddonsTab({
+  sub,
+  onSub,
+  guide,
+  onGuide,
+}: {
+  sub: AddonsSub;
+  onSub: (s: AddonsSub) => void;
+  guide: string | null;
+  onGuide: (id: string | null) => void;
+}) {
   return (
-    <div className="power">
+    <div className="botany">
+      <nav className="botany-nav" aria-label="Разделы аддонов">
+        {ADDONS_SUBS.map((s) => (
+          <button key={s.id} className={cx(sub === s.id && 'active')} onClick={() => onSub(s.id)}>
+            <span>{s.label}</span>
+          </button>
+        ))}
+      </nav>
+      <div className="botany-main power">
+        {sub === 'guides' ? (
+          <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>
+            <AddonsGuidesSection guide={guide} onGuide={onGuide} />
+          </Suspense>
+        ) : (
+          <AddonList onGuides={() => onSub('guides')} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Свои моды группы — что делают, рецепты, скачать, как поставить, что проверено */
+function AddonList({ onGuides }: { onGuides: () => void }) {
+  return (
+    <>
       <section className="ref-card">
         <h2 className="power-h">Аддоны сборки</h2>
         <p className="small">
           Маленькие моды, которые группа сделала сама под эту сборку. Каждый ставится в папку <code>mods</code> —{' '}
           <b>на сервер и всем игрокам</b>, если добавляет блоки (иначе клиент не войдёт на сервер). Исходники и сборка —
-          в репозитории сайта; как сделать свой —{' '}
+          в репозитории сайта. Как сделать свой —{' '}
+          <button type="button" className="power-link" onClick={onGuides}>
+            гайды
+          </button>{' '}
+          (с нуля) и{' '}
           <a href={ADDONS_DEV_DOC} target="_blank" rel="noreferrer">
-            «Разработка аддонов»
-          </a>
-          .
+            заметки разработчика
+          </a>{' '}
+          (сборка, проверка на сервере разработки).
         </p>
       </section>
       {ADDONS.map((a) => (
@@ -57,7 +99,7 @@ export function AddonsTab() {
           </div>
         </section>
       ))}
-    </div>
+    </>
   );
 }
 

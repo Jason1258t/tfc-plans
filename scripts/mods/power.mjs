@@ -274,6 +274,38 @@ function buildEE(jar, warnings) {
   const capOk = motorBe?.methods.some((m) => m.name === 'calculateMotorCapacity' && m.desc === '(D)F');
   if (!capOk) warnings.push('EE: формула мощности двигателя (calculateMotorCapacity) не найдена');
 
+  // Двигатель: напряжение — среднеквадратичное за 3 × microTicks последних расчётов (RMSHolder), SU и обороты меняет
+  // не чаще раза в 12 тиков; шкала ±256 об/мин (по умолчанию 32); режим «🔓» — обороты = V²/R / множитель шкалы
+  const motorRmsOk = expect(constants(motorBe, '<init>'), [3, 12], 'EE: усреднение двигателя', warnings);
+  const motorScaleOk = expect(constants(motorBe, 'addBehaviours'), [256, 32], 'EE: шкала двигателя', warnings);
+
+  // Нагреватель: в сети — резистор 45 Ом (константа, не настройка!); нагрев — по настройке resistiveHeaterResistance:
+  // heat += clamp(U² / R / 16000, 0, 1) × 0,05; heat × 0,977 каждый расчёт; уровни Create: ≥ 0,1 / 0,2 / 0,6
+  const heaterDev = classFrom(jar, `${EE}/content/resistive_heater/ResistiveHeaterDevice`);
+  const heaterBe = classFrom(jar, `${EE}/content/resistive_heater/ResistiveHeaterBlockEntity`);
+  const heaterOk =
+    expect(constants(heaterDev, 'preTick'), [45], 'EE: сопротивление нагревателя в сети', warnings) &&
+    expect(constants(heaterBe, 'setVoltage'), [16000, 0.05, 0.977], 'EE: нагрев нагревателя', warnings) &&
+    expect(constants(heaterBe, 'calculateHeatLevel'), [0.6, 0.2, 0.1], 'EE: уровни нагревателя', warnings);
+
+  // Аккумулятор: ячейка 24 В, внутреннее 0,1 Ом, заряд до maxAccumulatorCharge кулон; ЭДС = 24 × (lg(1000 × заряд) / 4
+  // + 0,25), ниже 0,001 % — 0; в блоке одна или две независимые ячейки, у каждой свои контакты
+  const acc = classFrom(jar, `${EE}/foundation/electrical_properties/AccumulatorProperties`);
+  const accOk =
+    expect(constants(acc, '<init>'), [0.1, 24], 'EE: ячейка аккумулятора', warnings) &&
+    expect(constants(acc, 'baseOpenCircuitVoltage'), [1e-5, 1000, 4, 0.25], 'EE: ЭДС аккумулятора', warnings);
+
+  // Предохранитель и автомат: греются током по updateTemp; срабатывают, когда температура выше 30 × (номинал − 3,3)
+  // (finalTempAt); ниже 1 А остывают сразу. Автомат на щите ещё и мгновенно — выше 5 × номинала; номинал 1…maxFuseAmperage
+  const fuseOk =
+    expect(constants(dev, 'finalTempAt'), [30, 3.3], 'EE: порог предохранителя', warnings) &&
+    expect(
+      constants(classFrom(jar, `${EE}/content/electrical_panel/attachments/MCBPanelAttachment`), 'postTick'),
+      [5],
+      'EE: мгновенное срабатывание автомата',
+      warnings,
+    );
+
   // Преобразователь: буфер converterMaxPower × 1000, сопротивление потребителя не меньше 20 Ом,
   // напряжение источника — шкала 0…432 × 10 В, по умолчанию 10 × 10
   const conv = classFrom(jar, `${EE}/content/converter/ConverterDevice`);
@@ -343,7 +375,20 @@ function buildEE(jar, warnings) {
       rotorK !== undefined && perStator
         ? { magnetsPerStator: perStator, baseMagnets: rotorK, sides: 4, maxRotors: maxRotors ?? null }
         : null,
-    motor: motorOk && capOk ? { minLoad: 0.05, loadedFactor: 0.8, idleFactor: 6 } : null,
+    motor:
+      motorOk && capOk
+        ? {
+            minLoad: 0.05,
+            loadedFactor: 0.8,
+            idleFactor: 6,
+            ...(motorRmsOk && motorScaleOk ? { rmsWindow: 3, updateTicks: 12, maxSpeed: 256, defaultSpeed: 32 } : {}),
+          }
+        : null,
+    heater: heaterOk
+      ? { circuitOhms: 45, wattsFull: 16000, gain: 0.05, keep: 0.977, smouldering: 0.1, fading: 0.2, kindled: 0.6 }
+      : null,
+    accumulator: accOk ? { cellVoltage: 24, internalResistance: 0.1, cellsPerBlock: 2 } : null,
+    fuse: fuseOk ? { perAmp: 30, offset: 3.3, coolBelow: 1, instantFactor: 5, defaultAmps: 100 } : null,
     converter: convOk
       ? {
           minResistance: 20,

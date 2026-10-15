@@ -1,6 +1,12 @@
 # Гайды: документы в Firestore со встроенными калькуляторами
 
-Статус: **сделано** (2026-10-15). Первый раздел — «Электричество» (`/reference?tab=power&sub=guides&g=<id>`).
+Статус: **сделано** (2026-10-15). Разделы: «Электричество» (`/reference?tab=power&sub=guides&g=<id>`) и «Аддоны →
+Как написать свой» (`/reference?tab=addons&sub=guides`, `section: addons`, только общие функции, без виджетов —
+`AddonsGuidesSection.tsx`).
+Статьи (id): generator, optimal, line, converter, rectify, ac-pump, motor, heater, accumulator, protection.
+Константы для новых статей (двигатель, нагреватель, аккумулятор, предохранитель) — `scripts/mods/power.mjs`, со сверкой
+по байткоду; собираются `npm run mods` (быстрее — вызвать `buildPower` из node и заменить поле `ee` в
+`public/power.json`).
 
 ## Зачем
 

@@ -3,6 +3,7 @@ import { errorText, type Scope } from '../../lib/calcExpr';
 import { formatValue, parseSpec } from '../../lib/guideFormat';
 import { cx } from '../../lib/util';
 import { Markdown } from '../Markdown';
+import { useGuideLink } from './guideLinks';
 import { expand, value, yaml } from './guideText';
 
 /**
@@ -264,11 +265,11 @@ function Calc({ spec, envs, pickers }: { spec: Spec; envs: Scope[]; pickers?: Re
               <div key={i} className={cx('power-out', bad && 'guide-out-bad', warn && 'guide-out-warn')}>
                 {o.label && <span className="faint small">{tpl(o.label)}</span>}
                 <b className={cx(bad && 'power-bad')}>
-                  <Markdown source={main} inline />
+                  <Md source={main} inline />
                 </b>
                 {hint && (
                   <span className={cx('small', bad ? 'power-bad' : warn ? 'guide-warn' : 'faint')}>
-                    <Markdown source={hint} inline />
+                    <Md source={hint} inline />
                   </span>
                 )}
               </div>
@@ -282,7 +283,7 @@ function Calc({ spec, envs, pickers }: { spec: Spec; envs: Scope[]; pickers?: Re
         if (!text) return null;
         return (
           <div key={i} className={cx('small', bad ? 'power-bad' : 'faint')}>
-            <Markdown source={text} inline />
+            <Md source={text} inline />
           </div>
         );
       })}
@@ -292,7 +293,7 @@ function Calc({ spec, envs, pickers }: { spec: Spec; envs: Scope[]; pickers?: Re
       {tables.map((t, i) => (
         <DataTable key={i} spec={t} all={all} at={at} where={`table[${i}]`} tpl={tpl} />
       ))}
-      {spec.footer && <Markdown source={tpl(spec.footer)} className="faint small" />}
+      {spec.footer && <Md source={tpl(spec.footer)} className="faint small" />}
       {errors.length > 0 && <CalcErrors list={errors} />}
     </>
   );
@@ -384,7 +385,7 @@ function BarChart({
       </svg>
       {spec.caption && (
         <figcaption className="faint small">
-          <Markdown source={tpl(spec.caption)} inline />
+          <Md source={tpl(spec.caption)} inline />
         </figcaption>
       )}
     </figure>
@@ -437,7 +438,7 @@ function DataTable({
                           );
                     return (
                       <td key={j} className={cx(c.num && 'num', bad && 'power-bad')}>
-                        <Markdown source={cell} inline />
+                        <Md source={cell} inline />
                       </td>
                     );
                   })}
@@ -447,9 +448,15 @@ function DataTable({
           </tbody>
         </table>
       </div>
-      {spec.caption && <Markdown source={tpl(spec.caption)} className="faint small" />}
+      {spec.caption && <Md source={tpl(spec.caption)} className="faint small" />}
     </>
   );
+}
+
+/** Markdown подписей калькулятора: ссылки на гайды работают так же, как в тексте статьи */
+function Md({ source, className, inline }: { source: string; className?: string; inline?: boolean }) {
+  const link = useGuideLink();
+  return <Markdown source={source} className={className} inline={inline} link={link} schemes={['guide:']} />;
 }
 
 export function CalcErrors({ list }: { list: string[] }) {

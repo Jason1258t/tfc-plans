@@ -243,6 +243,114 @@ export function powerScope(data: PowerData, s: PowerSettings): GuideScope {
       doc: 'запас магнитопровода по нагрузке (1,036 — 3,6 %)',
       v: core && h ? maxSteadyHeat(core.breakTemp, h) / core.heatPerLoad : null,
     },
+    motorSu: {
+      sig: 'motorSu(вольты)',
+      doc: 'сколько SU даёт двигатель EE при напряжении (V² / motorResistance), на любых оборотах',
+      v: (v: number) => (v * v) / (s.ee('Resistances.motorResistance')?.value ?? 30),
+    },
+    motorDraw: {
+      sig: 'motorDraw(вольты, доля нагрузки)',
+      doc: 'сколько ватт берёт двигатель при нагрузке (доля его SU, 0…1)',
+      v: (v: number, load: number) => {
+        const m = e?.motor;
+        if (!m) return null;
+        const r = s.ee('Resistances.motorResistance')?.value ?? 30;
+        const l = Math.min(1, Math.max(m.minLoad, load));
+        return (v * v) / (m.loadedFactor * Math.min(m.idleFactor * r, r / l));
+      },
+    },
+    motor: {
+      sig: 'motor.rmsWindow',
+      doc: 'двигатель из кода: rmsWindow, updateTicks, maxSpeed, defaultSpeed, loadedFactor…',
+      v: e?.motor ?? null,
+    },
+    heater: {
+      sig: 'heater.circuitOhms',
+      doc: 'нагреватель из кода: circuitOhms (в сети), wattsFull, gain, keep, smouldering / fading / kindled (уровни)',
+      v: e?.heater ?? null,
+    },
+    heaterHeat: {
+      sig: 'heaterHeat(вольты)',
+      doc: 'установившийся нагрев 0…1 при напряжении (считается по настройке resistiveHeaterResistance)',
+      v: (v: number) => {
+        const hh = e?.heater;
+        if (!hh) return null;
+        const x = Math.min(1, (v * v) / (s.ee('Resistances.resistiveHeaterResistance')?.value ?? 45) / hh.wattsFull);
+        return Math.min(1, (hh.keep * hh.gain * x) / (1 - hh.keep));
+      },
+    },
+    heaterVolts: {
+      sig: 'heaterVolts(нагрев)',
+      doc: 'какое напряжение нужно для установившегося нагрева 0…1',
+      v: (heat: number) => {
+        const hh = e?.heater;
+        if (!hh) return null;
+        const x = (heat * (1 - hh.keep)) / (hh.keep * hh.gain);
+        return Math.sqrt(x * hh.wattsFull * (s.ee('Resistances.resistiveHeaterResistance')?.value ?? 45));
+      },
+    },
+    heaterTicks: {
+      sig: 'heaterTicks(вольты, нагрев)',
+      doc: 'через сколько тиков от холодного нагреватель дойдёт до нагрева (null — не дойдёт)',
+      v: (v: number, target: number) => {
+        const hh = e?.heater;
+        if (!hh) return null;
+        const x = Math.min(1, (v * v) / (s.ee('Resistances.resistiveHeaterResistance')?.value ?? 45) / hh.wattsFull);
+        let h = 0;
+        for (let i = 1; i <= 2000; i++) {
+          h = Math.min(1, (h + x * hh.gain) * hh.keep);
+          if (h >= target) return i;
+        }
+        return null;
+      },
+    },
+    accumulator: {
+      sig: 'accumulator.cellVoltage',
+      doc: 'ячейка аккумулятора: cellVoltage, internalResistance, cellsPerBlock',
+      v: e?.accumulator ?? null,
+    },
+    accVolts: {
+      sig: 'accVolts(заряд 0…1)',
+      doc: 'ЭДС ячейки аккумулятора при заряде',
+      v: (soc: number) => {
+        const a = e?.accumulator;
+        if (!a) return null;
+        const c = Math.min(1, Math.max(0, soc));
+        return c < 1e-5 ? 0 : a.cellVoltage * (Math.log10(c * 1000) / 4 + 0.25);
+      },
+    },
+    accEnergy: {
+      sig: 'accEnergy(от, до)',
+      doc: 'энергия ячейки между зарядами (доли 0…1), Вт·ч; accEnergy(0, 1) — полная',
+      v: (from: number, to: number) => {
+        const a = e?.accumulator;
+        const q = s.ee('Voltages.maxAccumulatorCharge')?.value;
+        if (!a || !q) return null;
+        const lo = Math.max(1e-5, Math.min(from, to));
+        const hi = Math.min(1, Math.max(from, to));
+        const n = 400;
+        let sum = 0;
+        for (let i = 0; i < n; i++) {
+          const c = lo + ((i + 0.5) / n) * (hi - lo);
+          sum += a.cellVoltage * (Math.log10(c * 1000) / 4 + 0.25);
+        }
+        return ((sum / n) * (hi - lo) * q) / 3600;
+      },
+    },
+    fuse: {
+      sig: 'fuse.instantFactor',
+      doc: 'предохранитель из кода: perAmp, offset, coolBelow, instantFactor, defaultAmps',
+      v: e?.fuse ?? null,
+    },
+    fuseTicks: {
+      sig: 'fuseTicks(ток, номинал)',
+      doc: 'через сколько тиков сработает предохранитель (null — не сработает никогда)',
+      v: (i: number, rating: number) => {
+        const f = e?.fuse;
+        if (!f || i < f.coolBelow) return null;
+        return stepsToTemp(i, Math.max(0, f.perAmp * (rating - f.offset)), needHeat(), 72000);
+      },
+    },
     ieWires: {
       sig: 'ieWires',
       doc: 'провода IE: name, short (LV/MV/HV), connector (FE/t на ввод коннектора), maxLength, transferRate',

@@ -86,7 +86,12 @@ export function ReferencePage() {
       {tab === 'map' ? (
         <MapPage />
       ) : tab === 'addons' ? (
-        <AddonsTab />
+        <AddonsTab
+          sub={params.get('sub') === 'guides' ? 'guides' : 'list'}
+          onSub={(k) => setParams(k === 'list' ? { tab: 'addons' } : { tab: 'addons', sub: k }, { replace: true })}
+          guide={params.get('g')}
+          onGuide={(g) => setParams(g ? { tab: 'addons', sub: 'guides', g } : { tab: 'addons', sub: 'guides' })}
+        />
       ) : tab === 'power' ? (
         <PowerTab
           sub={POWER_SUBS.find((s) => s.id === params.get('sub'))?.id ?? 'link'}

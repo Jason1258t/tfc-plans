@@ -7,6 +7,7 @@ import { cx } from '../../lib/util';
 import { Markdown } from '../Markdown';
 import { BlockBoundary } from './BlockBoundary';
 import { CalcBlock, CalcErrors, type Picker } from './CalcBlock';
+import { GuideLinkContext } from './guideLinks';
 import { compile, prepare, widgetCall } from './guideText';
 
 /** Виджет раздела: то, что разметкой не описать (схемы-рисунки, особые графики) */
@@ -59,15 +60,17 @@ export function GuideBody({ source, kit, onGuide }: { source: string; kit: Guide
   };
 
   return (
-    <BlockBoundary text={source}>
-      <Markdown
-        source={prepared.markdown}
-        className="guide-body"
-        link={link}
-        block={block}
-        schemes={['gv:', 'guide:']}
-      />
-    </BlockBoundary>
+    <GuideLinkContext.Provider value={link}>
+      <BlockBoundary text={source}>
+        <Markdown
+          source={prepared.markdown}
+          className="guide-body"
+          link={link}
+          block={block}
+          schemes={['gv:', 'guide:']}
+        />
+      </BlockBoundary>
+    </GuideLinkContext.Provider>
   );
 }
 
