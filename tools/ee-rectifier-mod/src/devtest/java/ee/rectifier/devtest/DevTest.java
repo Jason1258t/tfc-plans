@@ -77,6 +77,21 @@ public class DevTest {
                                 .executes(c -> AcTest.moreLoad(c.getSource(),
                                         com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "n")))))
                 .then(Commands.literal("acreport").executes(c -> AcTest.report(c.getSource())))
+                .then(Commands.literal("small")
+                        .then(Commands.argument("rpm", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 256))
+                                .executes(c -> SmallLoad.build(c.getSource(),
+                                        com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "rpm")))))
+                .then(Commands.literal("smallpar").executes(c -> SmallLoad.parallel(c.getSource())))
+                .then(Commands.literal("smallwatch")
+                        .then(Commands.argument("ticks", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 2000))
+                                .executes(c -> SmallLoad.watch(c.getSource(),
+                                        com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "ticks")))))
+                .then(Commands.literal("smallreport")
+                        .then(Commands.argument("from", com.mojang.brigadier.arguments.IntegerArgumentType.integer(0))
+                                .then(Commands.argument("count", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 100))
+                                        .executes(c -> SmallLoad.report(c.getSource(),
+                                                com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "from"),
+                                                com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "count"))))))
                 .then(Commands.literal("genreport").executes(c -> Generator.report(c.getSource()))));
     }
 
