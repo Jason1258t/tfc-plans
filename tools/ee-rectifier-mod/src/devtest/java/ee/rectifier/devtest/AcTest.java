@@ -32,6 +32,8 @@ final class AcTest {
     static final BlockPos ROTOR = MOTOR.east();
     static final BlockPos BRUSHES = MOTOR.east(2);
     static final BlockPos[] RECT = {new BlockPos(40, -60, 6), new BlockPos(48, -60, 6), new BlockPos(56, -60, 6)};
+    /** Частотомер EE на фазе 1 и нейтрали — проверка жалобы «частотомер врёт» */
+    static final BlockPos FREQ = BRUSHES.offset(0, 0, -3);
     static final String[] NAMES = {"трёхфазный блок", "однофазный блок", "мост из 6 диодов EE"};
 
     static BlockPos heater(int i) {
@@ -85,6 +87,9 @@ final class AcTest {
             }
         }
         load(level, 2, up[0], 0, down[0], 1);
+        DevTest.place(level, FREQ, CEEBlocks.FREQUENCY_METER.getDefaultState());
+        DevTest.wire(level, BRUSHES, 1, FREQ, 0);
+        DevTest.wire(level, BRUSHES, 0, FREQ, 1);
         src.sendSuccess(() -> Component.literal("собрано, мотор " + rpm + " об/мин"), false);
         return 1;
     }
@@ -144,6 +149,19 @@ final class AcTest {
         }
     }
 
+    /** Показание частотомера (поле блока, его же видно в очках) */
+    static double frequency(ServerLevel level) {
+        try {
+            Object be = level.getBlockEntity(FREQ);
+            if (be == null) return Double.NaN;
+            Field f = be.getClass().getDeclaredField("frequency");
+            f.setAccessible(true);
+            return f.getFloat(be);
+        } catch (ReflectiveOperationException e) {
+            return Double.NaN;
+        }
+    }
+
     static int watch(CommandSourceStack src, int ticks) {
         samples.clear();
         left = ticks;
@@ -154,7 +172,8 @@ final class AcTest {
                 if (left <= 0) return;
                 left--;
                 DevicesSavedData d = DevicesSavedData.load(level);
-                double[] row = new double[6];
+                double[] row = new double[7];
+                row[6] = frequency(level);
                 for (int i = 0; i < 3; i++) {
                     GaugeDevice g = d.getDevice(meter(i), GaugeDevice.class);
                     row[i * 2] = g == null ? Double.NaN : last(g);
@@ -184,6 +203,12 @@ final class AcTest {
             out.append(String.format("%s: мгновенное %.1f…%.1f (среднее %.1f), вольтметр %.1f…%.1f; первые тики: %s| ",
                     NAMES[i], min, max, sum / Math.max(1, samples.size()), rmin, rmax, seq));
         }
+        double fmin = Double.MAX_VALUE, fmax = -Double.MAX_VALUE;
+        for (double[] row : samples) {
+            fmin = Math.min(fmin, row[6]);
+            fmax = Math.max(fmax, row[6]);
+        }
+        out.append(String.format("частотомер: %.2f…%.2f Гц", fmin, fmax));
         String msg = out.toString();
         src.sendSuccess(() -> Component.literal(msg), false);
         return 1;
