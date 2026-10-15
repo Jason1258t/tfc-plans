@@ -521,3 +521,18 @@
   align-items: flex-start;
   min-width: 0;
 }
+
+.guide-errors-reader {
+  color: inherit;
+  border-color: var(--border);
+  background: var(--surface-2);
+}
+
+.guide-errors-reader summary {
+  cursor: pointer;
+}
+
+.guide-errors-reader > div {
+  margin-top: 4px;
+  opacity: 0.7;
+}

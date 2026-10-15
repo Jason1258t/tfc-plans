@@ -138,6 +138,8 @@ export interface PowerData {
     wires: { name: string; maxLength: number; transferRate: number; distanceLoss: number }[];
     /** Потребители: мультиблоки и машины с рецептами (расход — из рецептов сборки) и приборы (из конфига) */
     consumers?: { machines: IeMachine[]; devices: IeDevice[] };
+    /** Конденсаторы IE: настройки machines.capacitors.<name>.storage / input / output */
+    capacitors?: { name: string; block: string }[];
     /** Ввод коннектора = пропускная способность провода / connectorDivisor */
     connectorDivisor: number | null;
     keys: PowerKey[];

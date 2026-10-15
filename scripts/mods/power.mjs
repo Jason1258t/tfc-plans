@@ -431,8 +431,26 @@ function buildIE(jar, warnings) {
 
   const machines = classFrom(jar, `${IE}/common/config/IEServerConfig$Machines`);
   const keys = machines ? configDefaults(machines).filter((k) => !k.key.startsWith('?')) : [];
+  // Конденсаторы IE: в конструкторе Machines — new CapacitorConfig(…, "low"|"medium"|"high", запас, вход, выход);
+  // раздел в TOML — machines.capacitors.<первая буква>v (CapacitorConfig.<init>: push(name.charAt(0) + "v"))
+  const consts = constants(machines, '<init>') ?? [];
+  const capacitors = [];
+  for (let i = 0; i < consts.length - 3; i++) {
+    const [name, storage, input, output] = consts.slice(i, i + 4);
+    if (!['low', 'medium', 'high'].includes(name) || ![storage, input, output].every((n) => typeof n === 'number'))
+      continue;
+    const sec = `machines.capacitors.${name[0]}v`;
+    capacitors.push({ name: `${name[0]}v`, block: `immersiveengineering:capacitor_${name[0]}v` });
+    keys.push(
+      { key: `${sec}.storage`, default: storage },
+      { key: `${sec}.input`, default: input },
+      { key: `${sec}.output`, default: output },
+    );
+  }
+  if (capacitors.length !== 3) warnings.push(`IE: конденсаторов найдено ${capacitors.length} вместо 3`);
   return {
     file: 'immersiveengineering-server.toml',
+    capacitors,
     wires,
     connectorDivisor: divOk ? 8 : null,
     keys: keys.map(({ key, default: d }) => ({ key, default: d })),

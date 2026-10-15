@@ -40,6 +40,12 @@ import {
 
 type Get = (key: string) => Setting | null;
 
+const CAPACITOR_LABEL: Record<string, string> = {
+  lv: 'Низковольтный',
+  mv: 'Средневольтный',
+  hv: 'Высоковольтный',
+};
+
 export interface PowerSettings {
   ee: Get;
   ie: Get;
@@ -350,6 +356,27 @@ export function powerScope(data: PowerData, s: PowerSettings): GuideScope {
         if (!f || i < f.coolBelow) return null;
         return stepsToTemp(i, Math.max(0, f.perAmp * (rating - f.offset)), needHeat(), 72000);
       },
+    },
+    ieCapacitors: {
+      sig: 'ieCapacitors',
+      doc: 'конденсаторы IE: name (lv/mv/hv), label, block, storage (FE), input / output (FE/t), wh — запас в Вт·ч EE, kw — отдача в кВт EE (по курсу преобразователя)',
+      v: (data.ie?.capacitors ?? []).map((c) => {
+        const g = (k: string) => s.ie(`machines.capacitors.${c.name}.${k}`)?.value ?? null;
+        const rate = s.ee('wattFeTConversionRate')?.value ?? null;
+        const storage = g('storage');
+        const input = g('input');
+        const output = g('output');
+        return {
+          ...c,
+          label: CAPACITOR_LABEL[c.name] ?? c.name,
+          storage,
+          input,
+          output,
+          wh: storage !== null && rate ? (storage * rate) / 20 / 3600 : null,
+          kwIn: input !== null && rate ? (input * rate) / 1000 : null,
+          kw: output !== null && rate ? (output * rate) / 1000 : null,
+        };
+      }),
     },
     ieWires: {
       sig: 'ieWires',

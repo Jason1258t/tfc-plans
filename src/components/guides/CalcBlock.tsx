@@ -3,7 +3,7 @@ import { errorText, type Scope } from '../../lib/calcExpr';
 import { formatValue, parseSpec } from '../../lib/guideFormat';
 import { cx } from '../../lib/util';
 import { Markdown } from '../Markdown';
-import { useGuideLink } from './guideLinks';
+import { useGuideEditing, useGuideLink } from './guideLinks';
 import { expand, value, yaml } from './guideText';
 
 /**
@@ -459,13 +459,39 @@ function Md({ source, className, inline }: { source: string; className?: string;
   return <Markdown source={source} className={className} inline={inline} link={link} schemes={['guide:']} />;
 }
 
+/**
+ * Ошибки формул. В редакторе — списком, как есть. Читателю — одной строкой по-человечески, подробности свёрнуты:
+ * «неизвестное имя» почти всегда значит, что вкладка открыта до обновления сайта.
+ */
 export function CalcErrors({ list }: { list: string[] }) {
+  const editing = useGuideEditing();
+  if (editing)
+    return (
+      <div className="guide-errors small">
+        {list.slice(0, 12).map((e, i) => (
+          <div key={i}>⚠ {e}</div>
+        ))}
+        {list.length > 12 && <div>…и ещё {list.length - 12}</div>}
+      </div>
+    );
+  const stale = list.some((e) => e.includes('неизвестное имя'));
   return (
-    <div className="guide-errors small">
+    <details className="guide-errors guide-errors-reader small">
+      <summary>
+        {stale ? (
+          <>
+            Часть расчётов не показана — похоже, сайт обновился, пока вкладка была открыта.{' '}
+            <button type="button" className="power-link" onClick={() => location.reload()}>
+              Обновить страницу
+            </button>
+          </>
+        ) : (
+          'Часть расчётов не получилась — в статье ошибка, её можно поправить кнопкой «Править»'
+        )}
+      </summary>
       {list.slice(0, 12).map((e, i) => (
-        <div key={i}>⚠ {e}</div>
+        <div key={i}>{e}</div>
       ))}
-      {list.length > 12 && <div>…и ещё {list.length - 12}</div>}
-    </div>
+    </details>
   );
 }

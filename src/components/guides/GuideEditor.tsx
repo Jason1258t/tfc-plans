@@ -7,6 +7,7 @@ import { ItemIcon } from '../ItemIcon';
 import { ItemPicker } from '../ItemPicker';
 import { GuideBody, type GuideKit } from './GuideBody';
 import { GuideHelp } from './GuideHelp';
+import { GuideEditingContext } from './guideLinks';
 import { CHECKED } from './guideMeta';
 
 const NEW_BODY = `## Что понадобится
@@ -245,18 +246,20 @@ export function GuideEditor({
             onChange={(e) => setBody(e.target.value)}
           />
         </div>
-        <div className="guide-preview">
-          <span className="faint small">Предпросмотр — калькуляторы работают</span>
-          <article className="ref-card power-article guide-article">
-            <h2 className="power-h">{title || 'Без заголовка'}</h2>
-            {previewSummary && (
-              <div className="power-note guide-summary">
-                <GuideBody source={`**Коротко.** ${previewSummary}`} kit={kit} onGuide={onGuide} />
-              </div>
-            )}
-            <GuideBody source={preview} kit={kit} onGuide={onGuide} />
-          </article>
-        </div>
+        <GuideEditingContext.Provider value>
+          <div className="guide-preview">
+            <span className="faint small">Предпросмотр — калькуляторы работают</span>
+            <article className="ref-card power-article guide-article">
+              <h2 className="power-h">{title || 'Без заголовка'}</h2>
+              {previewSummary && (
+                <div className="power-note guide-summary">
+                  <GuideBody source={`**Коротко.** ${previewSummary}`} kit={kit} onGuide={onGuide} />
+                </div>
+              )}
+              <GuideBody source={preview} kit={kit} onGuide={onGuide} />
+            </article>
+          </div>
+        </GuideEditingContext.Provider>
       </div>
     </section>
   );

@@ -7,7 +7,7 @@ import { cx } from '../../lib/util';
 import { Markdown } from '../Markdown';
 import { BlockBoundary } from './BlockBoundary';
 import { CalcBlock, CalcErrors, type Picker } from './CalcBlock';
-import { GuideLinkContext } from './guideLinks';
+import { GuideLinkContext, useGuideEditing } from './guideLinks';
 import { compile, prepare, widgetCall } from './guideText';
 
 /** Виджет раздела: то, что разметкой не описать (схемы-рисунки, особые графики) */
@@ -76,6 +76,7 @@ export function GuideBody({ source, kit, onGuide }: { source: string; kit: Guide
 
 /** {{выражение | формат}} в тексте; у настройки сервера — подсказка, откуда значение, и пометка, если изменено */
 function LiveValue({ src, envs, kit }: { src: string; envs: Scope[]; kit: GuideKit }) {
+  const editing = useGuideEditing();
   const { expr, spec } = splitSpec(src);
   let text: string;
   let st: ReturnType<NonNullable<GuideScope['setting']>> = null;
@@ -85,9 +86,10 @@ function LiveValue({ src, envs, kit }: { src: string; envs: Scope[]; kit: GuideK
     const path = exprPath(e);
     st = path && path.length > 1 ? (kit.scope.setting?.(path) ?? null) : null;
   } catch (err) {
+    // Читателю — прочерк с подсказкой, в редакторе — сама формула
     return (
       <span className="guide-val-error" title={errorText(err, expr.trim())}>
-        ⚠ {expr.trim()}
+        {editing ? `⚠ ${expr.trim()}` : '—'}
       </span>
     );
   }
