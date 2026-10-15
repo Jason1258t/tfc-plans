@@ -1,5 +1,5 @@
 import { ArrowDown } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { CONFIG_ORIGIN_LABEL } from '../lib/config';
 import {
   alternator,
@@ -17,8 +17,9 @@ import {
 import { cx } from '../lib/util';
 import { ItemIcon } from './ItemIcon';
 import { IeConsumers } from './PowerIeLoads';
-import { PowerGuides } from './PowerGuides';
 import './PowerTab.css';
+
+const PowerGuidesSection = lazy(() => import('./guides/PowerGuidesSection'));
 
 /**
  * Справочник → «Электричество». Три вида энергии сборки и переходы между ними:
@@ -98,7 +99,11 @@ function Body({
   if (sub === 'ee') return <EeLoads data={data} s={ee.get} />;
   if (sub === 'ie') return <IeNet data={data} s={ie.get} ee={ee.get} att={att.get} />;
   if (sub === 'guides')
-    return <PowerGuides data={data} ee={ee.get} ie={ie.get} att={att.get} guide={guide} onGuide={onGuide} />;
+    return (
+      <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>
+        <PowerGuidesSection data={data} ee={ee.get} ie={ie.get} att={att.get} guide={guide} onGuide={onGuide} />
+      </Suspense>
+    );
   return <Link_ data={data} ee={ee.get} ie={ie.get} />;
 }
 

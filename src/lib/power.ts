@@ -423,3 +423,121 @@ export function transformerRatios(ratios: [number, number][]) {
   const up = ratios.map(([a, b]) => ({ label: `${b}:${a}`, k: b / a }));
   return [...down, { label: '1:1', k: 1 }, ...up].sort((x, y) => x.k - y.k);
 }
+
+// ---------------------------------------------------------------- общее для гайдов
+
+/** Параметры генератора из настроек и данных мода; null — чего-то не хватает */
+export function alternatorParams(data: PowerData, get: (key: string) => Setting | null): AlternatorParams | null {
+  const powerMult = get('rotor.rotorPowerMultiplier');
+  const stressMult = get('rotor.rotorStressMultiplier');
+  const fullLoad = get('rotor.rotorFullLoadCurrent');
+  const rotor = data.ee?.rotor;
+  if (!powerMult || !stressMult || !fullLoad || !rotor) return null;
+  return {
+    powerMult: powerMult.value,
+    stressMult: stressMult.value,
+    fullLoadCurrent: fullLoad.value,
+    magnetsPerStator: rotor.magnetsPerStator,
+    baseMagnets: rotor.baseMagnets,
+  };
+}
+
+export const ALTERNATOR_REGIME: Record<LoadRegime, string> = {
+  idle: 'без нагрузки',
+  normal: 'нормальный: напряжение почти полное',
+  overload: 'перегрузка: отдаёт всю выработку, напряжение просело',
+  unstable: 'ток больше двух полных: режим вне модели, считать нельзя',
+};
+
+/** Подобрать трансформатор: соотношение «выход / вход», при котором потребители получат нужное напряжение */
+export function matchRatio(emf: number, power: number, consumerR: number, want: number, buffer: number) {
+  let k = want / emf;
+  for (let i = 0; i < 30; i++) {
+    const l = alternatorLoad(emf, power, consumerR / (k * k), buffer);
+    if (l.volts <= 0) break;
+    k = want / l.volts;
+  }
+  return k;
+}
+
+/** Шаг фазы за расчёт, при котором диоды EE успевают (до GOOD), терпимо (до OK); microTicks на сервере — до MAX */
+export const PHASE_STEP = { good: 10, ok: 25, maxMicro: 32 };
+
+/** Сколько расчётов за тик нужно, чтобы шаг фазы был не больше PHASE_STEP.good */
+export const microTicksFor = (rpm: number, hzPerRpm: number) =>
+  Math.min(PHASE_STEP.maxMicro, Math.max(1, Math.ceil(degreesPerStep(rpm, hzPerRpm, 1) / PHASE_STEP.good)));
+
+/** Напряжение на выходе схемы при угле θ с падением на диодах при нагрузке ohms (ток зависит от напряжения) */
+export function rectifiedLoaded(
+  kind: Rectifier,
+  amp: number,
+  theta: number,
+  ohms: number,
+  diode: { saturation: number; thermal: number; clamp?: number } | null | undefined,
+) {
+  const v = Math.abs(rectified(kind, amp, theta));
+  const n = diodesInPath(kind);
+  if (!n || !diode) return v;
+  let out = v;
+  for (let i = 0; i < 4; i++) out = Math.max(0, v - n * diodeDrop(out / ohms, diode));
+  return out;
+}
+
+export const RECTIFIERS: { id: Rectifier; label: string }[] = [
+  { id: 'dc', label: 'Обычный щёточный узел (постоянный ток)' },
+  { id: 'raw', label: 'Фаза и нейтраль напрямую, без выпрямителя' },
+  { id: 'bridge3', label: 'Трёхфазный мост, 6 диодов' },
+  { id: 'bridge1', label: 'Однофазный мост, 4 диода' },
+  { id: 'bridge1cap', label: 'Однофазный мост + конденсатор' },
+];
+
+/** Названия видов проводов EE; декоративные и творческий в гайды не идут */
+const WIRE_LABEL: Record<string, string> = {
+  standard: 'Изолированный медный',
+  copper: 'Медный голый',
+  heavily_insulated: 'Высокоизолированный',
+  bundle_conductor: 'Двухпроводной кабель (жила)',
+  electrum: 'Электрумовый голый',
+  iron: 'Железный кабель',
+  iron_bus: 'Железная шина',
+  iron_rail: 'Контактный рельс',
+};
+
+export interface WireRow {
+  name: string;
+  label: string;
+  /** Предмет для значка: катушка или сам провод */
+  item: string | null;
+  ohmPerM: number | null;
+  insulation: number;
+  maxTemp: number;
+  span: number | null;
+  /** Длительный ток: дольше — сгорит; с warnI — начнёт искрить */
+  maxI: number;
+  warnI: number;
+}
+
+export function wireRows(data: PowerData, get: (key: string) => Setting | null, h: HeatModel): WireRow[] {
+  const d = data.ee?.wireDefault ?? {};
+  return (data.ee?.wires ?? [])
+    .filter((w) => WIRE_LABEL[w.name] && !w.decorative)
+    .map((w) => {
+      const maxTemp = wireValue(w.maxTemperature, get, d.maxTemperature) ?? 0;
+      const infinite = !Number.isFinite(maxTemp) || maxTemp > 1e12;
+      return {
+        name: w.name,
+        label: WIRE_LABEL[w.name],
+        item: w.spool || w.item || null,
+        ohmPerM: wireValue(w.resistance, get),
+        insulation: wireValue(w.maxInsulationVoltage, get, d.maxInsulationVoltage) ?? 0,
+        maxTemp: infinite ? Infinity : maxTemp,
+        // У жилы кабеля длину пролёта задаёт оболочка (кабель двухпроводной) — у жилы её нет
+        span: w.name === 'bundle_conductor' ? (get('bundledWireLength')?.value ?? null) : wireValue(w.maxLength, get),
+        maxI: infinite ? Infinity : Math.min(h.maxCurrent, maxSteadyHeat(maxTemp, h)),
+        warnI: infinite ? Infinity : Math.min(h.maxCurrent, maxSteadyHeat(maxTemp * h.warn, h)),
+      };
+    });
+}
+
+/** Нагрузка механической помпы Create в конфиге Create */
+export const PUMP_IMPACT_KEY = 'kinetics.stressValues.v2.impact.mechanical_pump';

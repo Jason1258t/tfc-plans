@@ -179,6 +179,46 @@ service cloud.firestore {
       allow delete: if signedIn();
     }
 
+    // Гайды справочника: правят все, стирать нельзя (снимают с публикации — hidden).
+    // Каждое сохранение пишет и версию в revisions — их только добавляют.
+    match /guides/{id} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && request.resource.data.section is string
+        && request.resource.data.section.size() > 0
+        && request.resource.data.section.size() <= 40
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 200
+        && request.resource.data.summary is string
+        && request.resource.data.summary.size() <= 1000
+        && request.resource.data.body is string
+        && request.resource.data.body.size() <= 200000
+        && (request.resource.data.icon == null || (request.resource.data.icon is string
+            && request.resource.data.icon.size() <= 200))
+        && request.resource.data.group is string
+        && request.resource.data.group.size() <= 80
+        && request.resource.data.order is number
+        && request.resource.data.checked in ['game', 'server', 'code', 'none']
+        && request.resource.data.hidden is bool
+        && nick(request.resource.data.updatedBy);
+      allow delete: if false;
+
+      match /revisions/{rid} {
+        allow read: if signedIn();
+        allow create: if signedIn()
+          && request.resource.data.title is string
+          && request.resource.data.title.size() <= 200
+          && request.resource.data.summary is string
+          && request.resource.data.summary.size() <= 1000
+          && request.resource.data.body is string
+          && request.resource.data.body.size() <= 200000
+          && request.resource.data.at is number
+          && nick(request.resource.data.updatedBy);
+        allow update, delete: if false;
+      }
+    }
+
     match /artifacts/{id} {
       allow read: if signedIn();
       allow create, update: if signedIn()

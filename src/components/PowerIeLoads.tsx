@@ -216,7 +216,7 @@ export function IeLoadPicker({
         {onApply && (
           <div className="power-out">
             <button className="btn small" disabled={!total} onClick={() => onApply(total * rate)}>
-              Подставить в калькулятор генератора
+              Подставить в калькулятор
             </button>
             <span className="faint small">потери в преобразователе и проводах IE не учтены</span>
           </div>

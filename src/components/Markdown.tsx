@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { itemName, useItems } from '../lib/items';
@@ -8,8 +8,9 @@ import { ItemIcon } from './ItemIcon';
  * Markdown с поддержкой ссылок на предметы:
  *   [[tfc:metal/ingot/copper]]      → иконка + название
  *   [[tfc:metal/ingot/copper|16]]   → иконка + название + количество
+ *   [[tfc:metal/ingot/copper|icon]] → только иконка (рядом со своим названием)
  */
-const ITEM_TOKEN = /\[\[([a-z0-9_.-]+:[a-z0-9_/.-]+)(?:\|(\d+))?\]\]/g;
+const ITEM_TOKEN = /\[\[([a-z0-9_.-]+:[a-z0-9_/.-]+)(?:\|(\d+|icon))?\]\]/g;
 
 export const itemToken = (id: string, qty?: number) => `[[${id}${qty ? `|${qty}` : ''}]]`;
 
@@ -20,6 +21,7 @@ function preprocess(src: string) {
 function ItemChip({ href }: { href: string }) {
   const items = useItems();
   const [id, qty] = href.slice('item:'.length).split('?');
+  if (qty === 'icon') return <ItemIcon id={id} size={20} />;
   return (
     <span className="item-chip">
       <ItemIcon id={id} size={18} />
@@ -62,23 +64,53 @@ interface Props {
   className?: string;
   /** Клик по чекбоксу списка задач; без него чекбоксы только показываются */
   onToggleTask?: (line: number) => void;
+  /** Своя обработка ссылки (гайды: живые значения, ссылки на статьи); null — обычная ссылка */
+  link?: (href: string, children: ReactNode) => ReactNode | null;
+  /** Свой показ блока кода по языку (гайды: calc, widget); null — обычный блок */
+  block?: (lang: string, text: string) => ReactNode | null;
+  /** Ссылки с этими схемами не вырезать (item: — всегда) */
+  schemes?: string[];
+  /** Строчный вид: без обёртки-абзаца (ячейки таблиц, подписи) */
+  inline?: boolean;
 }
 
-export function Markdown({ source, className, onToggleTask }: Props) {
+interface HastNode {
+  tagName?: string;
+  value?: string;
+  properties?: { className?: unknown };
+  children?: HastNode[];
+}
+
+const hastText = (n: HastNode): string => n.value ?? (n.children ?? []).map(hastText).join('');
+
+export function Markdown({ source, className, onToggleTask, link, block, schemes, inline }: Props) {
+  const keep = ['item:', ...(schemes ?? [])];
+  const Wrap = inline ? 'span' : 'div';
   return (
-    <div className={`md ${className ?? ''}`}>
+    <Wrap className={`md ${className ?? ''}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        urlTransform={(url) => (url.startsWith('item:') ? url : defaultUrlTransform(url))}
+        urlTransform={(url) => (keep.some((k) => url.startsWith(k)) ? url : defaultUrlTransform(url))}
         components={{
-          a: ({ href, children }) =>
-            href?.startsWith('item:') ? (
-              <ItemChip href={href} />
-            ) : (
-              <a href={href} target="_blank" rel="noreferrer">
-                {children}
-              </a>
-            ),
+          ...(inline ? { p: ({ children }) => <>{children}</> } : {}),
+          pre: ({ node, children, ...rest }) => {
+            const code = (node as HastNode | undefined)?.children?.find((c) => c.tagName === 'code');
+            const cls = code?.properties?.className;
+            const lang = Array.isArray(cls) ? String(cls.find((c) => String(c).startsWith('language-')) ?? '') : '';
+            const custom = block && code && lang ? block(lang.slice('language-'.length), hastText(code)) : null;
+            return custom ?? <pre {...rest}>{children}</pre>;
+          },
+          a: ({ href, children }) => {
+            if (href?.startsWith('item:')) return <ItemChip href={href} />;
+            const custom = href && link ? link(href, children) : null;
+            return (
+              custom ?? (
+                <a href={href} target="_blank" rel="noreferrer">
+                  {children}
+                </a>
+              )
+            );
+          },
           li: ({ node, children, ...rest }) => (
             <li {...rest}>
               <TaskLine.Provider value={node?.position?.start.line ?? null}>{children}</TaskLine.Provider>
@@ -90,6 +122,6 @@ export function Markdown({ source, className, onToggleTask }: Props) {
       >
         {preprocess(source)}
       </ReactMarkdown>
-    </div>
+    </Wrap>
   );
 }

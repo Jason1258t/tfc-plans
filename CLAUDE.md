@@ -35,6 +35,7 @@ npm run mods          # пересобрать библиотеку из mods/ (
 npm run serverconfig -- <zip|папка>                # конфиги сервера → Firestore config
 npm run kubejs -- <zip|папка> [--layer world]  # скрипты KubeJS → public/kubejs.json, свои предметы → kubejs-items.json
 npm run world -- <мир|world/data|tfc_calendar.dat|zip>  # сохранение мира → Firestore config (scope world)
+npm run guides -- pull <папка> | push <файл.md|папка>   # гайды справочника ↔ файлы Markdown (подпись — TFC_NICK)
 ```
 
 Тестов нет. Проверка — руками в браузере (см. ниже) и разовыми node-скриптами в scratchpad.
@@ -82,7 +83,7 @@ npm run world -- <мир|world/data|tfc_calendar.dat|zip>  # сохранени�
 
 ## Firestore
 
-`tasks`, `groups`, `artifacts`, `files` (+`chunks`, пакет `firestore-files`), `datapacks`, `schematics`, `recipeHints`,
+`tasks`, `groups`, `artifacts`, `files` (+`chunks`, пакет `firestore-files`), `datapacks`, `schematics`, `recipeHints`, `guides` (+`revisions`),
 `packUpdates`, `settings/world`, `config`. Поля — в README, «Модель данных».
 
 - Авторизации нет: анонимный вход + ник в куке. Правила проверяют форму данных и `nick(...)`, а не владельца.
@@ -105,9 +106,13 @@ src/lib/
   nbt.ts schematic.ts materials.ts schematicLibrary.ts   схемы .nbt: замена/удаление блоков, материалы, библиотека
   reference.ts meals.ts        справочник (руды, топливо, жидкое топливо, еда, металлы); сборные блюда и калькуляторы
   power.ts                     электричество: Create SU ↔ Electro Energetics (В/А/Вт) ↔ IE FE/t, формулы из кода (UI — PowerTab)
+  calcExpr.ts guideFormat.ts   формулы гайдов (свой разборщик, без eval и импортов) и формат чисел {{x | 1 В}}
+  guideScope.ts powerGuideScope.ts   имена для формул: общие функции + раздел (настройки, power.json, формулы power.ts)
   projection.ts geo.ts atlas.ts config.ts   карта TFC Real World, настройки мира из конфига сервера
   packUpdates.ts gemini.ts     обновления сборки, запросы к Gemini (цепочки моделей с запасными, таймаут 90 с)
   files.ts files.config.ts     вложения через firestore-files
+src/components/guides/  гайды справочника: GuidesSection (карточки, статья), GuideEditor/History/Help, CalcBlock (```calc),
+                  GuideBody (Markdown + {{…}} + виджеты «::имя»), powerWidgets — рисунки раздела; формат — docs/plans/guides.md
 tools/            аддоны сборки (ee-rectifier-mod, ee-overheat-mod) — docs/addons.md; на сайте — lib/addons.ts, AddonsTab
 scripts/          mods.mjs + mods/{reference,tags,botany,meals,cuisine,power,geo,manifest,classfile,config-defaults}.mjs, serverconfig.mjs,
                   kubejs.mjs, pack-release.mjs; firestore-rest.mjs — общий доступ к Firestore
@@ -126,3 +131,6 @@ docs/plans/       планы фич со статусами; docs/STATE.md — �
 - Firestore на бесплатном тарифе: 50 тыс. чтений в сутки. Тяжёлое (иконки, карты, каталоги) — только статикой.
 - Скрытая панель браузера замораживает страницу — долгие операции в ней выглядят как зависание.
 - `predeploy` хостинга запускает `pack-release.mjs`; пропустить: `SKIP_PACK_RELEASE=1`.
+- Гайды хранятся только в Firestore. Правишь статью — сначала `npm run guides -- pull`, потом `push` (иначе затрёшь
+  правку игрока; старая версия останется в истории). В YAML калькулятора короткая запись `{ … }` режет значения по
+  запятым: формулу с запятой — в кавычки или отдельной строкой (калькулятор покажет «неизвестное поле»).
