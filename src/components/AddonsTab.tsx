@@ -8,7 +8,7 @@ import './PowerTab.css';
 
 const AddonsGuidesSection = lazy(() => import('./guides/AddonsGuidesSection'));
 
-/** Справочник → Аддоны: свои моды группы и гайды «как написать свой» */
+/** Страница «Аддоны»: свои моды группы и гайды «как написать свой» */
 export function AddonsTab({
   sub,
   onSub,

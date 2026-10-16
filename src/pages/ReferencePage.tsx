@@ -1,6 +1,6 @@
 import { ArrowRight, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { BotanyTab } from '../components/BotanyTab';
 import { DishesTab } from '../components/DishesTab';
 import { MealsTab } from '../components/MealsTab';
@@ -9,7 +9,7 @@ import { useTags } from '../lib/tags';
 import { ItemIcon } from '../components/ItemIcon';
 import { LiquidFuelTab } from '../components/LiquidFuelTab';
 import { MapPage } from './MapPage';
-import { AddonsTab } from '../components/AddonsTab';
+import { GuidesTab } from '../components/GuidesTab';
 import { PowerTab } from '../components/PowerTab';
 import { POWER_SUBS, type PowerSub } from '../lib/power';
 import type { BotanySub } from '../lib/botany';
@@ -33,7 +33,7 @@ import {
 import { cx } from '../lib/util';
 import './ReferencePage.css';
 
-type Tab = 'ores' | 'fuel' | 'metals' | 'food' | 'botany' | 'power' | 'addons' | 'map';
+type Tab = 'ores' | 'fuel' | 'metals' | 'food' | 'botany' | 'power' | 'guides' | 'map';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'ores', label: 'Руды' },
   { id: 'fuel', label: 'Топливо' },
@@ -41,12 +41,27 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'food', label: 'Еда' },
   { id: 'botany', label: 'Ботаника' },
   { id: 'power', label: 'Электричество' },
-  { id: 'addons', label: 'Аддоны' },
+  { id: 'guides', label: 'Гайды' },
   { id: 'map', label: 'Карта' },
 ];
 
 /** Справочник по данным сборки: жилы руд, топливо, еда, температуры металлов */
 export function ReferencePage() {
+  const [params] = useSearchParams();
+  // Прежние адреса: аддоны — теперь своя страница, гайды электричества — вкладка «Гайды»
+  if (params.get('tab') === 'addons') {
+    const rest = new URLSearchParams(params);
+    rest.delete('tab');
+    return <Navigate to={`/addons${rest.size ? `?${rest}` : ''}`} replace />;
+  }
+  if (params.get('tab') === 'power' && params.get('sub') === 'guides') {
+    const g = params.get('g');
+    return <Navigate to={`/reference?tab=guides${g ? `&g=${encodeURIComponent(g)}` : ''}`} replace />;
+  }
+  return <Reference />;
+}
+
+function Reference() {
   const [params, setParams] = useSearchParams();
   // tab=liquid — прежний адрес жидкого топлива, теперь это подраздел «Топлива»
   const oldLiquid = params.get('tab') === 'liquid';
@@ -85,21 +100,14 @@ export function ReferencePage() {
       </div>
       {tab === 'map' ? (
         <MapPage />
-      ) : tab === 'addons' ? (
-        <AddonsTab
-          sub={params.get('sub') === 'guides' ? 'guides' : 'list'}
-          onSub={(k) => setParams(k === 'list' ? { tab: 'addons' } : { tab: 'addons', sub: k }, { replace: true })}
-          guide={params.get('g')}
-          onGuide={(g) => setParams(g ? { tab: 'addons', sub: 'guides', g } : { tab: 'addons', sub: 'guides' })}
-        />
+      ) : tab === 'guides' ? (
+        <GuidesTab guide={params.get('g')} onGuide={(g) => setParams(g ? { tab: 'guides', g } : { tab: 'guides' })} />
       ) : tab === 'power' ? (
         <PowerTab
           sub={POWER_SUBS.find((s) => s.id === params.get('sub'))?.id ?? 'link'}
           onSub={(k: PowerSub) =>
             setParams(k === 'link' ? { tab: 'power' } : { tab: 'power', sub: k }, { replace: true })
           }
-          guide={params.get('g')}
-          onGuide={(g) => setParams(g ? { tab: 'power', sub: 'guides', g } : { tab: 'power', sub: 'guides' })}
         />
       ) : ref === undefined ? (
         <div className="empty">Загружаю справочник…</div>

@@ -63,7 +63,7 @@ export function GuideHelp({ kit, onClose }: { kit: GuideKit; onClose: () => void
             </li>
             <li>
               <code>[текст](guide:id)</code> — ссылка на другой гайд (id — из адреса, <code>g=…</code>);{' '}
-              <code>[текст](/reference?tab=addons)</code> — на раздел сайта.
+              <code>[текст](/reference?tab=guides)</code> — на раздел сайта.
             </li>
             <li>
               <code>&gt; текст</code> — плашка-заметка. Заголовки — <code>##</code>, таблицы — как в Markdown.

@@ -8,12 +8,11 @@ import { useModConfig, type ConfigOrigin, type ModConfig } from './config';
  */
 
 /** Подразделы вкладки «Электричество» */
-export type PowerSub = 'link' | 'ee' | 'ie' | 'guides';
+export type PowerSub = 'link' | 'ee' | 'ie';
 export const POWER_SUBS: { id: PowerSub; label: string }[] = [
   { id: 'link', label: 'Как связаны' },
   { id: 'ee', label: 'Нагрузки EE' },
   { id: 'ie', label: 'Сеть IE' },
-  { id: 'guides', label: 'Гайды' },
 ];
 
 /** Провода IE: короткое имя, катушка и коннектор */

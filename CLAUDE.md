@@ -94,8 +94,8 @@ npm run guides -- pull <папка> | push <файл.md|папка>   # гайд
 ## Карта кода
 
 ```
-src/pages/        TasksPage (+ раздел документов DocsSection), DocPage, FilesPage, SchematicsPage,
-                  DatapacksPage/RecipesPage/TagsPage (один раздел, слева PackNav), ReferencePage (вкладка «Карта» — MapPage), UpdatesPage
+src/pages/        TasksPage (+ раздел документов DocsSection), DocPage, FilesPage, SchematicsPage, AddonsPage (AddonsTab),
+                  DatapacksPage/RecipesPage/TagsPage (один раздел, слева PackNav), ReferencePage (вкладки «Гайды» — GuidesTab, «Карта» — MapPage), UpdatesPage
 src/components/   Modal, ItemPicker/ItemIcon, FileBadge (значок вида файла + имя; виды — lib/fileKinds.ts), RecipeCatalog (RecipeBrowser), KubejsConstructor, SchematicLibrary, WorldMap, …
 src/lib/
   items.ts fuzzy.ts            библиотека предметов, поиск (fuse.js — только подбор замен в схемах)

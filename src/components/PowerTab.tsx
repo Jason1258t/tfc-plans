@@ -1,5 +1,5 @@
 import { ArrowDown } from 'lucide-react';
-import { lazy, Suspense, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { CONFIG_ORIGIN_LABEL } from '../lib/config';
 import {
   alternator,
@@ -18,8 +18,6 @@ import { cx } from '../lib/util';
 import { ItemIcon } from './ItemIcon';
 import { IeConsumers } from './PowerIeLoads';
 import './PowerTab.css';
-
-const PowerGuidesSection = lazy(() => import('./guides/PowerGuidesSection'));
 
 /**
  * Справочник → «Электричество». Три вида энергии сборки и переходы между ними:
@@ -47,17 +45,7 @@ const EE_BLOCK = {
   transformer: 'electroenergetics:transformer',
 };
 
-export function PowerTab({
-  sub,
-  onSub,
-  guide,
-  onGuide,
-}: {
-  sub: PowerSub;
-  onSub: (s: PowerSub) => void;
-  guide: string | null;
-  onGuide: (id: string | null) => void;
-}) {
+export function PowerTab({ sub, onSub }: { sub: PowerSub; onSub: (s: PowerSub) => void }) {
   const data = usePower();
   return (
     <div className="botany">
@@ -74,7 +62,7 @@ export function PowerTab({
         ) : data === null ? (
           <div className="empty">Данные по электричеству не собраны — выполните npm run mods</div>
         ) : (
-          <Body data={data} sub={sub} guide={guide} onGuide={onGuide} />
+          <Body data={data} sub={sub} />
         )}
       </div>
     </div>
@@ -82,28 +70,12 @@ export function PowerTab({
 }
 
 /** Все настройки обоих модов — один раз, дальше по разделам */
-function Body({
-  data,
-  sub,
-  guide,
-  onGuide,
-}: {
-  data: PowerData;
-  sub: PowerSub;
-  guide: string | null;
-  onGuide: (id: string | null) => void;
-}) {
+function Body({ data, sub }: { data: PowerData; sub: PowerSub }) {
   const ee = useSettings(data.ee?.file, data.ee?.keys);
   const ie = useSettings(data.ie?.file, data.ie?.keys);
   const att = useSettings(data.att?.file, data.att?.keys);
   if (sub === 'ee') return <EeLoads data={data} s={ee.get} />;
   if (sub === 'ie') return <IeNet data={data} s={ie.get} ee={ee.get} att={att.get} />;
-  if (sub === 'guides')
-    return (
-      <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>
-        <PowerGuidesSection data={data} ee={ee.get} ie={ie.get} att={att.get} guide={guide} onGuide={onGuide} />
-      </Suspense>
-    );
   return <Link_ data={data} ee={ee.get} ie={ie.get} />;
 }
 

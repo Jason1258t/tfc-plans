@@ -54,6 +54,7 @@ export function Header({ nick, onChangeNick }: Props) {
           Датапаки
         </NavLink>
         <NavLink to="/reference">Справочник</NavLink>
+        <NavLink to="/addons">Аддоны</NavLink>
       </nav>
       <span className="grow" />
       {!firebaseEnabled && (

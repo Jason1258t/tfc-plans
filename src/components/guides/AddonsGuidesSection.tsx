@@ -5,7 +5,7 @@ import { GuidesSection } from './GuidesSection';
 /** Своих имён и виджетов у раздела нет — только общие функции формул */
 const KIT: GuideKit = { scope: { values: BASE_VALUES, docs: BASE_DOCS }, widgets: {} };
 
-/** Справочник → Аддоны → Гайды: как написать свой мод для сборки. Отдельный чанк (lazy в AddonsTab). */
+/** Аддоны → «Как написать свой»: как написать свой мод для сборки. Отдельный чанк (lazy в AddonsTab). */
 export default function AddonsGuidesSection({
   guide,
   onGuide,

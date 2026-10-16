@@ -9,7 +9,7 @@ import { POWER_WIDGETS } from './powerWidgets';
 type Get = (key: string) => Setting | null;
 
 /**
- * Справочник → Электричество → Гайды. Отдельный чанк (lazy в PowerTab): разборщик формул, YAML и редактор грузятся,
+ * Справочник → Гайды → Электричество. Отдельный чанк (lazy в GuidesTab): разборщик формул, YAML и редактор грузятся,
  * только когда открывают гайды.
  */
 export default function PowerGuidesSection({
