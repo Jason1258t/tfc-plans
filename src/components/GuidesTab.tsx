@@ -1,34 +1,54 @@
 import { lazy, Suspense } from 'react';
 import { usePower, useSettings, type PowerData } from '../lib/power';
+import { cx } from '../lib/util';
+import { GUIDES_SUBS, type GuidesSub } from './guides/guideMeta';
 import './PowerTab.css';
 
 const PowerGuidesSection = lazy(() => import('./guides/PowerGuidesSection'));
+const AddonsGuidesSection = lazy(() => import('./guides/AddonsGuidesSection'));
 
-/** Разделы гайдов справочника; гайды аддонов — на странице «Аддоны» */
-const SECTIONS = [{ id: 'power', label: 'Электричество' }] as const;
-
-/** Справочник → «Гайды»: типовые схемы со схемами и калькуляторами. Адрес статьи — ?tab=guides&g=<id>. */
-export function GuidesTab({ guide, onGuide }: { guide: string | null; onGuide: (id: string | null) => void }) {
-  const data = usePower();
+/** Справочник → «Гайды»: все разделы гайдов. Адрес статьи — ?tab=guides[&sub=addons]&g=<id>. */
+export function GuidesTab({
+  sub,
+  onSub,
+  guide,
+  onGuide,
+}: {
+  sub: GuidesSub;
+  onSub: (s: GuidesSub) => void;
+  guide: string | null;
+  onGuide: (id: string | null) => void;
+}) {
   return (
     <div className="botany">
       <nav className="botany-nav" aria-label="Разделы гайдов">
-        {SECTIONS.map((s) => (
-          <button key={s.id} className="active" onClick={() => onGuide(null)}>
+        {GUIDES_SUBS.map((s) => (
+          <button key={s.id} className={cx(sub === s.id && 'active')} onClick={() => onSub(s.id)}>
             <span>{s.label}</span>
           </button>
         ))}
       </nav>
       <div className="botany-main power">
-        {data === undefined ? (
-          <div className="empty">Загружаю…</div>
-        ) : data === null ? (
-          <div className="empty">Данные по электричеству не собраны — выполните npm run mods</div>
+        {sub === 'addons' ? (
+          <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>
+            <AddonsGuidesSection guide={guide} onGuide={onGuide} />
+          </Suspense>
         ) : (
-          <PowerGuides data={data} guide={guide} onGuide={onGuide} />
+          <PowerGuidesTab guide={guide} onGuide={onGuide} />
         )}
       </div>
     </div>
+  );
+}
+
+function PowerGuidesTab({ guide, onGuide }: { guide: string | null; onGuide: (id: string | null) => void }) {
+  const data = usePower();
+  return data === undefined ? (
+    <div className="empty">Загружаю…</div>
+  ) : data === null ? (
+    <div className="empty">Данные по электричеству не собраны — выполните npm run mods</div>
+  ) : (
+    <PowerGuides data={data} guide={guide} onGuide={onGuide} />
   );
 }
 

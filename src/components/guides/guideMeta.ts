@@ -7,3 +7,10 @@ export const CHECKED: Record<GuideChecked, { label: string; title: string }> = {
   code: { label: 'по коду модов', title: 'Разобрано по коду модов, в игре не проверялось' },
   none: { label: 'не проверено', title: 'Не проверялось ни в игре, ни по коду' },
 };
+
+/** Разделы гайдов справочника; гайды аддонов показаны ещё и на странице «Аддоны» */
+export type GuidesSub = 'power' | 'addons';
+export const GUIDES_SUBS: { id: GuidesSub; label: string }[] = [
+  { id: 'power', label: 'Электричество' },
+  { id: 'addons', label: 'Аддоны' },
+];

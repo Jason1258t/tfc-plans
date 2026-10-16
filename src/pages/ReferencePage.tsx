@@ -10,6 +10,7 @@ import { ItemIcon } from '../components/ItemIcon';
 import { LiquidFuelTab } from '../components/LiquidFuelTab';
 import { MapPage } from './MapPage';
 import { GuidesTab } from '../components/GuidesTab';
+import { GUIDES_SUBS, type GuidesSub } from '../components/guides/guideMeta';
 import { PowerTab } from '../components/PowerTab';
 import { POWER_SUBS, type PowerSub } from '../lib/power';
 import type { BotanySub } from '../lib/botany';
@@ -101,7 +102,19 @@ function Reference() {
       {tab === 'map' ? (
         <MapPage />
       ) : tab === 'guides' ? (
-        <GuidesTab guide={params.get('g')} onGuide={(g) => setParams(g ? { tab: 'guides', g } : { tab: 'guides' })} />
+        <GuidesTab
+          sub={GUIDES_SUBS.find((s) => s.id === params.get('sub'))?.id ?? 'power'}
+          onSub={(k: GuidesSub) =>
+            setParams(k === 'power' ? { tab: 'guides' } : { tab: 'guides', sub: k }, { replace: true })
+          }
+          guide={params.get('g')}
+          onGuide={(g) => {
+            const next: Record<string, string> = { tab: 'guides' };
+            if (params.get('sub') === 'addons') next.sub = 'addons';
+            if (g) next.g = g;
+            setParams(next);
+          }}
+        />
       ) : tab === 'power' ? (
         <PowerTab
           sub={POWER_SUBS.find((s) => s.id === params.get('sub'))?.id ?? 'link'}
