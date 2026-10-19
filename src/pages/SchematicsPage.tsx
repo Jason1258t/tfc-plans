@@ -4,6 +4,7 @@ import {
   Check,
   Download,
   FileBox,
+  Layers,
   Plus,
   RotateCcw,
   Search,
@@ -26,6 +27,7 @@ import {
 } from '../components/SchematicFavorites';
 import { replaceFavoritesStore } from '../data/store';
 import { useFavorites } from '../lib/replaceFavorites';
+import { SchematicLayers } from '../components/SchematicLayers';
 import { SchematicLibrary } from '../components/SchematicLibrary';
 import { useData } from '../data/DataContext';
 import { filesEnabled, formatSize } from '../lib/files';
@@ -108,7 +110,7 @@ const outName = (name: string) => name.replace(/(\.nbt)?$/i, '_tfc.nbt');
 
 /** Отпечаток замен одной схемы — понять, отличаются ли они от сохранённых в библиотеке */
 const replaceSig = (s: Schematic, replace: Map<string, string>) =>
-  JSON.stringify([[...replace].filter(([from]) => s.counts.has(from)).sort(), s.shape]);
+  JSON.stringify([[...replace].filter(([from]) => s.counts.has(from)).sort(), s.shape, s.rev]);
 
 const clampPad = (v: string) => Math.min(64, Math.max(0, Math.floor(Number(v)) || 0));
 
@@ -135,6 +137,8 @@ export function SchematicsPage() {
   const [smartFor, setSmartFor] = useState<Pair | null>(null);
   const [applyFavsOpen, setApplyFavsOpen] = useState(false);
   const [pickingPlatform, setPickingPlatform] = useState<string | null>(null);
+  /** key схемы, открытой в редакторе слоёв */
+  const [layersFor, setLayersFor] = useState<string | null>(null);
   const [rules, setRules] = useState<Rule[]>(loadRules);
   const [overwrite, setOverwrite] = useState(false);
   const [result, setResult] = useState<SmartResult | null>(null);
@@ -300,8 +304,12 @@ export function SchematicsPage() {
   const save = async (s: Schematic) => {
     setSaving((m) => ({ ...m, [s.key]: 'saving' }));
     try {
-      const id = await saveToLibrary(s, replace, nick);
-      setSchematics((list) => list.map((x) => (x.key === s.key ? { ...x, libraryId: id } : x)));
+      const { id, fileId } = await saveToLibrary(s, replace, nick);
+      setSchematics((list) =>
+        list.map((x) =>
+          x.key === s.key ? { ...x, libraryId: id, libraryFileId: fileId ?? x.libraryFileId, savedRev: s.rev } : x,
+        ),
+      );
       setSavedSig((m) => ({ ...m, [s.key]: replaceSig(s, replace) }));
       setSaving((m) => {
         const next = { ...m };
@@ -393,8 +401,17 @@ export function SchematicsPage() {
                       {shaped && ` → ${shaped.join('×')}`} · {s.counts.size} типов блоков
                       {ch.types > 0 && ` · изменено ${ch.types} (${ch.blocks} шт.)`}
                       {ch.removed > 0 && ` · удаляется ${ch.removed} шт.`}
+                      {s.rev !== (s.savedRev ?? 0) && ' · правки по слоям'}
                     </span>
                   </span>
+                  <button
+                    className="btn sm"
+                    onClick={() => setLayersFor(s.key)}
+                    title="Вид сверху по слоям: посмотреть блоки, убрать (ПКМ) или заменить (ЛКМ) отдельные"
+                  >
+                    <Layers size={14} />
+                    Слои
+                  </button>
                   <button
                     className="btn sm"
                     onClick={() => downloadSchematic(s)}
@@ -867,6 +884,19 @@ export function SchematicsPage() {
           </ul>
         </>
       )}
+
+      {(() => {
+        const s = layersFor && schematics.find((x) => x.key === layersFor);
+        return s ? (
+          <SchematicLayers
+            schematic={s}
+            replace={replace}
+            onChange={(next) => setSchematics((list) => list.map((x) => (x.key === next.key ? next : x)))}
+            onSetTarget={setTarget}
+            onClose={() => setLayersFor(null)}
+          />
+        ) : null;
+      })()}
 
       {smartFor && items && (
         <SmartAddDialog
