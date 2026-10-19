@@ -112,7 +112,8 @@ function Reference() {
           guide={params.get('g')}
           onGuide={(g) => {
             const next: Record<string, string> = { tab: 'guides' };
-            if (params.get('sub') === 'addons') next.sub = 'addons';
+            const sub = params.get('sub');
+            if (sub && sub !== 'power' && GUIDES_SUBS.some((s) => s.id === sub)) next.sub = sub;
             if (g) next.g = g;
             setParams(next);
           }}

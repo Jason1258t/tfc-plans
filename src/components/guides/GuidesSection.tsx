@@ -34,12 +34,15 @@ export function GuidesSection({
   guide,
   onGuide,
   intro,
+  checks = true,
 }: {
   section: string;
   kit: GuideKit;
   guide: string | null;
   onGuide: (id: string | null) => void;
   intro?: string;
+  /** Значок «проверено в игре / по коду»; разделу про сам сайт он ни к чему */
+  checks?: boolean;
 }) {
   const [guides, setGuides] = useState<Guide[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -110,7 +113,7 @@ export function GuidesSection({
               <div className="grow">
                 <h2 className="power-h">{current.title}</h2>
                 <div className="faint small guide-meta">
-                  <CheckedBadge c={current.checked} />
+                  {checks && <CheckedBadge c={current.checked} />}
                   {current.hidden && <span className="guide-badge guide-badge-hidden">снят с публикации</span>}
                   <span>
                     правил {current.updatedBy}, {date(current.updatedAt)}
@@ -176,7 +179,7 @@ export function GuidesSection({
           {groups.size > 1 && <h3 className="guide-group-title">{name}</h3>}
           <div className="guide-cards">
             {list.map((g) => (
-              <GuideCard key={g.id} g={g} kit={kit} onOpen={() => onGuide(g.id)} />
+              <GuideCard key={g.id} g={g} kit={kit} checks={checks} onOpen={() => onGuide(g.id)} />
             ))}
           </div>
         </div>
@@ -188,17 +191,17 @@ export function GuidesSection({
           </summary>
           <div className="guide-cards">
             {hidden.sort(byOrder).map((g) => (
-              <GuideCard key={g.id} g={g} kit={kit} onOpen={() => onGuide(g.id)} />
+              <GuideCard key={g.id} g={g} kit={kit} checks={checks} onOpen={() => onGuide(g.id)} />
             ))}
           </div>
         </details>
       )}
-      <GuideEditorHint />
+      <GuideEditorHint checks={checks} />
     </section>
   );
 }
 
-function GuideCard({ g, kit, onOpen }: { g: Guide; kit: GuideKit; onOpen: () => void }) {
+function GuideCard({ g, kit, checks, onOpen }: { g: Guide; kit: GuideKit; checks: boolean; onOpen: () => void }) {
   // Живые значения в «Коротко» — числами, как в статье
   const summary = useMemo(() => plain(expand(g.summary, [kit.scope.values])), [g.summary, kit.scope.values]);
   return (
@@ -208,7 +211,7 @@ function GuideCard({ g, kit, onOpen }: { g: Guide; kit: GuideKit; onOpen: () => 
         <b className="guide-card-title">{g.title}</b>
         {summary && <span className="guide-card-summary small">{summary}</span>}
         <span className="guide-card-meta faint small">
-          <CheckedBadge c={g.checked} />
+          {checks && <CheckedBadge c={g.checked} />}
           <span>{date(g.updatedAt)}</span>
         </span>
       </span>
@@ -225,12 +228,13 @@ export function CheckedBadge({ c }: { c: GuideChecked }) {
   );
 }
 
-function GuideEditorHint() {
+function GuideEditorHint({ checks }: { checks: boolean }) {
   return (
     <p className="faint small guide-foot">
       <Eye size={12} /> Гайды правят все игроки: кнопка «Править» в статье, каждая правка сохраняется в истории, и любую
-      прошлую версию можно вернуть. Числа в статьях — по коду модов и настройкам сервера; в игре схемы не проверялись,
-      если на карточке не сказано обратное.
+      прошлую версию можно вернуть.
+      {checks &&
+        ' Числа в статьях — по коду модов и настройкам сервера; в игре схемы не проверялись, если на карточке не сказано обратное.'}
     </p>
   );
 }

@@ -14,8 +14,20 @@ const ITEM_TOKEN = /\[\[([a-z0-9_.-]+:[a-z0-9_/.-]+)(?:\|(\d+|icon))?\]\]/g;
 
 export const itemToken = (id: string, qty?: number) => `[[${id}${qty ? `|${qty}` : ''}]]`;
 
+/** Блоки кода ```…``` и `код` в строке: запись [[id]] в них показывается как есть (справка, примеры) */
+const CODE = /^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1[^\n]*$|(`+)(?!`)[\s\S]*?[^`]\2(?!`)/gm;
+
+const items = (text: string) =>
+  text.replace(ITEM_TOKEN, (_, id: string, qty?: string) => `[item](item:${id}${qty ? `?${qty}` : ''})`);
+
 function preprocess(src: string) {
-  return src.replace(ITEM_TOKEN, (_, id: string, qty?: string) => `[item](item:${id}${qty ? `?${qty}` : ''})`);
+  let out = '';
+  let last = 0;
+  for (const m of src.matchAll(CODE)) {
+    out += items(src.slice(last, m.index)) + m[0];
+    last = m.index + m[0].length;
+  }
+  return out + items(src.slice(last));
 }
 
 function ItemChip({ href }: { href: string }) {

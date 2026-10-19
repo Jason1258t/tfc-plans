@@ -9,8 +9,9 @@ export const CHECKED: Record<GuideChecked, { label: string; title: string }> = {
 };
 
 /** Разделы гайдов справочника; гайды аддонов показаны ещё и на странице «Аддоны» */
-export type GuidesSub = 'power' | 'addons';
+export type GuidesSub = 'power' | 'addons' | 'site';
 export const GUIDES_SUBS: { id: GuidesSub; label: string }[] = [
   { id: 'power', label: 'Электричество' },
   { id: 'addons', label: 'Аддоны' },
+  { id: 'site', label: 'О сайте' },
 ];
