@@ -188,6 +188,8 @@ export interface SavedSchematic {
   };
   /** Превью (data URL webp/png ≤ ~200 КБ), рисуется в браузере сохранившего; нет у старых записей */
   preview?: string;
+  /** Описание (Markdown), правят все */
+  description?: string;
   author: string;
   updatedBy: string;
   createdAt: number;

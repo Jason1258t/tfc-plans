@@ -418,29 +418,154 @@
   margin: 0;
 }
 
-.schem-lib-name {
-  display: inline-flex;
+.schem-lib-pick {
+  flex: 1;
+  min-width: 0;
+  display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   padding: 0;
   border: 0;
   background: none;
   color: var(--text);
   font: inherit;
-  font-weight: 500;
   text-align: left;
-  overflow-wrap: anywhere;
   cursor: pointer;
 }
 
-.schem-lib-name svg {
-  opacity: 0;
-  flex: none;
+.schem-lib-pick > .grow {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
-.schem-lib-name:hover svg,
-.schem-lib-name:focus-visible svg {
-  opacity: 1;
+.schem-lib-name {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.schem-lib-pick:hover .schem-lib-name {
+  color: var(--accent);
+}
+
+.schem-library .schem-file.selected {
+  border-color: var(--accent);
+}
+
+/* Панель схемы справа */
+.schem-panel {
+  position: fixed;
+  top: var(--header-h);
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  width: min(420px, 100vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  animation: schem-panel-in 0.14s ease-out;
+}
+
+@keyframes schem-panel-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+.schem-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 10px 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.schem-panel-name {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 6px;
+  margin-left: -6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.schem-panel-name:hover {
+  border-color: var(--border);
+}
+
+.schem-panel-name:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+
+.schem-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 24px;
+}
+
+.schem-panel-preview {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: contain;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.schem-panel-preview.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px dashed var(--border-strong);
+}
+
+.schem-panel-meta {
+  margin: 0;
+}
+
+.schem-panel-desc h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.schem-panel-desc {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.schem-panel-desc textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.schem-panel-desc-view {
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  cursor: text;
+}
+
+.schem-panel-desc-view:hover,
+.schem-panel-desc-view:focus-visible {
+  border-color: var(--border);
+  background: var(--surface-2);
 }
 
 @media (max-width: 700px) {
@@ -550,46 +675,4 @@
 
 .fav-chip:hover {
   border-color: #e0a800;
-}
-
-.schem-lib-preview {
-  flex-shrink: 0;
-  width: 72px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
-  color: var(--text-3);
-  cursor: pointer;
-  overflow: hidden;
-}
-
-.schem-lib-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  image-rendering: auto;
-}
-
-.schem-lib-preview.empty {
-  border-style: dashed;
-}
-
-.schem-lib-preview:hover:not(:disabled) {
-  border-color: var(--accent);
-  color: var(--text);
-}
-
-.schem-lib-zoom {
-  display: block;
-  width: 100%;
-  max-height: 70vh;
-  object-fit: contain;
-  margin-bottom: 10px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
 }
