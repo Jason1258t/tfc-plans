@@ -98,18 +98,46 @@ export function propsByState(s: Schematic): Map<string, string>[] {
 
 interface Snapshot {
   blocks: Tag[];
-  paletteLens: number[];
+  /** Копии палитр: отмена убирает добавленные записи, повтор возвращает их */
+  palettes: Tag[][];
 }
 
 /** История правок по схеме — переживает закрытие редактора, пока схема открыта на странице */
-const history = new WeakMap<Schematic['parsed'], Snapshot[]>();
+interface History {
+  undo: Snapshot[];
+  redo: Snapshot[];
+}
+const histories = new WeakMap<Schematic['parsed'], History>();
 const MAX_HISTORY = 100;
 
-function snapshot(s: Schematic): Snapshot {
-  return { blocks: blocksOf(s), paletteLens: paletteLists(s.parsed.root.value).map((p) => p.length) };
+function historyOf(s: Schematic): History {
+  let h = histories.get(s.parsed);
+  if (!h) histories.set(s.parsed, (h = { undo: [], redo: [] }));
+  return h;
 }
 
-export const canUndo = (s: Schematic) => (history.get(s.parsed)?.length ?? 0) > 0;
+function snapshot(s: Schematic): Snapshot {
+  return { blocks: blocksOf(s), palettes: paletteLists(s.parsed.root.value).map((p) => [...p]) };
+}
+
+function restore(s: Schematic, snap: Snapshot) {
+  setBlocks(s, snap.blocks);
+  paletteLists(s.parsed.root.value).forEach((p, i) => {
+    const saved = snap.palettes[i];
+    if (saved) p.splice(0, p.length, ...saved);
+  });
+}
+
+/** Новая правка: снимок в отмену, повтор сбрасывается */
+function remember(s: Schematic) {
+  const h = historyOf(s);
+  h.undo.push(snapshot(s));
+  if (h.undo.length > MAX_HISTORY) h.undo.shift();
+  h.redo = [];
+}
+
+export const canUndo = (s: Schematic) => (histories.get(s.parsed)?.undo.length ?? 0) > 0;
+export const canRedo = (s: Schematic) => (histories.get(s.parsed)?.redo.length ?? 0) > 0;
 
 /** Схема после правки: новые счётчики и номер правки (parsed тот же объект) */
 const bumped = (s: Schematic, rev: number): Schematic => ({ ...s, counts: countBlocks(s.parsed), rev });
@@ -129,10 +157,7 @@ const propsKey = (entry: Tag) => JSON.stringify(propsOf(entry).sort(([a], [b]) =
  */
 export function editCells(s: Schematic, indices: number[], to: string): Schematic {
   if (!indices.length) return s;
-  const stack = history.get(s.parsed) ?? [];
-  stack.push(snapshot(s));
-  if (stack.length > MAX_HISTORY) stack.shift();
-  history.set(s.parsed, stack);
+  remember(s);
 
   const list = blocksOf(s);
   if (to === REMOVE) {
@@ -179,18 +204,28 @@ export function editCells(s: Schematic, indices: number[], to: string): Schemati
 }
 
 export function undoEdit(s: Schematic): Schematic {
-  const snap = history.get(s.parsed)?.pop();
-  if (!snap) return s;
-  setBlocks(s, snap.blocks);
-  // Записи палитры, добавленные после снимка, больше никому не нужны
-  paletteLists(s.parsed.root.value).forEach((p, i) => (p.length = snap.paletteLens[i] ?? p.length));
+  const h = histories.get(s.parsed);
+  const snap = h?.undo.pop();
+  if (!h || !snap) return s;
+  h.redo.push(snapshot(s));
+  restore(s, snap);
   return bumped(s, s.rev + 1);
 }
 
-/** Вернуть схему к виду до первой правки в этом редакторе */
+export function redoEdit(s: Schematic): Schematic {
+  const h = histories.get(s.parsed);
+  const snap = h?.redo.pop();
+  if (!h || !snap) return s;
+  h.undo.push(snapshot(s));
+  restore(s, snap);
+  return bumped(s, s.rev + 1);
+}
+
+/** Вернуть схему к виду до первой правки в этом редакторе — тоже правка: её можно отменить */
 export function revertEdits(s: Schematic): Schematic {
-  const stack = history.get(s.parsed);
-  if (!stack?.length) return s;
-  stack.splice(1);
-  return undoEdit(s);
+  const first = histories.get(s.parsed)?.undo[0];
+  if (!first) return s;
+  remember(s);
+  restore(s, first);
+  return bumped(s, s.rev + 1);
 }
