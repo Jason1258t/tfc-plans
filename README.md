@@ -55,7 +55,13 @@ npm run dev
 ```bash
 npm run deploy          # сборка + hosting + правила + auth
 npm run deploy:rules    # только правила Firestore
+npm run deploy:site     # только сайт, данные модов — готовые (jar в mods/ не нужны)
 ```
+
+`deploy:site` (переменная `TFC_KEEP_MODS=1`) — для правок кода сайта: библиотека предметов, рецепты и прочее из модов
+не пересобираются, а в git worktree копируются из `public/` основной копии. Там же сборка сама берёт `.env.local`,
+аддоны, ресурспаки и разбор KubeJS. Перед выкладкой `scripts/predeploy-check.mjs` проверяет, что сайт собран
+с настройками Firebase.
 
 Сайт: https://tfc-plans-fd2c.web.app
 

@@ -37,6 +37,7 @@ npx tsc -b             # типы (в build входит)
 npx oxlint src scripts # линтер; предупреждения set-state-in-effect и only-export-components — старые, не чинить попутно
 npx prettier --write <файлы>   # singleQuote, printWidth 120; не запускай на весь src без нужды — шум в диффе
 npx firebase deploy --only hosting           # сборка + pack-release + выкладка
+npm run deploy:site   # то же без пересборки данных модов (jar не нужны) — для правок сайта, в т. ч. из worktree
 npx firebase deploy --only firestore:rules
 npm run mods          # пересобрать библиотеку из mods/ (долго, кеш в .cache/)
 npm run serverconfig -- <zip|папка>                # конфиги сервера → Firestore config
@@ -141,10 +142,16 @@ docs/plans/       планы фич со статусами; docs/STATE.md — �
 - Firestore на бесплатном тарифе: 50 тыс. чтений в сутки. Тяжёлое (иконки, карты, каталоги) — только статикой.
 - Скрытая панель браузера замораживает страницу — долгие операции в ней выглядят как зависание.
 - `predeploy` хостинга запускает `pack-release.mjs`; пропустить: `SKIP_PACK_RELEASE=1`.
-- Деплой из git worktree — **только с модами в `mods/`**: jar в git нет, без них сборка соберёт каталог из одной ванили
-  и TFC, а `pack-release` запишет «убраны все моды» (так было дважды 2026-10-19). Перед деплоем в worktree:
-  `ln -s /Users/ivan/vscodeProjects/tfc-taskmanager/mods/*.jar mods/`. Сборка и `pack-release` теперь сами
-  останавливаются (обход — `TFC_ALLOW_NO_MODS=1` и `ALLOW_MODS_DROP=1`, только если моды правда убраны).
+- Деплой из git worktree: jar, `.env.local` и данные `public/` в git не хранятся. Без jar сборка собирала каталог
+  из одной ванили и TFC, а `pack-release` писал «убраны все моды» (дважды 2026-10-19). Теперь так:
+  - данные модов не менялись (правка сайта) — **`npm run deploy:site`** (`TFC_KEEP_MODS=1`): готовые данные модов
+    берутся из `public/` основной копии, jar не нужны;
+  - данные модов менялись (`scripts/mods/…`) — сначала `ln -s /Users/ivan/vscodeProjects/tfc-taskmanager/mods/*.jar mods/`,
+    потом обычный деплой.
+  Остальное (`.env.local`, аддоны, ресурспаки, разбор KubeJS) сборка в worktree сама берёт из основной копии.
+  Без jar и без флага сборка останавливается; `pack-release` — при 0 модов или потере больше половины
+  (обход — `TFC_ALLOW_NO_MODS=1` и `ALLOW_MODS_DROP=1`, только если моды правда убраны); `predeploy-check` — если
+  сайт собран без настроек Firebase.
 - Гайды хранятся только в Firestore. Правишь статью — сначала `npm run guides -- pull`, потом `push` (иначе затрёшь
   правку игрока; старая версия останется в истории). В YAML калькулятора короткая запись `{ … }` режет значения по
   запятым: формулу с запятой — в кавычки или отдельной строкой (калькулятор покажет «неизвестное поле»).

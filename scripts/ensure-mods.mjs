@@ -53,6 +53,12 @@ if (mainRoot) {
     fs.cpSync(path.join(mainPublic, name), dst, { recursive: true });
     copied.push(name);
   }
+  // Настройки Firebase: без них сайт собирается в запасном режиме на localStorage, без общей базы
+  const env = fileURLToPath(new URL('../.env.local', import.meta.url));
+  if (!fs.existsSync(env) && fs.existsSync(path.join(mainRoot, '.env.local'))) {
+    fs.copyFileSync(path.join(mainRoot, '.env.local'), env);
+    copied.push('../.env.local');
+  }
   if (copied.length) console.log(`[items] из основной копии (${mainPublic}): ${copied.join(', ')}`);
 }
 
