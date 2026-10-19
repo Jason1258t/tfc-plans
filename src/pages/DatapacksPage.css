@@ -120,6 +120,24 @@
   align-items: center;
 }
 
+.dp-saved {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-size: 13px;
+}
+
+.dp-saved.error {
+  background: color-mix(in srgb, var(--imp-2) 12%, transparent);
+}
+
+.dp-saved .btn {
+  margin-left: auto;
+}
+
 .dp-issues {
   display: flex;
   flex-direction: column;

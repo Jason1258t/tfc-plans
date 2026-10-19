@@ -9,11 +9,12 @@ import {
   Package,
   Paperclip,
   Plus,
+  Save,
   ShieldAlert,
   Trash2,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { EntryEditor } from '../components/EntryEditor';
 import { KubejsConstructor } from '../components/KubejsConstructor';
 import { Modal } from '../components/Modal';
@@ -32,7 +33,7 @@ import {
   zipName,
 } from '../lib/datapack';
 import { PackNav } from '../components/PackNav';
-import { filesEnabled, uploadFile } from '../lib/files';
+import { filesEnabled, removeFile, uploadFile } from '../lib/files';
 import { useItems } from '../lib/items';
 import { entryRecipeId, kubejsScript, scriptFileName } from '../lib/kubejsFix';
 import { useRecipes, type Recipe } from '../lib/recipes';
@@ -145,7 +146,7 @@ export function DatapacksPage() {
 }
 
 function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void }) {
-  const { nick } = useData();
+  const { nick, files } = useData();
   const navigate = useNavigate();
   const catalog = useRecipes();
   const [name, setName] = useState(pack.name);
@@ -154,6 +155,8 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
   const [catalogMode, setCatalogMode] = useState<'template' | 'existing' | null>(null);
   const [editing, setEditing] = useState<DatapackEntry | null>(null);
   const [attaching, setAttaching] = useState(false);
+  /** «Сохранить как файл»: идёт загрузка / готово (имя файла) / ошибка */
+  const [saving, setSaving] = useState<{ busy: boolean; done?: string; error?: string } | null>(null);
   /** Конструктор для рецепта, который режет KubeJS; entryId — рецепт этого датапака */
   const [constructing, setConstructing] = useState<{
     recipeId: string;
@@ -187,6 +190,24 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
   };
 
   const exportZip = () => download(buildZip(pack), zipName(pack));
+
+  /** zip в «Документы» без привязки к задаче; прежний такой же файл (то же имя, без задачи) заменяется */
+  const saveAsFile = async () => {
+    const name = zipName(pack);
+    const old = files.filter((f) => f.name === name && !f.taskId);
+    if (old.length && !confirm(`В «Документах» уже есть ${name} — заменить его текущей версией датапака?`)) return;
+    setSaving({ busy: true });
+    try {
+      await uploadFile(new File([buildZip(pack) as BlobPart], name, { type: 'application/zip' }), {
+        taskId: null,
+        author: nick,
+      });
+      for (const f of old) await removeFile(f);
+      setSaving({ busy: false, done: name });
+    } catch (e) {
+      setSaving({ busy: false, error: e instanceof Error ? e.message : String(e) });
+    }
+  };
 
   /** Рецепты датапака одним KubeJS-скриптом (event.custom) — их удаления KubeJS не трогают */
   const recipeEntries = pack.entries.filter((e) => (e.kind === 'add' || e.kind === 'replace') && entryRecipeId(e.path));
@@ -308,10 +329,36 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
         <button className="btn" onClick={() => setAttaching(true)} disabled={!pack.entries.length || !filesEnabled}>
           <Paperclip size={15} /> К задаче
         </button>
+        <button
+          className="btn"
+          onClick={saveAsFile}
+          disabled={!pack.entries.length || !filesEnabled || saving?.busy}
+          title="Положить zip в «Документы» (общее хранилище файлов) без привязки к задаче"
+        >
+          <Save size={15} /> {saving?.busy ? 'Сохраняю…' : 'Сохранить как файл'}
+        </button>
         <button className="btn primary" onClick={exportZip} disabled={!pack.entries.length}>
           <Download size={15} /> Скачать .zip
         </button>
       </div>
+
+      {saving && !saving.busy && (
+        <div className={cx('dp-saved', saving.error && 'error')}>
+          <span>
+            {saving.error ? (
+              <>Не сохранилось: {saving.error}</>
+            ) : (
+              <>
+                <b>{saving.done}</b> лежит в <Link to="/docs">«Документах»</Link>. Это снимок текущей версии — после
+                правок датапака сохраните заново.
+              </>
+            )}
+          </span>
+          <button className="btn ghost sm" onClick={() => setSaving(null)}>
+            Скрыть
+          </button>
+        </div>
+      )}
 
       {issues.length > 0 && (
         <div className="dp-issues">
