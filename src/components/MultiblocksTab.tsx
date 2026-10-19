@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Download, FlipHorizontal2, RotateCcw } from 'lucide-react';
+import { ChevronDown, ChevronUp, Download, FlipHorizontal2, RotateCcw } from 'lucide-react';
 import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { iconUrl, itemName, useItems, type ItemIndex } from '../lib/items';
@@ -164,12 +164,13 @@ function MbViewer({ m, shape, trigger }: { m: Multiblock; shape: MbShape; trigge
         )}
         <div className="mb-layer-ctl">
           <button
-            className="btn ghost icon"
+            className="btn sm icon"
             aria-label="Слой ниже"
+            title="Слой ниже"
             disabled={top <= 0}
             onClick={() => setLayer(top - 1)}
           >
-            <ChevronLeft size={15} />
+            <ChevronDown size={16} />
           </button>
           <input
             type="range"
@@ -180,12 +181,13 @@ function MbViewer({ m, shape, trigger }: { m: Multiblock; shape: MbShape; trigge
             aria-label="Слой"
           />
           <button
-            className="btn ghost icon"
+            className="btn sm icon"
             aria-label="Слой выше"
+            title="Слой выше"
             disabled={top >= sy - 1}
             onClick={() => setLayer(top + 1)}
           >
-            <ChevronRight size={15} />
+            <ChevronUp size={16} />
           </button>
           <span className="small">
             слой {top + 1} из {sy}

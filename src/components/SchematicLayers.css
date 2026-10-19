@@ -33,6 +33,12 @@
   font-size: 13px;
 }
 
+.layers-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .layers-range {
   width: min(240px, 40vw);
 }
