@@ -7,8 +7,9 @@ import './PowerTab.css';
 const PowerGuidesSection = lazy(() => import('./guides/PowerGuidesSection'));
 const AddonsGuidesSection = lazy(() => import('./guides/AddonsGuidesSection'));
 const SiteGuidesSection = lazy(() => import('./guides/SiteGuidesSection'));
+const MultiblockGuidesSection = lazy(() => import('./guides/MultiblockGuidesSection'));
 
-/** Справочник → «Гайды»: все разделы гайдов. Адрес статьи — ?tab=guides[&sub=addons|site]&g=<id>. */
+/** Справочник → «Гайды»: все разделы гайдов. Адрес статьи — ?tab=guides[&sub=multiblocks|addons|site]&g=<id>. */
 export function GuidesTab({
   sub,
   onSub,
@@ -33,6 +34,10 @@ export function GuidesTab({
         {sub === 'addons' ? (
           <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>
             <AddonsGuidesSection guide={guide} onGuide={onGuide} />
+          </Suspense>
+        ) : sub === 'multiblocks' ? (
+          <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>
+            <MultiblockGuidesSection guide={guide} onGuide={onGuide} />
           </Suspense>
         ) : sub === 'site' ? (
           <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>

@@ -136,6 +136,7 @@ function manualText(raw) {
     .replace(/<link;[^;>]*;([^;>]*)(;[^>]*)?>/g, '$1')
     .replace(/<keybind;([^>]*)>/g, '[$1]')
     .replace(/<config;[a-z]+;([^>]*)>/g, '{config:$1}')
+    .replace(/§./g, '')
     .replace(/<(br|np)>/g, '\n\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
