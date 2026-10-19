@@ -1,5 +1,5 @@
-import { ChevronDown, ChevronUp, Layers, Maximize, Minus, Plus, RotateCcw, Trash2, Undo2, X } from 'lucide-react';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Box, ChevronDown, ChevronUp, Layers, Maximize, Minus, Plus, RotateCcw, Trash2, Undo2, X } from 'lucide-react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { iconUrl, itemName, useItems } from '../lib/items';
 import { EMPTY_BLOCKS, REMOVE, type Schematic } from '../lib/schematic';
@@ -18,6 +18,9 @@ import { cx } from '../lib/util';
 import { ItemIcon } from './ItemIcon';
 import { ItemPicker } from './ItemPicker';
 import './SchematicLayers.css';
+
+// three.js — отдельным куском, грузится только при переходе в 3D
+const SchematicView3D = lazy(() => import('./SchematicView3D'));
 
 interface Props {
   schematic: Schematic;
@@ -86,6 +89,10 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
   const [y, setY] = useState(grid.minY);
   const layerY = Math.min(Math.max(0, y), Math.max(0, sy - 1));
   const [ghost, setGhost] = useState(true);
+  const [mode, setMode] = useState<'2d' | '3d'>('2d');
+  /** 3D: показывать только слои до текущего */
+  const [cut, setCut] = useState(false);
+  const [textured, setTextured] = useState(true);
   const [view, setView] = useState({ zoom: 16, ox: 0, oy: 0 });
   const [hover, setHover] = useState<{ x: number; z: number } | null>(null);
   const [menu, setMenu] = useState<Menu | null>(null);
@@ -507,6 +514,26 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
       </div>
 
       <div className="layers-toolbar">
+        <div className="layers-mode" role="tablist" aria-label="Вид">
+          <button
+            role="tab"
+            aria-selected={mode === '2d'}
+            className={cx('btn sm', mode === '2d' && 'on')}
+            onClick={() => setMode('2d')}
+          >
+            <Layers size={14} />
+            Слой
+          </button>
+          <button
+            role="tab"
+            aria-selected={mode === '3d'}
+            className={cx('btn sm', mode === '3d' && 'on')}
+            onClick={() => (setMode('3d'), setMenu(null))}
+          >
+            <Box size={14} />
+            3D
+          </button>
+        </div>
         <button className="btn sm icon" onClick={() => stepY(-1)} disabled={layerY <= 0} aria-label="Слой ниже">
           <ChevronDown size={16} />
         </button>
@@ -529,21 +556,48 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
           aria-label="Слой"
         />
         <span className="faint small">{layerTotal} блоков</span>
-        <label className="toggle sm-toggle" title="Бледно показывать блоки слоя ниже там, где на этом слое пусто">
-          <input type="checkbox" checked={ghost} onChange={(e) => setGhost(e.target.checked)} />
-          Слой ниже
-        </label>
-        <span className="grow" />
-        <button className="btn ghost sm icon" onClick={() => zoomAt(box.w / 2, box.h / 2, 1 / 1.4)} aria-label="Мельче">
-          <Minus size={15} />
-        </button>
-        <button className="btn ghost sm icon" onClick={() => zoomAt(box.w / 2, box.h / 2, 1.4)} aria-label="Крупнее">
-          <Plus size={15} />
-        </button>
-        <button className="btn ghost sm" onClick={fit} title="Вписать схему в окно">
-          <Maximize size={14} />
-          Вписать
-        </button>
+        {mode === '2d' ? (
+          <>
+            <label className="toggle sm-toggle" title="Бледно показывать блоки слоя ниже там, где на этом слое пусто">
+              <input type="checkbox" checked={ghost} onChange={(e) => setGhost(e.target.checked)} />
+              Слой ниже
+            </label>
+            <span className="grow" />
+            <button
+              className="btn ghost sm icon"
+              onClick={() => zoomAt(box.w / 2, box.h / 2, 1 / 1.4)}
+              aria-label="Мельче"
+            >
+              <Minus size={15} />
+            </button>
+            <button
+              className="btn ghost sm icon"
+              onClick={() => zoomAt(box.w / 2, box.h / 2, 1.4)}
+              aria-label="Крупнее"
+            >
+              <Plus size={15} />
+            </button>
+            <button className="btn ghost sm" onClick={fit} title="Вписать схему в окно">
+              <Maximize size={14} />
+              Вписать
+            </button>
+          </>
+        ) : (
+          <>
+            <label className="toggle sm-toggle" title="Скрыть слои выше выбранного — заглянуть внутрь">
+              <input type="checkbox" checked={cut} onChange={(e) => setCut(e.target.checked)} />
+              Срез по слою
+            </label>
+            <label
+              className="toggle sm-toggle"
+              title="Текстуры блоков; без них — средний цвет текстуры, проще и быстрее"
+            >
+              <input type="checkbox" checked={textured} onChange={(e) => setTextured(e.target.checked)} />
+              Текстуры
+            </label>
+            <span className="grow" />
+          </>
+        )}
       </div>
 
       <div className="layers-main">
@@ -557,7 +611,15 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
             onPointerLeave={() => setHover(null)}
             onContextMenu={(e) => e.preventDefault()}
           />
-          {hoverInfo && !menu && (
+          {mode === '3d' && (
+            <Suspense fallback={<div className="view3d faint small">Загружаю 3D…</div>}>
+              <SchematicView3D schematic={s} replace={replace} maxY={cut ? layerY : undefined} textured={textured} />
+              <div className="layers-hint faint small">
+                ЛКМ — вращать · ПКМ — сдвигать · колесо — масштаб · ↑↓ — слой среза · формы блоков упрощены
+              </div>
+            </Suspense>
+          )}
+          {mode === '2d' && hoverInfo && !menu && (
             <div className="layers-hover small">
               <b>{shownName(effective(hoverInfo.name))}</b>
               <code>{effective(hoverInfo.name)}</code>
@@ -570,11 +632,11 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
               </span>
             </div>
           )}
-          <div className="layers-hint faint small">
+          <div className={cx('layers-hint faint small', mode === '3d' && 'hidden')}>
             ЛКМ — заменить · ПКМ (можно провести) — убрать · колесо — масштаб · перетаскивание — сдвиг · ↑↓ — слои ·
             Ctrl+Z — отмена
           </div>
-          {menu && info && (
+          {mode === '2d' && menu && info && (
             <div className="layers-menu" style={{ left: menu.left, top: menu.top }}>
               <div className="row">
                 <ItemIcon id={effective(info.name)} size={28} />

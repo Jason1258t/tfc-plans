@@ -162,6 +162,8 @@ service cloud.firestore {
         && request.resource.data.fileId is string
         && request.resource.data.replace is list
         && request.resource.data.replace.size() <= 2000
+        && (!('preview' in request.resource.data)
+          || (request.resource.data.preview is string && request.resource.data.preview.size() <= 300000))
         && nick(request.resource.data.updatedBy);
       allow delete: if signedIn();
     }

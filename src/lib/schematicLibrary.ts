@@ -1,6 +1,7 @@
 import { schematicsStore } from '../data/store';
 import type { SavedSchematic } from '../types';
 import { fileBlob, removeFile, uploadFile } from './files';
+import type { ItemIndex } from './items';
 import { DEFAULT_SHAPE, editedSource, loadSchematic, type Schematic } from './schematic';
 
 /**
@@ -22,11 +23,18 @@ export async function saveToLibrary(
   s: Schematic,
   replace: Map<string, string>,
   nick: string,
+  preview?: string | null,
 ): Promise<{ id: string; fileId?: string }> {
   const edited = s.rev !== (s.savedRev ?? 0);
+  const withPreview = preview ? { preview } : {};
   if (s.libraryId) {
     if (!edited) {
-      await schematicsStore.update(s.libraryId, { replace: replaceList(s, replace), shape: s.shape, updatedBy: nick });
+      await schematicsStore.update(s.libraryId, {
+        replace: replaceList(s, replace),
+        shape: s.shape,
+        updatedBy: nick,
+        ...withPreview,
+      });
       return { id: s.libraryId };
     }
     const file = await editedSource(s);
@@ -38,6 +46,7 @@ export async function saveToLibrary(
       replace: replaceList(s, replace),
       shape: s.shape,
       updatedBy: nick,
+      ...withPreview,
     });
     if (s.libraryFileId)
       await removeFile(s.libraryFileId).catch((e) => console.error('Не удалось удалить прежний файл схемы:', e));
@@ -56,6 +65,7 @@ export async function saveToLibrary(
     shape: s.shape,
     author: nick,
     updatedBy: nick,
+    ...withPreview,
   });
   return { id, fileId };
 }
@@ -82,4 +92,30 @@ export async function removeFromLibrary(entry: SavedSchematic) {
   await schematicsStore.remove(entry.id);
   // Файл — следом: запись уже не ссылается на него, даже если удаление файла сорвётся
   await removeFile(entry.fileId).catch((e) => console.error('Не удалось удалить файл схемы:', e));
+}
+
+/** Превью больше этого не пишем в запись (лимит правил — 300 тыс. символов) */
+const MAX_PREVIEW = 280_000;
+
+/**
+ * Нарисовать превью схемы в этом браузере (three.js грузится только здесь). null — не вышло:
+ * нет WebGL, слишком большая схема или картинка; сохранению схемы это не мешает.
+ */
+export async function makePreview(s: Schematic, replace: Map<string, string>, items: ItemIndex) {
+  try {
+    const { renderPreview } = await import('./schematicRender');
+    const url = await renderPreview(s, replace, items);
+    return url.length <= MAX_PREVIEW ? url : null;
+  } catch (e) {
+    console.error('Превью схемы не нарисовано:', e);
+    return null;
+  }
+}
+
+/** Превью для записи, сохранённой раньше: исходник из хранилища → картинка → в запись */
+export async function refreshPreview(entry: SavedSchematic, items: ItemIndex) {
+  const { schematic, replace } = await openFromLibrary(entry);
+  const preview = await makePreview(schematic, replace, items);
+  if (!preview) throw new Error('не удалось нарисовать превью (нужен WebGL)');
+  await schematicsStore.update(entry.id, { preview });
 }

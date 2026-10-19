@@ -186,6 +186,8 @@ export interface SavedSchematic {
     platformBlock?: string;
     platformHollow?: boolean;
   };
+  /** Превью (data URL webp/png ≤ ~200 КБ), рисуется в браузере сохранившего; нет у старых записей */
+  preview?: string;
   author: string;
   updatedBy: string;
   createdAt: number;
