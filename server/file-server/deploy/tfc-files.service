@@ -1,0 +1,30 @@
+[Unit]
+Description=Сервер файлов «TFC Планы»
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tfcfiles
+Group=tfcfiles
+EnvironmentFile=/etc/tfc-files.env
+WorkingDirectory=/opt/tfc-files
+ExecStart=/usr/bin/node /opt/tfc-files/server.mjs
+Restart=on-failure
+RestartSec=3
+
+# Песочница: писать можно только в папку данных
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+ReadWritePaths=/var/lib/tfc-files
+
+[Install]
+WantedBy=multi-user.target

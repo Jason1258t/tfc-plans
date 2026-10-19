@@ -1,0 +1,12 @@
+# Caddy сам получает и продлевает сертификат Let's Encrypt для домена.
+# DOMAIN подставляет install.sh; порты 80 и 443 должны быть открыты.
+DOMAIN {
+	encode zstd gzip
+	request_body {
+		max_size 30MB
+	}
+	reverse_proxy 127.0.0.1:8787 {
+		# SSE (живой список файлов) — без буферизации
+		flush_interval -1
+	}
+}

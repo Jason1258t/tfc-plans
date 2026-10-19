@@ -1,17 +1,43 @@
-import { createFileStore, type StoredFile } from 'firestore-files';
-import { authReady, db } from '../firebase';
+import { getToken } from 'firebase/app-check';
+import { appCheck, auth, authReady, db } from '../firebase';
 import filesConfig from './files.config';
+import { firestoreAdapter } from './fileStorage/firestore';
+import { serverAdapter } from './fileStorage/server';
+import type { FileAdapter, StoredFile } from './fileStorage/types';
 
 /**
- * Вложения задач. Firebase Storage на бесплатном тарифе недоступен, поэтому файлы хранятся
- * в Firestore кусками — пакетом firestore-files (метаданные в files/{id}, содержимое в files/{id}/chunks/{n}).
+ * Вложения задач и исходники схем. Хранилище — за интерфейсом FileAdapter (lib/fileStorage):
+ * - по умолчанию Firestore кусками, пакет firestore-files (Firebase Storage на бесплатном тарифе недоступен);
+ * - если задан VITE_FILES_SERVER — свой сервер файлов (server/file-server).
  * Здесь — тонкая обёртка с API, к которому привыкли компоненты.
  */
-export type FileMeta = StoredFile<{ taskId: string | null; author: string }>;
+type Meta = { taskId: string | null; author: string };
+export type FileMeta = StoredFile<Meta>;
 
-const store = db
-  ? createFileStore<{ taskId: string | null; author: string }>(db, filesConfig, { ready: () => authReady })
-  : null;
+const serverUrl = import.meta.env.VITE_FILES_SERVER?.trim();
+
+/** Заголовки для сервера файлов: ID-токен анонимного входа и токен App Check — по ним сервер отсекает чужих */
+async function serverHeaders(): Promise<Record<string, string>> {
+  const h: Record<string, string> = {};
+  const idToken = await auth?.currentUser?.getIdToken();
+  if (idToken) h.Authorization = `Bearer ${idToken}`;
+  if (appCheck) {
+    const { token } = await getToken(appCheck, false);
+    h['X-Firebase-AppCheck'] = token;
+  }
+  return h;
+}
+
+const store: FileAdapter<Meta> | null = serverUrl
+  ? serverAdapter<Meta>({
+      baseUrl: serverUrl,
+      maxFileSize: filesConfig.maxFileSize,
+      ready: () => authReady,
+      headers: serverHeaders,
+    })
+  : db
+    ? firestoreAdapter<Meta>(db, filesConfig, () => authReady)
+    : null;
 
 export const filesEnabled = Boolean(store);
 export const MAX_FILE_SIZE = filesConfig.maxFileSize;
@@ -32,7 +58,7 @@ export function subscribeFiles(cb: (files: FileMeta[]) => void, onError?: (e: Er
     queueMicrotask(() => cb([]));
     return () => {};
   }
-  return store.subscribe([], cb, onError);
+  return store.subscribe(cb, onError);
 }
 
 export async function uploadFile(
@@ -45,7 +71,7 @@ export async function uploadFile(
   return f.id;
 }
 
-/** Собирает файл из кусков (кешируется пакетом) */
+/** Содержимое файла (кешируется хранилищем) */
 export const fileBlob = (f: FileMeta | string) => requireStore().read(f);
 /** object URL для показа картинки в <img> */
 export const fileUrl = (f: FileMeta) => requireStore().objectUrl(f);

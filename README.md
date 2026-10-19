@@ -134,6 +134,15 @@ npm run deploy:rules
 `scripts/migrate-files.mjs` перезаливает файлы, загруженные до перехода на пакет (добавляет контрольную сумму);
 повторный запуск ничего не делает, `--dry-run` — только показать.
 
+Хранилище спрятано за интерфейсом [`src/lib/fileStorage`](src/lib/fileStorage/types.ts), компоненты ходят только в
+`src/lib/files.ts`. Вторая реализация — свой сервер файлов для Ubuntu, [`server/file-server`](server/file-server/README.md)
+(установка, HTTPS, бэкап). Сайт переходит на него, если в `.env.local` задан `VITE_FILES_SERVER`. Файлы переносятся
+с сохранением id в любую сторону: Firestore, сервер, папка.
+
+```bash
+FILES_ADMIN_TOKEN=... node scripts/files-migrate.mjs --from firestore --to https://files.example.com [--dry-run]
+```
+
 ## Датапаки
 
 Страница «Датапаки»: черновики хранятся в Firestore (`datapacks`), экспорт — zip под 1.21.1 (`pack_format` 48).

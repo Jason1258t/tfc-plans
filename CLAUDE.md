@@ -119,9 +119,10 @@ src/lib/
   guideScope.ts powerGuideScope.ts   имена для формул: общие функции + раздел (настройки, power.json, формулы power.ts)
   projection.ts geo.ts atlas.ts config.ts   карта TFC Real World, настройки мира из конфига сервера
   packUpdates.ts gemini.ts     обновления сборки, запросы к Gemini (цепочки моделей с запасными, таймаут 90 с)
-  files.ts files.config.ts     вложения через firestore-files
+  files.ts files.config.ts     вложения: обёртка над fileStorage/ (интерфейс; Firestore или свой сервер — VITE_FILES_SERVER)
 src/components/guides/  гайды справочника: GuidesSection (карточки, статья), GuideEditor/History/Help, CalcBlock (```calc),
                   GuideBody (Markdown + {{…}} + виджеты «::имя»), powerWidgets — рисунки раздела; формат — docs/plans/guides.md
+server/file-server/  сервер файлов для Ubuntu (Node без зависимостей); переезд — scripts/files-migrate.mjs
 tools/            аддоны сборки (ee-rectifier-mod, ee-overheat-mod) — docs/addons.md; на сайте — lib/addons.ts, AddonsTab
 scripts/          mods.mjs + mods/{reference,tags,botany,meals,cuisine,power,multiblocks,geo,manifest,classfile,config-defaults}.mjs, serverconfig.mjs,
                   kubejs.mjs, pack-release.mjs; firestore-rest.mjs — общий доступ к Firestore

@@ -24,6 +24,20 @@ export function toValue(v) {
   return { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, toValue(x)])) } };
 }
 
+export function fromValue(v) {
+  if ('stringValue' in v) return v.stringValue;
+  if ('integerValue' in v) return Number(v.integerValue);
+  if ('doubleValue' in v) return v.doubleValue;
+  if ('booleanValue' in v) return v.booleanValue;
+  if ('nullValue' in v) return null;
+  if ('timestampValue' in v) return Date.parse(v.timestampValue);
+  if ('bytesValue' in v) return Buffer.from(v.bytesValue, 'base64');
+  if ('arrayValue' in v) return (v.arrayValue.values ?? []).map(fromValue);
+  if ('mapValue' in v)
+    return Object.fromEntries(Object.entries(v.mapValue.fields ?? {}).map(([k, x]) => [k, fromValue(x)]));
+  return null;
+}
+
 export async function token() {
   const require = createRequire(import.meta.url);
   const fbRoot = execFileSync('npm', ['root', '-g'], { encoding: 'utf8' }).trim();

@@ -1,5 +1,5 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
-import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider, type AppCheck } from 'firebase/app-check';
 import { getAuth, signInAnonymously } from 'firebase/auth';
 import {
   initializeFirestore,
@@ -28,18 +28,20 @@ export const app: FirebaseApp | null = firebaseEnabled ? initializeApp(config) :
  * браузера зарегистрировать в Firebase Console → App Check → Manage debug tokens.
  */
 const recaptchaKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
-if (app && recaptchaKey) {
+function setupAppCheck(app: FirebaseApp, siteKey: string): AppCheck {
   // Локальная разработка: заранее зарегистрированный debug-токен (только в dev-сборке, в прод не попадает)
   const debugToken = import.meta.env.DEV ? import.meta.env.VITE_APPCHECK_DEBUG_TOKEN : undefined;
   if (debugToken || import.meta.env.VITE_APPCHECK_DEBUG === 'true') {
     (self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN: string | boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN =
       debugToken || true;
   }
-  initializeAppCheck(app, {
-    provider: new ReCaptchaEnterpriseProvider(recaptchaKey),
+  return initializeAppCheck(app, {
+    provider: new ReCaptchaEnterpriseProvider(siteKey),
     isTokenAutoRefreshEnabled: true,
   });
 }
+/** Нужен и серверу файлов: он проверяет токен App Check так же, как Firestore */
+export const appCheck: AppCheck | null = app && recaptchaKey ? setupAppCheck(app, recaptchaKey) : null;
 export const db: Firestore | null = app
   ? initializeFirestore(app, {
       ignoreUndefinedProperties: true,
