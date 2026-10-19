@@ -173,7 +173,9 @@
 }
 
 .mb-cube.noicon .mb-face {
-  background-color: #b06ad0;
+  /* у блока нет текстуры (объёмная модель, например насос IE) — нейтральная заглушка */
+  background-color: #7d828c;
+  background-image: repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.15) 0 3px, transparent 3px 6px);
 }
 
 .mb-cube.trigger .mb-face {
