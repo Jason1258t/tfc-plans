@@ -1,15 +1,30 @@
-import { Box, ChevronDown, ChevronUp, Layers, Maximize, Minus, Plus, RotateCcw, Trash2, Undo2, X } from 'lucide-react';
+import {
+  Box,
+  ChevronDown,
+  ChevronUp,
+  Layers,
+  Maximize,
+  Minus,
+  Plus,
+  Redo2,
+  RotateCcw,
+  Trash2,
+  Undo2,
+  X,
+} from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { iconUrl, itemName, useItems } from '../lib/items';
 import { EMPTY_BLOCKS, REMOVE, type Schematic } from '../lib/schematic';
 import {
   buildGrid,
+  canRedo,
   canUndo,
   cellInfo,
   editCells,
   namesByState,
   propsByState,
+  redoEdit,
   revertEdits,
   stateOf,
   undoEdit,
@@ -67,6 +82,36 @@ function hashColor(id: string) {
 
 const FACING: Record<string, [number, number]> = { north: [0, -1], south: [0, 1], west: [-1, 0], east: [1, 0] };
 
+/**
+ * Действие редактора для отмены/повтора: правка клеток (снимки — в schematicEdit) или общая замена
+ * из окна (до и после; null — замены нет). Список — на схему, переживает закрытие редактора.
+ */
+type Action = { kind: 'cells' } | { kind: 'global'; id: string; before: string | null; after: string | null };
+const actionLog = new WeakMap<Schematic['parsed'], { undo: Action[]; redo: Action[] }>();
+const MAX_ACTIONS = 200;
+
+function logOf(s: Schematic) {
+  let l = actionLog.get(s.parsed);
+  if (!l) actionLog.set(s.parsed, (l = { undo: [], redo: [] }));
+  return l;
+}
+
+/** Новое действие: в отмену, повтор сбрасывается */
+function recordAction(s: Schematic, a: Action) {
+  const l = logOf(s);
+  l.undo.push(a);
+  if (l.undo.length > MAX_ACTIONS) l.undo.shift();
+  l.redo = [];
+}
+
+/** Снять действие из отмены (или повтора) и переложить в другой список */
+function takeAction(s: Schematic, dir: 'undo' | 'redo') {
+  const l = logOf(s);
+  const a = (dir === 'undo' ? l.undo : l.redo).pop();
+  if (a) (dir === 'undo' ? l.redo : l.undo).push(a);
+  return a;
+}
+
 interface Menu {
   x: number;
   z: number;
@@ -77,7 +122,7 @@ interface Menu {
 
 /**
  * Редактор схемы по слоям: вид сверху на один слой, масштаб колесом, сдвиг перетаскиванием.
- * ЛКМ по блоку — окно замены, ПКМ (можно провести) — убрать блоки. Ctrl+Z — отмена.
+ * ЛКМ по блоку — окно замены, ПКМ (можно провести) — убрать блоки. Ctrl+Z / Ctrl+Shift+Z — отмена и повтор.
  */
 export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, onClose }: Props) {
   const items = useItems();
@@ -162,11 +207,38 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
 
   const indexAt = (x: number, z: number) => (x >= 0 && z >= 0 && x < sx && z < sz ? (layer?.[x + z * sx] ?? -1) : -1);
 
-  const undo = useCallback(() => {
-    if (!canUndo(s)) return;
-    setMenu(null);
-    onChange(undoEdit(s));
-  }, [s, onChange]);
+  const [, bumpLog] = useState(0);
+  const { undo: undoList, redo: redoList } = logOf(s);
+  const record = (a: Action) => {
+    recordAction(s, a);
+    bumpLog((n) => n + 1);
+  };
+  /** Правка клеток — через историю схемы */
+  const changeCells = (next: Schematic) => {
+    if (next === s) return;
+    record({ kind: 'cells' });
+    onChange(next);
+  };
+  const setGlobal = (id: string, after: string | null) => {
+    const before = replace.get(id) ?? null;
+    if (before === after) return;
+    record({ kind: 'global', id, before, after });
+    onSetTarget(id, after);
+  };
+
+  const step = useCallback(
+    (dir: 'undo' | 'redo') => {
+      const a = takeAction(s, dir);
+      if (!a) return;
+      setMenu(null);
+      bumpLog((n) => n + 1);
+      if (a.kind === 'global') onSetTarget(a.id, dir === 'undo' ? a.before : a.after);
+      else if (dir === 'undo' ? canUndo(s) : canRedo(s)) onChange(dir === 'undo' ? undoEdit(s) : redoEdit(s));
+    },
+    [s, onChange, onSetTarget],
+  );
+  const undo = useCallback(() => step('undo'), [step]);
+  const redo = useCallback(() => step('redo'), [step]);
 
   // Клавиши: Esc, отмена, слои. В поле ввода — только Esc
   useEffect(() => {
@@ -180,9 +252,15 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
         return;
       }
       if (typing) return;
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+      // По физической клавише: в русской раскладке e.key — «я» и «н»
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.code === 'KeyZ') {
         e.preventDefault();
-        undo();
+        if (e.shiftKey) redo();
+        else undo();
+      } else if (mod && e.code === 'KeyY') {
+        e.preventDefault();
+        redo();
       } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
         e.preventDefault();
         setY((v) => Math.min(sy - 1, v + 1));
@@ -195,7 +273,7 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [menu, onClose, undo, sy]);
+  }, [menu, onClose, undo, redo, sy]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -403,7 +481,7 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
   const onPointerUp = (e: React.PointerEvent) => {
     const st = strokeRef.current;
     if (st) {
-      if (st.size) onChange(editCells(s, [...st], REMOVE));
+      if (st.size) changeCells(editCells(s, [...st], REMOVE));
       setStroke(null);
       return;
     }
@@ -452,8 +530,8 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
   const apply = (to: string) => {
     if (!info) return;
     if (to !== REMOVE && !items?.byId.has(to)) return;
-    if (scope === 'all') onSetTarget(info.name, to);
-    else onChange(editCells(s, scopeCells(info.name), to));
+    if (scope === 'all') setGlobal(info.name, to);
+    else changeCells(editCells(s, scopeCells(info.name), to));
     setMenu(null);
   };
 
@@ -495,13 +573,22 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
             · {sx}×{sy}×{sz}
           </span>
         </h2>
-        <button className="btn sm" onClick={undo} disabled={!canUndo(s)} title="Отменить правку (Ctrl+Z)">
+        <button className="btn sm" onClick={undo} disabled={!undoList.length} title="Отменить (Ctrl+Z)">
           <Undo2 size={14} />
           Отменить
         </button>
         <button
+          className="btn sm"
+          onClick={redo}
+          disabled={!redoList.length}
+          title="Повторить отменённое (Ctrl+Shift+Z или Ctrl+Y)"
+        >
+          <Redo2 size={14} />
+          Повторить
+        </button>
+        <button
           className="btn ghost sm"
-          onClick={() => confirm('Вернуть все блоки, изменённые в этом редакторе?') && onChange(revertEdits(s))}
+          onClick={() => confirm('Вернуть все блоки, изменённые в этом редакторе?') && changeCells(revertEdits(s))}
           disabled={!canUndo(s)}
           title="Вернуть схему к виду до правок по слоям"
         >
@@ -648,7 +735,7 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
           )}
           <div className={cx('layers-hint faint small', mode === '3d' && 'hidden')}>
             ЛКМ — заменить · ПКМ (можно провести) — убрать · колесо — масштаб · перетаскивание — сдвиг · ↑↓ — слои ·
-            Ctrl+Z — отмена
+            Ctrl+Z / Ctrl+Shift+Z — отмена и повтор
           </div>
           {mode === '2d' && menu && info && (
             <div className="layers-menu" style={{ left: menu.left, top: menu.top }}>
@@ -683,7 +770,7 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
                   Убрать
                 </button>
                 {scope === 'all' && replace.has(info.name) && (
-                  <button className="btn ghost sm" onClick={() => (onSetTarget(info.name, null), setMenu(null))}>
+                  <button className="btn ghost sm" onClick={() => (setGlobal(info.name, null), setMenu(null))}>
                     Отменить общую замену
                   </button>
                 )}
