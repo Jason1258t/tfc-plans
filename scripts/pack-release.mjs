@@ -261,6 +261,7 @@ async function main() {
 main().catch((e) => {
   console.error('[pack-release]', e.message ?? e);
   if (e.hint) console.error(`[pack-release] деплой остановлен. Обойти: ${e.hint}`);
-  else console.error('[pack-release] деплой остановлен, чтобы обновление не потерялось. Пропустить: SKIP_PACK_RELEASE=1');
+  else
+    console.error('[pack-release] деплой остановлен, чтобы обновление не потерялось. Пропустить: SKIP_PACK_RELEASE=1');
   process.exit(1);
 });
