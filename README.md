@@ -226,6 +226,14 @@ node scripts/seed-recipe-hints.mjs
 провода IE — из байткода. Поверх — импортированные `electroenergetics-server.toml` и `immersiveengineering-server.toml`.
 Что сделано и что дальше — `docs/plans/electricity.md`.
 
+### Мультиблоки (вкладка справочника)
+
+`public/multiblocks.json` и `public/multiblocks/*.nbt` собирает `scripts/mods/multiblocks.mjs` из jar IE и аддонов
+(Advanced TFC Tech): шаблоны структур `data/<ns>/structure/multiblocks/*.nbt` (поздний jar перекрывает — TFC-IE
+Crossover подменяет дуговую печь), блок для удара молотом, размер и зеркальность — из конструкторов классов
+мультиблоков, текст — из книги IE (`assets/<ns>/manual/`). Допустимые замены блоков — по тегам-заменителям IE
+(список в скрипте) и составу тегов из `tags.json` с правками KubeJS. Расход энергии берётся из `power.json`.
+
 ### Теги (страница «Теги»)
 
 `npm run mods` собирает `public/tags.json`: теги предметов, жидкостей, блоков и сущностей из `data/*/tags/` ванили и всех
