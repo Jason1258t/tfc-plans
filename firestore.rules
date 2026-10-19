@@ -164,6 +164,8 @@ service cloud.firestore {
         && request.resource.data.replace.size() <= 2000
         && (!('preview' in request.resource.data)
           || (request.resource.data.preview is string && request.resource.data.preview.size() <= 300000))
+        && (!('description' in request.resource.data)
+          || (request.resource.data.description is string && request.resource.data.description.size() <= 4000))
         && nick(request.resource.data.updatedBy);
       allow delete: if signedIn();
     }

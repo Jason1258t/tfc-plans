@@ -282,3 +282,24 @@
 .mb-other {
   border-color: var(--accent);
 }
+
+.mb-full-toggle {
+  align-self: flex-start;
+}
+
+/* виджет в гайде */
+.mb-embed {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.mb-embed .ref-card {
+  padding: 0;
+  border: 0;
+}

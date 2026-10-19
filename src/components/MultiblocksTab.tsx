@@ -76,12 +76,9 @@ export function MultiblocksTab({ slug, onSlug }: { slug: string | null; onSlug: 
 
 function MultiblockCard({ m, data }: { m: Multiblock; data: MultiblockData }) {
   const [full, setFull] = useState(false);
-  const [mirrored, setMirrored] = useState(false);
   const shape: MbShape = full && m.extra ? m.extra : m;
   const trigger = full ? null : m.trigger;
   const [sx, sy, sz] = shape.size;
-  const [layer, setLayer] = useState(sy - 1);
-  const top = Math.min(layer, sy - 1);
   const count = shape.blocks.length;
   const triggerState = trigger
     ? shape.palette[
@@ -130,62 +127,119 @@ function MultiblockCard({ m, data }: { m: Multiblock; data: MultiblockData }) {
               : 'Только как на схеме: зеркальный вариант эта печь не принимает.'}
           </li>
         </ol>
-        <div className="mb-toolbar">
-          {m.extra && (
-            <div className="seg" role="tablist">
-              <button aria-pressed={!full} onClick={() => (setFull(false), setLayer(m.size[1] - 1))}>
-                Сама машина
-              </button>
-              <button aria-pressed={full} onClick={() => (setFull(true), setLayer(m.extra!.size[1] - 1))}>
-                Целиком (как в книге)
-              </button>
-            </div>
-          )}
-          {m.mirror && (
-            <button className={cx('btn ghost', mirrored && 'active')} onClick={() => setMirrored((v) => !v)}>
-              <FlipHorizontal2 size={15} /> {mirrored ? 'Зеркально' : 'Как в книге'}
+        {m.extra && (
+          <div className="seg mb-full-toggle" role="tablist">
+            <button aria-pressed={!full} onClick={() => setFull(false)}>
+              Сама машина
             </button>
-          )}
-          <div className="mb-layer-ctl">
-            <button
-              className="btn ghost icon"
-              aria-label="Слой ниже"
-              disabled={top <= 0}
-              onClick={() => setLayer(top - 1)}
-            >
-              <ChevronLeft size={15} />
+            <button aria-pressed={full} onClick={() => setFull(true)}>
+              Целиком (как в книге)
             </button>
-            <input
-              type="range"
-              min={0}
-              max={sy - 1}
-              value={top}
-              onChange={(e) => setLayer(Number(e.target.value))}
-              aria-label="Слой"
-            />
-            <button
-              className="btn ghost icon"
-              aria-label="Слой выше"
-              disabled={top >= sy - 1}
-              onClick={() => setLayer(top + 1)}
-            >
-              <ChevronRight size={15} />
-            </button>
-            <span className="small">
-              слой {top + 1} из {sy}
-            </span>
           </div>
-        </div>
-        <div className="mb-views">
-          <Iso shape={shape} trigger={trigger} upTo={top} mirrored={mirrored} />
-          <LayerGrid shape={shape} trigger={trigger} y={top} mirrored={mirrored} />
-        </div>
+        )}
+        <MbViewer key={String(full)} m={m} shape={shape} trigger={trigger} />
       </section>
       <Materials m={m} shape={shape} data={data} />
       <MachineInfo m={m} />
       {m.manual.map((e) => (
         <ManualEntry key={`${e.ns}:${e.entry}`} e={e} m={m} />
       ))}
+    </div>
+  );
+}
+
+/** Объёмный вид и слой сверху с ползунком слоёв и зеркалом — в карточке и в виджете гайда */
+function MbViewer({ m, shape, trigger }: { m: Multiblock; shape: MbShape; trigger: [number, number, number] | null }) {
+  const [mirrored, setMirrored] = useState(false);
+  const sy = shape.size[1];
+  const [layer, setLayer] = useState(sy - 1);
+  const top = Math.min(layer, sy - 1);
+  return (
+    <>
+      <div className="mb-toolbar">
+        {m.mirror && (
+          <button className={cx('btn ghost', mirrored && 'active')} onClick={() => setMirrored((v) => !v)}>
+            <FlipHorizontal2 size={15} /> {mirrored ? 'Зеркально' : 'Как в книге'}
+          </button>
+        )}
+        <div className="mb-layer-ctl">
+          <button
+            className="btn ghost icon"
+            aria-label="Слой ниже"
+            disabled={top <= 0}
+            onClick={() => setLayer(top - 1)}
+          >
+            <ChevronLeft size={15} />
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={sy - 1}
+            value={top}
+            onChange={(e) => setLayer(Number(e.target.value))}
+            aria-label="Слой"
+          />
+          <button
+            className="btn ghost icon"
+            aria-label="Слой выше"
+            disabled={top >= sy - 1}
+            onClick={() => setLayer(top + 1)}
+          >
+            <ChevronRight size={15} />
+          </button>
+          <span className="small">
+            слой {top + 1} из {sy}
+          </span>
+        </div>
+      </div>
+      <div className="mb-views">
+        <Iso shape={shape} trigger={trigger} upTo={top} mirrored={mirrored} />
+        <LayerGrid shape={shape} trigger={trigger} y={top} mirrored={mirrored} />
+      </div>
+    </>
+  );
+}
+
+/**
+ * Виджет гайда «::multiblock id=crusher [full] [materials]»: структура в статье — заголовок со ссылкой на карточку
+ * во вкладке «Мультиблоки», объёмный вид и слои; materials — ещё таблица материалов.
+ */
+export function MultiblockEmbed({ id, full, withMaterials }: { id: string; full?: boolean; withMaterials?: boolean }) {
+  const data = useMultiblocks();
+  const items = useItems();
+  if (data === undefined) return <div className="empty">Загружаю мультиблок…</div>;
+  const m = data?.list.find((x) => x.id === id || x.id.split(':')[1] === id);
+  if (!data || !m)
+    return (
+      <div className="empty">
+        Нет мультиблока «{id}»{data ? `: ${data.list.map((x) => mbSlug(x, data.list)).join(', ')}` : ''}
+      </div>
+    );
+  const shape: MbShape = full && m.extra ? m.extra : m;
+  const trigger = full && m.extra ? null : m.trigger;
+  const t = trigger && shape.blocks.find((b) => b[0] === trigger[0] && b[1] === trigger[1] && b[2] === trigger[2]);
+  const triggerId = t ? shape.palette[t[3]].id : null;
+  return (
+    <div className="mb-embed">
+      <div className="mb-head">
+        <ItemIcon id={mbIcon(m, items) ?? undefined} size={28} />
+        <div className="grow">
+          <Link to={`/reference?tab=multiblocks&mb=${encodeURIComponent(mbSlug(m, data.list))}`}>
+            <b>{mbName(m)}</b>
+          </Link>
+          <div className="faint small">
+            {shape.size.join('×')} · блоков {shape.blocks.length}
+            {triggerId && (
+              <>
+                {' '}
+                · молотом — по «{itemName(items?.byId.get(triggerId), triggerId)}» на слое {trigger![1] + 1}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+      <MbViewer m={m} shape={shape} trigger={trigger} />
+      {withMaterials && <Materials m={m} shape={shape} data={data} />}
     </div>
   );
 }

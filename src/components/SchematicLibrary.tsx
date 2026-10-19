@@ -1,13 +1,15 @@
-import { Download, FileBox, ImagePlus, Library, PencilLine, Search, Trash2 } from 'lucide-react';
+import { Download, FileBox, ImagePlus, Library, Search, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useData } from '../data/DataContext';
 import { schematicsStore } from '../data/store';
-import { Modal } from './Modal';
 import { formatSize } from '../lib/files';
 import { useItems } from '../lib/items';
 import { REMOVE, type Schematic } from '../lib/schematic';
 import { openFromLibrary, refreshPreview, removeFromLibrary } from '../lib/schematicLibrary';
-import { timeAgo } from '../lib/util';
+import { cx, timeAgo } from '../lib/util';
 import type { SavedSchematic } from '../types';
+import { Markdown } from './Markdown';
 
 interface Props {
   /** id записей, уже открытых в редакторе */
@@ -16,15 +18,20 @@ interface Props {
   onDownload: (s: Schematic, replace: Map<string, string>) => Promise<void>;
 }
 
-/** Общая библиотека схем: исходник + замены, файл с заменами собирается при скачивании */
+/** Длина описания — как в правилах Firestore */
+const MAX_DESCRIPTION = 4000;
+
+/**
+ * Общая библиотека схем: исходник + замены, файл с заменами собирается при скачивании.
+ * Список — простыми строками; по клику справа панель с превью, названием и описанием.
+ */
 export function SchematicLibrary({ openIds, onOpen, onDownload }: Props) {
   const [list, setList] = useState<SavedSchematic[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const items = useItems();
-  /** Превью, открытое крупно */
-  const [zoomed, setZoomed] = useState<SavedSchematic | null>(null);
 
   useEffect(
     () =>
@@ -38,8 +45,10 @@ export function SchematicLibrary({ openIds, onOpen, onDownload }: Props) {
   const shown = useMemo(() => {
     const q = filter.trim().toLowerCase();
     if (!list || !q) return list ?? [];
-    return list.filter((s) => `${s.name} ${s.fileName} ${s.author}`.toLowerCase().includes(q));
+    return list.filter((s) => `${s.name} ${s.fileName} ${s.author} ${s.description ?? ''}`.toLowerCase().includes(q));
   }, [list, filter]);
+
+  const selected = list?.find((s) => s.id === selectedId) ?? null;
 
   /** Загрузка исходника из хранилища — общая для «Открыть» и «Скачать» */
   const run = async (entry: SavedSchematic, action: (s: Schematic, r: Map<string, string>) => unknown) => {
@@ -55,17 +64,12 @@ export function SchematicLibrary({ openIds, onOpen, onDownload }: Props) {
     }
   };
 
-  const rename = (entry: SavedSchematic) => {
-    const name = prompt('Название схемы', entry.name)?.trim();
-    if (!name || name === entry.name) return;
-    schematicsStore.update(entry.id, { name: name.slice(0, 120) }).catch((e) => setError(e.message));
-  };
-
   const remove = async (entry: SavedSchematic) => {
     if (!confirm(`Удалить схему «${entry.name}» из библиотеки? Это нельзя отменить.`)) return;
     setBusy(entry.id);
     try {
       await removeFromLibrary(entry);
+      if (selectedId === entry.id) setSelectedId(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -108,37 +112,21 @@ export function SchematicLibrary({ openIds, onOpen, onDownload }: Props) {
       ) : (
         <ul className="schem-files">
           {shown.map((entry) => {
-            const removed = entry.replace.filter((r) => r.to === REMOVE).length;
-            const replaced = entry.replace.length - removed;
             const isOpen = openIds.has(entry.id);
             return (
-              <li key={entry.id} className="schem-file">
-                {entry.preview ? (
-                  <button className="schem-lib-preview" onClick={() => setZoomed(entry)} title="Посмотреть крупнее">
-                    <img src={entry.preview} alt={`Превью ${entry.name}`} loading="lazy" />
-                  </button>
-                ) : (
-                  <button
-                    className="schem-lib-preview empty"
-                    onClick={() => preview(entry)}
-                    disabled={busy === entry.id || !items}
-                    title="Нарисовать превью (считается в этом браузере)"
-                  >
-                    {busy === entry.id ? <FileBox size={18} className="faint" /> : <ImagePlus size={18} />}
-                  </button>
-                )}
-                <span className="grow">
-                  <button className="schem-lib-name" onClick={() => rename(entry)} title="Переименовать">
-                    {entry.name}
-                    <PencilLine size={12} className="faint" />
-                  </button>
-                  <span className="faint small">
-                    {formatSize(entry.fileSize)}
-                    {entry.size && ` · ${entry.size.join('×')}`} · {entry.blocks} блоков
-                    {replaced > 0 && ` · замен ${replaced}`}
-                    {removed > 0 && ` · удалено типов ${removed}`} · {entry.updatedBy}, {timeAgo(entry.updatedAt)}
+              <li key={entry.id} className={cx('schem-file', selectedId === entry.id && 'selected')}>
+                <button
+                  className="schem-lib-pick"
+                  onClick={() => setSelectedId(selectedId === entry.id ? null : entry.id)}
+                  aria-expanded={selectedId === entry.id}
+                  title="Превью и описание"
+                >
+                  <FileBox size={18} className="faint" />
+                  <span className="grow">
+                    <span className="schem-lib-name">{entry.name}</span>
+                    <span className="faint small">{summary(entry)}</span>
                   </span>
-                </span>
+                </button>
                 <button
                   className="btn sm"
                   disabled={busy === entry.id}
@@ -170,24 +158,162 @@ export function SchematicLibrary({ openIds, onOpen, onDownload }: Props) {
           })}
         </ul>
       )}
-      {zoomed?.preview && (
-        <Modal title={zoomed.name} onClose={() => setZoomed(null)}>
-          <img className="schem-lib-zoom" src={zoomed.preview} alt={`Превью ${zoomed.name}`} />
-          <div className="row">
-            <span className="faint small grow">
-              Формы блоков упрощены. Превью рисуется при сохранении в библиотеку.
-            </span>
-            <button
-              className="btn sm"
-              disabled={busy === zoomed.id || !items}
-              onClick={() => preview(zoomed).then(() => setZoomed(null))}
-            >
-              <ImagePlus size={14} />
-              Перерисовать
-            </button>
-          </div>
-        </Modal>
+      {selected && (
+        <SchematicPanel
+          key={selected.id}
+          entry={selected}
+          busy={busy === selected.id}
+          canRender={!!items}
+          onPreview={() => preview(selected)}
+          onClose={() => setSelectedId(null)}
+          onError={setError}
+        />
       )}
     </section>
+  );
+}
+
+function summary(entry: SavedSchematic) {
+  const removed = entry.replace.filter((r) => r.to === REMOVE).length;
+  const replaced = entry.replace.length - removed;
+  return [
+    formatSize(entry.fileSize),
+    entry.size?.join('×'),
+    `${entry.blocks} блоков`,
+    replaced > 0 && `замен ${replaced}`,
+    removed > 0 && `удалено типов ${removed}`,
+    `${entry.updatedBy}, ${timeAgo(entry.updatedAt)}`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+interface PanelProps {
+  entry: SavedSchematic;
+  busy: boolean;
+  canRender: boolean;
+  onPreview: () => void;
+  onClose: () => void;
+  onError: (e: string) => void;
+}
+
+/** Панель справа: превью, название и описание (правят все, сохраняется при уходе с поля) */
+function SchematicPanel({ entry, busy, canRender, onPreview, onClose, onError }: PanelProps) {
+  const { nick } = useData();
+  const [name, setName] = useState(entry.name);
+  const [description, setDescription] = useState(entry.description ?? '');
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || (e.target instanceof HTMLElement && e.target.closest('input, textarea'))) return;
+      onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const save = async (patch: { name?: string; description?: string }) => {
+    setSaving(true);
+    try {
+      await schematicsStore.update(entry.id, { ...patch, updatedBy: nick });
+    } catch (e) {
+      onError(`Не сохранено: ${e instanceof Error ? e.message : e}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveName = () => {
+    const v = name.trim().slice(0, 120);
+    if (!v) return setName(entry.name);
+    if (v !== entry.name) save({ name: v });
+  };
+
+  const saveDescription = () => {
+    setEditing(false);
+    const v = description.trim();
+    if (v !== (entry.description ?? '')) save({ description: v });
+  };
+
+  return createPortal(
+    <aside className="schem-panel" aria-label={`Схема ${entry.name}`}>
+      <div className="schem-panel-head">
+        <input
+          className="schem-panel-name"
+          value={name}
+          maxLength={120}
+          onChange={(e) => setName(e.target.value)}
+          onBlur={saveName}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur();
+            if (e.key === 'Escape') {
+              setName(entry.name);
+              setTimeout(() => (document.activeElement as HTMLElement | null)?.blur());
+            }
+          }}
+          aria-label="Название схемы"
+          title="Название — можно исправить"
+        />
+        <button className="btn ghost icon" onClick={onClose} aria-label="Закрыть панель">
+          <X size={18} />
+        </button>
+      </div>
+
+      <div className="schem-panel-body">
+        {entry.preview ? (
+          <img className="schem-panel-preview" src={entry.preview} alt={`Превью ${entry.name}`} />
+        ) : (
+          <div className="schem-panel-preview empty faint small">Превью ещё нет</div>
+        )}
+        <div className="row">
+          <span className="faint small grow">
+            {entry.preview ? 'Формы блоков упрощены. ' : ''}Рисуется в браузере при сохранении в библиотеку.
+          </span>
+          <button className="btn sm" disabled={busy || !canRender} onClick={onPreview}>
+            <ImagePlus size={14} />
+            {busy ? 'Рисую…' : entry.preview ? 'Перерисовать' : 'Нарисовать'}
+          </button>
+        </div>
+
+        <p className="faint small schem-panel-meta">{summary(entry)}</p>
+
+        <div className="schem-panel-desc">
+          <div className="row">
+            <h4 className="grow">Описание</h4>
+            {saving && <span className="faint small">Сохраняю…</span>}
+          </div>
+          {editing ? (
+            <textarea
+              className="input"
+              autoFocus
+              rows={8}
+              maxLength={MAX_DESCRIPTION}
+              value={description}
+              placeholder="Что это, где стоит, что нужно для постройки… Markdown работает."
+              onChange={(e) => setDescription(e.target.value)}
+              onBlur={saveDescription}
+            />
+          ) : (
+            <div
+              className="schem-panel-desc-view"
+              role="button"
+              tabIndex={0}
+              onClick={(e) => !(e.target as HTMLElement).closest('a') && setEditing(true)}
+              onKeyDown={(e) => e.key === 'Enter' && setEditing(true)}
+              title="Нажмите, чтобы править"
+            >
+              {entry.description ? (
+                <Markdown source={entry.description} />
+              ) : (
+                <span className="faint">Описания нет — нажмите, чтобы добавить</span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </aside>,
+    document.body,
   );
 }

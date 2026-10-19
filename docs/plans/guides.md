@@ -41,7 +41,7 @@
 - `[[мод:предмет]]` — предмет со значком, `[[мод:предмет|icon]]` — только значок.
 - `[текст](guide:id)` — ссылка на гайд, `[текст](/reference?tab=guides)` — на раздел сайта.
 - строка `::имя параметры` — виджет раздела (рисунок, который разметкой не описать): `bridge-diagram legs=3 cap`,
-  `generator-diagram`, `line-diagram`, `load-chart`.
+  `generator-diagram`, `line-diagram`, `load-chart`; в разделе «Мультиблоки» — `multiblock id=crusher [full] [materials]`.
 - блок ` ```define ` — «имя: формула» по строкам, свои имена для всей статьи.
 - блок ` ```calc ` — калькулятор (YAML):
 
