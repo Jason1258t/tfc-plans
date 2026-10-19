@@ -34,7 +34,7 @@ export default function MultiblockGuidesSection({
       kit={KIT}
       guide={guide}
       onGuide={onGuide}
-      intro="Как собирать большие машины Immersive Engineering и Advanced TFC Tech и что в них изменено для TFC. Сами структуры по слоям — во вкладке «Мультиблоки»."
+      intro="Как собирать большие машины Immersive Engineering и Advanced TFC Tech и что в них изменено для TFC, а ещё буровая установка Create и поиск жил для неё. Сами структуры IE по слоям — во вкладке «Мультиблоки»."
     />
   );
 }
