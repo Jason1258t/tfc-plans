@@ -305,3 +305,35 @@
   padding: 0;
   border: 0;
 }
+
+/* итоговый вид — three.js */
+.mb-formed {
+  position: relative;
+  height: 420px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  overflow: hidden;
+  touch-action: none;
+}
+
+.mb-formed canvas {
+  display: block;
+}
+
+.mb-formed-note {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.mb-formed-foot {
+  margin: 6px 0 0;
+}
+
+@media (max-width: 720px) {
+  .mb-formed {
+    height: 340px;
+  }
+}

@@ -36,6 +36,21 @@ export interface MbShape {
   nbt: string;
 }
 
+/** Итоговый вид — модель собранной машины (scripts/mods/multiblock-models.mjs) */
+export interface MbFormed {
+  /** Путь OBJ внутри /multiblocks/ */
+  obj: string;
+  /** Поворот модели по Y, четверти оборота: (x, z) → r=1: (−z, x) */
+  r: number;
+  /** Сдвиг клетки модели в координаты постройки */
+  t: [number, number, number];
+  flipV?: boolean;
+  /** Материал OBJ → текстура (путь внутри /multiblocks/), кадров у анимированной, цвет и прозрачность */
+  mats: Record<string, { tex?: string; frames?: number; color?: [number, number, number]; alpha?: number }>;
+  /** Части модели совпали с постройкой не полностью */
+  rough?: boolean;
+}
+
 export interface Multiblock extends MbShape {
   id: string;
   ns: string;
@@ -51,6 +66,7 @@ export interface Multiblock extends MbShape {
   replaces?: string;
   manual: MbManual[];
   recipes: { t: string; n: number }[];
+  formed?: MbFormed;
   /** Вид целиком (экскаватор с ковшом) */
   extra?: MbShape & { id: string };
 }

@@ -16,13 +16,14 @@
  *
  *   { matchTags: [...], list: [{ id, ns, name: {en, ru}, block, size, trigger, mirror, palette, blocks,
  *     source, replaces?, manual: [{ entry, ns, jar, lang, title, subtitle, text, en? }], recipes: [{ t: тип, n: сколько }],
- *     extraTags?, nbt, extra? }] }
+ *     extraTags?, nbt, extra?, formed? (итоговый вид — scripts/mods/multiblock-models.mjs) }] }
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import AdmZip from 'adm-zip';
 import { argTypes, clinitValues, instructions, parseClass } from './classfile.mjs';
 import { readNbt, T } from '../../src/lib/nbt.ts';
+import { assetLookup, formedModel } from './multiblock-models.mjs';
 
 /**
  * Теги, внутри которых IE разрешает замену (IEMultiblocks.init → BlockMatcher.addPredicate). «/» в конце — все теги
@@ -177,8 +178,10 @@ async function readStructure(buf) {
   };
 }
 
-export async function writeMultiblocks(jarPaths, recipes, lang, outFile, outDir) {
+export async function writeMultiblocks(jarPaths, recipes, lang, outFile, outDir, vanillaAssets) {
   const warnings = [];
+  /** jar с ассетами мультиблоков (модели собранных машин, их текстуры, переопределения текстур IE аддонами) */
+  const assetZips = [];
   /** «ns:multiblocks/x» → { buf, jar, replaces? } — поздний jar перекрывает */
   const structures = new Map();
   const ctors = [];
@@ -195,6 +198,8 @@ export async function writeMultiblocks(jarPaths, recipes, lang, outFile, outDir)
     }
     const entries = zip.getEntries();
     const own = entries.filter((e) => STRUCT_RE.test(e.entryName));
+    if (own.length || entries.some((e) => /^assets\/(immersiveengineering|advancedtfctech)\//.test(e.entryName)))
+      assetZips.push(zip);
     const manualJson = entries.filter((e) => /^assets\/[a-z0-9_.-]+\/manual\/[a-z0-9_]+\.json$/.test(e.entryName));
     if (!own.length && !manualJson.length) continue;
     for (const e of own) {
@@ -267,6 +272,7 @@ export async function writeMultiblocks(jarPaths, recipes, lang, outFile, outDir)
   }
 
   fs.rmSync(outDir, { recursive: true, force: true });
+  const getAsset = assetLookup(assetZips, vanillaAssets);
   const list = [];
   const claimed = new Set();
   /** тип рецепта → сколько рецептов в модах (удаления KubeJS не учтены) */
@@ -335,6 +341,8 @@ export async function writeMultiblocks(jarPaths, recipes, lang, outFile, outDir)
         .map((t) => ({ t, n: recipeTypes.get(t) })),
       nbt: nbtRel,
     });
+    const formed = blockId ? formedModel(getAsset, blockId, st, outDir, name, warnings) : null;
+    if (formed) list.at(-1).formed = formed;
   }
   // Шаблоны без своего класса (excavator_full — экскаватор целиком для книги) — вид у мультиблока с тем же началом имени
   for (const [key, s] of structures) {
