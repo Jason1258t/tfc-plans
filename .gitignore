@@ -64,3 +64,4 @@ public/icons-kubejs/
 public/packs/
 __pycache__/
 server/file-server/data/
+out/
