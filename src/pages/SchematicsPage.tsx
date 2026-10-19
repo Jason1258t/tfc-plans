@@ -47,7 +47,7 @@ import {
   type RuleResult,
   type Schematic,
 } from '../lib/schematic';
-import { saveToLibrary } from '../lib/schematicLibrary';
+import { makePreview, saveToLibrary } from '../lib/schematicLibrary';
 import { cx } from '../lib/util';
 import './SchematicsPage.css';
 
@@ -304,7 +304,9 @@ export function SchematicsPage() {
   const save = async (s: Schematic) => {
     setSaving((m) => ({ ...m, [s.key]: 'saving' }));
     try {
-      const { id, fileId } = await saveToLibrary(s, replace, nick);
+      // Превью — с заменами, как схема будет выглядеть после скачивания
+      const preview = items ? await makePreview(s, replace, items) : null;
+      const { id, fileId } = await saveToLibrary(s, replace, nick, preview);
       setSchematics((list) =>
         list.map((x) =>
           x.key === s.key ? { ...x, libraryId: id, libraryFileId: fileId ?? x.libraryFileId, savedRev: s.rev } : x,

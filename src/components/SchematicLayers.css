@@ -176,3 +176,61 @@
     display: none;
   }
 }
+
+.layers-hint.hidden {
+  display: none;
+}
+
+.layers-mode {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.layers-mode .btn {
+  border-color: transparent;
+  background: transparent;
+}
+
+.layers-mode .btn.on {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.view3d {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+}
+
+.view3d canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.view3d-stats {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.view3d-error {
+  position: absolute;
+  top: 40px;
+  z-index: 1;
+}
+
+.view3d ~ .layers-hint {
+  z-index: 2;
+}

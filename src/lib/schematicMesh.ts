@@ -1,0 +1,460 @@
+import { textureUrl, type ItemIndex } from './items';
+import { EMPTY_BLOCKS, REMOVE, type Schematic } from './schematic';
+import { buildGrid, namesByState, propsByState, stateOf } from './schematicEdit';
+
+/**
+ * Геометрия схемы для 3D: каждый блок — один или несколько параллелепипедов по грубой форме
+ * (плита, ступенька, люк, забор, вал Create…), невидимые грани между сплошными блоками не строятся.
+ * Без three.js — только массивы; рисуют их SchematicView3D и превью библиотеки.
+ */
+
+/** Параллелепипед в долях блока: x0 y0 z0 x1 y1 z1 */
+type Box = [number, number, number, number, number, number];
+
+const FULL: Box = [0, 0, 0, 1, 1, 1];
+const px = (n: number) => n / 16;
+
+/** Прозрачные целые блоки: не закрывают соседей (стекло, листва, жидкости) */
+const SEE_THROUGH = /glass|leaves|ice\b|_ice|slime|honey_block|spawner|water|lava|cobweb|scaffolding/;
+const FLUID = /(^|:)(water|lava)$|fluid/;
+/** Текстуры в оттенках серого, которые игра красит по биому */
+const TINTED = /leaves|grass|vine|lily_pad|fern|sugar_cane/;
+
+function shapeOf(id: string, p: Map<string, string>): Box[] {
+  const name = id.split(':')[1] ?? id;
+  const facing = p.get('facing') ?? p.get('horizontal_facing') ?? 'north';
+  const axis =
+    p.get('axis') ?? (facing === 'east' || facing === 'west' ? 'x' : facing === 'up' || facing === 'down' ? 'y' : 'z');
+  /** Пластина у стороны side толщиной t */
+  const plate = (side: string, t: number): Box =>
+    side === 'north'
+      ? [0, 0, 0, 1, 1, t]
+      : side === 'south'
+        ? [0, 0, 1 - t, 1, 1, 1]
+        : side === 'west'
+          ? [0, 0, 0, t, 1, 1]
+          : side === 'east'
+            ? [1 - t, 0, 0, 1, 1, 1]
+            : side === 'down'
+              ? [0, 0, 0, 1, t, 1]
+              : [0, 1 - t, 0, 1, 1, 1];
+  const opposite: Record<string, string> = {
+    north: 'south',
+    south: 'north',
+    east: 'west',
+    west: 'east',
+    up: 'down',
+    down: 'up',
+  };
+  /** Стержень вдоль оси шириной w (в пикселях) */
+  const rod = (w: number): Box => {
+    const a = px(8 - w / 2);
+    const b = px(8 + w / 2);
+    return axis === 'x' ? [0, a, a, 1, b, b] : axis === 'y' ? [a, 0, a, b, 1, b] : [a, a, 0, b, b, 1];
+  };
+  /** Диск поперёк оси: диаметр d, толщина t (в пикселях) */
+  const disc = (d: number, t: number): Box => {
+    const a = px(8 - d / 2);
+    const b = px(8 + d / 2);
+    const c = px(8 - t / 2);
+    const e = px(8 + t / 2);
+    return axis === 'x' ? [c, a, a, e, b, b] : axis === 'y' ? [a, c, a, b, e, b] : [a, a, c, b, b, e];
+  };
+  const arms = (w: number, y0: number, y1: number, on: (side: string) => boolean): Box[] => {
+    const a = px(8 - w / 2);
+    const b = px(8 + w / 2);
+    const out: Box[] = [];
+    if (on('north')) out.push([a, y0, 0, b, y1, a]);
+    if (on('south')) out.push([a, y0, b, b, y1, 1]);
+    if (on('west')) out.push([0, y0, a, a, y1, b]);
+    if (on('east')) out.push([b, y0, a, 1, y1, b]);
+    return out;
+  };
+  const conn = (side: string) => {
+    const v = p.get(side);
+    return !!v && v !== 'false' && v !== 'none';
+  };
+
+  if (FLUID.test(id)) return [[0, 0, 0, 1, px(14), 1]];
+  if (name.endsWith('_slab') || name.includes('/slab/') || name.endsWith('slab')) {
+    const t = p.get('type');
+    return t === 'double' ? [FULL] : t === 'top' ? [[0, 0.5, 0, 1, 1, 1]] : [[0, 0, 0, 1, 0.5, 1]];
+  }
+  if (name.includes('stairs')) {
+    const top = p.get('half') === 'top';
+    const base: Box = top ? [0, 0.5, 0, 1, 1, 1] : [0, 0, 0, 1, 0.5, 1];
+    const [y0, y1] = top ? [0, 0.5] : [0.5, 1];
+    const step: Box =
+      facing === 'north'
+        ? [0, y0, 0, 1, y1, 0.5]
+        : facing === 'south'
+          ? [0, y0, 0.5, 1, y1, 1]
+          : facing === 'west'
+            ? [0, y0, 0, 0.5, y1, 1]
+            : [0.5, y0, 0, 1, y1, 1];
+    return [base, step];
+  }
+  if (name.includes('trapdoor')) {
+    if (p.get('open') === 'true') return [plate(opposite[facing] ?? 'south', px(3))];
+    return [plate(p.get('half') === 'top' ? 'up' : 'down', px(3))];
+  }
+  if (name.includes('door')) return [plate(opposite[facing] ?? 'south', px(3))];
+  if (name.includes('fence_gate')) {
+    const ns = facing === 'north' || facing === 'south';
+    return [ns ? [0, px(5), px(7), 1, 1, px(9)] : [px(7), px(5), 0, px(9), 1, 1]];
+  }
+  if (name.includes('fence')) {
+    return [[px(6), 0, px(6), px(10), 1, px(10)], ...arms(2, px(6), px(9), conn), ...arms(2, px(12), px(15), conn)];
+  }
+  if (name.endsWith('_wall') || name.includes('/wall/')) {
+    return [[px(4), 0, px(4), px(12), 1, px(12)], ...arms(6, 0, px(14), conn)];
+  }
+  if (name.includes('pane') || name.endsWith('_bars') || name === 'iron_bars') {
+    return [[px(7), 0, px(7), px(9), 1, px(9)], ...arms(2, 0, 1, conn)];
+  }
+  if (name.includes('carpet') || name.includes('rail') || name.includes('lily_pad')) return [[0, 0, 0, 1, px(1), 1]];
+  if (name.includes('pressure_plate')) return [[px(1), 0, px(1), px(15), px(1), px(15)]];
+  if (name === 'snow') return [[0, 0, 0, 1, px(2 * Number(p.get('layers') ?? 1)), 1]];
+  if (name.includes('torch')) return [[px(7), 0, px(7), px(9), px(10), px(9)]];
+  if (name.includes('lantern')) return [[px(5), 0, px(5), px(11), px(9), px(11)]];
+  if (name.includes('chain')) return [rod(3)];
+  if (name.includes('button')) return [[px(5), 0, px(6), px(11), px(2), px(10)]];
+  if (/(^|\/|_)(shaft|axis)$/.test(name) || name.endsWith('_shaft') || name === 'shaft') return [rod(4)];
+  if (name.includes('large_cogwheel')) return [disc(24, 4), rod(4)];
+  if (name.includes('cogwheel')) return [disc(14, 4), rod(4)];
+  if (name.includes('pipe') && !name.includes('pump')) return [rod(8)];
+  if (
+    /(flower|sapling|tulip|dandelion|poppy|orchid|allium|bluet|daisy|mushroom|candle|lever|fern|grass$|bush|crop|seed|sign|banner|head|skull|pot$)/.test(
+      name,
+    )
+  )
+    return [[px(4), 0, px(4), px(12), px(12), px(12)]];
+  return [FULL];
+}
+
+// ---------------------------------------------------------------- текстуры
+
+/** Пути текстур, которые точно лежат в /icons: все t из библиотеки предметов */
+let knownTextures: Set<string> | null = null;
+const known = (items: ItemIndex) =>
+  (knownTextures ??= new Set(items.list.map((i) => i.t).filter((t): t is string => !!t)));
+
+/** Текстура граней: сбоку и сверху. Сначала текстура блока с тем же путём, потом иконка предмета */
+function texturesOf(id: string, items: ItemIndex): { side: string | null; top: string | null } {
+  const [ns, path = ''] = id.split(':');
+  const has = known(items);
+  const t = items.byId.get(id)?.t;
+  const pick = (...c: (string | undefined)[]) => c.find((x): x is string => !!x && has.has(x)) ?? null;
+  const block = `${ns}/block/${path}`;
+  const side = pick(t?.includes('/block/') ? t : undefined, block, `${block}_side`, t);
+  const top = pick(`${block}_top`, `${block}_end`, side ?? undefined);
+  return { side, top: top ?? side };
+}
+
+const images = new Map<string, Promise<HTMLImageElement | null>>();
+function loadImage(path: string) {
+  let p = images.get(path);
+  if (!p) {
+    p = new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = textureUrl(path);
+    });
+    images.set(path, p);
+  }
+  return p;
+}
+
+/** Цвет блока без текстуры — по id, чтобы одинаковые блоки были одного цвета */
+function hashColor(id: string): [number, number, number] {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  const hue = (((h % 360) + 360) % 360) / 360;
+  // hsl(h, 45%, 55%) → rgb
+  const s = 0.45;
+  const l = 0.55;
+  const q = l + s - l * s;
+  const p = 2 * l - q;
+  const f = (t: number) => {
+    t = (t + 1) % 1;
+    return t < 1 / 6 ? p + (q - p) * 6 * t : t < 0.5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p;
+  };
+  return [f(hue + 1 / 3), f(hue), f(hue - 1 / 3)];
+}
+
+const TILE = 16;
+
+/** Атлас: все текстуры схемы плитками 16×16 (анимированные — первый кадр) и средний цвет каждой */
+export interface Atlas {
+  canvas: HTMLCanvasElement;
+  /** путь текстуры → [u0, v0, u1, v1] в долях атласа (v снизу, как в three) */
+  uv: Map<string, [number, number, number, number]>;
+  color: Map<string, [number, number, number]>;
+}
+
+async function buildAtlas(paths: string[]): Promise<Atlas> {
+  const loaded = (await Promise.all(paths.map(async (p) => [p, await loadImage(p)] as const))).filter(
+    (x): x is readonly [string, HTMLImageElement] => !!x[1],
+  );
+  const cols = Math.max(1, Math.ceil(Math.sqrt(loaded.length)));
+  const rows = Math.max(1, Math.ceil(loaded.length / cols));
+  const canvas = document.createElement('canvas');
+  canvas.width = cols * TILE;
+  canvas.height = rows * TILE;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+  ctx.imageSmoothingEnabled = false;
+  const uv = new Map<string, [number, number, number, number]>();
+  const color = new Map<string, [number, number, number]>();
+  // Отступ внутрь плитки — чтобы на краях не подмешивались соседние
+  const e = 0.02;
+  loaded.forEach(([path, img], i) => {
+    const x = (i % cols) * TILE;
+    const y = Math.floor(i / cols) * TILE;
+    const w = img.naturalWidth;
+    ctx.drawImage(img, 0, 0, w, Math.min(w, img.naturalHeight), x, y, TILE, TILE);
+    const W = canvas.width;
+    const H = canvas.height;
+    uv.set(path, [(x + e) / W, 1 - (y + TILE - e) / H, (x + TILE - e) / W, 1 - (y + e) / H]);
+    const d = ctx.getImageData(x, y, TILE, TILE).data;
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    let n = 0;
+    for (let k = 0; k < d.length; k += 4) {
+      if (d[k + 3] < 128) continue;
+      r += d[k];
+      g += d[k + 1];
+      b += d[k + 2];
+      n++;
+    }
+    if (n) color.set(path, [r / n / 255, g / n / 255, b / n / 255]);
+  });
+  return { canvas, uv, color };
+}
+
+// ---------------------------------------------------------------- сборка
+
+export interface MeshData {
+  positions: Float32Array;
+  /** Свет грани (с подкраской листвы) — умножается на текстуру */
+  light: Float32Array;
+  /** Свет × средний цвет текстуры — упрощённый вид без текстур */
+  flat: Float32Array;
+  uvs: Float32Array;
+  indices: Uint32Array;
+  atlas: Atlas;
+  /** Габарит схемы в блоках */
+  size: [number, number, number];
+  faces: number;
+  blocks: number;
+}
+
+/** Освещение граней «как в игре»: верх светлый, низ тёмный, бока по-разному */
+const SHADE = { up: 1, down: 0.5, north: 0.8, south: 0.8, east: 0.65, west: 0.65 };
+
+/** Грани: направление, сосед, вершины (CCW снаружи) через функцию от бокса */
+type Dir = keyof typeof SHADE;
+const DIRS: { dir: Dir; n: [number, number, number] }[] = [
+  { dir: 'up', n: [0, 1, 0] },
+  { dir: 'down', n: [0, -1, 0] },
+  { dir: 'east', n: [1, 0, 0] },
+  { dir: 'west', n: [-1, 0, 0] },
+  { dir: 'south', n: [0, 0, 1] },
+  { dir: 'north', n: [0, 0, -1] },
+];
+
+function corners(dir: Dir, b: Box): [number, number, number][] {
+  const [x0, y0, z0, x1, y1, z1] = b;
+  switch (dir) {
+    case 'up':
+      return [
+        [x0, y1, z1],
+        [x1, y1, z1],
+        [x1, y1, z0],
+        [x0, y1, z0],
+      ];
+    case 'down':
+      return [
+        [x0, y0, z0],
+        [x1, y0, z0],
+        [x1, y0, z1],
+        [x0, y0, z1],
+      ];
+    case 'east':
+      return [
+        [x1, y0, z1],
+        [x1, y0, z0],
+        [x1, y1, z0],
+        [x1, y1, z1],
+      ];
+    case 'west':
+      return [
+        [x0, y0, z0],
+        [x0, y0, z1],
+        [x0, y1, z1],
+        [x0, y1, z0],
+      ];
+    case 'south':
+      return [
+        [x0, y0, z1],
+        [x1, y0, z1],
+        [x1, y1, z1],
+        [x0, y1, z1],
+      ];
+    case 'north':
+      return [
+        [x1, y0, z0],
+        [x0, y0, z0],
+        [x0, y1, z0],
+        [x1, y1, z0],
+      ];
+  }
+}
+
+/** Координаты текстуры для точки грани (доли плитки, v снизу) */
+function faceUv(dir: Dir, [x, y, z]: [number, number, number]): [number, number] {
+  switch (dir) {
+    case 'up':
+      return [x, 1 - z];
+    case 'down':
+      return [x, z];
+    case 'east':
+      return [1 - z, y];
+    case 'west':
+      return [z, y];
+    case 'south':
+      return [x, y];
+    case 'north':
+      return [1 - x, y];
+  }
+}
+
+/** Лежит ли грань бокса на границе клетки (тогда её может закрыть сосед) */
+const onEdge = (dir: Dir, b: Box) =>
+  dir === 'up'
+    ? b[4] === 1
+    : dir === 'down'
+      ? b[1] === 0
+      : dir === 'east'
+        ? b[3] === 1
+        : dir === 'west'
+          ? b[0] === 0
+          : dir === 'south'
+            ? b[5] === 1
+            : b[2] === 0;
+
+/** Не больше стольких клеток: занятость хранится массивом на весь объём */
+const MAX_CELLS = 16_000_000;
+
+/**
+ * Собрать геометрию схемы с общими заменами. maxY — показывать слои не выше этого (срез).
+ * Блоки с id не из сборки рисуются цветом по id.
+ */
+export async function buildMesh(
+  s: Schematic,
+  replace: Map<string, string>,
+  items: ItemIndex,
+  opts: { maxY?: number } = {},
+): Promise<MeshData> {
+  const grid = buildGrid(s);
+  const [sx, sy, sz] = grid.size;
+  if (sx * sy * sz > MAX_CELLS) throw new Error(`Схема ${sx}×${sy}×${sz} слишком большая для 3D`);
+  const names = namesByState(s);
+  const props = propsByState(s);
+  const maxY = Math.min(sy - 1, opts.maxY ?? sy - 1);
+
+  // Что рисовать для каждой записи палитры
+  interface Meta {
+    id: string;
+    boxes: Box[];
+    /** Целый непрозрачный куб — закрывает соседей */
+    opaque: boolean;
+    /** Прозрачный целый блок: грани между одинаковыми не рисуем */
+    clear: boolean;
+    side: string | null;
+    top: string | null;
+    tint: boolean;
+  }
+  const metas: (Meta | null)[] = names.map((name, st) => {
+    if (!name) return null;
+    const id = replace.get(name) ?? name;
+    if (id === REMOVE || EMPTY_BLOCKS.has(id)) return null;
+    const boxes = shapeOf(id, props[st] ?? new Map());
+    const full = boxes.length === 1 && boxes[0] === FULL;
+    const see = SEE_THROUGH.test(id);
+    const tex = texturesOf(id, items);
+    return { id, boxes, opaque: full && !see, clear: see, ...tex, tint: TINTED.test(id) };
+  });
+
+  // Занятость: индекс записи палитры по клетке (-1 — пусто)
+  const cell = new Int32Array(sx * sy * sz).fill(-1);
+  const at = (x: number, y: number, z: number) =>
+    x < 0 || y < 0 || z < 0 || x >= sx || y > maxY || z >= sz ? -1 : cell[(y * sz + z) * sx + x];
+  let blocks = 0;
+  for (const [y, layer] of grid.layers) {
+    if (y > maxY) continue;
+    for (let i = 0; i < layer.length; i++) {
+      if (layer[i] < 0) continue;
+      const st = stateOf(s, layer[i]);
+      if (!metas[st]) continue;
+      cell[y * sz * sx + i] = st;
+      blocks++;
+    }
+  }
+
+  const paths = new Set<string>();
+  for (const m of metas) {
+    if (m?.side) paths.add(m.side);
+    if (m?.top) paths.add(m.top);
+  }
+  const atlas = await buildAtlas([...paths]);
+
+  const pos: number[] = [];
+  const light: number[] = [];
+  const flat: number[] = [];
+  const uvs: number[] = [];
+  const idx: number[] = [];
+  const white: [number, number, number, number] = [0, 0, 0, 0];
+  for (let y = 0; y <= maxY; y++)
+    for (let z = 0; z < sz; z++)
+      for (let x = 0; x < sx; x++) {
+        const st = cell[(y * sz + z) * sx + x];
+        if (st < 0) continue;
+        const m = metas[st]!;
+        for (const { dir, n } of DIRS) {
+          const nb = at(x + n[0], y + n[1], z + n[2]);
+          const nm = nb >= 0 ? metas[nb] : null;
+          const hiddenByNeighbor = nm && (nm.opaque || (m.clear && nm.clear && nm.id === m.id));
+          const tex = dir === 'up' || dir === 'down' ? m.top : m.side;
+          const base = (tex && atlas.color.get(tex)) || hashColor(m.id);
+          const uvRect = (tex && atlas.uv.get(tex)) || white;
+          const shade = SHADE[dir];
+          const tint = m.tint ? [0.55, 0.8, 0.4] : [1, 1, 1];
+          for (const b of m.boxes) {
+            if (hiddenByNeighbor && onEdge(dir, b)) continue;
+            const v0 = pos.length / 3;
+            for (const c of corners(dir, b)) {
+              pos.push(x + c[0], y + c[1], z + c[2]);
+              const [fu, fv] = faceUv(dir, c);
+              uvs.push(uvRect[0] + (uvRect[2] - uvRect[0]) * fu, uvRect[1] + (uvRect[3] - uvRect[1]) * fv);
+              light.push(shade * tint[0], shade * tint[1], shade * tint[2]);
+              flat.push(shade * tint[0] * base[0], shade * tint[1] * base[1], shade * tint[2] * base[2]);
+            }
+            idx.push(v0, v0 + 1, v0 + 2, v0, v0 + 2, v0 + 3);
+          }
+        }
+      }
+
+  return {
+    positions: new Float32Array(pos),
+    light: new Float32Array(light),
+    flat: new Float32Array(flat),
+    uvs: new Float32Array(uvs),
+    indices: new Uint32Array(idx),
+    atlas,
+    size: [sx, sy, sz],
+    faces: idx.length / 6,
+    blocks,
+  };
+}

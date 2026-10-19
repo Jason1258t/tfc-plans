@@ -1,9 +1,11 @@
-import { Download, FileBox, Library, PencilLine, Search, Trash2 } from 'lucide-react';
+import { Download, FileBox, ImagePlus, Library, PencilLine, Search, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { schematicsStore } from '../data/store';
+import { Modal } from './Modal';
 import { formatSize } from '../lib/files';
+import { useItems } from '../lib/items';
 import { REMOVE, type Schematic } from '../lib/schematic';
-import { openFromLibrary, removeFromLibrary } from '../lib/schematicLibrary';
+import { openFromLibrary, refreshPreview, removeFromLibrary } from '../lib/schematicLibrary';
 import { timeAgo } from '../lib/util';
 import type { SavedSchematic } from '../types';
 
@@ -20,6 +22,9 @@ export function SchematicLibrary({ openIds, onOpen, onDownload }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
+  const items = useItems();
+  /** Превью, открытое крупно */
+  const [zoomed, setZoomed] = useState<SavedSchematic | null>(null);
 
   useEffect(
     () =>
@@ -68,6 +73,19 @@ export function SchematicLibrary({ openIds, onOpen, onDownload }: Props) {
     }
   };
 
+  const preview = async (entry: SavedSchematic) => {
+    if (!items) return;
+    setBusy(entry.id);
+    setError(null);
+    try {
+      await refreshPreview(entry, items);
+    } catch (e) {
+      setError(`«${entry.name}»: ${e instanceof Error ? e.message : e}`);
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <section className="schem-library">
       <div className="row">
@@ -95,7 +113,20 @@ export function SchematicLibrary({ openIds, onOpen, onDownload }: Props) {
             const isOpen = openIds.has(entry.id);
             return (
               <li key={entry.id} className="schem-file">
-                <FileBox size={18} className="faint" />
+                {entry.preview ? (
+                  <button className="schem-lib-preview" onClick={() => setZoomed(entry)} title="Посмотреть крупнее">
+                    <img src={entry.preview} alt={`Превью ${entry.name}`} loading="lazy" />
+                  </button>
+                ) : (
+                  <button
+                    className="schem-lib-preview empty"
+                    onClick={() => preview(entry)}
+                    disabled={busy === entry.id || !items}
+                    title="Нарисовать превью (считается в этом браузере)"
+                  >
+                    {busy === entry.id ? <FileBox size={18} className="faint" /> : <ImagePlus size={18} />}
+                  </button>
+                )}
                 <span className="grow">
                   <button className="schem-lib-name" onClick={() => rename(entry)} title="Переименовать">
                     {entry.name}
@@ -138,6 +169,24 @@ export function SchematicLibrary({ openIds, onOpen, onDownload }: Props) {
             );
           })}
         </ul>
+      )}
+      {zoomed?.preview && (
+        <Modal title={zoomed.name} onClose={() => setZoomed(null)}>
+          <img className="schem-lib-zoom" src={zoomed.preview} alt={`Превью ${zoomed.name}`} />
+          <div className="row">
+            <span className="faint small grow">
+              Формы блоков упрощены. Превью рисуется при сохранении в библиотеку.
+            </span>
+            <button
+              className="btn sm"
+              disabled={busy === zoomed.id || !items}
+              onClick={() => preview(zoomed).then(() => setZoomed(null))}
+            >
+              <ImagePlus size={14} />
+              Перерисовать
+            </button>
+          </div>
+        </Modal>
       )}
     </section>
   );
