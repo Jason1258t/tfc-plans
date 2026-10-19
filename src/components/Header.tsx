@@ -4,6 +4,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { firebaseEnabled } from '../firebase';
 import { lastSeenUpdate, usePackUpdates } from '../lib/packUpdates';
 import './Header.css';
+import { OnboardingMenu } from './Onboarding';
 import { ItemIcon } from './ItemIcon';
 import { ItemIdSearch } from './ItemIdSearch';
 import { Modal } from './Modal';
@@ -78,6 +79,7 @@ export function Header({ nick, onChangeNick }: Props) {
           <ItemIdSearch autoFocus />
         </Modal>
       )}
+      <OnboardingMenu />
       <NavLink
         to="/updates"
         className="btn ghost sm icon updates-btn"

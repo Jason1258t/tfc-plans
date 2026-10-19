@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { Header } from './components/Header';
+import { Onboarding } from './components/Onboarding';
 import { NickDialog } from './components/NickDialog';
 import { TooltipLayer } from './components/Tooltip';
 import { DataProvider } from './data/DataContext';
@@ -66,6 +67,7 @@ export default function App() {
           </Routes>
         </ErrorBoundary>
         {changingNick && <NickDialog initial={nick} onSave={save} onCancel={() => setChangingNick(false)} />}
+        <Onboarding />
         <TooltipLayer />
       </DataProvider>
     </BrowserRouter>

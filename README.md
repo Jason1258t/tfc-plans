@@ -338,6 +338,7 @@ npm run serverconfig -- ~/Downloads/serverconfig.zip
 | `packUpdates` | записи об обновлениях сборки (создаёт деплой), `notes` — патчноут                                                                                                                |
 | `config`      | конфиги модов из `npm run serverconfig`: `scope`, `path`, `mod`, `values` (TOML), `importedBy`, `importedAt`                                                                           |
 | `settings`    | `world`: профиль и масштабы мира TFC Real World                                                                                                                                  |
+| `onboarding`  | id = uid анонимного входа (свой у каждого браузера): `seen` (ключ подсказок раздела → когда показаны), `off`, `updatedAt`; читать и писать — только свой |
 
 Пункт чеклиста: `{ id, text, itemId?, qty?, got?, done? }`. Если есть `itemId`, это ресурс «собрано got из qty»,
 иначе обычная галочка.
