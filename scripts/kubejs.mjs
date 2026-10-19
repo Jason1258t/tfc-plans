@@ -744,6 +744,7 @@ const MOD_ONLY_DATA = [
   ['firmalife/greenhouse', 'уровни теплицы'],
   ['createdieselgenerators/fuel_type', 'жидкое топливо'],
   ['createliquidfuel/compat', 'жидкое топливо'],
+  ['structure/multiblocks', 'шаблоны мультиблоков IE'],
 ];
 function unhandledData(layer) {
   const base = path.join(INSTANCE, layer, 'data');

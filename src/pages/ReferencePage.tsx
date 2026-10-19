@@ -9,6 +9,7 @@ import { useTags } from '../lib/tags';
 import { ItemIcon } from '../components/ItemIcon';
 import { LiquidFuelTab } from '../components/LiquidFuelTab';
 import { MapPage } from './MapPage';
+import { MultiblocksTab } from '../components/MultiblocksTab';
 import { GuidesTab } from '../components/GuidesTab';
 import { GUIDES_SUBS, type GuidesSub } from '../components/guides/guideMeta';
 import { PowerTab } from '../components/PowerTab';
@@ -34,7 +35,7 @@ import {
 import { cx } from '../lib/util';
 import './ReferencePage.css';
 
-type Tab = 'ores' | 'fuel' | 'metals' | 'food' | 'botany' | 'power' | 'guides' | 'map';
+type Tab = 'ores' | 'fuel' | 'metals' | 'food' | 'botany' | 'power' | 'multiblocks' | 'guides' | 'map';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'ores', label: 'Руды' },
   { id: 'fuel', label: 'Топливо' },
@@ -42,6 +43,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'food', label: 'Еда' },
   { id: 'botany', label: 'Ботаника' },
   { id: 'power', label: 'Электричество' },
+  { id: 'multiblocks', label: 'Мультиблоки' },
   { id: 'guides', label: 'Гайды' },
   { id: 'map', label: 'Карта' },
 ];
@@ -115,6 +117,11 @@ function Reference() {
             if (g) next.g = g;
             setParams(next);
           }}
+        />
+      ) : tab === 'multiblocks' ? (
+        <MultiblocksTab
+          slug={params.get('mb')}
+          onSlug={(mb) => setParams(mb ? { tab: 'multiblocks', mb } : { tab: 'multiblocks' }, { replace: true })}
         />
       ) : tab === 'power' ? (
         <PowerTab

@@ -72,7 +72,7 @@ npm run guides -- pull <папка> | push <файл.md|папка>   # гайд
 
 | Источник (не в git)           | Скрипт                                               | Результат                                                                                                 |
 | ----------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `mods/*.jar`                  | `mods.mjs` (+ `reference`, `manifest`, `geo`, `tags`, `botany`, `meals`, `cuisine`, `power`) | `public/items.json`, `icons/`, `recipes.json`, `reference.json`, `pack-manifest.json`, `geo.json`, `geo/`, `tags.json`, `botany.json`, `meals.json`, `power.json` |
+| `mods/*.jar`                  | `mods.mjs` (+ `reference`, `manifest`, `geo`, `tags`, `botany`, `meals`, `cuisine`, `power`, `multiblocks`) | `public/items.json`, `icons/`, `recipes.json`, `reference.json`, `pack-manifest.json`, `geo.json`, `geo/`, `tags.json`, `botany.json`, `meals.json`, `power.json`, `multiblocks.json`, `multiblocks/` |
 | `instance/kubejs/<слой>/`     | `kubejs.mjs`                                         | `public/kubejs.json`, `kubejs-items.json`, `icons-kubejs/` (свои предметы сборки из startup_scripts + assets), `kubejs-data.json` (еда и сковорода из `kubejs/data` — сайт заменяет ими данные модов) |
 | сохранение мира (`<мир>/data/`) | `world.mjs`                                        | Firestore `config/world__{файл}` — календарь TFC (длина месяца, заданная командой)                          |
 | zip/папка конфигов сервера    | `serverconfig.mjs`                                  | Firestore `config/{scope}__{путь}`                                                                        |
@@ -80,7 +80,7 @@ npm run guides -- pull <папка> | push <файл.md|папка>   # гайд
 
 - Запись в Firestore из скриптов — REST от имени `firebase login` (`scripts/firestore-rest.mjs`), правила на неё не действуют.
   Этим же способом удобно читать базу из node, когда нужно найти задачу или датапак.
-- `src/lib/recipeFilter.ts` и `recipeRefs.ts` — **без импортов, только стираемый синтаксис TS**: их запускает и сайт, и Node
+- `src/lib/recipeFilter.ts`, `recipeRefs.ts` и `nbt.ts` — **без импортов, только стираемый синтаксис TS**: их запускает и сайт, и Node
   (`import '../src/lib/x.ts'` из `.mjs`, Node 24). В `tsconfig` включён `erasableSyntaxOnly` — никаких enum и parameter properties.
 - То, что мод задаёт кодом (перечисления, константы), читай скриптом через `scripts/mods/classfile.mjs`, а не вписывай руками:
   данные сайта должны пересобираться из jar текущей сборки. Пример — `scripts/mods/botany.mjs`.
@@ -102,7 +102,8 @@ npm run guides -- pull <папка> | push <файл.md|папка>   # гайд
 
 ```
 src/pages/        TasksPage (+ раздел документов DocsSection), DocPage, FilesPage, SchematicsPage, AddonsPage (AddonsTab),
-                  DatapacksPage/RecipesPage/TagsPage (один раздел, слева PackNav), ReferencePage (вкладки «Гайды» — GuidesTab, «Карта» — MapPage), UpdatesPage
+                  DatapacksPage/RecipesPage/TagsPage (один раздел, слева PackNav), ReferencePage (вкладки «Гайды» — GuidesTab, «Карта» — MapPage,
+                  «Мультиблоки» — MultiblocksTab), UpdatesPage
 src/components/   Modal, ItemPicker/ItemIcon, FileBadge (значок вида файла + имя; виды — lib/fileKinds.ts), RecipeCatalog (RecipeBrowser), KubejsConstructor, SchematicLibrary, WorldMap, …
 src/lib/
   items.ts fuzzy.ts            библиотека предметов, поиск (fuse.js — только подбор замен в схемах)
@@ -112,6 +113,7 @@ src/lib/
   datapack.ts                  записи датапака, zip, проверки
   nbt.ts schematic.ts materials.ts schematicLibrary.ts   схемы .nbt: замена/удаление блоков, материалы, библиотека
   reference.ts meals.ts        справочник (руды, топливо, жидкое топливо, еда, металлы); сборные блюда и калькуляторы
+  multiblocks.ts               мультиблоки IE: шаблоны, замены по тегам-заменителям (UI — MultiblocksTab, CSS 3D)
   power.ts                     электричество: Create SU ↔ Electro Energetics (В/А/Вт) ↔ IE FE/t, формулы из кода (UI — PowerTab)
   calcExpr.ts guideFormat.ts   формулы гайдов (свой разборщик, без eval и импортов) и формат чисел {{x | 1 В}}
   guideScope.ts powerGuideScope.ts   имена для формул: общие функции + раздел (настройки, power.json, формулы power.ts)
@@ -121,7 +123,7 @@ src/lib/
 src/components/guides/  гайды справочника: GuidesSection (карточки, статья), GuideEditor/History/Help, CalcBlock (```calc),
                   GuideBody (Markdown + {{…}} + виджеты «::имя»), powerWidgets — рисунки раздела; формат — docs/plans/guides.md
 tools/            аддоны сборки (ee-rectifier-mod, ee-overheat-mod) — docs/addons.md; на сайте — lib/addons.ts, AddonsTab
-scripts/          mods.mjs + mods/{reference,tags,botany,meals,cuisine,power,geo,manifest,classfile,config-defaults}.mjs, serverconfig.mjs,
+scripts/          mods.mjs + mods/{reference,tags,botany,meals,cuisine,power,multiblocks,geo,manifest,classfile,config-defaults}.mjs, serverconfig.mjs,
                   kubejs.mjs, pack-release.mjs; firestore-rest.mjs — общий доступ к Firestore
 docs/plans/       планы фич со статусами; docs/STATE.md — текущее состояние
 ```

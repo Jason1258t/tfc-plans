@@ -27,6 +27,7 @@ import { isBotanyClass, writeBotany } from './mods/botany.mjs';
 import { isMealClass, writeMeals } from './mods/meals.mjs';
 import { isCuisineClass, isCuisineData } from './mods/cuisine.mjs';
 import { writePower } from './mods/power.mjs';
+import { writeMultiblocks } from './mods/multiblocks.mjs';
 
 const MC_VERSION = '1.21.1';
 
@@ -563,6 +564,15 @@ async function main() {
   );
   log(`электричество: настроек EE ${power.ee}, проводов IE ${power.ieWires}`);
   for (const w of power.warnings) log(`  электричество: ${w}`);
+  const multiblocks = await writeMultiblocks(
+    jars.map((j) => path.join(MODS_DIR, j)),
+    recipes,
+    (key) => ({ en: dict.en[key], ru: dict.ru[key] }),
+    path.join(ROOT, 'public', 'multiblocks.json'),
+    path.join(ROOT, 'public', 'multiblocks'),
+  );
+  log(`мультиблоки: ${multiblocks.count} — multiblocks.json ${multiblocks.kb}KB`);
+  for (const w of multiblocks.warnings) log(`  мультиблоки: ${w}`);
   const geo = writeGeo(dataDirs, parseLooseJson, path.join(ROOT, 'public'));
   if (geo) log(`география: ${geo.profiles} профилей, ${geo.waypoints} городов, ${geo.maps} карт`);
   const manifest = writeManifest({

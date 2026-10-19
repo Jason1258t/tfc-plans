@@ -1,7 +1,7 @@
 import { schematicsStore } from '../data/store';
 import type { SavedSchematic } from '../types';
 import { fileBlob, removeFile, uploadFile } from './files';
-import { DEFAULT_SHAPE, loadSchematic, type Schematic } from './schematic';
+import { DEFAULT_SHAPE, editedSource, loadSchematic, type Schematic } from './schematic';
 
 /**
  * Библиотека схем. Исходник .nbt — в хранилище файлов без привязки к задаче, в записи — имя и замены.
@@ -12,24 +12,52 @@ import { DEFAULT_SHAPE, loadSchematic, type Schematic } from './schematic';
 const replaceList = (s: Schematic, replace: Map<string, string>) =>
   [...replace].filter(([from]) => s.counts.has(from)).map(([from, to]) => ({ from, to }));
 
-export async function saveToLibrary(s: Schematic, replace: Map<string, string>, nick: string): Promise<string> {
+const blockTotal = (s: Schematic) => [...s.counts.values()].reduce((a, n) => a + n, 0);
+
+/**
+ * Сохранить в библиотеку. Блоки правили по клеткам (редактор слоёв) — исходник загружается заново
+ * с правками, старый файл удаляется после того, как запись перешла на новый.
+ */
+export async function saveToLibrary(
+  s: Schematic,
+  replace: Map<string, string>,
+  nick: string,
+): Promise<{ id: string; fileId?: string }> {
+  const edited = s.rev !== (s.savedRev ?? 0);
   if (s.libraryId) {
-    await schematicsStore.update(s.libraryId, { replace: replaceList(s, replace), shape: s.shape, updatedBy: nick });
-    return s.libraryId;
+    if (!edited) {
+      await schematicsStore.update(s.libraryId, { replace: replaceList(s, replace), shape: s.shape, updatedBy: nick });
+      return { id: s.libraryId };
+    }
+    const file = await editedSource(s);
+    const fileId = await uploadFile(file, { taskId: null, author: nick });
+    await schematicsStore.update(s.libraryId, {
+      fileId,
+      fileSize: file.size,
+      blocks: blockTotal(s),
+      replace: replaceList(s, replace),
+      shape: s.shape,
+      updatedBy: nick,
+    });
+    if (s.libraryFileId)
+      await removeFile(s.libraryFileId).catch((e) => console.error('Не удалось удалить прежний файл схемы:', e));
+    return { id: s.libraryId, fileId };
   }
-  const fileId = await uploadFile(s.file, { taskId: null, author: nick });
-  return schematicsStore.add({
+  const file = await editedSource(s);
+  const fileId = await uploadFile(file, { taskId: null, author: nick });
+  const id = await schematicsStore.add({
     name: s.fileName.replace(/\.nbt$/i, ''),
     fileName: s.fileName,
     fileId,
-    fileSize: s.fileSize,
+    fileSize: file.size,
     size: s.size,
-    blocks: [...s.counts.values()].reduce((a, n) => a + n, 0),
+    blocks: blockTotal(s),
     replace: replaceList(s, replace),
     shape: s.shape,
     author: nick,
     updatedBy: nick,
   });
+  return { id, fileId };
 }
 
 /** Схема из библиотеки с её заменами — для редактора и для скачивания */
@@ -45,6 +73,7 @@ export async function openFromLibrary(
   const schematic = await loadSchematic(new File([blob], `${safe || entry.fileName.replace(/\.nbt$/i, '')}.nbt`));
   schematic.key = `lib:${entry.id}`;
   schematic.libraryId = entry.id;
+  schematic.libraryFileId = entry.fileId;
   schematic.shape = { ...DEFAULT_SHAPE, ...entry.shape };
   return { schematic, replace: new Map(entry.replace.map((r) => [r.from, r.to])) };
 }

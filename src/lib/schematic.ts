@@ -28,6 +28,12 @@ export interface Schematic {
   size: [number, number, number] | null;
   /** Обрезка и отступы при скачивании */
   shape: Shape;
+  /** Файл в хранилище у схемы из библиотеки — заменяется, если блоки правили по клеткам */
+  libraryFileId?: string;
+  /** Номер правки по клеткам (редактор слоёв меняет parsed на месте); 0 — как в исходнике */
+  rev: number;
+  /** rev, с которым исходник лежит в библиотеке: отличается — при сохранении файл загружается заново */
+  savedRev?: number;
 }
 
 /**
@@ -66,9 +72,14 @@ export const DEFAULT_SHAPE: Shape = {
 /** Не больше стольких клеток при записи воздуха: каждая — отдельная запись в файле и в памяти браузера */
 const MAX_CLEAR_CELLS = 2_000_000;
 
-const EMPTY_BLOCKS = new Set(['minecraft:air', 'minecraft:cave_air', 'minecraft:void_air', 'minecraft:structure_void']);
+export const EMPTY_BLOCKS = new Set([
+  'minecraft:air',
+  'minecraft:cave_air',
+  'minecraft:void_air',
+  'minecraft:structure_void',
+]);
 
-function paletteLists(root: Compound): Tag[][] {
+export function paletteLists(root: Compound): Tag[][] {
   const single = root.get('palette');
   if (single?.type === T.List) return [single.value];
   // Структуры с несколькими вариантами палитры (palettes: [[...], [...]])
@@ -77,7 +88,7 @@ function paletteLists(root: Compound): Tag[][] {
   return [];
 }
 
-const nameOf = (entry: Tag) => {
+export const nameOf = (entry: Tag) => {
   if (entry.type !== T.Compound) return null;
   const n = entry.value.get('Name');
   return n?.type === T.String ? n.value : null;
@@ -88,8 +99,31 @@ export async function loadSchematic(file: File): Promise<Schematic> {
   const root = parsed.root.value;
   const palettes = paletteLists(root);
   if (!palettes.length) throw new Error('В файле нет палитры блоков — это не схема');
-  const palette = palettes[0];
 
+  const sizeTag = root.get('size');
+  const size =
+    sizeTag?.type === T.List && sizeTag.value.length === 3
+      ? (sizeTag.value.map((v) => (v.type === T.Int ? v.value : 0)) as [number, number, number])
+      : null;
+
+  return {
+    key: `${file.name}-${file.size}-${file.lastModified}`,
+    file,
+    fileName: file.name,
+    fileSize: file.size,
+    parsed,
+    counts: countBlocks(parsed),
+    size,
+    shape: { ...DEFAULT_SHAPE },
+    rev: 0,
+  };
+}
+
+/** id блока → сколько раз встречается; блоки палитры без позиций — с нулём */
+export function countBlocks(parsed: ParsedNbt): Map<string, number> {
+  const root = parsed.root.value;
+  const palettes = paletteLists(root);
+  const palette = palettes[0] ?? [];
   const counts = new Map<string, number>();
   const blocks = root.get('blocks');
   if (blocks?.type === T.List) {
@@ -106,28 +140,12 @@ export async function loadSchematic(file: File): Promise<Schematic> {
     const name = nameOf(p);
     if (name && !counts.has(name)) counts.set(name, 0);
   }
-
-  const sizeTag = root.get('size');
-  const size =
-    sizeTag?.type === T.List && sizeTag.value.length === 3
-      ? (sizeTag.value.map((v) => (v.type === T.Int ? v.value : 0)) as [number, number, number])
-      : null;
-
-  return {
-    key: `${file.name}-${file.size}-${file.lastModified}`,
-    file,
-    fileName: file.name,
-    fileSize: file.size,
-    parsed,
-    counts,
-    size,
-    shape: { ...DEFAULT_SHAPE },
-  };
+  return counts;
 }
 
-type Vec = [number, number, number];
+export type Vec = [number, number, number];
 
-const posOf = (b: Tag): Vec | null => {
+export const posOf = (b: Tag): Vec | null => {
   if (b.type !== T.Compound) return null;
   const p = b.value.get('pos');
   if (p?.type !== T.List || p.value.length !== 3) return null;
@@ -209,6 +227,13 @@ export function invalidTargets(replace: Map<string, string>, items: ItemIndex) {
   return [...replace].filter(([, to]) => to !== REMOVE && !items.byId.has(to)).map(([from, to]) => ({ from, to }));
 }
 
+/** Исходник с правками слоёв (без замен и формы) — его хранит библиотека */
+export async function editedSource(s: Schematic): Promise<File> {
+  if (!s.rev) return s.file;
+  const bytes = await writeNbt(s.parsed.root, s.parsed.gzipped);
+  return new File([bytes as BlobPart], s.fileName, { type: 'application/octet-stream' });
+}
+
 /** Новый файл с заменами (исходник в памяти не меняется) */
 export async function exportSchematic(s: Schematic, replace: Map<string, string>): Promise<Uint8Array> {
   // Объём считаем по исходнику и исходным именам: в клоне палитра уже с заменами
@@ -250,7 +275,11 @@ export async function exportSchematic(s: Schematic, replace: Map<string, string>
   return writeNbt(root, s.parsed.gzipped);
 }
 
-const intList = (v: Vec): Tag => ({ type: T.List, elemType: T.Int, value: v.map((x) => ({ type: T.Int, value: x })) });
+export const intList = (v: Vec): Tag => ({
+  type: T.List,
+  elemType: T.Int,
+  value: v.map((x) => ({ type: T.Int, value: x })),
+});
 
 /** Сдвиг блоков и сущностей в новый объём; блоки вне объёма отбрасываются, свободные клетки — воздух */
 function reshape(root: Compound, box: { min: Vec; size: Vec }, shape: Shape) {
