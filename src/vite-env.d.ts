@@ -12,4 +12,6 @@ interface ImportMetaEnv {
   readonly VITE_RECAPTCHA_SITE_KEY?: string;
   readonly VITE_APPCHECK_DEBUG?: string;
   readonly VITE_APPCHECK_DEBUG_TOKEN?: string;
+  /** адрес своего сервера файлов (server/file-server); пусто — вложения в Firestore */
+  readonly VITE_FILES_SERVER?: string;
 }
