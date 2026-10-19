@@ -9,6 +9,8 @@
  *   SKIP_PACK_RELEASE=1 firebase deploy   — пропустить (например, если Firestore недоступен)
  *   node scripts/pack-release.mjs --dry-run — показать разницу, ничего не записывая
  *   … --prev <файл>                         — сравнить с локальным снимком вместо опубликованного
+ *   ALLOW_MODS_DROP=1 firebase deploy      — записать, даже если в сборке 0 модов или убрано больше половины
+ *                                            (без неё такой деплой останавливается: обычно это сборка без mods/)
  */
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
@@ -142,6 +144,32 @@ async function changelogs(mods) {
   return out;
 }
 
+// ---------------------------------------------------------------- проверка на сборку без модов
+
+/**
+ * Снимок без модов или с потерей больше половины модов почти всегда значит, что библиотеку собрали без jar
+ * (деплой из git worktree, где mods/ пуст). Такая запись соврала бы игрокам «убраны все моды» — стоп.
+ */
+function assertPlausible(prev, next) {
+  if (process.env.ALLOW_MODS_DROP) return;
+  const before = prev?.mods.length ?? 0;
+  const after = next.mods.length;
+  let problem = null;
+  if (!after) problem = before ? `в новой сборке 0 модов (было ${before})` : 'в новой сборке 0 модов';
+  else if (before) {
+    const kept = new Set(next.mods.map((m) => m.id));
+    const removed = prev.mods.filter((m) => !kept.has(m.id)).length;
+    if (removed * 2 > before) problem = `убрано ${removed} модов из ${before} — больше половины`;
+  }
+  if (!problem) return;
+  const err = new Error(
+    `${problem}. Похоже, библиотеку собрали без jar в mods/ (например, в git worktree) — такую сборку на сайт не выкладываю.\n` +
+      'Положите моды в mods/ и запустите деплой снова. Если моды и правда убраны — ALLOW_MODS_DROP=1.',
+  );
+  err.hint = 'ALLOW_MODS_DROP=1';
+  throw err;
+}
+
 // ---------------------------------------------------------------- main
 
 const strip = (m) => ({ id: m.id, name: m.name, version: m.version, ...(m.from ? { from: m.from } : {}) });
@@ -162,6 +190,8 @@ async function main() {
     else if (res.status !== 404 && !type.includes('html'))
       throw new Error(`не удалось скачать опубликованный снимок: ${res.status}`);
   }
+
+  assertPlausible(prev, next);
 
   // id записи — отпечаток новой сборки: тот же набор jar не создаст вторую запись
   const id = createHash('sha1')
@@ -230,6 +260,8 @@ async function main() {
 
 main().catch((e) => {
   console.error('[pack-release]', e.message ?? e);
-  console.error('[pack-release] деплой остановлен, чтобы обновление не потерялось. Пропустить: SKIP_PACK_RELEASE=1');
+  if (e.hint) console.error(`[pack-release] деплой остановлен. Обойти: ${e.hint}`);
+  else
+    console.error('[pack-release] деплой остановлен, чтобы обновление не потерялось. Пропустить: SKIP_PACK_RELEASE=1');
   process.exit(1);
 });
