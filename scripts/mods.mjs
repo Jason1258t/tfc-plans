@@ -273,14 +273,33 @@ function readModel(ref) {
 }
 
 /** Собирает словарь текстур по цепочке parent'ов (дочерние перекрывают родительские) */
-function collectTextures(ref, depth = 0) {
+function collectTextures(ref, depth = 0, extras = false) {
   if (depth > 12) return {};
-  const model = readModel(ref);
-  if (!model) return {};
+  return modelTextures(readModel(ref), depth, extras);
+}
+
+/**
+ * Текстуры модели-объекта. Кроме parent/textures понимает загрузчики без текстур в JSON:
+ * neoforge:composite (children — вложенные модели), IE conf_sides (base_name + _side_none / _up_none — грани
+ * накопителей и насоса), IE conveyor (лента — block/conveyor/off, неподвижный кадр). Их берём только вторым
+ * проходом (extras), если обычные текстуры ничего не дали, — иначе у части предметов сменилась бы иконка.
+ */
+function modelTextures(model, depth, extras) {
+  if (!model || typeof model !== 'object') return {};
   // neoforge:separate_transforms — берём вид для GUI
   const parentRef = model.parent ?? model.perspectives?.gui?.parent ?? model.base?.parent;
-  const parent = parentRef ? collectTextures(parentRef, depth + 1) : {};
-  return { ...parent, ...(model.textures ?? {}) };
+  const parent = parentRef ? collectTextures(parentRef, depth + 1, extras) : {};
+  if (!extras) return { ...parent, ...(model.textures ?? {}) };
+  const children = {};
+  for (const c of Object.values(model.children ?? {})) Object.assign(children, modelTextures(c, depth + 1, extras));
+  const loader = {};
+  if (model.loader === 'immersiveengineering:conf_sides' && typeof model.base_name === 'string') {
+    loader.side = `${model.base_name}_side_none`;
+    loader.top = `${model.base_name}_up_none`;
+  } else if (model.loader === 'immersiveengineering:models/conveyor') {
+    loader.all = 'immersiveengineering:block/conveyor/off';
+  }
+  return { ...parent, ...children, ...loader, ...(model.textures ?? {}) };
 }
 
 const TEXTURE_PRIORITY = [
@@ -311,8 +330,12 @@ function textureFile(texRef) {
   return null;
 }
 
-function resolveIcon(itemModelRef) {
-  const textures = collectTextures(itemModelRef);
+/** Иконка по модели; extras — второй проход с загрузчиками и вложенными моделями (см. modelTextures) */
+function resolveIcon(itemModelRef, extras = false) {
+  return pickIcon(itemModelRef, collectTextures(itemModelRef, 0, extras));
+}
+
+function pickIcon(itemModelRef, textures) {
   const deref = (v, n = 0) =>
     typeof v === 'string' && v.startsWith('#') && n < 10 ? deref(textures[v.slice(1)], n + 1) : v;
   const keys = [...TEXTURE_PRIORITY, ...Object.keys(textures)];
@@ -502,7 +525,13 @@ async function main() {
       if (seen.has(id)) continue;
       // Предметом считаем только то, у чего есть модель предмета
       if (!readModel(`${ns}:item/${p}`)) continue;
-      const tex = resolveIcon(`${ns}:item/${p}`) ?? iconByName(ns, p) ?? fallbackIcon(p);
+      // Потом — текстура с тем же именем, загрузчики моделей (конвейеры, накопители IE) и модель блока
+      const tex =
+        resolveIcon(`${ns}:item/${p}`) ??
+        iconByName(ns, p) ??
+        resolveIcon(`${ns}:item/${p}`, true) ??
+        resolveIcon(`${ns}:block/${p}`, true) ??
+        fallbackIcon(p);
       seen.add(id);
       count++;
       items.push({
