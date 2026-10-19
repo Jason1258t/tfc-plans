@@ -1,0 +1,284 @@
+/* Справочник → «Мультиблоки» */
+
+.mb-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mb-nav-group + .mb-nav-group {
+  margin-top: 8px;
+}
+
+.mb-nav-mod {
+  padding: 4px 10px 2px;
+}
+
+.mb-nav-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+
+@media (max-width: 720px) {
+  .mb-nav-group {
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .mb-nav-mod {
+    width: 100%;
+  }
+}
+
+.mb-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.mb-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mb-head h2 {
+  margin: 0 0 2px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.mb-h {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.mb-note {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+}
+
+.mb-steps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mb-steps .item-icon {
+  vertical-align: -4px;
+}
+
+.mb-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mb-toolbar .btn.active {
+  background: var(--accent-soft);
+}
+
+.mb-layer-ctl {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.mb-layer-ctl input[type='range'] {
+  width: 140px;
+}
+
+.mb-views {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+@media (max-width: 860px) {
+  .mb-views {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* объёмный вид: CSS 3D, грани с текстурой иконки блока */
+.mb-iso {
+  position: relative;
+  min-height: 380px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  perspective: 1400px;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.mb-iso:active {
+  cursor: grabbing;
+}
+
+.mb-iso-scene {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-style: preserve-3d;
+}
+
+.mb-iso-floor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border: 1px dashed var(--border-strong);
+  background: color-mix(in srgb, var(--surface-3) 60%, transparent);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.mb-iso-floor span {
+  transform: translateY(18px);
+  font-size: 11px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.mb-cube {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-style: preserve-3d;
+}
+
+.mb-face {
+  position: absolute;
+  left: 0;
+  top: 0;
+  background-size: 100% 100%;
+  background-color: #8a8f99;
+  image-rendering: pixelated;
+  backface-visibility: hidden;
+}
+
+.mb-cube.noicon .mb-face {
+  background-color: #b06ad0;
+}
+
+.mb-cube.trigger .mb-face {
+  outline: 2px solid var(--danger);
+  outline-offset: -2px;
+}
+
+.mb-cube.current .mb-face {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+}
+
+.mb-iso-reset {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+}
+
+.mb-iso-hint {
+  position: absolute;
+  left: 8px;
+  bottom: 6px;
+}
+
+/* слой сверху */
+.mb-layer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-x: auto;
+}
+
+.mb-grid {
+  display: grid;
+  gap: 2px;
+}
+
+.mb-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  background: var(--surface-2);
+}
+
+.mb-cell.empty {
+  background: repeating-linear-gradient(45deg, transparent 0 4px, var(--surface-2) 4px 6px);
+  border: 1px dashed var(--border);
+}
+
+.mb-cell.trigger {
+  box-shadow: 0 0 0 2px var(--danger);
+}
+
+.mb-front {
+  text-align: center;
+}
+
+.mb-mat {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mb-alts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.mb-linkbtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+  text-align: left;
+}
+
+.mb-linkbtn:hover {
+  text-decoration: underline;
+}
+
+.mb-manual-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mb-manual p {
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+
+.mb-manual p:last-child {
+  margin-bottom: 0;
+}
+
+.mb-other {
+  border-color: var(--accent);
+}
