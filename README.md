@@ -242,6 +242,8 @@ node scripts/seed-recipe-hints.mjs
 Crossover подменяет дуговую печь), блок для удара молотом, размер и зеркальность — из конструкторов классов
 мультиблоков, текст — из книги IE (`assets/<ns>/manual/`). Допустимые замены блоков — по тегам-заменителям IE
 (список в скрипте) и составу тегов из `tags.json` с правками KubeJS. Расход энергии берётся из `power.json`.
+Итоговый вид — модели собранных машин (`.obj` из blockstate блока машины, загрузчик IE `basic_split`) с текстурами
+в `public/multiblocks/formed/` и `tex/` (`scripts/mods/multiblock-models.mjs`), на сайте — three.js.
 
 ### Теги (страница «Теги»)
 

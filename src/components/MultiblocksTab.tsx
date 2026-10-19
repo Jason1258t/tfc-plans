@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronUp, Download, FlipHorizontal2, RotateCcw } from 'lucide-react';
-import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { lazy, Suspense, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { iconUrl, itemName, useItems, type ItemIndex } from '../lib/items';
 import {
@@ -29,6 +29,8 @@ import './MultiblocksTab.css';
  */
 
 const HAMMER = 'immersiveengineering:hammer';
+
+const MultiblockFormed = lazy(() => import('./MultiblockFormed'));
 
 /** Иконка машины; у блоков с объёмной моделью (верстак, молниетвод) её нет — тогда самый частый блок структуры */
 function mbIcon(m: Multiblock, items: ItemIndex | null): string | null {
@@ -137,7 +139,7 @@ function MultiblockCard({ m, data }: { m: Multiblock; data: MultiblockData }) {
             </button>
           </div>
         )}
-        <MbViewer key={String(full)} m={m} shape={shape} trigger={trigger} />
+        <MbViewer key={String(full)} m={m} shape={shape} trigger={trigger} formedOk={!full} />
       </section>
       <Materials m={m} shape={shape} data={data} />
       <MachineInfo m={m} />
@@ -149,55 +151,92 @@ function MultiblockCard({ m, data }: { m: Multiblock; data: MultiblockData }) {
 }
 
 /** Объёмный вид и слой сверху с ползунком слоёв и зеркалом — в карточке и в виджете гайда */
-function MbViewer({ m, shape, trigger }: { m: Multiblock; shape: MbShape; trigger: [number, number, number] | null }) {
+function MbViewer({
+  m,
+  shape,
+  trigger,
+  formedOk = true,
+}: {
+  m: Multiblock;
+  shape: MbShape;
+  trigger: [number, number, number] | null;
+  /** Итоговый вид относится к этой форме (не к «целиком, как в книге») */
+  formedOk?: boolean;
+}) {
   const [mirrored, setMirrored] = useState(false);
+  const formed = formedOk ? m.formed : undefined;
+  const [view, setView] = useState<'build' | 'formed'>('build');
   const sy = shape.size[1];
   const [layer, setLayer] = useState(sy - 1);
   const top = Math.min(layer, sy - 1);
+  const showFormed = view === 'formed' && !!formed;
   return (
     <>
       <div className="mb-toolbar">
+        {formed && (
+          <div className="seg" role="tablist" aria-label="Вид">
+            <button aria-pressed={!showFormed} onClick={() => setView('build')}>
+              Постройка
+            </button>
+            <button aria-pressed={showFormed} onClick={() => setView('formed')}>
+              Итог
+            </button>
+          </div>
+        )}
         {m.mirror && (
           <button className={cx('btn ghost', mirrored && 'active')} onClick={() => setMirrored((v) => !v)}>
             <FlipHorizontal2 size={15} /> {mirrored ? 'Зеркально' : 'Как в книге'}
           </button>
         )}
-        <div className="mb-layer-ctl">
-          <button
-            className="btn sm icon"
-            aria-label="Слой ниже"
-            title="Слой ниже"
-            disabled={top <= 0}
-            onClick={() => setLayer(top - 1)}
-          >
-            <ChevronDown size={16} />
-          </button>
-          <input
-            type="range"
-            min={0}
-            max={sy - 1}
-            value={top}
-            onChange={(e) => setLayer(Number(e.target.value))}
-            aria-label="Слой"
-          />
-          <button
-            className="btn sm icon"
-            aria-label="Слой выше"
-            title="Слой выше"
-            disabled={top >= sy - 1}
-            onClick={() => setLayer(top + 1)}
-          >
-            <ChevronUp size={16} />
-          </button>
-          <span className="small">
-            слой {top + 1} из {sy}
-          </span>
+        {!showFormed && (
+          <div className="mb-layer-ctl">
+            <button
+              className="btn sm icon"
+              aria-label="Слой ниже"
+              title="Слой ниже"
+              disabled={top <= 0}
+              onClick={() => setLayer(top - 1)}
+            >
+              <ChevronDown size={16} />
+            </button>
+            <input
+              type="range"
+              min={0}
+              max={sy - 1}
+              value={top}
+              onChange={(e) => setLayer(Number(e.target.value))}
+              aria-label="Слой"
+            />
+            <button
+              className="btn sm icon"
+              aria-label="Слой выше"
+              title="Слой выше"
+              disabled={top >= sy - 1}
+              onClick={() => setLayer(top + 1)}
+            >
+              <ChevronUp size={16} />
+            </button>
+            <span className="small">
+              слой {top + 1} из {sy}
+            </span>
+          </div>
+        )}
+      </div>
+      {showFormed ? (
+        <Suspense fallback={<div className="mb-formed empty">Загружаю просмотр…</div>}>
+          <MultiblockFormed formed={formed} size={m.size} mirrored={mirrored} />
+          <p className="faint small mb-formed-foot">
+            Модель собранной машины из jar мода, поставлена на место постройки
+            {formed.rough ? ' (совпадение с постройкой неполное)' : ''}. Подвижные части (барабаны, поршни, лопасти) мод
+            рисует отдельно — здесь их нет.
+          </p>
+        </Suspense>
+      ) : (
+        <div className="mb-views">
+          <Iso shape={shape} trigger={trigger} upTo={top} mirrored={mirrored} />
+          <LayerGrid shape={shape} trigger={trigger} y={top} mirrored={mirrored} />
         </div>
-      </div>
-      <div className="mb-views">
-        <Iso shape={shape} trigger={trigger} upTo={top} mirrored={mirrored} />
-        <LayerGrid shape={shape} trigger={trigger} y={top} mirrored={mirrored} />
-      </div>
+      )}
     </>
   );
 }
@@ -240,7 +279,7 @@ export function MultiblockEmbed({ id, full, withMaterials }: { id: string; full?
           </div>
         </div>
       </div>
-      <MbViewer m={m} shape={shape} trigger={trigger} />
+      <MbViewer m={m} shape={shape} trigger={trigger} formedOk={!(full && m.extra)} />
       {withMaterials && <Materials m={m} shape={shape} data={data} />}
     </div>
   );

@@ -599,6 +599,7 @@ async function main() {
     (key) => ({ en: dict.en[key], ru: dict.ru[key] }),
     path.join(ROOT, 'public', 'multiblocks.json'),
     path.join(ROOT, 'public', 'multiblocks'),
+    path.join(vanillaDir, 'assets'),
   );
   log(`мультиблоки: ${multiblocks.count} — multiblocks.json ${multiblocks.kb}KB`);
   for (const w of multiblocks.warnings) log(`  мультиблоки: ${w}`);
