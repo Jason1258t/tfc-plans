@@ -155,21 +155,27 @@ export function modsSignature() {
     });
 }
 
-/** Сколько jar в папке модов основной копии репозитория, если мы в git worktree (иначе null) */
-function mainCheckoutJars() {
+/** Корень основной копии репозитория, если мы в git worktree (иначе null) */
+export function mainCheckoutRoot() {
   try {
     const common = execFileSync('git', ['-C', ROOT, 'rev-parse', '--path-format=absolute', '--git-common-dir'], {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
     }).trim();
-    const mainRoot = path.dirname(common);
-    if (path.resolve(mainRoot) === ROOT) return null;
-    const dir = path.join(mainRoot, 'mods');
-    const n = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('.jar')).length : 0;
-    return { dir, n };
+    const mainRoot = path.resolve(path.dirname(common));
+    return mainRoot === ROOT ? null : mainRoot;
   } catch {
     return null;
   }
+}
+
+/** Сколько jar в папке модов основной копии репозитория, если мы в git worktree (иначе null) */
+function mainCheckoutJars() {
+  const mainRoot = mainCheckoutRoot();
+  if (!mainRoot) return null;
+  const dir = path.join(mainRoot, 'mods');
+  const n = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('.jar')).length : 0;
+  return { dir, n };
 }
 
 /**
@@ -202,6 +208,7 @@ export function assertModsPresent() {
       main
         ? `Положите моды: ln -s "${main.dir}"/*.jar "${MODS_DIR}"/ (или скопируйте их) и запустите снова.`
         : 'Положите jar сборки в mods/ и запустите снова.',
+      'Данные модов не менялись (правка сайта)? TFC_KEEP_MODS=1 — взять готовые, без jar (npm run deploy:site).',
       'Если библиотека без модов нужна нарочно — TFC_ALLOW_NO_MODS=1.',
     ].join('\n'),
   );

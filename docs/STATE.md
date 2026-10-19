@@ -123,7 +123,9 @@
 - **Сборщики**: `npm run mods`, `npm run serverconfig`, `npm run kubejs`, `pack-release` при деплое.
   Защита от сборки без модов (worktree без jar): сборка библиотеки останавливается, если `mods/` пуст, а прежняя
   сборка была с модами (`TFC_ALLOW_NO_MODS=1` — обход); `pack-release` не пишет запись при 0 модов или потере больше
-  половины (`ALLOW_MODS_DROP=1`).
+  половины (`ALLOW_MODS_DROP=1`). `npm run deploy:site` (`TFC_KEEP_MODS=1`) — деплой правок сайта без jar: данные модов
+  готовые, в worktree — из основной копии вместе с `.env.local`, аддонами, ресурспаками и KubeJS; `predeploy-check`
+  не выпускает сайт, собранный без настроек Firebase.
 - Пакет **firestore-files@0.1.0** (отдельный репозиторий пользователя) — на нём вложения и исходники схем.
 - Хранилище файлов за интерфейсом (`src/lib/fileStorage`): Firestore (по умолчанию) или свой сервер
   `server/file-server` (Node без зависимостей, systemd + Caddy, проверка токенов Firebase и App Check, SSE).

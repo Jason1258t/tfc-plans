@@ -16,6 +16,7 @@
     ],
     "predeploy": [
       "npm run build",
+      "node scripts/predeploy-check.mjs",
       "node scripts/pack-release.mjs"
     ],
     "rewrites": [
