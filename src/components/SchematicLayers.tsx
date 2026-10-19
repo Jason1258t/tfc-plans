@@ -534,27 +534,41 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
             3D
           </button>
         </div>
-        <button className="btn sm icon" onClick={() => stepY(-1)} disabled={layerY <= 0} aria-label="Слой ниже">
-          <ChevronDown size={16} />
-        </button>
+        <span className="layers-step">
+          <button
+            className="btn sm icon"
+            onClick={() => stepY(-1)}
+            disabled={layerY <= 0}
+            aria-label="Слой ниже"
+            title="Слой ниже"
+          >
+            <ChevronDown size={16} />
+          </button>
+          <input
+            type="range"
+            className="layers-range"
+            min={0}
+            max={Math.max(0, sy - 1)}
+            value={layerY}
+            onChange={(e) => {
+              setY(Number(e.target.value));
+              setMenu(null);
+            }}
+            aria-label="Слой"
+          />
+          <button
+            className="btn sm icon"
+            onClick={() => stepY(1)}
+            disabled={layerY >= sy - 1}
+            aria-label="Слой выше"
+            title="Слой выше"
+          >
+            <ChevronUp size={16} />
+          </button>
+        </span>
         <span className="layers-y">
           Слой <b>{layerY + 1}</b> из {sy}
         </span>
-        <button className="btn sm icon" onClick={() => stepY(1)} disabled={layerY >= sy - 1} aria-label="Слой выше">
-          <ChevronUp size={16} />
-        </button>
-        <input
-          type="range"
-          className="layers-range"
-          min={0}
-          max={Math.max(0, sy - 1)}
-          value={layerY}
-          onChange={(e) => {
-            setY(Number(e.target.value));
-            setMenu(null);
-          }}
-          aria-label="Слой"
-        />
         <span className="faint small">{layerTotal} блоков</span>
         {mode === '2d' ? (
           <>
