@@ -155,6 +155,60 @@ export function modsSignature() {
     });
 }
 
+/** Сколько jar в папке модов основной копии репозитория, если мы в git worktree (иначе null) */
+function mainCheckoutJars() {
+  try {
+    const common = execFileSync('git', ['-C', ROOT, 'rev-parse', '--path-format=absolute', '--git-common-dir'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    const mainRoot = path.dirname(common);
+    if (path.resolve(mainRoot) === ROOT) return null;
+    const dir = path.join(mainRoot, 'mods');
+    const n = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('.jar')).length : 0;
+    return { dir, n };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Не даёт молча собрать библиотеку без модов, если прежняя сборка была с модами: так на сайт уходит каталог
+ * из одной ванили и TFC, а pack-release записывает «убраны все моды». Типичный случай — деплой из git worktree,
+ * где в mods/ только README. Нарочно собрать без модов: TFC_ALLOW_NO_MODS=1.
+ */
+export function assertModsPresent() {
+  if (modsSignature().length || process.env.TFC_ALLOW_NO_MODS) return;
+  const why = [];
+  try {
+    const prev = JSON.parse(fs.readFileSync(SIGNATURE_FILE, 'utf8'));
+    if (prev.length) why.push(`прошлая сборка здесь была из ${prev.length} jar (.cache/items-signature.json)`);
+  } catch {
+    /* ещё не собирали */
+  }
+  try {
+    const manifest = JSON.parse(fs.readFileSync(OUT_MANIFEST, 'utf8'));
+    if (manifest.mods?.length) why.push(`в public/pack-manifest.json ${manifest.mods.length} модов`);
+  } catch {
+    /* снимка нет */
+  }
+  const main = mainCheckoutJars();
+  if (main?.n) why.push(`это git worktree, а в основной копии ${main.dir} лежит ${main.n} jar`);
+  if (!why.length) return;
+  const err = new Error(
+    [
+      `в ${MODS_DIR} нет ни одного jar, а сборка была с модами: ${why.join('; ')}.`,
+      'Библиотека без модов — это каталог из одной ванили и TFC; при деплое он ушёл бы на сайт, а в историю обновлений — «убраны все моды».',
+      main
+        ? `Положите моды: ln -s "${main.dir}"/*.jar "${MODS_DIR}"/ (или скопируйте их) и запустите снова.`
+        : 'Положите jar сборки в mods/ и запустите снова.',
+      'Если библиотека без модов нужна нарочно — TFC_ALLOW_NO_MODS=1.',
+    ].join('\n'),
+  );
+  err.code = 'NO_MODS';
+  throw err;
+}
+
 /**
  * Распаковывает из jar только assets/<ns>/{models,textures,lang/en_us|ru_ru}.
  * Результат кешируется по имени+размеру+дате файла, повторный запуск ничего не распаковывает.
@@ -443,6 +497,7 @@ function writeRecipes(recipes) {
 }
 
 async function main() {
+  assertModsPresent();
   fs.mkdirSync(CACHE, { recursive: true });
   const vanillaDir = await prepareVanilla();
   const vanillaRoot = path.join(vanillaDir, 'assets');
@@ -623,7 +678,7 @@ async function main() {
 // Запуск как скрипт (а не импорт из ensure-items)
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   main().catch((e) => {
-    console.error(e);
+    console.error(e.code === 'NO_MODS' ? `[items] ${e.message}` : e);
     process.exit(1);
   });
 }

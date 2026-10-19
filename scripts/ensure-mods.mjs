@@ -2,7 +2,7 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { SIGNATURE_FILE, modsSignature } from './mods.mjs';
+import { SIGNATURE_FILE, assertModsPresent, modsSignature } from './mods.mjs';
 
 const itemsJson = fileURLToPath(new URL('../public/items.json', import.meta.url));
 const recipesJson = fileURLToPath(new URL('../public/recipes.json', import.meta.url));
@@ -37,6 +37,13 @@ else if (previous !== null && previous !== current) reason = 'набор мод�
 else if (previous === null && current !== '[]') reason = 'в mods/ появились моды';
 
 if (reason) {
+  // mods/ пуст, а сборка была с модами (чаще всего — git worktree без jar): стоп, а не каталог из одной ванили
+  try {
+    assertModsPresent();
+  } catch (e) {
+    console.error(`[items] ${reason}, но пересобирать нельзя:\n${e.message}`);
+    process.exit(1);
+  }
   console.log(`[items] ${reason} — пересобираю…`);
   execFileSync(process.execPath, [fileURLToPath(new URL('./mods.mjs', import.meta.url))], {
     stdio: 'inherit',
