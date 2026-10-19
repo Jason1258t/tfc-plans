@@ -9,18 +9,27 @@
 //
 // Рецепты печи, которые KubeJS сборки удаляет (public/kubejs.json), пропускаются.
 //
-//   node scripts/pellet-arc-datapack.mjs [выход.zip]   (по умолчанию out/pellet_arc_furnace.zip)
+//   node scripts/pellet-arc-datapack.mjs [выход.zip] [--upload]   (по умолчанию out/pellet_arc_furnace.zip)
+//
+// --upload — ещё и положить датапак на сайт (Firestore datapacks, от имени `firebase login`): датапак с тем же
+// именем обновляется, иначе создаётся новый. Подпись — TFC_NICK или git user.name.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { strToU8, zipSync } from 'fflate';
-import { ROOT } from './firestore-rest.mjs';
+import { DOCS, ROOT, deployer, fromValue, toValue, token } from './firestore-rest.mjs';
+import { recipeHash } from '../src/lib/hash.ts';
 import { matchFilter } from '../src/lib/recipeFilter.ts';
 import { recipeRefs } from '../src/lib/recipeRefs.ts';
 
 const NS = 'tfc_plans_pellets';
 const PACK_FORMAT = 48; // Minecraft 1.21.1
-const out = path.resolve(process.argv[2] ?? path.join(ROOT, 'out/pellet_arc_furnace.zip'));
+const NAME = 'Пеллеты и брикеты в дуговой печи';
+const DESCRIPTION =
+  'Пеллеты и брикеты tfcorewashing плавятся в дуговой печи (scripts/pellet-arc-datapack.mjs, TFC Планы)';
+const args = process.argv.slice(2);
+const upload = args.includes('--upload');
+const out = path.resolve(args.find((a) => !a.startsWith('--')) ?? path.join(ROOT, 'out/pellet_arc_furnace.zip'));
 
 const readJson = (p) => JSON.parse(fs.readFileSync(path.join(ROOT, p), 'utf8'));
 const recipes = readJson('public/recipes.json');
@@ -77,8 +86,7 @@ const files = {
     {
       pack: {
         pack_format: PACK_FORMAT,
-        description:
-          'Пеллеты и брикеты tfcorewashing плавятся в дуговой печи (scripts/pellet-arc-datapack.mjs, TFC Планы)',
+        description: DESCRIPTION,
       },
     },
     null,
@@ -86,6 +94,8 @@ const files = {
   ),
 };
 const table = [];
+/** Записи датапака в формате сайта (types.ts, DatapackEntry) */
+const entries = [];
 /** пеллета/брикет → рецепт печи, по которому сделан */
 const made = new Map();
 for (const r of recipes) {
@@ -113,7 +123,8 @@ for (const r of recipes) {
     const k = n / g;
     const m = num / g;
     const name = item.split(':')[1];
-    files[`data/${NS}/recipe/arc_furnace/${name}.json`] = JSON.stringify(
+    const file = `data/${NS}/recipe/arc_furnace/${name}.json`;
+    files[file] = JSON.stringify(
       {
         type: 'immersiveengineering:arc_furnace',
         additives: [],
@@ -125,6 +136,16 @@ for (const r of recipes) {
       null,
       2,
     );
+    entries.push({
+      id: Math.random().toString(36).slice(2, 10),
+      kind: 'add',
+      path: file,
+      content: files[file],
+      recipeType: r.t,
+      sourceRecipe: r.i,
+      sourceHash: recipeHash(r.j),
+      note: `${k} шт. = ${k * powders} пылек; исходник — ${n} пылек → ${outCount}`,
+    });
     table.push(`${k} × ${item} → ${m} × ${res.id ?? JSON.stringify(res)}   (как ${n} × ${powder} → ${outCount})`);
   }
 }
@@ -136,3 +157,36 @@ fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, zipSync(Object.fromEntries(Object.entries(files).map(([p, s]) => [p, strToU8(s)]))));
 console.log(table.sort().join('\n'));
 console.log(`\n${table.length} рецептов → ${path.relative(process.cwd(), out)}`);
+
+if (upload) {
+  const auth = { Authorization: `Bearer ${await token()}`, 'Content-Type': 'application/json' };
+  const nick = deployer('Claude');
+  let existing = null;
+  for (let pageToken = ''; ;) {
+    const res = await fetch(`${DOCS}/datapacks?pageSize=300${pageToken && `&pageToken=${pageToken}`}`, {
+      headers: auth,
+    });
+    if (!res.ok) throw new Error(`чтение datapacks: ${res.status} ${await res.text()}`);
+    const page = await res.json();
+    existing ??= (page.documents ?? []).find((d) => fromValue(d.fields.name ?? { nullValue: null }) === NAME);
+    if (!page.nextPageToken) break;
+    pageToken = page.nextPageToken;
+  }
+  const now = Date.now();
+  const data = { name: NAME, namespace: NS, description: DESCRIPTION, entries, updatedBy: nick, updatedAt: now };
+  if (!existing) Object.assign(data, { author: nick, createdAt: now });
+  const fields = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, toValue(v)]));
+  const mask = Object.keys(data)
+    .map((k) => `updateMask.fieldPaths=${k}`)
+    .join('&');
+  const res = existing
+    ? await fetch(`https://firestore.googleapis.com/v1/${existing.name}?${mask}`, {
+        method: 'PATCH',
+        headers: auth,
+        body: JSON.stringify({ fields }),
+      })
+    : await fetch(`${DOCS}/datapacks`, { method: 'POST', headers: auth, body: JSON.stringify({ fields }) });
+  if (!res.ok) throw new Error(`запись датапака: ${res.status} ${await res.text()}`);
+  const id = (await res.json()).name.split('/').pop();
+  console.log(`${existing ? 'обновлён' : 'создан'} датапак на сайте: datapacks/${id} (подпись ${nick})`);
+}
