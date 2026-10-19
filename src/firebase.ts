@@ -51,8 +51,10 @@ export const db: Firestore | null = app
  * Настоящей авторизации нет — ник хранится в куке. Анонимный вход нужен только для того,
  * чтобы правила Firestore могли отсечь запросы не из приложения (request.auth != null).
  */
-export const authReady: Promise<void> = app
-  ? signInAnonymously(getAuth(app)).then(
+export const auth = app ? getAuth(app) : null;
+
+export const authReady: Promise<void> = auth
+  ? signInAnonymously(auth).then(
       () => undefined,
       (e) => console.warn('Анонимный вход не удался (включите Anonymous в Firebase Auth):', e),
     )

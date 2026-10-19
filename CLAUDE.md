@@ -91,7 +91,7 @@ npm run guides -- pull <папка> | push <файл.md|папка>   # гайд
 ## Firestore
 
 `tasks`, `groups`, `artifacts`, `files` (+`chunks`, пакет `firestore-files`), `datapacks`, `schematics`, `recipeHints`, `guides` (+`revisions`),
-`packUpdates`, `settings/world`, `config`. Поля — в README, «Модель данных».
+`packUpdates`, `settings/world`, `config`, `onboarding/{uid}` (какие подсказки знакомства показаны). Поля — в README, «Модель данных».
 
 - Авторизации нет: анонимный вход + ник в куке. Правила проверяют форму данных и `nick(...)`, а не владельца.
 - `config` и создание `packUpdates` закрыты для сайта — пишут только скрипты.
@@ -104,7 +104,7 @@ npm run guides -- pull <папка> | push <файл.md|папка>   # гайд
 src/pages/        TasksPage (+ раздел документов DocsSection), DocPage, FilesPage, SchematicsPage, AddonsPage (AddonsTab),
                   DatapacksPage/RecipesPage/TagsPage (один раздел, слева PackNav), ReferencePage (вкладки «Гайды» — GuidesTab, «Карта» — MapPage,
                   «Мультиблоки» — MultiblocksTab), UpdatesPage
-src/components/   Modal, ItemPicker/ItemIcon, FileBadge (значок вида файла + имя; виды — lib/fileKinds.ts), RecipeCatalog (RecipeBrowser), KubejsConstructor, SchematicLibrary, WorldMap, …
+src/components/   Onboarding (подсказки при первом входе в раздел, тексты — lib/onboarding.ts), Modal, ItemPicker/ItemIcon, FileBadge (значок вида файла + имя; виды — lib/fileKinds.ts), RecipeCatalog (RecipeBrowser), KubejsConstructor, SchematicLibrary, WorldMap, …
 src/lib/
   items.ts fuzzy.ts            библиотека предметов, поиск (fuse.js — только подбор замен в схемах)
   recipes.ts recipeFilter.ts   каталог рецептов + KubeJS: статусы, фильтры

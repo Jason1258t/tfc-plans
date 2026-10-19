@@ -223,6 +223,17 @@ service cloud.firestore {
       }
     }
 
+    // Какие подсказки знакомства уже показаны — у каждого анонимного входа (браузера) свой документ, чужие не видны
+    match /onboarding/{uid} {
+      allow read, delete: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['seen', 'off', 'updatedAt'])
+        && request.resource.data.seen is map
+        && request.resource.data.seen.size() <= 100
+        && request.resource.data.off is bool
+        && request.resource.data.updatedAt is number;
+    }
+
     match /artifacts/{id} {
       allow read: if signedIn();
       allow create, update: if signedIn()
