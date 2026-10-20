@@ -80,6 +80,10 @@ function AddonList({ onGuides }: { onGuides: () => void }) {
           </div>
           <p>{a.summary}</p>
           <p className="faint small">Ставить: {a.needs}</p>
+          <p className="faint small">
+            Программой: <code>tfc pull addons {a.id}</code>
+            {a.replaces?.length ? <> — заодно уберёт (с копией) {a.replaces.join(', ')}</> : null}
+          </p>
           {a.blocks.map((b) => (
             <AddonBlockCard key={b.id} b={b} />
           ))}

@@ -1,6 +1,8 @@
 /**
  * Аддоны сборки — свои маленькие моды группы (исходники — tools/<мод>/ в репозитории, разработка — docs/addons.md).
  * Jar для скачивания лежат на хостинге в /addons/ (public/addons, в git не хранится — кладётся при сборке мода).
+ * Для программы tfc (`tfc pull addons`) при сборке сайта рядом кладётся /addons/index.json —
+ * scripts/addons-index.mjs. Файл читает и Node: без импортов, только стираемый синтаксис TS.
  */
 
 export interface AddonBlock {
@@ -22,6 +24,10 @@ export interface Addon {
   source: string;
   summary: string;
   needs: string;
+  /** Куда ставит `tfc pull addons` без имён: both — и клиенту, и серверу */
+  side: 'both' | 'client' | 'server';
+  /** Файлы сборки (путь от папки версии), которые аддон заменяет: `tfc pull addons` убирает их с копией */
+  replaces?: string[];
   blocks: AddonBlock[];
   verified: string[];
   notVerified: string[];
@@ -41,6 +47,7 @@ export const ADDONS: Addon[] = [
     summary:
       'Два блока для Create Electro Energetics: переменный ток на входе — ровный постоянный на выходе, например для электропомп, ламп и аккумуляторов. С версии 1.1 внутри нет диодов EE: блок берёт мощность с сети как нагрузка и отдаёт постоянное напряжение как генератор, поэтому не зависит от настройки сервера microTicks.',
     needs: 'Сервер и все игроки (новые блоки). NeoForge 21.1.219+, Create 6.0.10, Electro Energetics 1.1.2+.',
+    side: 'both',
     blocks: [
       {
         id: 'ee_rectifier:three_phase_rectifier',
@@ -83,6 +90,7 @@ export const ADDONS: Addon[] = [
     summary:
       'Электронагреватель Electro Energetics при полном нагреве (≥ 0,9, около 6,8 кВт) даёт чаше Create уровень «перегрев» (superheated): сталь, каолин и другие superheated-рецепты идут на нагревателе.',
     needs: 'Сервер и все игроки. Electro Energetics 1.1+.',
+    side: 'both',
     blocks: [],
     verified: ['Собирается.'],
     notVerified: ['В игре не проверялся ни разу.'],
@@ -97,6 +105,8 @@ export const ADDONS: Addon[] = [
       'Исправляет ошибку TFC Real World 4.1.4 в «мире хоста»: когда хост проходил в ад, умирал или телепортировался в другое измерение, мод стирал размер карты и у сервера. Карта становилась меньше, Eratosthenes считал базу «за северным полюсом» и каждый тик переносил всех к краю карты (Z ≈ −20 100), а новые места генерировались океаном; помогал только перезаход хоста. Заодно заменяет скрипт KubeJS выхода из ада (eratosthenes_portal_clamp.js — его нужно удалить): тот был рассчитан на карту в 2,5 раза меньше, уводил игроков в Сахару и не давал выйти из ада даже командой.',
     needs:
       'Хост (в его программе работает сервер) — обязательно; сервер и остальные игроки — можно, у них ничего не меняется. TFC Real World 4.1.4, NeoForge 21.1.234+. Вместе с ним удалить kubejs/server_scripts/event/eratosthenes_portal_clamp.js.',
+    side: 'both',
+    replaces: ['kubejs/server_scripts/event/eratosthenes_portal_clamp.js'],
     blocks: [],
     verified: [
       'Причина найдена по байткоду TFC Real World и Eratosthenes и по логам игры хоста 2026-10-21: после смерти в аду «Half meridian set to 20000» вместо 50000, затем тысячи строк «canceled land».',
