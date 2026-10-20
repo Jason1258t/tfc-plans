@@ -8,18 +8,20 @@
  *
  * Документ config/world__<имя файла>: { scope: 'world', path, mod, values (NBT как обычный объект), … }.
  * Берутся только файлы из списка WANTED: в data/ мира лежит много лишнего и личного (игроки, команды, карты).
+ * Из кода: worldDocs(вход) — документы без записи, importWorld({ input, dryRun }) — разбор и запись.
  */
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { unzipSync } from 'fflate';
-import { deployer, DOCS, toValue, token } from './firestore-rest.mjs';
+import { fileURLToPath } from 'node:url';
+import { deployer, writeConfigDocs } from './firestore-rest.mjs';
 import { readNbt, T } from '../src/lib/nbt.ts';
 
 const log = (...a) => console.log('[world]', ...a);
 
 /** Какие файлы сохранения читаем: имя файла → мод */
-const WANTED = { 'tfc_calendar.dat': 'tfc' };
+export const WANTED = { 'tfc_calendar.dat': 'tfc' };
 
 function readInput(input) {
   const files = [];
@@ -53,14 +55,9 @@ function plain(tag) {
   return v;
 }
 
-async function main() {
-  const argv = process.argv.slice(2);
-  const dryRun = argv.includes('--dry-run');
-  const input = argv.find((a) => !a.startsWith('--'));
-  if (!input) throw new Error('укажите папку мира, файл или zip: npm run world -- <путь>');
+/** Документы config/world__… из папки мира, data/, файла или zip; [] — если нужных файлов нет */
+export async function worldDocs(input) {
   const files = readInput(input);
-  if (!files.length)
-    throw new Error(`не найдено ни одного файла из списка: ${Object.keys(WANTED).join(', ')} (лежат в <мир>/data/)`);
   const by = deployer('import');
   const docs = [];
   for (const f of files) {
@@ -81,20 +78,30 @@ async function main() {
     });
     log(`${f.name}: ${JSON.stringify(values).slice(0, 600)}`);
   }
-  if (dryRun) return log('--dry-run, ничего не записываю');
-  const headers = { Authorization: `Bearer ${await token()}`, 'Content-Type': 'application/json' };
-  for (const d of docs) {
-    const r = await fetch(`${DOCS}/config/${encodeURIComponent(d.id)}`, {
-      method: 'PATCH',
-      headers,
-      body: JSON.stringify({ fields: toValue(d.data).mapValue.fields }),
-    });
-    if (!r.ok) throw new Error(`Firestore ${r.status} на ${d.id}: ${(await r.text()).slice(0, 300)}`);
-  }
-  log(`записано документов: ${docs.length}`);
+  return docs;
 }
 
-main().catch((e) => {
-  console.error('[world]', e.message ?? e);
-  process.exit(1);
-});
+export async function importWorld({ input, dryRun = false }) {
+  const docs = await worldDocs(input);
+  if (!docs.length)
+    throw new Error(`не найдено ни одного файла из списка: ${Object.keys(WANTED).join(', ')} (лежат в <мир>/data/)`);
+  if (dryRun) {
+    log('--dry-run, ничего не записываю');
+    return docs;
+  }
+  await writeConfigDocs(docs);
+  log(`записано документов: ${docs.length}`);
+  return docs;
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  const argv = process.argv.slice(2);
+  const input = argv.find((a) => !a.startsWith('--'));
+  (input
+    ? importWorld({ input, dryRun: argv.includes('--dry-run') })
+    : Promise.reject(new Error('укажите папку мира, файл или zip: npm run world -- <путь>'))
+  ).catch((e) => {
+    console.error('[world]', e.message ?? e);
+    process.exit(1);
+  });
+}

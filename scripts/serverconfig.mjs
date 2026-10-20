@@ -20,18 +20,19 @@
  * (token, secret, password, webhook, api key) — такие файлы пропускаются целиком, с сообщением.
  * Комментарии из TOML не сохраняются. Повторный импорт перезаписывает документ целиком.
  * Писать в config может только этот скрипт (правила Firestore закрывают коллекцию для сайта).
+ * Из кода: configDocs(вход, опции) — документы без записи, importServerConfig(опции) — разбор, сводка и запись.
  */
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { unzipSync } from 'fflate';
 import { parse } from 'smol-toml';
-import { deployer, DOCS, toValue, token } from './firestore-rest.mjs';
+import { fileURLToPath } from 'node:url';
+import { deployer, writeConfigDocs } from './firestore-rest.mjs';
 
 const log = (...a) => console.log('[config]', ...a);
 
-function args() {
-  const argv = process.argv.slice(2);
+function args(argv) {
   const opts = { input: null, scope: null, only: [], dryRun: false, all: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -43,8 +44,6 @@ function args() {
     else throw new Error(`неизвестный флаг ${a}`);
   }
   if (!opts.input) throw new Error('укажите zip или папку с конфигами: npm run serverconfig -- <путь>');
-  if (opts.scope !== null && !/^[a-z0-9_-]{1,40}$/i.test(opts.scope))
-    throw new Error('--scope: латиница, цифры, _ и -');
   return opts;
 }
 
@@ -97,16 +96,26 @@ function clean(v) {
   return v;
 }
 
-async function main() {
-  const opts = args();
+/**
+ * Документы config/{scope}__… из zip или папки. Опции: scope (иначе — по папке), only, all, как у флагов;
+ * exclude — путь конфига → true, если файл брать нельзя (запреты npm run pack).
+ */
+export function configDocs(input, { scope: forcedScope = null, only = [], all = false, exclude = null } = {}) {
+  if (forcedScope !== null && !/^[a-z0-9_-]{1,40}$/i.test(forcedScope))
+    throw new Error('--scope: латиница, цифры, _ и -');
+  const opts = { input, scope: forcedScope, only, all };
   const source = path.basename(opts.input);
   const by = deployer('import');
   const docs = [];
-  const skipped = { other: 0, client: 0, secret: [], unusual: [] };
+  const skipped = { other: 0, excluded: 0, client: 0, secret: [], unusual: [] };
   for (const f of readInput(opts.input)) {
     const p = configPath(f.name);
     if (!p.endsWith('.toml')) {
       skipped.other++;
+      continue;
+    }
+    if (exclude?.(p)) {
+      skipped.excluded++;
       continue;
     }
     const forced = opts.only.some((o) => p.includes(o));
@@ -148,8 +157,11 @@ async function main() {
       },
     });
   }
-  if (!docs.length) throw new Error('не найдено ни одного .toml');
+  return { docs, skipped };
+}
 
+/** Сводка в лог: что импортируется, что пропущено, карта мира */
+export function logConfigDocs(docs, skipped) {
   if (docs.length <= 12)
     for (const d of docs)
       log(`${d.data.path} → config/${d.id} (ключей верхнего уровня: ${Object.keys(d.data.values).length})`);
@@ -158,7 +170,8 @@ async function main() {
     `к импорту: ${docs.length} файлов (${scopes.map((x) => `${x}: ${docs.filter((d) => d.data.scope === x).length}`).join(', ')})`,
   );
   log(
-    `пропущено: не TOML ${skipped.other}, клиентских ${skipped.client}, с похожим на секрет ключом ${skipped.secret.length}`,
+    `пропущено: не TOML ${skipped.other}, клиентских ${skipped.client}, с похожим на секрет ключом ${skipped.secret.length}` +
+      (skipped.excluded ? `, запрещённых для импорта ${skipped.excluded}` : ''),
   );
   for (const p of skipped.secret) log(`  не импортирован (секрет?): ${p}`);
   if (skipped.unusual.length)
@@ -174,26 +187,27 @@ async function main() {
         ` спавн ${s.spawn_mode} ${s.spawn_center_latitude ?? ''} ${s.spawn_center_longitude ?? ''}`,
     );
   }
-  if (opts.dryRun) {
-    log('--dry-run, ничего не записываю');
-    for (const d of docs) console.log(JSON.stringify(d, null, 2));
-    return;
-  }
-
-  const headers = { Authorization: `Bearer ${await token()}`, 'Content-Type': 'application/json' };
-  for (const d of docs) {
-    // PATCH без updateMask — документ заменяется целиком (создаётся, если его не было)
-    const r = await fetch(`${DOCS}/config/${encodeURIComponent(d.id)}`, {
-      method: 'PATCH',
-      headers,
-      body: JSON.stringify({ fields: toValue(d.data).mapValue.fields }),
-    });
-    if (!r.ok) throw new Error(`Firestore ${r.status} на ${d.id}: ${(await r.text()).slice(0, 300)}`);
-  }
-  log(`записано документов: ${docs.length}`);
 }
 
-main().catch((e) => {
-  console.error('[config]', e.message ?? e);
-  process.exit(1);
-});
+export async function importServerConfig({ input, dryRun = false, ...opts }) {
+  const { docs, skipped } = configDocs(input, opts);
+  if (!docs.length) throw new Error('не найдено ни одного .toml');
+  logConfigDocs(docs, skipped);
+  if (dryRun) {
+    log('--dry-run, ничего не записываю');
+    for (const d of docs) console.log(JSON.stringify(d, null, 2));
+    return docs;
+  }
+  await writeConfigDocs(docs);
+  log(`записано документов: ${docs.length}`);
+  return docs;
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  Promise.resolve()
+    .then(() => importServerConfig(args(process.argv.slice(2))))
+    .catch((e) => {
+      console.error('[config]', e.message ?? e);
+      process.exit(1);
+    });
+}
