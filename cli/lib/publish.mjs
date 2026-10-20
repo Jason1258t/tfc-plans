@@ -95,7 +95,11 @@ export async function publish({ api, profile, local, current, note, mc, loader, 
   }
   const snap = await api.post('/pack/snapshots', { note: note ?? '', mc, loader, files });
   if (setCurrent) await api.post('/pack/current', { id: snap.id });
-  saveState(profile, { snapshot: snap.id, files: Object.fromEntries(files.map((f) => [f.path, f.sha256])) });
+  saveState(profile, {
+    ...loadState(profile), // pulled (tfc pull) — не терять
+    snapshot: snap.id,
+    files: Object.fromEntries(files.map((f) => [f.path, f.sha256])),
+  });
   console.log(
     `${bold('Готово:')} снимок ${snap.id}${setCurrent ? ' — теперь он текущий' : ` (текущий не менял: tfc admin use ${snap.id})`}.`,
   );

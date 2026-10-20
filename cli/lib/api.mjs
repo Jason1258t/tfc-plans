@@ -48,6 +48,18 @@ export class Api {
   post = (url, body) => this.req('POST', url, body);
   del = (url) => this.req('DELETE', url);
 
+  /** Небольшой файл целиком (исходник схемы с сайта) */
+  async bytes(url) {
+    let res;
+    try {
+      res = await fetch(this.server + url, { headers: this.headers() });
+    } catch (e) {
+      throw new Error(`сервер сборки ${this.server} недоступен: ${e.cause?.code ?? e.message}`);
+    }
+    if (!res.ok) throw new Error(apiError(res.status, await res.json().catch(() => null)));
+    return new Uint8Array(await res.arrayBuffer());
+  }
+
   /** Текущий снимок или null, если сборку ещё не заливали */
   async current() {
     try {

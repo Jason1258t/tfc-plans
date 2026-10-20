@@ -44,9 +44,15 @@ const sha256 = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 const mb = (n) => `${(n / 1024 / 1024).toFixed(1)} МБ`;
 const git = (...a) => execFileSync('git', a, { cwd: ROOT, encoding: 'utf8' }).trim();
 
-/** Версия — последний коммит, менявший программу: пересборка без правок не заставит игроков обновляться */
+/** Версия — последний коммит, менявший программу (и общие модули сайта в ней): пересборка без правок не заставит игроков обновляться */
 function buildVersion() {
-  const srcs = ['cli', 'server/pack-server/lib/paths.mjs'];
+  const srcs = [
+    'cli',
+    'server/pack-server/lib/paths.mjs',
+    'src/lib/datapackFiles.ts',
+    'src/lib/schematicFile.ts',
+    'src/lib/nbt.ts',
+  ];
   const [ct, hash] = git('log', '-1', '--format=%ct %h', '--', ...srcs).split(' ');
   const time = Number(ct) * 1000;
   const day = new Date(time).toISOString().slice(0, 10).replaceAll('-', '.');
@@ -111,9 +117,13 @@ async function bundle(work, version) {
     logLevel: 'warning',
     legalComments: 'none',
   });
-  // Разборщики сайта (scripts/) в файл игроков попадать не должны: tfc build — команда только из проекта
+  // Разборщики сайта (scripts/) в файл игроков попадать не должны: tfc build — команда только из проекта.
+  // Из сайта — только общие модули без импортов (tfc pull) и fflate
   const foreign = Object.keys(res.metafile.inputs).filter(
-    (f) => !/^(cli|server\/pack-server\/lib)\/|^<define:/.test(f),
+    (f) =>
+      !/^(cli|server\/pack-server\/lib)\/|^src\/lib\/(datapackFiles|schematicFile|nbt)\.ts$|^node_modules\/fflate\/|^<define:/.test(
+        f,
+      ),
   );
   if (foreign.length) throw new Error(`в сборку попали лишние файлы: ${foreign.join(', ')}`);
   return outfile;
