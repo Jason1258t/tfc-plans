@@ -196,3 +196,36 @@
   gap: 6px;
   font-size: 12px;
 }
+
+/* Программа tfc: скачать и три команды */
+.tfc-dl-os {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tfc-dl-steps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tfc-dl-steps li > .btn {
+  margin: 4px 6px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+
+.tfc-dl-steps pre {
+  margin: 6px 0;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--surface-2, var(--bg));
+  border: 1px solid var(--border);
+  overflow-x: auto;
+  font-size: 13px;
+}
