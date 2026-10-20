@@ -62,6 +62,10 @@ public/icons-kubejs/
 
 # Серверные ресурспаки (чужие треки и т. п.) — только на хостинг, не в репозиторий
 public/packs/
+
+# tfc одним файлом (npm run tfc:dist) — только на хостинг
+dist-tfc/
+public/tfc/
 __pycache__/
 server/file-server/data/
 server/pack-server/data/

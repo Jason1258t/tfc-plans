@@ -14,6 +14,8 @@ import { diffFiles, printDiff, publish } from './lib/publish.mjs';
 import { scanLocal } from './lib/scan.mjs';
 import { applyPlan, undoLast } from './lib/sync.mjs';
 import { ask, bold, choose, confirm, cyan, date, dim, green, interactive, mb, red, yellow } from './lib/ui.mjs';
+import { checkUpdate } from './lib/update.mjs';
+import { BUILD, IS_BINARY } from './lib/version.mjs';
 
 const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
 
@@ -33,7 +35,7 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
   tfc build [mods,kubejs,config,world]   собрать данные сайта локально в ./tfc-out — посмотреть до заливки
   tfc admin keys | invite <ник> [--admin] | revoke <id> | history | use <id> | rollback
 
-Общее: --profile <имя> — другой профиль. Настройки: ${configFile()}`;
+Общее: --profile <имя> — другой профиль; tfc --version — версия. Настройки: ${configFile()}`;
 
 const opts = {
   profile: { type: 'string' },
@@ -53,6 +55,7 @@ const opts = {
   'no-current': { type: 'boolean' },
   admin: { type: 'boolean' },
   help: { type: 'boolean', short: 'h' },
+  version: { type: 'boolean', short: 'v' },
 };
 
 function api(cfg) {
@@ -280,14 +283,17 @@ async function cmdPublish(v) {
 }
 
 async function cmdBuild(v, parts) {
-  const cfg = loadConfig();
-  const profile = currentProfile(cfg, v.profile);
-  // Разборщики живут в репозитории сайта (scripts/); в одном файле tfc для игроков их нет — это команда хоста
+  // Разборщики живут в репозитории сайта (scripts/); в одном файле tfc для игроков их нет — это команда хоста.
+  // Импорт — по пути из переменной, чтобы сборщик (npm run tfc:dist) не тянул scripts/ в файл
+  const msg = 'сборка данных доступна только из папки проекта сайта (npm run tfc -- build)';
+  if (IS_BINARY) throw new Error(msg);
+  const profile = currentProfile(loadConfig(), v.profile);
+  const packModule = '../scripts/pack.mjs';
   let runPack;
   try {
-    ({ runPack } = await import('../scripts/pack.mjs'));
+    ({ runPack } = await import(packModule));
   } catch (e) {
-    throw new Error(`сборка данных доступна только из папки проекта сайта (npm run tfc -- build): ${e.message}`);
+    throw new Error(`${msg}: ${e.message}`);
   }
   const outDir = path.resolve(v.out ?? 'tfc-out');
   await runPack({
@@ -351,10 +357,29 @@ const COMMANDS = {
 async function main(argv) {
   const { values, positionals } = parseArgs({ args: argv, options: opts, allowPositionals: true, strict: true });
   const [cmd, ...rest] = positionals;
-  if (!cmd || values.help || cmd === 'help') return console.log(HELP);
+  if (values.version || cmd === 'version') {
+    console.log(BUILD ? `tfc ${BUILD.version}` : 'tfc из исходников (node cli/tfc.mjs) — версия не задана');
+    const hint = await checkUpdate({ force: true });
+    if (hint) console.log(hint);
+    return;
+  }
+  if (!cmd || values.help || cmd === 'help') {
+    console.log(HELP);
+    // Двойной клик по tfc.exe: окно консоли закрылось бы сразу после справки
+    if (!cmd && IS_BINARY && process.platform === 'win32' && interactive())
+      await ask(dim('\nЭто программа для командной строки (PowerShell). Enter — закрыть'));
+    return;
+  }
   const fn = COMMANDS[cmd];
   if (!fn) throw new Error(`нет команды «${cmd}» — tfc help`);
-  await fn(values, rest);
+  // Проверка новой версии идёт параллельно с командой, подсказка — в конце (и после ошибки)
+  const update = checkUpdate();
+  try {
+    await fn(values, rest);
+  } finally {
+    const hint = await update;
+    if (hint) console.log(`\n${hint}`);
+  }
 }
 
 main(process.argv.slice(2)).catch((e) => {
