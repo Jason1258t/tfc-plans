@@ -66,7 +66,10 @@ export function classifyPath(p) {
   if (segs.some((s) => s.endsWith(' ') || s.endsWith('.'))) return { error: 'имя кончается пробелом или точкой' };
   const lower = segs.map((s) => s.toLowerCase());
   if (FORBIDDEN_NAMES.has(lower.at(-1))) return { error: `запрещённый файл ${segs.at(-1)}` };
-  const dir = lower.slice(0, -1).find((s) => FORBIDDEN_DIRS.has(s));
+  // Папки мира и сервера — только на своём месте (верх папки версии или мира): внутри датапаков и kubejs/data
+  // такие имена законны (data/minecraft/loot_table/entities/, data/<ns>/advancements/)
+  const dirs = lower[0] === 'world' ? lower.slice(0, 2) : lower.slice(0, 1);
+  const dir = dirs.slice(0, lower.length - 1).find((s) => FORBIDDEN_DIRS.has(s));
   if (dir) return { error: `запрещённая папка ${dir}/` };
   if (lower.at(-1).endsWith('.bak')) return { error: 'резервные копии *.bak не берём' };
   const rule = RULES.find((r) => r.test(p));

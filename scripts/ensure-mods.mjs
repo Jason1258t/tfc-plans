@@ -1,13 +1,15 @@
 // Перед dev/build: пересобирает библиотеку предметов, если её нет или поменялось содержимое mods/.
 // TFC_KEEP_MODS=1 — данные модов не пересобирать, взять готовые (в git worktree — из основной копии); jar не нужны.
+// jar в mods/ нет, а в .env.local есть TFC_PACK_URL и TFC_PACK_TOKEN — данные модов с сервера сборки (pack-fetch.mjs).
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SIGNATURE_FILE, assertModsPresent, mainCheckoutRoot, modsSignature } from './mods.mjs';
+import { fetchData, packServer } from './pack-fetch.mjs';
 
 const PUBLIC = fileURLToPath(new URL('../public', import.meta.url));
-const keepMods = !!process.env.TFC_KEEP_MODS;
+let keepMods = !!process.env.TFC_KEEP_MODS;
 /** Что в public/ собирает npm run mods; остальное неотслеживаемое (kubejs, аддоны, ресурспаки) — из других мест */
 const MODS_OUTPUTS = new Set([
   'items.json',
@@ -62,6 +64,19 @@ if (mainRoot) {
   if (copied.length) console.log(`[items] из основной копии (${mainPublic}): ${copied.join(', ')}`);
 }
 
+// Сервер сборки: jar нет — данные модов текущего снимка с сервера (одинаковые файлы не качаются), не пересобираем
+const packSrv = !keepMods && !modsSignature().length ? packServer() : null;
+if (packSrv) {
+  console.log(`[items] в mods/ нет jar — беру данные модов с сервера сборки ${packSrv.url}`);
+  try {
+    await fetchData({ outDir: PUBLIC, srv: packSrv });
+  } catch (e) {
+    console.error(`[items] сервер сборки: ${e.message}`);
+    process.exit(1);
+  }
+  keepMods = true;
+}
+
 const itemsJson = fileURLToPath(new URL('../public/items.json', import.meta.url));
 const recipesJson = fileURLToPath(new URL('../public/recipes.json', import.meta.url));
 const referenceJson = fileURLToPath(new URL('../public/reference.json', import.meta.url));
@@ -98,13 +113,13 @@ else if (previous === null && current !== '[]') reason = 'в mods/ появил�
 
 if (reason && keepMods) {
   console.error(
-    `[items] TFC_KEEP_MODS: ${reason}, а пересобирать данные модов флаг не даёт. ` +
+    `[items] ${packSrv ? 'данные с сервера сборки' : 'TFC_KEEP_MODS'}: ${reason}, а пересобирать данные модов флаг не даёт. ` +
       (mainRoot ? `В основной копии ${mainRoot} их тоже нет — ` : '') +
       'соберите их там, где лежат jar: npm run mods.',
   );
   process.exit(1);
 } else if (keepMods) {
-  console.log('[items] TFC_KEEP_MODS: данные модов не пересобираю, mods/ не смотрю');
+  if (!packSrv) console.log('[items] TFC_KEEP_MODS: данные модов не пересобираю, mods/ не смотрю');
 } else if (reason) {
   // mods/ пуст, а сборка была с модами (чаще всего — git worktree без jar): стоп, а не каталог из одной ванили
   try {

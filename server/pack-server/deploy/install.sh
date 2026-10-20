@@ -24,11 +24,19 @@ if [ "${NODE_MAJOR:-0}" -lt 22 ]; then
   apt-get install -y nodejs
 fi
 
+# git — сборка данных держит свою копию репозитория (код разборщиков)
+command -v git >/dev/null || { apt-get update; apt-get install -y git; }
+
 # Настройки — только при первой установке
 if [ ! -f "$ENV_FILE" ]; then
   echo "→ Создаю $ENV_FILE"
   cp "$SRC/.env.example" "$ENV_FILE"
   chmod 640 "$ENV_FILE"
+fi
+# Настройки, появившиеся позже (сборка данных), — дописываем, если их нет; остальное не трогаем
+grep -q '^BUILD_HEAP_MB=' "$ENV_FILE" || printf '\n# Лимит кучи процесса сборки данных, МБ\nBUILD_HEAP_MB=640\n' >> "$ENV_FILE"
+if [ -f /etc/tfc-pack/firebase-sa.json ] && ! grep -q '^GOOGLE_APPLICATION_CREDENTIALS=' "$ENV_FILE"; then
+  printf '\n# Сервисный ключ Firebase — публикация данных\nGOOGLE_APPLICATION_CREDENTIALS=/etc/tfc-pack/firebase-sa.json\n' >> "$ENV_FILE"
 fi
 DATA=$(sed -n 's/^DATA_DIR=//p' "$ENV_FILE" | tail -1)
 DATA=${DATA:-/var/lib/tfc-pack}
