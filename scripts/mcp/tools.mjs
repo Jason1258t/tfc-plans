@@ -24,7 +24,7 @@ import {
   tagsOf,
 } from './data.mjs';
 import { FirestoreError, configDocs, guideDoc, guideDocs, writeGuide } from './firestore.mjs';
-import { clip, dateOf, nameOf, named, norm, num, page, paging, short, str, words } from './fmt.mjs';
+import { clip, dateOf, nameOf, named, norm, num, page, paging, short, str, userRegex, words } from './fmt.mjs';
 import { oneClass, classRecord } from './code-index.mjs';
 import { javap, jarList, jarToc, nestedJars, pathMatcher, readEntry, resolveJar } from './jars.mjs';
 import { TOOLS as blocksTools } from './tools/blocks.mjs';
@@ -535,7 +535,7 @@ function jarRead(a) {
     return `${a.path} — двоичный файл, ${r.data.length} Б.`;
   let lines = text.split('\n').map((l, i) => [i + 1, l]);
   if (a.grep) {
-    const re = new RegExp(a.grep, 'i');
+    const re = userRegex(a.grep);
     lines = lines.filter(([, l]) => re.test(l));
   }
   const offset = Math.max(0, Number(a.offset ?? 0) | 0);
@@ -826,4 +826,4 @@ for (const t of TOOLS) {
   t.handler = async (a) => clip(String(await run(a)));
 }
 
-export const INSTRUCTIONS = `Данные сборки TFC RealWorld для сайта «TFC Планы» (данные: ${PUBLIC}). Используйте вместо grep по public/*.json и распаковки mods/*.jar: ответы уже учитывают KubeJS (удаления, замены, kubejs/data), теги со вложенными и KubeJS, слои конфигов. Факты из jar — jar_find/jar_read/jar_javap. Отладка сборки: class_find/class_info/class_hierarchy, code_refs (кто вызывает), mixins (миксины и конфликты), decompile, jar_grep, mods_check (зависимости), log_analyze (лог/краш). Гайды: guide_get → правка → guide_put с revision.`;
+export const INSTRUCTIONS = `Данные сборки TFC RealWorld для сайта «TFC Планы» (данные: ${PUBLIC}). Используйте вместо grep по public/*.json и распаковки mods/*.jar: ответы уже учитывают KubeJS (удаления, замены, kubejs/data), теги со вложенными и KubeJS, слои конфигов. Факты из jar — jar_find/jar_read/jar_javap. Отладка сборки: class_find/class_info/class_hierarchy, code_refs (кто вызывает, кто пишет поле, сторона кода), event_listeners (кто слушает событие, вкл. KubeJS), mixins (миксины и конфликты), decompile, jar_grep, mods_check (зависимости), log_analyze (лог/краш; level=timeline — хронология игры). Регионы мира — map_regions. Гайды: guide_get → правка → guide_put с revision.`;

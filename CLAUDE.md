@@ -67,10 +67,13 @@ npm run pack:publish -- <папка данных> --dry-run   # что выло�
   сковорода, мультиблоки, power). Настройки: `config_get` (мир > serverconfig > config > значение из кода; только чтение).
 - Код модов: `jar_find` (путь, класс через точки, glob), `jar_read` (по строкам, grep), `jar_javap` (метод; jar можно не
   указывать). Вложенные jar-in-jar и Minecraft+NeoForge («minecraft») — тоже.
-- Отладка сборки: `class_find`, `class_info` (сигнатуры, строки исходника для стека), `class_hierarchy`, `code_refs`
-  (кто вызывает/использует — по байткоду, `Owner#method`, `"строка"`), `mixins` (на класс по методам, конфликты, мод,
-  обзор), `decompile` (Vineflower; Minecraft — исходники), `jar_grep` (текст в файлах jar), `mods_check`
-  (зависимости по правилам FML), `log_analyze` (лог/краш-репорт → моды, миксины, расшифровка ошибок).
+- Отладка сборки: `class_find`, `class_info` (сигнатуры, строки исходника для стека, ⚠ ссылки на клиентские классы),
+  `class_hierarchy`, `code_refs` (кто вызывает/использует — по байткоду, `Owner#method`, `"строка"`; у поля — запись
+  или чтение, `access=write`; у места — сторона: клиент / событие обеих сторон), `event_listeners` (кто слушает
+  событие NeoForge: `@SubscribeEvent`, `addListener`, скрипты KubeJS), `mixins` (на класс по методам, конфликты,
+  мод, обзор), `decompile` (Vineflower; Minecraft — исходники NeoForge, версия в ответе), `jar_grep` (текст в файлах
+  jar), `mods_check` (зависимости по правилам FML), `log_analyze` (лог/краш-репорт → моды, миксины, расшифровка
+  ошибок, сверка модов игрока; `level=timeline` — хронология: входы с координатами, измерения, команды, чат, смерти).
   **Краш или «что сломалось» — начинай с `log_analyze`**, потом `class_info`/`decompile`/`mixins target=…`.
 - Гайды: `guides_list`, `guide_search`, `guide_get` → правка → `guide_put` с `baseRevision` из `guide_get`
   (отказ, если статью изменили после чтения; подпись `Claude`, версия — в историю). Это запись в общую базу.
@@ -79,7 +82,8 @@ npm run pack:publish -- <папка данных> --dry-run   # что выло�
 - Книги: `books_list`, `book_search`, `book_entry` — руководство TFC (со статьями аддонов и KubeJS) и справочник IE.
 - Не предметы: `lang_search` (переводы всех jar — блоки, существа, жидкости, эффекты), `block_get`,
   `loot_for` (что выпадает), `loot_sources` (откуда выпадает предмет).
-- Карта: `map_point` (блок ↔ широта/долгота, города, климат TFC), `map_rocks` (породы и жилы), `map_find` (место → блок).
+- Карта: `map_point` (блок ↔ широта/долгота, города, климат TFC), `map_rocks` (породы и жилы), `map_find` (место → блок),
+  `map_regions` (блоки → файлы `r.X.Z.mca` и команды PowerShell).
 - Контент сайта, только чтение: `tasks_list`/`task_get`, `datapacks_list`/`datapack_get`, `kubejs_site_list`/`kubejs_site_get`,
   `schematics_list`/`schematic_get` — тратят чтения Firestore (пишут сколько), не дёргай в цикле.
 - Инструменты раздела — `scripts/mcp/tools/<раздел>.mjs` (`export const TOOLS`), общие помощники — `fmt.mjs`.

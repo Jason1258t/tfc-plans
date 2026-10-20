@@ -9,7 +9,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT, readJson } from '../data.mjs';
-import { clip, dateOf, norm, num, page, paging, short, str, words } from '../fmt.mjs';
+import { clip, dateOf, norm, num, page, paging, short, str, textTest } from '../fmt.mjs';
 
 function packRoot() {
   try {
@@ -73,6 +73,17 @@ function linesOf(f) {
   return lines;
 }
 const isText = (f) => TEXT.test(f.rel) && f.size <= MAX_TEXT;
+
+/** Строки скриптов (server/startup/client_scripts всех слоёв), прошедшие проверку: [{ rel, folder, line, text }] */
+export function scriptLines(test) {
+  const out = [];
+  for (const f of walk()) {
+    if (!SCRIPT_FOLDERS.has(f.folder) || !isText(f)) continue;
+    for (const [i, l] of linesOf(f).entries())
+      if (test(l)) out.push({ rel: f.rel, folder: f.folder, line: i + 1, text: l.trim() });
+  }
+  return out;
+}
 
 function filterFiles(list, a) {
   let l = list;
@@ -249,22 +260,12 @@ function kubejsSearch(a) {
   if (!all.length) return noDir();
   const q = String(a.query ?? '');
   let test;
-  if (a.regex) {
-    let re;
-    try {
-      re = new RegExp(q, 'i');
-    } catch (e) {
-      return `Регулярка не разобралась: ${e.message}`;
-    }
-    test = (s) => re.test(s);
-  } else {
-    const w = words(q);
-    if (!w.length) return 'Пустой запрос.';
-    test = (s) => {
-      const n = norm(s);
-      return w.every((x) => n.includes(x));
-    };
+  try {
+    test = textTest(q, { regex: a.regex, words: true });
+  } catch (e) {
+    return e.message;
   }
+  if (!test) return 'Пустой запрос.';
   const ctx = Math.min(10, Math.max(0, Number(a.context ?? 2) | 0));
   const { byFile } = parsed();
   const files = filterFiles(all, a).filter(isText);
@@ -332,14 +333,13 @@ function kubejsRead(a) {
 
   let idx = lines.map((_, i) => i);
   if (a.grep) {
-    let re;
+    let test;
     try {
-      re = new RegExp(a.grep, 'i');
+      test = textTest(a.grep, { regex: true });
     } catch {
-      const g = norm(a.grep);
-      re = { test: (s) => norm(s).includes(g) };
+      test = textTest(a.grep);
     }
-    idx = idx.filter((i) => re.test(lines[i]));
+    idx = idx.filter((i) => test(lines[i]));
     out.push(`grep «${a.grep}»: ${idx.length} строк.`);
   }
   const start = Math.max(1, Number(a.offset ?? 1) | 0);
@@ -400,7 +400,7 @@ export const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        query: str('слова (все в одной строке) или регулярка при regex=true'),
+        query: str('слова (все в одной строке); «a|b» — любое из; регулярка — при regex=true'),
         regex: { type: 'boolean', description: 'query — регулярное выражение (без учёта регистра)' },
         context: num('соседних строк до и после (по умолчанию 2, до 10)'),
         ...where,

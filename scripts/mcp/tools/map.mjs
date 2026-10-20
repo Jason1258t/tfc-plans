@@ -503,6 +503,94 @@ function mapFind(w, a) {
   return head.join('\n');
 }
 
+// ---------------------------------------------------------------- регионы мира
+
+/** Папка измерения в сохранении: overworld — корень, ад — DIM-1, энд — DIM1, остальные — dimensions/<ns>/<путь> */
+function dimFolder(dim) {
+  const d = String(dim ?? 'overworld')
+    .trim()
+    .toLowerCase()
+    .replace(/^minecraft:/, '');
+  if (['overworld', 'верхний', 'мир', ''].includes(d)) return { id: 'minecraft:overworld', dir: [] };
+  if (['the_nether', 'nether', 'ад', 'незер'].includes(d)) return { id: 'minecraft:the_nether', dir: ['DIM-1'] };
+  if (['the_end', 'end', 'энд', 'край'].includes(d)) return { id: 'minecraft:the_end', dir: ['DIM1'] };
+  const [ns, ...rest] = d.includes(':') ? d.split(':') : ['minecraft', d];
+  return { id: `${ns}:${rest.join(':')}`, dir: ['dimensions', ns, ...rest.join(':').split('/')] };
+}
+
+const KINDS = ['region', 'entities', 'poi'];
+const psq = (s) => `'${String(s).replaceAll("'", "''")}'`;
+
+function mapRegions(a) {
+  let x1;
+  let z1;
+  let x2;
+  let z2;
+  const nums = a.text ? (String(a.text).match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number) : [];
+  if (typeof a.x1 === 'number' && typeof a.z1 === 'number') {
+    [x1, z1] = [a.x1, a.z1];
+    [x2, z2] = [a.x2 ?? a.x1, a.z2 ?? a.z1];
+  } else if (nums.length === 4) [x1, z1, x2, z2] = nums;
+  else if (typeof a.x === 'number' && typeof a.z === 'number') {
+    const r = Math.abs(Number(a.radius ?? 0));
+    [x1, z1, x2, z2] = [a.x - r, a.z - r, a.x + r, a.z + r];
+  } else if (nums.length === 2 || nums.length === 3) {
+    const [x, z] = nums.length === 3 ? [nums[0], nums[2]] : nums;
+    const r = Math.abs(Number(a.radius ?? 0));
+    [x1, z1, x2, z2] = [x - r, z - r, x + r, z + r];
+  } else
+    throw new Error('укажите x1, z1, x2, z2 (углы прямоугольника, блоки), или x, z и radius, или text «x1 z1 x2 z2»');
+  const [bx1, bx2] = [Math.floor(Math.min(x1, x2)), Math.floor(Math.max(x1, x2))];
+  const [bz1, bz2] = [Math.floor(Math.min(z1, z2)), Math.floor(Math.max(z1, z2))];
+  const rx = [Math.floor(bx1 / 512), Math.floor(bx2 / 512)];
+  const rz = [Math.floor(bz1 / 512), Math.floor(bz2 / 512)];
+  const count = (rx[1] - rx[0] + 1) * (rz[1] - rz[0] + 1);
+  if (count > 400) throw new Error(`прямоугольник задевает ${count} регионов — слишком много, сузьте`);
+  const dim = dimFolder(a.dim);
+  const kinds = a.kinds
+    ? String(a.kinds)
+        .split(/[\s,]+/)
+        .filter((k) => KINDS.includes(k))
+    : KINDS;
+  const regions = [];
+  for (let x = rx[0]; x <= rx[1]; x++) for (let z = rz[0]; z <= rz[1]; z++) regions.push({ x, z });
+  const files = [];
+  for (const k of kinds) for (const r of regions) files.push([...dim.dir, k, `r.${r.x}.${r.z}.mca`]);
+  const out = [
+    `Блоки X ${bx1}…${bx2}, Z ${bz1}…${bz2} (${dim.id}) → чанки X ${Math.floor(bx1 / 16)}…${Math.floor(bx2 / 16)}, Z ${Math.floor(bz1 / 16)}…${Math.floor(bz2 / 16)} → регионов ${regions.length} (регион — 512×512 блоков, 32×32 чанка).`,
+  ];
+  if (dim.id === 'minecraft:the_nether') out.push('Координаты — адские (в верхнем мире X и Z в 8 раз больше).');
+  out.push('Регионы и их блоки:');
+  for (const r of regions.slice(0, 60))
+    out.push(`  r.${r.x}.${r.z}.mca — X ${r.x * 512}…${r.x * 512 + 511}, Z ${r.z * 512}…${r.z * 512 + 511}`);
+  if (regions.length > 60) out.push(`  … ещё ${regions.length - 60}`);
+  out.push(
+    `Файлы (${kinds.join(', ')}; region — блоки, entities — существа, poi — порталы, кровати, рабочие места жителей): ${files.length}.`,
+  );
+  const world = a.world ? String(a.world) : 'C:\\путь\\к\\saves\\Мир';
+  const list = files.map((f) => psq(f.join('\\'))).join(', ');
+  out.push(
+    '',
+    `PowerShell (ПК игрока или хоста; игра/сервер выключены, иначе файл занят или перезапишется)${a.world ? '' : ' — подставьте путь к миру в $w'}:`,
+    '```powershell',
+    `$w = ${psq(world)}`,
+    `$f = @(${list})`,
+    '# посмотреть: какие есть, размер, время изменения',
+    "$f | ForEach-Object { Get-Item -LiteralPath (Join-Path $w $_) -ErrorAction SilentlyContinue } | Format-Table @{n='Файл';e={$_.FullName.Substring($w.Length+1)}}, Length, LastWriteTime",
+    '# копия рядом с миром (сначала всегда копия)',
+    "$b = Join-Path (Split-Path $w) ((Split-Path $w -Leaf) + '-regions-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))",
+    '$f | ForEach-Object { $s = Join-Path $w $_; if (Test-Path -LiteralPath $s) { $d = Join-Path $b $_; New-Item -ItemType Directory -Force -Path (Split-Path $d) | Out-Null; Copy-Item -LiteralPath $s -Destination $d } }; "копия: $b"',
+    '# удалить (мир пересоздаст эти места заново — постройки и вещи там пропадут)',
+    '# $f | ForEach-Object { Remove-Item -LiteralPath (Join-Path $w $_) -ErrorAction SilentlyContinue }',
+    '```',
+    'Linux (сервер сборки), из папки мира:',
+    '```bash',
+    `ls -la ${files.map((f) => f.join('/')).join(' ')} 2>/dev/null`,
+    '```',
+  );
+  return out.join('\n');
+}
+
 const pointProps = {
   x: numIn('X блока'),
   z: numIn('Z блока'),
@@ -539,5 +627,29 @@ export const TOOLS = [
       required: ['query'],
     },
     handler: async (a) => mapFind(await world(), a),
+  },
+  {
+    name: 'map_regions',
+    description:
+      'Прямоугольник блоков → файлы региона сохранения r.X.Z.mca (region — блоки, entities — существа, poi — порталы/кровати) с папкой измерения (DIM-1, DIM1, dimensions/…) и готовые команды PowerShell: посмотреть, скопировать, удалить (удаление закомментировано). Для сброса места или переноса куска мира.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        x1: numIn('угол 1: X блока'),
+        z1: numIn('угол 1: Z блока'),
+        x2: numIn('угол 2: X блока'),
+        z2: numIn('угол 2: Z блока'),
+        x: numIn('или центр: X'),
+        z: numIn('или центр: Z'),
+        radius: numIn('с x/z: половина стороны квадрата, блоков'),
+        text: str('или строкой: «x1 z1 x2 z2», «x z» (+ radius), строка F3'),
+        dim: str(
+          'измерение: overworld (по умолчанию), the_nether (ад — координаты адские), the_end, rocketnautics:moon…',
+        ),
+        kinds: str('какие папки: region,entities,poi (по умолчанию все)'),
+        world: str('путь к папке мира на ПК — подставится в команды'),
+      },
+    },
+    handler: mapRegions,
   },
 ];
