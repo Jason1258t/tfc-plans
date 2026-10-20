@@ -28,6 +28,7 @@ import {
   classIndex,
   classRecord,
   compareVersions,
+  findClasses,
   inRange,
   isInterface,
   isRuntimeClass,
@@ -41,6 +42,7 @@ import {
   superChain,
 } from '../code-index.mjs';
 import { clip, page, paging, short, str, textTest, userRegex } from '../fmt.mjs';
+import { scriptLines } from './kubejs.mjs';
 import {
   PLATFORM,
   PLATFORM_SOURCES,
@@ -69,6 +71,82 @@ const modOf = (jar) => (jar === PLATFORM ? 'minecraft' : jarOwner(jar));
 
 /** Внутренний jar по параметру: любой архив, включая вложенные и minecraft */
 const anyJar = (q) => (q ? resolveJar(q, true) : null);
+
+// ---------------------------------------------------------------- стороны: клиент / сервер
+
+const ONLY_IN = 'Lnet/neoforged/api/distmarker/OnlyIn;';
+const SUBSCRIBE = 'Lnet/neoforged/bus/api/SubscribeEvent;';
+const EVENT_BASE = 'net/neoforged/bus/api/Event';
+/** Классы, которых нет на выделенном сервере: RuntimeDistCleaner не даёт их загрузить («invalid dist DEDICATED_SERVER») */
+const CLIENT_CLS = /^(net\/minecraft\/client|net\/neoforged\/neoforge\/client|com\/mojang\/blaze3d)\//;
+const isClientName = (n) => CLIENT_CLS.test(n) || /\/client\//.test(n);
+const onlyInClient = (anns) => anns.some((x) => x.type === ONLY_IN && JSON.stringify(x.values).includes('CLIENT'));
+const ebsClient = (c) =>
+  c.annotations.some(
+    (x) =>
+      /EventBusSubscriber;$/.test(x.type) &&
+      JSON.stringify(x.values.value ?? '').includes('CLIENT') &&
+      !JSON.stringify(x.values.value ?? '').includes('DEDICATED'),
+  );
+/** События, которые приходят и для клиентского мира (ClientLevel, сущности на клиенте) — в одиночной игре и в «мире хоста» их ловят оба */
+const BOTH_SIDES =
+  /^net\/neoforged\/neoforge\/event\/(level\/LevelEvent|entity\/EntityJoinLevelEvent|entity\/EntityLeaveLevelEvent|tick\/(EntityTickEvent|LevelTickEvent|PlayerTickEvent))(\$|$)/;
+const bothSides = (ev) => superChain(ev).some((x) => BOTH_SIDES.test(x.name));
+const isEventClass = (n) => n !== EVENT_BASE && superChain(n).some((x) => x.name === EVENT_BASE);
+
+/** Чей код: «клиент (…)» / «событие X — и клиент, и сервер» / null (не определить по коду) */
+function sideOf(c, m) {
+  if (onlyInClient(c.annotations)) return 'клиент: @OnlyIn(CLIENT) на классе';
+  if (m && onlyInClient(m.annotations)) return 'клиент: @OnlyIn(CLIENT)';
+  if (ebsClient(c)) return 'клиент: @EventBusSubscriber(Dist.CLIENT)';
+  if (isClientName(c.name)) return 'клиент: пакет client';
+  if (!m) return null;
+  const params = descClasses(m.desc);
+  const cl = params.find(isClientName);
+  if (cl) return `клиент: параметр ${javaName(cl)}`;
+  // Обработчик события: @SubscribeEvent или метод с одним параметром-событием (addListener(this::onX))
+  const isEvent = params.length === 1 && (m.annotations.some((x) => x.type === SUBSCRIBE) || isEventClass(params[0]));
+  if (isEvent) {
+    if (bothSides(params[0])) return `обе стороны: событие ${javaName(params[0])} приходит и для клиентского мира`;
+    return `событие ${javaName(params[0])}`;
+  }
+  return null;
+}
+
+/** Ссылки класса на клиентские классы: owner → Set(где) — по коду методов и сигнатурам */
+function clientRefsOf(c) {
+  const out = new Map();
+  const add = (owner, at) => {
+    if (owner === c.name || owner.startsWith(`${c.name}$`)) return;
+    if (!out.has(owner)) out.set(owner, new Set());
+    out.get(owner).add(at);
+  };
+  for (const f of c.fields) for (const t of descClasses(f.desc)) if (isClientName(t)) add(t, `поле ${f.name}`);
+  for (const m of c.methods) {
+    const at = methodShort(m.name, m.desc);
+    for (const t of descClasses(m.desc)) if (isClientName(t)) add(t, at);
+    for (const r of codeRefs(c, m)) {
+      if (r.owner && isClientName(r.owner)) add(r.owner, `${at}${r.line ? `:${r.line}` : ''}`);
+    }
+  }
+  return out;
+}
+
+/** Предупреждение «на выделенном сервере»: класс общий, но тянет клиентские классы */
+function clientWarning(c, forMixin) {
+  if (onlyInClient(c.annotations) || isClientName(c.name)) return [];
+  const refs = clientRefsOf(c);
+  if (!refs.size) return [];
+  const list = [...refs]
+    .slice(0, 8)
+    .map(([o, at]) => `${javaName(o)} (${[...at].slice(0, 3).join(', ')}${at.size > 3 ? '…' : ''})`);
+  return [
+    `⚠ ссылается на классы только клиента: ${list.join('; ')}${refs.size > 8 ? ` … ещё ${refs.size - 8}` : ''}.`,
+    forMixin
+      ? '  Миксин, который переписывает этот класс на выделенном сервере, может его уронить: при пересчёте фреймов Mixin грузит типы из этих мест — «Attempted to load class net/minecraft/client/… for invalid dist DEDICATED_SERVER». Миксин держите в разделе client конфига или не трогайте методы с клиентскими типами.'
+      : '  Сам класс на сервере грузится, пока эти места не выполняются; но миксин на него (или вызов этих методов) на выделенном сервере может упасть с «invalid dist DEDICATED_SERVER».',
+  ];
+}
 
 // ---------------------------------------------------------------- class_find
 
@@ -178,6 +256,8 @@ function classInfo(a) {
   }
   const subs = idx.subs.get(name) ?? [];
   if (subs.length) out.push(`прямых наследников/реализаций: ${subs.length} — class_hierarchy`);
+  if (onlyInClient(c.annotations) || isClientName(name)) out.push('сторона: только клиент (пакет client или @OnlyIn)');
+  else out.push(...clientWarning(c, mx.length > 0));
 
   const re = a.members ? userRegex(a.members) : null;
   const showSynth = Boolean(a.synthetic);
@@ -298,6 +378,8 @@ function refsScan(target, a) {
   if (target.kind === 'string') needles.push(Buffer.from(target.value));
   else if (target.kind === 'member') needles.push(Buffer.from(target.name));
   if (target.owner && !a.subtypes) needles.push(Buffer.from(target.owner));
+  const access = a.access ? String(a.access) : null;
+  if (access && !['read', 'write'].includes(access)) throw new Error('access — read или write');
   const ownerDesc = target.owner ? `L${target.owner};` : null;
   const ownerDots = target.owner ? dotted(target.owner) : null;
   const hits = [];
@@ -313,9 +395,10 @@ function refsScan(target, a) {
       } catch {
         continue;
       }
-      if (target.owner && c.name === target.owner && !a.self) continue;
+      if (target.kind === 'class' && c.name === target.owner && !a.self) continue;
       const at = (m, r) => `${dotted(c.name)}.${m ? methodShort(m.name, m.desc) : ''}${r?.line ? `:${r.line}` : ''}`;
-      const add = (loc, what) => hits.push({ jar: j, cls: c.name, loc, what });
+      const add = (loc, what, m, extra) =>
+        hits.push({ jar: j, cls: c.name, loc, what, side: a.side === false ? null : sideOf(c, m), ...extra });
       if (target.kind === 'class') {
         if (c.superName === target.owner) add(dotted(c.name), 'extends');
         if (c.interfaces.includes(target.owner)) add(dotted(c.name), 'implements');
@@ -328,7 +411,7 @@ function refsScan(target, a) {
           if (descClasses(f.desc).includes(target.owner))
             add(`${dotted(c.name)}.${f.name}`, `поле ${fieldType(f.desc)}`);
         for (const m of c.methods) {
-          if (descClasses(m.desc).includes(target.owner)) add(at(m), 'в сигнатуре');
+          if (descClasses(m.desc).includes(target.owner)) add(at(m), 'в сигнатуре', m);
           const seen = new Set();
           for (const r of codeRefs(c, m)) {
             if (r.owner !== target.owner) continue;
@@ -339,7 +422,7 @@ function refsScan(target, a) {
             const key = `${r.line}|${what}`;
             if (seen.has(key)) continue;
             seen.add(key);
-            add(at(m, r), what);
+            add(at(m, r), what, m);
           }
         }
       } else if (target.kind === 'member') {
@@ -350,18 +433,20 @@ function refsScan(target, a) {
             if (target.desc && !r.desc.startsWith(target.desc)) continue;
             if (target.only === 'field' && r.kind !== 'field') continue;
             if (target.only === 'method' && r.kind === 'field') continue;
+            const write = r.kind === 'field' && r.op.startsWith('put');
+            if (access && (r.kind !== 'field' || (access === 'write') !== write)) continue;
             const what =
               r.kind === 'field'
-                ? `${r.op} ${javaName(r.owner)}.${r.name}`
+                ? `${write ? 'ЗАПИСЬ' : 'чтение'} (${r.op}) ${javaName(r.owner)}.${r.name}`
                 : `${r.kind === 'lambda' ? `ссылка (${r.via})` : r.op} ${javaName(r.owner)}.${methodShort(r.name, r.desc)}`;
-            add(at(m, r), what);
+            add(at(m, r), what, m, { access: r.kind === 'field' ? (write ? 'write' : 'read') : null });
           }
       } else {
         const v = target.value;
         for (const m of c.methods)
           for (const r of codeRefs(c, m))
             if (r.kind === 'string' && r.value.includes(v))
-              add(at(m, r), `${r.op} ${JSON.stringify(short(r.value, 200))}`);
+              add(at(m, r), `${r.op} ${JSON.stringify(short(r.value, 200))}`, m);
         for (const f of c.fields)
           if (typeof f.constant === 'string' && f.constant.includes(v))
             add(`${dotted(c.name)}.${f.name}`, `константа ${JSON.stringify(short(f.constant, 200))}`);
@@ -400,7 +485,198 @@ function codeRefsTool(a) {
         .map(([m, n]) => `${m} ${n}`)
         .join(', ')}`,
     );
-  return `${head.join('\n')}\n${page(hits, a, (h) => [`${modOf(h.jar)}: ${h.loc} — ${h.what}`], 40)}`;
+  const reads = hits.filter((h) => h.access === 'read').length;
+  const writes = hits.filter((h) => h.access === 'write').length;
+  if (reads || writes)
+    head.push(`Поле: запись ${writes}, чтение ${reads}${a.access ? '' : ' (access=write — только запись)'}.`);
+  const client = hits.filter((h) => h.side?.startsWith('клиент')).length;
+  const both = hits.filter((h) => h.side?.startsWith('обе')).length;
+  if (client || both)
+    head.push(
+      `Сторона: из клиентского кода ${client}, из обработчиков событий, которые приходят и на клиент, ${both}. В одиночной игре и «мире хоста» клиент и встроенный сервер — один процесс: статические поля у них общие.`,
+    );
+  return `${head.join('\n')}\n${page(hits, a, (h) => [`${modOf(h.jar)}: ${h.loc} — ${h.what}${h.side ? ` [${h.side}]` : ''}`], 40)}`;
+}
+
+// ---------------------------------------------------------------- event_listeners
+
+const KUBE_HANDLER = /^Ldev\/latvian\/mods\/kubejs\/event\/(Targeted)?EventHandler;$/;
+const kubeNames = new Map(); // класс групп событий KubeJS → Map(поле → «PlayerEvents.loggedIn»)
+
+/** Имена событий KubeJS по статическому инициализатору класса групп: GROUP = EventGroup.of("X"); Y = GROUP.server("y", …) */
+function kubeEventNames(owner) {
+  if (kubeNames.has(owner)) return kubeNames.get(owner);
+  const out = new Map();
+  kubeNames.set(owner, out);
+  const rec = classRecord(owner);
+  if (!rec) return out;
+  const c = readClass(rec);
+  const init = c.methods.find((m) => m.name === '<clinit>');
+  if (!init) return out;
+  let group = null;
+  let last = null;
+  for (const r of codeRefs(c, init)) {
+    if (r.kind === 'string' && r.op !== 'concat') last = r.value;
+    else if (r.kind === 'field' && r.op === 'putstatic' && r.owner === owner) {
+      if (r.desc === 'Ldev/latvian/mods/kubejs/event/EventGroup;') group = last;
+      else if (KUBE_HANDLER.test(r.desc) && last) out.set(r.name, `${group ?? javaName(owner)}.${last}`);
+      last = null;
+    }
+  }
+  return out;
+}
+
+/** События KubeJS, которые разносит этот метод (и его лямбды): getstatic XxxEvents.FIELD → «Group.name» */
+function kubeEventsPosted(c, m) {
+  const out = new Set();
+  const scan = (mm, depth) => {
+    for (const r of codeRefs(c, mm)) {
+      if (r.kind === 'field' && r.op === 'getstatic' && KUBE_HANDLER.test(r.desc)) {
+        const n = kubeEventNames(r.owner).get(r.name);
+        if (n) out.add(n);
+      }
+      // Тело лямбды в том же классе
+      if (depth < 2 && r.kind === 'lambda' && r.owner === c.name) {
+        const body = c.methods.find((x) => x.name === r.name && x.desc === r.desc);
+        if (body && body !== mm) scan(body, depth + 1);
+      }
+    }
+  };
+  scan(m, 0);
+  return [...out];
+}
+
+function eventListeners(a) {
+  // Одинаковые простые имена (EntityTickEvent у NeoForge и у мода) — берём тот, что наследует Event
+  let found = findClasses(a.event).filter(isEventClass);
+  if (found.length > 1 && found.filter((n) => n.startsWith('net/neoforged/')).length === 1)
+    found = found.filter((n) => n.startsWith('net/neoforged/'));
+  const ev = found.length === 1 ? found[0] : oneClass(a.event);
+  const others = findClasses(a.event).filter((n) => n !== ev && !n.includes('$') === !ev.includes('$'));
+  const chain = superChain(ev);
+  const isEvent = chain.some((x) => x.name === EVENT_BASE);
+  const targets = new Map([[ev, 'само']]);
+  for (const x of chain.slice(1))
+    if (x.name !== EVENT_BASE && x.name !== 'java/lang/Object') targets.set(x.name, `предок ${javaName(x.name)}`);
+  if (a.subtypes !== false) for (const x of subtypes(ev)) targets.set(x.rec.name, `наследник ${javaName(x.rec.name)}`);
+  const t0 = Date.now();
+  const jars = allJars().filter((j) => a.platform || j !== PLATFORM);
+  const needles = [Buffer.from('SubscribeEvent'), Buffer.from('addListener')];
+  const names = [...targets.keys()].map((n) => Buffer.from(n));
+  const hits = [];
+  for (const j of jars)
+    for (const e of jarToc(j)) {
+      if (!e.name.endsWith('.class') || e.name.startsWith('META-INF/')) continue;
+      const buf = readEntry(j, e.name).data;
+      if (!needles.some((n) => buf.includes(n)) || !names.some((n) => buf.includes(n))) continue;
+      let c;
+      try {
+        c = parseClassFull(buf);
+      } catch {
+        continue;
+      }
+      const ebs = c.annotations.find((x) => /EventBusSubscriber;$/.test(x.type));
+      for (const m of c.methods) {
+        const sub = m.annotations.find((x) => x.type === SUBSCRIBE);
+        if (sub) {
+          const p0 = descClasses(m.desc)[0];
+          if (p0 && targets.has(p0)) {
+            const opts = Object.entries(sub.values)
+              .map(([k, v]) => `${k}=${valueText(v)}`)
+              .join(', ');
+            hits.push({
+              jar: j,
+              c,
+              m,
+              ev: p0,
+              how: `@SubscribeEvent${opts ? `(${opts})` : ''}${ebs ? ` в ${annotationText(ebs)}` : ''}`,
+              loc: `${dotted(c.name)}.${methodShort(m.name, m.desc)}${lineRange(m)}`,
+            });
+          }
+        }
+        // addListener(…, Consumer): событие — из ldc Класс.class перед вызовом или из параметров лямбды/ссылки
+        const refs = codeRefs(c, m);
+        let from = 0;
+        for (let i = 0; i < refs.length; i++) {
+          const r = refs[i];
+          if (r.kind !== 'method' || r.name !== 'addListener') continue;
+          const win = refs.slice(from, i);
+          from = i + 1;
+          const ldc = win.filter((x) => x.kind === 'class' && x.op.startsWith('ldc') && targets.has(x.owner)).at(-1);
+          const lam = win.filter((x) => x.kind === 'lambda').at(-1);
+          const evc = ldc?.owner ?? (lam ? descClasses(lam.desc).find((x) => targets.has(x)) : null);
+          if (!evc) continue;
+          const body =
+            lam && lam.owner === c.name ? c.methods.find((x) => x.name === lam.name && x.desc === lam.desc) : null;
+          hits.push({
+            jar: j,
+            c,
+            m: body ?? m,
+            ev: evc,
+            how: `addListener в ${methodShort(m.name, m.desc)}${r.line ? `:${r.line}` : ''}`,
+            loc: lam
+              ? `${dotted(lam.owner)}.${lam.name}${body ? lineRange(body) : ''}`
+              : `${dotted(c.name)}.${methodShort(m.name, m.desc)}`,
+          });
+        }
+      }
+    }
+  // Скрипты KubeJS: прямые подписки (NativeEvents.onEvent, Java.loadClass с именем класса) и события KubeJS, которые
+  // разносят обработчики самого KubeJS из списка выше
+  const kube = [];
+  if (a.kubejs !== false) {
+    const variants = new Set();
+    for (const n of targets.keys()) {
+      const simple = n.slice(n.lastIndexOf('/') + 1);
+      variants.add(simple);
+      variants.add(simple.replaceAll('$', '.'));
+    }
+    const vs = [...variants].map((v) => new RegExp(`\\b${v.replaceAll('$', '\\$').replaceAll('.', '\\.')}\\b`));
+    for (const l of scriptLines((t) => vs.some((re) => re.test(t))))
+      kube.push({ ...l, why: 'класс события в скрипте' });
+    const posted = new Map();
+    for (const h of hits)
+      if (/kubejs/.test(jarOwner(h.jar))) for (const n of kubeEventsPosted(h.c, h.m)) posted.set(n, h);
+    for (const [n] of posted) {
+      const re = new RegExp(`\\b${n.replace('.', '\\.')}\\s*\\(`);
+      for (const l of scriptLines((t) => re.test(t))) kube.push({ ...l, why: `событие KubeJS ${n}` });
+    }
+    if (posted.size)
+      kube.unshift({ note: `KubeJS разносит это событие скриптам как: ${[...posted.keys()].join(', ')}` });
+  }
+  const out = [
+    `${dotted(ev)}${isEvent ? '' : ' — ⚠ не наследник net.neoforged.bus.api.Event: это точно событие?'} — обработчиков: ${hits.length} в ${jars.length} jar за ${Date.now() - t0} мс${a.platform ? '' : ' (без Minecraft+NeoForge — platform=true)'}.`,
+    ...(others.length && !String(a.event).includes('.')
+      ? [`(есть и другие классы с этим именем: ${others.slice(0, 3).map(dotted).join(', ')} — укажите полное имя)`]
+      : []),
+    `Учтены ${targets.size} классов: само событие${targets.size > 1 ? ', предки (их обработчики получают и это событие)' : ''}${a.subtypes !== false && subtypes(ev).length ? ', наследники (subtypes=false — без них)' : ''}.`,
+  ];
+  if (bothSides(ev))
+    out.push(
+      'Это событие приходит и для клиентского мира: в одиночной игре и «мире хоста» его ловят и клиент, и встроенный сервер.',
+    );
+  const body = page(
+    hits,
+    a,
+    (h) => {
+      const side = sideOf(h.c, h.m);
+      return [
+        `${modOf(h.jar)}: ${h.loc} — ${h.how}${h.ev !== ev ? ` [${targets.get(h.ev)}]` : ''}${side?.startsWith('клиент') ? ` [${side}]` : ''}`,
+      ];
+    },
+    60,
+  );
+  out.push(body);
+  if (a.kubejs !== false) {
+    const lines = kube.filter((k) => !k.note);
+    out.push(`Скрипты KubeJS: ${lines.length}${kube[0]?.note ? `. ${kube[0].note}` : ''}`);
+    for (const k of lines.slice(0, 40)) out.push(`  ${k.rel}:${k.line} (${k.why}): ${short(k.text, 200)}`);
+    if (lines.length > 40) out.push(`  … ещё ${lines.length - 40} — kubejs_search`);
+  }
+  out.push(
+    'Код обработчика — decompile class=… method=…; порядок вызова — priority (HIGHEST → LOWEST), receiveCanceled.',
+  );
+  return clip(out.join('\n'));
 }
 
 // ---------------------------------------------------------------- миксины
@@ -553,6 +829,8 @@ function mixinsTool(a) {
       .slice(1)
       .filter((s) => idx.mixinsOf.has(s.name));
     const out = [`${dotted(name)}${exists(idx, name) ? '' : ' [класса нет в сборке]'} — миксинов: ${recs.length}`];
+    const tRec = classRecord(name);
+    if (tRec) out.push(...clientWarning(readClass(tRec), true));
     if (!recs.length) {
       if (parents.length)
         out.push(
@@ -1088,7 +1366,7 @@ export const TOOLS = [
   {
     name: 'code_refs',
     description:
-      'Кто использует по байткоду всех jar (метод:строка): класс (extends, new, вызовы, поля, сигнатуры, аннотации и цели миксинов), метод или поле (Owner#name, Owner.name, *#name — любой владелец; subtypes — и через наследников) или строку в коде ("tfc:metal/ingot", ключ конфига). ~3–5 с на всю сборку.',
+      'Кто использует по байткоду всех jar (метод:строка): класс (extends, new, вызовы, поля, сигнатуры, аннотации и цели миксинов), метод или поле (Owner#name, Owner.name, *#name — любой владелец; subtypes — и через наследников) или строку в коде ("tfc:metal/ingot", ключ конфига). У полей — запись/чтение (access=write — кто перезаписывает), у каждого места — сторона: клиент (пакет client, @OnlyIn, клиентское событие) или событие, которое приходит и для клиентского мира. ~3–5 с на всю сборку.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1097,12 +1375,33 @@ export const TOOLS = [
         jar: str('искать только в этом jar'),
         subtypes: bool('для метода/поля: вызовы через наследников владельца (виртуальные)'),
         platform: bool('искать и в Minecraft + NeoForge (долго, много совпадений)'),
-        self: bool('включать сам класс-владелец'),
+        self: bool('для класса: включать сам класс (для метода/поля он и так в ответе)'),
+        access: str('для поля: read — только чтение, write — только запись (putfield/putstatic)'),
+        side: bool('false — не помечать сторону кода (клиент/обе стороны)'),
         ...paging,
       },
       required: ['target'],
     },
     handler: codeRefsTool,
+  },
+  {
+    name: 'event_listeners',
+    description:
+      'Кто слушает событие NeoForge по всей сборке: методы @SubscribeEvent с этим событием (и с его предками/наследниками), addListener(…) с лямбдами и ссылками на методы, сторона кода; плюс скрипты KubeJS — NativeEvents.onEvent/Java.loadClass с этим классом и события KubeJS (PlayerEvents.loggedIn и т. п.), которые KubeJS разносит из своего обработчика. ~3–6 с.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        event: str(
+          'класс события: EntityTravelToDimensionEvent, LevelEvent$Unload, net.neoforged….PlayerChangedDimensionEvent',
+        ),
+        subtypes: bool('false — без обработчиков наследников события (по умолчанию с ними)'),
+        platform: bool('искать и в Minecraft + NeoForge'),
+        kubejs: bool('false — без скриптов KubeJS'),
+        ...paging,
+      },
+      required: ['event'],
+    },
+    handler: eventListeners,
   },
   {
     name: 'mixins',

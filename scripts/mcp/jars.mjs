@@ -131,16 +131,32 @@ function findPlatform() {
   }
   const found = [];
   const tools = path.join(PLATFORM_ROOT, 'tools');
+  // tools/<мод>/build/… и на уровень глубже (tools/<мод>/devserver/build/… — тестовый сервер аддона)
+  const dirs = [];
   for (const mod of fs.existsSync(tools) ? fs.readdirSync(tools) : []) {
-    const dir = path.join(tools, mod, 'build/moddev/artifacts');
+    const base = path.join(tools, mod);
+    if (!fs.statSync(base).isDirectory()) continue;
+    dirs.push(path.join(base, 'build/moddev/artifacts'));
+    for (const sub of fs.readdirSync(base))
+      if (!['build', 'src', 'node_modules', '.gradle'].includes(sub))
+        dirs.push(path.join(base, sub, 'build/moddev/artifacts'));
+  }
+  for (const dir of dirs) {
     if (!fs.existsSync(dir)) continue;
     for (const f of fs.readdirSync(dir)) {
       const m = f.match(/^neoforge-(\d+)\.(\d+)\.(\d+)\.jar$/);
-      if (m) found.push({ dir, f, v: m.slice(1).map(Number) });
+      // Без исходников версия хуже: decompile Minecraft берёт их из -sources.jar
+      if (m)
+        found.push({
+          dir,
+          f,
+          v: m.slice(1).map(Number),
+          src: fs.existsSync(path.join(dir, f.replace(/\.jar$/, '-sources.jar'))),
+        });
     }
   }
   if (!found.length) return null;
-  found.sort((a, b) => a.v[0] - b.v[0] || a.v[1] - b.v[1] || a.v[2] - b.v[2]);
+  found.sort((a, b) => a.src - b.src || a.v[0] - b.v[0] || a.v[1] - b.v[1] || a.v[2] - b.v[2]);
   const { dir, f, v } = found.at(-1);
   const sources = path.join(dir, f.replace(/\.jar$/, '-sources.jar'));
   return { classes: path.join(dir, f), sources: fs.existsSync(sources) ? sources : null, version: v.join('.') };

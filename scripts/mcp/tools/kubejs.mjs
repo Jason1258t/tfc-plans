@@ -9,7 +9,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT, readJson } from '../data.mjs';
-import { clip, dateOf, norm, num, page, paging, short, str, textTest, words } from '../fmt.mjs';
+import { clip, dateOf, norm, num, page, paging, short, str, textTest } from '../fmt.mjs';
 
 function packRoot() {
   try {
@@ -73,6 +73,17 @@ function linesOf(f) {
   return lines;
 }
 const isText = (f) => TEXT.test(f.rel) && f.size <= MAX_TEXT;
+
+/** Строки скриптов (server/startup/client_scripts всех слоёв), прошедшие проверку: [{ rel, folder, line, text }] */
+export function scriptLines(test) {
+  const out = [];
+  for (const f of walk()) {
+    if (!SCRIPT_FOLDERS.has(f.folder) || !isText(f)) continue;
+    for (const [i, l] of linesOf(f).entries())
+      if (test(l)) out.push({ rel: f.rel, folder: f.folder, line: i + 1, text: l.trim() });
+  }
+  return out;
+}
 
 function filterFiles(list, a) {
   let l = list;
