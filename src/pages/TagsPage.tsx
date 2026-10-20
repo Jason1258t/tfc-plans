@@ -9,6 +9,7 @@ import { useItems } from '../lib/items';
 import {
   directMembers,
   flattenTag,
+  kindsOf,
   searchTags,
   sourceName,
   TAG_KIND_LABEL,
@@ -153,7 +154,7 @@ export function TagsPage() {
                     <button className={cx(t.key === selectedKey && 'active')} onClick={() => set({ tag: t.key })}>
                       <code>{t.i}</code>
                       <span className="faint small">
-                        {TAG_KIND_LABEL[t.k]} · {directMembers(t).length}
+                        <KindLabel kind={t.k} /> {directMembers(t).length}
                       </span>
                     </button>
                   </li>
@@ -173,7 +174,7 @@ export function TagsPage() {
                   tag={tag}
                   onEdit={() => setEditing({ kind: tag.k, id: tag.i })}
                   hasEntry={Boolean(pack?.entries.some((e) => e.path === tagPath(tag.k, tag.i)))}
-                  onOpenTag={(id) => set({ tag: tagKey(tag.k, id) })}
+                  onOpenTag={(id, k = tag.k) => set({ tag: tagKey(k, id) })}
                 />
               ) : (
                 <div className="tags-hint faint">
@@ -212,7 +213,7 @@ function TagDetail({
   tag: Tag;
   onEdit: () => void;
   hasEntry: boolean;
-  onOpenTag: (id: string) => void;
+  onOpenTag: (id: string, kind?: TagKind) => void;
 }) {
   const cat = useTags();
   const direct = useMemo(() => directMembers(tag), [tag]);
@@ -221,6 +222,7 @@ function TagDetail({
   const [full, setFull] = useState(false);
   const list = full ? direct : direct.slice(0, 150);
   const regex = tag.ops.flatMap((o) => o.re ?? []);
+  const others = cat ? kindsOf(cat, tag.i).filter((k) => k !== tag.k) : [];
 
   return (
     <div className="tag-detail">
@@ -230,7 +232,7 @@ function TagDetail({
             <code>#{tag.i}</code>
           </h2>
           <p className="faint small">
-            {TAG_KIND_LABEL[tag.k]} · в составе {direct.length}
+            <KindLabel kind={tag.k} /> в составе {direct.length}
             {nested.length > 0 && `, с вложенными тегами ${flat.length}`} · источников {tag.s.length + tag.ops.length}
           </p>
         </div>
@@ -238,6 +240,26 @@ function TagDetail({
           <FilePen size={15} /> {hasEntry ? 'Править файл в датапаке' : 'Править датапаком'}
         </button>
       </div>
+
+      {others.length > 0 ? (
+        <p className="tag-kind-note small">
+          Тег с таким же именем есть и у вида{' '}
+          {others.map((k) => (
+            <button key={k} className="link" onClick={() => onOpenTag(tag.i, k)}>
+              <KindLabel kind={k} />
+            </button>
+          ))}{' '}
+          — это разные теги со своим составом.
+        </p>
+      ) : (
+        tag.k !== 'item' &&
+        tag.k !== 'fluid' && (
+          <p className="tag-kind-note small">
+            Это тег вида «{TAG_KIND_LABEL[tag.k]}»: в рецептах (<code>"tag": "{tag.i}"</code>) он не сработает — рецепты
+            берут теги предметов и жидкостей.
+          </p>
+        )
+      )}
 
       <h3>Откуда берётся</h3>
       <ol className="tag-sources">
@@ -315,4 +337,9 @@ function TagDetail({
       )}
     </div>
   );
+}
+
+/** Ярлык вида тега: предметы, блоки, жидкости, сущности — своим цветом */
+function KindLabel({ kind }: { kind: TagKind }) {
+  return <span className={`tag-kind tag-kind-${kind}`}>{TAG_KIND_LABEL[kind]}</span>;
 }

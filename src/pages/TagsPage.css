@@ -193,3 +193,46 @@
   text-decoration: underline;
   font: inherit;
 }
+
+/* Ярлык вида тега */
+.tag-kind {
+  --kind: var(--text-3);
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--kind) 16%, transparent);
+  color: var(--kind);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 17px;
+  white-space: nowrap;
+}
+
+.tag-kind-item {
+  --kind: var(--accent);
+}
+
+.tag-kind-block {
+  --kind: var(--imp-2);
+}
+
+.tag-kind-fluid {
+  --kind: var(--imp-1);
+}
+
+.tag-kind-entity_type {
+  --kind: var(--amethyst);
+}
+
+.tag-kind-note {
+  margin: 10px 0 0;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.tag-kind-note .link {
+  margin-right: 4px;
+  text-decoration: none;
+}

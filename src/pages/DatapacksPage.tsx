@@ -39,7 +39,7 @@ import { useItems } from '../lib/items';
 import { entryRecipeId, kubejsScript, scriptFileName } from '../lib/kubejsFix';
 import { downloadScript, freeScriptName, NEW_SCRIPT_TEXT } from '../lib/kubejsScripts';
 import { useRecipes, type Recipe } from '../lib/recipes';
-import { tagFromPath, tagKey } from '../lib/tags';
+import { tagFromPath, tagKey, useTags } from '../lib/tags';
 import { cx, timeAgo, uid } from '../lib/util';
 import type { Datapack, DatapackEntry, KubejsScript } from '../types';
 import './DatapacksPage.css';
@@ -238,8 +238,12 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
   } | null>(null);
 
   const items = useItems();
+  const tags = useTags();
   const kjsHits = useMemo(() => kubejsIssues(pack, catalog), [pack, catalog]);
-  const issues = useMemo(() => [...validatePack(pack), ...staleIssues(pack, catalog, items)], [pack, catalog, items]);
+  const issues = useMemo(
+    () => [...validatePack(pack), ...staleIssues(pack, catalog, items, tags)],
+    [pack, catalog, items, tags],
+  );
   const update = (patch: Partial<Datapack>) => datapacksStore.update(pack.id, { ...patch, updatedBy: nick });
 
   const saveEntry = (entry: DatapackEntry) => {
