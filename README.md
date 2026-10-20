@@ -372,21 +372,22 @@ npm run pack -- <папка инстанса или сервера | zip> [--wor
 
 ## Модель данных (Firestore)
 
-| Коллекция     | Поля                                                                                                                                                                             |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tasks`       | `title`, `description` (md), `status`, `priority` 0–3, `rating` (Elo), `checklist[]`, `icon`, `groupId`, `author`, `assignee`, `place` ({x, z, label}), `createdAt`, `updatedAt` |
-| `groups`      | `name`, `icon`, `order`, `author`, `createdAt`                                                                                                                                   |
-| `artifacts`   | `title`, `content` (md), `taskId`, `author`, `updatedBy`, `createdAt`, `updatedAt`                                                                                               |
-| `files`       | вложения — пакет firestore-files (метаданные + `chunks/{n}`)                                                                                                                     |
-| `datapacks`   | `name`, `namespace`, `description`, `entries[]` (`path`, `content`, `kind`, `sourceRecipe`, `sourceHash`)                                                                        |
-| `schematics`  | библиотека схем: `name`, `fileName`, `fileId` (исходник в `files`), `replace[]` ({from, to}, `#remove` — удалить)                                                                |
-| `replaceFavorites` | избранные замены блоков в схемах: `from`, `to`, `updatedBy` (у одного `from` может быть несколько) |
-| `guides`      | гайды справочника: `section`, `title`, `summary`, `body` (md + `{{формулы}}` + ```calc), `icon`, `group`, `order`, `checked`, `hidden`, `updatedBy`; `revisions/` — версии |
-| `recipeHints` | подсказки по типам рецептов: `title`, `body`, `source`                                                                                                                           |
-| `packUpdates` | записи об обновлениях сборки (создаёт деплой), `notes` — патчноут                                                                                                                |
-| `config`      | конфиги модов из `npm run serverconfig`: `scope`, `path`, `mod`, `values` (TOML), `importedBy`, `importedAt`                                                                           |
-| `settings`    | `world`: профиль и масштабы мира TFC Real World                                                                                                                                  |
-| `onboarding`  | id = uid анонимного входа (свой у каждого браузера): `seen` (ключ подсказок раздела → когда показаны), `off`, `updatedAt`; читать и писать — только свой |
+| Коллекция          | Поля                                                                                                                                                                             |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tasks`            | `title`, `description` (md), `status`, `priority` 0–3, `rating` (Elo), `checklist[]`, `icon`, `groupId`, `author`, `assignee`, `place` ({x, z, label}), `createdAt`, `updatedAt` |
+| `groups`           | `name`, `icon`, `order`, `author`, `createdAt`                                                                                                                                   |
+| `artifacts`        | `title`, `content` (md), `taskId`, `author`, `updatedBy`, `createdAt`, `updatedAt`                                                                                               |
+| `files`            | вложения — пакет firestore-files (метаданные + `chunks/{n}`)                                                                                                                     |
+| `datapacks`        | `name`, `namespace`, `description`, `entries[]` (`path`, `content`, `kind`, `sourceRecipe`, `sourceHash`), `install` — «Ставить в мир»                                           |
+| `kubejsScripts`    | скрипты KubeJS для `server_scripts/`: `fileName`, `text`, `install` — «Ставить на сервер», `author`, `updatedBy`                                                                 |
+| `schematics`       | библиотека схем: `name`, `fileName`, `fileId` (исходник в `files`), `replace[]` ({from, to}, `#remove` — удалить)                                                                |
+| `replaceFavorites` | избранные замены блоков в схемах: `from`, `to`, `updatedBy` (у одного `from` может быть несколько)                                                                               |
+| `guides`           | гайды справочника: `section`, `title`, `summary`, `body` (md + `{{формулы}}` + ```calc), `icon`, `group`, `order`, `checked`, `hidden`, `updatedBy`; `revisions/` — версии       |
+| `recipeHints`      | подсказки по типам рецептов: `title`, `body`, `source`                                                                                                                           |
+| `packUpdates`      | записи об обновлениях сборки (создаёт деплой), `notes` — патчноут                                                                                                                |
+| `config`           | конфиги модов из `npm run serverconfig`: `scope`, `path`, `mod`, `values` (TOML), `importedBy`, `importedAt`                                                                     |
+| `settings`         | `world`: профиль и масштабы мира TFC Real World                                                                                                                                  |
+| `onboarding`       | id = uid анонимного входа (свой у каждого браузера): `seen` (ключ подсказок раздела → когда показаны), `off`, `updatedAt`; читать и писать — только свой                         |
 
 Пункт чеклиста: `{ id, text, itemId?, qty?, got?, done? }`. Если есть `itemId`, это ресурс «собрано got из qty»,
 иначе обычная галочка.
