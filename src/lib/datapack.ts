@@ -4,7 +4,8 @@ import type { Datapack, DatapackEntry } from '../types';
 import { recipeHash } from './hash';
 import type { ItemIndex } from './items';
 import { entryRecipeId, recipePathOf, targetFromJson } from './kubejsFix';
-import { tagFromPath } from './tags';
+import { kindsOf, TAG_KIND_LABEL, tagFromPath, type TagCatalog } from './tags';
+import { recipeRefs } from './recipeRefs';
 import { itemRefsOf, kubejsHits, recipePath, type Recipe, type RecipeCatalog } from './recipes';
 import { uid } from './util';
 
@@ -132,8 +133,15 @@ export function validatePack(pack: Datapack): PackIssue[] {
  * Расхождения датапака с текущей сборкой: исходный рецепт пропал или изменился (после обновления модов),
  * в файлах упоминаются предметы, которых в сборке больше нет.
  */
-export function staleIssues(pack: Datapack, catalog: RecipeCatalog | null, items: ItemIndex | null): PackIssue[] {
+export function staleIssues(
+  pack: Datapack,
+  catalog: RecipeCatalog | null,
+  items: ItemIndex | null,
+  tags: TagCatalog | null = null,
+): PackIssue[] {
   const issues: PackIssue[] = [];
+  // Теги, которые датапак определяет сам
+  const ownTags = new Set(pack.entries.map((e) => tagFromPath(e.path)?.id).filter(Boolean));
   for (const e of pack.entries) {
     if (catalog?.list.length && e.sourceRecipe) {
       const r = catalog.byId.get(e.sourceRecipe);
@@ -155,6 +163,27 @@ export function staleIssues(pack: Datapack, catalog: RecipeCatalog | null, items
             path: e.path,
             message: `нет в сборке: ${missing.slice(0, 5).join(', ')}${missing.length > 5 ? '…' : ''}`,
           });
+      } catch {
+        /* синтаксис проверяет validatePack */
+      }
+    }
+    if (tags?.list.length && e.path.endsWith('.json') && !tagFromPath(e.path)) {
+      try {
+        // Рецепт берёт теги предметов или жидкостей; тег блоков с тем же именем ему не подходит — ячейка пустая
+        const { inputs, outputs } = recipeRefs(JSON.parse(e.content));
+        for (const ref of new Set([...inputs, ...outputs])) {
+          if (!ref.startsWith('#')) continue;
+          const id = ref.slice(1);
+          if (ownTags.has(id)) continue;
+          const kinds = kindsOf(tags, id);
+          if (kinds.includes('item') || kinds.includes('fluid')) continue;
+          issues.push({
+            path: e.path,
+            message: kinds.length
+              ? `тег #${id} есть только у вида «${kinds.map((k) => TAG_KIND_LABEL[k]).join('», «')}», а рецепт берёт теги предметов и жидкостей — в игре на этом месте будет пусто`
+              : `тега #${id} в сборке нет — в игре на этом месте будет пусто`,
+          });
+        }
       } catch {
         /* синтаксис проверяет validatePack */
       }

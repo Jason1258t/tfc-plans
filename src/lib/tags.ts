@@ -71,6 +71,10 @@ export interface TagCatalog {
 
 export const tagKey = (kind: string, id: string) => `${kind}|${id}`;
 
+/** У каких видов есть тег с этим id: одно имя бывает у тега блоков и у тега предметов с разным составом */
+export const kindsOf = (cat: TagCatalog, id: string): TagKind[] =>
+  TAG_KINDS.filter((k) => cat.byKey.has(tagKey(k, id)));
+
 let promise: Promise<TagCatalog> | null = null;
 let loaded: TagCatalog | null = null;
 
