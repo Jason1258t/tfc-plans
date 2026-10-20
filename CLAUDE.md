@@ -65,7 +65,13 @@ npm run pack:publish -- <папка данных> --dry-run   # что выло�
   через теги), `recipe_get` (статус, какое правило KubeJS удаляет/меняет — файл:строка, JSON).
 - Теги: `tag_members`, `tags_of`. Справочник: `reference_get` (руды, плавка, металлы, топливо, еда, ботаника, блюда,
   сковорода, мультиблоки, power). Настройки: `config_get` (мир > serverconfig > config > значение из кода; только чтение).
-- Код модов: `jar_find` (путь, класс через точки, glob), `jar_read` (по строкам, grep), `jar_javap` (метод).
+- Код модов: `jar_find` (путь, класс через точки, glob), `jar_read` (по строкам, grep), `jar_javap` (метод; jar можно не
+  указывать). Вложенные jar-in-jar и Minecraft+NeoForge («minecraft») — тоже.
+- Отладка сборки: `class_find`, `class_info` (сигнатуры, строки исходника для стека), `class_hierarchy`, `code_refs`
+  (кто вызывает/использует — по байткоду, `Owner#method`, `"строка"`), `mixins` (на класс по методам, конфликты, мод,
+  обзор), `decompile` (Vineflower; Minecraft — исходники), `jar_grep` (текст в файлах jar), `mods_check`
+  (зависимости по правилам FML), `log_analyze` (лог/краш-репорт → моды, миксины, расшифровка ошибок).
+  **Краш или «что сломалось» — начинай с `log_analyze`**, потом `class_info`/`decompile`/`mixins target=…`.
 - Гайды: `guides_list`, `guide_search`, `guide_get` → правка → `guide_put` с `baseRevision` из `guide_get`
   (отказ, если статью изменили после чтения; подпись `Claude`, версия — в историю). Это запись в общую базу.
 - Сборка: `mods_list`, `mod_get` (версия, предметы, рецепты по статусам), `pack_updates` (история обновлений).

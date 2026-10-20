@@ -25,10 +25,13 @@ import {
 } from './data.mjs';
 import { FirestoreError, configDocs, guideDoc, guideDocs, writeGuide } from './firestore.mjs';
 import { clip, dateOf, nameOf, named, norm, num, page, paging, short, str, words } from './fmt.mjs';
-import { javap, jarList, jarToc, pathMatcher, readEntry, resolveJar } from './jars.mjs';
+import { oneClass, classRecord } from './code-index.mjs';
+import { javap, jarList, jarToc, nestedJars, pathMatcher, readEntry, resolveJar } from './jars.mjs';
 import { TOOLS as blocksTools } from './tools/blocks.mjs';
 import { TOOLS as booksTools } from './tools/books.mjs';
+import { TOOLS as codeTools } from './tools/code.mjs';
 import { TOOLS as kubejsTools } from './tools/kubejs.mjs';
+import { TOOLS as logsTools } from './tools/logs.mjs';
 import { TOOLS as mapTools } from './tools/map.mjs';
 import { TOOLS as packTools } from './tools/pack.mjs';
 import { TOOLS as siteTools } from './tools/site.mjs';
@@ -516,14 +519,14 @@ async function guidePut(a) {
 
 function jarFind(a) {
   const match = pathMatcher(a.pattern);
-  const jars = a.jar ? [resolveJar(a.jar)] : jarList();
+  const jars = a.jar ? [resolveJar(a.jar, true)] : [...jarList(), ...(a.nested ? nestedJars() : [])];
   const hits = [];
   for (const jar of jars) for (const e of jarToc(jar)) if (match(e.name)) hits.push(`${jar}: ${e.name} (${e.size} Б)`);
   return page(hits, a, (l) => [l], 50);
 }
 
 function jarRead(a) {
-  const jar = resolveJar(a.jar);
+  const jar = resolveJar(a.jar, true);
   const r = readEntry(jar, String(a.path ?? ''));
   if (!r) return `В ${jar} нет ${a.path}. Найти: jar_find.`;
   if (r.entry.name.endsWith('.class')) return `${a.path} — класс (${r.data.length} Б): используйте jar_javap.`;
@@ -544,8 +547,15 @@ function jarRead(a) {
 }
 
 async function jarJavap(a) {
-  const jar = resolveJar(a.jar);
-  const text = await javap(jar, String(a.class ?? ''));
+  // jar не обязателен: класс находится по индексу кода (в т. ч. во вложенных jar и Minecraft)
+  let jar = a.jar ? resolveJar(a.jar, true) : null;
+  let cls = String(a.class ?? '');
+  if (!jar) {
+    const name = oneClass(cls);
+    jar = classRecord(name).jar;
+    cls = name;
+  }
+  const text = await javap(jar, cls);
   let lines = text.split('\n');
   if (a.method) {
     // Блоки методов javap: заголовок с отступом 2, тело до пустой строки
@@ -748,12 +758,15 @@ const CORE = [
   {
     name: 'jar_find',
     description:
-      'Поиск файлов и классов в jar сборки (mods/). Шаблон: часть пути, имя класса через точки (net.dries007.tfc.config) или glob (data/tfc/**/*.json, *Config.class).',
+      'Поиск файлов и классов в jar сборки (mods/). Шаблон: часть пути, имя класса через точки (net.dries007.tfc.config) или glob (data/tfc/**/*.json, *Config.class). Классы удобнее — class_find, текст в файлах — jar_grep.',
     inputSchema: {
       type: 'object',
       properties: {
         pattern: str('шаблон'),
-        jar: str('искать в одном jar: имя файла, часть имени или id мода'),
+        jar: str(
+          'искать в одном jar: имя файла, часть имени, id мода, вложенный «jar!META-INF/jarjar/x.jar» или «minecraft»',
+        ),
+        nested: { type: 'boolean', description: 'искать и во вложенных jar (jar-in-jar)' },
         ...paging,
       },
       required: ['pattern'],
@@ -766,7 +779,7 @@ const CORE = [
     inputSchema: {
       type: 'object',
       properties: {
-        jar: str('jar: имя файла, часть имени или id мода'),
+        jar: str('jar: имя файла, часть имени, id мода, вложенный или «minecraft»'),
         path: str('путь внутри jar'),
         grep: str('регулярное выражение'),
         offset: num('с какой строки'),
@@ -778,23 +791,34 @@ const CORE = [
   },
   {
     name: 'jar_javap',
-    description: 'Байткод класса из jar (javap -c -p -constants); method — только этот метод/поле.',
+    description:
+      'Байткод класса (javap -c -p -constants); method — только этот метод/поле. jar можно не указывать — класс найдётся по индексу. Читаемый код — decompile.',
     inputSchema: {
       type: 'object',
       properties: {
-        jar: str('jar: имя файла, часть имени или id мода'),
+        jar: str('jar (необязательно): имя файла, часть имени, id мода, вложенный или «minecraft»'),
         class: str('класс через точки или путь .class'),
         method: str('имя метода или поля'),
         offset: num('с какой строки'),
         limit: num('сколько строк (400)'),
       },
-      required: ['jar', 'class'],
+      required: ['class'],
     },
     handler: jarJavap,
   },
 ];
 
-export const TOOLS = [...CORE, ...packTools, ...kubejsTools, ...booksTools, ...blocksTools, ...siteTools, ...mapTools];
+export const TOOLS = [
+  ...CORE,
+  ...codeTools,
+  ...logsTools,
+  ...packTools,
+  ...kubejsTools,
+  ...booksTools,
+  ...blocksTools,
+  ...siteTools,
+  ...mapTools,
+];
 
 // Любой ответ — не длиннее MAX: списки и так режутся страницами, это страховка от длинных строк
 for (const t of TOOLS) {
@@ -802,4 +826,4 @@ for (const t of TOOLS) {
   t.handler = async (a) => clip(String(await run(a)));
 }
 
-export const INSTRUCTIONS = `Данные сборки TFC RealWorld для сайта «TFC Планы» (данные: ${PUBLIC}). Используйте вместо grep по public/*.json и распаковки mods/*.jar: ответы уже учитывают KubeJS (удаления, замены, kubejs/data), теги со вложенными и KubeJS, слои конфигов. Факты из jar — jar_find/jar_read/jar_javap. Гайды: guide_get → правка → guide_put с revision.`;
+export const INSTRUCTIONS = `Данные сборки TFC RealWorld для сайта «TFC Планы» (данные: ${PUBLIC}). Используйте вместо grep по public/*.json и распаковки mods/*.jar: ответы уже учитывают KubeJS (удаления, замены, kubejs/data), теги со вложенными и KubeJS, слои конфигов. Факты из jar — jar_find/jar_read/jar_javap. Отладка сборки: class_find/class_info/class_hierarchy, code_refs (кто вызывает), mixins (миксины и конфликты), decompile, jar_grep, mods_check (зависимости), log_analyze (лог/краш). Гайды: guide_get → правка → guide_put с revision.`;
