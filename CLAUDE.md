@@ -125,7 +125,7 @@ npm run pack:publish -- <папка данных> --dry-run   # что выло�
 - Запись в Firestore из скриптов — REST от имени `firebase login` или сервисного ключа (`GOOGLE_APPLICATION_CREDENTIALS`)
   (`scripts/firestore-rest.mjs`), правила на неё не действуют.
   Этим же способом удобно читать базу из node, когда нужно найти задачу или датапак.
-- `src/lib/recipeFilter.ts`, `recipeRefs.ts`, `nbt.ts`, `datapackFiles.ts` и `schematicFile.ts` (импортирует только `./nbt.ts` —
+- `src/lib/recipeFilter.ts`, `recipeRefs.ts`, `nbt.ts`, `datapackFiles.ts`, `addons.ts` и `schematicFile.ts` (импортирует только `./nbt.ts` —
   с расширением) — **без импортов, только стираемый синтаксис TS**: их запускает и сайт, и Node
   (`import '../src/lib/x.ts'` из `.mjs`, Node 24). В `tsconfig` включён `erasableSyntaxOnly` — никаких enum и parameter properties.
 - То, что мод задаёт кодом (перечисления, константы), читай скриптом через `scripts/mods/classfile.mjs`, а не вписывай руками:
@@ -173,7 +173,7 @@ src/components/guides/  гайды справочника: GuidesSection (кар
 server/file-server/  сервер файлов для Ubuntu (Node без зависимостей); переезд — scripts/files-migrate.mjs
 server/pack-server/  сервер сборки (снимки, ключи); стоит на VPS — docs/pack-server.md
 cli/              программа tfc для ПК (npm run tfc -- …): sync/publish сборки; инструкция — docs/tfc-app.md, cli/README.md
-tools/            аддоны сборки (ee-rectifier-mod, ee-overheat-mod) — docs/addons.md; на сайте — lib/addons.ts, AddonsTab
+tools/            аддоны сборки — docs/addons.md; на сайте — lib/addons.ts, AddonsTab; для tfc — /addons/index.json (scripts/addons-index.mjs)
 scripts/mcp/      MCP сборки для агента (stdio): data.mjs — слияние данных как на сайте, jars.mjs, firestore.mjs, tools.mjs
 scripts/          mods.mjs + mods/{reference,tags,botany,meals,cuisine,power,multiblocks,geo,manifest,classfile,config-defaults}.mjs, serverconfig.mjs,
                   kubejs.mjs, pack-release.mjs, pack.mjs (вся папка сборки); firestore-rest.mjs — общий доступ к Firestore

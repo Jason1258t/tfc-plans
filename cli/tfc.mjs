@@ -35,7 +35,8 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
   tfc pull datapacks [имя…]   датапаки сайта «Ставить в мир» → <мир>/datapacks/ (с именем — любой, и тестовый)
   tfc pull kubejs [имя…]      скрипты KubeJS сайта «Ставить на сервер» → kubejs/server_scripts/
   tfc pull schematics [имя…]  схемы библиотеки сайта (с заменами) → schematics/
-      tfc pull all — всё сразу; --dry-run — только показать; --force — перезаписать и ваши файлы
+  tfc pull addons [имя…]      аддоны сборки с сайта → mods/ (старую версию и заменённые файлы — в копию)
+      tfc pull all — всё сразу; --dry-run — только показать; --force — перезаписать и ваши файлы; --yes — не спрашивать
 
 Хосту (ключ администратора):
   tfc publish                 залить сборку из папки игры на сервер (--note "что поменял", --yes, --force)
@@ -272,7 +273,7 @@ async function cmdSync(v, groups) {
     console.log(yellow(`Сравните свои файлы с *.tfc-new (${plan.conflict.length}) и оставьте нужное.`));
 }
 
-const PULL_TITLE = { datapacks: 'Датапаки', kubejs: 'Скрипты KubeJS', schematics: 'Схемы' };
+const PULL_TITLE = { datapacks: 'Датапаки', kubejs: 'Скрипты KubeJS', schematics: 'Схемы', addons: 'Аддоны сборки' };
 
 async function cmdPull(v, [what, ...names]) {
   const kinds = what === 'all' ? PULL_KINDS : PULL_KINDS.includes(what) ? [what] : null;
@@ -280,7 +281,8 @@ async function cmdPull(v, [what, ...names]) {
   if (what === 'all' && names.length) throw new Error('имена — только для одного вида: tfc pull datapacks <имя>');
   const cfg = loadConfig();
   const profile = currentProfile(cfg, v.profile);
-  const a = api(cfg);
+  // Аддоны — статика сайта, ключ сервера сборки им не нужен
+  const a = kinds.some((k) => k !== 'addons') ? api(cfg) : null;
   console.log(`Профиль ${profileTitle(profile)}`);
   const plans = [];
   for (const kind of kinds) {
@@ -295,11 +297,24 @@ async function cmdPull(v, [what, ...names]) {
     const line = (mark, title, list) => {
       if (!list.length) return;
       console.log(`  ${mark} ${title}: ${list.length}`);
-      for (const x of list) console.log(dim(`      ${x.name ?? x.id} → ${x.path.replace(/^world\//, '<мир>/')}`));
+      for (const x of list) {
+        console.log(dim(`      ${x.name ?? x.id} → ${x.path.replace(/^world\//, '<мир>/')}`));
+        if (x.note) console.log(dim(`        ставить: ${x.note}`));
+      }
     };
     line(green('+'), 'поставить', p.add);
     line(yellow('~'), 'обновить (старое — в копию)', p.update);
-    line(red('−'), 'убрать (сняли отметку или убрали с сайта)', p.remove);
+    line(
+      red('−'),
+      kind === 'addons'
+        ? 'убрать (старая версия или аддон убран с сайта)'
+        : 'убрать (сняли отметку или убрали с сайта)',
+      p.remove,
+    );
+    if (p.obsolete.length) {
+      console.log(`  ${red('−')} убрать — старые версии и то, что заменяет аддон (с копией): ${p.obsolete.length}`);
+      for (const x of p.obsolete) console.log(dim(`      ${x.path} ${dim(`— ${x.name}`)}`));
+    }
     line(yellow('!'), 'там ваш файл — рядом положу .tfc-new (перезаписать: --force)', p.conflict);
     line(dim('·'), 'ставил я, но вы меняли — оставляю', p.keptModified);
     if (p.unknown.length) {
@@ -314,12 +329,20 @@ async function cmdPull(v, [what, ...names]) {
     return;
   }
   if (v['dry-run']) return console.log(dim('--dry-run: ничего не менял'));
+  // Аддоны трогают mods/ и убирают чужие файлы (старый jar, заменённый скрипт) — спросить
+  if (!v.yes && plans.some((p) => p.kind === 'addons' && pullChanges(p))) {
+    if (!interactive() && plans.some((p) => p.obsolete.length))
+      throw new Error('аддоны уберут файлы (с копией) — подтвердите: tfc pull addons --yes');
+    if (interactive() && !(await confirm('Применить?', true))) return;
+  }
   const backup = applyPull(profile, plans);
   console.log(green('Готово.') + (backup ? dim(` Копия прежнего — ${backup}; вернуть: tfc sync --undo`) : ''));
   if (plans.some((p) => p.kind === 'datapacks' && pullChanges(p)))
     console.log(dim('Датапаки подхватятся после перезапуска мира или командой /reload.'));
   if (plans.some((p) => p.kind === 'kubejs' && pullChanges(p)))
     console.log(dim('Скрипты сервера — /reload на сервере (или перезапуск).'));
+  if (plans.some((p) => p.kind === 'addons' && pullChanges(p)))
+    console.log(dim('Аддоны — это моды: перезапустите игру (и сервер).'));
   if (cfg.role === 'admin' && plans.some((p) => p.kind !== 'schematics' && pullChanges(p)))
     console.log(dim('Хосту: чтобы это попало игрокам и на сайт — tfc publish.'));
 }

@@ -9,8 +9,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "prebuild": "node scripts/ensure-mods.mjs",
-    "predev": "node scripts/ensure-mods.mjs",
+    "prebuild": "node scripts/ensure-mods.mjs && node scripts/addons-index.mjs",
+    "predev": "node scripts/ensure-mods.mjs && node scripts/addons-index.mjs",
     "mods": "node scripts/mods.mjs",
     "items": "node scripts/mods.mjs",
     "lint": "oxlint",

@@ -54,6 +54,15 @@
         ]
       },
       {
+        "source": "/addons/index.json",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
         "source": "/tfc/version.json",
         "headers": [
           {

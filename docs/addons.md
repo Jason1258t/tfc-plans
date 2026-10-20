@@ -125,7 +125,11 @@ tools/<имя>-mod/
 1. `./release.sh` — ресурсы, сборка, проверки; jar кладётся в папку мода (хранится в git — это и есть выпуск) и в
    `public/addons/` (в git не хранится, уходит на хостинг при `npx firebase deploy --only hosting`).
 2. Поднять версию: `mod_version` в `gradle.properties`, `version` в `neoforge.mods.toml`, `version` и `file` в
-   `src/lib/addons.ts`.
-3. Хост кладёт jar в `mods/` сервера, игроки — в `mods/` клиента (ссылка — вкладка «Аддоны» на сайте).
+   `src/lib/addons.ts`. Там же `side` (куда ставит `tfc pull addons` без имён: `both`, `client`, `server`) и
+   `replaces` — файлы сборки, которые аддон заменяет (путь от папки версии); `tfc pull addons` уберёт их с копией.
+   При сборке сайта `scripts/addons-index.mjs` кладёт `public/addons/index.json` (версия, файл, sha256) — из него
+   берёт список программа `tfc`.
+3. Хост ставит аддон в свою папку игры `tfc pull addons` и заливает сборку `tfc publish` — сервер и игроки получат
+   его через `tfc sync` ([docs/tfc-app.md](tfc-app.md)). Вручную — jar с вкладки «Аддоны» в `mods/`.
 4. Чтобы сайт показывал блоки аддона в библиотеке предметов и рецептах, jar можно положить и в `mods/` проекта
    (`npm run mods`) — после того как аддон реально стоит на сервере.

@@ -1,7 +1,9 @@
 /**
  * `tfc pull` — контент сайта в папку игры: датапаки «Ставить в мир» → `<мир>/datapacks/tfc-plans-<id>.zip`,
  * скрипты KubeJS «Ставить на сервер» → `kubejs/server_scripts/<fileName>`, схемы библиотеки → `schematics/`.
- * Берёт с сервера сборки (раздел /site), сайт закрыт App Check. Файлы собираются теми же модулями, что и
+ * Берёт с сервера сборки (раздел /site), сайт закрыт App Check. Аддоны сборки → `mods/` — со статики сайта
+ * (/addons/index.json и jar, ключ не нужен): старый jar того же мода и файлы, которые аддон заменяет (`replaces`),
+ * убираются с копией. Файлы собираются теми же модулями, что и
  * на сайте (src/lib/datapackFiles.ts, schematicFile.ts) — esbuild кладёт их в один файл программы.
  *
  * Что поставлено — `.tfc/state.json`, поле `pulled`: { вид: { id: { path, sha256, name } } }, path — как в
@@ -15,11 +17,27 @@ import path from 'node:path';
 import { strToU8, zipSync } from 'fflate';
 import { datapackFiles } from '../../src/lib/datapackFiles.ts';
 import { schematicFromLibrary } from '../../src/lib/schematicFile.ts';
+import { modIdsOf } from './jarid.mjs';
 import { loadState, saveState } from './plan.mjs';
 import { localPath, stateDir } from './scan.mjs';
 import { assertNotLocked, move, pruneBackups } from './sync.mjs';
+import { SITE } from './update.mjs';
 
-export const PULL_KINDS = ['datapacks', 'kubejs', 'schematics'];
+export const PULL_KINDS = ['datapacks', 'kubejs', 'schematics', 'addons'];
+
+/** Сайт со статикой аддонов; TFC_SITE — проверить на dev-сервере или копии */
+const site = () => (process.env.TFC_SITE || SITE).replace(/\/+$/, '');
+
+async function siteFetch(url) {
+  let res;
+  try {
+    res = await fetch(site() + url, { headers: { 'Cache-Control': 'no-cache' }, signal: AbortSignal.timeout(60_000) });
+  } catch (e) {
+    throw new Error(`сайт ${site()} недоступен: ${e.cause?.code ?? e.cause?.message ?? e.message}`);
+  }
+  if (!res.ok) throw new Error(`сайт ответил ${res.status} на ${url}`);
+  return res;
+}
 
 const sha = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const fileSha = (file) => (fs.existsSync(file) ? sha(fs.readFileSync(file)) : null);
@@ -50,6 +68,7 @@ const KUBEJS_NAME_RE = /^[a-z0-9_][a-z0-9_.-]{0,79}\.js$/;
  * unknown — названные, которых на сайте нет; all — для подсказки.
  */
 async function wanted(api, kind, names, profile) {
+  if (kind === 'addons') return wantedAddons(names, profile);
   if (kind === 'datapacks') {
     const r = await api.get(`/site/datapacks${query(names)}`);
     return {
@@ -118,6 +137,81 @@ async function wanted(api, kind, names, profile) {
   return { items, unknown, all: list.map((s) => ({ id: s.id, name: s.name })) };
 }
 
+/** Имя аддона из командной строки: id, имя jar с версией и без; «-», «_» и регистр не важны */
+const addonKey = (s) =>
+  String(s ?? '')
+    .toLowerCase()
+    .replace(/\.jar$/, '')
+    .replace(/[-_\s]+/g, '');
+const addonMatch = (a, n) =>
+  [a.id, a.file, a.file.replace(/-\d[\w.+-]*\.jar$/i, '')].some((x) => addonKey(x) === addonKey(n));
+
+/** Аддоны: без имён — все, что ставятся на эту сторону (клиент/сервер), с именами — названные */
+async function wantedAddons(names, profile) {
+  const index = await (await siteFetch('/addons/index.json')).json();
+  const list = (index.addons ?? []).filter(
+    (a) => /^[\w.+-]+\.jar$/.test(a.file ?? '') && /^[0-9a-f]{64}$/.test(a.sha256),
+  );
+  const side = profile.side ?? 'client';
+  const chosen = names.length
+    ? list.filter((a) => names.some((n) => addonMatch(a, n)))
+    : list.filter((a) => a.side === 'both' || a.side === side);
+  const cacheDir = path.join(stateDir(profile), 'site-files');
+  const items = chosen.map((a) => {
+    const jar = path.join(cacheDir, `${a.sha256}.jar`);
+    return {
+      id: a.id,
+      name: `${a.name} ${a.version}`,
+      path: `mods/${a.file}`,
+      note: a.needs,
+      replaces: Array.isArray(a.replaces) ? a.replaces : [],
+      jar,
+      bytes: async () => {
+        if (fileSha(jar) !== a.sha256) {
+          const bytes = new Uint8Array(await (await siteFetch(a.url ?? `/addons/${a.file}`)).arrayBuffer());
+          if (sha(bytes) !== a.sha256)
+            throw new Error(`${a.file} пришёл повреждённым (хеш не сошёлся) — запустите ещё раз`);
+          fs.mkdirSync(cacheDir, { recursive: true });
+          fs.writeFileSync(`${jar}.part`, bytes);
+          fs.renameSync(`${jar}.part`, jar);
+        }
+        return fs.readFileSync(jar);
+      },
+    };
+  });
+  return {
+    items,
+    unknown: names.filter((n) => !list.some((a) => addonMatch(a, n))),
+    all: list.map((a) => ({ id: a.id, name: `${a.id} ${a.version}` })),
+  };
+}
+
+/**
+ * Что убрать при постановке аддонов: другие jar того же мода в mods/ (старая версия под другим именем — с двумя
+ * игра не запустится) и файлы, которые аддон заменяет. Пути, которые ставим или уже убираем, — пропускаем.
+ */
+function addonObsolete(profile, items, skip) {
+  const out = new Map();
+  const modsDir = path.join(profile.instance, 'mods');
+  const jars = fs.existsSync(modsDir) ? fs.readdirSync(modsDir).filter((f) => /\.jar$/i.test(f)) : [];
+  for (const it of items) {
+    const ids = new Set(modIdsOf(it.jar));
+    for (const f of jars) {
+      const p = `mods/${f}`;
+      if (skip.has(p) || out.has(p) || !ids.size) continue;
+      const file = path.join(modsDir, f);
+      const same = modIdsOf(file).filter((id) => ids.has(id));
+      if (same.length) out.set(p, { id: p, name: `старая версия (${same.join(', ')})`, path: p, file });
+    }
+    for (const p of it.replaces) {
+      const file = typeof p === 'string' && !p.startsWith('world/') ? localPath(profile, p) : null;
+      if (!file || skip.has(p) || out.has(p) || !fs.existsSync(file)) continue;
+      out.set(p, { id: p, name: `заменён аддоном ${it.id}`, path: p, file });
+    }
+  }
+  return [...out.values()];
+}
+
 /**
  * План одного вида. Возвращает { add, update, same, conflict, remove, keptModified, skipped, unknown, all }:
  * элементы — { id, name, path, file, sha256, bytes }.
@@ -126,7 +220,17 @@ export async function planPull(api, profile, kind, names = [], { force = false }
   const state = loadState(profile);
   const mine = state.pulled?.[kind] ?? {};
   const w = await wanted(api, kind, names, profile);
-  const plan = { kind, add: [], update: [], same: [], conflict: [], remove: [], keptModified: [], noWorld: [] };
+  const plan = {
+    kind,
+    add: [],
+    update: [],
+    same: [],
+    conflict: [],
+    remove: [],
+    keptModified: [],
+    noWorld: [],
+    obsolete: [],
+  };
   const target = new Set();
   for (const it of w.items) {
     const file = localPath(profile, it.path);
@@ -144,7 +248,8 @@ export async function planPull(api, profile, kind, names = [], { force = false }
     const fromSync = disk && state.files?.[it.path] === disk;
     if (!disk) plan.add.push(item);
     else if (disk === item.sha256) plan.same.push(item);
-    else if (ours || fromSync || force) plan.update.push(item);
+    // jar аддона руками не правят: другой файл под тем же именем — просто заменяем (с копией)
+    else if (ours || fromSync || force || kind === 'addons') plan.update.push(item);
     else plan.conflict.push(item);
   }
   // Убрать: без имён — всё своё, чего больше нет среди отмеченных; переименованное — старый путь
@@ -160,14 +265,21 @@ export async function planPull(api, profile, kind, names = [], { force = false }
     else if (disk === rec.sha256) plan.remove.push(item);
     else plan.keptModified.push(item);
   }
+  if (kind === 'addons') {
+    const skip = new Set([...target, ...plan.remove.map((x) => x.path), ...plan.keptModified.map((x) => x.path)]);
+    plan.obsolete = addonObsolete(profile, [...plan.add, ...plan.update, ...plan.same], skip);
+  }
   return { ...plan, unknown: w.unknown ?? [], all: w.all ?? [] };
 }
 
-export const pullChanges = (p) => p.add.length + p.update.length + p.conflict.length + p.remove.length;
+export const pullChanges = (p) =>
+  p.add.length + p.update.length + p.conflict.length + p.remove.length + (p.obsolete?.length ?? 0);
 
 /** Применить планы (несколько видов за раз — одна копия для отмены) */
 export function applyPull(profile, plans) {
-  const files = plans.flatMap((p) => [...p.update, ...p.remove.filter((x) => !x.gone)].map((x) => x.file));
+  const files = plans.flatMap((p) =>
+    [...p.update, ...p.remove.filter((x) => !x.gone), ...(p.obsolete ?? [])].map((x) => x.file),
+  );
   assertNotLocked(files);
   const state = loadState(profile);
   const prevState = structuredClone(state);
@@ -185,6 +297,7 @@ export function applyPull(profile, plans) {
       if (!x.gone) keep(x, manifest.removed);
       delete mine[x.id];
     }
+    for (const x of p.obsolete ?? []) keep(x, manifest.removed);
     for (const x of p.update) keep(x, manifest.replaced);
     for (const x of [...p.add, ...p.update]) {
       fs.mkdirSync(path.dirname(x.file), { recursive: true });
