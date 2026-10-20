@@ -2,6 +2,8 @@
 # Установка и обновление сервера сборки на Ubuntu 22.04 / 24.04. Запуск от root из папки server/pack-server:
 #   sudo bash deploy/install.sh pack.example.com     — первая установка (домен — для HTTPS через Caddy)
 #   sudo bash deploy/install.sh                       — обновление кода (настройки, сборку и ключи не трогает)
+# Порты 80/443 заняты — свой порт и сертификат через DuckDNS (см. server/common/caddy-site.sh):
+#   sudo HTTPS_PORT=8443 DUCKDNS_TOKEN_FILE=/etc/tfc-pack/duckdns.token bash deploy/install.sh pack.duckdns.org
 # Можно ставить рядом с сервером файлов: другая служба, другой порт, свой блок в Caddy.
 set -euo pipefail
 
@@ -64,7 +66,10 @@ systemctl --no-pager --lines=5 status tfc-pack || true
 echo
 PORT=$(sed -n 's/^PORT=//p' "$ENV_FILE" | tail -1)
 curl -fsS "http://127.0.0.1:${PORT:-8788}/health" && echo
-[ -n "$DOMAIN" ] && echo "Снаружи: https://$DOMAIN/health"
+if [ -n "$DOMAIN" ]; then
+  P="${HTTPS_PORT:-443}"
+  if [ "$P" = 443 ]; then echo "Снаружи: https://$DOMAIN/health"; else echo "Снаружи: https://$DOMAIN:$P/health"; fi
+fi
 if [ -n "$NEW_KEY" ]; then
   echo
   echo "Ключ администратора (сохраните — больше он нигде не показывается):"
