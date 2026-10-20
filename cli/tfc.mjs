@@ -10,6 +10,7 @@ import { Api } from './lib/api.mjs';
 import { configFile, currentProfile, DEFAULT_SERVER, loadConfig, saveConfig } from './lib/config.mjs';
 import { detectVersions, findInstances, findWorlds, gameDirOf, isDir, isServerDir } from './lib/detect.mjs';
 import { bytesOf, changes, GROUPS, kindsOf, loadState, makePlan } from './lib/plan.mjs';
+import { parseParts, printJobs, PUBLISH, showJob } from './lib/jobs.mjs';
 import { diffFiles, printDiff, publish } from './lib/publish.mjs';
 import { scanLocal } from './lib/scan.mjs';
 import { applyPlan, undoLast } from './lib/sync.mjs';
@@ -34,6 +35,10 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
   tfc publish                 залить сборку из папки игры на сервер (--note "что поменял", --yes, --force)
   tfc build [mods,kubejs,config,world]   собрать данные сайта локально в ./tfc-out — посмотреть до заливки
   tfc admin keys | invite <ник> [--admin] | revoke <id> | history | use <id> | rollback
+  tfc admin rebuild [mods,kubejs,config,world]   пересобрать данные сайта на сервере (--pull — свежий код,
+                              --publish none|dry-run|live — что потом; по умолчанию dry-run — только показать)
+  tfc admin publish           показать, что изменится на сайте; --live — выложить (текущую сборку, с вопросом)
+  tfc admin jobs [id|last]    задания сервера; с id — лог и итог (--follow — следить до конца)
 
 Общее: --profile <имя> — другой профиль; tfc --version — версия. Настройки: ${configFile()}`;
 
@@ -54,6 +59,12 @@ const opts = {
   'dry-run': { type: 'boolean' },
   'no-current': { type: 'boolean' },
   admin: { type: 'boolean' },
+  pull: { type: 'boolean' },
+  publish: { type: 'string' },
+  live: { type: 'boolean' },
+  snapshot: { type: 'string' },
+  follow: { type: 'boolean', short: 'f' },
+  'no-follow': { type: 'boolean' },
   help: { type: 'boolean', short: 'h' },
   version: { type: 'boolean', short: 'v' },
 };
@@ -263,8 +274,7 @@ async function cmdPublish(v) {
   const { files: local, skipped } = await scan(profile);
   if (!local.size) throw new Error(`в ${profile.instance} нечего заливать`);
   const ver = detectVersions(profile.instance);
-  const mc = v.mc ?? ver.mc ?? current?.mc ?? null;
-  const loader = v.loader ?? ver.loader ?? current?.loader ?? null;
+  const { mc, loader } = await gameVersion(a, v, ver, current, profile.instance);
   console.log(`Профиль ${profileTitle(profile)}${mc ? dim(` · Minecraft ${mc}${loader ? `, ${loader}` : ''}`) : ''}`);
   if (skipped) console.log(dim(`(пропущено вне белого списка: ${skipped})`));
   if (!profile.world) console.log(yellow('Мир не выбран — датапаки и календарь мира не попадут в сборку (tfc init).'));
@@ -280,6 +290,34 @@ async function cmdPublish(v) {
     force: v.force,
     setCurrent: !v['no-current'],
   });
+}
+
+/**
+ * Версия игры для снимка: --mc/--loader, из папки (лаунчер), из прошлых снимков, иначе спросить.
+ * Сервер принимает только строки — без версии заливка падала на «mc — строка до 40 символов».
+ */
+async function gameVersion(a, v, ver, current, dir) {
+  let mc = v.mc || ver.mc || current?.mc || null;
+  let loader = v.loader || ver.loader || current?.loader || null;
+  if (!mc || !loader) {
+    const { snapshots } = await a.get('/pack/snapshots');
+    const prev = snapshots.find((s) => (mc || s.mc) && (loader || s.loader));
+    if (prev) {
+      mc ||= prev.mc;
+      loader ||= prev.loader;
+      console.log(dim(`Версию игры в папке не нашёл — беру из прошлой сборки ${prev.id}: ${mc}, ${loader}`));
+    }
+  }
+  if (!mc || !loader) {
+    const hint = 'укажите её: tfc publish --mc 1.21.1 --loader neoforge';
+    if (!interactive() || v.yes) throw new Error(`не определилась версия игры в ${dir} — ${hint}`);
+    console.log(yellow('Версию Minecraft и загрузчика в папке не нашёл (лаунчер её не записал).'));
+    mc ||= await ask('Версия Minecraft', '1.21.1');
+    loader ||= await ask('Загрузчик (как в лаунчере: neoforge или neoforge-21.1.219)', 'neoforge');
+  }
+  if (mc.length > 40 || loader.length > 80)
+    throw new Error('версия игры слишком длинная — --mc 1.21.1 --loader neoforge');
+  return { mc, loader };
 }
 
 async function cmdBuild(v, parts) {
@@ -307,7 +345,53 @@ async function cmdBuild(v, parts) {
   console.log(`${green('Собрано')} в ${outDir} — в Firestore ничего не записано.`);
 }
 
-async function cmdAdmin(v, [sub, arg]) {
+/** Перед настоящей выкладкой: только текущая сборка и явное «да» */
+async function confirmLive(a, v) {
+  const { current, snapshots } = await a.get('/pack/snapshots');
+  if (!current) throw new Error('текущей сборки нет — выкладывать нечего');
+  if (v.snapshot && v.snapshot !== current)
+    throw new Error(
+      `выкладывать можно только текущую сборку (${current}); сделать текущей — tfc admin use ${v.snapshot}`,
+    );
+  const s = snapshots.find((x) => x.id === current);
+  console.log(
+    `Выложить на сайт данные сборки ${bold(current)}${s ? dim(` от ${date(s.createdAt)}${s.author ? `, ${s.author}` : ''}${s.note ? ` — ${s.note}` : ''}`) : ''}.`,
+  );
+  console.log(
+    dim('Обновятся предметы, рецепты, карта и справочник на сайте, настройки сборки в базе и запись в «Обновлениях».'),
+  );
+  console.log(dim('Что именно изменится — без --live (пробно).'));
+  if (v.yes) return;
+  if (!interactive()) throw new Error('подтвердите выкладку: --live --yes');
+  if (!(await confirm('Выкладывать?', false))) throw new Error('отменено — на сайте ничего не менялось');
+}
+
+/** Задание поставлено: следить за ним (по умолчанию) или подсказать, как посмотреть */
+async function startedJob(a, j, v) {
+  console.log(`Задание ${bold(j.id)} ${j.state === 'queued' ? 'в очереди' : j.state}.`);
+  if (v['no-follow']) return console.log(dim(`Посмотреть: tfc admin jobs ${j.id} --follow`));
+  const done = await showJob(a, j.id, { follow: true });
+  if (done.state === 'failed') process.exitCode = 1;
+}
+
+/** Ответ 409 на сборку/публикацию — по-человечески */
+function jobError(e, snapshot) {
+  if (e.status === 404)
+    return new Error(
+      snapshot
+        ? `на сервере нет сборки ${snapshot} — список: tfc admin history`
+        : 'на сервере нет текущей сборки — сначала tfc publish (или tfc admin use <id>)',
+    );
+  if (e.status !== 409) return e;
+  if (/не собран/.test(e.data?.error))
+    return new Error('данные этой сборки на сервере ещё не собраны — tfc admin rebuild');
+  if (/текущий/.test(e.data?.error))
+    return new Error('выкладывать на сайт можно только текущую сборку — сначала tfc admin use <id>');
+  return e;
+}
+
+async function cmdAdmin(v, [sub, ...args]) {
+  const arg = args[0];
   const a = api(loadConfig());
   if (sub === 'keys') {
     const res = await a.get('/admin/keys');
@@ -337,7 +421,39 @@ async function cmdAdmin(v, [sub, arg]) {
   } else if (sub === 'rollback') {
     const r = await a.post('/pack/current', { rollback: true });
     console.log(`Откатил: текущая сборка — ${r.current} (была ${r.previous}).`);
-  } else throw new Error('tfc admin keys | invite <ник> | revoke <id> | history | use <id> | rollback');
+  } else if (sub === 'rebuild') {
+    const parts = parseParts(args);
+    // По умолчанию — пробно, даже если на сервере включена автоматическая выкладка (AUTO_PUBLISH=live)
+    const publish = v.publish ?? 'dry-run';
+    if (!PUBLISH.includes(publish)) throw new Error(`--publish — ${PUBLISH.join(', ')}`);
+    if (publish === 'live') await confirmLive(a, v);
+    const body = { parts, pull: !!v.pull, publish, ...(v.snapshot ? { snapshot: v.snapshot } : {}) };
+    const j = await a.post('/admin/rebuild', body).catch((e) => {
+      throw jobError(e, v.snapshot);
+    });
+    await startedJob(a, j, v);
+  } else if (sub === 'publish') {
+    if (v.live) await confirmLive(a, v);
+    const body = v.live ? { dryRun: false } : { dryRun: true, ...(v.snapshot ? { snapshot: v.snapshot } : {}) };
+    const j = await a.post('/admin/publish', body).catch((e) => {
+      throw jobError(e, v.snapshot);
+    });
+    await startedJob(a, j, v);
+  } else if (sub === 'jobs') {
+    if (!arg) return printJobs(a);
+    let id = arg;
+    if (id === 'last') {
+      id = (await a.get('/jobs')).jobs[0]?.id;
+      if (!id) return console.log('Заданий ещё не было.');
+    }
+    const j = await showJob(a, id, { follow: v.follow }).catch((e) => {
+      throw e.status === 404 ? new Error(`нет задания ${id} — список: tfc admin jobs`) : e;
+    });
+    if (j.state === 'failed') process.exitCode = 1;
+  } else
+    throw new Error(
+      'tfc admin keys | invite <ник> | revoke <id> | history | use <id> | rollback | rebuild | publish | jobs',
+    );
 }
 
 // ---------------------------------------------------------------- main
