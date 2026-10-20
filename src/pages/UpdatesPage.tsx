@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ItemIcon } from '../components/ItemIcon';
 import { Markdown } from '../components/Markdown';
+import { TfcDownload } from '../components/TfcDownload';
 import { useData } from '../data/DataContext';
 import { datapacksStore } from '../data/store';
 import { generatePatchNotes, geminiEnabled, geminiErrorText } from '../lib/gemini';
@@ -41,6 +42,7 @@ export function UpdatesPage() {
           Modrinth и разнице сборок; его можно поправить руками.
         </p>
       </div>
+      <TfcDownload />
       {updates === null ? (
         <div className="empty">Загружаю…</div>
       ) : updates.length === 0 ? (
