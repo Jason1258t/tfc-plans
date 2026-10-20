@@ -11,6 +11,8 @@ export JAVA_HOME="${JAVA_HOME:-$HOME/.gradle/local-tools/jdk21/Contents/Home}"
 rm -rf run && mkdir -p run/mods run/world/serverconfig/tfc_real_world
 cp ../../../mods/TerraFirmaCraft-NeoForge-*.jar ../../../mods/Patchouli-*.jar ../../../mods/TFC-Real-World-NeoForge-*.jar \
   ../rw-host-fix-*.jar run/mods/
+# EXTRA_MODS="путь/к.jar …" — ещё моды на сервер (например диагностика ../tp-trace-mod/tp-trace-1.0.0.jar)
+for j in ${EXTRA_MODS:-}; do cp "../$j" run/mods/; done
 printf '[generation_modes]\nhorizontal_scale = 100000\nvertical_scale = 50000\n' > run/world/serverconfig/tfc_real_world/server.toml
 echo 'eula=true' > run/eula.txt
 cat > run/server.properties <<'P'

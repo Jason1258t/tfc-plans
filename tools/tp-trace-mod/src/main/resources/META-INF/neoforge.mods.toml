@@ -1,0 +1,19 @@
+modLoader = "javafml"
+loaderVersion = "[2,)"
+license = "MIT"
+
+[[mods]]
+modId = "tp_trace"
+version = "1.0.0"
+displayName = "TP Trace (диагностика)"
+description = "Временный: пишет в лог скачки позиции игроков, телепорты сервера и подтверждения с тем, кто их вызвал. Строки — «[tp-trace]»."
+
+[[mixins]]
+config = "tp_trace.mixins.json"
+
+[[dependencies.tp_trace]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1,)"
+ordering = "NONE"
+side = "BOTH"
