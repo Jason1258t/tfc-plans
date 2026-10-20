@@ -14,7 +14,7 @@ import { mb, progress } from './ui.mjs';
 
 const BACKUPS = 5;
 
-function move(from, to) {
+export function move(from, to) {
   fs.mkdirSync(path.dirname(to), { recursive: true });
   try {
     fs.renameSync(from, to);
@@ -26,7 +26,7 @@ function move(from, to) {
 }
 
 /** Файл не занят игрой (на Windows запущенная игра держит jar) */
-function assertNotLocked(files) {
+export function assertNotLocked(files) {
   for (const f of files) {
     if (!fs.existsSync(f)) continue;
     try {
@@ -143,7 +143,7 @@ function backups(profile) {
     .map((d) => path.join(dir, d));
 }
 
-function pruneBackups(profile) {
+export function pruneBackups(profile) {
   const all = backups(profile);
   for (const d of all.slice(0, Math.max(0, all.length - BACKUPS))) fs.rmSync(d, { recursive: true, force: true });
 }

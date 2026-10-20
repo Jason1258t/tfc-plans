@@ -11,6 +11,7 @@ import { configFile, currentProfile, DEFAULT_SERVER, loadConfig, saveConfig } fr
 import { detectVersions, findInstances, findWorlds, gameDirOf, isDir, isServerDir } from './lib/detect.mjs';
 import { bytesOf, changes, GROUPS, kindsOf, loadState, makePlan } from './lib/plan.mjs';
 import { diffFiles, printDiff, publish } from './lib/publish.mjs';
+import { applyPull, planPull, PULL_KINDS, pullChanges } from './lib/pull.mjs';
 import { scanLocal } from './lib/scan.mjs';
 import { applyPlan, undoLast } from './lib/sync.mjs';
 import { ask, bold, choose, confirm, cyan, date, dim, green, interactive, mb, red, yellow } from './lib/ui.mjs';
@@ -29,6 +30,10 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
   tfc sync [что]              докачать и обновить; что: ${Object.keys(GROUPS).join(', ')}
       --dry-run               только показать          --force   перезаписать и ваши правки (с копией)
       --yes                   не спрашивать            --undo    вернуть как было до прошлой синхронизации
+  tfc pull datapacks [имя…]   датапаки сайта «Ставить в мир» → <мир>/datapacks/ (с именем — любой, и тестовый)
+  tfc pull kubejs [имя…]      скрипты KubeJS сайта «Ставить на сервер» → kubejs/server_scripts/
+  tfc pull schematics [имя…]  схемы библиотеки сайта (с заменами) → schematics/
+      tfc pull all — всё сразу; --dry-run — только показать; --force — перезаписать и ваши файлы
 
 Хосту (ключ администратора):
   tfc publish                 залить сборку из папки игры на сервер (--note "что поменял", --yes, --force)
@@ -253,6 +258,58 @@ async function cmdSync(v, groups) {
     console.log(yellow(`Сравните свои файлы с *.tfc-new (${plan.conflict.length}) и оставьте нужное.`));
 }
 
+const PULL_TITLE = { datapacks: 'Датапаки', kubejs: 'Скрипты KubeJS', schematics: 'Схемы' };
+
+async function cmdPull(v, [what, ...names]) {
+  const kinds = what === 'all' ? PULL_KINDS : PULL_KINDS.includes(what) ? [what] : null;
+  if (!kinds) throw new Error(`tfc pull ${PULL_KINDS.join(' | ')} | all [имя…]`);
+  if (what === 'all' && names.length) throw new Error('имена — только для одного вида: tfc pull datapacks <имя>');
+  const cfg = loadConfig();
+  const profile = currentProfile(cfg, v.profile);
+  const a = api(cfg);
+  console.log(`Профиль ${profileTitle(profile)}`);
+  const plans = [];
+  for (const kind of kinds) {
+    if (kind === 'datapacks' && !profile.world) {
+      console.log(yellow(`${PULL_TITLE[kind]}: мир не выбран — пропускаю (tfc init --world <мир>)`));
+      continue;
+    }
+    const p = await planPull(a, profile, kind, names, { force: v.force });
+    plans.push(p);
+    const total = p.add.length + p.update.length + p.same.length + p.conflict.length;
+    console.log(`${bold(PULL_TITLE[kind])}: ${names.length ? `названо ${names.length}` : `с сайта ${total}`}`);
+    const line = (mark, title, list) => {
+      if (!list.length) return;
+      console.log(`  ${mark} ${title}: ${list.length}`);
+      for (const x of list) console.log(dim(`      ${x.name ?? x.id} → ${x.path.replace(/^world\//, '<мир>/')}`));
+    };
+    line(green('+'), 'поставить', p.add);
+    line(yellow('~'), 'обновить (старое — в копию)', p.update);
+    line(red('−'), 'убрать (сняли отметку или убрали с сайта)', p.remove);
+    line(yellow('!'), 'там ваш файл — рядом положу .tfc-new (перезаписать: --force)', p.conflict);
+    line(dim('·'), 'ставил я, но вы меняли — оставляю', p.keptModified);
+    if (p.unknown.length) {
+      console.log(red(`  нет на сайте: ${p.unknown.join(', ')}`));
+      if (p.all.length)
+        console.log(dim(`  есть: ${p.all.map((x) => `${x.name}${x.install ? ' (в мир)' : ''}`).join(', ')}`));
+    }
+    if (!pullChanges(p) && !p.keptModified.length) console.log(dim('  всё на месте'));
+  }
+  if (!plans.some(pullChanges)) {
+    applyPull(profile, plans); // запомнить, что всё на месте
+    return;
+  }
+  if (v['dry-run']) return console.log(dim('--dry-run: ничего не менял'));
+  const backup = applyPull(profile, plans);
+  console.log(green('Готово.') + (backup ? dim(` Копия прежнего — ${backup}; вернуть: tfc sync --undo`) : ''));
+  if (plans.some((p) => p.kind === 'datapacks' && pullChanges(p)))
+    console.log(dim('Датапаки подхватятся после перезапуска мира или командой /reload.'));
+  if (plans.some((p) => p.kind === 'kubejs' && pullChanges(p)))
+    console.log(dim('Скрипты сервера — /reload на сервере (или перезапуск).'));
+  if (cfg.role === 'admin' && plans.some((p) => p.kind !== 'schematics' && pullChanges(p)))
+    console.log(dim('Хосту: чтобы это попало игрокам и на сайт — tfc publish.'));
+}
+
 // ---------------------------------------------------------------- хост
 
 async function cmdPublish(v) {
@@ -349,6 +406,7 @@ const COMMANDS = {
   use: cmdUse,
   status: cmdStatus,
   sync: cmdSync,
+  pull: cmdPull,
   publish: cmdPublish,
   build: cmdBuild,
   admin: cmdAdmin,

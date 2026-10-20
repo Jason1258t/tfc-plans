@@ -21,6 +21,10 @@
  *   GET    /jobs, GET /jobs/:id     — задания сборки: состояние и лог           admin
  *   GET    /data                    — собранные данные текущего снимка: список   player
  *   GET    /data/:snapshot/<путь>   — файл собранных данных                     player
+ *   GET    /site/datapacks?name=…   — датапаки сайта «Ставить в мир» (+ названные)  player
+ *   GET    /site/kubejs?name=…      — скрипты KubeJS «Ставить на сервер» (+ названные) player
+ *   GET    /site/schematics         — схемы библиотеки (без превью)              player
+ *   GET    /site/files/:id          — исходник схемы (.nbt из хранилища сайта)   player
  */
 import fs from 'node:fs';
 import http from 'node:http';
@@ -28,6 +32,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openJobs, PUBLISH } from './lib/jobs.mjs';
 import { openKeys } from './lib/keys.mjs';
+import { openSite } from './lib/site.mjs';
 import { openStore } from './lib/store.mjs';
 import { HttpError, SHA256_RE } from './lib/util.mjs';
 
@@ -61,6 +66,11 @@ const jobs = openJobs(config.dataDir, {
   repoBranch: env.REPO_BRANCH ?? 'main',
   heapMb: Number(env.BUILD_HEAP_MB) || 0,
   timeoutMs: (Number(env.JOB_TIMEOUT_MIN) || 120) * 60_000,
+});
+const site = openSite(config.dataDir, {
+  repoDir,
+  ttlMs: Number(env.SITE_CACHE_SEC ?? 300) * 1000,
+  docsUrl: env.SITE_DOCS_URL, // для проверки на заглушке Firestore
 });
 /** После смены текущего снимка: собрать (off — нет) и как публиковать (по умолчанию — только пробно) */
 const autoBuild = env.AUTO_BUILD !== 'off';
@@ -290,6 +300,28 @@ async function handle(req, res) {
       .createReadStream(file)
       .on('error', () => res.destroy())
       .pipe(res);
+  }
+
+  // --- контент сайта для tfc pull (Firestore — сервисным ключом, с кешем)
+  if (parts[0] === 'site' && req.method === 'GET') {
+    await authorize(req, 'player');
+    const names = url.searchParams.getAll('name');
+    if (url.pathname === '/site/datapacks') return json(res, 200, await site.datapacks(names));
+    if (url.pathname === '/site/kubejs') return json(res, 200, await site.kubejs(names));
+    if (url.pathname === '/site/schematics') return json(res, 200, await site.schematics());
+    if (parts[1] === 'files' && parts.length === 3) {
+      const file = await site.filePath(parts[2]);
+      const st = await fs.promises.stat(file);
+      res.writeHead(200, {
+        'Content-Type': 'application/octet-stream',
+        'Content-Length': st.size,
+        'Cache-Control': 'private, max-age=31536000, immutable',
+      });
+      return fs
+        .createReadStream(file)
+        .on('error', () => res.destroy())
+        .pipe(res);
+    }
   }
 
   throw new HttpError(404, 'Нет такого адреса');
