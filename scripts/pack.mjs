@@ -178,7 +178,8 @@ function writeSources(file, parts) {
 // ---------------------------------------------------------------- main
 
 /**
- * Разбор папки сборки целиком. Возвращает { root, world, parts }: parts — что запускалось, откуда и с какими файлами.
+ * Разбор папки сборки целиком. Возвращает { root, world, parts, firestore }: parts — что запускалось, откуда и с какими
+ * файлами; firestore — документы config (с dryRun не записаны — их пишет сервер сборки при публикации).
  * cacheDir — кеш jar (как у npm run mods); outDir — данные сайта; instanceDir — слои KubeJS и sources.json.
  */
 export async function runPack({ input, cacheDir = DEFAULT_CACHE, ...opts }) {
@@ -280,14 +281,14 @@ async function packDir(
   if (!Object.keys(parts).length) throw new Error('ничего не нашлось для разбора');
   if (dryRun) {
     log(`--dry-run: в Firestore не пишу (документов было бы ${firestore.length}), sources.json не трогаю`);
-    return { root, world: world.dir, parts };
+    return { root, world: world.dir, parts, firestore };
   }
   if (firestore.length) {
     await writeConfigDocs(firestore);
     log(`записано в Firestore config: ${firestore.length}`);
   }
   writeSources(path.join(instanceDir, 'sources.json'), parts);
-  return { root, world: world.dir, parts };
+  return { root, world: world.dir, parts, firestore };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {

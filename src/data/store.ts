@@ -4,9 +4,11 @@ import type {
   Artifact,
   Datapack,
   Group,
+  KubejsScript,
   NewArtifact,
   NewDatapack,
   NewGroup,
+  NewKubejsScript,
   NewReplaceFavorite,
   NewSavedSchematic,
   NewTask,
@@ -114,3 +116,4 @@ export const artifactsStore = make<Artifact, NewArtifact>('artifacts');
 export const datapacksStore = make<Datapack, NewDatapack>('datapacks');
 export const schematicsStore = make<SavedSchematic, NewSavedSchematic>('schematics');
 export const replaceFavoritesStore = make<ReplaceFavorite, NewReplaceFavorite>('replaceFavorites');
+export const kubejsScriptsStore = make<KubejsScript, NewKubejsScript>('kubejsScripts');

@@ -142,6 +142,20 @@ service cloud.firestore {
         && request.resource.data.name.size() <= 80
         && request.resource.data.entries is list
         && request.resource.data.entries.size() <= 300
+        && (!('install' in request.resource.data) || request.resource.data.install is bool)
+        && nick(request.resource.data.updatedBy);
+      allow delete: if signedIn();
+    }
+
+    // Скрипты KubeJS (kubejs/server_scripts/): текст внутри документа, «Ставить на сервер» — install
+    match /kubejsScripts/{id} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && request.resource.data.fileName is string
+        && request.resource.data.fileName.matches('[a-z0-9_][a-z0-9_.-]{0,79}[.]js')
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 200000
+        && (!('install' in request.resource.data) || request.resource.data.install is bool)
         && nick(request.resource.data.updatedBy);
       allow delete: if signedIn();
     }

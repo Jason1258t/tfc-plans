@@ -150,6 +150,8 @@ export interface Datapack {
   namespace: string;
   description: string;
   entries: DatapackEntry[];
+  /** «Ставить в мир»: программа tfc ставит только отмеченные; тестовые не отмечают */
+  install?: boolean;
   author: string;
   updatedBy: string;
   createdAt: number;
@@ -157,6 +159,22 @@ export interface Datapack {
 }
 
 export type NewDatapack = Omit<Datapack, 'id' | 'createdAt' | 'updatedAt'>;
+
+/** Скрипт KubeJS для kubejs/server_scripts/ (из конструктора или написанный руками) */
+export interface KubejsScript {
+  id: string;
+  /** Имя файла в server_scripts: латиница, цифры, _ . -, на конце .js */
+  fileName: string;
+  text: string;
+  /** «Ставить на сервер»: программа tfc ставит только отмеченные */
+  install?: boolean;
+  author: string;
+  updatedBy: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type NewKubejsScript = Omit<KubejsScript, 'id' | 'createdAt' | 'updatedAt'>;
 
 /**
  * Схема в библиотеке: исходный .nbt лежит в хранилище файлов (files/{fileId}, без задачи),
