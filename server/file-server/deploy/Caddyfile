@@ -1,5 +1,5 @@
 # Caddy сам получает и продлевает сертификат Let's Encrypt для домена.
-# DOMAIN подставляет install.sh; порты 80 и 443 должны быть открыты.
+# install.sh кладёт этот блок в /etc/caddy/conf.d/tfc-files.caddy, подставив DOMAIN; порты 80 и 443 должны быть открыты.
 DOMAIN {
 	encode zstd gzip
 	request_body {
