@@ -19,7 +19,7 @@ export class FirestoreError extends Error {
   }
 }
 
-async function api(url, init = {}) {
+export async function api(url, init = {}) {
   const res = await fetch(url, {
     ...init,
     headers: { Authorization: `Bearer ${await auth()}`, 'Content-Type': 'application/json', ...init.headers },
@@ -37,7 +37,7 @@ async function api(url, init = {}) {
 
 const fields = (d) => Object.fromEntries(Object.entries(d.fields ?? {}).map(([k, v]) => [k, fromValue(v)]));
 
-async function listAll(collection, mask) {
+export async function listAll(collection, mask) {
   const out = [];
   let pageToken = '';
   const m = mask ? mask.map((f) => `&mask.fieldPaths=${f}`).join('') : '';
@@ -51,7 +51,7 @@ async function listAll(collection, mask) {
 }
 
 /** Кеш списка на ttl мс: повторные вопросы агента не тратят чтения */
-function cached(ttl, load) {
+export function cached(ttl, load) {
   let c = null;
   const get = async () => {
     if (!c || c.until < Date.now()) c = { until: Date.now() + ttl, value: load() };
