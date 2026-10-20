@@ -333,6 +333,28 @@ npm run serverconfig -- ~/Downloads/serverconfig.zip
 `generation_modes.horizontal_scale`/`vertical_scale`, `spawn_settings`). `tfc_eratosthenes-server.toml` сохранён
 для справки: Eratosthenes берёт масштаб у TFC Real World и проецирует так же (`TFC_REAL_WORLD_FULL_WORLD`).
 
+### Вся папка сборки одной командой
+
+```bash
+npm run pack -- <папка инстанса или сервера | zip> [--world <мир>] [--only mods,kubejs,config,world] [--out <папка>] [--instance <папка>] [--dry-run]
+```
+
+Сам находит `mods/`, `kubejs/`, `config/`, `defaultconfigs/`, `serverconfig/` и мир (`--world`, иначе `level-name`
+из `server.properties`, `world/` или единственный мир в `saves/`) и запускает то же, что `npm run mods`, `kubejs`,
+`serverconfig` и `world`. Берётся только белый список из `docs/plans/pack-directory.md`: из `config/` — без
+`fancymenu`, `jmsharedmaps`, `CSC`, `voicechat`, `xaero` и `*.bak`; из мира — только `data/tfc_calendar.dat` и
+`serverconfig/`; списки игроков, `playerdata/`, регионы и `server.properties` (кроме `level-name`) не читаются.
+Из zip распаковывается только нужное, во временную папку в `.cache/`.
+
+- `--out` — данные сайта в другую папку вместо `public/`; `--instance` — слои KubeJS и `sources.json` вместо `instance/`.
+- `--dry-run` — ничего не писать в Firestore и в `sources.json`; данные сайта собираются как обычно.
+- `instance/sources.json` — что импортировано, откуда, когда и sha1 каждого файла (по частям; прошлые части сохраняются).
+
+Скрипты можно вызывать и из кода (так их будет запускать сервер сборки): `buildMods({ modsDir, outDir, cacheDir })`,
+`buildKubejs({ instanceDir, outDir })`, `configDocs(папка)`, `worldDocs(мир)`, `packRelease({ manifestFile })`,
+`runPack({ input, … })`. Запись в Firestore — от имени `firebase login` или сервисным ключом, если задан
+`GOOGLE_APPLICATION_CREDENTIALS` (файл JSON ключа; в git не класть).
+
 ### Сохранение мира
 
 `npm run world -- <папка мира | world/data | tfc_calendar.dat | zip>` кладёт в `config` (scope `world`) то, что мир

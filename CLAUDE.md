@@ -43,6 +43,7 @@ npm run mods          # пересобрать библиотеку из mods/ (
 npm run serverconfig -- <zip|папка>                # конфиги сервера → Firestore config
 npm run kubejs -- <zip|папка> [--layer world]  # скрипты KubeJS → public/kubejs.json, свои предметы → kubejs-items.json
 npm run world -- <мир|world/data|tfc_calendar.dat|zip>  # сохранение мира → Firestore config (scope world)
+npm run pack -- <папка версии|zip> [--world …] [--only …] [--out …] [--dry-run]  # всё сразу + instance/sources.json
 npm run guides -- pull <папка> | push <файл.md|папка>   # гайды справочника ↔ файлы Markdown (подпись — TFC_NICK)
 ```
 
@@ -97,7 +98,11 @@ npm run guides -- pull <папка> | push <файл.md|папка>   # гайд
 | zip/папка конфигов сервера    | `serverconfig.mjs`                                  | Firestore `config/{scope}__{путь}`                                                                        |
 | разница манифестов при деплое | `pack-release.mjs` (predeploy)                       | Firestore `packUpdates/{id}`                                                                              |
 
-- Запись в Firestore из скриптов — REST от имени `firebase login` (`scripts/firestore-rest.mjs`), правила на неё не действуют.
+- Разборщики — библиотека: папки входа, выхода (вместо `public/`) и кеша передаются параметрами (`buildMods`,
+  `buildKubejs`, `configDocs`, `worldDocs`, `packRelease`, `runPack`); пути от корня репозитория — только значения
+  по умолчанию для `npm run …`. Новые пути в разборщиках — тоже параметром, не `ROOT`.
+- Запись в Firestore из скриптов — REST от имени `firebase login` или сервисного ключа (`GOOGLE_APPLICATION_CREDENTIALS`)
+  (`scripts/firestore-rest.mjs`), правила на неё не действуют.
   Этим же способом удобно читать базу из node, когда нужно найти задачу или датапак.
 - `src/lib/recipeFilter.ts`, `recipeRefs.ts` и `nbt.ts` — **без импортов, только стираемый синтаксис TS**: их запускает и сайт, и Node
   (`import '../src/lib/x.ts'` из `.mjs`, Node 24). В `tsconfig` включён `erasableSyntaxOnly` — никаких enum и parameter properties.
@@ -145,7 +150,7 @@ server/file-server/  сервер файлов для Ubuntu (Node без зав
 tools/            аддоны сборки (ee-rectifier-mod, ee-overheat-mod) — docs/addons.md; на сайте — lib/addons.ts, AddonsTab
 scripts/mcp/      MCP сборки для агента (stdio): data.mjs — слияние данных как на сайте, jars.mjs, firestore.mjs, tools.mjs
 scripts/          mods.mjs + mods/{reference,tags,botany,meals,cuisine,power,multiblocks,geo,manifest,classfile,config-defaults}.mjs, serverconfig.mjs,
-                  kubejs.mjs, pack-release.mjs; firestore-rest.mjs — общий доступ к Firestore
+                  kubejs.mjs, pack-release.mjs, pack.mjs (вся папка сборки); firestore-rest.mjs — общий доступ к Firestore
 docs/plans/       планы фич со статусами; docs/STATE.md — текущее состояние
 ```
 

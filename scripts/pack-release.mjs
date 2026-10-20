@@ -11,21 +11,17 @@
  *   … --prev <файл>                         — сравнить с локальным снимком вместо опубликованного
  *   ALLOW_MODS_DROP=1 firebase deploy      — записать, даже если в сборке 0 модов или убрано больше половины
  *                                            (без неё такой деплой останавливается: обычно это сборка без mods/)
+ * Из кода: packRelease({ manifestFile, prevFile, dryRun }) — manifestFile вместо public/pack-manifest.json.
  */
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { deployer, DOCS, ROOT, SITE, toValue, token } from './firestore-rest.mjs';
-const dryRun = process.argv.includes('--dry-run');
 const LIST_CAP = 3000;
 const CHANGELOG_CAP = 3000;
 const CHANGELOGS_TOTAL_CAP = 300_000;
 const log = (...a) => console.log('[pack-release]', ...a);
-
-if (process.env.SKIP_PACK_RELEASE) {
-  log('пропущено (SKIP_PACK_RELEASE)');
-  process.exit(0);
-}
 
 // ---------------------------------------------------------------- разница снимков
 
@@ -174,14 +170,17 @@ function assertPlausible(prev, next) {
 
 const strip = (m) => ({ id: m.id, name: m.name, version: m.version, ...(m.from ? { from: m.from } : {}) });
 
-async function main() {
-  const localFile = path.join(ROOT, 'public', 'pack-manifest.json');
-  if (!fs.existsSync(localFile)) throw new Error('нет public/pack-manifest.json — сначала npm run mods');
-  const next = JSON.parse(fs.readFileSync(localFile, 'utf8'));
+/** Записывает обновление сборки (или ничего, если сборка не изменилась); возвращает запись или null */
+export async function packRelease({
+  manifestFile = path.join(ROOT, 'public', 'pack-manifest.json'),
+  prevFile = null,
+  dryRun = false,
+} = {}) {
+  if (!fs.existsSync(manifestFile)) throw new Error(`нет ${manifestFile} — сначала npm run mods`);
+  const next = JSON.parse(fs.readFileSync(manifestFile, 'utf8'));
 
   let prev = null;
-  const prevArg = process.argv.indexOf('--prev');
-  if (prevArg > 0) prev = JSON.parse(fs.readFileSync(process.argv[prevArg + 1], 'utf8'));
+  if (prevFile) prev = JSON.parse(fs.readFileSync(prevFile, 'utf8'));
   else {
     const res = await fetch(`${SITE}/pack-manifest.json`, { cache: 'no-store' });
     const type = res.headers.get('content-type') ?? '';
@@ -215,7 +214,7 @@ async function main() {
     const d = diff(prev, next);
     if (isEmpty(d)) {
       log('сборка не изменилась');
-      return;
+      return null;
     }
     log(
       `моды +${d.mods.added.length} −${d.mods.removed.length} ~${d.mods.updated.length}; ` +
@@ -241,7 +240,7 @@ async function main() {
   if (dryRun) {
     log('--dry-run, ничего не записываю');
     console.log(JSON.stringify(record, null, 2).slice(0, 4000));
-    return;
+    return record;
   }
 
   const headers = { Authorization: `Bearer ${await token()}`, 'Content-Type': 'application/json' };
@@ -256,12 +255,21 @@ async function main() {
   if (r.status === 409) log(`запись ${id} уже есть`);
   else if (!r.ok) throw new Error(`Firestore ${r.status}: ${(await r.text()).slice(0, 300)}`);
   else log(`записано обновление ${id}`);
+  return record;
 }
 
-main().catch((e) => {
-  console.error('[pack-release]', e.message ?? e);
-  if (e.hint) console.error(`[pack-release] деплой остановлен. Обойти: ${e.hint}`);
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  const argv = process.argv.slice(2);
+  const prevAt = argv.indexOf('--prev');
+  if (process.env.SKIP_PACK_RELEASE) log('пропущено (SKIP_PACK_RELEASE)');
   else
-    console.error('[pack-release] деплой остановлен, чтобы обновление не потерялось. Пропустить: SKIP_PACK_RELEASE=1');
-  process.exit(1);
-});
+    packRelease({ prevFile: prevAt >= 0 ? argv[prevAt + 1] : null, dryRun: argv.includes('--dry-run') }).catch((e) => {
+      console.error('[pack-release]', e.message ?? e);
+      if (e.hint) console.error(`[pack-release] деплой остановлен. Обойти: ${e.hint}`);
+      else
+        console.error(
+          '[pack-release] деплой остановлен, чтобы обновление не потерялось. Пропустить: SKIP_PACK_RELEASE=1',
+        );
+      process.exit(1);
+    });
+}

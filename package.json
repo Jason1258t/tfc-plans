@@ -22,7 +22,8 @@
     "kubejs": "node scripts/kubejs.mjs",
     "world": "node scripts/world.mjs",
     "guides": "node scripts/guides.mjs",
-    "datapack:pellets": "node scripts/pellet-arc-datapack.mjs"
+    "datapack:pellets": "node scripts/pellet-arc-datapack.mjs",
+    "pack": "node scripts/pack.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
