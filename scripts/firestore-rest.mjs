@@ -22,7 +22,13 @@ export function toValue(v) {
   if (typeof v === 'number') return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
   if (typeof v === 'string') return { stringValue: v };
   if (v instanceof Date) return { timestampValue: v.toISOString() };
-  if (Array.isArray(v)) return { arrayValue: { values: v.map(toValue) } };
+  // Firestore не хранит массив прямо в массиве (списки списков бывают в TOML-конфигах): внутренний — map { __array }
+  if (Array.isArray(v))
+    return {
+      arrayValue: {
+        values: v.map((x) => (Array.isArray(x) ? { mapValue: { fields: { __array: toValue(x) } } } : toValue(x))),
+      },
+    };
   return { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, toValue(x)])) } };
 }
 
@@ -35,8 +41,11 @@ export function fromValue(v) {
   if ('timestampValue' in v) return Date.parse(v.timestampValue);
   if ('bytesValue' in v) return Buffer.from(v.bytesValue, 'base64');
   if ('arrayValue' in v) return (v.arrayValue.values ?? []).map(fromValue);
-  if ('mapValue' in v)
-    return Object.fromEntries(Object.entries(v.mapValue.fields ?? {}).map(([k, x]) => [k, fromValue(x)]));
+  if ('mapValue' in v) {
+    const f = v.mapValue.fields ?? {};
+    if (Object.keys(f).length === 1 && f.__array?.arrayValue) return fromValue(f.__array);
+    return Object.fromEntries(Object.entries(f).map(([k, x]) => [k, fromValue(x)]));
+  }
   return null;
 }
 
