@@ -1,6 +1,6 @@
 # План: программа `tfc` для ПК и сервер сборки
 
-Статус: **не начато**, только план (2026-10-20). Вбирает в себя [pack-directory.md](pack-directory.md): «одна команда
+Статус: **этап 1 готов** (2026-10-20), остальное — план. Вбирает в себя [pack-directory.md](pack-directory.md): «одна команда
 на всю папку» и «доставка папки» решаются здесь.
 
 Решения пользователя: сервер сборки — **отдельный Ubuntu-сервер** (как задуманный сервер файлов); программой
@@ -172,6 +172,13 @@ esbuild) под Windows, macOS, Linux, Node ставить не нужно. По
    `pack-release.mjs` принимают папки входа и выхода параметрами, а не от корня репозитория; `firestore-rest.mjs`
    умеет брать токен из сервисного ключа (JWT на `node:crypto`). `npm run pack -- <папка версии> [--world …]` —
    одна команда на всё (этап 1 из pack-directory). Поведение сайта не меняется.
+   **Готово (2026-10-20).** `buildMods({ modsDir, outDir, cacheDir, fresh })`, `importKubejsLayer` / `buildKubejs({ instanceDir,
+   outDir })`, `configDocs` / `importServerConfig`, `worldDocs` / `importWorld`, `packRelease({ manifestFile, prevFile })`,
+   `runPack({ input, world, only, outDir, instanceDir, cacheDir, dryRun })`; запись config — `writeConfigDocs`.
+   Токен из сервисного ключа — JWT RS256 на `node:crypto`, проверен на локальной заглушке токен-сервера (подпись,
+   поля, кеш); на настоящем ключе Google не проверялся — ключа ещё нет. Выход `npm run mods` и `npm run kubejs`
+   до и после — побайтово одинаковый (7574 файла, кроме меток времени `builtAt` / `generatedAt`), и так же — с пустым
+   кешем в отдельной папке. `--dry-run` у `pack` в Firestore не пишет, но данные сайта собирает.
 2. **Сервер сборки, хранение** (средняя). Хранилище, снимки, ключи, API без сборки данных. Проверка — локально
    (`npm run dev` без Firebase), как сервер файлов.
 3. **`tfc`: настройка, `status`, `publish`, `sync`** (большая). Заливка недостающего, синхронизация по правилам выше.
