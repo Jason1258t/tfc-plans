@@ -400,6 +400,7 @@ src/data/           CRUD + подписки (Firestore или localStorage), ж�
 src/lib/            логика: предметы, рецепты и KubeJS, датапаки, схемы .nbt, справочник, карта, Gemini, файлы
 src/components/     UI-кирпичики (ItemPicker, RecipeCatalog, KubejsConstructor, WorldMap, …)
 src/pages/          задачи, документы, схемы, датапаки, рецепты, справочник, обновления, карта
+docs/mcp.md         MCP сборки для агента: инструменты и устройство
 docs/plans/         планы крупных фич
 firestore.rules     правила доступа
 ```
