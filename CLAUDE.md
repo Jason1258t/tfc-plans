@@ -65,6 +65,15 @@ npm run pack:publish -- <папка данных> --dry-run   # что выло�
 - Код модов: `jar_find` (путь, класс через точки, glob), `jar_read` (по строкам, grep), `jar_javap` (метод).
 - Гайды: `guides_list`, `guide_search`, `guide_get` → правка → `guide_put` с `baseRevision` из `guide_get`
   (отказ, если статью изменили после чтения; подпись `Claude`, версия — в историю). Это запись в общую базу.
+- Сборка: `mods_list`, `mod_get` (версия, предметы, рецепты по статусам), `pack_updates` (история обновлений).
+- Исходники KubeJS: `kubejs_files`, `kubejs_search`, `kubejs_read` (с пометками, что разобрано как правило/рецепт/тег).
+- Книги: `books_list`, `book_search`, `book_entry` — руководство TFC (со статьями аддонов и KubeJS) и справочник IE.
+- Не предметы: `lang_search` (переводы всех jar — блоки, существа, жидкости, эффекты), `block_get`,
+  `loot_for` (что выпадает), `loot_sources` (откуда выпадает предмет).
+- Карта: `map_point` (блок ↔ широта/долгота, города, климат TFC), `map_rocks` (породы и жилы), `map_find` (место → блок).
+- Контент сайта, только чтение: `tasks_list`/`task_get`, `datapacks_list`/`datapack_get`, `kubejs_site_list`/`kubejs_site_get`,
+  `schematics_list`/`schematic_get` — тратят чтения Firestore (пишут сколько), не дёргай в цикле.
+- Инструменты раздела — `scripts/mcp/tools/<раздел>.mjs` (`export const TOOLS`), общие помощники — `fmt.mjs`.
 - grep и `unzip` — когда инструмента нет (сырьё, которого нет в данных сайта) или нужно проверить сам MCP.
   Данные MCP — это то, что собрали `npm run mods` / `kubejs`: устарели сборщики — устарел и ответ.
 - После правки `scripts/mcp/` сервер нужно перезапустить (`/mcp` в Claude Code); данные `public/` он перечитывает сам.

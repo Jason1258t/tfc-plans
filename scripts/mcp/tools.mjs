@@ -11,7 +11,6 @@ import {
   flattenTag,
   getTag,
   isActive,
-  itemName,
   items,
   meals,
   modLabel,
@@ -25,58 +24,16 @@ import {
   tagsOf,
 } from './data.mjs';
 import { FirestoreError, configDocs, guideDoc, guideDocs, writeGuide } from './firestore.mjs';
+import { clip, dateOf, nameOf, named, norm, num, page, paging, short, str, words } from './fmt.mjs';
 import { javap, jarList, jarToc, pathMatcher, readEntry, resolveJar } from './jars.mjs';
+import { TOOLS as blocksTools } from './tools/blocks.mjs';
+import { TOOLS as booksTools } from './tools/books.mjs';
+import { TOOLS as kubejsTools } from './tools/kubejs.mjs';
+import { TOOLS as mapTools } from './tools/map.mjs';
+import { TOOLS as packTools } from './tools/pack.mjs';
+import { TOOLS as siteTools } from './tools/site.mjs';
 
-const MAX = 20000;
 const NICK = 'Claude';
-
-const norm = (s) => String(s).toLowerCase().replaceAll('ё', 'е');
-const words = (q) =>
-  norm(q ?? '')
-    .split(/\s+/)
-    .filter(Boolean);
-const short = (s, n) => (s.length > n ? `${s.slice(0, n)}…` : s);
-
-function clip(text) {
-  return text.length > MAX
-    ? `${text.slice(0, MAX)}\n… обрезано: ещё ${text.length - MAX} симв. Сузьте запрос (фильтр, limit, offset).`
-    : text;
-}
-
-/** Страница списка: строка-итог + строки; страница кончается и по limit, и по объёму (MAX) — тогда «дальше» раньше */
-function page(list, args, fmt, defLimit = 20) {
-  const offset = Math.max(0, Number(args.offset ?? 0) | 0);
-  const limit = Math.min(200, Math.max(1, Number(args.limit ?? defLimit) | 0));
-  const lines = [];
-  let size = 0;
-  let end = offset;
-  for (; end < Math.min(list.length, offset + limit); end++) {
-    const part = fmt(list[end], end);
-    const add = part.reduce((n, l) => n + l.length + 1, 0);
-    if (end > offset && size + add > MAX - 300) break;
-    lines.push(...part);
-    size += add;
-  }
-  const head = !list.length
-    ? 'Ничего не найдено.'
-    : `Всего ${list.length}; показаны ${offset + 1}–${end}${end < list.length ? `; дальше: offset=${end}` : ''}.`;
-  return [head, ...lines].join('\n');
-}
-
-/** «tfc:metal/ingot/copper «Медный слиток»» — id с названием, если оно есть */
-const named = (ref) => {
-  if (ref.startsWith('#')) return ref;
-  const n = itemName(ref) ?? tags().fluids.get(ref)?.r ?? tags().fluids.get(ref)?.e;
-  return n ? `${ref} «${n}»` : ref;
-};
-
-/** Название предмета или жидкости по id, иначе пусто */
-const nameOf = (id) => {
-  const f = tags().fluids.get(id);
-  return itemName(id) ?? (f ? `${f.r ?? ''} ${f.e}` : '');
-};
-
-const dateOf = (ms) => (ms ? new Date(ms).toISOString().slice(0, 16).replace('T', ' ') : '?');
 
 // ---------------------------------------------------------------- предметы
 
@@ -619,9 +576,6 @@ async function jarJavap(a) {
 
 // ---------------------------------------------------------------- список
 
-const str = (description) => ({ type: 'string', description });
-const num = (description) => ({ type: 'integer', description });
-const paging = { limit: num('сколько записей (по умолчанию 20)'), offset: num('с какой записи (для «дальше»)') };
 const recipeOpts = {
   status: {
     type: 'string',
@@ -632,7 +586,7 @@ const recipeOpts = {
   ...paging,
 };
 
-export const TOOLS = [
+const CORE = [
   {
     name: 'items_search',
     description: 'Поиск предметов сборки по русскому/английскому названию или id. Возвращает id, названия и мод.',
@@ -839,6 +793,8 @@ export const TOOLS = [
     handler: jarJavap,
   },
 ];
+
+export const TOOLS = [...CORE, ...packTools, ...kubejsTools, ...booksTools, ...blocksTools, ...siteTools, ...mapTools];
 
 // Любой ответ — не длиннее MAX: списки и так режутся страницами, это страховка от длинных строк
 for (const t of TOOLS) {
