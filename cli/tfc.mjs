@@ -17,6 +17,7 @@ import { scanLocal } from './lib/scan.mjs';
 import { applyPlan, undoLast } from './lib/sync.mjs';
 import { ask, bold, choose, confirm, cyan, date, dim, green, interactive, mb, red, yellow } from './lib/ui.mjs';
 import { checkUpdate } from './lib/update.mjs';
+import { cleanupOld, upgrade } from './lib/upgrade.mjs';
 import { BUILD, IS_BINARY } from './lib/version.mjs';
 
 const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
@@ -45,7 +46,8 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
   tfc admin publish           показать, что изменится на сайте; --live — выложить (текущую сборку, с вопросом)
   tfc admin jobs [id|last]    задания сервера; с id — лог и итог (--follow — следить до конца)
 
-Общее: --profile <имя> — другой профиль; tfc --version — версия. Настройки: ${configFile()}`;
+Общее: --profile <имя> — другой профиль; tfc --version — версия; tfc --upgrade — обновить программу
+(--force — скачать заново, даже если версия та же). Настройки: ${configFile()}`;
 
 const opts = {
   profile: { type: 'string' },
@@ -72,6 +74,7 @@ const opts = {
   'no-follow': { type: 'boolean' },
   help: { type: 'boolean', short: 'h' },
   version: { type: 'boolean', short: 'v' },
+  upgrade: { type: 'boolean' },
 };
 
 function api(cfg) {
@@ -531,6 +534,12 @@ const COMMANDS = {
 async function main(argv) {
   const { values, positionals } = parseArgs({ args: argv, options: opts, allowPositionals: true, strict: true });
   const [cmd, ...rest] = positionals;
+  cleanupOld();
+  if (values.upgrade || cmd === 'upgrade') {
+    const r = await upgrade({ force: values.force });
+    if (!r) return console.log(green(`У вас последняя версия tfc: ${BUILD.version}.`));
+    return console.log(`${green('Обновил')} tfc: ${r.from} → ${bold(r.to)} (${r.path}).`);
+  }
   if (values.version || cmd === 'version') {
     console.log(BUILD ? `tfc ${BUILD.version}` : 'tfc из исходников (node cli/tfc.mjs) — версия не задана');
     const hint = await checkUpdate({ force: true });

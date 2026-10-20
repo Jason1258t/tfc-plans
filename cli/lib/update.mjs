@@ -17,7 +17,7 @@ const DAY = 24 * 3600 * 1000;
  * GET JSON с жёстким пределом времени. Не fetch: тот после отмены держит недоконнекченный сокет и не даёт
  * программе завершиться ещё ~10 с, а здесь сокет обрывается сразу.
  */
-function getJson(url, ms) {
+export function getJson(url, ms) {
   return new Promise((resolve, reject) => {
     const req = (url.startsWith('https:') ? https : http).get(
       url,
@@ -78,6 +78,8 @@ export async function checkUpdate({ force = false } = {}) {
   const file = cache.files?.[targetName()]?.file;
   return [
     yellow(`Вышла новая версия tfc: ${cache.version} (у вас ${BUILD.version}).`),
-    dim(`  Скачайте ${file ? `${SITE}/tfc/${file}` : `с ${SITE}/updates`} и замените им старый файл.`),
+    dim(
+      `  Обновить: tfc --upgrade (или скачайте ${file ? `${SITE}/tfc/${file}` : `с ${SITE}/updates`} и замените им старый файл).`,
+    ),
   ].join('\n');
 }
