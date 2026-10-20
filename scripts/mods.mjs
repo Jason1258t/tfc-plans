@@ -13,6 +13,9 @@
  *
  * Использование:  npm run mods          (пересобрать, используя кеш)
  *                 npm run mods -- --fresh  (скачать всё заново)
+ *
+ * Из кода: buildMods({ modsDir, outDir, cacheDir, fresh }) — папка jar, папка данных сайта (вместо public/)
+ * и кеша (вместо .cache/); по умолчанию — как у npm run mods.
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -67,15 +70,19 @@ const UI_TEXTURES = [
 ];
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CACHE = path.join(ROOT, '.cache', 'assets');
-const MODS_DIR = path.join(ROOT, 'mods');
-export const SIGNATURE_FILE = path.join(ROOT, '.cache', 'items-signature.json');
-const OUT_ICONS = path.join(ROOT, 'public', 'icons');
-const OUT_JSON = path.join(ROOT, 'public', 'items.json');
-const OUT_RECIPES = path.join(ROOT, 'public', 'recipes.json');
-const OUT_REFERENCE = path.join(ROOT, 'public', 'reference.json');
-const OUT_MANIFEST = path.join(ROOT, 'public', 'pack-manifest.json');
-const fresh = process.argv.includes('--fresh');
+export const DEFAULT_MODS = path.join(ROOT, 'mods');
+export const DEFAULT_OUT = path.join(ROOT, 'public');
+export const DEFAULT_CACHE = path.join(ROOT, '.cache');
+/** Список jar прошлой сборки — в папке кеша */
+const signatureFile = (cacheDir) => path.join(cacheDir, 'items-signature.json');
+export const SIGNATURE_FILE = signatureFile(DEFAULT_CACHE);
+/** Путь для сообщений: от корня репозитория, если внутри него */
+const shown = (file) => (file.startsWith(ROOT + path.sep) ? path.relative(ROOT, file) : file);
+
+/** Папки текущего запуска buildMods: распакованные ассеты (кеш) и иконки; fresh — не верить кешу */
+let CACHE = path.join(DEFAULT_CACHE, 'assets');
+let OUT_ICONS = path.join(DEFAULT_OUT, 'icons');
+let fresh = false;
 
 const log = (...a) => console.log('[items]', ...a);
 
@@ -143,14 +150,14 @@ function prepareMod(src) {
 }
 
 /** Список jar в mods/ с размером и датой — по нему понимаем, что сборка изменилась */
-export function modsSignature() {
-  if (!fs.existsSync(MODS_DIR)) return [];
+export function modsSignature(modsDir = DEFAULT_MODS) {
+  if (!fs.existsSync(modsDir)) return [];
   return fs
-    .readdirSync(MODS_DIR)
+    .readdirSync(modsDir)
     .filter((f) => f.endsWith('.jar'))
     .sort()
     .map((f) => {
-      const st = fs.statSync(path.join(MODS_DIR, f));
+      const st = fs.statSync(path.join(modsDir, f));
       return `${f}:${st.size}:${Math.round(st.mtimeMs)}`;
     });
 }
@@ -183,22 +190,25 @@ function mainCheckoutJars() {
  * из одной ванили и TFC, а pack-release записывает «убраны все моды». Типичный случай — деплой из git worktree,
  * где в mods/ только README. Нарочно собрать без модов: TFC_ALLOW_NO_MODS=1.
  */
-export function assertModsPresent() {
-  if (modsSignature().length || process.env.TFC_ALLOW_NO_MODS) return;
+export function assertModsPresent({ modsDir = DEFAULT_MODS, outDir = DEFAULT_OUT, cacheDir = DEFAULT_CACHE } = {}) {
+  if (modsSignature(modsDir).length || process.env.TFC_ALLOW_NO_MODS) return;
+  const MODS_DIR = modsDir;
   const why = [];
   try {
-    const prev = JSON.parse(fs.readFileSync(SIGNATURE_FILE, 'utf8'));
-    if (prev.length) why.push(`прошлая сборка здесь была из ${prev.length} jar (.cache/items-signature.json)`);
+    const prev = JSON.parse(fs.readFileSync(signatureFile(cacheDir), 'utf8'));
+    if (prev.length) why.push(`прошлая сборка здесь была из ${prev.length} jar (${shown(signatureFile(cacheDir))})`);
   } catch {
     /* ещё не собирали */
   }
   try {
-    const manifest = JSON.parse(fs.readFileSync(OUT_MANIFEST, 'utf8'));
-    if (manifest.mods?.length) why.push(`в public/pack-manifest.json ${manifest.mods.length} модов`);
+    const manifestFile = path.join(outDir, 'pack-manifest.json');
+    const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8'));
+    if (manifest.mods?.length) why.push(`в ${shown(manifestFile)} ${manifest.mods.length} модов`);
   } catch {
     /* снимка нет */
   }
-  const main = mainCheckoutJars();
+  // Основная копия репозитория — подсказка только для папки mods/ по умолчанию
+  const main = modsDir === DEFAULT_MODS ? mainCheckoutJars() : null;
   if (main?.n) why.push(`это git worktree, а в основной копии ${main.dir} лежит ${main.n} jar`);
   if (!why.length) return;
   const err = new Error(
@@ -489,8 +499,8 @@ function collectRecipes(into, dataDir, source) {
   }
 }
 
-/** public/recipes.json: [{ i: "ns:path" (= data/ns/recipe/path.json), t: тип, s: jar-источник, j: json }] */
-function writeRecipes(recipes) {
+/** recipes.json: [{ i: "ns:path" (= data/ns/recipe/path.json), t: тип, s: jar-источник, j: json }] */
+function writeRecipes(recipes, OUT_RECIPES) {
   const list = [...recipes].map(([id, r]) => ({
     i: id,
     t: typeof r.json.type === 'string' ? r.json.type : '',
@@ -503,9 +513,26 @@ function writeRecipes(recipes) {
   );
 }
 
-async function main() {
-  assertModsPresent();
+/** Собирает данные сайта из jar папки modsDir в outDir (items.json, recipes.json, icons/ …) */
+export async function buildMods({
+  modsDir = DEFAULT_MODS,
+  outDir = DEFAULT_OUT,
+  cacheDir = DEFAULT_CACHE,
+  fresh: freshRun = false,
+} = {}) {
+  assertModsPresent({ modsDir, outDir, cacheDir });
+  const MODS_DIR = modsDir;
+  CACHE = path.join(cacheDir, 'assets');
+  OUT_ICONS = path.join(outDir, 'icons');
+  fresh = freshRun;
+  const OUT_JSON = path.join(outDir, 'items.json');
+  const OUT_RECIPES = path.join(outDir, 'recipes.json');
+  const OUT_REFERENCE = path.join(outDir, 'reference.json');
+  const OUT_MANIFEST = path.join(outDir, 'pack-manifest.json');
+  // Состояние прошлого запуска в этом же процессе (другая папка модов) не должно просочиться
+  for (const m of [assetRoots, modelCache, textureIndex, copied]) m.clear();
   fs.mkdirSync(CACHE, { recursive: true });
+  fs.mkdirSync(outDir, { recursive: true });
   const vanillaDir = await prepareVanilla();
   const vanillaRoot = path.join(vanillaDir, 'assets');
   addRoot('minecraft', vanillaRoot);
@@ -519,7 +546,7 @@ async function main() {
         .filter((f) => f.endsWith('.jar'))
         .sort()
     : [];
-  if (jars.length) log(`mods/: ${jars.length} jar`);
+  if (jars.length) log(`${modsDir === DEFAULT_MODS ? 'mods/' : modsDir}: ${jars.length} jar`);
   /** Рецепты: «data/<ns>/recipe/<path>.json» → { источник, json }; поздние перекрывают ранние, как датапаки */
   const recipes = new Map();
   collectRecipes(recipes, path.join(vanillaDir, 'data'), 'minecraft');
@@ -615,13 +642,13 @@ async function main() {
   }
 
   fs.writeFileSync(OUT_JSON, JSON.stringify(items));
-  writeRecipes(recipes);
+  writeRecipes(recipes, OUT_RECIPES);
   const ref = buildReference(dataDirs, recipes, parseLooseJson, fluidNames);
   fs.writeFileSync(OUT_REFERENCE, JSON.stringify(ref));
   log(
     `справочник: ${ref.veins.length} жил, ${ref.fuels.length} топлива, ${ref.foods.length} еды, ${ref.metals.length} металлов, ${ref.tagCount} тегов — ${Math.round(fs.statSync(OUT_REFERENCE).size / 1024)}KB`,
   );
-  const tags = writeTags(dataDirs, parseLooseJson, fluidNames, path.join(ROOT, 'public', 'tags.json'));
+  const tags = writeTags(dataDirs, parseLooseJson, fluidNames, path.join(outDir, 'tags.json'));
   log(`теги: ${tags.tags} (${tags.entries} значений), жидкостей ${tags.fluids} — tags.json ${tags.kb}KB`);
   const botany = writeBotany(
     dataDirs,
@@ -629,7 +656,7 @@ async function main() {
     items,
     recipes,
     (key) => ({ en: dict.en[key], ru: dict.ru[key] }),
-    path.join(ROOT, 'public', 'botany.json'),
+    path.join(outDir, 'botany.json'),
   );
   log(
     `ботаника: культур ${botany.crops}, кустов ${botany.bushes}, деревьев ${botany.trees}, прочих ${botany.other}; ` +
@@ -641,7 +668,7 @@ async function main() {
     dataDirs.map((d) => path.join(path.dirname(d.dir), 'classes')),
     recipes,
     items,
-    path.join(ROOT, 'public', 'meals.json'),
+    path.join(outDir, 'meals.json'),
     jars.map((j) => path.join(MODS_DIR, j)),
     dataDirs,
     parseLooseJson,
@@ -650,7 +677,7 @@ async function main() {
   for (const w of meals.warnings) log(`  сборные блюда: ${w}`);
   const power = writePower(
     jars.map((j) => path.join(MODS_DIR, j)),
-    path.join(ROOT, 'public', 'power.json'),
+    path.join(outDir, 'power.json'),
     recipes,
   );
   log(`электричество: настроек EE ${power.ee}, проводов IE ${power.ieWires}`);
@@ -659,32 +686,32 @@ async function main() {
     jars.map((j) => path.join(MODS_DIR, j)),
     recipes,
     (key) => ({ en: dict.en[key], ru: dict.ru[key] }),
-    path.join(ROOT, 'public', 'multiblocks.json'),
-    path.join(ROOT, 'public', 'multiblocks'),
+    path.join(outDir, 'multiblocks.json'),
+    path.join(outDir, 'multiblocks'),
     path.join(vanillaDir, 'assets'),
   );
   log(`мультиблоки: ${multiblocks.count} — multiblocks.json ${multiblocks.kb}KB`);
   for (const w of multiblocks.warnings) log(`  мультиблоки: ${w}`);
-  const geo = writeGeo(dataDirs, parseLooseJson, path.join(ROOT, 'public'));
+  const geo = writeGeo(dataDirs, parseLooseJson, outDir);
   if (geo) log(`география: ${geo.profiles} профилей, ${geo.waypoints} городов, ${geo.maps} карт`);
   const manifest = writeManifest({
     jarPaths: jars.map((j) => path.join(MODS_DIR, j)),
     items,
     recipes,
     outFile: OUT_MANIFEST,
-    cacheDir: path.join(ROOT, '.cache'),
+    cacheDir,
   });
   log(
     `снимок сборки: ${manifest.mods.length} модов, pack-manifest.json ${Math.round(fs.statSync(OUT_MANIFEST).size / 1024)}KB`,
   );
-  fs.writeFileSync(SIGNATURE_FILE, JSON.stringify(modsSignature()));
+  fs.writeFileSync(signatureFile(cacheDir), JSON.stringify(modsSignature(modsDir)));
   const kb = Math.round(fs.statSync(OUT_JSON).size / 1024);
   log(`готово: ${items.length} предметов, ${copied.size} иконок, items.json ${kb}KB`);
 }
 
 // Запуск как скрипт (а не импорт из ensure-items)
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
-  main().catch((e) => {
+  buildMods({ fresh: process.argv.includes('--fresh') }).catch((e) => {
     console.error(e.code === 'NO_MODS' ? `[items] ${e.message}` : e);
     process.exit(1);
   });

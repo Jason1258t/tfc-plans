@@ -21,10 +21,14 @@
  * kubejs/data — обычный датапак (KubeJS грузит его вместе с остальными): его рецепты идут в каталог
  * как переопределения/добавления. Удаления KubeJS применяются и к ним, и к нашим датапакам — так же, как в игре:
  * RecipesKubeEvent.remove перебирает только рецепты из датапаков (originalRecipes), не добавленные скриптами.
+ *
+ * Из кода: importKubejsLayer(вход, слой, { instanceDir }) и buildKubejs({ instanceDir, outDir }). outDir — вместо
+ * public/: оттуда же читаются данные модов (recipes.json, reference.json, tags.json, meals.json, icons/).
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import { fileURLToPath } from 'node:url';
 import { unzipSync } from 'fflate';
 import { ROOT } from './firestore-rest.mjs';
 import { matchFilter } from '../src/lib/recipeFilter.ts';
@@ -32,14 +36,20 @@ import { recipeRefs } from '../src/lib/recipeRefs.ts';
 import { ingredientOf, skilletEntryValues } from './mods/cuisine.mjs';
 import { oreChains } from './mods/reference.mjs';
 
-const INSTANCE = path.join(ROOT, 'instance', 'kubejs');
-const OUT = path.join(ROOT, 'public', 'kubejs.json');
+export const DEFAULT_INSTANCE = path.join(ROOT, 'instance', 'kubejs');
+export const DEFAULT_OUT = path.join(ROOT, 'public');
+/** Папка слоёв (instance/kubejs) и папка данных сайта (public/) текущего запуска */
+let INSTANCE = DEFAULT_INSTANCE;
+let OUT_DIR = DEFAULT_OUT;
+/** Путь для сообщений: от корня репозитория, если внутри него */
+const shown = (file) => (file.startsWith(ROOT + path.sep) ? path.relative(ROOT, file) : file);
 const log = (...a) => console.log('[kubejs]', ...a);
 
 // ---------------------------------------------------------------- импорт слоя
 
-function importLayer(input, layer) {
-  const dest = path.join(INSTANCE, layer);
+export function importKubejsLayer(input, layer = 'pack', { instanceDir = DEFAULT_INSTANCE } = {}) {
+  if (!/^[a-z0-9_-]{1,32}$/i.test(layer)) throw new Error('--layer: латиница, цифры, _ и -');
+  const dest = path.join(instanceDir, layer);
   const files = [];
   if (fs.statSync(input).isDirectory()) {
     const walk = (dir) => {
@@ -73,7 +83,7 @@ function importLayer(input, layer) {
     fs.writeFileSync(out, f.data);
   }
   fs.writeFileSync(path.join(dest, '.source'), path.basename(input));
-  log(`слой ${layer}: ${kept.length} файлов из ${path.basename(input)} → instance/kubejs/${layer}/`);
+  log(`слой ${layer}: ${kept.length} файлов из ${path.basename(input)} → ${shown(dest)}/`);
 }
 
 // ---------------------------------------------------------------- песочница
@@ -522,7 +532,7 @@ function runStartup(layer) {
 
 /** Имена и иконки своих предметов сборки → записи библиотеки { i, e, r?, t? } */
 function libraryItems(registered) {
-  const OUT_ICONS = path.join(ROOT, 'public', 'icons-kubejs');
+  const OUT_ICONS = path.join(OUT_DIR, 'icons-kubejs');
   fs.rmSync(OUT_ICONS, { recursive: true, force: true });
   const langs = new Map();
   const lang = (layer, ns, code) => {
@@ -554,7 +564,7 @@ function libraryItems(registered) {
       fs.mkdirSync(path.dirname(target), { recursive: true });
       fs.copyFileSync(own, target);
       t = `@kubejs/${tns}/${tp}`;
-    } else if (fs.existsSync(path.join(ROOT, 'public', 'icons', tns, `${tp}.png`))) t = `${tns}/${tp}`;
+    } else if (fs.existsSync(path.join(OUT_DIR, 'icons', tns, `${tp}.png`))) t = `${tns}/${tp}`;
     out.set(it.id, { i: it.id, e: en, ...(ru && ru !== en ? { r: ru } : {}), ...(t ? { t } : {}) });
   }
   return [...out.values()];
@@ -659,7 +669,7 @@ function dataOverrides(layers) {
     // Папку «жареной» питательности называет аддон совместимости — берём её из собранного meals.json
     let cookedDir = null;
     try {
-      cookedDir = JSON.parse(fs.readFileSync(path.join(ROOT, 'public', 'meals.json'), 'utf8')).skillet?.cookedDir;
+      cookedDir = JSON.parse(fs.readFileSync(path.join(OUT_DIR, 'meals.json'), 'utf8')).skillet?.cookedDir;
     } catch {
       /* библиотека ещё не собрана */
     }
@@ -686,7 +696,7 @@ function dataOverrides(layers) {
 function oreOverrides(catalog, recipes, rules) {
   const read = (name) => {
     try {
-      return JSON.parse(fs.readFileSync(path.join(ROOT, 'public', name), 'utf8'));
+      return JSON.parse(fs.readFileSync(path.join(OUT_DIR, name), 'utf8'));
     } catch {
       return null;
     }
@@ -759,11 +769,16 @@ function unhandledData(layer) {
 
 // ---------------------------------------------------------------- main
 
-function analyze() {
+/** Разбор всех слоёв instanceDir → kubejs.json, kubejs-data.json, kubejs-items.json, icons-kubejs/ в outDir */
+export function buildKubejs({ instanceDir = DEFAULT_INSTANCE, outDir = DEFAULT_OUT } = {}) {
+  INSTANCE = instanceDir;
+  OUT_DIR = outDir;
   if (!fs.existsSync(INSTANCE)) {
-    log('instance/kubejs нет — импортируйте папку: npm run kubejs -- <zip|папка>');
+    log(`${shown(INSTANCE)} нет — импортируйте папку: npm run kubejs -- <zip|папка>`);
     return;
   }
+  fs.mkdirSync(OUT_DIR, { recursive: true });
+  const OUT = path.join(OUT_DIR, 'kubejs.json');
   const layers = fs
     .readdirSync(INSTANCE, { withFileTypes: true })
     .filter((e) => e.isDirectory())
@@ -823,7 +838,7 @@ function analyze() {
   const overrides = dataOverrides(layers);
   log(
     `данные kubejs/data: еды ${overrides.data.foods.length}, металлов ${overrides.data.metals.length}, продуктов сковороды ${overrides.data.skillet.entries.length}, ` +
-      `«жареной» питательности ${overrides.data.skillet.cooked.length} → public/kubejs-data.json`,
+      `«жареной» питательности ${overrides.data.skillet.cooked.length} → ${shown(path.join(OUT_DIR, 'kubejs-data.json'))}`,
   );
   for (const n of overrides.notes) log(`  ${n}`);
   for (const layer of layers)
@@ -831,7 +846,7 @@ function analyze() {
       log(`  сборка переопределяет данные, которые сайт читает только из модов — ${w}`);
 
   // Сводка по каталогу: сколько рецептов сборки задевают удаления (сайт считает то же самое у себя)
-  const catalogFile = path.join(ROOT, 'public', 'recipes.json');
+  const catalogFile = path.join(OUT_DIR, 'recipes.json');
   if (fs.existsSync(catalogFile)) {
     const catalog = JSON.parse(fs.readFileSync(catalogFile, 'utf8'));
     const ores = oreOverrides(catalog, recipes, rules);
@@ -857,32 +872,31 @@ function analyze() {
     log(`каталог: удалено KubeJS ${removed} рецептов из ${original.length}, неоднозначно ${maybe}`);
   }
 
-  fs.writeFileSync(path.join(ROOT, 'public', 'kubejs-data.json'), JSON.stringify(overrides.data));
+  fs.writeFileSync(path.join(OUT_DIR, 'kubejs-data.json'), JSON.stringify(overrides.data));
 
   const lib = libraryItems(registered);
-  fs.writeFileSync(path.join(ROOT, 'public', 'kubejs-items.json'), JSON.stringify(lib));
+  fs.writeFileSync(path.join(OUT_DIR, 'kubejs-items.json'), JSON.stringify(lib));
   log(
     `свои предметы сборки: ${lib.length}, с иконкой ${lib.filter((i) => i.t).length}, ` +
-      `с русским названием ${lib.filter((i) => i.r).length} → public/kubejs-items.json`,
+      `с русским названием ${lib.filter((i) => i.r).length} → ${shown(path.join(OUT_DIR, 'kubejs-items.json'))}`,
   );
   fs.writeFileSync(
     OUT,
     JSON.stringify({ generatedAt: Date.now(), layers: layerInfo, rules, recipes, tags, items: registered, errors }),
   );
-  log(`записан public/kubejs.json (${(fs.statSync(OUT).size / 1024).toFixed(0)} КБ)`);
+  log(`записан ${shown(OUT)} (${(fs.statSync(OUT).size / 1024).toFixed(0)} КБ)`);
 }
 
-const argv = process.argv.slice(2);
-try {
-  const layerAt = argv.indexOf('--layer');
-  const layer = layerAt >= 0 ? argv[layerAt + 1] : 'pack';
-  const input = argv.find((a, i) => !a.startsWith('--') && argv[i - 1] !== '--layer');
-  if (input) {
-    if (!/^[a-z0-9_-]{1,32}$/i.test(layer)) throw new Error('--layer: латиница, цифры, _ и -');
-    importLayer(input, layer);
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  const argv = process.argv.slice(2);
+  try {
+    const layerAt = argv.indexOf('--layer');
+    const layer = layerAt >= 0 ? argv[layerAt + 1] : 'pack';
+    const input = argv.find((a, i) => !a.startsWith('--') && argv[i - 1] !== '--layer');
+    if (input) importKubejsLayer(input, layer);
+    buildKubejs();
+  } catch (e) {
+    console.error('[kubejs]', e.message ?? e);
+    process.exit(1);
   }
-  analyze();
-} catch (e) {
-  console.error('[kubejs]', e.message ?? e);
-  process.exit(1);
 }
