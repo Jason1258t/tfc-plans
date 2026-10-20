@@ -46,23 +46,8 @@ systemctl daemon-reload
 systemctl enable tfc-files >/dev/null
 systemctl restart tfc-files
 
-# HTTPS через Caddy
-if [ -n "$DOMAIN" ]; then
-  if ! command -v caddy >/dev/null; then
-    echo "→ Ставлю Caddy"
-    apt-get install -y debian-keyring debian-archive-keyring apt-transport-https curl gnupg
-    curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/gpg.key | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-    curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt > /etc/apt/sources.list.d/caddy-stable.list
-    apt-get update
-    apt-get install -y caddy
-  fi
-  sed "s|^DOMAIN {|$DOMAIN {|" "$SRC/deploy/Caddyfile" > /etc/caddy/Caddyfile
-  systemctl reload caddy || systemctl restart caddy
-  if command -v ufw >/dev/null && ufw status | grep -q active; then
-    ufw allow 80/tcp >/dev/null
-    ufw allow 443/tcp >/dev/null
-  fi
-fi
+# HTTPS через Caddy (свой блок в /etc/caddy/conf.d — чтобы рядом мог стоять сервер сборки)
+[ -n "$DOMAIN" ] && bash "$SRC/../common/caddy-site.sh" tfc-files "$SRC/deploy/Caddyfile" "$DOMAIN"
 
 sleep 1
 systemctl --no-pager --lines=5 status tfc-files || true
