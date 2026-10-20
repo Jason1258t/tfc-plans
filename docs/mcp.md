@@ -16,7 +16,9 @@ MCP-сервер сборки — локальная программа, чер�
   тоже без зависимостей.
 - Firestore читается от имени `firebase login` или сервисного ключа (`GOOGLE_APPLICATION_CREDENTIALS`), через
   `scripts/firestore-rest.mjs`. Без входа работает всё, кроме конфигов, гайдов, обновлений сборки и контента сайта.
-- `javap` для `jar_javap` берётся из системного JDK.
+- `javap` для `jar_javap` берётся из системного JDK; декомпилятор для `decompile` — Vineflower из кеша Gradle
+  (`~/.gradle/caches/…/org.vineflower`, кладёт сборка аддона) или `TFC_DECOMPILER`, Java — JDK 21 из
+  `~/.gradle/local-tools/jdk21` или системная.
 - **После правки кода в `scripts/mcp/`** сервер нужно перезапустить: `/mcp` в терминальном Claude Code или новая
   сессия в приложении. Данные (`public/`, jar, KubeJS) он перечитывает сам, когда файлы меняются.
 
@@ -29,7 +31,8 @@ MCP-сервер сборки — локальная программа, чер�
 | Предметы, рецепты, теги, справочник, манифест модов | `public/*.json` | `npm run mods` |
 | Правила и рецепты KubeJS, `kubejs/data` | `public/kubejs.json`, `kubejs-data.json` | `npm run kubejs` |
 | Исходники KubeJS | `instance/kubejs/<слой>/` | `npm run pack:fetch -- --kubejs` |
-| Код модов, книги, переводы, таблицы добычи | `mods/*.jar` | `npm run pack:fetch` |
+| Код модов, книги, переводы, таблицы добычи | `mods/*.jar` (и вложенные jar-in-jar) | `npm run pack:fetch` |
+| Код и исходники Minecraft + NeoForge (имена Mojang) | `tools/<аддон>/build/moddev/artifacts/neoforge-*.jar`, `-sources.jar` | сборка аддона (`./gradlew build`, docs/addons.md) |
 | Переводы ванили | `.cache/assets/minecraft-1.21.1/` | `npm run mods` (кладёт в кеш) |
 | Ресурспаки | `instance/resourcepacks/` | `npm run pack:fetch` |
 | Конфиги сервера и мира | Firestore `config` | `npm run serverconfig`, `npm run world` |
@@ -49,10 +52,12 @@ MCP-сервер сборки — локальная программа, чер�
 | `TFC_INSTANCE_DIR` | `<корень>/instance` |
 | `TFC_KUBEJS_DIR` | `<корень>/instance/kubejs` |
 | `TFC_VANILLA_DIR` | `<корень>/.cache/assets/minecraft-1.21.1` |
+| `TFC_PLATFORM_JAR` / `TFC_PLATFORM_SOURCES` | самый новый `neoforge-X.jar` / `-sources.jar` в `tools/*/build/moddev/artifacts` |
+| `TFC_DECOMPILER` | самый новый Vineflower в кеше Gradle |
 
 ## Инструменты
 
-Всего 40. Звёздочка — обязательный параметр. У списков есть `limit` и `offset`: ответ пишет «дальше: offset=…».
+Всего 49. Звёздочка — обязательный параметр. У списков есть `limit` и `offset`: ответ пишет «дальше: offset=…».
 
 ### Предметы, рецепты, теги
 
@@ -103,11 +108,43 @@ MCP-сервер сборки — локальная программа, чер�
 
 | Инструмент | Что делает |
 | --- | --- |
-| `jar_find(pattern*, jar)` | файлы и классы в jar: часть пути, класс через точки или glob (`data/tfc/**/*.json`) |
+| `jar_find(pattern*, jar, nested)` | файлы и классы в jar: часть пути, класс через точки или glob (`data/tfc/**/*.json`) |
 | `jar_read(jar*, path*, grep)` | текстовый файл из jar по строкам |
-| `jar_javap(jar*, class*, method)` | байткод класса или одного метода |
+| `jar_javap(class*, jar, method)` | байткод класса или одного метода; без `jar` класс находится по индексу |
 
-`jar` — имя файла, его часть или id мода.
+`jar` — имя файла, его часть или id мода; вложенный — `<jar>!<путь>` (или однозначная часть имени), Minecraft +
+NeoForge — `minecraft`.
+
+### Отладка сборки: код модов, миксины, зависимости, логи
+
+Индекс классов — все jar `mods/`, их вложенные библиотеки (jar-in-jar по `META-INF/jarjar/metadata.json`, как у
+загрузчика, и вложенные во вложенные) и Minecraft + NeoForge с именами Mojang из кеша сборки аддона. Строится в
+памяти за ~3,5 с при первом запросе (~75 тыс. классов), потом пересобирается только по изменившимся jar. Разбор
+.class — свой (`bytecode.mjs`), без JDK.
+
+| Инструмент | Что делает |
+| --- | --- |
+| `class_find(query*, jar, kind, mixin, platform)` | классы по части имени, полному имени или glob (`*Furnace*`): вид, родитель, jar и мод, у миксинов — цели |
+| `class_info(class*, jar, members, synthetic)` | класс по байткоду: предки с модами, интерфейсы, аннотации, поля с константами, методы с сигнатурами и строками исходника (`:66–89` — для стека краша), миксины на класс, другие jar с тем же классом |
+| `class_hierarchy(class*, direction, depth, platform)` | предки и все интерфейсы; дерево наследников и реализаций по всей сборке |
+| `code_refs(target*, kind, jar, subtypes, platform)` | кто использует — с методом и строкой: класс (`extends`, `new`, вызовы, сигнатуры, аннотации и цели миксинов), метод/поле (`Owner#name`, `*#name`; `subtypes` — вызовы через наследников), строку (`"tfc:…"`, ключ конфига). ~2–6 с на сборку |
+| `mixins(target, method, class, mod, platform)` | `target` — миксины на класс по методам (`@Inject`/`@Redirect`/`@Overwrite`/MixinExtras, `at`, priority, конфиг) и возможные конфликты; `class` — один миксин; `mod` — миксины и конфиги мода; без параметров — обзор: цели без класса, необъявленные конфиги, классы под миксинами многих модов |
+| `decompile(class*, jar, method, grep)` | исходник: моды — Vineflower (кеш `.cache/mcp/decompile`, ~1–4 с первый раз), Minecraft — `-sources.jar`; `method` — только метод |
+| `jar_grep(query*, regex, path, jar, nested, context)` | текст в файлах jar (json, toml, lang, mixins.json, data/, assets/), без классов |
+| `mods_check(mod, neoforge, minecraft, side)` | зависимости по `neoforge.mods.toml` всех jar и вложенных: нет мода, не та версия, несовместимые, мод в двух jar, одинаковые классы в разных jar, минимальный NeoForge; `mod` — об одном моде и кто от него зависит |
+| `log_analyze(path, text, level, query)` | лог или краш-репорт (`latest.log`, `crash-*.txt`, `.gz`, папка игры — берёт свежий; или текст стека): ошибки без повторов, стек → мод, обработчики миксинов → мод, расшифровка `NoSuchMethodError`, нет класса, миксин не применился, нет зависимости, битые рецепты и скрипты KubeJS. IP игроков скрыты |
+
+Что сверено с кодом, а не взято по памяти:
+
+- `mods_check` повторяет FML 4.0.42 (`ModSorter.verifyDependencyVersions`, `VersionSupportMatrix`): зависимости
+  другой стороны не проверяются, `optional` проверяется только если мод стоит, `discouraged` — ошибка в логе без
+  остановки; на Minecraft 1.21.1 зависимость засчитывается, если диапазон включает `1.21` (для `minecraft`) или
+  `21.0.166` (для `neoforge`) — поэтому JEI с `[1.21, 1.21.1)` работает. `dependencyOverrides` из `config/fml.toml`
+  не учтены.
+- Миксины (Mixin 0.8.7): цели без класса — только WARN в логе, миксин пропускается (`@Pseudo` — тихо);
+  ошибка применения (инжект не нашёл метод) в конфиге `required` — краш, иначе WARN (`MixinProcessor`).
+- Исходники Minecraft — той версии NeoForge, что в кеше аддона (сейчас 21.1.219); номера строк Minecraft в
+  стеке игры могут не совпасть. У классов модов номера строк — из байткода, они совпадают со стеком.
 
 ### Книги модов
 
@@ -189,10 +226,12 @@ scripts/mcp/
   tools.mjs         базовые инструменты (предметы, рецепты, теги, справочник, конфиги, гайды, jar) и общий список
   fmt.mjs           общее: page (страницы), clip, named/nameOf (id с названием), words/norm, схемы str/num/paging
   data.mjs          данные public/: слияние модов и KubeJS, как на сайте; кеш по времени изменения файла
-  jars.mjs          оглавление и чтение jar без распаковки, javap
+  jars.mjs          оглавление и чтение jar без распаковки (и вложенных, и Minecraft + NeoForge), javap
+  bytecode.mjs      разбор .class: аннотации, номера строк, ссылки из инструкций, сигнатуры текстом
+  code-index.mjs    индекс классов, цели миксинов, neoforge.mods.toml (свой мини-TOML), версии как в Maven/FML
   firestore.mjs     REST к Firestore: api, listAll, cached; конфиги, гайды
-  tools/<раздел>.mjs  инструменты раздела: pack, kubejs, books (+books-index), blocks (+blocks-data),
-                      site, map (+map-climate, map-png)
+  tools/<раздел>.mjs  инструменты раздела: code (классы, миксины, декомпиляция, зависимости), logs,
+                      pack, kubejs, books (+books-index), blocks (+blocks-data), site, map (+map-climate, map-png)
 ```
 
 Логика слияния данных повторяет сайт (`src/lib/items.ts`, `recipes.ts`, `tags.ts`, `reference.ts`, `meals.ts`):
