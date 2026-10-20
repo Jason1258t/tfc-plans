@@ -84,6 +84,9 @@ ${body}
 }
 
 /** Имя файла скрипта — латиницей (KubeJS грузит любые, но так проще на сервере) */
+/** Имя файла скрипта на сайте — то же условие, что в правилах Firestore (kubejsScripts) */
+export const SCRIPT_FILE_RE = /^[a-z0-9_][a-z0-9_.-]{0,79}\.js$/;
+
 export const scriptFileName = (base: string) =>
   `${
     base

@@ -1,8 +1,13 @@
-import { Check, Copy, Download, FilePlus2, ShieldOff, Wand2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Check, Copy, Download, FilePlus2, Save, ShieldOff, Wand2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useData } from '../data/DataContext';
+import { kubejsScriptsStore } from '../data/store';
 import { filterToJs } from '../lib/recipeFilter';
 import { kubejsHits, ruleIsIdOnly, type KjsRule } from '../lib/recipes';
 import { kubejsScript, liftPatch, scriptFileName, targetFromJson } from '../lib/kubejsFix';
+import { downloadScript, freeScriptName } from '../lib/kubejsScripts';
+import type { KubejsScript } from '../types';
 import { Modal } from './Modal';
 import './KubejsConstructor.css';
 
@@ -35,17 +40,6 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-function downloadText(text: string, name: string) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/javascript' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
-}
-
 /**
  * Рецепт удаляется скриптом KubeJS — два пути:
  * 1) снять ограничение: готовая правка скрипта сборки (строку удалить или добавить в фильтр not: { id });
@@ -64,6 +58,36 @@ export function KubejsConstructor({ recipeId, json, rules, namespace, onNewEntry
     [rules, newId, json, idValid],
   );
   const script = kubejsScript([{ id: newId, json }], `Рецепт ${recipeId} без удаления KubeJS`);
+  const fileName = scriptFileName(newId.split(':')[1] ?? '');
+
+  const { nick } = useData();
+  const [scripts, setScripts] = useState<KubejsScript[] | null>(null);
+  useEffect(() => kubejsScriptsStore.subscribe(setScripts), []);
+  /** Сохранённый на сайте скрипт: id и имя файла */
+  const [saved, setSaved] = useState<{ id: string; fileName: string } | null>(null);
+
+  /** В коллекцию скриптов сайта; файл с тем же именем — заменить текст или сохранить под новым именем */
+  const saveScript = async () => {
+    if (!scripts) return;
+    const same = scripts.find((s) => s.fileName === fileName);
+    if (
+      same &&
+      confirm(`На сайте уже есть ${fileName} — заменить его текст? «Отмена» — сохранить под другим именем.`)
+    ) {
+      await kubejsScriptsStore.update(same.id, { text: script, updatedBy: nick });
+      setSaved({ id: same.id, fileName });
+      return;
+    }
+    const name = freeScriptName(fileName, scripts);
+    const id = await kubejsScriptsStore.add({
+      fileName: name,
+      text: script,
+      install: false,
+      author: nick,
+      updatedBy: nick,
+    });
+    setSaved({ id, fileName: name });
+  };
 
   return (
     <Modal onClose={onClose} title="Рецепт режет KubeJS" wide>
@@ -180,14 +204,25 @@ export function KubejsConstructor({ recipeId, json, rules, namespace, onNewEntry
             </p>
           </div>
           <CopyButton text={script} />
-          <button
-            className="btn"
-            disabled={!idValid}
-            onClick={() => downloadText(script, scriptFileName(newId.split(':')[1] ?? ''))}
-          >
+          <button className="btn" disabled={!idValid} onClick={() => downloadScript(script, fileName)}>
             <Download size={14} /> .js
           </button>
+          <button
+            className="btn"
+            disabled={!idValid || !scripts}
+            onClick={saveScript}
+            title="Сохранить в «Скрипты KubeJS» на сайте — оттуда его поставит программа tfc"
+          >
+            <Save size={14} /> На сайт
+          </button>
         </div>
+        {saved && (
+          <p className="kjs-ok small">
+            Сохранён как <code>{saved.fileName}</code> —{' '}
+            <Link to={`/datapacks?script=${saved.id}`}>открыть в «Скриптах KubeJS»</Link>. Чтобы программа tfc поставила
+            его на сервер, отметьте там «Ставить на сервер».
+          </p>
+        )}
         <pre className="kjs-script">{script}</pre>
       </section>
     </Modal>
