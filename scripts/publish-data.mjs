@@ -22,7 +22,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DOCS, fromValue, SITE, token, writeConfigDocs } from './firestore-rest.mjs';
-import { currentRelease, deploy, hostingFile, versionFiles } from './hosting-rest.mjs';
+import { currentRelease, deploy, gzipWithHash, hostingFile, versionFiles } from './hosting-rest.mjs';
 import { packRelease } from './pack-release.mjs';
 
 /** Файлы, где меняется только метка времени при каждой сборке */
@@ -144,10 +144,11 @@ export async function publishData({ dataDir, dryRun = false, message = null, log
   for (const rel of files) {
     const p = `/${rel}`;
     const buf = fs.readFileSync(path.join(dataDir, rel));
-    const { gz, hash } = hostingFile(buf);
-    let h = hash;
+    const { gz, hash, hashes } = hostingFile(buf);
     const pub = published.get(p);
-    if (pub && pub !== hash && STAMPS[rel]) {
+    // Тот же файл, сжатый на другой системе, — тот же (на хостинге остаётся прежний вариант)
+    let h = pub && hashes.has(pub) ? pub : hash;
+    if (pub && pub !== h && STAMPS[rel]) {
       const r = await fetch(`${SITE}${p}`, { cache: 'no-store' });
       if (r.ok && sameExceptStamp(buf.toString('utf8'), await r.text(), STAMPS[rel])) {
         h = pub; // на хостинге остаётся прежний файл
@@ -203,7 +204,7 @@ export async function publishData({ dataDir, dryRun = false, message = null, log
     sourceVersion: release.version.name,
     roots,
     files: local,
-    getGz: (p) => hostingFile(fs.readFileSync(path.join(dataDir, p.slice(1)))).gz,
+    getGz: (p, h) => gzipWithHash(fs.readFileSync(path.join(dataDir, p.slice(1))), h),
     message: message ?? 'сервер сборки: данные сборки',
     log: (m) => say(`hosting: ${m}`),
   });

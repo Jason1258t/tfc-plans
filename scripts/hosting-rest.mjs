@@ -3,7 +3,9 @@
  * сервисным ключом. Токен — тот же, что для Firestore (scripts/firestore-rest.mjs: сервисный ключ или firebase login).
  *
  * Хеш файла у Hosting — sha256 от gzip (уровень 9) содержимого, как у firebase CLI: проверено, что для всех 7574
- * файлов данных он совпадает с опубликованным. Поэтому одинаковые файлы видны без скачивания.
+ * файлов данных он совпадает с опубликованным. Поэтому одинаковые файлы видны без скачивания. Байт «ОС» в заголовке
+ * gzip у Node зависит от системы (macOS — 19, Linux — 3; сжатые данные одинаковые — проверено на Node 22 и 24),
+ * поэтому сравниваем со всеми вариантами заголовка (hashes).
  *
  * Выкладка: versions:clone текущего релиза без папок данных → populateFiles (все файлы данных, по 1000) →
  * загрузка только тех, чьих хешей у Hosting нет → status FINALIZED → releases.create.
@@ -15,10 +17,29 @@ import { PROJECT, token } from './firestore-rest.mjs';
 export const HOSTING_API = process.env.TFC_HOSTING_API ?? 'https://firebasehosting.googleapis.com/v1beta1';
 export const SITE_ID = process.env.TFC_HOSTING_SITE ?? PROJECT;
 
-/** gzip как у firebase CLI и sha256 от него */
+const OS_BYTES = [3, 19, 0, 7, 11, 255]; // Unix, macOS, FAT, старый Mac, NTFS, неизвестно
+
+/** gzip как у firebase CLI и sha256 от него; hashes — хеш при каждом варианте байта ОС → этот байт */
 export function hostingFile(buf) {
   const gz = zlib.gzipSync(buf, { level: 9 });
-  return { gz, hash: createHash('sha256').update(gz).digest('hex') };
+  const hash = createHash('sha256').update(gz).digest('hex');
+  const hashes = new Map([[hash, gz[9]]]);
+  for (const os of OS_BYTES) {
+    if (os === gz[9]) continue;
+    const v = Buffer.from(gz);
+    v[9] = os;
+    hashes.set(createHash('sha256').update(v).digest('hex'), os);
+  }
+  return { gz, hash, hashes };
+}
+
+/** gzip с нужным хешем (вариант байта ОС) — если Hosting попросит загрузить уже опубликованный вариант */
+export function gzipWithHash(buf, want) {
+  const { gz, hashes } = hostingFile(buf);
+  if (!hashes.has(want)) return gz;
+  const v = Buffer.from(gz);
+  v[9] = hashes.get(want);
+  return v;
 }
 
 async function call(method, url, body, { raw = false } = {}) {
@@ -77,8 +98,8 @@ async function waitOperation(op, log) {
 }
 
 /**
- * Выкладка. files — Map путь («/items.json») → { hash, gz? } (gz нужен только тем, что придётся загрузить —
- * функция getGz(path) отдаёт его по запросу). roots — что выкинуть из копии текущей версии.
+ * Выкладка. files — Map путь («/items.json») → { hash }; gzip тех, что придётся загрузить, отдаёт getGz(путь, хеш).
+ * roots — что выкинуть из копии текущей версии.
  * Возвращает { version, release, uploaded, populated }.
  */
 export async function deploy({ sourceVersion, roots, files, getGz, message, site = SITE_ID, log = () => {} }) {
@@ -109,7 +130,7 @@ export async function deploy({ sourceVersion, roots, files, getGz, message, site
     for (let h = queue.shift(); h; h = queue.shift()) {
       const p = byHash.get(h);
       if (!p) throw new Error(`Hosting просит хеш ${h}, которого нет среди файлов`);
-      await call('POST', `${uploadUrl}/${h}`, await getGz(p), { raw: true });
+      await call('POST', `${uploadUrl}/${h}`, await getGz(p, h), { raw: true });
       uploaded++;
       if (uploaded % 200 === 0) log(`загружено ${uploaded} из ${required.size}`);
     }

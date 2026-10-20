@@ -45,6 +45,8 @@ npm run kubejs -- <zip|папка> [--layer world]  # скрипты KubeJS → 
 npm run world -- <мир|world/data|tfc_calendar.dat|zip>  # сохранение мира → Firestore config (scope world)
 npm run pack -- <папка версии|zip> [--world …] [--only …] [--out …] [--dry-run]  # всё сразу + instance/sources.json
 npm run guides -- pull <папка> | push <файл.md|папка>   # гайды справочника ↔ файлы Markdown (подпись — TFC_NICK)
+npm run pack:fetch [-- --kubejs] [--data|--data-only]  # текущая сборка с сервера сборки → instance/pack/ + mods/ (и данные)
+npm run pack:publish -- <папка данных> --dry-run   # что выложилось бы на сайт (Hosting по разнице, config, packUpdates)
 ```
 
 Тестов нет. Проверка — руками в браузере (см. ниже) и разовыми node-скриптами в scratchpad.
@@ -178,6 +180,8 @@ docs/plans/       планы фич со статусами; docs/STATE.md — �
     берутся из `public/` основной копии, jar не нужны;
   - данные модов менялись (`scripts/mods/…`) — сначала `ln -s /Users/ivan/vscodeProjects/tfc-taskmanager/mods/*.jar mods/`,
     потом обычный деплой.
+  - jar нет, а в `.env.local` есть `TFC_PACK_URL` / `TFC_PACK_TOKEN` — данные модов текущего снимка сборка сайта
+    берёт с сервера сборки (только изменённые файлы).
   Остальное (`.env.local`, аддоны, ресурспаки, разбор KubeJS) сборка в worktree сама берёт из основной копии.
   Без jar и без флага сборка останавливается; `pack-release` — при 0 модов или потере больше половины
   (обход — `TFC_ALLOW_NO_MODS=1` и `ALLOW_MODS_DROP=1`, только если моды правда убраны); `predeploy-check` — если
