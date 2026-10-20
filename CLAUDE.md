@@ -49,6 +49,24 @@ npm run guides -- pull <папка> | push <файл.md|папка>   # гайд
 
 Тестов нет. Проверка — руками в браузере (см. ниже) и разовыми node-скриптами в scratchpad.
 
+## MCP сборки (`tfc-pack`)
+
+Локальный MCP-сервер `scripts/mcp/` (stdio, подключён в `.mcp.json`; в worktree данные берёт из `public/` и `mods/`
+основной копии). **Для игровых фактов и гайдов сначала он, а не grep** по `public/recipes.json` (7,7 МБ), `items.json`,
+`tags.json` и не распаковка jar: ответы короткие, постраничные и уже учитывают KubeJS (удаления, replaceInput/Output,
+рецепты скриптов, kubejs/data), вложенные теги и слои конфигов.
+
+- Предметы и рецепты: `items_search`, `item_get`, `recipes_for` (как получить), `recipes_using` (где нужен, в т. ч.
+  через теги), `recipe_get` (статус, какое правило KubeJS удаляет/меняет — файл:строка, JSON).
+- Теги: `tag_members`, `tags_of`. Справочник: `reference_get` (руды, плавка, металлы, топливо, еда, ботаника, блюда,
+  сковорода, мультиблоки, power). Настройки: `config_get` (мир > serverconfig > config > значение из кода; только чтение).
+- Код модов: `jar_find` (путь, класс через точки, glob), `jar_read` (по строкам, grep), `jar_javap` (метод).
+- Гайды: `guides_list`, `guide_search`, `guide_get` → правка → `guide_put` с `baseRevision` из `guide_get`
+  (отказ, если статью изменили после чтения; подпись `Claude`, версия — в историю). Это запись в общую базу.
+- grep и `unzip` — когда инструмента нет (сырьё, которого нет в данных сайта) или нужно проверить сам MCP.
+  Данные MCP — это то, что собрали `npm run mods` / `kubejs`: устарели сборщики — устарел и ответ.
+- После правки `scripts/mcp/` сервер нужно перезапустить (`/mcp` в Claude Code); данные `public/` он перечитывает сам.
+
 ## Проверка в браузере
 
 - Сервер превью: конфигурация **`dev-alt`** (порт 5176) из `.claude/launch.json`. Порт 5173 часто занят другой сессией;
@@ -130,6 +148,7 @@ src/components/guides/  гайды справочника: GuidesSection (кар
                   GuideBody (Markdown + {{…}} + виджеты «::имя»), powerWidgets — рисунки раздела; формат — docs/plans/guides.md
 server/file-server/  сервер файлов для Ubuntu (Node без зависимостей); переезд — scripts/files-migrate.mjs
 tools/            аддоны сборки (ee-rectifier-mod, ee-overheat-mod) — docs/addons.md; на сайте — lib/addons.ts, AddonsTab
+scripts/mcp/      MCP сборки для агента (stdio): data.mjs — слияние данных как на сайте, jars.mjs, firestore.mjs, tools.mjs
 scripts/          mods.mjs + mods/{reference,tags,botany,meals,cuisine,power,multiblocks,geo,manifest,classfile,config-defaults}.mjs, serverconfig.mjs,
                   kubejs.mjs, pack-release.mjs, pack.mjs (вся папка сборки); firestore-rest.mjs — общий доступ к Firestore
 docs/plans/       планы фич со статусами; docs/STATE.md — текущее состояние

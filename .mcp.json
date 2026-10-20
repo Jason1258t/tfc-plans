@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "tfc-pack": {
+      "command": "node",
+      "args": ["scripts/mcp/server.mjs"]
+    }
+  }
+}
