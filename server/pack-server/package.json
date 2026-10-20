@@ -1,0 +1,15 @@
+{
+  "name": "tfc-pack-server",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Сервер сборки «TFC Планы»: снимки сборки (моды, конфиги, KubeJS, ресурспаки) и раздача программе tfc",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "DATA_DIR=./data node --watch server.mjs",
+    "key": "DATA_DIR=./data node cli.mjs key"
+  }
+}

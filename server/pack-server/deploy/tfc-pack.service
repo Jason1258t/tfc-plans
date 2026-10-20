@@ -1,0 +1,30 @@
+[Unit]
+Description=Сервер сборки «TFC Планы»
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tfcpack
+Group=tfcpack
+EnvironmentFile=/etc/tfc-pack.env
+WorkingDirectory=/opt/tfc-pack
+ExecStart=/usr/bin/node /opt/tfc-pack/server.mjs
+Restart=on-failure
+RestartSec=3
+
+# Песочница: писать можно только в папку данных
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+ReadWritePaths=/var/lib/tfc-pack
+
+[Install]
+WantedBy=multi-user.target
