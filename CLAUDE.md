@@ -42,7 +42,7 @@ npx firebase deploy --only hosting           # сборка + pack-release + в�
 npm run deploy:site   # то же без пересборки данных модов (jar не нужны) — для правок сайта, в т. ч. из worktree
 npx firebase deploy --only firestore:rules
 npm run mods          # пересобрать библиотеку из mods/ (долго, кеш в .cache/)
-npm run serverconfig -- <zip|папка>                # конфиги сервера → Firestore config
+npm run serverconfig -- <zip|папка>                # конфиги сервера (TOML и <мод>.json5) → Firestore config
 npm run kubejs -- <zip|папка> [--layer world]  # скрипты KubeJS → public/kubejs.json, свои предметы → kubejs-items.json
 npm run world -- <мир|world/data|tfc_calendar.dat|zip>  # сохранение мира → Firestore config (scope world)
 npm run pack -- <папка версии|zip> [--world …] [--only …] [--out …] [--dry-run]  # всё сразу + instance/sources.json

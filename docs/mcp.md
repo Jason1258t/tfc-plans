@@ -86,7 +86,7 @@ MCP-сервер сборки — локальная программа, чер�
 | Инструмент | Что делает |
 | --- | --- |
 | `reference_get(section, filter, id)` | разделы справочника сайта: `ores`, `smelt`, `chains`, `metals`, `fuels`, `liquid`, `foods`, `botany`, `greenhouse`, `meals`, `skillet`, `multiblocks`, `power` (с поправками `kubejs/data`) |
-| `config_get(file, key, mod)` | настройки модов по слоям: сохранение мира > `serverconfig/` > `config/` сборки > значение из кода мода. Только чтение |
+| `config_get(file, key, mod)` | настройки модов по слоям: сохранение мира > `serverconfig/` > `config/` сборки > значение из кода мода. TOML (`<мод>-server/common.toml`, `<мод>/server.toml`) и с 2026-10-21 JSON5 в корне `config/` (`worldborder.json5` и другие моды на Collective; вложенные `*.json5` — импорт с `--all`). Только чтение |
 
 ### Сборка
 

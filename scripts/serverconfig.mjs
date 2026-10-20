@@ -9,16 +9,17 @@
  *                       сервера), config/ и defaultconfigs/ → config (конфиг сборки). Сайт ищет значение сначала
  *                       в server, потом в config, потом берёт значение мода по умолчанию из кода.
  *   … --all           — импортировать и клиентские конфиги, и файлы с нестандартными именами (по умолчанию берутся
- *                       только <мод>-server.toml / -common.toml и <мод>/server.toml / common.toml)
+ *                       только <мод>-server.toml / -common.toml, <мод>/server.toml / common.toml и <мод>.json5 в корне —
+ *                       так хранят настройки моды на Collective: World Border и другие моды Natamus)
  *   … --only <подстрока пути>   — импортировать только подходящие файлы (можно несколько раз)
  *   … --dry-run       — показать, что будет записано, без записи
  *
  * Один файл = один документ config/{scope}__{путь, где / → __}:
- *   { scope, path, mod, values (разобранный TOML), sha1, source, importedBy, importedAt }
+ *   { scope, path, mod, values (разобранный TOML или JSON5), sha1, source, importedBy, importedAt }
  * Коллекцию config читает любой посетитель сайта, поэтому в неё не попадают: клиентские конфиги (*-client.toml,
  * client.toml), резервные копии (.bak) и любые файлы, где есть непустой ключ, похожий на секрет
  * (token, secret, password, webhook, api key) — такие файлы пропускаются целиком, с сообщением.
- * Комментарии из TOML не сохраняются. Повторный импорт перезаписывает документ целиком.
+ * Комментарии из TOML и JSON5 не сохраняются. Повторный импорт перезаписывает документ целиком.
  * Писать в config может только этот скрипт (правила Firestore закрывают коллекцию для сайта).
  * Из кода: configDocs(вход, опции) — документы без записи, importServerConfig(опции) — разбор, сводка и запись.
  */
@@ -64,8 +65,42 @@ function scopeOf(p, input) {
 /** Конфиги модов по соглашению NeoForge: <мод>-server.toml, <мод>-common.toml, <мод>/server.toml, <мод>/common.toml */
 const MOD_CONFIG = /(^|[-_/])(server|common)\.toml$/i;
 const CLIENT = /(^|[-_/])client(-\d+)?\.toml$/i;
+/** <мод>.json5 в корне config/ — настройки модов на Collective (Natamus: worldborder.json5 и т. п.) */
+const JSON5_CONFIG = /^[^/]+\.json5$/i;
+const CONFIG_FILE = /\.(toml|json5)$/i;
 const SECRET =
-  /^\s*"?[\w.-]*(token|secret|password|passwd|webhook|cookie|api[_-]?key)[\w.-]*"?\s*=\s*(?!""|''|false|true|\d)\S/im;
+  /^\s*"?[\w.-]*(token|secret|password|passwd|webhook|cookie|api[_-]?key)[\w.-]*"?\s*[=:]\s*(?!""|''|false|true|\d)\S/im;
+
+/**
+ * JSON5 без зависимостей: комментарии // и /* *\/, запятые перед } и ], ключи без кавычек, строки в одинарных
+ * кавычках. Collective пишет почти JSON (ключи в кавычках, комментарии строками) — этого хватает с запасом.
+ */
+export function parseJson5(text) {
+  let out = '';
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '"' || c === "'") {
+      let j = i + 1;
+      let body = '';
+      for (; j < text.length && text[j] !== c; j++) {
+        if (text[j] === '\\') body += text[j++];
+        body += text[j];
+      }
+      if (j >= text.length) throw new Error('строка без закрывающей кавычки');
+      out += c === '"' ? `"${body}"` : JSON.stringify(body.replace(/\\'/g, "'"));
+      i = j;
+    } else if (c === '/' && text[i + 1] === '/') {
+      while (i < text.length && text[i] !== '\n') i++;
+      out += '\n';
+    } else if (c === '/' && text[i + 1] === '*') {
+      const end = text.indexOf('*/', i + 2);
+      if (end < 0) throw new Error('комментарий /* без конца');
+      i = end + 1;
+    } else out += c;
+  }
+  out = out.replace(/,(\s*[}\]])/g, '$1').replace(/([{,]\s*)([A-Za-z_$][\w$]*)(\s*:)/g, '$1"$2"$3');
+  return JSON.parse(out);
+}
 
 function readInput(input) {
   const files = [];
@@ -110,7 +145,7 @@ export function configDocs(input, { scope: forcedScope = null, only = [], all = 
   const skipped = { other: 0, excluded: 0, client: 0, secret: [], unusual: [] };
   for (const f of readInput(opts.input)) {
     const p = configPath(f.name);
-    if (!p.endsWith('.toml')) {
+    if (!CONFIG_FILE.test(p)) {
       skipped.other++;
       continue;
     }
@@ -125,7 +160,7 @@ export function configDocs(input, { scope: forcedScope = null, only = [], all = 
       continue;
     }
     // Файлы с нестандартными именами (coldsweat/item.toml, c2me.toml…) — только по явной просьбе: --only или --all
-    if (!opts.all && !forced && !MOD_CONFIG.test(p)) {
+    if (!opts.all && !forced && !MOD_CONFIG.test(p) && !JSON5_CONFIG.test(p)) {
       skipped.unusual.push(p);
       continue;
     }
@@ -135,11 +170,12 @@ export function configDocs(input, { scope: forcedScope = null, only = [], all = 
       continue;
     }
     const scope = opts.scope ?? scopeOf(f.name, opts.input);
+    const json5 = /\.json5$/i.test(p);
     let values;
     try {
-      values = clean(parse(text));
+      values = clean(json5 ? parseJson5(text) : parse(text));
     } catch (e) {
-      log(`пропущен ${p}: не разобрался TOML — ${e.message.split('\n')[0]}`);
+      log(`пропущен ${p}: не разобрался ${json5 ? 'JSON5' : 'TOML'} — ${e.message.split('\n')[0]}`);
       continue;
     }
     docs.push({
@@ -148,7 +184,7 @@ export function configDocs(input, { scope: forcedScope = null, only = [], all = 
         scope,
         path: p,
         // Мод — по папке (tfc_real_world/server.toml) или по имени файла (tfc_eratosthenes-server.toml)
-        mod: p.includes('/') ? p.split('/')[0] : p.replace(/(-(server|common|client))?\.toml$/, ''),
+        mod: p.includes('/') ? p.split('/')[0] : p.replace(/(-(server|common|client))?\.(toml|json5)$/i, ''),
         values,
         sha1: createHash('sha1').update(f.data).digest('hex'),
         source,
@@ -170,7 +206,7 @@ export function logConfigDocs(docs, skipped) {
     `к импорту: ${docs.length} файлов (${scopes.map((x) => `${x}: ${docs.filter((d) => d.data.scope === x).length}`).join(', ')})`,
   );
   log(
-    `пропущено: не TOML ${skipped.other}, клиентских ${skipped.client}, с похожим на секрет ключом ${skipped.secret.length}` +
+    `пропущено: не TOML/JSON5 ${skipped.other}, клиентских ${skipped.client}, с похожим на секрет ключом ${skipped.secret.length}` +
       (skipped.excluded ? `, запрещённых для импорта ${skipped.excluded}` : ''),
   );
   for (const p of skipped.secret) log(`  не импортирован (секрет?): ${p}`);
@@ -191,7 +227,7 @@ export function logConfigDocs(docs, skipped) {
 
 export async function importServerConfig({ input, dryRun = false, ...opts }) {
   const { docs, skipped } = configDocs(input, opts);
-  if (!docs.length) throw new Error('не найдено ни одного .toml');
+  if (!docs.length) throw new Error('не найдено ни одного .toml или .json5');
   logConfigDocs(docs, skipped);
   if (dryRun) {
     log('--dry-run, ничего не записываю');
