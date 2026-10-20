@@ -166,8 +166,14 @@
   `POST /admin/rebuild` сервер собирает данные сайта своей копией репозитория (`/var/lib/tfc-pack/repo`, `git pull`
   по запросу), пик памяти на VPS ~0,8 ГБ при `BUILD_HEAP_MB=640` (свопа нет и пока не нужен). Публикация —
   Hosting только изменённое, `config`, `packUpdates`; **по умолчанию только пробная** (`AUTO_PUBLISH=dry-run`),
-  настоящая с сервера ещё ни разу не делалась. На сервере тестовый снимок `20261020-120830-b1bc` (jar и KubeJS
-  с Mac, скрипты слоя `world` — в `kubejs/server_scripts`), **не текущий**. Ключ `claude` (admin) — агента, можно
+  настоящая — `POST /admin/publish {"dryRun": false}` / `tfc admin publish`. **Первая настоящая публикация —
+  2026-10-20**, снимок хоста `20261020-161550-09d2` (текущий): +2 мода (аддоны ee_rectifier, ee_overheat) в
+  `packUpdates`, 103 новых документа `config` (все TOML сервера без клиентских; ключей, похожих на секреты, нет),
+  на Hosting — 2 иконки и 5 файлов данных. Первая попытка упала: Firestore не хранит массив в массиве
+  (`createentitycontrol-common.toml`, `blocks_limit`) — теперь `toValue` пишет внутренний как `{ __array }`.
+  **Данные модов на сайте теперь с сервера:** `npm run deploy:site` из основной копии выложит её `public/` —
+  если там старые данные модов, сначала `npm run pack:fetch -- --data`. Старый тестовый снимок
+  `20261020-120830-b1bc` остался в истории. Ключ `claude` (admin) — агента, можно
   отозвать. Сборка сайта без jar с `TFC_PACK_URL`/`TFC_PACK_TOKEN` в `.env.local` берёт данные модов с сервера;
   `npm run pack:fetch` — сборка с сервера в проект.
 - **Программа `tfc`** (`cli/`, этап 3 плана `docs/plans/pack-cli.md`, 2026-10-20): `init`/`login`/профили, `status`,
