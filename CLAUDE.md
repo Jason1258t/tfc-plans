@@ -8,6 +8,8 @@
 - Что уже сделано и что висит — в [docs/STATE.md](docs/STATE.md). **Обновляй его в конце работы**, если состояние изменилось.
 - Устройство и инструкции для людей — в [README.md](README.md); планы крупных фич — в `docs/plans/`.
 - Свои моды сборки (аддоны) — `tools/<мод>-mod/`; как их собирать и проверять без игры — [docs/addons.md](docs/addons.md).
+- Сервер сборки (VPS, обслуживание, публикация на сайт) — [docs/pack-server.md](docs/pack-server.md); программа `tfc`
+  (скачать, команды игрока и хоста) — [docs/tfc-app.md](docs/tfc-app.md).
 
 ## Как работаем
 
@@ -163,8 +165,8 @@ src/lib/
 src/components/guides/  гайды справочника: GuidesSection (карточки, статья), GuideEditor/History/Help, CalcBlock (```calc),
                   GuideBody (Markdown + {{…}} + виджеты «::имя»), powerWidgets — рисунки раздела; формат — docs/plans/guides.md
 server/file-server/  сервер файлов для Ubuntu (Node без зависимостей); переезд — scripts/files-migrate.mjs
-server/pack-server/  сервер сборки (снимки, ключи); стоит на VPS — адрес и порты в docs/STATE.md
-cli/              программа tfc для ПК (npm run tfc -- …): sync/publish сборки; инструкция — cli/README.md
+server/pack-server/  сервер сборки (снимки, ключи); стоит на VPS — docs/pack-server.md
+cli/              программа tfc для ПК (npm run tfc -- …): sync/publish сборки; инструкция — docs/tfc-app.md, cli/README.md
 tools/            аддоны сборки (ee-rectifier-mod, ee-overheat-mod) — docs/addons.md; на сайте — lib/addons.ts, AddonsTab
 scripts/mcp/      MCP сборки для агента (stdio): data.mjs — слияние данных как на сайте, jars.mjs, firestore.mjs, tools.mjs
 scripts/          mods.mjs + mods/{reference,tags,botany,meals,cuisine,power,multiblocks,geo,manifest,classfile,config-defaults}.mjs, serverconfig.mjs,
