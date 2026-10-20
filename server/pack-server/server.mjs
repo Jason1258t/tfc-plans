@@ -16,9 +16,17 @@
  *   GET    /admin/keys              — ключи (без самих ключей)               admin
  *   POST   /admin/keys              — { name, role } → { key, ... }          admin
  *   DELETE /admin/keys/:id          — отозвать ключ                          admin
+ *   POST   /admin/rebuild           — собрать данные сайта (+ git pull, части)  admin
+ *   POST   /admin/publish           — опубликовать собранное (по умолчанию пробно) admin
+ *   GET    /jobs, GET /jobs/:id     — задания сборки: состояние и лог           admin
+ *   GET    /data                    — собранные данные текущего снимка: список   player
+ *   GET    /data/:snapshot/<путь>   — файл собранных данных                     player
  */
 import fs from 'node:fs';
 import http from 'node:http';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { openJobs, PUBLISH } from './lib/jobs.mjs';
 import { openKeys } from './lib/keys.mjs';
 import { openStore } from './lib/store.mjs';
 import { HttpError, SHA256_RE } from './lib/util.mjs';
@@ -27,7 +35,7 @@ const env = process.env;
 const config = {
   port: Number(env.PORT ?? 8788),
   host: env.HOST ?? '127.0.0.1',
-  dataDir: env.DATA_DIR ?? './data',
+  dataDir: path.resolve(env.DATA_DIR ?? './data'),
   maxBlobSize: Number(env.MAX_BLOB_SIZE ?? 1024 ** 3),
   maxTotalBytes: Number(env.MAX_TOTAL_BYTES ?? 50 * 1024 ** 3),
   minFreeBytes: Number(env.MIN_FREE_BYTES ?? 1024 ** 3),
@@ -36,6 +44,30 @@ const config = {
 
 const store = await openStore(config.dataDir, config);
 const keys = openKeys(config.dataDir);
+
+/**
+ * Код разборщиков. Сервер запущен из репозитория (npm run dev) — берём его же, git pull не делаем (это рабочая
+ * копия разработчика). Установлен в /opt/tfc-pack — своя копия в <DATA_DIR>/repo, её обновляет git pull.
+ */
+const here = path.dirname(fileURLToPath(import.meta.url));
+const inRepo = fs.existsSync(path.join(here, '..', '..', 'scripts', 'pack.mjs'));
+const repoDir = path.resolve(
+  env.REPO_DIR ?? (inRepo ? path.join(here, '..', '..') : path.join(config.dataDir, 'repo')),
+);
+const jobs = openJobs(config.dataDir, {
+  repoDir,
+  managedRepo: env.REPO_MANAGED ? env.REPO_MANAGED === '1' : !inRepo && !env.REPO_DIR,
+  repoUrl: env.REPO_URL ?? 'https://github.com/Jason1258t/tfc-plans.git',
+  repoBranch: env.REPO_BRANCH ?? 'main',
+  heapMb: Number(env.BUILD_HEAP_MB) || 0,
+  timeoutMs: (Number(env.JOB_TIMEOUT_MIN) || 120) * 60_000,
+});
+/** После смены текущего снимка: собрать (off — нет) и как публиковать (по умолчанию — только пробно) */
+const autoBuild = env.AUTO_BUILD !== 'off';
+const autoPublish = PUBLISH.includes(env.AUTO_PUBLISH) ? env.AUTO_PUBLISH : 'dry-run';
+const dataRoot = path.join(config.dataDir, 'data');
+const SNAP_RE = /^\d{8}-\d{6}-[0-9a-f]{4}$/;
+const built = (id) => SNAP_RE.test(id ?? '') && fs.existsSync(path.join(dataRoot, id, '.build.json'));
 
 // ---------------------------------------------------------------- доступ
 
@@ -154,6 +186,12 @@ async function handle(req, res) {
       const who = await authorize(req, 'admin');
       const r = await store.setCurrent(await readJsonBody(req), who.name);
       console.log(`★ текущий снимок ${r.previous ?? '—'} → ${r.current} — ${who.name}`);
+      if (autoBuild) {
+        // Уже собранный (откат) — только публикация; новый — сборка и публикация
+        const kind = built(r.current) ? 'publish' : 'build';
+        if (kind === 'build' || autoPublish !== 'none')
+          r.job = (await jobs.enqueue({ kind, snapshot: r.current, publish: autoPublish, by: who.name })).id;
+      }
       return json(res, 200, r);
     }
     if (parts[1] === 'snapshots' && parts.length === 2) {
@@ -192,6 +230,68 @@ async function handle(req, res) {
     }
   }
 
+  // --- сборка данных и публикация
+  if (route === 'POST /admin/rebuild' || route === 'POST /admin/publish') {
+    const who = await authorize(req, 'admin');
+    const body = (await readJsonBody(req)) ?? {};
+    const current = store.channels().current;
+    const snapshot = body.snapshot ?? current;
+    if (!snapshot || !(await store.getSnapshot(snapshot))) throw new HttpError(404, 'Нет такого снимка');
+    const isPublish = parts[1] === 'publish';
+    // Публикация по умолчанию — пробная: настоящая только явно (publish: 'live' / dryRun: false)
+    const publish = isPublish ? (body.dryRun === false ? 'live' : 'dry-run') : (body.publish ?? autoPublish);
+    if (publish === 'live' && snapshot !== current)
+      throw new HttpError(409, 'Публиковать можно только текущий снимок — сначала POST /pack/current');
+    if (isPublish && !built(snapshot)) throw new HttpError(409, 'Снимок ещё не собран — POST /admin/rebuild');
+    const j = await jobs.enqueue({
+      kind: isPublish ? 'publish' : 'build',
+      snapshot,
+      parts: isPublish ? [] : (body.parts ?? []),
+      pull: !isPublish && !!body.pull,
+      publish,
+      by: who.name,
+    });
+    console.log(`+ задание ${j.id} (${j.kind}, ${snapshot}, публикация ${publish}) — ${who.name}`);
+    return json(res, 202, j);
+  }
+  if (parts[0] === 'jobs' && req.method === 'GET') {
+    await authorize(req, 'admin');
+    if (parts.length === 1) return json(res, 200, { ...jobs.busy(), jobs: jobs.list() });
+    if (parts.length === 2) {
+      const j = await jobs.get(parts[1], Number(url.searchParams.get('from')) || 0);
+      return j ? json(res, 200, j) : json(res, 404, { error: 'Нет такого задания' });
+    }
+  }
+
+  // --- собранные данные (для npm run pack:fetch и деплоя сайта без jar)
+  if (parts[0] === 'data' && (req.method === 'GET' || req.method === 'HEAD')) {
+    await authorize(req, 'player');
+    if (parts.length === 1) {
+      const id = url.searchParams.get('snapshot') ?? store.channels().current;
+      if (!built(id)) throw new HttpError(404, 'Данные этого снимка ещё не собраны');
+      const dir = path.join(dataRoot, id);
+      const build = JSON.parse(await fs.promises.readFile(path.join(dir, '.build.json'), 'utf8'));
+      const index = JSON.parse(await fs.promises.readFile(path.join(dir, '.index.json'), 'utf8'));
+      return json(res, 200, { snapshot: id, current: id === store.channels().current, build, files: index.files });
+    }
+    const rel = parts.slice(2).map(decodeURIComponent);
+    if (!built(parts[1]) || rel.some((s) => s.startsWith('.') || s.includes('/') || s.includes('\\')))
+      throw new HttpError(404, 'Нет такого файла');
+    const file = path.join(dataRoot, parts[1], ...rel);
+    const st = await fs.promises.stat(file).catch(() => null);
+    if (!st?.isFile()) throw new HttpError(404, 'Нет такого файла');
+    res.writeHead(200, {
+      'Content-Type': 'application/octet-stream',
+      'Content-Length': st.size,
+      'Cache-Control': 'private, no-cache',
+    });
+    if (req.method === 'HEAD') return res.end();
+    return fs
+      .createReadStream(file)
+      .on('error', () => res.destroy())
+      .pipe(res);
+  }
+
   throw new HttpError(404, 'Нет такого адреса');
 }
 
@@ -211,6 +311,10 @@ server.listen(config.port, config.host, async () => {
   console.log(
     `Сервер сборки: http://${config.host}:${config.port}, данные — ${config.dataDir}, ` +
       `снимков ${s.snapshots}, файлов ${s.blobs}, текущий — ${s.current ?? 'нет'}`,
+  );
+  console.log(
+    `Сборка данных: код — ${repoDir}${inRepo ? ' (репозиторий, без git pull)' : ''}; после смены текущего — ` +
+      `${autoBuild ? `сборка, публикация ${autoPublish}` : 'ничего (AUTO_BUILD=off)'}`,
   );
   if (!(await keys.list()).some((k) => k.role === 'admin'))
     console.warn(
