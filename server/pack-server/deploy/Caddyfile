@@ -1,5 +1,5 @@
 # Сервер сборки «TFC Планы». install.sh кладёт этот блок в /etc/caddy/conf.d/tfc-pack.caddy, подставив DOMAIN.
-# Caddy сам получает и продлевает сертификат Let's Encrypt; порты 80 и 443 должны быть открыты.
+# Caddy сам получает и продлевает сертификат Let's Encrypt: порты 80 и 443, либо свой порт + DuckDNS (caddy-site.sh).
 # Сжатие — только для JSON и текста (так Caddy делает по умолчанию); jar и zip идут как есть.
 DOMAIN {
 	encode zstd gzip
