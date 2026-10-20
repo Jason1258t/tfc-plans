@@ -1,2 +1,367 @@
-/** Инструменты MCP: раздел «pack» (заготовка). */
-export const TOOLS = [];
+/**
+ * Инструменты MCP: обзор сборки — моды (pack-manifest.json + библиотека и каталог рецептов) и история обновлений
+ * (Firestore packUpdates, пишет scripts/pack-release.mjs при деплое). Firestore — только чтение и с кешем.
+ */
+import { DOCS, fromValue } from '../../firestore-rest.mjs';
+import { isActive, items, mods, readJson, recipes, tags } from '../data.mjs';
+import { FirestoreError, api, cached, configDocs, listAll } from '../firestore.mjs';
+import { dateOf, named, norm, page, paging, short, str, words } from '../fmt.mjs';
+
+// ---------------------------------------------------------------- моды
+
+/** Число предметов и рецептов по пространству имён — из манифеста (как их видел деплой, без KubeJS) */
+function manifestCounts() {
+  const m = readJson('pack-manifest.json', null);
+  const count = (ids) => {
+    const map = new Map();
+    for (const id of ids) {
+      const ns = id.split(':')[0];
+      map.set(ns, (map.get(ns) ?? 0) + 1);
+    }
+    return map;
+  };
+  return {
+    manifest: m,
+    items: count(m?.items ?? []),
+    recipes: count(Object.keys(m?.recipes ?? {})),
+  };
+}
+
+const modLine = (m, c) =>
+  `${m.id} — ${m.name} ${m.version} [${m.jar}] предметов ${c.items.get(m.id) ?? 0}, рецептов ${c.recipes.get(m.id) ?? 0}`;
+
+function modsList(a) {
+  const c = manifestCounts();
+  if (!c.manifest) return 'pack-manifest.json не собран (npm run mods).';
+  const w = words(a.query);
+  let list = [...mods().values()].filter((m) => {
+    const hay = norm(`${m.id} ${m.name} ${m.jar}`);
+    return w.every((x) => hay.includes(x));
+  });
+  if (a.sort === 'items' || a.sort === 'recipes')
+    list.sort((x, y) => (c[a.sort].get(y.id) ?? 0) - (c[a.sort].get(x.id) ?? 0));
+  else list.sort((x, y) => x.id.localeCompare(y.id));
+  const head = `Сборка: ${mods().size} модов, сборка данных ${dateOf(Number(c.manifest.builtAt))}. Числа — предметы и рецепты с id в пространстве мода, до KubeJS (подробно — mod_get).`;
+  return `${head}\n${page(list, a, (m) => [modLine(m, c)], 30)}`;
+}
+
+/** Мод по id, имени jar или части названия: точное совпадение id, иначе единственный по словам */
+function findMod(q) {
+  const all = [...mods().values()];
+  const s = norm(String(q ?? '').trim());
+  const exact = all.find((m) => m.id === s || norm(m.jar) === s || norm(m.name) === s);
+  if (exact) return { mod: exact };
+  const w = words(s);
+  const hits = w.length ? all.filter((m) => w.every((x) => norm(`${m.id} ${m.name} ${m.jar}`).includes(x))) : [];
+  return hits.length === 1 ? { mod: hits[0] } : { hits };
+}
+
+/** Импортированные конфиги мода из Firestore (кеш configDocs общий с config_get); при ошибке — текст ошибки */
+async function importedConfigs(id) {
+  try {
+    const docs = await configDocs();
+    const low = id.toLowerCase();
+    return docs
+      .filter((d) => {
+        const file = String(d.path ?? '').toLowerCase();
+        return String(d.mod ?? '').toLowerCase() === low || file.startsWith(`${low}-`) || file.startsWith(`${low}/`);
+      })
+      .map((d) => `${d.scope}/${d.path}`);
+  } catch (e) {
+    return `не прочитаны (${short(String(e.message ?? e), 120)})`;
+  }
+}
+
+async function modGet(a) {
+  if (!readJson('pack-manifest.json', null)) return 'pack-manifest.json не собран (npm run mods).';
+  const { mod: m, hits } = findMod(a.id);
+  if (!m) {
+    if (!hits.length) return `Мод «${a.id}» не найден. Список — mods_list.`;
+    return `Под «${a.id}» подходит несколько модов, уточните id:\n${hits
+      .slice(0, 30)
+      .map((x) => `${x.id} — ${x.name}`)
+      .join('\n')}`;
+  }
+  const ns = m.id;
+  const c = manifestCounts();
+  const out = [`${m.id} — ${m.name}`, `версия ${m.version}; jar ${m.jar}; sha1 ${m.sha1 ?? '?'}`];
+
+  // Предметы: библиотека сайта (items.json + свои предметы KubeJS сборки в этом пространстве имён)
+  const its = items().list.filter((it) => it.i.split(':')[0] === ns);
+  const own = its.filter((it) => it.kjs).length;
+  out.push(
+    `предметов: ${its.length}${own ? ` (из них ${own} регистрирует KubeJS сборки)` : ''}; в манифесте ${c.items.get(ns) ?? 0} — items_search с mod="${ns}"`,
+  );
+
+  // Рецепты с id мода: состояние в игре с учётом KubeJS
+  const cat = recipes();
+  const rs = cat.list.filter((r) => r.i.split(':')[0] === ns);
+  const n = (f) => rs.filter(f).length;
+  out.push(
+    `рецептов с id мода: ${rs.length} — работают ${n(isActive)}, удалены KubeJS ${n((r) => !r.removed && r.kjsRemoved.length)}, ` +
+      `отключены заглушкой датапака ${n((r) => r.removed)}, изменены KubeJS ${n((r) => isActive(r) && r.kjsChanged.length)}, ` +
+      `под сомнением (неразборчивый фильтр удаления) ${n((r) => isActive(r) && r.kjsMaybe.length)}` +
+      `${n((r) => r.origin !== 'mod') ? `; из kubejs/data или скриптов сборки (замены и новые) ${n((r) => r.origin !== 'mod')}` : ''}` +
+      `; в манифесте ${c.recipes.get(ns) ?? 0}`,
+  );
+  // Рецепты, дающие предметы мода (любого пространства имён) — так видно, сколько из них остались в игре
+  const ids = new Set(its.map((it) => it.i));
+  const making = new Set();
+  for (const id of ids) for (const r of cat.byOutput.get(id) ?? []) making.add(r);
+  const makingActive = [...making].filter(isActive).length;
+  out.push(`рецептов, дающих предметы мода (из любых модов): ${making.size}, работают ${makingActive}`);
+
+  // Типы рецептов мода: из манифеста (зарегистрированные в jar) + сколько рецептов каждого типа в каталоге
+  const types = (c.manifest.recipeTypes ?? []).filter((t) => t.split(':')[0] === ns);
+  if (types.length) {
+    const byType = new Map();
+    for (const r of cat.list) if (r.t.split(':')[0] === ns) byType.set(r.t, (byType.get(r.t) ?? 0) + 1);
+    out.push(`типов рецептов: ${types.length} — ${types.map((t) => `${t} (${byType.get(t) ?? 0})`).join(', ')}`);
+  } else out.push('типов рецептов: 0');
+
+  // Теги с id мода по видам
+  const kinds = new Map();
+  for (const t of tags().byKey.values()) if (t.i.split(':')[0] === ns) kinds.set(t.k, (kinds.get(t.k) ?? 0) + 1);
+  const tagTotal = [...kinds.values()].reduce((s, x) => s + x, 0);
+  out.push(`тегов с id мода: ${tagTotal}${tagTotal ? ` (${[...kinds].map(([k, x]) => `${k} ${x}`).join(', ')})` : ''}`);
+
+  // Конфиг: значения по умолчанию из кода (config-defaults.json) и импортированные файлы
+  const base = m.jar.replace(/\.jar$/, '');
+  const defs = (readJson('config-defaults.json', []) ?? []).filter((d) => d.src === base);
+  out.push(
+    defs.length
+      ? `конфиг из кода (config-defaults.json): ${defs.map((d) => `${d.type} — ${d.keys.length} ключей`).join(', ')}`
+      : 'конфиг из кода: не разобран (config-defaults.json знает только часть модов)',
+  );
+  const imported = await importedConfigs(ns);
+  out.push(
+    typeof imported === 'string'
+      ? `импортированные конфиги: ${imported}`
+      : `импортированные конфиги (Firestore): ${imported.length ? imported.join(', ') : 'нет'}${imported.length || defs.length ? ' — config_get' : ''}`,
+  );
+  out.push(`код мода: jar_find с jar="${ns}"`);
+  return out.join('\n');
+}
+
+// ---------------------------------------------------------------- обновления сборки
+
+const TTL = 10 * 60_000;
+
+/** Лента без больших списков (предметы, рецепты, ченджлоги, текст патчноута): одно чтение на запись раз в 10 мин */
+const updatesList = cached(TTL, async () =>
+  (
+    await listAll('packUpdates', [
+      'createdAt',
+      'deployedBy',
+      'baseline',
+      'counts',
+      'totals',
+      'mods',
+      'newRecipeTypes',
+      'notes.updatedAt',
+    ])
+  ).sort((x, y) => (y.createdAt ?? 0) - (x.createdAt ?? 0)),
+);
+
+/** Запись целиком — свой кеш на каждую (патчноут могут дописать на сайте, поэтому не навсегда) */
+const docCache = new Map();
+function updateDoc(id) {
+  if (!docCache.has(id))
+    docCache.set(
+      id,
+      cached(TTL, async () => {
+        try {
+          const d = await api(`${DOCS}/packUpdates/${encodeURIComponent(id)}`);
+          return {
+            id,
+            updateTime: d.updateTime,
+            ...Object.fromEntries(Object.entries(d.fields ?? {}).map(([k, v]) => [k, fromValue(v)])),
+          };
+        } catch (e) {
+          if (e instanceof FirestoreError && e.status === 404) return null;
+          throw e;
+        }
+      }),
+    );
+  return docCache.get(id)();
+}
+
+const delta = ([a, b] = [0, 0]) => `${a} → ${b}${b - a ? ` (${b - a > 0 ? '+' : ''}${b - a})` : ''}`;
+
+function summary(u) {
+  const md = u.mods ?? {};
+  const t = u.totals;
+  const parts = u.baseline
+    ? [`первая запись: вся сборка — ${md.added?.length ?? 0} модов`]
+    : [
+        `моды +${md.added?.length ?? 0} −${md.removed?.length ?? 0} ~${md.updated?.length ?? 0}`,
+        ...(t
+          ? [
+              `предметы +${t.itemsAdded} −${t.itemsRemoved}`,
+              `рецепты +${t.recipesAdded} −${t.recipesRemoved} ~${t.recipesChanged}`,
+            ]
+          : []),
+      ];
+  if (u.newRecipeTypes?.length) parts.push(`новых типов рецептов ${u.newRecipeTypes.length}`);
+  return parts.join('; ');
+}
+
+const modRef = (m) => `${m.id} — ${m.name} ${m.from ? `${m.from} → ` : ''}${m.version}`;
+
+/** Короткие имена модов для строки ленты: «+ee_overheat, ~tfc 4.2.8→4.2.9» */
+function modsBrief(u) {
+  if (u.baseline) return '';
+  const md = u.mods ?? {};
+  const all = [
+    ...(md.added ?? []).map((m) => `+${m.id}`),
+    ...(md.removed ?? []).map((m) => `−${m.id}`),
+    ...(md.updated ?? []).map((m) => `~${m.id} ${m.from ?? '?'}→${m.version}`),
+  ];
+  return all.length ? `\n  ${short(all.join(', '), 400)}` : '';
+}
+
+const SECTIONS = ['items', 'recipes', 'mods', 'changelog', 'notes'];
+const KINDS = { items: ['added', 'removed'], recipes: ['added', 'removed', 'changed'] };
+const KIND_RU = { added: 'добавлены', removed: 'убраны', changed: 'изменены' };
+
+async function packUpdates(a) {
+  const id = String(a.id ?? '').trim();
+  if (!id) {
+    const list = await updatesList();
+    return (
+      page(list, a, (u) => [
+        `${u.id} — ${dateOf(u.createdAt)}, ${u.deployedBy ?? '?'}: ${summary(u)}; модов ${delta(u.counts?.mods)}` +
+          `${u.notes?.updatedAt ? '; есть патчноут' : ''}${modsBrief(u)}`,
+      ]) + (list.length ? '\nПодробно — pack_updates с id.' : '')
+    );
+  }
+  const u = await updateDoc(id);
+  if (!u) return `Обновления ${id} нет. Список — pack_updates без id.`;
+  const section = a.section ?? '';
+  if (section && !SECTIONS.includes(section)) return `section: одно из ${SECTIONS.join(', ')}.`;
+  const w = words(a.query);
+  const match = (s) => w.every((x) => norm(s).includes(x));
+
+  if (section === 'items' || section === 'recipes') {
+    const kind = a.kind ?? KINDS[section][0];
+    if (!KINDS[section].includes(kind)) return `kind для ${section}: ${KINDS[section].join(', ')}.`;
+    const ids = u[section]?.[kind] ?? [];
+    const total = u.totals?.[`${section}${kind[0].toUpperCase()}${kind.slice(1)}`];
+    const list = ids.map((x) => (section === 'items' ? named(x) : x)).filter(match);
+    const cut = total > ids.length ? ` (в записи сохранены ${ids.length} из ${total})` : '';
+    return `${section === 'items' ? 'Предметы' : 'Рецепты'} ${KIND_RU[kind]}${cut}:\n${page(list, a, (x) => [x], 50)}`;
+  }
+  if (section === 'mods') {
+    const md = u.mods ?? {};
+    const list = [
+      ...(md.added ?? []).map((m) => `+ ${modRef(m)}`),
+      ...(md.removed ?? []).map((m) => `− ${modRef(m)}`),
+      ...(md.updated ?? []).map((m) => `~ ${modRef(m)}`),
+    ].filter(match);
+    return page(list, a, (x) => [x], 50);
+  }
+  if (section === 'changelog') {
+    const logs = u.changelogs ?? {};
+    const mod = String(a.mod ?? '').trim();
+    if (!mod) {
+      const keys = Object.keys(logs);
+      return keys.length
+        ? `Ченджлоги с Modrinth (${keys.length}): ${keys.join(', ')}. Текст — section=changelog, mod=<id>.`
+        : 'Ченджлогов в записи нет.';
+    }
+    return logs[mod]
+      ? `Ченджлог ${mod}:\n${logs[mod]}`
+      : `Ченджлога ${mod} нет. Есть: ${Object.keys(logs).join(', ') || '—'}.`;
+  }
+  if (section === 'notes')
+    return u.notes?.body
+      ? `Патчноут (${u.notes.source === 'agent' ? 'от модели' : 'вручную'}, ${u.notes.updatedBy ?? '?'}, ${dateOf(u.notes.updatedAt)}):\n${u.notes.body}`
+      : 'Патчноута нет (пишется при первом открытии обновления на сайте).';
+
+  // Обзор записи: сводка, моды полностью (кроме первой записи), начало списков предметов и рецептов
+  const out = [
+    `${u.id} — ${dateOf(u.createdAt)}, ${u.deployedBy ?? '?'}${u.baseline ? ' (первая запись: вся сборка)' : ''}`,
+    `модов ${delta(u.counts?.mods)}; предметов ${delta(u.counts?.items)}; рецептов ${delta(u.counts?.recipes)}`,
+    summary(u),
+  ];
+  const md = u.mods ?? {};
+  if (u.baseline) out.push(`моды: ${md.added?.length ?? 0} — section=mods`);
+  else
+    for (const [k, sign] of [
+      ['added', '+'],
+      ['removed', '−'],
+      ['updated', '~'],
+    ])
+      if (md[k]?.length)
+        out.push(`моды ${k === 'updated' ? 'обновлены' : KIND_RU[k]}:`, ...md[k].map((m) => `  ${sign} ${modRef(m)}`));
+  if (u.newRecipeTypes?.length) out.push(`новые типы рецептов: ${u.newRecipeTypes.join(', ')}`);
+  const SHOW = 10;
+  for (const s of ['items', 'recipes'])
+    for (const kind of KINDS[s]) {
+      const ids = u[s]?.[kind] ?? [];
+      if (!ids.length) continue;
+      const total = u.totals?.[`${s}${kind[0].toUpperCase()}${kind.slice(1)}`] ?? ids.length;
+      out.push(
+        `${s === 'items' ? 'предметы' : 'рецепты'} ${KIND_RU[kind]} (${total}):`,
+        ...ids.slice(0, SHOW).map((x) => `  ${s === 'items' ? named(x) : x}`),
+      );
+      if (total > SHOW) out.push(`  … ещё ${total - SHOW}: section=${s}, kind=${kind}`);
+    }
+  const logs = Object.keys(u.changelogs ?? {});
+  if (logs.length) out.push(`ченджлоги (${logs.length}): ${logs.join(', ')} — section=changelog, mod=<id>`);
+  out.push(u.notes?.body ? `патчноут есть — section=notes` : 'патчноута нет');
+  return out.join('\n');
+}
+
+export const TOOLS = [
+  {
+    name: 'mods_list',
+    description:
+      'Моды сборки (pack-manifest.json): id, название, версия, jar, число предметов и рецептов мода. Поиск по словам в id/названии/jar, сортировка по id или по числу предметов/рецептов.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: str('слова для поиска (id, название, имя jar); пусто — все'),
+        sort: {
+          type: 'string',
+          enum: ['id', 'items', 'recipes'],
+          description: 'порядок: id (по умолчанию), items, recipes',
+        },
+        ...paging,
+      },
+    },
+    handler: modsList,
+  },
+  {
+    name: 'mod_get',
+    description:
+      'Один мод сборки: версия, jar, sha1, предметы, рецепты (работают / удалены KubeJS / отключены / изменены), типы рецептов, теги, конфиг (значения из кода и импортированные файлы).',
+    inputSchema: {
+      type: 'object',
+      properties: { id: str('id мода (namespace), имя jar или слова из названия') },
+      required: ['id'],
+    },
+    handler: modGet,
+  },
+  {
+    name: 'pack_updates',
+    description:
+      'История обновлений сборки (Firestore packUpdates, пишет деплой): без id — лента с датами и сводкой; с id — запись: моды добавлены/убраны/обновлены, предметы, рецепты, новые типы рецептов; section — полный список (items/recipes с kind, mods), ченджлог мода с Modrinth (changelog + mod), патчноут (notes). Кеш 10 мин.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: str('id записи из ленты'),
+        section: { type: 'string', enum: SECTIONS, description: 'часть записи целиком' },
+        kind: {
+          type: 'string',
+          enum: ['added', 'removed', 'changed'],
+          description: 'для items/recipes: added (по умолчанию), removed, changed (только рецепты)',
+        },
+        mod: str('для changelog: id мода'),
+        query: str('для items/recipes/mods: слова фильтра'),
+        ...paging,
+      },
+    },
+    handler: packUpdates,
+  },
+];
