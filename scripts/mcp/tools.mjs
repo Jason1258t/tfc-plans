@@ -24,7 +24,7 @@ import {
   tagsOf,
 } from './data.mjs';
 import { FirestoreError, configDocs, guideDoc, guideDocs, writeGuide } from './firestore.mjs';
-import { clip, dateOf, nameOf, named, norm, num, page, paging, short, str, words } from './fmt.mjs';
+import { clip, dateOf, nameOf, named, norm, num, page, paging, short, str, userRegex, words } from './fmt.mjs';
 import { oneClass, classRecord } from './code-index.mjs';
 import { javap, jarList, jarToc, nestedJars, pathMatcher, readEntry, resolveJar } from './jars.mjs';
 import { TOOLS as blocksTools } from './tools/blocks.mjs';
@@ -535,7 +535,7 @@ function jarRead(a) {
     return `${a.path} — двоичный файл, ${r.data.length} Б.`;
   let lines = text.split('\n').map((l, i) => [i + 1, l]);
   if (a.grep) {
-    const re = new RegExp(a.grep, 'i');
+    const re = userRegex(a.grep);
     lines = lines.filter(([, l]) => re.test(l));
   }
   const offset = Math.max(0, Number(a.offset ?? 0) | 0);

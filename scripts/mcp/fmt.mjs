@@ -57,3 +57,39 @@ export const dateOf = (ms) => (ms ? new Date(ms).toISOString().slice(0, 16).repl
 export const str = (description) => ({ type: 'string', description });
 export const num = (description) => ({ type: 'integer', description });
 export const paging = { limit: num('сколько записей (по умолчанию 20)'), offset: num('с какой записи (для «дальше»)') };
+
+/**
+ * Регулярка из запроса агента. Регистр и так не учитывается; встроенные флаги в начале, как в Java/PCRE
+ * («(?i)…», «(?s)…»), JS не понимает — снимаем и переводим в флаги. Ошибка — с понятным текстом.
+ */
+export function userRegex(q, flags = 'i') {
+  let s = String(q ?? '');
+  let f = flags;
+  for (let m; (m = s.match(/^\(\?([imsx]+)\)/)); s = s.slice(m[0].length))
+    for (const c of m[1]) if ('ms'.includes(c) && !f.includes(c)) f += c;
+  try {
+    return new RegExp(s, f);
+  } catch (e) {
+    throw new Error(`регулярка «${q}» не разобралась: ${e.message.replace(/^Invalid regular expression: /, '')}`);
+  }
+}
+
+/**
+ * Проверка строки по запросу: regex — регулярка (userRegex); иначе «a|b» — любая из частей, часть — подстрока
+ * (или все слова части, если words=true). Без учёта регистра и «ё».
+ */
+export function textTest(q, { regex = false, words: byWords = false } = {}) {
+  if (regex) {
+    const re = userRegex(q);
+    return (s) => re.test(s);
+  }
+  const alts = String(q ?? '')
+    .split('|')
+    .map((x) => (byWords ? words(x) : [norm(x.trim())]).filter(Boolean))
+    .filter((x) => x.length);
+  if (!alts.length) return null;
+  return (s) => {
+    const n = norm(s);
+    return alts.some((ws) => ws.every((w) => n.includes(w)));
+  };
+}

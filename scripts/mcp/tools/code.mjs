@@ -40,7 +40,7 @@ import {
   subtypes,
   superChain,
 } from '../code-index.mjs';
-import { clip, page, paging, short, str } from '../fmt.mjs';
+import { clip, page, paging, short, str, textTest, userRegex } from '../fmt.mjs';
 import {
   PLATFORM,
   PLATFORM_SOURCES,
@@ -179,7 +179,7 @@ function classInfo(a) {
   const subs = idx.subs.get(name) ?? [];
   if (subs.length) out.push(`прямых наследников/реализаций: ${subs.length} — class_hierarchy`);
 
-  const re = a.members ? new RegExp(a.members, 'i') : null;
+  const re = a.members ? userRegex(a.members) : null;
   const showSynth = Boolean(a.synthetic);
   const fields = c.fields.filter((f) => (!re || re.test(f.name)) && (showSynth || !(f.access & ACC.SYNTHETIC)));
   const methods = c.methods.filter((m) => (!re || re.test(m.name)) && (showSynth || !(m.access & ACC.SYNTHETIC)));
@@ -815,7 +815,7 @@ async function decompileTool(a) {
     numbered = blocks;
   }
   if (a.grep) {
-    const re = new RegExp(a.grep, 'i');
+    const re = userRegex(a.grep);
     numbered = numbered.filter(([, l]) => re.test(l));
   }
   // Номера строк исходника из байткода — чтобы сверять со стеком краша (у Vineflower свои номера строк)
@@ -848,9 +848,9 @@ const BINARY =
 function jarGrep(a) {
   const q = String(a.query ?? '');
   if (!q) throw new Error('пустой запрос');
-  const re = a.regex ? new RegExp(q, 'i') : null;
-  const low = q.toLowerCase();
-  const test = re ? (l) => re.test(l) : (l) => l.toLowerCase().includes(low);
+  const test = textTest(q, { regex: a.regex });
+  // Быстрый отсев по байтам — для простого ASCII-запроса без «|»
+  const pre = !a.regex && !q.includes('|') && /^[\x20-\x7e]*$/.test(q) ? q.trim().toLowerCase() : null;
   const match = a.path ? pathMatcher(a.path) : null;
   const jars = a.jar ? [resolveJar(a.jar, true)] : [...jarList(), ...(a.nested ? nestedJars() : [])];
   const ctx = Math.min(5, Math.max(0, Number(a.context ?? 0) | 0));
@@ -863,7 +863,7 @@ function jarGrep(a) {
       if (BINARY.test(e.name) || (match && !match(e.name))) continue;
       if (e.size > (match ? 16 << 20 : 2 << 20)) continue;
       const data = readEntry(jar, e.name).data;
-      if (!re && !data.toString('latin1').toLowerCase().includes(low) && /^[\x20-\x7e]*$/.test(q)) continue;
+      if (pre && !data.toString('latin1').toLowerCase().includes(pre)) continue;
       const text = data.toString('utf8');
       if (text.includes('\u0000')) continue;
       const lines = text.split('\n');
@@ -1147,7 +1147,7 @@ export const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        query: str('текст (без учёта регистра) или регулярка с regex=true'),
+        query: str('текст (без учёта регистра; «a|b» — любой из) или регулярка с regex=true'),
         regex: bool('query — регулярное выражение'),
         path: str('glob или часть пути файла внутри jar'),
         jar: str('только этот jar (в т. ч. вложенный или «minecraft»)'),

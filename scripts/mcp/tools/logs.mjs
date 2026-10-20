@@ -9,14 +9,14 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { javaName, methodShort } from '../bytecode.mjs';
 import { classIndex, classRecord, isRuntimeClass, jarMeta, jarOwner, readClass } from '../code-index.mjs';
-import { clip, page, paging, short, str } from '../fmt.mjs';
-import { PLATFORM } from '../jars.mjs';
+import { clip, page, paging, short, str, userRegex } from '../fmt.mjs';
+import { PLATFORM, jarList, nestedJars } from '../jars.mjs';
 
 const maskIp = (s) => s.replace(/\/\d{1,3}(?:\.\d{1,3}){3}(?::\d+)?/g, '/<ip>');
 const modOf = (jar) => (jar === PLATFORM ? 'minecraft' : jarOwner(jar));
 
 function readInput(a) {
-  if (a.text) return { name: 'текст', text: String(a.text) };
+  if (a.text) return { name: 'текст', text: String(a.text).replace(/\r/g, '') };
   if (!a.path) throw new Error('нужен path (файл, .gz или папка игры/сервера) или text');
   let p = path.resolve(String(a.path));
   if (!fs.existsSync(p)) throw new Error(`нет ${p}`);
@@ -41,7 +41,7 @@ function readInput(a) {
   }
   let buf = fs.readFileSync(p);
   if (p.endsWith('.gz')) buf = zlib.gunzipSync(buf);
-  return { name: p, text: buf.toString('utf8'), others };
+  return { name: p, text: buf.toString('utf8').replace(/\r/g, ''), others };
 }
 
 // ---------------------------------------------------------------- стек
@@ -241,6 +241,193 @@ function throwableText(t, limitFrames = 6) {
   return out;
 }
 
+// ---------------------------------------------------------------- краш-репорт
+
+/** Моды, которые сами просят проверить краш без них (шапка Connector, Sable…): «… not caused by X …» */
+function crashWarnings(pre) {
+  const out = new Set();
+  for (const m of pre.matchAll(
+    /(?:not caused by|verify issues are not caused by|reproduce it without) ([A-Z][\w-]*(?: [A-Z][\w-]*)?)/g,
+  ))
+    out.add(m[1]);
+  if (/SINYTRA CONNECTOR IS PRESENT/i.test(pre)) out.add('Connector');
+  return [...out];
+}
+
+/** Разделы «-- Имя --»: [{ title, lines }] */
+function crashSections(text) {
+  const out = [];
+  let cur = null;
+  for (const l of text.split('\n')) {
+    const m = l.match(/^-- (.+) --$/);
+    if (m) out.push((cur = { title: m[1], lines: [] }));
+    else if (cur) cur.lines.push(l);
+  }
+  return out;
+}
+
+/** Сведения «Ключ: значение» раздела (с табуляцией в начале), без стека */
+function sectionDetails(lines) {
+  const out = [];
+  for (const l of lines) {
+    if (/^\s*Stacktrace:/.test(l)) break;
+    const m = l.match(/^\t([^\t:][^:]*): (.*)$/);
+    if (m) out.push([m[1].trim(), m[2].trim()]);
+  }
+  return out;
+}
+
+/** Моды сборки сайта: id → версия (jar из mods/ и вложенные jar-in-jar — FML показывает их в списке) */
+function packMods() {
+  const out = new Map();
+  try {
+    for (const jar of [...jarList(), ...nestedJars()])
+      for (const m of jarMeta(jar).mods) if (!out.has(m.id)) out.set(m.id, m.version);
+  } catch {
+    /* нет mods/ — без сравнения */
+  }
+  return out;
+}
+
+/** Таблица «Mod List» из System Details: [{ jar, name, id, version }] */
+function crashModList(lines) {
+  const out = [];
+  for (const l of lines) {
+    const m = l.match(/^\t\t(\S.*?)\s*\|(.*?)\s*\|(\S+)\s*\|(\S+)\s*\|/);
+    if (m) out.push({ jar: m[1], name: m[2].trim(), id: m[3], version: m[4] });
+  }
+  return out;
+}
+
+function compareWithPack(list) {
+  const pack = packMods();
+  if (!pack.size || !list.length) return [];
+  // Столбец id в таблице обрезан до 30 символов
+  const idOf = (id) => (pack.has(id) || id.length < 30 ? id : ([...pack.keys()].find((k) => k.startsWith(id)) ?? id));
+  for (const m of list) m.id = idOf(m.id);
+  const theirs = new Map(list.map((m) => [m.id, m]));
+  const skip = new Set(['minecraft', 'neoforge']);
+  const extra = list.filter((m) => !pack.has(m.id) && !skip.has(m.id));
+  const missing = [...pack.keys()].filter((id) => !theirs.has(id) && !skip.has(id));
+  // Версия в таблице обрезана до 20 символов — сравниваем по началу
+  const differ = list.filter((m) => {
+    const v = pack.get(m.id);
+    return v && v !== '?' && !skip.has(m.id) && !String(v).startsWith(m.version) && !m.version.startsWith(v);
+  });
+  const lst = (arr, f) => `${arr.slice(0, 12).map(f).join(', ')}${arr.length > 12 ? ` … ещё ${arr.length - 12}` : ''}`;
+  const out = [`Сверка со сборкой сайта (mods/, ${pack.size} модов):`];
+  if (extra.length + missing.length > (pack.size + list.length) / 3)
+    out.push('  ⚠ различий очень много — похоже, у игрока другая сборка или другая её версия');
+  if (extra.length)
+    out.push(`  у игрока есть, в сборке нет: ${extra.length} — ${lst(extra, (m) => `${m.id} ${m.version}`)}`);
+  if (missing.length) out.push(`  в сборке есть, у игрока нет: ${missing.length} — ${lst(missing, (id) => id)}`);
+  if (differ.length)
+    out.push(
+      `  другие версии: ${differ.length} — ${lst(differ, (m) => `${m.id} ${m.version} (в сборке ${pack.get(m.id)})`)}`,
+    );
+  if (out.length === 1) out.push('  совпадает');
+  return out;
+}
+
+/** Миксины из пометок кадра: «pl:mixin:APP:file.json:Cls from mod M» → [мод] */
+const frameMixinMods = (raw) => [...raw.matchAll(/pl:mixin:APP:[^,}]*? from mod ([\w-]+)/g)].map((m) => m[1]);
+
+function crashReport(text) {
+  const out = [];
+  const [pre] = text.split(/\nTime: /);
+  const desc = text.match(/^Description: (.*)$/m)?.[1];
+  out.push(
+    `Краш-репорт${desc ? `: ${desc}` : ''}${text.match(/^Time: (.*)$/m) ? ` (${text.match(/^Time: (.*)$/m)[1]})` : ''}`,
+  );
+  const warn = crashWarnings(pre);
+  if (warn.length)
+    out.push(
+      `Шапка: ${warn.join(', ')} — эти моды сами просят сначала проверить краш без них (Connector — Fabric-моды на NeoForge; ошибки в переведённых им модах часто его)`,
+    );
+  const suspects = text.match(/^Suspected Mods?: (.*)$/m)?.[1];
+  if (suspects) out.push(`Minecraft подозревает: ${suspects}`);
+  const sections = crashSections(text);
+  const head = sections.find((x) => x.title === 'Head');
+  const thread = head?.lines.find((l) => l.startsWith('Thread: '))?.slice(8);
+  if (thread)
+    out.push(
+      `Поток: ${thread}${/^Server thread$/.test(thread) ? ' (сервер)' : /Render thread/.test(thread) ? ' (клиент, отрисовка)' : ''}`,
+    );
+
+  const body = text.split(/\nA detailed walkthrough of the error/)[0].split('\n');
+  const rawFrames = body.filter((l) => FRAME.test(l));
+  const head_ = parseThrowables(body.slice(body.findIndex((l) => l.startsWith('Description:')) + 1));
+  for (const t of head_) out.push(...throwableText(t, 8));
+  // Моды по стеку: владельцы кадров (без Minecraft/JDK) по порядку и миксины на верхних кадрах
+  const frames = head_.flatMap((t) => t.frames);
+  const owners = [];
+  for (const f of frames) if (!f.platform && !owners.includes(f.owner)) owners.push(f.owner);
+  if (owners.length) out.push(`Моды в стеке (сверху вниз): ${owners.slice(0, 10).join(', ')}`);
+  const firstMod = Math.max(
+    0,
+    frames.findIndex((f) => !f.platform),
+  );
+  const topMixins = new Set(rawFrames.slice(0, firstMod + 3).flatMap(frameMixinMods));
+  if (topMixins.size)
+    out.push(
+      `Миксины на классах верхних кадров: ${[...topMixins].slice(0, 15).join(', ')} — mixins target=… покажет, что они меняют`,
+    );
+  if (!head_.length) out.push('Исключение не разобралось — смотрите Description и раздел -- Head -- в файле.');
+
+  // Подробности разделов (уровень, блок, сущность, экран…), кроме служебных
+  const SKIP = /^(Head|System Details|Uptime|Last reload|Dynamic Lighting|Mod loading issue for: .*)$/;
+  for (const sec of sections) {
+    if (SKIP.test(sec.title)) continue;
+    const d = sectionDetails(sec.lines);
+    if (d.length)
+      out.push(
+        `-- ${sec.title}: ${d
+          .slice(0, 8)
+          .map(([k, v]) => `${k}: ${short(v, 160)}`)
+          .join('; ')}`,
+      );
+  }
+
+  // Ошибки загрузки модов: блоки «-- Mod loading issue for: x --»
+  for (const m of text.matchAll(/-- Mod loading issue for: (\S+) --\n([\s\S]*?)(?=\n-- |\n\n\S)/g)) {
+    const fail = m[2].match(/Failure message: (.*)/)?.[1];
+    const file = m[2].match(/Mod File: (.*)/)?.[1];
+    out.push(`Мод ${m[1]} не загрузился${file ? ` (${path.basename(file.trim())})` : ''}: ${short(fail ?? '', 400)}`);
+    for (const t of parseThrowables(m[2].split('\n')).slice(0, 2))
+      out.push(...throwableText(t, 5).map((x) => `  ${x}`));
+  }
+  const mixinErr = [...text.matchAll(/(Mixin \[[^\]]+\] from mod \w+[^\n]*)/g)].map((x) => x[1]);
+  for (const x of [...new Set(mixinErr)].slice(0, 5)) {
+    out.push(`Миксин: ${short(x, 300)}`);
+    for (const h of hints({ msg: x, extra: [] })) out.push(`  → ${h}`);
+  }
+
+  // Система и список модов
+  const sys = sections.find((x) => x.title === 'System Details');
+  if (sys) {
+    const d = new Map(sectionDetails(sys.lines));
+    const mem = d.get('Memory')?.match(/up to (\d+) bytes/)?.[1];
+    const parts = [
+      d.get('Type'),
+      d.get('NeoForge') && `NeoForge ${d.get('NeoForge')}`,
+      d.get('Minecraft Version') && `Minecraft ${d.get('Minecraft Version')}`,
+      d.get('Java Version') && `Java ${d.get('Java Version')}`,
+      mem && `память до ${Math.round(Number(mem) / 2 ** 20)} МБ`,
+      d.get('Operating System'),
+      d.get('Launched Version') && `версия в лаунчере «${d.get('Launched Version')}»`,
+      d.get('Loaded Shaderpack') && `шейдеры ${d.get('Loaded Shaderpack')}`,
+      d.get('Sinytra Connector') && `Connector ${d.get('Sinytra Connector')}`,
+    ].filter(Boolean);
+    if (parts.length) out.push(`Система: ${parts.join(', ')}`);
+    const list = crashModList(sys.lines);
+    if (list.length) {
+      out.push(`Модов в списке краша: ${list.length}`);
+      out.push(...compareWithPack(list));
+    }
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------- строки лога
 
 const LINE_NF = /^\[([^\]]+)\] \[([^\]]+?)\/(\w+)\] \[([^\]]*)\]: ?(.*)$/;
@@ -336,32 +523,14 @@ function logAnalyze(a) {
   const out = [`Файл: ${input.name} — ${text.split('\n').length} строк`];
   if (input.others?.length) out.push(`рядом есть: ${input.others.join(', ')}`);
   const level = String(a.level ?? 'error');
-  const q = a.query ? new RegExp(a.query, 'i') : null;
+  const q = a.query ? userRegex(a.query) : null;
 
-  // Краш-репорт: описание, исключение, подозреваемые моды, ошибки загрузки модов
+  // Краш-репорт: шапка, описание, исключение, моды по стеку, подробности, система и список модов
   if (/---- Minecraft Crash Report ----/.test(text)) {
-    const desc = text.match(/^Description: (.*)$/m)?.[1];
-    out.push(`Краш-репорт${desc ? `: ${desc}` : ''}`);
-    const suspects = text.match(/^Suspected Mods?: (.*)$/m)?.[1];
-    if (suspects) out.push(`Minecraft подозревает: ${suspects}`);
-    const body = text.split(/\nA detailed walkthrough of the error/)[0].split('\n');
-    const head = parseThrowables(body.slice(body.findIndex((l) => l.startsWith('Description:')) + 1));
-    for (const t of head) out.push(...throwableText(t, 8));
-    // Ошибки загрузки модов: блоки «-- Mod loading issue for: x --»
-    for (const m of text.matchAll(/-- Mod loading issue for: (\S+) --\n([\s\S]*?)(?=\n-- |\n\n\S)/g)) {
-      const fail = m[2].match(/Failure message: (.*)/)?.[1];
-      const file = m[2].match(/Mod File: (.*)/)?.[1];
-      out.push(`Мод ${m[1]} не загрузился${file ? ` (${path.basename(file.trim())})` : ''}: ${short(fail ?? '', 400)}`);
-      for (const t of parseThrowables(m[2].split('\n')).slice(0, 2))
-        out.push(...throwableText(t, 5).map((x) => `  ${x}`));
-    }
-    const mixinErr = [...text.matchAll(/(Mixin \[[^\]]+\] from mod \w+[^\n]*)/g)].map((x) => x[1]);
-    for (const x of [...new Set(mixinErr)].slice(0, 5)) {
-      out.push(`Миксин: ${short(x, 300)}`);
-      for (const h of hints({ msg: x, extra: [] })) out.push(`  → ${h}`);
-    }
+    out.push(...crashReport(text));
     return clip(maskIp(out.join('\n')));
   }
+  if (level === 'timeline') return clip(maskIp(`${out.join('\n')}\n${timeline(parseLog(text), a, q)}`));
 
   // Лог: записи ERROR/FATAL (и WARN по level=warn), одинаковые — вместе
   const recs = parseLog(text);
@@ -424,6 +593,130 @@ function logAnalyze(a) {
   return clip(maskIp(`${out.join('\n')}\n${body}`));
 }
 
+// ---------------------------------------------------------------- хронология
+
+/** Шум, которого в хронологии не бывает даже по query: LOD-рендер, прегенерация, рецепты, JEI/EMI */
+const NOISE =
+  /^(Voxy|Roxy|ChunkBuilder|ByePregen|EMI|mezz\.jei\.|net\.minecraft\.world\.item\.crafting\.RecipeManager|net\.minecraft\.client\.ClientRecipeBook|Sodium|flywheel|net\.minecraft\.client\.resources\.model\.|net\.minecraft\.client\.sounds\.)|Ingredients are being removed/;
+/** Служебные строки сервера, которые не события игры */
+const SERVER_SERVICE =
+  /^(Saving chunks for level|Preparing (start region|spawn area)|Generating keypair|Starting (minecraft server|Minecraft server on)|Loading properties|Default game type|Using |Time elapsed|Done \(|ThreadedAnvilChunkStorage|Preparing level|Changing (view|simulation) distance)/;
+
+const dimName = (s) =>
+  s
+    .replace(/ResourceKey\[minecraft:dimension \/ ([\w:./-]+)\]/g, '$1')
+    .replace(/\bminecraft:/g, '')
+    .trim();
+const coords = (x, y, z) => [x, y, z].map((v) => Math.round(Number(v))).join(' ');
+const hms = (t) => t.match(/(\d\d:\d\d:\d\d)/)?.[1] ?? t;
+
+/** Событие игры из записи лога: { kind, text } или null */
+function gameEvent(r) {
+  const m0 = r.msg;
+  const lg = r.logger;
+  let m;
+  if ((m = m0.match(/^(\S+?)\[[^\]]*\] logged in with entity id \d+ at \(([-\d.]+), ([-\d.]+), ([-\d.]+)\)/)))
+    return { kind: 'вход', text: `${m[1]} вошёл в ${coords(m[2], m[3], m[4])}` };
+  if ((m = m0.match(/^(\S+) lost connection: (.*)/))) return { kind: 'выход', text: `${m[1]} отключился: ${m[2]}` };
+  if ((m = m0.match(/^(\S+) issued server command: (.*)/))) return { kind: 'команда', text: `${m[1]}: ${m[2]}` };
+  if ((m = m0.match(/^Reloading pipeline on dimension change: (\S+) => (\S+)/)) && /Iris/.test(lg))
+    return { kind: 'измерение', text: `${dimName(m[1])} → ${dimName(m[2])} (клиент, Iris)`, dim: dimName(m[2]) };
+  if ((m = m0.match(/Dimension change: (.+?) → (.+)$/)))
+    return {
+      kind: 'измерение',
+      text: `${dimName(m[1])} → ${dimName(m[2])} (клиент, JourneyMap)`,
+      dim: dimName(m[2]),
+      jm: true,
+    };
+  if ((m = m0.match(/^Can't keep up! .*?Running (\d+)ms or (\d+) ticks behind/)))
+    return { kind: 'лаг', text: `сервер отстаёт на ${(Number(m[1]) / 1000).toFixed(1)} с` };
+  if (/^Saving and pausing game|^Saving the game|^Saving worlds|^Saving players/.test(m0))
+    return { kind: 'сохранение', text: m0 };
+  if (/^Starting integrated minecraft server|^Starting minecraft server version/.test(m0))
+    return { kind: 'сервер', text: m0 };
+  if (/^Stopping server|^Stopping the server|^Stopping!$/.test(m0))
+    return { kind: 'стоп', text: `${m0} [${r.thread}]` };
+  if ((m = m0.match(/^Connecting to (.*)/)) && /ConnectScreen/.test(lg)) return { kind: 'подключение', text: m[1] };
+  if (/ChatComponent/.test(lg) && (m = m0.match(/^\[(?:System\] \[)?CHAT\] (.*)/)))
+    return { kind: 'чат', text: m[1], chat: true };
+  if (/MinecraftServer|DedicatedServer/.test(lg) && r.level === 'INFO' && !SERVER_SERVICE.test(m0)) {
+    // [Игрок: текст] — ответ команды, разосланный операторам; остальное — чат, вход/выход, смерти, достижения
+    if ((m = m0.match(/^\[(\S+?): (.*)\]$/))) return { kind: 'команда', text: `${m[1]} → ${m[2]}` };
+    return { kind: 'сервер', text: m0, said: true };
+  }
+  return null;
+}
+
+/** Ключ для схлопывания дублей «сервер → чат клиента» (одна строка приходит дважды) */
+const dupKey = (t) => t.replace(/^\S+ → /, '').replace(/^\[\S+?: (.*)\]$/, '$1');
+
+function timeline(recs, a, q) {
+  const events = [];
+  const errSeen = new Map();
+  let lastSave = -1e9;
+  let lastDim = null;
+  const recent = []; // последние тексты сервера (для дублей в чате клиента)
+  let inGame = false;
+  for (const r of recs) {
+    const quiet = NOISE.test(r.logger) || NOISE.test(r.msg);
+    let ev = quiet ? null : gameEvent(r);
+    if (ev?.kind === 'вход' || ev?.kind === 'подключение') inGame = true;
+    if (!ev && !quiet && q && q.test(`${r.logger} ${r.msg}`))
+      ev = { kind: 'строка', text: `[${r.logger || r.thread}] ${r.msg}` };
+    // Ошибки во время игры (после входа): по одной на вид, с числом повторов
+    if (!ev && !quiet && inGame && (r.level === 'ERROR' || r.level === 'FATAL')) {
+      // Одинаковые с точностью до id и чисел — одна строка; блок строк одного логгера в ту же секунду — одна строка
+      const key = `${r.logger}|${normMsg(r.msg.replace(/[a-z0-9_.-]+:[\w/.-]+/g, '<id>'))}`;
+      const seen = errSeen.get(key);
+      const last = events.at(-1);
+      if (seen) {
+        seen.count++;
+        continue;
+      }
+      if (last?.kind === 'ошибка' && last.logger === r.logger && last.time === hms(r.time)) {
+        if (last.parts < 4) last.text += ` / ${r.msg}`;
+        last.parts++;
+        errSeen.set(key, last);
+        continue;
+      }
+      ev = { kind: 'ошибка', text: `[${r.logger || r.thread}] ${r.msg}`, count: 1, logger: r.logger, parts: 1 };
+      errSeen.set(key, ev);
+    }
+    if (!ev) continue;
+    const sec = r.time.match(/(\d\d):(\d\d):(\d\d)/);
+    const t = sec ? Number(sec[1]) * 3600 + Number(sec[2]) * 60 + Number(sec[3]) : 0;
+    if (ev.kind === 'сохранение') {
+      if (t - lastSave < 30) continue;
+      lastSave = t;
+    }
+    // Смена измерения: Iris и JourneyMap пишут одно и то же — второй раз не показываем
+    if (ev.dim) {
+      if (lastDim && lastDim.dim === ev.dim && t - lastDim.t < 15) continue;
+      lastDim = { dim: ev.dim, t };
+    }
+    if (ev.chat) {
+      const k = dupKey(ev.text);
+      if (recent.some((x) => x.k === k && t - x.t <= 2)) continue;
+    } else if (ev.kind === 'команда' || ev.said) recent.push({ k: dupKey(ev.text), t });
+    if (recent.length > 20) recent.shift();
+    ev.n = r.n;
+    ev.time = hms(r.time);
+    events.push(ev);
+  }
+  const counts = new Map();
+  for (const e of events) counts.set(e.kind, (counts.get(e.kind) ?? 0) + 1);
+  const head = [
+    `Хронология: ${events.length} событий — ${[...counts].map(([k, n]) => `${k} ${n}`).join(', ')}${q ? `; плюс строки по «${a.query}»` : ''}.`,
+    'Время — из лога; «#N» — строка файла. Ошибки — только после входа в мир, по одной на вид (×N — повторы).',
+  ];
+  return `${head.join('\n')}\n${page(
+    events,
+    a,
+    (e) => [`${e.time} #${e.n} ${e.kind}: ${short(e.text, 300)}${e.count > 1 ? ` ×${e.count}` : ''}`],
+    150,
+  )}`;
+}
+
 export const TOOLS = [
   {
     name: 'log_analyze',
@@ -434,8 +727,12 @@ export const TOOLS = [
       properties: {
         path: str('файл лога/краш-репорта или папка игры/сервера'),
         text: str('или сам текст (стек, кусок лога)'),
-        level: str('error (по умолчанию: ERROR/FATAL и важные WARN), warn или all'),
-        query: str('только сообщения по регулярке'),
+        level: str(
+          'error (по умолчанию: ERROR/FATAL и важные WARN), warn, all или timeline — хронология игры: входы/выходы с координатами, смены измерения, команды и их ответы, чат, смерти, сохранения, лаги, ошибки после входа; шум LOD/рецептов/JEI убран',
+        ),
+        query: str(
+          'регулярка, регистр не учитывается ((?i) можно, не нужен); в error/warn/all — только такие сообщения, в timeline — добавить строки к событиям',
+        ),
         ...paging,
       },
     },
