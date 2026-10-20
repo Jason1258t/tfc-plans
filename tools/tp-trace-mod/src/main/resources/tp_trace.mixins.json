@@ -1,0 +1,9 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "tp.trace.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": ["EntityMixin", "ServerGamePacketListenerImplMixin"],
+  "client": ["ClientPacketListenerMixin"],
+  "injectors": { "defaultRequire": 1 }
+}
