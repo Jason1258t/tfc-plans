@@ -205,7 +205,7 @@ esbuild) под Windows, macOS, Linux, Node ставить не нужно. По
    - `init` (инстансы Prism/MultiMC/CurseForge/Modrinth/ATLauncher, папка сервера по `server.properties`, мир по
      `level-name` или из `saves/`), `login` (роль по ключу), профили; `status`, `sync [части]` (`--dry-run`,
      `--force`, `--undo`), `publish`, `build` (обёртка `runPack` без записи в Firestore), `admin keys/invite/revoke/
-     history/use/rollback`.
+     history/use/rollback/rebuild/publish/jobs`.
    - Белый список — общий с сервером (`server/pack-server/lib/paths.mjs`); снимок — с клиентской папки хоста,
      `serverconfig/` — из `--server-dir`. На папке сервера `sync` по умолчанию не трогает моды.
    - Старую версию мода под другим именем jar убирает по id мода (`META-INF/neoforge.mods.toml` / `fabric.mod.json`,
@@ -216,7 +216,9 @@ esbuild) под Windows, macOS, Linux, Node ставить не нужно. По
      сервера) с локальным сервером сборки: 58 сверок, включая докачку с места обрыва и испорченную загрузку; хеши
      234 настоящих jar — 0,5 с, повторно 5 мс; вход ключом администратора и `status` на боевом сервере. **На Windows
      не проверялось** (блокировка jar запущенной игрой — по коду), в лаунчерах на этом Mac инстансов нет.
-   - Не сделано: `tfc fetch`, `tfc config set`, `tfc admin rebuild` (этап 4), `tfc pull` (этап 5).
+   - `publish` без версии игры в папке (лаунчер её не записал) берёт её из прошлых снимков, в терминале — спрашивает,
+     иначе — ошибка с подсказкой `--mc 1.21.1 --loader neoforge` (раньше падал на «mc — строка до 40 символов»).
+   - Не сделано: `tfc fetch`, `tfc config set`, `tfc pull` (этап 5).
 4. **Сборка и публикация на сервере** (большая). Задание сборки после снимка и по `tfc admin rebuild`, разница
    с прошлыми данными, частичная выкладка Hosting, `config` и `packUpdates`. `tfc fetch`; деплой сайта берёт данные
    с сервера.
@@ -254,7 +256,12 @@ esbuild) под Windows, macOS, Linux, Node ставить не нужно. По
    - Найдено попутно: белый список (`lib/paths.mjs`) отвергал `kubejs/data/minecraft/loot_table/entities/…` и
      датапаки с `advancements/` — запрет папок мира срабатывал на любой глубине. Теперь — только в корне версии
      и `world/<папка>`.
-   - Не сделано: `tfc admin rebuild` / `tfc fetch` в программе (API есть), слой KubeJS сервера отдельно от
+   - В программе (2026-10-20): `tfc admin rebuild [части] [--pull] [--publish none|dry-run|live]`, `tfc admin publish
+     [--live]`, `tfc admin jobs [id|last] [--follow]` — задание, лог по ходу (только целые строки: сервер режет лог
+     по байтам) и итог публикации простыми словами (Hosting, `config`, `packUpdates`). По умолчанию всё пробно, даже
+     если на сервере `AUTO_PUBLISH=live`; `live` — только текущий снимок и с вопросом (без терминала — `--yes`).
+     Проверено node-скриптом с локальным сервером и подставным процессом сборки; на боевом — только отказ без ключа.
+   - Не сделано: `tfc fetch` в программе (API есть), слой KubeJS сервера отдельно от
      клиентского (пока — класть в `kubejs/` снимка), удаление старых `data/<снимок>/`, MCP на сервере.
    - **MCP сборки на сервере.** Локальный MCP (`scripts/mcp/`, stdio) уже есть: инструменты в `tools.mjs` не
      зависят от транспорта, данные берут из `TFC_PUBLIC_DIR` / `TFC_MODS_DIR`. На сервере — тот же `tools.mjs`

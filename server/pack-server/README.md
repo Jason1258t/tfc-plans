@@ -108,7 +108,8 @@ sudo -u tfcpack env DATA_DIR=/var/lib/tfc-pack node cli.mjs key revoke <id>
   Сайт, аддоны и ресурспаки остаются, как выложил разработчик. Нужен сервисный ключ (`GOOGLE_APPLICATION_CREDENTIALS`)
   с ролями Cloud Datastore User и Firebase Hosting Admin.
 - **Пробный режим по умолчанию.** После смены снимка публикация только показывает, что изменится (`AUTO_PUBLISH=dry-run`).
-  Выложить — `POST /admin/publish {"dryRun": false}` (только текущий снимок) или `AUTO_PUBLISH=live`.
+  Выложить — `tfc admin publish --live` (то же, что `POST /admin/publish {"dryRun": false}`; только текущий снимок)
+  или `AUTO_PUBLISH=live`. Ход и итог заданий — `tfc admin jobs`.
 - **Память.** Сборка модов без лимита берёт до ~1,2 ГБ, с `BUILD_HEAP_MB=640` — около 0,9 ГБ (меньше ~400 —
   не хватает). Если процесс убит (OOM), в задании так и написано; тогда — своп или машина с памятью побольше.
 
