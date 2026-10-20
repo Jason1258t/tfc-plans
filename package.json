@@ -27,7 +27,6 @@
     "guides": "node scripts/guides.mjs",
     "datapack:pellets": "node scripts/pellet-arc-datapack.mjs",
     "pack": "node scripts/pack.mjs",
-    "pack": "node scripts/pack.mjs",
     "pack:fetch": "node scripts/pack-fetch.mjs",
     "pack:publish": "node scripts/publish-data.mjs",
     "tfc": "node cli/tfc.mjs"
