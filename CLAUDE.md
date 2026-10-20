@@ -147,6 +147,8 @@ src/lib/
 src/components/guides/  гайды справочника: GuidesSection (карточки, статья), GuideEditor/History/Help, CalcBlock (```calc),
                   GuideBody (Markdown + {{…}} + виджеты «::имя»), powerWidgets — рисунки раздела; формат — docs/plans/guides.md
 server/file-server/  сервер файлов для Ubuntu (Node без зависимостей); переезд — scripts/files-migrate.mjs
+server/pack-server/  сервер сборки (снимки, ключи); стоит на VPS — адрес и порты в docs/STATE.md
+cli/              программа tfc для ПК (npm run tfc -- …): sync/publish сборки; инструкция — cli/README.md
 tools/            аддоны сборки (ee-rectifier-mod, ee-overheat-mod) — docs/addons.md; на сайте — lib/addons.ts, AddonsTab
 scripts/mcp/      MCP сборки для агента (stdio): data.mjs — слияние данных как на сайте, jars.mjs, firestore.mjs, tools.mjs
 scripts/          mods.mjs + mods/{reference,tags,botany,meals,cuisine,power,multiblocks,geo,manifest,classfile,config-defaults}.mjs, serverconfig.mjs,
