@@ -14,7 +14,7 @@
 
 ## Что нужно
 
-- Сервер с Ubuntu 22.04 или 24.04 с открытыми портами 80 и 443. Памяти хватит 512 МБ, места — от 5 ГБ:
+- Сервер с Ubuntu 22.04 или 24.04 с открытыми портами 80 и 443 (или одним любым — см. ниже). Памяти хватит 512 МБ, места — от 5 ГБ:
   сборка ≈ 0,5 ГБ, каждое обновление добавляет только изменённые файлы (~50–100 МБ).
 - Домен (поддомен), который указывает на IP сервера, например `pack.example.com`.
 
@@ -27,6 +27,18 @@ git clone https://github.com/Jason1258t/tfc-plans.git
 cd tfc-plans/server/pack-server
 sudo bash deploy/install.sh pack.example.com
 ```
+
+**Порты 80 и 443 заняты** (на машине уже есть прокси, VPN и т. п.). Тогда HTTPS — на своём порту, а сертификат
+выдаётся через DNS-проверку DuckDNS, порт 80 не нужен. Поддомен на https://www.duckdns.org, его IP — адрес сервера,
+токен DuckDNS — в файл на сервере (не в чат и не в git):
+
+```bash
+mkdir -p /etc/tfc-pack && (umask 077; read -rsp 'Токен DuckDNS: ' T; echo; printf %s "$T" > /etc/tfc-pack/duckdns.token)
+sudo HTTPS_PORT=8443 DUCKDNS_TOKEN_FILE=/etc/tfc-pack/duckdns.token bash deploy/install.sh pack.duckdns.org
+```
+
+Адрес сервера станет `https://pack.duckdns.org:8443`; в файрволе открывается только этот порт. Caddy доставляется
+с модулем DuckDNS; после обновления пакета `caddy` через apt запустите `install.sh` ещё раз — вернёт модуль.
 
 Скрипт ставит Node.js 22 и Caddy, создаёт пользователя `tfcpack`, службу `tfc-pack` и файл настроек
 `/etc/tfc-pack.env`. В конце печатает ответ `/health` и **первый ключ администратора** — сохраните его,
