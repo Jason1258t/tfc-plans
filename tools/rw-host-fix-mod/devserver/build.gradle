@@ -1,0 +1,28 @@
+// Проверочный сервер аддона: NeoForge хоста, в run/mods — TFC, Patchouli, TFC Real World и сам аддон (test-server.sh).
+// Свой исходник — только проверочный мод с командой /rwtest.
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    version = project.neo_version
+    mods {
+        rw_host_fix_devtest { sourceSet sourceSets.main }
+    }
+    runs {
+        server {
+            server()
+            programArgument '--nogui'
+        }
+    }
+}
+
+dependencies {
+    // TFC Real World и аддон — только для компиляции проверочного мода; на сервер их кладёт test-server.sh
+    compileOnly fileTree(dir: '../../../mods', include: 'TFC-Real-World-NeoForge-*.jar')
+}
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
