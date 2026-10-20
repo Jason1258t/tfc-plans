@@ -18,12 +18,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { strToU8, zipSync } from 'fflate';
 import { DOCS, ROOT, deployer, fromValue, toValue, token } from './firestore-rest.mjs';
+import { PACK_FORMAT } from '../src/lib/datapackFiles.ts';
 import { recipeHash } from '../src/lib/hash.ts';
 import { matchFilter } from '../src/lib/recipeFilter.ts';
 import { recipeRefs } from '../src/lib/recipeRefs.ts';
 
 const NS = 'tfc_plans_pellets';
-const PACK_FORMAT = 48; // Minecraft 1.21.1
 const NAME = 'Пеллеты и брикеты в дуговой печи';
 const DESCRIPTION =
   'Пеллеты и брикеты tfcorewashing плавятся в дуговой печи (scripts/pellet-arc-datapack.mjs, TFC Планы)';

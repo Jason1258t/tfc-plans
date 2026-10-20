@@ -1,4 +1,5 @@
 import { strToU8, zipSync } from 'fflate';
+import { datapackFiles } from './datapackFiles';
 import type { Datapack, DatapackEntry } from '../types';
 import { recipeHash } from './hash';
 import type { ItemIndex } from './items';
@@ -7,8 +8,7 @@ import { tagFromPath } from './tags';
 import { itemRefsOf, kubejsHits, recipePath, type Recipe, type RecipeCatalog } from './recipes';
 import { uid } from './util';
 
-/** pack_format датапаков Minecraft 1.21.1 */
-export const PACK_FORMAT = 48;
+export { PACK_FORMAT, zipName } from './datapackFiles';
 
 /** Так сам TFC отключает ванильные рецепты: файл по тому же пути с ложным условием */
 export const REMOVAL_JSON = { 'neoforge:conditions': [{ type: 'neoforge:false' }] };
@@ -163,19 +163,9 @@ export function staleIssues(pack: Datapack, catalog: RecipeCatalog | null, items
   return issues;
 }
 
+/** zip датапака: файлы — из общего с Node модуля datapackFiles.ts */
 export function buildZip(pack: Datapack): Uint8Array {
-  const files: Record<string, Uint8Array> = {
-    'pack.mcmeta': strToU8(pretty({ pack: { pack_format: PACK_FORMAT, description: pack.description || pack.name } })),
-  };
-  for (const e of pack.entries) files[e.path] = strToU8(e.content);
+  const files: Record<string, Uint8Array> = {};
+  for (const [path, text] of Object.entries(datapackFiles(pack))) files[path] = strToU8(text);
   return zipSync(files, { level: 6 });
 }
-
-/** Имя zip: кириллица допустима, убираем только символы, запрещённые в именах файлов */
-export const zipName = (pack: Datapack) =>
-  `${
-    pack.name
-      .trim()
-      .replace(/[\\/:*?"<>|]+/g, '_')
-      .replace(/\s+/g, '_') || 'datapack'
-  }.zip`;

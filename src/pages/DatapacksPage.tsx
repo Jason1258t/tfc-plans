@@ -17,10 +17,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { EntryEditor } from '../components/EntryEditor';
 import { KubejsConstructor } from '../components/KubejsConstructor';
+import { InstallToggle, ScriptEditor } from '../components/KubejsScripts';
 import { Modal } from '../components/Modal';
 import { RecipeCatalog } from '../components/RecipeCatalog';
 import { useData } from '../data/DataContext';
-import { datapacksStore } from '../data/store';
+import { datapacksStore, kubejsScriptsStore } from '../data/store';
 import {
   buildZip,
   entryFromRecipe,
@@ -36,10 +37,11 @@ import { PackNav } from '../components/PackNav';
 import { filesEnabled, removeFile, uploadFile } from '../lib/files';
 import { useItems } from '../lib/items';
 import { entryRecipeId, kubejsScript, scriptFileName } from '../lib/kubejsFix';
+import { downloadScript, freeScriptName, NEW_SCRIPT_TEXT } from '../lib/kubejsScripts';
 import { useRecipes, type Recipe } from '../lib/recipes';
 import { tagFromPath, tagKey } from '../lib/tags';
 import { cx, timeAgo, uid } from '../lib/util';
-import type { Datapack, DatapackEntry } from '../types';
+import type { Datapack, DatapackEntry, KubejsScript } from '../types';
 import './DatapacksPage.css';
 
 const KIND: Record<DatapackEntry['kind'], { label: string; cls: string }> = {
@@ -64,14 +66,35 @@ export function DatapacksPage() {
   const { nick } = useData();
   const [params, setParams] = useSearchParams();
   const [packs, setPacks] = useState<Datapack[] | null>(null);
+  const [scripts, setScripts] = useState<KubejsScript[] | null>(null);
   const selectedId = params.get('pack');
+  const scriptId = params.get('script');
 
   useEffect(
     () => datapacksStore.subscribe((list) => setPacks([...list].sort((a, b) => b.updatedAt - a.updatedAt))),
     [],
   );
+  useEffect(
+    () =>
+      kubejsScriptsStore.subscribe((list) =>
+        setScripts([...list].sort((a, b) => a.fileName.localeCompare(b.fileName))),
+      ),
+    [],
+  );
 
   const pack = packs?.find((p) => p.id === selectedId) ?? null;
+  const script = scripts?.find((s) => s.id === scriptId) ?? null;
+
+  const createScript = async () => {
+    const id = await kubejsScriptsStore.add({
+      fileName: freeScriptName('tfc_plans.js', scripts ?? []),
+      text: NEW_SCRIPT_TEXT,
+      install: false,
+      author: nick,
+      updatedBy: nick,
+    });
+    setParams({ script: id });
+  };
 
   const create = async () => {
     const id = await datapacksStore.add({
@@ -79,6 +102,7 @@ export function DatapacksPage() {
       namespace: 'tfc_plans',
       description: '',
       entries: [],
+      install: false,
       author: nick,
       updatedBy: nick,
     });
@@ -118,6 +142,53 @@ export function DatapacksPage() {
                       {p.entries.length} файл(ов) · {p.updatedBy}, {timeAgo(p.updatedAt)}
                     </span>
                   </span>
+                  {p.install && (
+                    <span className="dp-badge" title="Отмечен «Ставить в мир»: программа tfc поставит его в мир">
+                      в мир
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="dp-list-head dp-list-head-next">
+          <span>Скрипты KubeJS</span>
+          <button
+            className="btn ghost sm icon"
+            onClick={createScript}
+            disabled={!scripts}
+            aria-label="Новый скрипт KubeJS"
+            title="Новый скрипт KubeJS"
+          >
+            <Plus size={15} />
+          </button>
+        </div>
+        {scripts?.length === 0 && (
+          <div className="faint small" style={{ padding: '0 8px' }}>
+            Пока нет. Сохраняются из конструктора «KubeJS удалит» или кнопкой +.
+          </div>
+        )}
+        {!!scripts?.length && (
+          <ul>
+            {scripts.map((s) => (
+              <li key={s.id}>
+                <button
+                  className={cx('dp-item', s.id === scriptId && 'active')}
+                  onClick={() => setParams({ script: s.id })}
+                >
+                  <FileTerminal size={15} className="faint" />
+                  <span className="grow">
+                    <span className="dp-item-name mono">{s.fileName}</span>
+                    <span className="faint small">
+                      {s.updatedBy}, {timeAgo(s.updatedAt)}
+                    </span>
+                  </span>
+                  {s.install && (
+                    <span className="dp-badge" title="Отмечен «Ставить на сервер»: программа tfc поставит его">
+                      на сервер
+                    </span>
+                  )}
                 </button>
               </li>
             ))}
@@ -125,7 +196,9 @@ export function DatapacksPage() {
         )}
       </aside>
       <main className="dp-main">
-        {pack ? (
+        {script && scripts ? (
+          <ScriptEditor key={script.id} script={script} scripts={scripts} onDeleted={() => setParams({})} />
+        ) : pack ? (
           <PackEditor key={pack.id} pack={pack} onDeleted={() => setParams({})} />
         ) : (
           <div className="dp-empty">
@@ -219,15 +292,7 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
         return [];
       }
     });
-    const text = kubejsScript(recipes, `Рецепты датапака «${pack.name}»`);
-    const url = URL.createObjectURL(new Blob([text], { type: 'text/javascript' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = scriptFileName(pack.namespace);
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    downloadScript(kubejsScript(recipes, `Рецепты датапака «${pack.name}»`), scriptFileName(pack.namespace));
   };
 
   const openConstructor = (e: DatapackEntry) => {
@@ -297,6 +362,12 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
             onBlur={() => description !== pack.description && update({ description })}
           />
         </div>
+        <InstallToggle
+          checked={!!pack.install}
+          label="Ставить в мир"
+          where="в мир"
+          onChange={(install) => update({ install })}
+        />
       </section>
 
       <div className="dp-toolbar">

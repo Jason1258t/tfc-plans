@@ -2,7 +2,8 @@ import { schematicsStore } from '../data/store';
 import type { SavedSchematic } from '../types';
 import { fileBlob, removeFile, uploadFile } from './files';
 import type { ItemIndex } from './items';
-import { DEFAULT_SHAPE, editedSource, loadSchematic, type Schematic } from './schematic';
+import { editedSource, loadSchematic, type Schematic } from './schematic';
+import { savedEdits } from './schematicFile';
 
 /**
  * Библиотека схем. Исходник .nbt — в хранилище файлов без привязки к задаче, в записи — имя и замены.
@@ -84,8 +85,9 @@ export async function openFromLibrary(
   schematic.key = `lib:${entry.id}`;
   schematic.libraryId = entry.id;
   schematic.libraryFileId = entry.fileId;
-  schematic.shape = { ...DEFAULT_SHAPE, ...entry.shape };
-  return { schematic, replace: new Map(entry.replace.map((r) => [r.from, r.to])) };
+  const { replace, shape } = savedEdits(entry);
+  schematic.shape = shape;
+  return { schematic, replace };
 }
 
 export async function removeFromLibrary(entry: SavedSchematic) {

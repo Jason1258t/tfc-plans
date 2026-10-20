@@ -70,7 +70,8 @@ npm run guides -- pull <папка> | push <файл.md|папка>   # гайд
 ## Проверка в браузере
 
 - Сервер превью: конфигурация **`dev-alt`** (порт 5176) из `.claude/launch.json`. Порт 5173 часто занят другой сессией;
-  если занят и 5176 — `dev-alt2` (5177).
+  если занят и 5176 — `dev-alt2` (5177). В git worktree без jar — **`dev-wt`** (5179, `TFC_KEEP_MODS=1`: данные модов
+  из основной копии).
 - Dev-сервер ходит в **боевой Firestore** (App Check debug-токен из `.env.local`). Тестовые записи в общих коллекциях
   не оставляй: либо удаляй за собой, либо проверяй логику без записи.
 - В браузере превью ник — `ClaudeTest` (кука `tfc_nick`). Если пишешь данные от своего имени осознанно
@@ -104,7 +105,8 @@ npm run guides -- pull <папка> | push <файл.md|папка>   # гайд
 - Запись в Firestore из скриптов — REST от имени `firebase login` или сервисного ключа (`GOOGLE_APPLICATION_CREDENTIALS`)
   (`scripts/firestore-rest.mjs`), правила на неё не действуют.
   Этим же способом удобно читать базу из node, когда нужно найти задачу или датапак.
-- `src/lib/recipeFilter.ts`, `recipeRefs.ts` и `nbt.ts` — **без импортов, только стираемый синтаксис TS**: их запускает и сайт, и Node
+- `src/lib/recipeFilter.ts`, `recipeRefs.ts`, `nbt.ts`, `datapackFiles.ts` и `schematicFile.ts` (импортирует только `./nbt.ts` —
+  с расширением) — **без импортов, только стираемый синтаксис TS**: их запускает и сайт, и Node
   (`import '../src/lib/x.ts'` из `.mjs`, Node 24). В `tsconfig` включён `erasableSyntaxOnly` — никаких enum и parameter properties.
 - То, что мод задаёт кодом (перечисления, константы), читай скриптом через `scripts/mods/classfile.mjs`, а не вписывай руками:
   данные сайта должны пересобираться из jar текущей сборки. Пример — `scripts/mods/botany.mjs`.
@@ -114,7 +116,7 @@ npm run guides -- pull <папка> | push <файл.md|папка>   # гайд
 
 ## Firestore
 
-`tasks`, `groups`, `artifacts`, `files` (+`chunks`, пакет `firestore-files`), `datapacks`, `schematics`, `recipeHints`, `guides` (+`revisions`),
+`tasks`, `groups`, `artifacts`, `files` (+`chunks`, пакет `firestore-files`), `datapacks`, `kubejsScripts`, `schematics`, `recipeHints`, `guides` (+`revisions`),
 `packUpdates`, `settings/world`, `config`, `onboarding/{uid}` (какие подсказки знакомства показаны). Поля — в README, «Модель данных».
 
 - Авторизации нет: анонимный вход + ник в куке. Правила проверяют форму данных и `nick(...)`, а не владельца.
@@ -134,8 +136,10 @@ src/lib/
   recipes.ts recipeFilter.ts   каталог рецептов + KubeJS: статусы, фильтры
   recipeRefs.ts kubejsFix.ts   входы/выходы рецепта; конструктор обхода удалений KubeJS
   tags.ts                      теги: слияние источников и KubeJS, поиск, файл правки датапака (UI — TagEditor)
-  datapack.ts                  записи датапака, zip, проверки
-  nbt.ts schematic.ts materials.ts schematicLibrary.ts   схемы .nbt: замена/удаление блоков, материалы, библиотека
+  datapack.ts datapackFiles.ts записи датапака, zip, проверки; файлы датапака (общие с Node)
+  kubejsScripts.ts             скрипты KubeJS на сайте (коллекция kubejsScripts, UI — components/KubejsScripts)
+  nbt.ts schematic.ts materials.ts schematicLibrary.ts   схемы .nbt: замена/удаление блоков, материалы, библиотека;
+  schematicFile.ts             файл схемы с заменами и формой (общий с Node; подбор замен — в schematic.ts)
   reference.ts meals.ts        справочник (руды, топливо, жидкое топливо, еда, металлы); сборные блюда и калькуляторы
   multiblocks.ts               мультиблоки IE: шаблоны, замены по тегам-заменителям (UI — MultiblocksTab, CSS 3D)
   power.ts                     электричество: Create SU ↔ Electro Energetics (В/А/Вт) ↔ IE FE/t, формулы из кода (UI — PowerTab)
@@ -147,6 +151,8 @@ src/lib/
 src/components/guides/  гайды справочника: GuidesSection (карточки, статья), GuideEditor/History/Help, CalcBlock (```calc),
                   GuideBody (Markdown + {{…}} + виджеты «::имя»), powerWidgets — рисунки раздела; формат — docs/plans/guides.md
 server/file-server/  сервер файлов для Ubuntu (Node без зависимостей); переезд — scripts/files-migrate.mjs
+server/pack-server/  сервер сборки (снимки, ключи); стоит на VPS — адрес и порты в docs/STATE.md
+cli/              программа tfc для ПК (npm run tfc -- …): sync/publish сборки; инструкция — cli/README.md
 tools/            аддоны сборки (ee-rectifier-mod, ee-overheat-mod) — docs/addons.md; на сайте — lib/addons.ts, AddonsTab
 scripts/mcp/      MCP сборки для агента (stdio): data.mjs — слияние данных как на сайте, jars.mjs, firestore.mjs, tools.mjs
 scripts/          mods.mjs + mods/{reference,tags,botany,meals,cuisine,power,multiblocks,geo,manifest,classfile,config-defaults}.mjs, serverconfig.mjs,
