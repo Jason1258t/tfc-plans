@@ -226,6 +226,20 @@ ByePregen, рецептов, `ClientRecipeBook`, JEI/EMI, моделей и зв
 затенение по нормали, полупрозрачность, multipart, `neoforge:composite` — нет. Не рисует окраску `tintindex`
 (трава и листья серые), анимацию (первый кадр), `builtin/entity` и модели с `loader` — о них предупреждает.
 Сверено с ванилью: печь в инвентаре — лицом влево, факел, рычаг, ступени, вал Create, наковальня TFC.
+Края сглажены: модель рисуется в 4 раза крупнее и усредняется (альфа — по покрытию), грани — с краями
+включительно и запасом в полпикселя, так что на стыках нет щелей; пиксели текстур — ближайшие, как в игре.
+Предмет `item/generated` — плоская текстура, увеличенная с целым масштабом, по центру картинки.
+
+Тот же код — **единственный генератор иконок** аддонов (сайт `public/addons/*.png`, выпуск аддона):
+
+```bash
+node scripts/mcp/render.mjs tools/ee-extras-mod ee_extras:four_core_termination ee_extras:four_core_cable_spool --out out/icons --size 256
+```
+
+Первый аргумент — папка аддона (или папка с `assets/`), дальше id; файл — `<путь id, «/» → «_»>.png`. По умолчанию
+`--kind icon` (как в инвентаре: модель предмета, нет её — блок), ещё `--state`, `--view`, `--aa` (1 — без
+сглаживания). Чужие `parent` и текстуры — из jar `mods/` и Minecraft. Код выхода 1, если что-то не нарисовалось;
+предупреждения печатаются под строкой файла.
 
 `resources_check` сверяет:
 
@@ -309,7 +323,7 @@ scripts/mcp/
   firestore.mjs     REST к Firestore: api, listAll, cached; конфиги, гайды
   site-datapacks.mjs  датапаки сайта как слой рецептов (recipes(site) в data.mjs)
   resources.mjs     слои ресурсов клиента (ресурспаки, KubeJS, аддоны, jar, Minecraft), модель с parent
-  render.mjs        растеризатор моделей в PNG (model_render, texture_get)
+  render.mjs        растеризатор моделей в PNG (model_render, texture_get) и генератор иконок из командной строки
   tools/<раздел>.mjs  инструменты раздела: code (классы, миксины, декомпиляция, зависимости), logs,
                       pack, kubejs, books (+books-index), blocks (+blocks-data), site, map (+map-climate,
                       map-png — PNG чтение и запись), resources (model_render, texture_get, resources_check)

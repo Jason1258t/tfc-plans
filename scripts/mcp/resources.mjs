@@ -289,3 +289,71 @@ export function resolveTexture(textures, ref) {
   if (r && typeof r === 'object') r = r.sprite; // форма { sprite, … } NeoForge
   return typeof r === 'string' && !r.startsWith('#') ? r : null;
 }
+
+// ---------------------------------------------------------------- блокстейты
+
+/** «facing=north,roll=false» → { facing: 'north', roll: 'false' } */
+export function parseState(s) {
+  const out = {};
+  for (const part of String(s ?? '').split(',')) {
+    const [k, v] = part.split('=').map((x) => x?.trim());
+    if (k && v != null) out[k] = v;
+  }
+  return out;
+}
+export const stateText = (st) =>
+  Object.entries(st)
+    .map(([k, v]) => `${k}=${v}`)
+    .join(',');
+
+/** Подходит ли условие multipart «when» к состоянию */
+export function whenMatches(when, st) {
+  if (!when) return true;
+  if (Array.isArray(when.OR)) return when.OR.some((w) => whenMatches(w, st));
+  if (Array.isArray(when.AND)) return when.AND.every((w) => whenMatches(w, st));
+  return Object.entries(when).every(([k, v]) => {
+    const neg = String(v).startsWith('!');
+    const vals = String(v).replace(/^!/, '').split('|');
+    return neg ? !vals.includes(st[k]) : vals.includes(st[k]);
+  });
+}
+
+/** Свойства и значения, упомянутые в блокстейте: Map(свойство → Set(значения)) */
+export function statePropsOf(bs) {
+  const props = new Map();
+  const add = (k, v) => (props.get(k) ?? props.set(k, new Set()).get(k)).add(String(v));
+  for (const key of Object.keys(bs.variants ?? {})) for (const [k, v] of Object.entries(parseState(key))) add(k, v);
+  const walk = (w) => {
+    if (!w) return;
+    if (Array.isArray(w.OR)) return w.OR.forEach(walk);
+    if (Array.isArray(w.AND)) return w.AND.forEach(walk);
+    for (const [k, v] of Object.entries(w)) for (const x of String(v).replace(/^!/, '').split('|')) add(k, x);
+  };
+  for (const p of bs.multipart ?? []) walk(p.when);
+  return props;
+}
+
+const firstModel = (v) => (Array.isArray(v) ? v[0] : v);
+
+/** Модели блокстейта для состояния: [{ model, x, y, uvlock }], ключ варианта */
+export function pickVariant(bs, want) {
+  if (bs.variants) {
+    const keys = Object.keys(bs.variants);
+    const key =
+      keys.find(
+        (k) =>
+          Object.entries(parseState(k)).every(([p, v]) => want[p] == null || want[p] === v) &&
+          Object.keys(want).every((p) => p in parseState(k) || !k),
+      ) ??
+      keys.find((k) => Object.entries(want).every(([p, v]) => parseState(k)[p] === v)) ??
+      keys[0];
+    const v = firstModel(bs.variants[key]);
+    return { key, parts: v ? [v] : [] };
+  }
+  // multipart: свойства без значения — первое упомянутое значение
+  const st = { ...want };
+  for (const [k, vals] of statePropsOf(bs)) if (st[k] == null) st[k] = [...vals][0];
+  const parts = [];
+  for (const p of bs.multipart ?? []) if (whenMatches(p.when, st)) parts.push(...[p.apply].flat().slice(0, 1));
+  return { key: stateText(st), parts };
+}
