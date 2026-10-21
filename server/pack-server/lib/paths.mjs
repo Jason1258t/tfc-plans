@@ -37,6 +37,32 @@ const FORBIDDEN_DIRS = new Set([
 /** Клиентское и личное в config/ — из docs/plans/pack-directory.md */
 const CONFIG_EXCLUDED = ['fancymenu', 'jmsharedmaps', 'csc', 'voicechat', 'xaero'];
 
+/**
+ * Не настройки, а состояние модов, кеши и личное, хоть и лежат в config/. Сервер их принимает (старые версии tfc
+ * заливают), но tfc их не заливает и у игрока не трогает: ни ставит, ни убирает. Найдено по истории снимков —
+ * файлы, которые менялись почти при каждой заливке, и то, что видно по содержимому (docs/pack-server.md, «Шум»).
+ */
+const STATE_PATHS = [
+  /^config\/emi-accelerator\/(reload-timings\.json|.*\.emic)$/i, // замеры загрузки и кеш стаков EMI
+  /^config\/jei\/world\//i, // история поиска и закладки JEI по мирам игрока
+  /^config\/spark\/(activity\.json|tmp(-client)?\/)/i, // журнал профилировщика: ник и UUID, временные файлы
+  /^config\/sodium-fingerprint\.json$/i, // отпечаток железа ПК: Sodium сверяет его, чтобы заметить чужой конфиг
+  /^config\/chunky\/tasks\//i, // прогресс прогрузки чанков
+  /^config\/create_submarine_client_state\.json$/i, // «экран приветствия показан»
+  /^config\/NoChatReports\/NCR-ServerPreferences\.json$/i, // выбор игрока по серверам
+];
+
+/** Состояние мода, а не настройка: в снимок не берём */
+export const isStatePath = (p) => STATE_PATHS.some((re) => re.test(p));
+
+/**
+ * Клиентские настройки (интерфейс, клавиши, графика): у каждого игрока свои — у игрока только добавляются, если их
+ * нет, а при заливке хоста версия на сервере не обновляется (до игроков она всё равно не дошла бы).
+ * -client / _client в имени, в том числе vss-client-config.json.
+ */
+export const isClientConfig = (p) =>
+  /^(config|defaultconfigs)\/.*[-_]client([-_][\w-]+)?\.(toml|json5?|cfg|properties|txt|snbt|ya?ml|ini)$/i.test(p);
+
 const RULES = [
   { kind: 'mod', test: (p) => /^mods\/[^/]+\.jar$/i.test(p) },
   {

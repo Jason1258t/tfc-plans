@@ -337,6 +337,7 @@ function printPlan(plan, { verbose = false } = {}) {
   line(red('−'), 'убрать (больше нет в сборке)', plan.remove);
   line(yellow('!'), 'вы меняли — рядом положу .tfc-new (перезаписать: --force)', plan.conflict);
   line(dim('·'), 'клиентские конфиги отличаются — оставляю ваши', plan.keepClient);
+  line(dim('·'), 'ваши правки конфигов — в сборке эти файлы не менялись, оставляю', plan.keptLocal);
   line(dim('·'), 'убраны из сборки, но вы их меняли — оставляю', plan.keptModified);
   const extraMods = plan.extra.filter((f) => f.kind === 'mod');
   line(dim('·'), 'ваши моды не из сборки — не трогаю', extraMods);
@@ -492,12 +493,13 @@ async function cmdPublish(v) {
   const profile = currentProfile(cfg, v.profile);
   const a = api(cfg);
   const current = await a.current();
-  const { files: local, skipped } = await scan(profile);
+  const { files: local, skipped, state } = await scan(profile);
   if (!local.size) throw new Error(`в ${profile.instance} нечего заливать`);
   const ver = detectVersions(profile.instance);
   const { mc, loader } = await gameVersion(a, v, ver, current, profile.instance);
   console.log(`Профиль ${profileTitle(profile)}${mc ? dim(` · Minecraft ${mc}${loader ? `, ${loader}` : ''}`) : ''}`);
   if (skipped) console.log(dim(`(пропущено вне белого списка: ${skipped})`));
+  if (state) console.log(dim(`(состояние модов — кеши, история JEI и т. п. — не заливаю: ${state})`));
   if (!profile.world) console.log(yellow('Мир не выбран — датапаки и календарь мира не попадут в сборку (tfc init).'));
   await publish({
     api: a,
