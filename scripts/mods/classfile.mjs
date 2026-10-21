@@ -4,7 +4,7 @@
  * JDK и javap не нужны: сборка должна работать у любого, кто положил моды в mods/.
  *
  *   const cls = parseClass(buffer)
- *   cls.name, cls.fields[{ name, desc, constant }], cls.methods[{ name, desc, code }]
+ *   cls.name, cls.interfaces, cls.fields[{ name, desc, constant }], cls.methods[{ name, desc, code }]
  *   enumConstants(cls)  → [{ name, field, desc, args: [значения после (String имя, int номер)] }]
  *   clinitValues(cls)   → { constants (то же), statics: Map(имя статического поля → значение) }
  *   lambdaTargets(cls, method) → [{ owner, name, desc }] — что вызывают лямбды, созданные в методе
@@ -109,8 +109,8 @@ export function parseClass(buf) {
   const name = className(u2());
   const superIdx = u2();
   const superName = superIdx ? className(superIdx) : null;
-  const interfaces = u2();
-  p += interfaces * 2;
+  const interfaces = [];
+  for (let n = u2(); n > 0; n--) interfaces.push(className(u2()));
 
   const attributes = () => {
     const out = [];
@@ -163,7 +163,7 @@ export function parseClass(buf) {
     }
   }
 
-  return { name, superName, fields, methods, bootstrap, cp, constant, ref, nat, className, utf };
+  return { name, superName, interfaces, fields, methods, bootstrap, cp, constant, ref, nat, className, utf };
 }
 
 // ---------------------------------------------------------------- инструкции

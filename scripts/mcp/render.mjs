@@ -20,6 +20,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { mods } from './data.mjs';
+import { entityItemModel } from './entityModels.mjs';
+import { fluidLook } from './fluids.mjs';
 import {
   blockstatePath,
   findResource,
@@ -38,13 +40,14 @@ import {
 const SHADE = { up: 1.0, down: 0.5, north: 0.8, south: 0.8, east: 0.6, west: 0.6 };
 const DEG = Math.PI / 180;
 
-/** Как iso.py: вокруг Y на −ry, затем вокруг X на rx — поворот display.gui [x, y, 0] (север слева при 225°) */
-function viewRot([x, y, z], rx, ry) {
-  const a = -ry * DEG;
-  const x1 = x * Math.cos(a) + z * Math.sin(a);
-  const z1 = -x * Math.sin(a) + z * Math.cos(a);
-  const b = rx * DEG;
-  return [x1, y * Math.cos(b) - z1 * Math.sin(b), y * Math.sin(b) + z1 * Math.cos(b)];
+/**
+ * Поворот display.gui [x, y, z] — как у игры: ItemTransform.apply → Quaternionf.rotationXYZ (сначала z, потом y,
+ * потом x, правая тройка), экран GuiGraphics.renderItem — scale(16, −16, 16): x вправо, y вверх, ближе — больше z.
+ * При [30, 225, 0] видны верх, север (справа) и восток (слева) — как на иконке печи в Minecraft Wiki
+ * (Invicon_Furnace: топка справа). До 2026-10-21 здесь был −y (как в iso.py) — иконки выходили зеркальными.
+ */
+function viewRot(p, rx, ry, rz = 0) {
+  return axisRot(axisRot(axisRot(p, 'z', rz), 'y', ry), 'x', rx);
 }
 
 /** Поворот вокруг оси (правая тройка, градусы) */
@@ -169,7 +172,16 @@ export const DRAWN_LOADERS = new Set([
   'neoforge:separate_transforms',
   'forge:separate_transforms',
   'immersiveengineering:conf_sides',
+  'sophisticatedbackpacks:backpack',
 ]);
+
+/**
+ * Рюкзак Sophisticated Backpacks (BackpackDynamicModel): части block/backpack_<часть> с текстурой clips из модели
+ * предмета. Без улучшений (как в JEI и творческом) — основа, карманы слева, справа и спереди, лямки (лямок нет только
+ * на спине игрока). Цвета ткани и окантовки по умолчанию — BackpackWrapper.DEFAULT_MAIN_COLOR / DEFAULT_ACCENT_COLOR.
+ */
+const BACKPACK_PARTS = ['base', 'left_pouch', 'right_pouch', 'front_pouch', 'straps'];
+const BACKPACK_TINTS = { 0: 0xcc613a, 1: 0x622e1a };
 
 /** Ссылка на модель из поля загрузчика: строка или { parent, textures } — модель с подставленными текстурами */
 function inlineModel(layers, ref) {
@@ -227,6 +239,21 @@ function expandParts(layers, parts, warnings) {
       }
       continue;
     }
+    if (loader === 'sophisticatedbackpacks:backpack' && !m.elements) {
+      const clips = resolveTexture(m.textures, '#clips');
+      for (const name of BACKPACK_PARTS) {
+        const c = loadModel(layers, `sophisticatedbackpacks:block/backpack_${name}`);
+        if (!c.chain.length || c.missing.length) {
+          warnings.add(`${m.id}: нет части рюкзака backpack_${name}`);
+          continue;
+        }
+        if (clips) c.textures = { ...c.textures, clips };
+        c.display = { ...c.display, ...m.display };
+        c.tints = BACKPACK_TINTS;
+        out.push({ ...part, model: c });
+      }
+      continue;
+    }
     if (loader === 'immersiveengineering:conf_sides' && !m.elements) {
       // Конденсаторы IE и т. п.: <base_name>_<сторона>_none (по коду IE — side_top_bottom, side_top, all_same…)
       const base = m.loaderJson?.base_name;
@@ -260,6 +287,42 @@ function expandParts(layers, parts, warnings) {
 }
 
 /**
+ * Инструменты IE (ie_obj с полем callbacks): какие группы OBJ видны у предмета без улучшений и насадок — как в JEI
+ * и творческом. Перенесено из shouldRenderGroup / getTextureReplacement / getRenderColor классов
+ * blusunrize.immersiveengineering.client.models.obj.callback.item.*Callbacks (IE 1.21.1-12.4.2).
+ */
+const IE_ITEM_CALLBACKS = {
+  // DrillCallbacks: без головки — только рама и рукоять
+  'immersiveengineering:drill': { show: (g) => g === 'drill_frame' || g === 'drill_grip' },
+  // ChemthrowerCallbacks: base, grip, cage, tanks, tank; large_tank и multi_tank — с улучшениями
+  'immersiveengineering:chemthrower': { show: (g) => ['base', 'grip', 'cage', 'tanks', 'tank'].includes(g) },
+  // RailgunCallbacks: всё, кроме прицела и ускорителя (barrel_top виден без ускорителя)
+  'immersiveengineering:railgun': { show: (g) => g !== 'upgrade_scope' && g !== 'upgrade_speed' },
+  // RevolverCallbacks: frame, cylinder, barrel, cosmetic_compensator; все материалы — текстура item/revolvers/revolver
+  'immersiveengineering:revolver': {
+    show: (g) => ['frame', 'cylinder', 'barrel', 'cosmetic_compensator'].includes(g),
+    texture: 'immersiveengineering:item/revolvers/revolver',
+  },
+  // ShieldCallbacks: всё, кроме вспышки и электрошока
+  'immersiveengineering:shield': { show: (g) => g !== 'flash' && g !== 'shock' },
+  // BuzzsawCallbacks: без диска и улучшений — корпус и прочее, что не перечислено
+  'immersiveengineering:buzzsaw': {
+    show: (g) =>
+      !['blade', 'upgrade_lube', 'upgrade_launcher', 'upgrade_waterproof'].includes(g) && !/^upgrade_blades\d$/.test(g),
+  },
+  // PowerpackCallbacks (проход 0): без знамён, антенны, индукции и катушки Теслы
+  'immersiveengineering:powerpack': {
+    show: (g) =>
+      !['banner', 'big_banner', 'banner_post', 'antenna', 'induction', 'induction_tubes', 'tesla_coil'].includes(g),
+  },
+  // FluorescentTubeCallbacks: трубка — белый × 0.3 (не горит), остальное — 0.067
+  'immersiveengineering:fluorescent_tube': { show: () => true, tint: (g) => (g === 'tube' ? 0x4d4d4d : 0x111111) },
+};
+
+/** ie_obj рисуем, если видимость групп не задаёт код (нет callbacks) или её код перенесён в IE_ITEM_CALLBACKS */
+export const ieObjDrawable = (m) => !m.loaderJson?.callbacks || Boolean(IE_ITEM_CALLBACKS[m.loaderJson.callbacks]);
+
+/**
  * Геометрия OBJ (neoforge:obj, ie_obj): треугольники в пикселях модели (0–16 = блок) с uv 0–1 (v сверху, как у
  * картинки; flip_v — как в ObjLoader NeoForge) и текстурой материала (map_Kd: id текстуры или #переменная модели).
  */
@@ -284,7 +347,11 @@ function objTriangles(layers, m, warnings) {
   const vns = [];
   const tris = [];
   let mat = null;
-  const flipV = j.flip_v === true;
+  let group = null;
+  // ie_obj переворачивает v всегда (PolygonUtils.toBakedQuad IE: sprite.getV(1 − v)), NeoForge — по flip_v
+  const flipV = j.flip_v === true || m.loader === 'immersiveengineering:ie_obj';
+  // Инструменты IE: какие группы видны и чем перекрашены — по коду их ItemCallback (IE_ITEM_CALLBACKS)
+  const cb = m.loader === 'immersiveengineering:ie_obj' ? IE_ITEM_CALLBACKS[j.callbacks] : null;
   for (const raw of r.data.toString('utf8').split(/\r?\n/)) {
     const line = raw.trim();
     const [cmd, ...a] = line.split(/\s+/);
@@ -292,6 +359,7 @@ function objTriangles(layers, m, warnings) {
     else if (cmd === 'vt') vts.push(a.slice(0, 2).map(Number));
     else if (cmd === 'vn') vns.push(a.slice(0, 3).map(Number));
     else if (cmd === 'usemtl') mat = a.join(' ');
+    else if (cmd === 'o' || cmd === 'g') group = a.join(' ');
     else if (cmd === 'mtllib') {
       const mr = findResource(layers, dir + a.join(' '));
       if (!mr) warnings.add(`${m.id}: нет материалов ${dir}${a.join(' ')}`);
@@ -312,9 +380,11 @@ function objTriangles(layers, m, warnings) {
         };
       });
       if (pts.some((x) => !x.v)) continue;
+      if (cb && group != null && !cb.show(group)) continue;
       // Текстура материала: map_Kd — id текстуры (ns:block/x) или #переменная модели; нет — #материал / particle
       const kd = materials.get(mat);
       const tex =
+        cb?.texture ??
         resolveTexture(m.textures, kd && !kd.startsWith('#') ? kd : (kd ?? `#${mat}`)) ??
         resolveTexture(m.textures, `#${mat}`) ??
         resolveTexture(m.textures, '#particle');
@@ -325,6 +395,7 @@ function objTriangles(layers, m, warnings) {
           UV: tri.map((x) => (x.t ? [x.t[0], flipV ? 1 - x.t[1] : x.t[1]] : [0, 0])),
           N: tri.every((x) => x.n) ? tri.map((x) => x.n).reduce((s, n) => s.map((c, k) => c + n[k]), [0, 0, 0]) : null,
           tex,
+          tint: cb?.tint?.(group) ?? null,
         });
       }
     }
@@ -346,9 +417,10 @@ export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } 
   const texCache = new Map();
   let rx;
   let ry;
+  let rz = 0;
   if (view === 'gui') {
     const gui = parts.find((p) => p.model.display.gui)?.model.display.gui;
-    [rx, ry] = gui?.rotation ?? [30, 225, 0];
+    [rx, ry, rz = 0] = gui?.rotation ?? [30, 225, 0];
     if (!gui) warnings.add('нет display.gui в цепочке parent — взят поворот [30, 225, 0] (как у block/block)');
   } else
     [rx, ry] = { top: [90, 0], bottom: [-90, 0], south: [0, 0], north: [0, 180], east: [0, 90], west: [0, -90] }[
@@ -361,27 +433,63 @@ export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } 
   const tris = [];
   for (const part of parts) {
     const m = part.model;
-    const place = (p) => {
-      let d = [p[0] - 8, p[1] - 8, p[2] - 8];
+    // Вариант блокстейта: сначала x, потом y, оба — по часовой (отрицательный угол правой тройки); затем mat —
+    // поворот, который добавляет код предмета (рендерер ящиков Functional Storage)
+    const orient = (v) => {
+      let d = v;
       if (part.x) d = axisRot(d, 'x', -part.x);
       if (part.y) d = axisRot(d, 'y', -part.y);
+      const M = part.mat;
+      if (M)
+        d = [
+          M[0] * d[0] + M[1] * d[1] + M[2] * d[2],
+          M[3] * d[0] + M[4] * d[1] + M[5] * d[2],
+          M[6] * d[0] + M[7] * d[1] + M[8] * d[2],
+        ];
       return d;
     };
+    const place = (p) => orient([p[0] - 8, p[1] - 8, p[2] - 8]);
     if (/(^|:)(ie_)?obj$/.test(m.loader ?? '') && !m.elements) {
       for (const t of objTriangles(layers, m, warnings)) {
         const P = t.P.map(place);
         // Нормаль: из vn файла, а нет — по треугольнику; затенение — как у граней блока
-        let n = t.N;
-        if (part.x) n = n && axisRot(n, 'x', -part.x);
-        if (part.y) n = n && axisRot(n, 'y', -part.y);
+        let n = t.N && orient(t.N);
         if (!n) {
           const e1 = P[1].map((c, k) => c - P[0][k]);
           const e2 = P[2].map((c, k) => c - P[0][k]);
           n = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
         }
         const len = Math.hypot(...n) || 1;
-        tris.push({ P: P.map((v) => viewRot(v, rx, ry)), UV: t.UV, tex: t.tex, shade: shadeOf(n.map((c) => c / len)) });
+        tris.push({
+          P: P.map((v) => viewRot(v, rx, ry, rz)),
+          UV: t.UV,
+          tex: t.tex,
+          tint: t.tint,
+          shade: shadeOf(n.map((c) => c / len)),
+        });
         if (!t.tex) warnings.add(`${m.id}: у материала OBJ нет текстуры`);
+      }
+      continue;
+    }
+    // Грани моделей сущностей (entityModels.mjs): уже в пикселях блока, с uv по вершинам; без отсечения задних
+    // граней (кубы замкнуты — видимое решает буфер глубины), наложение (узор знамени) — поверх той же грани
+    if (m.quads) {
+      for (const fq of m.quads) {
+        const [O, U, V] = fq.P.map((x) => viewRot(place(x), rx, ry, rz));
+        const n = orient(fq.N);
+        const len = Math.hypot(...n) || 1;
+        quads.push({
+          O,
+          U,
+          V,
+          tex: fq.tex,
+          uv: fq.uv,
+          rot: 0,
+          shade: shadeOf(n.map((c) => c / len)),
+          tint: fq.tint,
+          overlay: fq.overlay,
+          nocull: true,
+        });
       }
       continue;
     }
@@ -404,34 +512,26 @@ export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } 
           }
           v = [d[0] + o[0], d[1] + o[1], d[2] + o[2]];
         }
-        // Вариант блокстейта: сначала x, потом y, оба — по часовой (отрицательный угол правой тройки)
-        let d = [v[0] - 8, v[1] - 8, v[2] - 8];
-        if (part.x) d = axisRot(d, 'x', -part.x);
-        if (part.y) d = axisRot(d, 'y', -part.y);
-        return d;
+        return place(v);
       };
-      const normalOf = (n) => {
-        let v = n;
-        if (er && er.angle) v = axisRot(v, er.axis, er.angle);
-        if (part.x) v = axisRot(v, 'x', -part.x);
-        if (part.y) v = axisRot(v, 'y', -part.y);
-        return v;
-      };
+      const normalOf = (n) => orient(er && er.angle ? axisRot(n, er.axis, er.angle) : n);
       for (const [name, face] of Object.entries(el.faces ?? {})) {
         if (!NORMALS[name]) continue;
         const [o, pu, pv] = faceQuad(from, to, name);
         const texId = resolveTexture(m.textures, face.texture);
         if (!texId) warnings.add(`${m.id}: текстура ${face.texture} не задана`);
-        if (face.tintindex != null && face.tintindex >= 0)
+        const tint = face.tintindex != null && face.tintindex >= 0 ? (m.tints?.[face.tintindex] ?? null) : null;
+        if (face.tintindex != null && face.tintindex >= 0 && tint == null)
           warnings.add('tintindex: окраску задаёт код — грань без неё');
         quads.push({
-          O: viewRot(toBlock(o), rx, ry),
-          U: viewRot(toBlock(pu), rx, ry),
-          V: viewRot(toBlock(pv), rx, ry),
+          O: viewRot(toBlock(o), rx, ry, rz),
+          U: viewRot(toBlock(pu), rx, ry, rz),
+          V: viewRot(toBlock(pv), rx, ry, rz),
           tex: texId,
           uv: face.uv ?? defaultUv(from, to, name),
           rot: ((face.rotation ?? 0) % 360) / 90,
           shade: el.shade === false ? 1 : shadeOf(normalOf(NORMALS[name])),
+          tint,
         });
       }
     }
@@ -480,7 +580,7 @@ export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } 
     const dv = [V[0] - O[0], V[1] - O[1], V[2] - O[2]];
     const det = du[0] * dv[1] - du[1] * dv[0];
     // Видна, если смотрит на зрителя (+z после поворота): u × v в экранных координатах (y вниз)
-    if (Math.abs(det) < 1e-9 || det < 0) continue;
+    if (Math.abs(det) < 1e-9 || (det < 0 && !q.nocull)) continue;
     let tex = null;
     if (q.tex) {
       tex = loadTexture(layers, q.tex, texCache);
@@ -508,7 +608,8 @@ export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } 
         t = Math.min(0.99999, Math.max(0, t));
         const z = O[2] + s * du[2] + t * dv[2];
         const k = py * S + px;
-        if (z <= depth[k]) continue;
+        // Наложение рисуется на своей же грани: глубина та же (с допуском), её не пишет
+        if (q.overlay ? z < depth[k] - 0.05 : z <= depth[k]) continue;
         let a = s;
         let b = t;
         for (let i = 0; i < q.rot; i++) [a, b] = [b, 1 - a]; // поворот текстуры грани по часовой
@@ -532,11 +633,13 @@ export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } 
         }
         if (al === 0) continue;
         const i4 = k * 4;
-        r *= q.shade;
-        g *= q.shade;
-        bl *= q.shade;
-        if (al < 255) {
-          // Полупрозрачное — смешиваем поверх, глубину не пишем
+        // Окраска кодом (tintindex), если она известна: умножение, как у игры
+        const tr = q.tint == null ? 1 : 1 / 255;
+        r *= q.shade * (q.tint == null ? 1 : (q.tint >> 16) * tr);
+        g *= q.shade * (q.tint == null ? 1 : ((q.tint >> 8) & 255) * tr);
+        bl *= q.shade * (q.tint == null ? 1 : (q.tint & 255) * tr);
+        if (al < 255 || q.overlay) {
+          // Полупрозрачное и наложение — смешиваем поверх, глубину не пишем
           const f = al / 255;
           img[i4] = r * f + img[i4] * (1 - f);
           img[i4 + 1] = g * f + img[i4 + 1] * (1 - f);
@@ -598,9 +701,10 @@ export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } 
         if (al < 128) continue;
         const i4 = k * 4;
         depth[k] = z;
-        img[i4] = r * tr.shade;
-        img[i4 + 1] = g * tr.shade;
-        img[i4 + 2] = bl * tr.shade;
+        const tt = tr.tint;
+        img[i4] = r * tr.shade * (tt == null ? 1 : (tt >> 16) / 255);
+        img[i4 + 1] = g * tr.shade * (tt == null ? 1 : ((tt >> 8) & 255) / 255);
+        img[i4 + 2] = bl * tr.shade * (tt == null ? 1 : (tt & 255) / 255);
         img[i4 + 3] = 255;
       }
   }
@@ -643,46 +747,103 @@ function downsample(src, S, ss) {
 
 /** Слои layer0… предмета item/generated — один рисунок по сетке самой крупной текстуры, увеличенный без сглаживания */
 export function renderGenerated(layers, model, size = 256) {
-  const warnings = [];
-  const used = new Map();
-  const texs = [];
+  const specs = [];
   for (let i = 0; i < 16; i++) {
     const ref = model.textures[`layer${i}`];
     if (!ref) break;
-    const id = resolveTexture(model.textures, ref);
-    const t = id ? loadTexture(layers, id) : null;
-    used.set(id ?? ref, t ? t.from : null);
-    if (!t || t.error) warnings.push(`нет текстуры ${id ?? ref}`);
-    else texs.push(t);
+    specs.push({ id: resolveTexture(model.textures, ref) ?? ref });
   }
-  if (!texs.length) {
-    warnings.push('у предмета нет слоёв layer0…');
-    return { png: encodePng(1, 1, new Uint8Array(4)), warnings, textures: used };
+  const r = renderFlat(layers, specs, size);
+  if (!specs.length) r.warnings.push('у предмета нет слоёв layer0…');
+  if (specs.length > 1) r.warnings.push('слои выше layer0 часто окрашиваются кодом (tint) — здесь без окраски');
+  return r;
+}
+
+/** DyedItemColor.LEATHER_COLOR Minecraft 1.21.1 — кожаная броня без окраски */
+const LEATHER_COLOR = 0xffa06540;
+
+/**
+ * Плоские предметы с загрузчиком (как их видно в JEI и творческом):
+ *   neoforge:fluid_container — base, маска fluid, залитая текстурой still жидкости с её окраской (fluids.mjs), cover
+ *     (cover_is_mask, по умолчанию да, — base по форме cover); жидкость не определилась — пустое ведро (base);
+ *   tfc:fluid_container (ContainedFluidModel) — сосуд пустой: base;
+ *   tfc:trim (TrimmedItemModel) — без отделки: armor и overlay, оба с tintindex 0 (кожаная броня — LEATHER_COLOR).
+ * Возвращает null, если это не такой загрузчик.
+ */
+export function flatLoaderSpecs(layers, model, itemId, look) {
+  const tex = (k) => resolveTexture(model.textures, `#${k}`);
+  const j = model.loaderJson ?? {};
+  if (/^(neoforge|forge):fluid_container$/.test(model.loader ?? '')) {
+    const specs = [];
+    if (tex('base')) specs.push({ id: tex('base') });
+    const f = typeof j.fluid === 'string' && look ? look(j.fluid) : null;
+    if (f && tex('fluid')) specs.push({ id: f.still, mask: tex('fluid'), tint: f.tint });
+    const cover = tex('cover');
+    if (cover && j.cover_is_mask !== false) {
+      if (tex('base')) specs.push({ id: tex('base'), mask: cover });
+    } else if (cover) specs.push({ id: cover });
+    return { specs, fluid: f ? j.fluid : null, wanted: j.fluid ?? null };
   }
+  if (model.loader === 'tfc:fluid_container') return { specs: tex('base') ? [{ id: tex('base') }] : [] };
+  if (model.loader === 'tfc:trim') {
+    const tint = /^minecraft:leather_/.test(itemId ?? '') ? LEATHER_COLOR : undefined;
+    return { specs: ['armor', 'overlay'].filter(tex).map((k) => ({ id: tex(k), tint })) };
+  }
+  return null;
+}
+
+/**
+ * Слои плоского предмета: [{ id — текстура, mask — форма из этой текстуры (цвет берётся из id в той же точке),
+ * tint — 0xAARRGGBB, умножение }] — снизу вверх, с прозрачностью, по сетке самой крупной текстуры.
+ */
+export function renderFlat(layers, specs, size = 256) {
+  const warnings = [];
+  const used = new Map();
+  const ready = [];
+  const load = (id) => {
+    const t = loadTexture(layers, id);
+    used.set(id, t && !t.error ? t.from : null);
+    if (!t || t.error) warnings.push(`нет текстуры ${id}`);
+    return t && !t.error ? t : null;
+  };
+  for (const sp of specs) {
+    const t = load(sp.id);
+    const m = sp.mask ? load(sp.mask) : null;
+    if (t && (!sp.mask || m)) ready.push({ t, m, tint: sp.tint });
+  }
+  if (!ready.length) return { png: encodePng(1, 1, new Uint8Array(4)), warnings, textures: used };
   // Целый масштаб (пиксели текстуры — квадраты одного размера), по центру картинки size×size
-  const n = Math.max(...texs.map((t) => t.w));
+  const n = Math.max(...ready.map((r) => (r.m ?? r.t).w));
   const k = Math.max(1, Math.floor(size / n));
   const W = n * k;
   const C = Math.max(size, W);
   const off = (C - W) >> 1;
   const img = new Uint8Array(C * C * 4);
-  for (const t of texs)
+  for (const { t, m, tint } of ready) {
+    const tr = tint == null ? 255 : (tint >>> 16) & 255;
+    const tg = tint == null ? 255 : (tint >>> 8) & 255;
+    const tb = tint == null ? 255 : tint & 255;
+    const ta = tint == null ? 255 : tint >>> 24;
     for (let y = 0; y < W; y++)
       for (let x = 0; x < W; x++) {
         const tx = Math.floor((x / W) * t.w);
         const ty = Math.floor((y / W) * t.h);
-        const al = t.a[ty * t.w + tx];
+        let al = t.a[ty * t.w + tx];
+        if (m) {
+          const mi = Math.floor((y / W) * m.h) * m.w + Math.floor((x / W) * m.w);
+          if (!m.a[mi]) continue;
+        }
+        al = (al * ta) / 255;
         if (!al) continue;
         const c = t.rgb[ty * t.w + tx];
         const i4 = ((y + off) * C + x + off) * 4;
         const f = al / 255;
-        img[i4] = (c >> 16) * f + img[i4] * (1 - f);
-        img[i4 + 1] = ((c >> 8) & 255) * f + img[i4 + 1] * (1 - f);
-        img[i4 + 2] = (c & 255) * f + img[i4 + 2] * (1 - f);
+        img[i4] = (((c >> 16) * tr) / 255) * f + img[i4] * (1 - f);
+        img[i4 + 1] = ((((c >> 8) & 255) * tg) / 255) * f + img[i4 + 1] * (1 - f);
+        img[i4 + 2] = (((c & 255) * tb) / 255) * f + img[i4 + 2] * (1 - f);
         img[i4 + 3] = Math.max(img[i4 + 3], al);
       }
-  if (Object.keys(model.textures).some((x) => /^layer[1-9]/.test(x)))
-    warnings.push('слои выше layer0 часто окрашиваются кодом (tint) — здесь без окраски');
+  }
   return { png: encodePng(C, C, img), warnings, textures: used };
 }
 
@@ -755,6 +916,20 @@ export function renderId(layers, id, { kind, state, view = 'gui', size = 256, aa
       m = gm;
     }
     if (!m.chain.length) return { png: null, lines: [...lines, `Модели ${modelPath(mid)} нет.`] };
+    const flat = flatLoaderSpecs(layers, m, k === 'item' ? `${ns}:${p}` : null, fluidLook);
+    if (flat) {
+      const r = renderFlat(layers, flat.specs, size);
+      lines.push(`плоский предмет, загрузчик ${m.loader}: слои ${flat.specs.map((x) => (x.mask ? `${x.id} по форме ${x.mask}` : x.id)).join(', ')}`);
+      if (flat.wanted && !flat.fluid) lines.push(`⚠ жидкость ${flat.wanted}: текстуру и цвет из кода определить не вышло — ведро пустое`);
+      for (const [t, from] of r.textures) lines.push(`  текстура ${t}: ${from ?? '❌ нет'}`);
+      for (const w of r.warnings) lines.push(`⚠ ${w}`);
+      return { png: r.png, lines };
+    }
+    const em = m.entity ? entityItemModel(layers, `${ns}:${p}`, m) : null;
+    if (em) {
+      lines.push(`рисуется кодом (builtin/entity) — перенесённая модель: ${em.drawnBy}`);
+      m = em;
+    }
     if (m.generated) {
       const r = renderGenerated(layers, m, size);
       lines.push(
