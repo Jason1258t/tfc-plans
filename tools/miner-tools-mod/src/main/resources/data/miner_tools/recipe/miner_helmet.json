@@ -1,0 +1,18 @@
+{
+  "neoforge:conditions": [
+    { "type": "neoforge:mod_loaded", "modid": "tfc" },
+    { "type": "neoforge:mod_loaded", "modid": "immersiveengineering" }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": ["PLP", "WHW", "RCR"],
+  "key": {
+    "P": { "tag": "c:plates/steel" },
+    "L": { "item": "immersiveengineering:electric_lantern" },
+    "W": { "item": "tfc:wool_cloth" },
+    "H": { "item": "tfc:metal/helmet/steel" },
+    "R": { "tag": "c:wires/copper" },
+    "C": { "item": "immersiveengineering:capacitor_lv" }
+  },
+  "result": { "id": "miner_tools:miner_helmet", "count": 1 }
+}
