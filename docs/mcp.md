@@ -293,17 +293,29 @@ TFC 4.2.9 (включая то, как Java читает серые карты).
 `guide_put` откажет, если статью изменили после `guide_get` (условие Firestore на `updateTime`); для новой статьи
 `baseRevision` — `"new"`.
 
-### Контент сайта (только чтение)
+### Контент сайта: задачи, документы-планы, датапаки, схемы
 
 Каждый ответ пишет, сколько чтений Firestore он стоил. Списки читаются с маской полей и кешируются на минуты;
-документ целиком — отдельным запросом. uid, куки и токены в ответы не попадают.
+документ целиком — отдельным запросом. uid, куки и токены в ответы не попадают. Пишут только задачи и документы-планы
+(автор и `updatedBy` — `Claude`); датапаки, скрипты и схемы — только чтение.
 
 | Инструмент | Что делает |
 | --- | --- |
-| `tasks_list(query, status, assignee, group)` / `task_get(id*, doc_chars)` | задачи и группы; задача с чеклистом, вложениями (без содержимого) и документами |
+| `tasks_list(query, status, assignee, group)` / `task_get(id*, doc_chars)` | задачи и группы; задача с чеклистом, вложениями (без содержимого), документами, ссылкой на сайт и `revision` |
+| `groups_list(query)` | группы задач: id, название, значок, порядок — найти группу по имени («фиксы») |
+| `task_create(title*, description, group, priority, status, checklist, icon, assignee, place)` | **запись в общую базу**: задача как с кнопки «Новая задача» (рейтинг 1000, `completedAt` при `done`); `group` — id или название; `checklist` — строки, `{ text, done }` или ресурсы `{ itemId, qty, got }` (предмет проверяется по библиотеке) |
+| `task_update(id*, baseRevision*, …поля task_create, checklist_add)` | **запись**: меняются только переданные поля; `checklist` заменяет чеклист (id прежних пунктов сохраняются), `checklist_add` дописывает; смена статуса ставит/снимает `completedAt`; `"-"` очищает группу, значок, исполнителя |
+| `artifacts_list(query, task)` / `artifact_get(id*, offset, limit)` | документы-планы (`artifacts`): список по названию и задаче (`"-"` — свободные); документ по строкам и его `revision` |
+| `artifact_put(id, baseRevision, title, content, task)` | **запись**: без `id` — новый документ («План: <задача>», если название не дано), с `id` — правка переданных полей; `content` — текст целиком |
 | `datapacks_list(query, install)` / `datapack_get(id*, path)` | датапаки; файл zip — так, как его собирает сайт |
 | `kubejs_site_list(query, install)` / `kubejs_site_get(id*)` | скрипты KubeJS, добавленные на сайте (не скрипты сборки) |
 | `schematics_list(query)` / `schematic_get(id*)` | схемы Create: габариты, блоки, замены |
+
+`task_update` и `artifact_put` с `id` откажут, если задачу/документ изменили после `task_get`/`artifact_get`:
+`baseRevision` — их `revision` (`updateTime` Firestore; сверяется перед записью и условием самой записи). Ревизию
+задачи меняет и сайт — например, сравнение «Что важнее?» правит рейтинг; при отказе перечитай и повтори. Удаления
+нет: временные записи при проверке удаляй разовым скриптом через `scripts/firestore-rest.mjs`. Планы репозитория
+(`docs/plans/*.md`, их десяток) отдельного инструмента не имеют — это обычные файлы, читай их напрямую.
 
 ## Лимиты
 
@@ -329,7 +341,8 @@ scripts/mcp/
   resources.mjs     слои ресурсов клиента (ресурспаки, KubeJS, аддоны, jar, Minecraft), модель с parent
   render.mjs        растеризатор моделей в PNG (model_render, texture_get) и генератор иконок из командной строки
   tools/<раздел>.mjs  инструменты раздела: code (классы, миксины, декомпиляция, зависимости), logs,
-                      config (config_get, config_propose, config_changes), pack, kubejs, books (+books-index), blocks (+blocks-data), site, map (+map-climate,
+                      config (config_get, config_propose, config_changes), pack, kubejs, books (+books-index), blocks (+blocks-data),
+                      site (задачи, группы, документы-планы с записью; датапаки, схемы, скрипты сайта), map (+map-climate,
                       map-png — PNG чтение и запись), resources (model_render, texture_get, resources_check)
 ```
 
@@ -349,8 +362,8 @@ scripts/mcp/
 4. Проверка — node-скрипт в scratchpad, который запускает `server.mjs`, шлёт `initialize`, `tools/list` и вызовы
    и сверяет ответы с прямым чтением файлов, jar или Firestore. Потом `npx oxlint scripts/mcp` и
    `npx prettier --write` на свои файлы.
-5. В Firestore из MCP пишут только `guide_put` (с проверкой ревизии) и `config_propose` / `config_changes cancel=…`
-   (своя коллекция `configChanges`, файлы применяет хост). Новая запись — с такой же защитой от затирания чужого.
+5. В Firestore из MCP пишут только `guide_put`, `task_update`, `artifact_put` (с проверкой ревизии), `task_create`
+   и `config_propose` / `config_changes cancel=…` (своя коллекция `configChanges`, файлы применяет хост). Новая запись — с такой же защитой от затирания чужого.
 6. Перечисли новый инструмент в этом файле (с параметрами) и в разделе MCP в `CLAUDE.md`; если он меняет привычный
    путь агента (как `log_analyze` для крашей) — и в `INSTRUCTIONS` в `tools.mjs`.
 

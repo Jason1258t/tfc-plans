@@ -1,12 +1,14 @@
 /**
- * Инструменты MCP: контент сайта из Firestore — задачи и группы, датапаки, скрипты KubeJS с сайта, схемы Create.
- * Только чтение. Экономим чтения (50 тыс. в сутки на всех): списки — с mask (только нужные поля) и кешем на
+ * Инструменты MCP: контент сайта из Firestore — задачи и группы, документы-планы, датапаки, скрипты KubeJS с сайта,
+ * схемы Create. Пишут только task_create / task_update / artifact_put (подпись Claude, правка — с проверкой ревизии,
+ * как guide_put). Экономим чтения (50 тыс. в сутки на всех): списки — с mask (только нужные поля) и кешем на
  * несколько минут, документ целиком — отдельным GET по запросу, вложения задачи — запросом по taskId.
  * В конце каждого ответа — сколько чтений Firestore он стоил (0 — всё из кеша).
  */
 import { DOCS, fromValue } from '../../firestore-rest.mjs';
 import { datapackFiles, zipName } from '../../../src/lib/datapackFiles.ts';
-import { FirestoreError, api, cached, listAll } from '../firestore.mjs';
+import { itemName } from '../data.mjs';
+import { FirestoreError, api, cached, createDoc, listAll, patchDoc } from '../firestore.mjs';
 import { dateOf, nameOf, named, norm, num, page, paging, short, str, words } from '../fmt.mjs';
 
 const TTL = 3 * 60_000;
@@ -29,7 +31,7 @@ async function getDoc(coll, id, mask) {
   try {
     const d = await api(`${DOCS}/${coll}/${encodeURIComponent(id)}${mask ? `?${maskQs(mask)}` : ''}`);
     reads += 1;
-    return { id, ...fields(d) };
+    return { id, updateTime: d.updateTime, ...fields(d) };
   } catch (e) {
     if (e instanceof FirestoreError && e.status === 404) {
       reads += 1;
@@ -47,7 +49,13 @@ async function queryEq(coll, field, value, mask) {
     ...(mask ? { select: { fields: mask.map((fieldPath) => ({ fieldPath })) } } : {}),
   };
   const r = await api(`${DOCS}:runQuery`, { method: 'POST', body: JSON.stringify({ structuredQuery }) });
-  const out = r.filter((x) => x.document).map((x) => ({ id: x.document.name.split('/').pop(), ...fields(x.document) }));
+  const out = r
+    .filter((x) => x.document)
+    .map((x) => ({
+      id: x.document.name.split('/').pop(),
+      updateTime: x.document.updateTime,
+      ...fields(x.document),
+    }));
   reads += Math.max(1, out.length);
   return out;
 }
@@ -79,7 +87,10 @@ const tasksIndex = cached(TTL, () => {
   tasksLoaded = Date.now();
   return listCounted('tasks', TASK_MASK);
 });
-const groupsIndex = cached(TTL, () => listCounted('groups', ['name', 'order']));
+const groupsIndex = cached(TTL, () => listCounted('groups', ['name', 'icon', 'order']));
+const artifactsIndex = cached(TTL, () =>
+  listCounted('artifacts', ['title', 'taskId', 'author', 'updatedBy', 'createdAt', 'updatedAt']),
+);
 const datapacksIndex = cached(TTL, () =>
   listCounted('datapacks', ['name', 'namespace', 'description', 'install', 'author', 'updatedBy', 'updatedAt']),
 );
@@ -155,6 +166,8 @@ function pick(list, key, label, what) {
 }
 
 const FIRESTORE_ID = /^[A-Za-z0-9]{20}$/;
+const SITE = 'https://tfc-plans-fd2c.web.app';
+const NICK = 'Claude';
 
 /** Документ целиком: id сайта — сразу GET (1 чтение), иначе поиск по кешированному списку и GET найденного */
 async function resolve(coll, index, key, label, what, mask) {
@@ -249,7 +262,8 @@ async function taskGet(a) {
       PRIORITY[t.priority] ?? '?'
     }; рейтинг: ${t.rating ?? '—'}`,
     `группа: ${g ? `«${g.name}» (${g.id})` : '—'}; автор: ${t.author ?? '?'}; исполнитель: ${t.assignee || '—'}`,
-    `создана ${dateOf(t.createdAt)}, изменена ${dateOf(t.updatedAt)}`,
+    `создана ${dateOf(t.createdAt)}, изменена ${dateOf(t.updatedAt)}; на сайте: ${SITE}/?task=${t.id}`,
+    `revision: ${t.updateTime}   ← для task_update как baseRevision`,
   ];
   if (t.place) out.push(`место: x=${t.place.x}, z=${t.place.z}${t.place.label ? ` — ${t.place.label}` : ''}`);
   if (t.description) out.push('', 'Описание:', t.description);
@@ -266,10 +280,290 @@ async function taskGet(a) {
     out.push('', `Документы (${docs.length}):`);
     for (const d of docs.sort(byUpdated)) {
       const text = String(d.content ?? '');
-      out.push(`— ${d.id} «${d.title}» (${who(d)}, ${dateOf(d.updatedAt)}, ${text.length} симв.)`, short(text, max));
+      out.push(
+        `— ${d.id} «${d.title}» (${who(d)}, ${dateOf(d.updatedAt)}, ${text.length} симв.; revision ${d.updateTime})`,
+        short(text, max),
+      );
     }
   }
   return out.join('\n');
+}
+
+// ---------------------------------------------------------------- группы и запись задач
+
+async function groupsList(a) {
+  let list = [...(await groupsIndex())].sort((x, y) => (x.order ?? 0) - (y.order ?? 0));
+  const ws = words(a.query);
+  if (ws.length) list = list.filter((g) => has(`${g.id} ${g.name}`, ws));
+  // число задач — только из тёплого кеша: грузить ради него весь список задач не стоит
+  const warm = Date.now() - tasksLoaded < TTL ? await tasksIndex() : null;
+  return page(list, a, (g) => [
+    `${g.id} — «${g.name}» [порядок ${g.order ?? 0}${g.icon ? `, значок ${named(g.icon)}` : ''}${
+      warm ? `, задач ${warm.filter((t) => t.groupId === g.id).length}` : ''
+    }]`,
+  ]);
+}
+
+/** Как uid() в src/lib/util.ts — id пункта чеклиста */
+const uid = () => crypto.randomUUID().replaceAll('-', '').slice(0, 12);
+
+/** Предмет по id — только из библиотеки сайта, иначе отказ */
+function itemOrThrow(id, what) {
+  const k = String(id).trim();
+  if (!itemName(k)) throw new Error(`${what}: нет предмета ${k} в библиотеке (найдите id через items_search)`);
+  return k;
+}
+
+/**
+ * Чеклист как у сайта (components/Checklist.tsx): ресурс — { id, itemId, text, qty, got }, пункт — { id, text, done }.
+ * Строка — обычный пункт. id прежнего пункта сохраняется (по id, по предмету или по тексту).
+ */
+function checklistOf(list, old = []) {
+  if (!Array.isArray(list)) throw new Error('checklist — массив пунктов');
+  const used = new Set();
+  const reuse = (e, same) => {
+    const prev = old.find((o) => !used.has(o.id) && (o.id === e.id || same(o)));
+    const id = prev?.id ?? uid();
+    used.add(id);
+    return id;
+  };
+  return list.map((raw, i) => {
+    const e = typeof raw === 'string' ? { text: raw } : (raw ?? {});
+    if (e.itemId) {
+      const itemId = itemOrThrow(e.itemId, `checklist[${i}]`);
+      const qty = Math.max(1, Number(e.qty ?? 1) | 0);
+      const got = Math.max(0, Number(e.got ?? 0) | 0);
+      const text = String(e.text ?? '').trim() || itemName(itemId);
+      return { id: reuse(e, (o) => o.itemId === itemId), itemId, text, qty, got };
+    }
+    const text = String(e.text ?? '').trim();
+    if (!text) throw new Error(`checklist[${i}]: нужен text (или itemId для ресурса)`);
+    return { id: reuse(e, (o) => !o.itemId && o.text === text), text, done: Boolean(e.done) };
+  });
+}
+
+/** Поля задачи из аргументов (только переданные) → patch; task — текущая задача для правки */
+async function taskFields(a, task) {
+  const p = {};
+  if (a.title != null) {
+    p.title = String(a.title).trim();
+    if (!p.title || p.title.length > 300) throw new Error('title — 1…300 символов');
+  }
+  if (a.description != null) {
+    p.description = String(a.description);
+    if (p.description.length > 200000) throw new Error('description — до 200 000 символов');
+  }
+  if (a.priority != null) {
+    p.priority = Number(a.priority);
+    if (![0, 1, 2, 3].includes(p.priority)) throw new Error('priority — 0…3 (низкая, обычная, высокая, критическая)');
+  }
+  if (a.status != null) {
+    if (!STATUS[a.status]) throw new Error('status — todo, doing или done');
+    p.status = a.status;
+    // как сайт: отметка «готово» ставит completedAt, снятие — обнуляет
+    if (a.status !== task?.status) p.completedAt = a.status === 'done' ? Date.now() : null;
+  }
+  if (a.group != null) {
+    const g = String(a.group).trim();
+    if (g === '-' || !g) p.groupId = null;
+    else {
+      const r = pick(await groupsIndex(), g, (x) => x.name, 'группы');
+      if (r.error) throw new Error(`группа: ${r.error} Список — groups_list.`);
+      p.groupId = r.doc.id;
+    }
+  }
+  if (a.icon != null) p.icon = a.icon === '-' || !a.icon ? null : itemOrThrow(a.icon, 'icon');
+  if (a.assignee != null) {
+    const n = String(a.assignee).trim();
+    p.assignee = n === '-' || !n ? null : n;
+    if (p.assignee && (p.assignee.length < 2 || p.assignee.length > 24)) throw new Error('assignee — ник 2…24 символа');
+  }
+  if (a.place != null) {
+    if (a.place === '-' || a.place === null) p.place = null;
+    else {
+      const x = Number(a.place.x);
+      const z = Number(a.place.z);
+      if (!Number.isFinite(x) || !Number.isFinite(z)) throw new Error('place — { x, z, label } (блоковые координаты)');
+      p.place = { x: Math.round(x), z: Math.round(z), ...(a.place.label ? { label: String(a.place.label) } : {}) };
+    }
+  }
+  const old = task?.checklist ?? [];
+  if (a.checklist != null) p.checklist = checklistOf(a.checklist, old);
+  if (a.checklist_add != null) p.checklist = [...(p.checklist ?? old), ...checklistOf(a.checklist_add)];
+  if ((p.checklist?.length ?? 0) > 500) throw new Error('чеклист — до 500 пунктов');
+  return p;
+}
+
+const changed = (p) =>
+  Object.keys(p)
+    .filter((k) => k !== 'updatedAt' && k !== 'updatedBy')
+    .join(', ');
+
+/** Отказ записи из-за условия Firestore (документ изменили между проверкой и записью) */
+const preconditionFailed = (e) =>
+  e instanceof FirestoreError &&
+  (e.status === 400 || e.status === 409 || e.status === 404) &&
+  /FAILED_PRECONDITION|NOT_FOUND/.test(e.body);
+
+async function taskCreate(a) {
+  const p = await taskFields({ ...a, title: a.title ?? '' });
+  const now = Date.now();
+  // как CreateTask в components/TaskDialog.tsx + createdAt/updatedAt из store.add
+  const task = {
+    title: p.title,
+    description: p.description ?? '',
+    status: p.status ?? 'todo',
+    priority: p.priority ?? 1,
+    rating: 1000,
+    checklist: p.checklist ?? [],
+    icon: p.icon ?? null,
+    groupId: p.groupId ?? null,
+    author: NICK,
+    assignee: p.assignee ?? null,
+    completedAt: p.completedAt ?? null,
+    place: p.place ?? null,
+    createdAt: now,
+    updatedAt: now,
+  };
+  const { id, updateTime } = await createDoc('tasks', task);
+  tasksIndex.reset();
+  const g = task.groupId ? (await groupMap()).get(task.groupId) : null;
+  return [
+    `Создана задача ${id} — ${task.title} [${STATUS[task.status]}, ${PRIORITY[task.priority]}${
+      g ? `, группа «${g.name}»` : ', без группы'
+    }${task.checklist.length ? `, чеклист ${task.checklist.length}` : ''}; автор ${NICK}]`,
+    `на сайте: ${SITE}/?task=${id}`,
+    `revision: ${updateTime}   ← для task_update; план к задаче — artifact_put task="${id}"`,
+  ].join('\n');
+}
+
+async function taskUpdate(a) {
+  const id = String(a.id ?? '').trim();
+  const base = String(a.baseRevision ?? '').trim();
+  if (!FIRESTORE_ID.test(id)) throw new Error('id — id задачи (20 символов) из task_get или tasks_list');
+  if (!base) throw new Error('нужен baseRevision — revision из task_get');
+  const cur = await getDoc('tasks', id);
+  if (!cur) return `Отказ: задачи ${id} нет.`;
+  if (cur.updateTime !== base)
+    return `Отказ: задачу изменили после чтения — ваша ревизия ${base}, сейчас ${cur.updateTime} (изменена ${dateOf(cur.updatedAt)}). Перечитайте task_get и перенесите правки; ничего не записано.`;
+  const p = await taskFields(a, cur);
+  if (!Object.keys(p).length) throw new Error('нечего менять: передайте хотя бы одно поле');
+  p.updatedAt = Date.now();
+  try {
+    const rev = await patchDoc('tasks', id, p, base);
+    tasksIndex.reset();
+    return `Сохранено: ${id} — ${p.title ?? cur.title}; изменено: ${changed(p)}. Новая ревизия ${rev}.\nна сайте: ${SITE}/?task=${id}`;
+  } catch (e) {
+    if (preconditionFailed(e))
+      return 'Отказ: задачу изменили одновременно с записью. Перечитайте task_get; ничего не записано.';
+    throw e;
+  }
+}
+
+// ---------------------------------------------------------------- документы-планы (artifacts)
+
+/** Название задачи — только из тёплого кеша, иначе id */
+async function taskLabel(id) {
+  if (!id) return 'свободный';
+  if (Date.now() - tasksLoaded >= TTL) return `задача ${id}`;
+  const t = (await tasksIndex()).find((x) => x.id === id);
+  return t ? `задача ${id} «${t.title}»` : `задача ${id} (удалена?)`;
+}
+
+/** Задача по id или словам названия; "-" — без задачи */
+async function taskRef(key) {
+  const k = String(key).trim();
+  if (k === '-' || !k) return { id: null };
+  const r = await resolve('tasks', tasksIndex, k, (x) => x.title, 'задачи', ['title']);
+  if (r.error) throw new Error(`задача: ${r.error}`);
+  return { id: r.doc.id, title: r.doc.title };
+}
+
+async function artifactsList(a) {
+  let list = [...(await artifactsIndex())];
+  if (a.task != null) {
+    const t = String(a.task).trim();
+    const id = t === '-' ? null : FIRESTORE_ID.test(t) ? t : (await taskRef(t)).id;
+    list = list.filter((d) => (d.taskId ?? null) === id);
+  }
+  const ws = words(a.query);
+  if (ws.length) list = list.filter((d) => has(`${d.id} ${d.title}`, ws));
+  list.sort(byUpdated);
+  const shown = page(list, a, (d) => [
+    `${d.id} — «${d.title}» [@@${d.taskId ?? ''}; ${who(d)}, ${dateOf(d.updatedAt)}]`,
+  ]);
+  // подписи задач подставляем после страницы, чтобы не искать по всему списку
+  const ids = [...new Set([...shown.matchAll(/@@(\w*)/g)].map((m) => m[1]))];
+  const labels = new Map(await Promise.all(ids.map(async (id) => [id, await taskLabel(id)])));
+  return shown.replace(/@@(\w*)/g, (_, id) => labels.get(id));
+}
+
+async function artifactGet(a) {
+  const r = await resolve('artifacts', artifactsIndex, a.id, (x) => x.title, 'документа');
+  if (r.error) return r.error;
+  const d = r.doc;
+  const text = String(d.content ?? '');
+  return [
+    `${d.id} — «${d.title}»; ${await taskLabel(d.taskId)}; ${who(d)}; создан ${dateOf(d.createdAt)}, изменён ${dateOf(d.updatedAt)}`,
+    `на сайте: ${SITE}/doc/${d.id}; ${text.length} симв.`,
+    `revision: ${d.updateTime}   ← для artifact_put как baseRevision`,
+    '',
+    text ? lines(text, a) : '(пусто)',
+  ].join('\n');
+}
+
+async function artifactPut(a) {
+  const p = {};
+  if (a.title != null) {
+    p.title = String(a.title).trim();
+    if (!p.title || p.title.length > 300) throw new Error('title — 1…300 символов');
+  }
+  if (a.content != null) {
+    p.content = String(a.content);
+    if (p.content.length > 900000) throw new Error('content — до 900 000 символов (правило Firestore)');
+  }
+  const task = a.task != null ? await taskRef(a.task) : null;
+  if (task) p.taskId = task.id;
+  const now = Date.now();
+  const id = String(a.id ?? '').trim();
+  if (!id) {
+    // как TaskDialog/DocsSection: «План: <задача>» или «Новый план»
+    const doc = {
+      title: p.title ?? (task?.title ? `План: ${task.title}` : 'Новый план'),
+      content: p.content ?? '',
+      taskId: p.taskId ?? null,
+      author: NICK,
+      updatedBy: NICK,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const r = await createDoc('artifacts', doc);
+    artifactsIndex.reset();
+    return [
+      `Создан документ ${r.id} — «${doc.title}»; ${doc.taskId ? `к задаче ${doc.taskId}` : 'свободный'}; ${doc.content.length} симв.; автор ${NICK}`,
+      `на сайте: ${SITE}/doc/${r.id}`,
+      `revision: ${r.updateTime}`,
+    ].join('\n');
+  }
+  const base = String(a.baseRevision ?? '').trim();
+  if (!FIRESTORE_ID.test(id))
+    throw new Error('id — id документа (20 символов) из artifact_get; без id — новый документ');
+  if (!base) throw new Error('нужен baseRevision — revision из artifact_get');
+  if (!Object.keys(p).length) throw new Error('нечего менять: передайте title, content или task');
+  const cur = await getDoc('artifacts', id, ['title', 'updatedBy', 'updatedAt']);
+  if (!cur) return `Отказ: документа ${id} нет.`;
+  if (cur.updateTime !== base)
+    return `Отказ: документ изменили после чтения — ваша ревизия ${base}, сейчас ${cur.updateTime} (правил ${cur.updatedBy ?? '?'} ${dateOf(cur.updatedAt)}). Перечитайте artifact_get и перенесите правки; ничего не записано.`;
+  Object.assign(p, { updatedBy: NICK, updatedAt: now });
+  try {
+    const rev = await patchDoc('artifacts', id, p, base);
+    artifactsIndex.reset();
+    return `Сохранено: ${id} — «${p.title ?? cur.title}»; изменено: ${changed(p)}. Новая ревизия ${rev}.\nна сайте: ${SITE}/doc/${id}`;
+  } catch (e) {
+    if (preconditionFailed(e))
+      return 'Отказ: документ изменили одновременно с записью. Перечитайте artifact_get; ничего не записано.';
+    throw e;
+  }
 }
 
 // ---------------------------------------------------------------- датапаки
@@ -406,6 +700,44 @@ async function schematicGet(a) {
 
 // ---------------------------------------------------------------- описание
 
+const TASK_PROPS = {
+  title: str('название (до 300 символов)'),
+  description: str('описание, Markdown'),
+  group: str('id или название группы (groups_list); "-" — без группы'),
+  priority: {
+    type: 'integer',
+    enum: [0, 1, 2, 3],
+    description: 'важность: 0 низкая, 1 обычная (по умолчанию), 2 высокая, 3 критическая',
+  },
+  status: {
+    type: 'string',
+    enum: ['todo', 'doing', 'done'],
+    description: 'надо сделать (по умолчанию) / в работе / готово',
+  },
+  checklist: {
+    type: 'array',
+    description:
+      'пункты: { text, done } — галочка; { itemId, qty, got, text? } — ресурс собрать (id предмета из items_search); можно просто строку',
+    items: {
+      type: ['object', 'string'],
+      properties: {
+        text: str('текст пункта'),
+        done: { type: 'boolean', description: 'отмечен' },
+        itemId: str('id предмета — пункт-ресурс'),
+        qty: num('сколько нужно (1)'),
+        got: num('сколько уже есть (0)'),
+      },
+    },
+  },
+  icon: str('значок задачи — id предмета; "-" — убрать'),
+  assignee: str('кто делает (ник); "-" — никто'),
+  place: {
+    type: 'object',
+    description: 'место в мире — показывается на карте',
+    properties: { x: num('блок X'), z: num('блок Z'), label: str('подпись') },
+  },
+};
+
 const install = { type: 'boolean', description: 'только отмеченные «ставить» (true) или только неотмеченные (false)' };
 
 export const TOOLS = [
@@ -438,6 +770,83 @@ export const TOOLS = [
       required: ['id'],
     },
     handler: counted(taskGet),
+  },
+  {
+    name: 'groups_list',
+    description:
+      'Группы задач сайта (Firestore groups): id, название, значок, порядок; поиск по словам — чтобы найти группу по имени («фиксы»). Число задач — если список задач уже в кеше.',
+    inputSchema: { type: 'object', properties: { query: str('слова названия'), ...paging } },
+    handler: counted(groupsList),
+  },
+  {
+    name: 'task_create',
+    description: `Создать задачу на сайте (**запись в общую базу**, автор Claude) — как кнопка «Новая задача»: рейтинг 1000, createdAt/updatedAt, completedAt при status=done. Вернёт id, ссылку и revision. Подробный план — отдельным документом: artifact_put task=<id>.`,
+    inputSchema: {
+      type: 'object',
+      properties: TASK_PROPS,
+      required: ['title'],
+    },
+    handler: counted(taskCreate),
+  },
+  {
+    name: 'task_update',
+    description:
+      'Поменять поля задачи (**запись в общую базу**); переданные поля заменяются, остальные не трогаются. Отказ, если задачу изменили после чтения: baseRevision — revision из task_get. checklist заменяет весь чеклист (id прежних пунктов сохраняются по предмету/тексту), checklist_add — дописывает.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: str('id задачи (20 символов)'),
+        baseRevision: str('revision из task_get'),
+        ...TASK_PROPS,
+        checklist_add: { ...TASK_PROPS.checklist, description: 'пункты, дописываемые в конец чеклиста' },
+      },
+      required: ['id', 'baseRevision'],
+    },
+    handler: counted(taskUpdate),
+  },
+  {
+    name: 'artifacts_list',
+    description:
+      'Документы-планы сайта (Firestore artifacts, раздел «Документы» и планы в задачах): id, название, задача, автор. Поиск по словам названия; task — документы задачи ("-" — свободные). Текст — artifact_get.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: str('слова названия'),
+        task: str('id или слова названия задачи; "-" — без задачи'),
+        ...paging,
+      },
+    },
+    handler: counted(artifactsList),
+  },
+  {
+    name: 'artifact_get',
+    description: 'Документ-план целиком (Markdown по строкам), его задача и revision для artifact_put.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: str('id документа или слова названия'),
+        offset: num('с какой строки'),
+        limit: num('сколько строк (300)'),
+      },
+      required: ['id'],
+    },
+    handler: counted(artifactGet),
+  },
+  {
+    name: 'artifact_put',
+    description:
+      'Создать или поменять документ-план (**запись в общую базу**, подпись Claude). Без id — новый документ (название по умолчанию «План: <задача>»). С id — меняются только переданные title/content/task; нужен baseRevision из artifact_get, отказ, если документ изменили после чтения. content заменяет текст целиком.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: str('id документа; пусто — создать новый'),
+        baseRevision: str('revision из artifact_get (для правки)'),
+        title: str('название'),
+        content: str('текст Markdown целиком'),
+        task: str('id или слова названия задачи, к которой привязать; "-" — отвязать'),
+      },
+    },
+    handler: counted(artifactPut),
   },
   {
     name: 'datapacks_list',

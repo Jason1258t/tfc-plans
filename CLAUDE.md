@@ -91,8 +91,11 @@ npm run pack:publish -- <папка данных> --dry-run   # что выло�
   переводы из кода, PartialModel, добыча). **Правил ресурсы аддона — прогони `resources_check` и посмотри `model_render`.**
 - Карта: `map_point` (блок ↔ широта/долгота, города, климат TFC), `map_rocks` (породы и жилы), `map_find` (место → блок),
   `map_regions` (блоки → файлы `r.X.Z.mca` и команды PowerShell).
-- Контент сайта, только чтение: `tasks_list`/`task_get`, `datapacks_list`/`datapack_get`, `kubejs_site_list`/`kubejs_site_get`,
-  `schematics_list`/`schematic_get` — тратят чтения Firestore (пишут сколько), не дёргай в цикле.
+- Контент сайта: `tasks_list`/`task_get`, `groups_list`, `artifacts_list`/`artifact_get` (документы-планы),
+  `datapacks_list`/`datapack_get`, `kubejs_site_list`/`kubejs_site_get`, `schematics_list`/`schematic_get` — тратят
+  чтения Firestore (пишут сколько), не дёргай в цикле. **Запись в общую базу** (подпись `Claude`): `task_create`,
+  `task_update` и `artifact_put` (план к задаче) — правка с `baseRevision` из `task_get`/`artifact_get`, отказ, если
+  изменили после чтения. Задачу или план на сайте заводи ими, а не разовым скриптом.
 - Инструменты раздела — `scripts/mcp/tools/<раздел>.mjs` (`export const TOOLS`), общие помощники — `fmt.mjs`.
 - grep и `unzip` — когда инструмента нет (сырьё, которого нет в данных сайта) или нужно проверить сам MCP.
   Данные MCP — это то, что собрали `npm run mods` / `kubejs`: устарели сборщики — устарел и ответ.
