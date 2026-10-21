@@ -94,11 +94,11 @@ export function TfcDownload() {
           <pre>
             {`${run.exe} init            # найдёт папку игры и мир, спросит, какую взять
 ${run.exe} login tfc_…     # ваш ключ
-${run.exe} sync            # докачать и обновить сборку`}
+${run.exe} pull            # докачать и обновить сборку`}
           </pre>
           <span className="faint small">
-            Потом, при каждом обновлении сборки, — только <code>{run.exe} sync</code>. Посмотреть, что изменится, ничего
-            не трогая: <code>{run.exe} status</code>. Вернуть как было: <code>{run.exe} sync --undo</code>.
+            Потом, при каждом обновлении сборки, — только <code>{run.exe} pull</code>. Посмотреть, что изменится, ничего
+            не трогая: <code>{run.exe} status</code>. Вернуть как было: <code>{run.exe} undo</code>.
           </span>
         </li>
       </ol>

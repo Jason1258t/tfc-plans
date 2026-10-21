@@ -1,5 +1,5 @@
 /**
- * `tfc pull` — контент сайта в папку игры: датапаки «Ставить в мир» → `<мир>/datapacks/tfc-plans-<id>.zip`,
+ * `tfc pull`, часть «сайт» — контент сайта в папку игры (снимок сборки — plan.mjs и sync.mjs, вместе — cli/tfc.mjs): датапаки «Ставить в мир» → `<мир>/datapacks/tfc-plans-<id>.zip`,
  * скрипты KubeJS «Ставить на сервер» → `kubejs/server_scripts/<fileName>`, схемы библиотеки → `schematics/`.
  * Берёт с сервера сборки (раздел /site), сайт закрыт App Check. Аддоны сборки → `mods/` — со статики сайта
  * (/addons/index.json и jar, ключ не нужен): старый jar того же мода и файлы, которые аддон заменяет (`replaces`),
@@ -9,7 +9,11 @@
  * Что поставлено — `.tfc/state.json`, поле `pulled`: { вид: { id: { path, sha256, name } } }, path — как в
  * снимке (`world/…` для мира). Без имён — ставим отмеченные и убираем то, что ставили раньше и с чего сняли
  * отметку (только своё и только неизменённое). С именами — ставим названные, остальное не трогаем.
- * Старое уходит в ту же копию, что у `tfc sync`, поэтому `tfc sync --undo` отменяет и последний pull.
+ * Старое уходит в ту же копию, что и файлы сборки (beginBackup в sync.mjs), `tfc undo` отменяет весь pull.
+ *
+ * Сайт и сборка не спорят за файл (siteOwned): у аддонов главный сайт — jar другой версии того же аддона и файлы
+ * из `replaces` из сборки не ставятся; у датапаков и скриптов главная сборка — путь, который есть в снимке,
+ * сайт не трогает.
  */
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
@@ -20,7 +24,7 @@ import { schematicFromLibrary } from '../../src/lib/schematicFile.ts';
 import { modIdsOf } from './jarid.mjs';
 import { loadState, saveState } from './plan.mjs';
 import { localPath, stateDir } from './scan.mjs';
-import { assertNotLocked, move, pruneBackups } from './sync.mjs';
+import { assertNotLocked, toBackup } from './sync.mjs';
 import { SITE } from './update.mjs';
 
 export const PULL_KINDS = ['datapacks', 'kubejs', 'schematics', 'addons'];
@@ -143,8 +147,9 @@ const addonKey = (s) =>
     .toLowerCase()
     .replace(/\.jar$/, '')
     .replace(/[-_\s]+/g, '');
-const addonMatch = (a, n) =>
-  [a.id, a.file, a.file.replace(/-\d[\w.+-]*\.jar$/i, '')].some((x) => addonKey(x) === addonKey(n));
+/** Имя jar без версии: ee-extras-2.0.1.jar → ee-extras */
+const jarBase = (file) => String(file ?? '').replace(/-\d[\w.+-]*\.jar$/i, '');
+const addonMatch = (a, n) => [a.id, a.file, jarBase(a.file)].some((x) => addonKey(x) === addonKey(n));
 
 /** Аддоны: без имён — все, что ставятся на эту сторону (клиент/сервер), с именами — названные */
 async function wantedAddons(names, profile) {
@@ -190,7 +195,7 @@ async function wantedAddons(names, profile) {
  * Что убрать при постановке аддонов: другие jar того же мода в mods/ (старая версия под другим именем — с двумя
  * игра не запустится) и файлы, которые аддон заменяет. Пути, которые ставим или уже убираем, — пропускаем.
  */
-function addonObsolete(profile, items, skip) {
+export function addonObsolete(profile, items, skip) {
   const out = new Map();
   const modsDir = path.join(profile.instance, 'mods');
   const jars = fs.existsSync(modsDir) ? fs.readdirSync(modsDir).filter((f) => /\.jar$/i.test(f)) : [];
@@ -268,6 +273,7 @@ export async function planPull(api, profile, kind, names = [], { force = false }
   if (kind === 'addons') {
     const skip = new Set([...target, ...plan.remove.map((x) => x.path), ...plan.keptModified.map((x) => x.path)]);
     plan.obsolete = addonObsolete(profile, [...plan.add, ...plan.update, ...plan.same], skip);
+    plan.skip = skip;
   }
   return { ...plan, unknown: w.unknown ?? [], all: w.all ?? [] };
 }
@@ -275,30 +281,79 @@ export async function planPull(api, profile, kind, names = [], { force = false }
 export const pullChanges = (p) =>
   p.add.length + p.update.length + p.conflict.length + p.remove.length + (p.obsolete?.length ?? 0);
 
-/** Применить планы (несколько видов за раз — одна копия для отмены) */
-export function applyPull(profile, plans) {
+const targets = (p) => [...p.add, ...p.update, ...p.same, ...p.conflict];
+
+/**
+ * Кто владеет путём, когда файл есть и в снимке, и на сайте. Меняет планы сайта (убирает из них пути снимка
+ * у датапаков и скриптов) и возвращает { skip, overrides }: skip — пути, которые план снимка не трогает (их ставит
+ * или убирает сайт), overrides — пути снимка, которые заменяют аддоны (запоминаются в state.addonOverrides, чтобы
+ * `tfc pull kubejs` без аддонов не вернул скрипт, убранный аддоном).
+ */
+export function siteOwned(plans, snapshot, state) {
+  const snapPaths = new Set((snapshot?.files ?? []).map((f) => f.path));
+  for (const p of plans) {
+    if (p.kind === 'addons') continue;
+    for (const k of ['add', 'update', 'same', 'conflict', 'remove', 'keptModified'])
+      p[k] = p[k].filter((x) => !snapPaths.has(x.path));
+  }
+  const skip = new Set();
+  for (const p of plans) for (const x of [...targets(p), ...p.remove, ...p.keptModified]) skip.add(x.path);
+  const addons = plans.find((p) => p.kind === 'addons');
+  let overrides = state.addonOverrides ?? [];
+  if (addons) {
+    const mine = targets(addons);
+    const bases = new Set(
+      [...mine.map((x) => x.path), ...addons.remove.map((x) => x.path)].map((p) => addonKey(jarBase(p.slice(5)))),
+    );
+    const over = new Set();
+    for (const f of snapshot?.files ?? [])
+      if (f.kind === 'mod' && !skip.has(f.path) && bases.has(addonKey(jarBase(f.path.slice(5))))) over.add(f.path);
+    for (const x of mine) for (const r of x.replaces ?? []) if (snapPaths.has(r)) over.add(r);
+    for (const x of addons.obsolete) if (snapPaths.has(x.path)) over.add(x.path);
+    // Заменённое раньше по id мода (имя jar не совпало) — пока стоят аддоны
+    if (mine.length) for (const p of overrides) if (snapPaths.has(p)) over.add(p);
+    overrides = [...over];
+  }
+  for (const p of overrides) skip.add(p);
+  return { skip, overrides };
+}
+
+/**
+ * После снимка: сборка могла поставить jar того же мода, что аддон, под незнакомым именем — убрать и его
+ * (и запомнить в overrides, чтобы в следующий раз сборка его не ставила).
+ */
+export function recheckAddons(profile, plans, overrides) {
+  const addons = plans.find((p) => p.kind === 'addons');
+  if (!addons) return;
+  const skip = new Set([...addons.skip, ...addons.obsolete.map((x) => x.path)]);
+  for (const x of addonObsolete(profile, targets(addons), skip)) {
+    addons.obsolete.push(x);
+    if (!overrides.includes(x.path)) overrides.push(x.path);
+  }
+}
+
+/** Применить планы сайта (несколько видов за раз). backup — общая копия pull (beginBackup в sync.mjs) */
+export function applyPull(profile, plans, backup, overrides) {
   const files = plans.flatMap((p) =>
     [...p.update, ...p.remove.filter((x) => !x.gone), ...(p.obsolete ?? [])].map((x) => x.file),
   );
   assertNotLocked(files);
   const state = loadState(profile);
-  const prevState = structuredClone(state);
   state.pulled ??= {};
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backupDir = path.join(stateDir(profile), 'backup', stamp);
-  const manifest = { at: Date.now(), pull: true, added: [], replaced: [], removed: [], tfcNew: [], prevState };
-  const keep = (x, list) => {
-    move(x.file, path.join(backupDir, 'files', ...x.path.split('/')));
-    list.push(x.path);
-  };
+  if (overrides) state.addonOverrides = overrides;
+  const manifest = backup.manifest;
+  const keep = (x, list) => toBackup(backup, x.file, x.path, list);
   for (const p of plans) {
     const mine = (state.pulled[p.kind] ??= {});
     for (const x of p.remove) {
-      if (!x.gone) keep(x, manifest.removed);
+      if (!x.gone) keep(x, 'removed');
       delete mine[x.id];
     }
-    for (const x of p.obsolete ?? []) keep(x, manifest.removed);
-    for (const x of p.update) keep(x, manifest.replaced);
+    for (const x of p.obsolete ?? []) {
+      keep(x, 'removed');
+      delete state.files?.[x.path];
+    }
+    for (const x of p.update) keep(x, 'replaced');
     for (const x of [...p.add, ...p.update]) {
       fs.mkdirSync(path.dirname(x.file), { recursive: true });
       fs.writeFileSync(x.file, x.bytes);
@@ -311,10 +366,4 @@ export function applyPull(profile, plans) {
     }
   }
   saveState(profile, state);
-  const touched = manifest.added.length + manifest.replaced.length + manifest.removed.length + manifest.tfcNew.length;
-  if (!touched) return null;
-  fs.mkdirSync(backupDir, { recursive: true });
-  fs.writeFileSync(path.join(backupDir, 'manifest.json'), `${JSON.stringify(manifest, null, 1)}\n`);
-  pruneBackups(profile);
-  return backupDir;
 }

@@ -70,7 +70,7 @@ export async function publish({ api, profile, local, current, note, mc, loader, 
       );
       for (const p of lost.slice(0, 20)) console.log(`    ! ${p}`);
       if (!force) {
-        console.log(yellow('Сначала заберите их: tfc sync config — или залейте поверх: tfc publish --force'));
+        console.log(yellow('Сначала заберите их: tfc pull config — или залейте поверх: tfc publish --force'));
         return null;
       }
     }

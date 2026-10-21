@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * tfc — программа «TFC Планы» для ПК: сверяет папку игры со сборкой на сервере, докачивает моды, конфиги,
- * скрипты KubeJS и ресурспаки; хосту — заливает сборку и собирает данные сайта. План — docs/plans/pack-cli.md,
+ * tfc — программа «TFC Планы» для ПК: сверяет папку игры со сборкой на сервере и сайтом, докачивает моды, аддоны,
+ * конфиги, скрипты KubeJS, ресурспаки, датапаки и схемы (tfc pull); хосту — заливает сборку и собирает данные сайта. План — docs/plans/pack-cli.md,
  * инструкция для игроков — cli/README.md.
  */
 import path from 'node:path';
@@ -9,12 +9,12 @@ import { parseArgs } from 'node:util';
 import { Api } from './lib/api.mjs';
 import { configFile, currentProfile, DEFAULT_SERVER, loadConfig, saveConfig } from './lib/config.mjs';
 import { detectVersions, findInstances, findWorlds, gameDirOf, isDir, isServerDir } from './lib/detect.mjs';
-import { bytesOf, changes, GROUPS, kindsOf, loadState, makePlan } from './lib/plan.mjs';
+import { bytesOf, changes, loadState, makePlan, PARTS, scopeOf } from './lib/plan.mjs';
 import { parseParts, printJobs, PUBLISH, showJob } from './lib/jobs.mjs';
 import { diffFiles, printDiff, publish } from './lib/publish.mjs';
-import { applyPull, planPull, PULL_KINDS, pullChanges } from './lib/pull.mjs';
+import { applyPull, planPull, pullChanges, recheckAddons, siteOwned } from './lib/pull.mjs';
 import { scanLocal } from './lib/scan.mjs';
-import { applyPlan, undoLast } from './lib/sync.mjs';
+import { applyPlan, beginBackup, finishBackup, undoLast } from './lib/sync.mjs';
 import { ask, bold, choose, confirm, cyan, date, dim, green, interactive, mb, red, yellow } from './lib/ui.mjs';
 import { checkUpdate } from './lib/update.mjs';
 import { cleanupOld, upgrade } from './lib/upgrade.mjs';
@@ -28,15 +28,13 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
   tfc profiles                профили; tfc use <профиль> — сделать текущим
 
 Игрокам:
-  tfc status [что]            чем папка отличается от сборки — ничего не меняет
-  tfc sync [что]              докачать и обновить; что: ${Object.keys(GROUPS).join(', ')}
+  tfc status [что]            что изменится — ничего не меняет
+  tfc pull [что]              докачать и обновить всё: сборку с сервера, аддоны, датапаки и скрипты сайта, схемы
+      что: ${Object.keys(PARTS).join(', ')} (без — всё, что нужно этой папке)
       --dry-run               только показать          --force   перезаписать и ваши правки (с копией)
-      --yes                   не спрашивать            --undo    вернуть как было до прошлой синхронизации
-  tfc pull datapacks [имя…]   датапаки сайта «Ставить в мир» → <мир>/datapacks/ (с именем — любой, и тестовый)
-  tfc pull kubejs [имя…]      скрипты KubeJS сайта «Ставить на сервер» → kubejs/server_scripts/
-  tfc pull schematics [имя…]  схемы библиотеки сайта (с заменами) → schematics/
-  tfc pull addons [имя…]      аддоны сборки с сайта → mods/ (старую версию и заменённые файлы — в копию)
-      tfc pull all — всё сразу; --dry-run — только показать; --force — перезаписать и ваши файлы; --yes — не спрашивать
+      --yes                   не спрашивать
+  tfc pull datapacks|kubejs|schematics|addons <имя…>   одно названное с сайта (датапак — любой, и тестовый)
+  tfc undo                    вернуть как было до прошлого pull
 
 Хосту (ключ администратора):
   tfc publish                 залить сборку из папки игры на сервер (--note "что поменял", --yes, --force)
@@ -133,7 +131,7 @@ async function cmdInit(v) {
   console.log(
     dim(
       side === 'server'
-        ? 'Это папка сервера: моды по умолчанию не трогаю (tfc sync mods — явно).'
+        ? 'Это папка сервера: моды сборки по умолчанию не трогаю (tfc pull mods — явно), аддоны ставлю.'
         : 'Это папка клиента.',
     ),
   );
@@ -181,6 +179,90 @@ async function scan(profile) {
   return res;
 }
 
+/** Аргументы pull/status: сначала части (mods, kubejs…), дальше — имена с сайта (tfc pull datapacks "Фикс") */
+function splitArgs(args) {
+  const i = args.findIndex((a) => !(a in PARTS) && a !== 'all');
+  const parts = (i < 0 ? args : args.slice(0, i)).filter((a) => a !== 'all');
+  const names = i < 0 ? [] : args.slice(i);
+  if (names.length) {
+    const site = parts.flatMap((p) => PARTS[p].site ?? []);
+    if (parts.length !== 1 || new Set(site).size !== 1)
+      throw new Error(
+        parts.length
+          ? 'имена — для одного вида с сайта: tfc pull datapacks|kubejs|schematics|addons <имя…>'
+          : `не знаю «${names[0]}» — можно: ${Object.keys(PARTS).join(', ')}`,
+      );
+  }
+  return { parts, names };
+}
+
+/**
+ * План pull: снимок сборки с сервера + контент сайта, без споров за файл (siteOwned). С именами — только
+ * названное с сайта, сборку не трогаем.
+ */
+async function prepare(v, args) {
+  const { parts, names } = splitArgs(args);
+  const cfg = loadConfig();
+  const profile = currentProfile(cfg, v.profile);
+  const scope = scopeOf(parts, profile);
+  if (names.length) scope.snap = [];
+  // Ключ нужен всему, кроме аддонов (статика сайта); без ключа только аддоны и тянем
+  const a = cfg.token || scope.snap.length || scope.site.some((k) => k !== 'addons') ? api(cfg) : null;
+  let current = a ? await a.current() : null;
+  const notes = [];
+  if (!current && scope.snap.length) {
+    if (!scope.site.length) throw new Error('на сервере ещё нет сборки — хост заливает её командой tfc publish');
+    notes.push('на сервере ещё нет сборки — беру только контент сайта');
+    scope.snap = [];
+  }
+  const sitePlans = [];
+  for (const kind of scope.site) {
+    if (kind === 'datapacks' && !profile.world) {
+      if (parts.length) notes.push(`датапаки сайта: мир не выбран — пропускаю (tfc init --world <мир>)`);
+      continue;
+    }
+    sitePlans.push(await planPull(a, profile, kind, names, { force: v.force }));
+  }
+  const state = loadState(profile);
+  const owned = siteOwned(sitePlans, names.length ? null : current, state);
+  // Аддоны не все (названы) или снимка не знаем — прежние замены не забываем
+  if (names.length || !current) owned.overrides = [...new Set([...(state.addonOverrides ?? []), ...owned.overrides])];
+  const hasAddons = sitePlans.some((p) => p.kind === 'addons');
+  const pulled = new Set(Object.values(state.pulled ?? {}).flatMap((m) => Object.values(m).map((r) => r.path)));
+  let plan = null;
+  let local = null;
+  let cache = null;
+  if (scope.snap.length) {
+    ({ files: local, cache } = await scan(profile));
+    plan = makePlan(current, local, state, scope.snap, { force: v.force, hasWorld: !!profile.world, skip: owned.skip });
+    plan.extra = plan.extra.filter((f) => !pulled.has(f.path));
+  }
+  return {
+    cfg,
+    profile,
+    api: a,
+    current,
+    local,
+    cache,
+    plan,
+    sitePlans,
+    names,
+    parts,
+    notes,
+    state,
+    skip: new Set([...owned.skip, ...pulled]),
+    overrides: hasAddons ? owned.overrides : undefined,
+  };
+}
+
+function printHeader(profile, current) {
+  console.log(`Профиль ${profileTitle(profile)}`);
+  if (current)
+    console.log(
+      `Сборка на сервере: ${bold(current.id)} от ${date(current.createdAt)}${current.author ? `, ${current.author}` : ''}${current.note ? ` — ${current.note}` : ''}`,
+    );
+}
+
 function printPlan(plan, { verbose = false } = {}) {
   const line = (mark, title, list, extra = '') => {
     if (!list.length) return;
@@ -200,151 +282,146 @@ function printPlan(plan, { verbose = false } = {}) {
   if (plan.noWorld.length) console.log(dim(`  · файлов мира ${plan.noWorld.length} — мир не выбран (tfc init)`));
 }
 
-async function prepare(v, groups) {
-  const cfg = loadConfig();
-  const profile = currentProfile(cfg, v.profile);
-  const a = api(cfg);
-  const current = await a.current();
-  if (!current) throw new Error('на сервере ещё нет сборки — хост заливает её командой tfc publish');
-  const { files: local, cache, skipped } = await scan(profile);
-  const kinds = kindsOf(groups, profile.side);
-  const state = loadState(profile);
-  const plan = makePlan(current, local, state, kinds, { force: v.force, hasWorld: !!profile.world });
-  return { cfg, profile, api: a, current, local, cache, kinds, plan, skipped, state };
-}
+const PULL_TITLE = {
+  datapacks: 'Датапаки сайта',
+  kubejs: 'Скрипты KubeJS сайта',
+  schematics: 'Схемы',
+  addons: 'Аддоны сборки',
+};
 
-function printHeader(profile, current) {
-  console.log(`Профиль ${profileTitle(profile)}`);
-  console.log(
-    `Сборка на сервере: ${bold(current.id)} от ${date(current.createdAt)}${current.author ? `, ${current.author}` : ''}${current.note ? ` — ${current.note}` : ''}`,
+function printSite(p, names) {
+  const total = p.add.length + p.update.length + p.same.length + p.conflict.length;
+  console.log(`${bold(PULL_TITLE[p.kind])}: ${names.length ? `названо ${names.length}` : `с сайта ${total}`}`);
+  const line = (mark, title, list) => {
+    if (!list.length) return;
+    console.log(`  ${mark} ${title}: ${list.length}`);
+    for (const x of list) {
+      console.log(dim(`      ${x.name ?? x.id} → ${x.path.replace(/^world\//, '<мир>/')}`));
+      if (x.note) console.log(dim(`        ставить: ${x.note}`));
+    }
+  };
+  line(green('+'), 'поставить', p.add);
+  line(yellow('~'), 'обновить (старое — в копию)', p.update);
+  line(
+    red('−'),
+    p.kind === 'addons'
+      ? 'убрать (старая версия или аддон убран с сайта)'
+      : 'убрать (сняли отметку или убрали с сайта)',
+    p.remove,
   );
+  if (p.obsolete.length) {
+    console.log(`  ${red('−')} убрать — старые версии и то, что заменяет аддон (с копией): ${p.obsolete.length}`);
+    for (const x of p.obsolete) console.log(dim(`      ${x.path} ${dim(`— ${x.name}`)}`));
+  }
+  line(yellow('!'), 'там ваш файл — рядом положу .tfc-new (перезаписать: --force)', p.conflict);
+  line(dim('·'), 'ставил я, но вы меняли — оставляю', p.keptModified);
+  if (p.unknown.length) {
+    console.log(red(`  нет на сайте: ${p.unknown.join(', ')}`));
+    if (p.all.length)
+      console.log(dim(`  есть: ${p.all.map((x) => `${x.name}${x.install ? ' (в мир)' : ''}`).join(', ')}`));
+  }
+  if (!pullChanges(p) && !p.keptModified.length) console.log(dim('  всё на месте'));
 }
 
-async function cmdStatus(v, groups) {
-  const { cfg, profile, current, local, plan, state } = await prepare(v, groups);
-  printHeader(profile, current);
-  if (state.snapshot && state.snapshot !== current.id)
-    console.log(yellow('Сборку обновили после вашей прошлой синхронизации.'));
-  if (!changes(plan)) console.log(green('Папка совпадает со сборкой.'));
-  printPlan(plan, { verbose: false });
-  if (changes(plan)) console.log(`Применить: ${cyan(`tfc sync${groups.length ? ` ${groups.join(' ')}` : ''}`)}`);
-  if (cfg.role === 'admin') {
-    const d = diffFiles(current.files, [...local.values()]);
-    const n = d.added.length + d.changed.length + d.removed.length;
-    if (n) {
+/** Шапка, план сборки и планы сайта; возвращает, сколько всего изменится */
+function printAll(r, { verbose = false } = {}) {
+  printHeader(r.profile, r.current);
+  for (const n of r.notes) console.log(yellow(n));
+  if (r.plan) {
+    if (r.state.snapshot && r.state.snapshot !== r.current.id && !r.names.length)
+      console.log(yellow('Сборку обновили после вашего прошлого pull.'));
+    console.log(bold('Сборка'));
+    if (!changes(r.plan)) console.log(dim('  всё на месте'));
+    printPlan(r.plan, { verbose });
+  }
+  for (const p of r.sitePlans) printSite(p, r.names);
+  return (r.plan ? changes(r.plan) : 0) + r.sitePlans.reduce((s, p) => s + pullChanges(p), 0);
+}
+
+async function cmdStatus(v, args) {
+  const r = await prepare(v, args);
+  const n = printAll(r);
+  if (!n) console.log(green('Папка совпадает со сборкой и сайтом.'));
+  else console.log(`Применить: ${cyan(`tfc pull${args.length ? ` ${args.join(' ')}` : ''}`)}`);
+  if (r.cfg.role === 'admin' && r.local) {
+    const d = diffFiles(r.current.files, [...r.local.values()]);
+    const k = d.added.length + d.changed.length + d.removed.length;
+    if (k) {
       console.log(
-        dim(`\nХосту: ваша папка отличается от сборки на сервере на ${n} файлов (все разделы) — tfc publish:`),
+        dim(`\nХосту: ваша папка отличается от сборки на сервере на ${k} файлов (все разделы) — tfc publish:`),
       );
       printDiff(d, { limit: 5 });
     }
   }
 }
 
-async function cmdSync(v, groups) {
-  if (v.undo) {
-    const cfg = loadConfig();
-    const profile = currentProfile(cfg, v.profile);
-    const m = undoLast(profile);
-    if (!m) return console.log('Отменять нечего: копий прошлых синхронизаций нет.');
-    console.log(
-      `${green('Вернул')} как было ${date(m.at)}: убрал добавленные ${m.added.length}, вернул заменённые ${m.replaced.length} и убранные ${m.removed.length}.`,
-    );
-    return;
+async function cmdPull(v, args) {
+  if (v.undo) return cmdUndo(v);
+  const r = await prepare(v, args);
+  const { profile, plan, sitePlans } = r;
+  const n = printAll(r, { verbose: v['dry-run'] });
+  const backup = beginBackup(profile);
+  if (!n) {
+    // Запомнить, что всё на месте (state.json)
+    if (plan)
+      await applyPlan({ api: r.api, profile, plan, snapshot: r.current, cache: r.cache, backup, onlyNew: true });
+    applyPull(profile, sitePlans, backup, r.overrides);
+    return console.log(green('Всё уже на месте.'));
   }
-  const { profile, api: a, current, plan, cache } = await prepare(v, groups);
-  printHeader(profile, current);
-  if (!changes(plan)) {
-    printPlan(plan);
-    await applyPlan({ api: a, profile, plan, snapshot: current, cache, onlyNew: true }); // запомнить, что всё на месте
-    return console.log(green('Всё уже как в сборке.'));
-  }
-  printPlan(plan, { verbose: v['dry-run'] });
   if (v['dry-run']) return console.log(dim('--dry-run: ничего не менял'));
-  const risky = plan.update.length + plan.remove.length;
+  const risky =
+    (plan ? plan.update.length + plan.remove.length : 0) +
+    sitePlans.reduce((s, p) => s + p.update.length + p.remove.length + p.obsolete.length, 0);
   if (!v.yes) {
-    if (!interactive() && risky) throw new Error('есть замены и удаления — подтвердите: tfc sync --yes');
+    if (!interactive() && risky) throw new Error('есть замены и удаления — подтвердите: tfc pull --yes');
     if (interactive() && !(await confirm('Применить?', true))) return;
   }
-  const res = await applyPlan({ api: a, profile, plan, snapshot: current, cache });
-  for (const d of res.duplicates)
-    console.log(`  ${red('−')} старая версия мода ${d.ids.join(', ')}: ${d.path} ${dim(`(в сборке — ${d.by})`)}`);
-  console.log(green('Готово.') + (res.backup ? dim(` Копия прежнего — ${res.backup}; вернуть: tfc sync --undo`) : ''));
-  if (plan.conflict.length)
-    console.log(yellow(`Сравните свои файлы с *.tfc-new (${plan.conflict.length}) и оставьте нужное.`));
+  if (plan) {
+    const res = await applyPlan({
+      api: r.api,
+      profile,
+      plan,
+      snapshot: r.current,
+      cache: r.cache,
+      backup,
+      skip: r.skip,
+    });
+    for (const d of res.duplicates)
+      console.log(`  ${red('−')} старая версия мода ${d.ids.join(', ')}: ${d.path} ${dim(`(в сборке — ${d.by})`)}`);
+    const before = sitePlans.find((p) => p.kind === 'addons')?.obsolete.length ?? 0;
+    if (r.overrides) recheckAddons(profile, sitePlans, r.overrides);
+    for (const x of sitePlans.find((p) => p.kind === 'addons')?.obsolete.slice(before) ?? [])
+      console.log(`  ${red('−')} ${x.path} ${dim(`— ${x.name}, вместо него аддон`)}`);
+  }
+  applyPull(profile, sitePlans, backup, r.overrides);
+  const dir = finishBackup(profile, backup);
+  console.log(green('Готово.') + (dir ? dim(` Копия прежнего — ${dir}; вернуть: tfc undo`) : ''));
+  if (plan?.conflict.length || sitePlans.some((p) => p.conflict.length))
+    console.log(yellow('Сравните свои файлы с *.tfc-new и оставьте нужное.'));
+  const changed = (kind) => sitePlans.some((p) => p.kind === kind && pullChanges(p));
+  if (changed('datapacks') || plan?.add.concat(plan.update, plan.remove).some((f) => f.kind === 'world-datapack'))
+    console.log(dim('Датапаки подхватятся после перезапуска мира или командой /reload.'));
+  if (changed('addons') || plan?.add.concat(plan.update, plan.remove).some((f) => f.kind === 'mod'))
+    console.log(dim('Моды поменялись — перезапустите игру (и сервер).'));
+  else if (changed('kubejs')) console.log(dim('Скрипты сервера — /reload на сервере (или перезапуск).'));
+  if (r.cfg.role === 'admin' && sitePlans.some((p) => p.kind !== 'schematics' && pullChanges(p)))
+    console.log(dim('Хосту: чтобы сайт собрал данные с этим (рецепты, предметы) — tfc publish.'));
 }
 
-const PULL_TITLE = { datapacks: 'Датапаки', kubejs: 'Скрипты KubeJS', schematics: 'Схемы', addons: 'Аддоны сборки' };
-
-async function cmdPull(v, [what, ...names]) {
-  const kinds = what === 'all' ? PULL_KINDS : PULL_KINDS.includes(what) ? [what] : null;
-  if (!kinds) throw new Error(`tfc pull ${PULL_KINDS.join(' | ')} | all [имя…]`);
-  if (what === 'all' && names.length) throw new Error('имена — только для одного вида: tfc pull datapacks <имя>');
+function cmdUndo(v) {
   const cfg = loadConfig();
   const profile = currentProfile(cfg, v.profile);
-  // Аддоны — статика сайта, ключ сервера сборки им не нужен
-  const a = kinds.some((k) => k !== 'addons') ? api(cfg) : null;
-  console.log(`Профиль ${profileTitle(profile)}`);
-  const plans = [];
-  for (const kind of kinds) {
-    if (kind === 'datapacks' && !profile.world) {
-      console.log(yellow(`${PULL_TITLE[kind]}: мир не выбран — пропускаю (tfc init --world <мир>)`));
-      continue;
-    }
-    const p = await planPull(a, profile, kind, names, { force: v.force });
-    plans.push(p);
-    const total = p.add.length + p.update.length + p.same.length + p.conflict.length;
-    console.log(`${bold(PULL_TITLE[kind])}: ${names.length ? `названо ${names.length}` : `с сайта ${total}`}`);
-    const line = (mark, title, list) => {
-      if (!list.length) return;
-      console.log(`  ${mark} ${title}: ${list.length}`);
-      for (const x of list) {
-        console.log(dim(`      ${x.name ?? x.id} → ${x.path.replace(/^world\//, '<мир>/')}`));
-        if (x.note) console.log(dim(`        ставить: ${x.note}`));
-      }
-    };
-    line(green('+'), 'поставить', p.add);
-    line(yellow('~'), 'обновить (старое — в копию)', p.update);
-    line(
-      red('−'),
-      kind === 'addons'
-        ? 'убрать (старая версия или аддон убран с сайта)'
-        : 'убрать (сняли отметку или убрали с сайта)',
-      p.remove,
-    );
-    if (p.obsolete.length) {
-      console.log(`  ${red('−')} убрать — старые версии и то, что заменяет аддон (с копией): ${p.obsolete.length}`);
-      for (const x of p.obsolete) console.log(dim(`      ${x.path} ${dim(`— ${x.name}`)}`));
-    }
-    line(yellow('!'), 'там ваш файл — рядом положу .tfc-new (перезаписать: --force)', p.conflict);
-    line(dim('·'), 'ставил я, но вы меняли — оставляю', p.keptModified);
-    if (p.unknown.length) {
-      console.log(red(`  нет на сайте: ${p.unknown.join(', ')}`));
-      if (p.all.length)
-        console.log(dim(`  есть: ${p.all.map((x) => `${x.name}${x.install ? ' (в мир)' : ''}`).join(', ')}`));
-    }
-    if (!pullChanges(p) && !p.keptModified.length) console.log(dim('  всё на месте'));
-  }
-  if (!plans.some(pullChanges)) {
-    applyPull(profile, plans); // запомнить, что всё на месте
-    return;
-  }
-  if (v['dry-run']) return console.log(dim('--dry-run: ничего не менял'));
-  // Аддоны трогают mods/ и убирают чужие файлы (старый jar, заменённый скрипт) — спросить
-  if (!v.yes && plans.some((p) => p.kind === 'addons' && pullChanges(p))) {
-    if (!interactive() && plans.some((p) => p.obsolete.length))
-      throw new Error('аддоны уберут файлы (с копией) — подтвердите: tfc pull addons --yes');
-    if (interactive() && !(await confirm('Применить?', true))) return;
-  }
-  const backup = applyPull(profile, plans);
-  console.log(green('Готово.') + (backup ? dim(` Копия прежнего — ${backup}; вернуть: tfc sync --undo`) : ''));
-  if (plans.some((p) => p.kind === 'datapacks' && pullChanges(p)))
-    console.log(dim('Датапаки подхватятся после перезапуска мира или командой /reload.'));
-  if (plans.some((p) => p.kind === 'kubejs' && pullChanges(p)))
-    console.log(dim('Скрипты сервера — /reload на сервере (или перезапуск).'));
-  if (plans.some((p) => p.kind === 'addons' && pullChanges(p)))
-    console.log(dim('Аддоны — это моды: перезапустите игру (и сервер).'));
-  if (cfg.role === 'admin' && plans.some((p) => p.kind !== 'schematics' && pullChanges(p)))
-    console.log(dim('Хосту: чтобы это попало игрокам и на сайт — tfc publish.'));
+  const m = undoLast(profile);
+  if (!m) return console.log('Отменять нечего: копий прошлых pull нет.');
+  console.log(
+    `${green('Вернул')} как было ${date(m.at)}: убрал добавленные ${m.added.length}, вернул заменённые ${m.replaced.length} и убранные ${m.removed.length}.`,
+  );
+}
+
+/** Старое имя pull — пока подсказываем */
+async function cmdSync(v, args) {
+  console.log(dim(v.undo ? 'tfc sync --undo теперь называется tfc undo.' : 'tfc sync теперь называется tfc pull.'));
+  return cmdPull(v, args);
 }
 
 // ---------------------------------------------------------------- хост
@@ -547,8 +624,9 @@ const COMMANDS = {
   profiles: cmdProfiles,
   use: cmdUse,
   status: cmdStatus,
-  sync: cmdSync,
   pull: cmdPull,
+  undo: cmdUndo,
+  sync: cmdSync,
   publish: cmdPublish,
   build: cmdBuild,
   admin: cmdAdmin,
