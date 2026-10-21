@@ -1,0 +1,80 @@
+{
+  "credit": "ee_extras",
+  "textures": {
+    "0": "ee_extras:block/four_core_cable",
+    "particle": "ee_extras:block/four_core_cable"
+  },
+  "elements": [
+    {
+      "name": "sheath",
+      "from": [
+        -1.5,
+        -1.5,
+        0
+      ],
+      "to": [
+        1.5,
+        1.5,
+        8
+      ],
+      "faces": {
+        "east": {
+          "texture": "#0",
+          "uv": [
+            0,
+            0,
+            16,
+            6
+          ]
+        },
+        "west": {
+          "texture": "#0",
+          "uv": [
+            0,
+            0,
+            16,
+            6
+          ]
+        },
+        "up": {
+          "texture": "#0",
+          "uv": [
+            0,
+            0,
+            16,
+            6
+          ],
+          "rotation": 90
+        },
+        "down": {
+          "texture": "#0",
+          "uv": [
+            0,
+            0,
+            16,
+            6
+          ],
+          "rotation": 90
+        },
+        "north": {
+          "texture": "#0",
+          "uv": [
+            0,
+            0,
+            6,
+            6
+          ]
+        },
+        "south": {
+          "texture": "#0",
+          "uv": [
+            0,
+            0,
+            6,
+            6
+          ]
+        }
+      }
+    }
+  ]
+}

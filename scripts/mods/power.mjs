@@ -251,7 +251,7 @@ function buildEE(jar, warnings) {
   // Ротор: каждый статор вокруг даёт ему «магниты» (iinc в lazyTick, сейчас 3); выработка щёточного узла =
   // Σ магниты × |об/мин| × rotorPowerMultiplier, нагрузка ротора на вал = (магниты + 0,125) × rotorPowerMultiplier ×
   // rotorStressMultiplier SU на 1 об/мин. Узел собирает до 16 роторов подряд за собой (getRotors, bipush 16).
-  // Проверено на сервере разработки (tools/ee-rectifier-mod, /rectest gen): 4 + 2 статора, 64 об/мин → 55 296 Вт.
+  // Проверено на сервере разработки (tools/ee-extras-mod, /rectest gen): 4 + 2 статора, 64 об/мин → 55 296 Вт.
   const rotor = classFrom(jar, `${EE}/content/rotor/AlternatorRotorBlockEntity`);
   const rotorK = constants(rotor, 'calculateStressApplied')?.find((c) => typeof c === 'number' && c > 0 && c < 1);
   if (rotorK === undefined) warnings.push('EE: нагрузка ротора без статоров не найдена');
@@ -369,7 +369,7 @@ function buildEE(jar, warnings) {
     ac: acOk && phaseOk ? { hzPerRpm: 0.15625, phaseShift: 120 } : null,
     pump: pumpMax ? { maxSpeed: pumpMax } : null,
     // Точка линеаризации ограничена ±0,8 В: выше неё диод EE — прямая с проводимостью Is/Vt·e^(0,8/Vt) (≈ 5,6 Ом);
-    // проверено в симуляции EE (tools/ee-rectifier-mod/test-server.sh): 2,78 А → 16,4 В на диоде
+    // проверено в симуляции EE (tools/ee-extras-mod/test-server.sh): 2,78 А → 16,4 В на диоде
     diode: diodeOk ? { saturation: 1e-9, thermal: 0.05, clamp: 0.8 } : null,
     rotor:
       rotorK !== undefined && perStator

@@ -1,8 +1,0 @@
-{
-  "block.ee_rectifier.three_phase_rectifier": "Трёхфазный выпрямитель",
-  "block.ee_rectifier.three_phase_rectifier.tooltip": "Три фазы → постоянный ток. Внутри — мост из шести диодов.",
-  "block.ee_rectifier.three_phase_rectifier.tooltip.nodes": "Медные клеммы — фазы 1–3, красная — «+», синяя — «−». Нейтраль не нужна.",
-  "block.ee_rectifier.single_phase_rectifier": "Однофазный выпрямитель",
-  "block.ee_rectifier.single_phase_rectifier.tooltip": "Фаза и нейтраль → постоянный ток. Внутри — мост из четырёх диодов.",
-  "block.ee_rectifier.single_phase_rectifier.tooltip.nodes": "Медные клеммы — фаза и нейтраль (порядок не важен), красная — «+», синяя — «−». Для ровного тока — конденсатор на выход."
-}

@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "electroenergetics:converter"
+    },
+    {
+      "item": "electroenergetics:converter"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "ee_extras:bidirectional_converter"
+  }
+}

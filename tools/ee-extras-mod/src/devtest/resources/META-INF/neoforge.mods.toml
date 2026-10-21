@@ -1,0 +1,9 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "MIT"
+
+# Только для проверочного сервера (test-server.sh), в jar аддона не входит
+[[mods]]
+modId = "ee_extras_devtest"
+version = "1.0.0"
+displayName = "EE Extras dev test"
