@@ -2,6 +2,9 @@ modLoader = "javafml"
 loaderVersion = "[1,)"
 license = "MIT"
 
+[[mixins]]
+config = "ee_extras.mixins.json"
+
 [[mods]]
 modId = "ee_extras"
 version = "2.0.2"
