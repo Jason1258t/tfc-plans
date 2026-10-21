@@ -261,6 +261,15 @@
   `map_regions` — блоки → `r.X.Z.mca` + PowerShell. Исходники Minecraft — NeoForge 21.1.251 (`tools/rw-host-fix-mod/
   devserver`). Проверено на трёх `latest.log` игрока и краш-репорте FTB Quests, на TFC Real World (цепочка
   `serverConfigActive` → `clearServerConfig` ← `onLevelUnload` [обе стороны]).
+- **MCP: датапаки сайта в рецептах и ресурсы без клиента** (2026-10-21, всего 54 инструмента; заказ ① из
+  `docs/plans/mcp-next.md`): `recipes_for`/`recipes_using`/`recipe_get` учитывают датапаки сайта «ставить» как слой
+  поверх модов (`recipes_for electroenergetics:duplex_wire_spool` → рецепт `electroenergetics_missing`).
+  `model_render` (PNG картинкой в ответе MCP; перенос `iso.py` + `parent`, повороты элементов и вариантов, предметы),
+  `texture_get` (картинка + палитра), `resources_check` (аддон из `tools/` или мод из `mods/`: блокстейт ↔ свойства
+  из байткода, модели/текстуры, переводы из кода, PartialModel, добыча). EE Extras — ошибок нет; на испорченной копии
+  находит все подброшенные ошибки. Находки: в EE 1.1.2 нет модели `block/duplex_wire_segment` (её берёт и оболочка
+  двухпроводного кабеля EE Extras — по jar, в игре не проверялось); `iso.py` рисовал задние грани (иконки аддона на
+  сайте надо перерисовать — см. «Висит»).
 
 ## Импортировано с сервера
 
@@ -275,6 +284,10 @@
   и слой `world` (один скрипт `ee_heater_crucible.js`). Удалено KubeJS: 1325 рецептов сборки.
 
 ## Ждёт проверки в игре (агент проверить не может)
+
+- **Оболочка двухпроводного кабеля** (EE Extras 2.0 и сам EE 1.1.2): `CEEPartialModels.DUPLEX_WIRE_SEGMENT` ссылается
+  на модель `electroenergetics:block/duplex_wire_segment`, которой нет ни в одном jar сборки и в KubeJS
+  (`resources_check mod=electroenergetics`, 2026-10-21). Посмотреть в игре, как рисуется проложенный кабель.
 
 - **Датапак `electroenergetics_missing`** (Firestore `datapacks/JyhxDrNwnrhEPfZElEMn`, zip приложен к задаче
   «датапак Create Electro Energetics», `tasks/V5yKUg2ghPKQDB5mg3NI`): 6 рецептов, которых нет в моде — трёхфазный
@@ -335,6 +348,10 @@
 - README, раздел «Структура» — краткий; подробная карта кода в `CLAUDE.md`.
 
 ## Планы без начала работ
+
+- Иконки аддона EE Extras на сайте рисовал `tools/ee-extras-mod/art/iso.py` — с перевёрнутым отсечением граней
+  (видны задние грани). Исправить условие `det > 0` → `det < 0` в `iso.py` (или рисовать `model_render`) и
+  перерисовать иконки.
 
 - Раздел «Еда» закрыт (`docs/plans/food.md`): продукты, сборные блюда с калькуляторами, готовые блюда по способу
   приготовления. Оставшиеся мелочи перечислены в плане («Сознательно не сделано»).

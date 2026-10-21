@@ -62,7 +62,8 @@ npm run pack:publish -- <папка данных> --dry-run   # что выло�
 Полное описание (инструменты, откуда данные, лимиты, как добавить инструмент) — [docs/mcp.md](docs/mcp.md).
 
 - Предметы и рецепты: `items_search`, `item_get`, `recipes_for` (как получить), `recipes_using` (где нужен, в т. ч.
-  через теги), `recipe_get` (статус, какое правило KubeJS удаляет/меняет — файл:строка, JSON).
+  через теги), `recipe_get` (статус, какое правило KubeJS удаляет/меняет — файл:строка, JSON). Рецепты учитывают и
+  датапаки сайта «ставить» (источник «датапак сайта <имя>»; неставящиеся — отдельной строкой).
 - Теги: `tag_members`, `tags_of`. Справочник: `reference_get` (руды, плавка, металлы, топливо, еда, ботаника, блюда,
   сковорода, мультиблоки, power). Настройки: `config_get` (мир > serverconfig > config > значение из кода; только чтение).
 - Код модов: `jar_find` (путь, класс через точки, glob), `jar_read` (по строкам, grep), `jar_javap` (метод; jar можно не
@@ -82,6 +83,10 @@ npm run pack:publish -- <папка данных> --dry-run   # что выло�
 - Книги: `books_list`, `book_search`, `book_entry` — руководство TFC (со статьями аддонов и KubeJS) и справочник IE.
 - Не предметы: `lang_search` (переводы всех jar — блоки, существа, жидкости, эффекты), `block_get`,
   `loot_for` (что выпадает), `loot_sources` (откуда выпадает предмет).
+- Ресурсы без клиента: `model_render` (блок/предмет/модель **картинкой**: блокстейт → `parent` → повороты; из jar,
+  KubeJS, ресурспаков и `tools/<мод>/src/main/resources`), `texture_get` (текстура картинкой + палитра),
+  `resources_check addon=<папка tools>|mod=<id>` (блокстейты ↔ свойства блока из байткода, модели, текстуры,
+  переводы из кода, PartialModel, добыча). **Правил ресурсы аддона — прогони `resources_check` и посмотри `model_render`.**
 - Карта: `map_point` (блок ↔ широта/долгота, города, климат TFC), `map_rocks` (породы и жилы), `map_find` (место → блок),
   `map_regions` (блоки → файлы `r.X.Z.mca` и команды PowerShell).
 - Контент сайта, только чтение: `tasks_list`/`task_get`, `datapacks_list`/`datapack_get`, `kubejs_site_list`/`kubejs_site_get`,
