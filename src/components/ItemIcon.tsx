@@ -1,4 +1,4 @@
-import { iconUrl, itemName, textureUrl, useItems } from '../lib/items';
+import { guiIcon, itemName, textureUrl, useItems } from '../lib/items';
 import { cx } from '../lib/util';
 import { tooltipHandlers } from './Tooltip';
 
@@ -16,11 +16,12 @@ interface Props {
 export function ItemIcon({ id, texture, size = 32, tip = true, className }: Props) {
   const items = useItems();
   const item = id ? items?.byId.get(id) : undefined;
-  const url = texture ? textureUrl(texture) : iconUrl(item);
+  const icon = texture ? { url: textureUrl(texture), smooth: false } : guiIcon(item);
+  const url = icon?.url;
   const handlers = tip && id ? tooltipHandlers(itemName(item, id), id) : {};
   return (
     <span
-      className={cx('item-icon', !url && items && 'missing', className)}
+      className={cx('item-icon', icon?.smooth && 'smooth', !url && items && 'missing', className)}
       style={{ width: size, height: size, backgroundImage: url ? `url(${url})` : undefined }}
       role="img"
       aria-label={id ? itemName(item, id) : undefined}
