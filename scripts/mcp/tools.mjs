@@ -35,6 +35,7 @@ import { TOOLS as kubejsTools } from './tools/kubejs.mjs';
 import { TOOLS as logsTools } from './tools/logs.mjs';
 import { TOOLS as mapTools } from './tools/map.mjs';
 import { TOOLS as packTools } from './tools/pack.mjs';
+import { TOOLS as resourcesTools } from './tools/resources.mjs';
 import { TOOLS as siteTools } from './tools/site.mjs';
 
 const NICK = 'Claude';
@@ -859,14 +860,18 @@ export const TOOLS = [
   ...kubejsTools,
   ...booksTools,
   ...blocksTools,
+  ...resourcesTools,
   ...siteTools,
   ...mapTools,
 ];
 
-// Любой ответ — не длиннее MAX: списки и так режутся страницами, это страховка от длинных строк
+// Любой ответ (текст ответа с картинками тоже) — не длиннее MAX: списки и так режутся страницами, это страховка от длинных строк
 for (const t of TOOLS) {
   const run = t.handler;
-  t.handler = async (a) => clip(String(await run(a)));
+  t.handler = async (a) => {
+    const r = await run(a);
+    return r && typeof r === 'object' && 'images' in r ? { ...r, text: clip(String(r.text ?? '')) } : clip(String(r));
+  };
 }
 
-export const INSTRUCTIONS = `Данные сборки TFC RealWorld для сайта «TFC Планы» (данные: ${PUBLIC}). Используйте вместо grep по public/*.json и распаковки mods/*.jar: ответы уже учитывают KubeJS (удаления, замены, kubejs/data), теги со вложенными и KubeJS, слои конфигов. Факты из jar — jar_find/jar_read/jar_javap. Отладка сборки: class_find/class_info/class_hierarchy, code_refs (кто вызывает, кто пишет поле, сторона кода), event_listeners (кто слушает событие, вкл. KubeJS), mixins (миксины и конфликты), decompile, jar_grep, mods_check (зависимости), log_analyze (лог/краш; level=timeline — хронология игры). Регионы мира — map_regions. Гайды: guide_get → правка → guide_put с revision.`;
+export const INSTRUCTIONS = `Данные сборки TFC RealWorld для сайта «TFC Планы» (данные: ${PUBLIC}). Используйте вместо grep по public/*.json и распаковки mods/*.jar: ответы уже учитывают KubeJS (удаления, замены, kubejs/data), теги со вложенными и KubeJS, слои конфигов. Факты из jar — jar_find/jar_read/jar_javap. Отладка сборки: class_find/class_info/class_hierarchy, code_refs (кто вызывает, кто пишет поле, сторона кода), event_listeners (кто слушает событие, вкл. KubeJS), mixins (миксины и конфликты), decompile, jar_grep, mods_check (зависимости), log_analyze (лог/краш; level=timeline — хронология игры). Регионы мира — map_regions. Ресурсы без клиента: model_render (модель картинкой), texture_get, resources_check (блокстейты ↔ свойства блока, модели, текстуры, переводы мода или аддона tools/). Рецепты учитывают датапаки сайта. Гайды: guide_get → правка → guide_put с revision.`;

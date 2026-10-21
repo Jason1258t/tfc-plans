@@ -35,9 +35,17 @@ async function handle(req) {
       if (!tool) throw Object.assign(new Error(`нет инструмента ${req.params?.name}`), { code: -32602 });
       const t0 = Date.now();
       try {
-        const text = String(await tool.handler(req.params.arguments ?? {}));
-        console.error(`[tfc-pack] ${tool.name} ${Date.now() - t0} мс, ${text.length} симв.`);
-        return { content: [{ type: 'text', text }] };
+        // Ответ — текст или { text, images: [Buffer PNG] } (model_render, texture_get): картинки — MCP image
+        const r = await tool.handler(req.params.arguments ?? {});
+        const text = typeof r === 'string' ? r : String(r.text ?? '');
+        const images = typeof r === 'string' ? [] : (r.images ?? []);
+        console.error(`[tfc-pack] ${tool.name} ${Date.now() - t0} мс, ${text.length} симв., картинок ${images.length}`);
+        return {
+          content: [
+            { type: 'text', text },
+            ...images.map((b) => ({ type: 'image', data: b.toString('base64'), mimeType: 'image/png' })),
+          ],
+        };
       } catch (e) {
         console.error(`[tfc-pack] ${tool.name}: ${e.stack ?? e}`);
         return { content: [{ type: 'text', text: `Ошибка: ${e.message ?? e}` }], isError: true };
