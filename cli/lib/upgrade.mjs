@@ -3,8 +3,9 @@
  * новый файл рядом → проверочный запуск `--version` → замена. Старый файл не теряется, пока новый не запустился.
  * Windows не даёт перезаписать запущенный exe, но даёт переименовать: старый уходит в tfc.exe.old и удаляется
  * при следующем запуске (cleanupOld).
+ * Пакет npm обновляется самим npm: npm install -g <пакет с сайта>.
  */
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -12,7 +13,7 @@ import { unzipSync } from 'fflate';
 import { configDir } from './config.mjs';
 import { mb, progress } from './ui.mjs';
 import { getJson, SITE } from './update.mjs';
-import { BUILD, IS_BINARY, targetName } from './version.mjs';
+import { BUILD, CHANNEL, IS_BINARY, targetName } from './version.mjs';
 
 const self = () => process.execPath;
 
@@ -41,7 +42,7 @@ async function download(url, size) {
 
 /** { from, to, path } — обновлено; null — уже последняя */
 export async function upgrade({ force = false } = {}) {
-  if (!IS_BINARY)
+  if (CHANNEL === 'source')
     throw new Error('это запуск из исходников (node cli/tfc.mjs) — обновляется через git pull, а не --upgrade');
   const base = process.env.TFC_UPDATE_URL || `${SITE}/tfc/version.json`;
   let remote;
@@ -50,6 +51,7 @@ export async function upgrade({ force = false } = {}) {
   } catch (e) {
     throw new Error(`не удалось узнать новую версию (${base}): ${e.message}`);
   }
+  if (CHANNEL === 'npm') return upgradeNpm(remote, base, force);
   const target = targetName();
   const info = remote.files?.[target];
   if (!info?.file) throw new Error(`для этой системы (${target}) на сайте файла нет`);
@@ -99,4 +101,22 @@ export async function upgrade({ force = false } = {}) {
   // Подсказка «вышла новая версия» больше не нужна
   fs.rmSync(path.join(configDir(), 'update-check.json'), { force: true });
   return { from: BUILD.version, to: remote.version, path: file };
+}
+
+/** Пакет npm: npm install -g с сайта (тот же адрес, что в инструкции) */
+function upgradeNpm(remote, base, force) {
+  if (!remote.npm?.file) throw new Error('на сайте нет пакета npm');
+  if (!force && !(remote.time > BUILD.time)) return null;
+  const url = new URL(remote.npm.file, base).href;
+  console.log(`Ставлю ${remote.version}: npm install -g ${url}`);
+  // npm на Windows — npm.cmd, его запускает только оболочка
+  const r = spawnSync('npm', ['install', '-g', url], { stdio: 'inherit', shell: process.platform === 'win32' });
+  if (r.error) throw new Error(`npm не запустился: ${r.error.message}`);
+  if (r.status !== 0)
+    throw new Error(
+      `npm install завершился с ошибкой (код ${r.status})` +
+        (process.platform === 'win32' ? '' : ' — если не хватило прав, запустите ту же команду через sudo'),
+    );
+  fs.rmSync(path.join(configDir(), 'update-check.json'), { force: true });
+  return { from: BUILD.version, to: remote.version, path: 'npm (глобальный пакет)' };
 }
