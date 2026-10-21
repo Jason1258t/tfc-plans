@@ -14,43 +14,53 @@ import net.minecraft.world.phys.Vec3;
 /**
  * Блок, к которому подходит кабель: узел 0 — точка кабеля (оболочки), узлы 1…n — жилы. Наследник соединителя
  * двухпроводного кабеля EE: подсветку узла и «пунктир» будущего кабеля при катушке в руке EE рисует для всех его
- * наследников (BundledWireApplyingBehaviour, только клиент), а катушку обслуживает CableLaying. Свойство FLIP
- * от EE остаётся в блокстейте, но не используется: положение — FACING и ROLL, как у остальных блоков EE.
+ * наследников (BundledWireApplyingBehaviour, только клиент; в EE 1.1.2 его никто не вызывает — вызывает CableHud),
+ * а катушку обслуживает CableLaying. Положение — FACING и четыре поворота вокруг него (ROLL и FLIP от EE,
+ * CableOrientation): ключ по лицевой грани перебирает все четыре.
  */
 public abstract class CableEndBlock extends BundledWireTerminationBlock {
     public final CableKind kind;
-    private final NodeConfigurator nodes;
-    private final NodeConfigurator nodesRolled;
+    private final NodeConfigurator[] nodes = new NodeConfigurator[4];
 
     protected CableEndBlock(Properties properties, CableKind kind, float[][] points) {
         super(properties, BundledWireType.DUPLEX);
         this.kind = kind;
-        this.nodes = configurator(points, false);
-        this.nodesRolled = configurator(points, true);
+        for (int o = 0; o < 4; o++) nodes[o] = configurator(points, o);
     }
 
-    /** Точки {x, y, z} в пикселях для блока лицом вверх; крен — (x, z) → (16 − z, x), как у выпрямителей */
-    static NodeConfigurator configurator(float[][] points, boolean rolled) {
+    /** Точки {x, y, z} в пикселях для блока лицом вверх, o раз повёрнутые креном (x, z) → (16 − z, x), как у выпрямителей */
+    static NodeConfigurator configurator(float[][] points, int o) {
         NodeConfigurator.Builder b = new NodeConfigurator.Builder();
         for (float[] p : points) {
-            if (rolled) b.add(16 - p[2], p[1], p[0]);
-            else b.add(p[0], p[1], p[2]);
+            float x = p[0], z = p[2];
+            for (int i = 0; i < o; i++) {
+                float t = x;
+                x = 16 - z;
+                z = t;
+            }
+            b.add(x, p[1], z);
         }
         return b.simple();
     }
 
     NodeConfigurator config(BlockState state) {
-        return state.getValue(ROLL) ? nodesRolled : nodes;
+        return nodes[CableOrientation.of(state)];
     }
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        // Как DirectionalRolledDeviceBlock EE: лицом к грани, по которой кликнули; на полу и потолке крен — по взгляду
+        // Лицом к грани, по которой кликнули (как у блоков EE); вывод кабеля — от игрока на полу и потолке, вверх на стене
         Direction face = context.getClickedFace();
-        BlockState state = defaultBlockState().setValue(FACING, face).setValue(FLIP, false);
-        if (face.getAxis().isVertical())
-            state = state.setValue(ROLL, context.getHorizontalDirection().getAxis() == Direction.Axis.X);
-        return withWater(state, context);
+        Vec3 want = CableOrientation.desired(face, context.getHorizontalDirection());
+        int o = CableOrientation.best(i -> nodes[i].getNodePos(face, 0), want);
+        return withWater(CableOrientation.with(defaultBlockState().setValue(FACING, face), o), context);
+    }
+
+    /** Ключ по лицевой или задней грани — следующее из четырёх положений (у EE — только крен, два положения) */
+    @Override
+    public BlockState getRotatedBlockState(BlockState state, Direction targetedFace) {
+        if (targetedFace.getAxis() != state.getValue(FACING).getAxis()) return super.getRotatedBlockState(state, targetedFace);
+        return CableOrientation.with(state, CableOrientation.nextOwn(CableOrientation.of(state)));
     }
 
     @Override

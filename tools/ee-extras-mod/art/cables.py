@@ -155,7 +155,18 @@ def roll_box(e):
     return {**e, 'from': [16 - z1, y0, x0], 'to': [16 - z0, y1, x1], 'faces': faces}
 
 
-def termination_model(ns, rolled, display):
+def turn(els, o):
+    """o раз крен — положение o (CableOrientation: ROLL + 2·FLIP)"""
+    for _ in range(o):
+        els = [roll_box(e) for e in els]
+    return els
+
+
+# Модели по положению o = ROLL + 2·FLIP
+ORIENT_MODELS = ['block', 'block_roll', 'block_flip', 'block_flip_roll']
+
+
+def termination_model(ns, o, display):
     t = '#0'
     side = {'texture': t, 'uv': [8, 5.5, 16, 8]}
     els = [box('plate', [0, 0, 1], [16, 2, 7], {
@@ -169,8 +180,7 @@ def termination_model(ns, rolled, display):
     els.append(box('cable_entry', [6, 0, 7], [10, 4, 13], {
         'north': rubber, 'east': rubber, 'west': rubber, 'up': rubber, 'down': rubber,
         'south': {'texture': t, 'uv': [8, 0, 12, 4]}}))
-    if rolled:
-        els = [roll_box(e) for e in els]
+    els = turn(els, o)
     tex = f'{ns}:block/four_core_termination'
     return {'credit': 'ee_extras', 'textures': {'0': tex, 'particle': tex}, 'elements': els, 'display': display}
 
@@ -200,15 +210,51 @@ def insulator_model(ns, name):
 
 
 def blockstate(ns, name, rot, models):
-    """FACING × ROLL × FLIP (FLIP — свойство блока EE, у нас не используется) × вода/масло"""
+    """FACING × ROLL × FLIP × вода/масло; models — по положению o = ROLL + 2·FLIP"""
     variants = {}
     for facing, r in rot.items():
-        for flip in ('false', 'true'):
+        for flip in (False, True):
             for logged in ('dry', 'oillogged', 'waterlogged'):
                 for rolled in (False, True):
-                    key = f'facing={facing},flip={flip},logged_state={logged},roll={str(rolled).lower()}'
-                    variants[key] = {'model': f'{ns}:block/{name}/{models[rolled]}', **r}
+                    key = f'facing={facing},flip={str(flip).lower()},logged_state={logged},roll={str(rolled).lower()}'
+                    variants[key] = {'model': f'{ns}:block/{name}/{models[rolled + 2 * flip]}', **r}
     return {'variants': variants}
+
+
+# Сторона кабеля двухпроводного соединителя EE по положению (BundledWireNodeConfigurator: юг, восток, север, запад)
+# → сколько раз повернуть креном вывод, нарисованный на юг (крен уводит юг на запад)
+EE_TURNS = [0, 3, 2, 1]
+
+
+def ee_termination_models(ns):
+    """
+    Модели двухпроводного соединителя EE с резиновым выводом кабеля: у EE кабель выходит из гладкой боковины, точку не
+    видно. Модели EE из jar + втулка у узла кабеля (8, 2, 12 лицом вверх, сторона 0). Лежат в assets/electroenergetics
+    этого мода — ресурсы модов идут в порядке загрузки, ee_extras грузится после EE (ordering AFTER) и перекрывает.
+    """
+    import json
+    out = {}
+    with zipfile.ZipFile(EE_JAR[-1]) as z:
+        for o, name in enumerate(ORIENT_MODELS):
+            m = json.loads(z.read(f'assets/electroenergetics/models/block/duplex_wire_termination/{name}.json'))
+            m['textures']['9'] = f'{ns}:block/four_core_termination'
+            rubber = {'texture': '#9', 'uv': [12, 0, 16, 4]}
+            gland = box('cable_gland', [6, 0, 12], [10, 4, 14], {
+                'east': rubber, 'west': rubber, 'up': rubber, 'down': rubber,
+                'south': {'texture': '#9', 'uv': [8, 0, 12, 4]}})
+            m['elements'] = m['elements'] + turn([gland], EE_TURNS[o])
+            m['credit'] = 'Electro Energetics; ee_extras: вывод кабеля (cable_gland)'
+            out[name] = m
+    return out
+
+
+def dump_to(res, obj, namespace, *path):
+    """Файл в assets/<namespace>/… (res — assets/<ns> этого мода)"""
+    import json
+    p = os.path.join(os.path.dirname(res), namespace, *path)
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    with open(p, 'w') as f:
+        json.dump(obj, f, indent=2)
 
 
 def generate(res, ns, dump, rot, display):
@@ -217,20 +263,23 @@ def generate(res, ns, dump, rot, display):
     os.makedirs(os.path.join(tex, 'item'), exist_ok=True)
 
     write(os.path.join(tex, 'block', 'four_core_termination.png'), termination_texture())
-    dump(termination_model(ns, False, display), 'models', 'block', 'four_core_termination', 'block.json')
-    dump(termination_model(ns, True, display), 'models', 'block', 'four_core_termination', 'block_roll.json')
+    for o, name in enumerate(ORIENT_MODELS):
+        dump(termination_model(ns, o, display), 'models', 'block', 'four_core_termination', name + '.json')
     dump({'parent': f'{ns}:block/four_core_termination/block'}, 'models', 'item', 'four_core_termination.json')
-    dump(blockstate(ns, 'four_core_termination', rot, {False: 'block', True: 'block_roll'}),
-         'blockstates', 'four_core_termination.json')
+    dump(blockstate(ns, 'four_core_termination', rot, ORIENT_MODELS), 'blockstates', 'four_core_termination.json')
 
     for name, base in (('duplex_cable_insulator', hexc('5a5450')), ('four_core_cable_insulator', hexc('3f5a8c'))):
         write(os.path.join(tex, 'block', name + '.png'), insulator_texture(base))
         dump(insulator_model(ns, name), 'models', 'block', name, 'block.json')
         dump({'parent': f'{ns}:block/{name}/block'}, 'models', 'item', name + '.json')
-        dump(blockstate(ns, name, rot, {False: 'block', True: 'block'}), 'blockstates', name + '.json')
+        dump(blockstate(ns, name, rot, ['block'] * 4), 'blockstates', name + '.json')
 
     write(os.path.join(tex, 'block', 'four_core_cable.png'), segment_texture())
     dump(segment_model(ns), 'models', 'block', 'four_core_cable_segment.json')
+    # Оболочка двухжильного кабеля: у EE 1.1.2 модели block/duplex_wire_segment нет — берём его витую пару
+    dump({'parent': 'electroenergetics:block/bundled_wire_segment'}, 'models', 'block', 'duplex_cable_segment.json')
+    for name, m in ee_termination_models(ns).items():
+        dump_to(res, m, 'electroenergetics', 'models', 'block', 'duplex_wire_termination', name + '.json')
     dump({'credit': 'ee_extras: жилы кабеля не рисуются', 'textures': {'particle': f'{ns}:block/four_core_cable'},
           'elements': []}, 'models', 'block', 'empty_wire_segment.json')
 

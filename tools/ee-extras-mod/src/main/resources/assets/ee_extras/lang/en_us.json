@@ -32,5 +32,11 @@
   "ee_extras.nodes.charge_positive": "Charge + (EE grid into the capacitor)",
   "ee_extras.nodes.charge_negative": "Charge - (EE grid into the capacitor)",
   "ee_extras.nodes.discharge_positive": "Discharge + (capacitor out to the EE grid)",
-  "ee_extras.nodes.discharge_negative": "Discharge - (capacitor out to the EE grid)"
+  "ee_extras.nodes.discharge_negative": "Discharge - (capacitor out to the EE grid)",
+  "ee_extras.cable.rotate_wired": "Remove the wires and cable first: rotating an EE termination would break them",
+  "ee_extras.cable.selected": "Selected: click the second block (Shift + click cancels)",
+  "ee_extras.cable.accepts.duplex": "Duplex cable",
+  "ee_extras.cable.accepts.four_core": "Four-core cable",
+  "ee_extras.cable.accepts.ee": "Duplex cable, or four-core (neutral and one phase)",
+  "ee_extras.nodes.cable": "Cable gland"
 }

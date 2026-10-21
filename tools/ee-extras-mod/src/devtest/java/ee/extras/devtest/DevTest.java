@@ -114,7 +114,9 @@ public class DevTest {
                                         com.mojang.brigadier.arguments.DoubleArgumentType.getDouble(c, "volts")))))
                 .then(Commands.literal("cablereport").executes(c -> Extras.cableReport(c.getSource())))
                 .then(Commands.literal("cablecut").executes(c -> Extras.cableCut(c.getSource())))
-                .then(Commands.literal("phase").executes(c -> Extras.phase(c.getSource()))));
+                .then(Commands.literal("phase").executes(c -> Extras.phase(c.getSource())))
+                .then(Commands.literal("orient").executes(c -> Orient.run(c.getSource())))
+                .then(Commands.literal("orientreport").executes(c -> Orient.report(c.getSource()))));
     }
 
     static BlockPos battery(BlockPos base, int i) {
