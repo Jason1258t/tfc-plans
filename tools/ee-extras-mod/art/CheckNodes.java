@@ -23,6 +23,7 @@ import org.joml.Vector4f;
  */
 public class CheckNodes {
     static final Path MODELS = Path.of("src/main/resources/assets/ee_extras/models/block/four_core_termination");
+    static final Path TAP_MODELS = Path.of("src/main/resources/assets/ee_extras/models/block/four_core_tap");
     static final Path EE_MODELS = Path.of("src/main/resources/assets/electroenergetics/models/block/duplex_wire_termination");
     /** По положению o = ROLL + 2·FLIP (CableOrientation) */
     static final String[] ORIENT_MODELS = {"block", "block_roll", "block_flip", "block_flip_roll"};
@@ -73,11 +74,11 @@ public class CheckNodes {
     }
 
     /** Из модели: узел 0 — середина наружной грани вывода кабеля, узлы 1–4 — центры клемм l1, l2, l3, n */
-    static List<float[]> terminationPoints(int o) {
-        Map<String, float[][]> boxes = boxes(MODELS.resolve(ORIENT_MODELS[o] + ".json"));
+    static List<float[]> terminationPoints(Path dir, String[] terms, int o) {
+        Map<String, float[][]> boxes = boxes(dir.resolve(ORIENT_MODELS[o] + ".json"));
         List<float[]> out = new ArrayList<>();
         out.add(sideFace(boxes.get("cable_entry"), true));
-        for (String t : new String[] {"l1", "l2", "l3", "n"}) {
+        for (String t : terms) {
             float[][] b = boxes.get(t);
             out.add(new float[] {(b[0][0] + b[1][0]) / 2, (b[0][1] + b[1][1]) / 2, (b[0][2] + b[1][2]) / 2});
         }
@@ -132,9 +133,12 @@ public class CheckNodes {
         }
         // Четырёхжильный соединитель: клеммы и торец вывода кабеля в сгенерированных моделях (4 положения) против
         // точек проводов его NodeConfigurator (Layout.FOUR_CORE_TERMINATION, повороты — как в CableEndBlock)
-        for (int o = 0; o < 4; o++) {
-            List<float[]> model = terminationPoints(o);
-            NodeConfigurator nc = nodes(Layout.FOUR_CORE_TERMINATION, o);
+        // Отвод фазы — то же для его моделей и Layout.PHASE_TAP
+        for (int o = 0; o < 8; o++) {
+            boolean tap = o >= 4;
+            List<float[]> model = terminationPoints(tap ? TAP_MODELS : MODELS,
+                    tap ? new String[] {"phase", "n"} : new String[] {"l1", "l2", "l3", "n"}, o % 4);
+            NodeConfigurator nc = nodes(tap ? Layout.PHASE_TAP : Layout.FOUR_CORE_TERMINATION, o % 4);
             for (var e : rot.entrySet()) {
                 Map<Integer, Vec3> nodes = nc.getNodes(e.getKey());
                 for (int i = 0; i < model.size(); i++) {
@@ -142,8 +146,8 @@ public class CheckNodes {
                     total++;
                     if (at.distanceTo(nodes.get(i)) > 1e-4) {
                         bad++;
-                        System.out.printf("НЕ СОВПАЛО four_core_termination %s положение %d узел %d: модель %s, провод %s%n",
-                                e.getKey(), o, i, at, nodes.get(i));
+                        System.out.printf("НЕ СОВПАЛО %s %s положение %d узел %d: модель %s, провод %s%n",
+                                tap ? "four_core_tap" : "four_core_termination", e.getKey(), o % 4, i, at, nodes.get(i));
                     }
                 }
             }

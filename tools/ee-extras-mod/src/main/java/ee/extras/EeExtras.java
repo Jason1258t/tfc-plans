@@ -11,10 +11,16 @@ import ee.extras.cable.CableKind;
 import ee.extras.cable.CableWires;
 import ee.extras.cable.FourCoreSpoolItem;
 import ee.extras.cable.FourCoreTerminationBlock;
+import ee.extras.cable.PhaseTapBlock;
+import ee.extras.lines.LineWire;
+import ee.extras.lines.LinesClient;
+import ee.extras.lines.Tension;
 import ee.extras.converter.BidiConverterBlock;
 import ee.extras.converter.BidiConverterBlockEntity;
 import ee.extras.converter.BidiConverterDevice;
+import com.mojang.logging.LogUtils;
 import java.util.function.Supplier;
+import org.slf4j.Logger;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
@@ -25,6 +31,7 @@ import net.minecraft.world.level.material.MapColor;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
@@ -43,11 +50,12 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 @Mod(EeExtras.MOD_ID)
 public class EeExtras {
     public static final String MOD_ID = "ee_extras";
+    public static final Logger LOGGER = LogUtils.getLogger();
     /** Прежний modId: блоки, предметы и устройства EE из мира 1.x переходят на новые id по псевдонимам */
     static final String OLD_ID = "ee_rectifier";
 
-    static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MOD_ID);
-    static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MOD_ID);
+    public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MOD_ID);
+    public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MOD_ID);
     static final DeferredRegister<SimulatedDeviceType<?>> DEVICES =
             DeferredRegister.create(CEERegistries.SIMULATED_DEVICE_TYPE, MOD_ID);
     static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
@@ -73,6 +81,10 @@ public class EeExtras {
             "four_core_termination", () -> new FourCoreTerminationBlock(metal()));
     public static final DeferredItem<Item> FOUR_CORE_TERMINATION_ITEM = ITEMS.register("four_core_termination",
             () -> new TooltipBlockItem(FOUR_CORE_TERMINATION.get(), new Item.Properties()));
+    public static final DeferredBlock<PhaseTapBlock> PHASE_TAP = BLOCKS.register(
+            "four_core_tap", () -> new PhaseTapBlock(metal()));
+    public static final DeferredItem<Item> PHASE_TAP_ITEM = ITEMS.register("four_core_tap",
+            () -> new TooltipBlockItem(PHASE_TAP.get(), new Item.Properties()));
     public static final DeferredBlock<CableInsulatorBlock> DUPLEX_INSULATOR = BLOCKS.register(
             "duplex_cable_insulator", () -> new CableInsulatorBlock(ceramic(), CableKind.DUPLEX));
     public static final DeferredItem<Item> DUPLEX_INSULATOR_ITEM = ITEMS.register("duplex_cable_insulator",
@@ -130,15 +142,21 @@ public class EeExtras {
 
     public EeExtras(IEventBus modBus) {
         CableWires.init();
+        LineWire.register();
+        Tension.register(modBus);
         BLOCKS.register(modBus);
         ITEMS.register(modBus);
         DEVICES.register(modBus);
         BLOCK_ENTITIES.register(modBus);
         WIRES.register(modBus);
         modBus.addListener(EeExtras::addToTab);
+        modBus.addListener((FMLCommonSetupEvent e) -> e.enqueueWork(Tension::tuneIronSag));
         modBus.addListener(EeExtras::capabilities);
         CableEvents.register(NeoForge.EVENT_BUS);
-        if (FMLEnvironment.dist == Dist.CLIENT) CableHud.register(modBus, NeoForge.EVENT_BUS);
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            CableHud.register(modBus, NeoForge.EVENT_BUS);
+            LinesClient.register(modBus, NeoForge.EVENT_BUS);
+        }
     }
 
     /** FE — только через заднюю грань (ту, которой блок стоит на конденсаторе или машине), как у преобразователя EE */
@@ -150,7 +168,12 @@ public class EeExtras {
     private static void addToTab(BuildCreativeModeTabContentsEvent event) {
         if (!event.getTabKey().equals(CEECreativeTab.CREATIVE_TAB.getKey())) return;
         for (Supplier<? extends Item> item : new Supplier[] {SINGLE_PHASE.item, THREE_PHASE.item, CONVERTER_ITEM,
-                FOUR_CORE_TERMINATION_ITEM, DUPLEX_INSULATOR_ITEM, FOUR_CORE_INSULATOR_ITEM, FOUR_CORE_SPOOL})
+                FOUR_CORE_TERMINATION_ITEM, PHASE_TAP_ITEM, DUPLEX_INSULATOR_ITEM, FOUR_CORE_INSULATOR_ITEM, FOUR_CORE_SPOOL})
             event.accept(item.get());
+        for (LineWire w : LineWire.values()) {
+            if (w.wire != null) event.accept(w.wire.get());
+            event.accept(w.spool.get());
+        }
+        event.accept(Tension.CLAMP_ITEM.get());
     }
 }

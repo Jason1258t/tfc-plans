@@ -226,4 +226,7 @@ for i, (name, (terminals, kinds)) in enumerate(LAYOUTS.items()):
 import cables  # noqa: E402 — кабели, соединитель, изоляторы, катушка (art/cables.py)
 
 cables.generate(RES, NS, dump, ROT, DISPLAY)
+import lines  # noqa: E402 — провода ЛЭП и натяжной зажим (art/lines.py)
+
+lines.generate(RES, NS, dump)
 print('готово:', os.path.normpath(RES))
