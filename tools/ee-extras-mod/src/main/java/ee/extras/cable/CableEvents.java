@@ -5,6 +5,7 @@ import com.george_vi.electroenergetics.content.bundled_wire.BundledWireTerminati
 import com.george_vi.electroenergetics.simulation.infrastructure.InWorldNodeData;
 import com.george_vi.electroenergetics.simulation.infrastructure.InfrastructureSavedData;
 import com.simibubi.create.AllSoundEvents;
+import ee.extras.lines.Tension;
 import com.simibubi.create.content.equipment.wrench.WrenchItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -52,7 +53,8 @@ public final class CableEvents {
         }
         if (!(stack.getItem() instanceof WrenchItem) || e.getEntity().isShiftKeyDown()) return;
         BlockState state = level.getBlockState(pos);
-        if (!(state.getBlock() instanceof BundledWireTerminationBlock) || state.getBlock() instanceof CableEndBlock) return;
+        boolean tap = state.getBlock() instanceof PhaseTapBlock;
+        if (!(state.getBlock() instanceof BundledWireTerminationBlock) || state.getBlock() instanceof CableEndBlock && !tap) return;
         boolean phase = level instanceof ServerLevel sl
                 ? CableLaying.cyclePhase(sl, pos, e.getEntity())
                 : CableClient.hasFourCore(CableEnd.of(pos, state));
@@ -61,6 +63,7 @@ public final class CableEvents {
             e.setCancellationResult(InteractionResult.SUCCESS);
             return;
         }
+        if (tap) return; // без кабеля — поворот самим блоком (CableEndBlock.getRotatedBlockState)
         Direction face = e.getHitVec().getDirection();
         if (face.getAxis() != state.getValue(BundledWireTerminationBlock.FACING).getAxis()) return;
         e.setCanceled(true);
@@ -99,6 +102,7 @@ public final class CableEvents {
     static void tick(LevelTickEvent.Post e) {
         if (e.getLevel() instanceof ServerLevel sl && sl.getGameTime() % CableData.CHECK_TICKS == 0)
             CableData.get(sl).check(sl);
+        if (e.getLevel() instanceof ServerLevel sl && sl.getGameTime() % Tension.CHECK_TICKS == 0) Tension.check(sl);
     }
 
     private CableEvents() {

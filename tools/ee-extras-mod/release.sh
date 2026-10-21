@@ -16,6 +16,7 @@ cp "build/libs/ee-extras-$VERSION.jar" ../../public/addons/
 # Иконки для сайта — общим генератором MCP (сглаживание, те же правила, что у model_render); 192 px — сайт
 # показывает их 96 px, на экранах с двойной плотностью — пиксель в пиксель
 ICONS="three_phase_rectifier single_phase_rectifier bidirectional_converter four_core_termination
-  duplex_cable_insulator four_core_cable_insulator four_core_cable_spool"
+  duplex_cable_insulator four_core_cable_insulator four_core_cable_spool four_core_tap
+  copper_busbar_spool power_cable_spool stranded_copper_spool acsr_spool aluminum_spool bronze_spool steel_spool tension_clamp"
 (cd ../.. && node scripts/mcp/render.mjs tools/ee-extras-mod $(printf 'ee_extras:%s ' $ICONS) --out public/addons --size 192)
 echo "готово: ee-extras-$VERSION.jar → tools/ee-extras-mod и public/addons"

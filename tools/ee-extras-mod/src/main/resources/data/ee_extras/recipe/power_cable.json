@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "electroenergetics:heavily_insulated_wire"
+    },
+    {
+      "item": "ee_extras:stranded_copper_wire"
+    },
+    {
+      "item": "ee_extras:stranded_copper_wire"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "ee_extras:power_cable"
+  }
+}

@@ -15,6 +15,7 @@ import { jarToc, readEntry, resolveJar } from '../jars.mjs';
 import { loadTexture, renderId, textureImage } from '../render.mjs';
 import {
   addonDirs,
+  addonRoot,
   blockstatePath,
   findResource,
   loadModel,
@@ -31,8 +32,17 @@ import {
 
 // ---------------------------------------------------------------- model_render
 
+/** Слои ресурсов; addon — папка аддона (в т. ч. в git worktree) поверх одноимённой из tools/ */
+function layersFor(a) {
+  const q = String(a.addon ?? '').trim();
+  if (!q) return resourceLayers();
+  const addon = addonRoot(q);
+  if (!addon) throw new Error(`${q}: нет ни src/main/resources, ни папки с assets/`);
+  return resourceLayers(null, true, null, addon);
+}
+
 function modelRender(a) {
-  const r = renderId(resourceLayers(), String(a.id ?? '').trim(), {
+  const r = renderId(layersFor(a), String(a.id ?? '').trim(), {
     kind: a.kind,
     state: a.state,
     view: a.view,
@@ -44,7 +54,7 @@ function modelRender(a) {
 // ---------------------------------------------------------------- texture_get
 
 function textureGet(a) {
-  const layers = resourceLayers();
+  const layers = layersFor(a);
   let id = String(a.path ?? '').trim();
   const m = id.match(/^assets\/([^/]+)\/textures\/(.+?)(\.png)?$/);
   if (m) id = `${m[1]}:${m[2]}`;
@@ -329,6 +339,32 @@ function registrations(src, load) {
   return out;
 }
 
+/** Вызов, первый аргумент которого — ключ перевода: Component.translatable*, I18n.get/exists, new TranslatableContents */
+const isTranslateCall = (r) =>
+  r.kind === 'method' &&
+  r.desc.startsWith('(Ljava/lang/String;') &&
+  ((/\/(Component|MutableComponent)$/.test(r.owner) && r.name.startsWith('translatable')) ||
+    (r.owner.endsWith('/I18n') && (r.name === 'get' || r.name === 'exists')) ||
+    (r.owner.endsWith('/TranslatableContents') && r.name === '<init>'));
+
+/**
+ * Индексы строк — ключей перевода перед вызовом k: ldc сразу перед вызовом, а у тернарного оператора — две и
+ * больше ldc подряд (ветки сходятся на одном вызове). У translatable(key, Object...) строки после
+ * anewarray Object — аргументы, ключ — до него.
+ */
+function translateKeys(refs, k) {
+  let j = k - 1;
+  if (refs[k].desc.includes('[Ljava/lang/Object;')) {
+    const stop = Math.max(0, k - 40);
+    while (j >= stop && !(refs[j].kind === 'class' && refs[j].owner === 'java/lang/Object')) j--;
+    if (j < stop) return [];
+    j--;
+  }
+  const out = [];
+  for (; j >= 0 && refs[j].kind === 'string' && refs[j].op !== 'concat'; j--) out.push(j);
+  return out;
+}
+
 /** Строки кода: ключи перевода и PartialModel.of(...) — по codeRefs (вкл. шаблоны склейки строк) */
 function codeStrings(src, load) {
   const strings = [];
@@ -338,9 +374,15 @@ function codeStrings(src, load) {
     if (!cls) continue;
     for (const m of cls.methods) {
       const refs = codeRefs(cls, m);
+      const keys = new Set(refs.flatMap((r, k) => (isTranslateCall(r) ? translateKeys(refs, k) : [])));
       refs.forEach((r, k) => {
         if (r.kind === 'string')
-          strings.push({ value: r.value, concat: r.op === 'concat', where: `${n.split('/').pop()}.${m.name}` });
+          strings.push({
+            value: r.value,
+            concat: r.op === 'concat',
+            key: keys.has(k),
+            where: `${n.split('/').pop()}.${m.name}`,
+          });
         if (r.kind === 'method' && r.name === 'of' && r.owner.endsWith('/PartialModel')) {
           const prev = refs.slice(Math.max(0, k - 5), k).filter((x) => x.kind === 'string' && x.op !== 'concat');
           partials.push({ strs: prev.map((x) => x.value), where: `${n.split('/').pop()}.${m.name}` });
@@ -357,13 +399,7 @@ function codeStrings(src, load) {
 function checkTarget(a) {
   const q = String(a.addon ?? a.path ?? '').trim();
   if (q) {
-    const hit = addonDirs().find((d) => d.name === q || d.name === `${q}-mod`);
-    const dir = hit?.dir ?? path.resolve(q);
-    const res = fs.existsSync(path.join(dir, 'src/main/resources'))
-      ? path.join(dir, 'src/main/resources')
-      : fs.existsSync(path.join(dir, 'assets'))
-        ? dir
-        : null;
+    const { dir, res } = addonRoot(q) ?? {};
     if (!res)
       throw new Error(
         `${q}: нет ни tools/<аддон>/src/main/resources, ни папки с assets/ (аддоны: ${addonDirs()
@@ -488,9 +524,15 @@ function resourcesCheck(a) {
       else Object.assign(lang[l], r.json);
     }
   }
+  // Аддон сборки — свой, русский перевод обязателен (игроки видят ru_ru); у чужого мода нет ru_ru — не ошибка
+  const keysChecked = new Set();
   const needKey = (key, why) => {
+    keysChecked.add(key);
     if (!(key in lang.en_us)) errors.push(`нет перевода ${key} в en_us (${why}) — в игре будет виден сам ключ`);
-    if (!(key in lang.ru_ru)) warns.push(`нет перевода ${key} в ru_ru (${why})`);
+    if (!(key in lang.ru_ru))
+      (target.only.addon ? errors : warns).push(
+        `нет перевода ${key} в ru_ru (${why})${target.only.addon ? ' — у игроков будет английский текст' : ''}`,
+      );
   };
 
   // Модели: проверка цепочки и текстур (с кешем по id)
@@ -678,11 +720,28 @@ function resourcesCheck(a) {
   const prefixes = spaces.flatMap((ns) => [`block.${ns}.`, `item.${ns}.`, `${ns}.`]);
   const keyRe = /^[a-z0-9_-]+(\.[a-z0-9_/-]+)+$/;
   const foreign = new Map(); // ns → lang
+  const mcLayers = layers.filter((l) => l.kind === 'minecraft');
   const foreignLang = (ns) => {
-    if (!foreign.has(ns)) foreign.set(ns, readJsonRes(layers, `assets/${ns}/lang/en_us.json`)?.json ?? null);
+    // en_us Minecraft — из его ресурсов: в jar модов бывают огрызки assets/minecraft/lang
+    if (!foreign.has(ns))
+      foreign.set(
+        ns,
+        readJsonRes(ns === 'minecraft' ? mcLayers : layers, `assets/${ns}/lang/en_us.json`)?.json ?? null,
+      );
     return foreign.get(ns);
   };
   const seenKeys = new Set();
+  // Первые части своих ключей (miner_belt из miner_belt.on), кроме общих block/item/…
+  const langPrefixes = new Set(
+    Object.keys(lang.en_us)
+      .map((k) => k.split('.')[0])
+      .filter(
+        (x) =>
+          !/^(block|item|entity|effect|enchantment|biome|fluid|fluid_type|container|gui|key|itemGroup|death|subtitles|advancements|tag|stat|attribute|commands|chat|menu|options|tooltip)$/.test(
+            x,
+          ),
+      ),
+  );
   let codeKeys = 0;
   for (const s of code.strings) {
     if (s.concat) {
@@ -705,7 +764,35 @@ function resourcesCheck(a) {
       continue;
     }
     const v = s.value;
+    if (s.key && /^[A-Za-z0-9_-]+(\.[A-Za-z0-9_/-]+)+$/.test(v)) {
+      // Передаётся в Component.translatable и т. п. — ключ при любом префиксе (miner_belt.on, тернарный оператор)
+      if (seenKeys.has(v)) continue;
+      seenKeys.add(v);
+      const parts = v.split('.');
+      const ns = parts[0] === 'block' || parts[0] === 'item' ? parts[1] : parts[0];
+      const ownKey = v in lang.en_us || v in lang.ru_ru || spaces.includes(ns) || langPrefixes.has(parts[0]);
+      const fl = !ownKey && mods().has(ns) && ns !== 'minecraft' ? foreignLang(ns) : null;
+      const mc = foreignLang('minecraft');
+      if (ownKey) {
+        codeKeys++;
+        needKey(v, `Component.translatable в ${s.where}`);
+      } else if ((fl && v in fl) || (mc && v in mc)) codeKeys++;
+      else if (fl) warns.push(`${s.where}: ключ ${v} из чужого namespace — в en_us ${ns} его нет`);
+      else
+        (target.only.addon ? warns : info).push(
+          `${s.where}: ключ ${v} — нет ни в переводах мода, ни в Minecraft${mc ? '' : ' (ресурсы Minecraft не найдены)'}`,
+        );
+      continue;
+    }
     if (!keyRe.test(v) || /\.(json|png|toml|class|js|nbt)$/.test(v) || seenKeys.has(v)) continue;
+    // Строка с префиксом ключей мода (miner_belt.…), но не прямо в translatable — ключ, если перевод есть
+    if (langPrefixes.has(v.split('.')[0]) && !prefixes.some((x) => v.startsWith(x))) {
+      seenKeys.add(v);
+      if (v in lang.en_us) codeKeys++;
+      else
+        info.push(`${s.where}: строка ${v} похожа на ключ перевода мода, но в en_us её нет — проверьте, ключ ли это`);
+      continue;
+    }
     if (prefixes.some((x) => v.startsWith(x))) {
       seenKeys.add(v);
       codeKeys++;
@@ -734,7 +821,7 @@ function resourcesCheck(a) {
   ];
   const out = [
     `Проверка ресурсов: ${target.label}; namespace ${spaces.join(', ') || '—'}`,
-    `проверено: блоков ${blocks.size} (состояний ${statesChecked}), предметов ${items.size}, моделей ${checkedModels.size}, ключей перевода из кода ${codeKeys}, PartialModel ${code.partials.length}; классов ${src.names.length}, регистраций в коде ${regs.length}`,
+    `проверено: блоков ${blocks.size} (состояний ${statesChecked}), предметов ${items.size}, моделей ${checkedModels.size}, ключей перевода ${keysChecked.size} (из кода ${codeKeys}), PartialModel ${code.partials.length}; классов ${src.names.length}, регистраций в коде ${regs.length}`,
   ];
   const E = uniq(errors);
   const W = uniq(warns);
@@ -762,7 +849,7 @@ export const TOOLS = [
   {
     name: 'model_render',
     description:
-      'Рисунок модели блока или предмета картинкой PNG (без клиента): блокстейт → вариант (state) → модель с parent, повороты x/y варианта и элементов, uv и rotation граней, display.gui; предмет item/generated — слои. Ищет по слоям: ресурспаки, KubeJS, папки аддонов tools/<мод>/src/main/resources, jar модов, Minecraft. В тексте — цепочка моделей, откуда каждая текстура, предупреждения (tint, loader, нет текстуры).',
+      'Рисунок модели блока или предмета картинкой PNG (без клиента): блокстейт → вариант (state) → модель с parent, повороты x/y варианта и элементов, uv и rotation граней, display.gui; предмет item/generated — слои. Ищет по слоям: ресурспаки, KubeJS, папки аддонов tools/<мод>/src/main/resources (аддон из git worktree — addon=<путь>), jar модов, Minecraft. В тексте — цепочка моделей, откуда каждая текстура, предупреждения (tint, loader, нет текстуры).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -779,6 +866,9 @@ export const TOOLS = [
           description: 'вид: gui — как в инвентаре (по умолчанию), top — сверху, стороны — с этой стороны',
         },
         size: num('размер картинки в пикселях (256, до 1024)'),
+        addon: str(
+          'папка аддона (путь, например .claude/worktrees/…/tools/miner-tools-mod, или имя в tools/): ресурсы берутся из неё вместо tools/ основной копии',
+        ),
       },
       required: ['id'],
     },
@@ -794,6 +884,7 @@ export const TOOLS = [
         path: str('ns:block/x или assets/ns/textures/….png'),
         size: num('размер картинки по большей стороне (256)'),
         colors: num('сколько цветов палитры (12, до 32)'),
+        addon: str('папка аддона (путь или имя в tools/) вместо tools/ основной копии — как у model_render'),
       },
       required: ['path'],
     },
@@ -802,7 +893,7 @@ export const TOOLS = [
   {
     name: 'resources_check',
     description:
-      'Проверка ресурсов мода или аддона без клиента: у каждого блока есть блокстейт и он покрывает все сочетания свойств (свойства — из байткода createBlockStateDefinition с предками), значения свойств верные, модели и parent существуют (вкл. чужие namespace и Minecraft), текстуры есть, координаты и углы элементов допустимы, у предметов есть модель, ключи перевода из кода и названия блоков/предметов есть в en_us и ru_ru, PartialModel.of указывает на модель, есть добыча блоков.',
+      'Проверка ресурсов мода или аддона без клиента: у каждого блока есть блокстейт и он покрывает все сочетания свойств (свойства — из байткода createBlockStateDefinition с предками), значения свойств верные, модели и parent существуют (вкл. чужие namespace и Minecraft), текстуры есть, координаты и углы элементов допустимы, у предметов есть модель, ключи перевода из кода (всё, что уходит в Component.translatable — вкл. ветки тернарного оператора, и строки с префиксом ключей мода) и названия блоков/предметов есть в en_us и ru_ru (у аддона нет в ru_ru — ошибка), PartialModel.of указывает на модель, есть добыча блоков.',
     inputSchema: {
       type: 'object',
       properties: {
