@@ -173,10 +173,13 @@ export function undoLast(profile) {
     const f = localPath(profile, p);
     if (f) fs.rmSync(f, { force: true });
   }
+  // Поставленное и тут же убранное в том же pull (jar сборки вместо аддона) — до pull его не было
+  const added = new Set(m.added);
   for (const p of [...m.replaced, ...m.removed]) {
     const f = localPath(profile, p);
-    if (f) move(path.join(last, 'files', ...p.split('/')), f);
+    if (f && !added.has(p)) move(path.join(last, 'files', ...p.split('/')), f);
   }
+  m.removed = m.removed.filter((p) => !added.has(p));
   saveState(profile, m.prevState);
   fs.rmSync(last, { recursive: true, force: true });
   return m;
