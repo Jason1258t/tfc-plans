@@ -1,4 +1,4 @@
-import { ArrowRight, Star, Trash2 } from 'lucide-react';
+import { ArrowRight, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { replaceFavoritesStore } from '../data/store';
 import { deriveVariants } from '../lib/replaceFavorites';
@@ -29,39 +29,11 @@ const Block = ({ id, items }: { id: string; items: ItemIndex | null }) => (
   </span>
 );
 
-/** Список избранных замен и кнопка «подставить в схемы» */
-export function FavoritesPanel({
-  favorites,
-  items,
-  applicable,
-  onApply,
-}: {
-  favorites: ReplaceFavorite[];
-  items: ItemIndex | null;
-  /** Сколько блоков в загруженных схемах можно заменить избранным */
-  applicable: number;
-  onApply: () => void;
-}) {
+/** Список избранных замен (кнопка «Подставить в схемы» — в панели инструментов редактора) */
+export function FavoritesPanel({ favorites, items }: { favorites: ReplaceFavorite[]; items: ItemIndex | null }) {
   const sorted = [...favorites].sort((a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to));
   return (
-    <details className="schem-favs">
-      <summary>
-        <Star size={15} className="fav-star on" />
-        <span>Избранные замены</span>
-        <span className="faint small">{favorites.length}</span>
-        <span className="grow" />
-        <button
-          className="btn sm primary"
-          disabled={applicable === 0}
-          onClick={(e) => {
-            e.preventDefault();
-            onApply();
-          }}
-          title="Подставить избранные замены в блоки загруженных схем, где замены ещё нет"
-        >
-          Подставить в схемы{applicable > 0 && ` (${applicable})`}
-        </button>
-      </summary>
+    <section className="schem-favs">
       {sorted.length === 0 ? (
         <p className="faint small">
           Пусто. Замените блок и нажмите ★ рядом с заменой — она станет доступна во всех схемах.
@@ -85,7 +57,7 @@ export function FavoritesPanel({
           ))}
         </ul>
       )}
-    </details>
+    </section>
   );
 }
 
