@@ -1,9 +1,10 @@
 /**
- * Применение плана: скачать, заменить с копией старого, убрать лишнее, отменить последнюю синхронизацию.
+ * Применение плана: скачать, заменить с копией старого, убрать лишнее, отменить последний `tfc pull`.
  *
  * Сначала всё качается в <версия>/.tfc/dl/ (по sha256), и только потом файлы быстро переставляются на место:
- * оборванная загрузка не оставляет полусобранную папку. Старое уходит в <версия>/.tfc/backup/<время>/,
- * `tfc sync --undo` возвращает. Хранятся последние BACKUPS копий.
+ * оборванная загрузка не оставляет полусобранную папку. Старое уходит в <версия>/.tfc/backup/<время>/
+ * (одна копия на весь pull — и сборка, и сайт: beginBackup … finishBackup), `tfc undo` возвращает.
+ * Хранятся последние BACKUPS копий.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -55,36 +56,50 @@ async function fetchAll(api, items) {
   return (sha) => path.join(dl, sha);
 }
 
+/** Копия на один pull: сюда складывают старое и сборка (applyPlan), и сайт (applyPull в pull.mjs) */
+export function beginBackup(profile) {
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  return {
+    dir: path.join(stateDir(profile), 'backup', stamp),
+    manifest: { at: Date.now(), added: [], replaced: [], removed: [], tfcNew: [], prevState: loadState(profile) },
+  };
+}
+
+/** Убрать файл в копию; list — куда записать путь (replaced или removed) */
+export function toBackup(backup, file, snapPath, list) {
+  move(file, path.join(backup.dir, 'files', ...snapPath.split('/')));
+  backup.manifest[list].push(snapPath);
+}
+
+/** Записать опись копии; ничего не тронули — копии нет (null) */
+export function finishBackup(profile, backup) {
+  const m = backup.manifest;
+  if (!(m.added.length + m.replaced.length + m.removed.length + m.tfcNew.length)) return null;
+  fs.mkdirSync(backup.dir, { recursive: true });
+  fs.writeFileSync(path.join(backup.dir, 'manifest.json'), `${JSON.stringify(m, null, 1)}\n`);
+  pruneBackups(profile);
+  return backup.dir;
+}
+
 /**
- * Применить план. Возвращает { backup, duplicates } — папку копий и убранные старые версии модов.
- * cache — HashCache из scanLocal (запомнить хеши записанного, чтобы не перечитывать).
+ * Применить план снимка. Возвращает убранные старые версии модов. backup — из beginBackup;
+ * cache — HashCache из scanLocal (запомнить хеши записанного, чтобы не перечитывать);
+ * skip — пути сайта (аддоны): их не считаем ни модами сборки, ни дублями.
  */
-export async function applyPlan({ api, profile, plan, snapshot, cache, onlyNew = false }) {
+export async function applyPlan({ api, profile, plan, snapshot, cache, backup, skip = new Set(), onlyNew = false }) {
   const dest = (f) => localPath(profile, f.path);
   const toWrite = [...plan.add, ...plan.update];
   assertNotLocked([...plan.update, ...plan.remove].map(dest));
   const blob = await fetchAll(api, { profile, list: [...toWrite, ...plan.conflict] });
 
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backupDir = path.join(stateDir(profile), 'backup', stamp);
   const state = loadState(profile);
-  const manifest = {
-    at: Date.now(),
-    snapshot: snapshot.id,
-    added: [],
-    replaced: [],
-    removed: [],
-    tfcNew: [],
-    prevState: state,
-  };
-  const keep = (f, to) => {
-    move(dest(f), path.join(backupDir, 'files', ...f.path.split('/')));
-    (to ?? manifest.replaced).push(f.path);
-  };
+  const manifest = backup.manifest;
+  manifest.snapshot = snapshot.id;
+  const keep = (f, to = 'replaced') => toBackup(backup, dest(f), f.path, to);
 
   for (const f of plan.update) keep(f);
   for (const f of plan.remove) {
-    keep(f, manifest.removed);
+    keep(f, 'removed');
     delete state.files[f.path];
   }
   for (const f of toWrite) {
@@ -104,18 +119,19 @@ export async function applyPlan({ api, profile, plan, snapshot, cache, onlyNew =
 
   // Старые версии обновлённых модов: свой jar игрока с тем же id мода, что у jar сборки
   const duplicates = [];
-  const snapJars = (snapshot.files ?? []).filter((f) => f.kind === 'mod');
-  if (!onlyNew && snapJars.length && plan.extra.some((f) => f.kind === 'mod')) {
+  const snapJars = (snapshot.files ?? []).filter((f) => f.kind === 'mod' && !skip.has(f.path));
+  const extraJars = plan.extra.filter((f) => f.kind === 'mod' && !skip.has(f.path));
+  if (!onlyNew && snapJars.length && extraJars.length) {
     const owner = new Map();
     for (const f of snapJars) {
       const file = dest(f);
       if (fs.existsSync(file)) for (const id of modIdsOf(file)) owner.set(id, f.path);
     }
-    for (const f of plan.extra.filter((x) => x.kind === 'mod')) {
+    for (const f of extraJars) {
       const ids = modIdsOf(f.file).filter((id) => owner.has(id));
       if (!ids.length) continue;
       assertNotLocked([f.file]);
-      keep(f, manifest.removed);
+      keep(f, 'removed');
       duplicates.push({ path: f.path, ids, by: owner.get(ids[0]) });
     }
   }
@@ -123,14 +139,8 @@ export async function applyPlan({ api, profile, plan, snapshot, cache, onlyNew =
   state.snapshot = snapshot.id;
   saveState(profile, state);
   cache.save();
-  const touched = manifest.added.length + manifest.replaced.length + manifest.removed.length + manifest.tfcNew.length;
-  if (touched) {
-    fs.mkdirSync(backupDir, { recursive: true });
-    fs.writeFileSync(path.join(backupDir, 'manifest.json'), `${JSON.stringify(manifest, null, 1)}\n`);
-    pruneBackups(profile);
-  }
   fs.rmSync(path.join(stateDir(profile), 'dl'), { recursive: true, force: true });
-  return { backup: touched ? backupDir : null, duplicates };
+  return { duplicates };
 }
 
 function backups(profile) {
@@ -148,7 +158,7 @@ export function pruneBackups(profile) {
   for (const d of all.slice(0, Math.max(0, all.length - BACKUPS))) fs.rmSync(d, { recursive: true, force: true });
 }
 
-/** Отменить последнюю синхронизацию: убрать добавленное, вернуть заменённое и убранное */
+/** Отменить последний pull: убрать добавленное, вернуть заменённое и убранное */
 export function undoLast(profile) {
   const last = backups(profile).at(-1);
   if (!last) return null;
