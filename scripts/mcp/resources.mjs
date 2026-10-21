@@ -196,6 +196,35 @@ export function resourceLayers(only = null, withDeps = true, skipJars = null, ad
   return layers;
 }
 
+/** Слой «jar модов» (общий индекс по путям, как в resourceLayers) — запасной для генератора иконок: блокстейты */
+export function modJarsLayer() {
+  return {
+    label: 'jar модов',
+    kind: 'jars',
+    has: (p) => Boolean(jarFor(p)),
+    read: (p) => {
+      const j = jarFor(p);
+      return j ? (readEntry(j, p)?.data ?? null) : null;
+    },
+    which: (p) => jarFor(p),
+    list: () => [],
+  };
+}
+
+/**
+ * Только ресурсы Minecraft (client-extra jar) и NeoForge (jar platform) — запасной слой для генератора иконок сайта:
+ * его ванильный кеш (mods.mjs) хранит лишь textures/item и textures/block, а моделям сущностей нужны textures/entity,
+ * вёдрам — модели neoforge:item/*.
+ */
+export function platformLayers() {
+  const out = [];
+  const mc = minecraftResources();
+  if (mc) out.push(zipLayer('Minecraft', mc, 'minecraft'));
+  const nf = platform()?.classes;
+  if (nf) out.push(zipLayer('NeoForge', nf, 'minecraft'));
+  return out;
+}
+
 /** Файл из первого слоя, где он есть: { data, layer, from } или null */
 export function findResource(layers, p) {
   for (const l of layers) {
@@ -291,6 +320,8 @@ export function loadModel(layers, id) {
     for (const [k, v] of Object.entries(m.textures ?? {})) if (!(k in out.textures)) out.textures[k] = v;
     if (!out.elements && Array.isArray(m.elements)) out.elements = m.elements;
     for (const [k, v] of Object.entries(m.display ?? {})) if (!(k in out.display)) out.display[k] = v;
+    // overrides — у ближайшей модели (предметы с состояниями: заряд, наполнение)
+    if (!out.overrides && Array.isArray(m.overrides)) out.overrides = m.overrides;
     if (!out.loader && m.loader) {
       out.loader = m.loader;
       out.loaderJson = m; // поля загрузчика: model (obj), base/perspectives, children, base_name…
