@@ -1,6 +1,9 @@
 package ee.extras;
 
+import com.george_vi.electroenergetics.CEEBlocks;
 import com.george_vi.electroenergetics.CEECreativeTab;
+import com.george_vi.electroenergetics.CEEItems;
+import com.george_vi.electroenergetics.config.CEEConfigs;
 import com.george_vi.electroenergetics.CEERegistries;
 import com.george_vi.electroenergetics.devices.device.SimulatedDeviceType;
 import com.george_vi.electroenergetics.simulation.WireType;
@@ -175,5 +178,15 @@ public class EeExtras {
             event.accept(w.spool.get());
         }
         event.accept(Tension.CLAMP_ITEM.get());
+        // EE 1.1.2 сам не кладёт во вкладку двухпроводной кабель и соединитель, а переменный ток — только с
+        // showACContent (по умолчанию выключен). JEI и поиск творческого режима берут предметы из вкладок — без этого
+        // их не найти, хотя рецепты есть. Дважды класть нельзя (исключение), поэтому — при тех же условиях, что у EE.
+        event.accept(CEEBlocks.DUPLEX_WIRE_TERMINATION.asStack());
+        event.accept(CEEItems.DUPLEX_WIRE_SPOOL.asStack());
+        if (FMLEnvironment.dist == Dist.CLIENT && !CEEConfigs.client().showACContent.get()) {
+            event.accept(CEEBlocks.THREE_PHASE_ALTERNATOR_BRUSHES.asStack());
+            event.accept(CEEBlocks.SYNCHROSCOPE.asStack());
+            event.accept(CEEBlocks.FREQUENCY_METER.asStack());
+        }
     }
 }
