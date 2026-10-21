@@ -2,6 +2,7 @@ package miner.tools;
 
 import com.mojang.serialization.Codec;
 import java.util.function.Supplier;
+import miner.tools.helmet.Helmet;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -10,6 +11,7 @@ import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
@@ -23,6 +25,9 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  * <p>
  * Пояс шахтёра: пока он надет (слот Curios «пояс») или лежит в инвентаре, игрок не подбирает предметы из его фильтра —
  * камешки, гравий, землю. ПКМ с поясом в руке — окно фильтра, Shift+ПКМ — включить/выключить.
+ * <p>
+ * Каска шахтёра (с 1.1.0, пакет {@code helmet}): стальной шлем с аккумулятором FE и фонарём, смягчает удары падающих
+ * блоков — {@link Helmet}.
  */
 @Mod(MinerTools.MOD_ID)
 public class MinerTools {
@@ -48,12 +53,13 @@ public class MinerTools {
     public static final DeferredHolder<MenuType<?>, MenuType<BeltMenu>> MENU = MENUS.register("miner_belt",
             () -> IMenuTypeExtension.create(BeltMenu::new));
 
-    public MinerTools(IEventBus modBus) {
+    public MinerTools(IEventBus modBus, ModContainer container) {
         ITEMS.register(modBus);
         COMPONENTS.register(modBus);
         MENUS.register(modBus);
         modBus.addListener(MinerTools::creativeTab);
         NeoForge.EVENT_BUS.register(PickupFilter.class);
+        Helmet.register(modBus, container);
     }
 
     private static void creativeTab(BuildCreativeModeTabContentsEvent event) {

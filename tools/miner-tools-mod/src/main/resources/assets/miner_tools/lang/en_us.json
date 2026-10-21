@@ -14,5 +14,18 @@
   "miner_belt.gui.enabled.hint": "A disabled belt blocks nothing",
   "miner_belt.gui.any.on": "Any rock: yes",
   "miner_belt.gui.any.off": "Any rock: no",
-  "miner_belt.gui.any.hint": "Yes — a sample means every rock and soil type: a granite pebble blocks all pebbles (mossy too), gravel blocks any gravel, dirt any dirt of that kind. No — only the exact item"
+  "miner_belt.gui.any.hint": "Yes — a sample means every rock and soil type: a granite pebble blocks all pebbles (mossy too), gravel blocks any gravel, dirt any dirt of that kind. No — only the exact item",
+  "item.miner_tools.miner_helmet": "Miner's Helmet",
+  "item.miner_tools.miner_helmet.energy": "Charge: %s / %s FE",
+  "item.miner_tools.miner_helmet.lamp_on": "Lamp on",
+  "item.miner_tools.miner_helmet.lamp_off": "Lamp off",
+  "item.miner_tools.miner_helmet.hint": "Shift+right-click or the \"Helmet lamp\" key (H) — toggle. Charge it in an IE charging station",
+  "item.miner_tools.miner_helmet.cushion": "Falling blocks and cave-ins: −%s%%",
+  "message.miner_tools.miner_helmet.on": "Helmet lamp on",
+  "message.miner_tools.miner_helmet.on_empty": "Helmet lamp on, but the battery is empty — charge the helmet",
+  "message.miner_tools.miner_helmet.off": "Helmet lamp off",
+  "message.miner_tools.miner_helmet.empty": "Helmet battery is empty",
+  "message.miner_tools.miner_helmet.not_worn": "You are not wearing a Miner's Helmet",
+  "key.categories.miner_tools": "Miner's Gear",
+  "key.miner_tools.helmet_lamp": "Helmet lamp"
 }

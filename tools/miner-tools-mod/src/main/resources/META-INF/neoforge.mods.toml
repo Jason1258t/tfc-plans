@@ -4,13 +4,16 @@ license = "MIT"
 
 [[mods]]
 modId = "miner_tools"
-version = "1.0.0"
+version = "1.1.0"
 displayName = "Miner Tools"
 authors = "TFC Планы"
 description = '''
 Снаряжение шахтёра для сборки TFC Планы. Пояс шахтёра: пока он надет (слот Curios «пояс») или лежит в инвентаре, игрок не подбирает
 выбранные предметы — камешки, гравий, землю. ПКМ поясом — окно фильтра, Shift+ПКМ — включить/выключить.
+Каска шахтёра: стальной шлем с аккумулятором FE (заряжается в зарядной станции Immersive Engineering) и фонарём
+(свет — LambDynamicLights), смягчает удары падающих блоков и обвалов. Shift+ПКМ или клавиша H — фонарь.
 '''
+credits = "Модель каски — мод Mining Helmet (CysticTurtle85, MIT, LICENSE-mining-helmet.txt): https://github.com/CysticTurtle85/Mining-Helmet"
 
 [[dependencies.miner_tools]]
 modId = "neoforge"
@@ -33,3 +36,19 @@ type = "optional"
 versionRange = "[9.0,)"
 ordering = "NONE"
 side = "BOTH"
+
+# Модель каски на игроке
+[[dependencies.miner_tools]]
+modId = "geckolib"
+type = "required"
+versionRange = "[4.8,5)"
+ordering = "NONE"
+side = "BOTH"
+
+# Свет фонаря каски (assets/miner_tools/dynamiclights): без мода каска не светит, остальное работает
+[[dependencies.miner_tools]]
+modId = "lambdynlights"
+type = "optional"
+versionRange = "[4.0,)"
+ordering = "NONE"
+side = "CLIENT"

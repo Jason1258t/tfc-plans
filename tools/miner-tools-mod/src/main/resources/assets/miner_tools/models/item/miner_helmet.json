@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": { "layer0": "miner_tools:item/miner_helmet" },
+  "overrides": [
+    { "predicate": { "miner_tools:lit": 1 }, "model": "miner_tools:item/miner_helmet_lit" }
+  ]
+}
