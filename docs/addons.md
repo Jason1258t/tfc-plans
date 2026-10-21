@@ -154,7 +154,9 @@ tools/<имя>-mod/
 33,3 · (1 + T/1000), предел — `maxTemperature`), сопротивление — потери (Ом/м × `WireData.length`), провис середины —
 0,05 · `sag` · пролёт · f (`WireData.getSag`, `QuadraticWireHelper`), f = clamp(длина − пролёт + 1, 0,2, 30). Свои
 навесные детали и действия по клику на провод — реестры EE `WIRE_ATTACHMENT_TYPE` и `WIRE_INTERACTION_BEHAVIOUR`
-(так сделан натяжной зажим). Подсказку с Ом/м и током EE вешает через `TooltipModifier.REGISTRY` Create — для своих
+(так сделан натяжной зажим). В 2.1 исправлен веер застывших копий у гирлянды подвесных изоляторов EE:
+отрисовка провода EE (`WireVisual.recreateInstances`) шла из двух потоков Flywheel сразу — миксин `WireVisualMixin`
+(клиент) делает её по одному потоку на провод. Подсказку с Ом/м и током EE вешает через `TooltipModifier.REGISTRY` Create — для своих
 предметов её надо зарегистрировать самому (`LinesClient`).
 
 ## Графика
