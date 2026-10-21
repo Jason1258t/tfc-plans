@@ -933,8 +933,11 @@ export function renderId(layers, id, { kind, state, view = 'gui', size = 256, aa
     const flat = flatLoaderSpecs(layers, m, k === 'item' ? `${ns}:${p}` : null, fluidLook);
     if (flat) {
       const r = renderFlat(layers, flat.specs, size);
-      lines.push(`плоский предмет, загрузчик ${m.loader}: слои ${flat.specs.map((x) => (x.mask ? `${x.id} по форме ${x.mask}` : x.id)).join(', ')}`);
-      if (flat.wanted && !flat.fluid) lines.push(`⚠ жидкость ${flat.wanted}: текстуру и цвет из кода определить не вышло — ведро пустое`);
+      lines.push(
+        `плоский предмет, загрузчик ${m.loader}: слои ${flat.specs.map((x) => (x.mask ? `${x.id} по форме ${x.mask}` : x.id)).join(', ')}`,
+      );
+      if (flat.wanted && !flat.fluid)
+        lines.push(`⚠ жидкость ${flat.wanted}: текстуру и цвет из кода определить не вышло — ведро пустое`);
       for (const [t, from] of r.textures) lines.push(`  текстура ${t}: ${from ?? '❌ нет'}`);
       for (const w of r.warnings) lines.push(`⚠ ${w}`);
       return { png: r.png, lines };

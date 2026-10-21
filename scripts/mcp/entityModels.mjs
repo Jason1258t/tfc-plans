@@ -37,7 +37,11 @@ const apply = (m, [x, y, z]) => [
   m[4] * x + m[5] * y + m[6] * z + m[7],
   m[8] * x + m[9] * y + m[10] * z + m[11],
 ];
-const applyDir = (m, [x, y, z]) => [m[0] * x + m[1] * y + m[2] * z, m[4] * x + m[5] * y + m[6] * z, m[8] * x + m[9] * y + m[10] * z];
+const applyDir = (m, [x, y, z]) => [
+  m[0] * x + m[1] * y + m[2] * z,
+  m[4] * x + m[5] * y + m[6] * z,
+  m[8] * x + m[9] * y + m[10] * z,
+];
 const DEG = Math.PI / 180;
 
 /** Стек поз: методы умножают справа, как PoseStack (translate, scale, mulPose) */
@@ -98,12 +102,36 @@ function cubeQuads(c) {
   const f11 = v + d;
   const f12 = v + d + h;
   const all = {
-    down: [[V4, V3, V7, V0], [f5, f10, f6, f11], [0, -1, 0]],
-    up: [[V1, V2, V6, V5], [f6, f11, f7, f10], [0, 1, 0]],
-    west: [[V7, V3, V6, V2], [f4, f11, f5, f12], [-1, 0, 0]],
-    north: [[V0, V7, V2, V1], [f5, f11, f6, f12], [0, 0, -1]],
-    east: [[V4, V0, V1, V5], [f6, f11, f8, f12], [1, 0, 0]],
-    south: [[V3, V4, V5, V6], [f8, f11, f9, f12], [0, 0, 1]],
+    down: [
+      [V4, V3, V7, V0],
+      [f5, f10, f6, f11],
+      [0, -1, 0],
+    ],
+    up: [
+      [V1, V2, V6, V5],
+      [f6, f11, f7, f10],
+      [0, 1, 0],
+    ],
+    west: [
+      [V7, V3, V6, V2],
+      [f4, f11, f5, f12],
+      [-1, 0, 0],
+    ],
+    north: [
+      [V0, V7, V2, V1],
+      [f5, f11, f6, f12],
+      [0, 0, -1],
+    ],
+    east: [
+      [V4, V0, V1, V5],
+      [f6, f11, f8, f12],
+      [1, 0, 0],
+    ],
+    south: [
+      [V3, V4, V5, V6],
+      [f8, f11, f9, f12],
+      [0, 0, 1],
+    ],
   };
   return Object.entries(all)
     .filter(([name]) => !c.faces || c.faces.includes(name))
@@ -122,7 +150,12 @@ function renderPart(pose, p, tex, out, opts = {}) {
   if (q.xr) ps.r('x', q.xr);
   for (const c of p.cubes)
     for (const [vs, [u1, v1, u2, v2], dir] of cubeQuads(c)) {
-      const P = vs.map((x) => apply(ps.m, x.map((k) => k / 16)).map((k) => k * 16));
+      const P = vs.map((x) =>
+        apply(
+          ps.m,
+          x.map((k) => k / 16),
+        ).map((k) => k * 16),
+      );
       out.push({
         P: [P[1], P[0], P[2]], // начало uv (u1, v1), конец по u, конец по v
         uv: [(u1 * 16) / tex.w, (v1 * 16) / tex.h, (u2 * 16) / tex.w, (v2 * 16) / tex.h],
@@ -144,24 +177,16 @@ const CHEST = [
   part([box(0, 0, 7, -2, 14, 2, 4, 1)], { x: 0, y: 9, z: 1 }),
 ];
 // BedRenderer.createHeadLayer / createFootLayer, 64×64
-const BED_HEAD = part(
-  [],
-  {},
-  [
-    part([box(0, 0, 0, 0, 0, 16, 16, 6)]),
-    part([box(50, 6, 0, 6, 0, 3, 3, 3)], { xr: Math.PI / 2, zr: Math.PI / 2 }),
-    part([box(50, 18, -16, 6, 0, 3, 3, 3)], { xr: Math.PI / 2, zr: Math.PI }),
-  ],
-);
-const BED_FOOT = part(
-  [],
-  {},
-  [
-    part([box(0, 22, 0, 0, 0, 16, 16, 6)]),
-    part([box(50, 0, 0, 6, -16, 3, 3, 3)], { xr: Math.PI / 2 }),
-    part([box(50, 12, -16, 6, -16, 3, 3, 3)], { xr: Math.PI / 2, zr: (Math.PI * 3) / 2 }),
-  ],
-);
+const BED_HEAD = part([], {}, [
+  part([box(0, 0, 0, 0, 0, 16, 16, 6)]),
+  part([box(50, 6, 0, 6, 0, 3, 3, 3)], { xr: Math.PI / 2, zr: Math.PI / 2 }),
+  part([box(50, 18, -16, 6, 0, 3, 3, 3)], { xr: Math.PI / 2, zr: Math.PI }),
+]);
+const BED_FOOT = part([], {}, [
+  part([box(0, 22, 0, 0, 0, 16, 16, 6)]),
+  part([box(50, 0, 0, 6, -16, 3, 3, 3)], { xr: Math.PI / 2 }),
+  part([box(50, 12, -16, 6, -16, 3, 3, 3)], { xr: Math.PI / 2, zr: (Math.PI * 3) / 2 }),
+]);
 // ShulkerModel.createBodyLayer (base, lid), 64×64
 const SHULKER = [
   part([box(0, 28, -8, -8, -8, 16, 8, 16)], { y: 24 }),
@@ -225,7 +250,11 @@ function build(layers, id, chain) {
     // ChestRenderer без мира: FACING = SOUTH (поворот 0), крышка закрыта
     let tex = null;
     if (ns === 'minecraft')
-      tex = { chest: 'minecraft:entity/chest/normal', trapped_chest: 'minecraft:entity/chest/trapped', ender_chest: 'minecraft:entity/chest/ender' }[p];
+      tex = {
+        chest: 'minecraft:entity/chest/normal',
+        trapped_chest: 'minecraft:entity/chest/trapped',
+        ender_chest: 'minecraft:entity/chest/ender',
+      }[p];
     else {
       // TFCChestBlockEntityRenderer: tfc:entity/chest/<normal|trapped>/<дерево> (Beneath кладёт свои туда же)
       const m = p.match(/(trapped_)?chest\/([a-z0-9_]+)$/);
@@ -269,7 +298,9 @@ function build(layers, id, chain) {
     if (tint == null) return null;
     // BannerRenderer без мира: translate(.5), scale(2/3, −2/3, −2/3); древко и перекладина, флаг — banner_base и
     // поверх entity/banner/base с цветом знамени (DyeColor.textureDiffuseColor)
-    const ps = base().t(0.5, 0.5, 0.5).s(2 / 3, -2 / 3, -2 / 3);
+    const ps = base()
+      .t(0.5, 0.5, 0.5)
+      .s(2 / 3, -2 / 3, -2 / 3);
     const baseTex = { id: 'minecraft:entity/banner_base', w: 64, h: 64 };
     for (const pt of BANNER_POLE) renderPart(ps, pt, baseTex, out);
     renderPart(ps, BANNER_FLAG, baseTex, out);
@@ -302,7 +333,8 @@ function build(layers, id, chain) {
   }
   if (id === 'minecraft:conduit') {
     // ConduitRenderer, не активен: translate(.5), оболочка entity/conduit/base
-    for (const pt of CONDUIT) renderPart(base().t(0.5, 0.5, 0.5), pt, { id: 'minecraft:entity/conduit/base', w: 32, h: 16 }, out);
+    for (const pt of CONDUIT)
+      renderPart(base().t(0.5, 0.5, 0.5), pt, { id: 'minecraft:entity/conduit/base', w: 32, h: 16 }, out);
     return { quads: out, kind: 'проводник (ConduitRenderer)' };
   }
   if (id === 'minecraft:decorated_pot') {

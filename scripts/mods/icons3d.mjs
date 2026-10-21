@@ -104,7 +104,9 @@ export function makeRenderer({ findAsset, outIcons, cacheDir, size = 96 }) {
     }
     if (model.drawnBy) h.update(model.drawnBy);
     // …и окраска (знамёна разных цветов — одни текстуры)
-    h.update(JSON.stringify([...new Set((model.quads ?? []).map((q) => `${q.tex}|${q.tint ?? ''}|${q.overlay ? 1 : 0}`))]));
+    h.update(
+      JSON.stringify([...new Set((model.quads ?? []).map((q) => `${q.tex}|${q.tint ?? ''}|${q.overlay ? 1 : 0}`))]),
+    );
     // Окраска tintindex (рюкзаки)
     if (model.tints) h.update(JSON.stringify(model.tints));
     // Части модели блока (ящики): их цепочки, текстуры и повороты

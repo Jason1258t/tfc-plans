@@ -165,7 +165,7 @@ function lookup(ns, p) {
       return {
         still: isMetal || hit.metal ? MOLTEN_STILL : WATER_STILL,
         // Без альфы в константе — непрозрачный (TFC сам ставит 0xFF000000 | цвет металлам)
-        tint: (hit.color >>> 0) > 0xffffff ? hit.color >>> 0 : (0xff000000 | hit.color) >>> 0,
+        tint: hit.color >>> 0 > 0xffffff ? hit.color >>> 0 : (0xff000000 | hit.color) >>> 0,
         from: hit.from,
       };
   }

@@ -643,8 +643,14 @@ export async function buildMods({
     `объёмные иконки: нарисовано ${st.drawn}, из кеша ${st.cached}, не вышло ${st.failed}, модель кодом или загрузчиком ${st.code} (эти — текстурой)`,
   );
   if (st.codeKinds.size)
-    log(`  текстурой (рисует код): ${[...st.codeKinds].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(', ')}`);
-  if (st.failedIds.length) log(`  не вышло: ${st.failedIds.slice(0, 60).join(', ')}${st.failedIds.length > 60 ? '…' : ''}`);
+    log(
+      `  текстурой (рисует код): ${[...st.codeKinds]
+        .sort((a, b) => b[1] - a[1])
+        .map(([k, n]) => `${k} ${n}`)
+        .join(', ')}`,
+    );
+  if (st.failedIds.length)
+    log(`  не вышло: ${st.failedIds.slice(0, 60).join(', ')}${st.failedIds.length > 60 ? '…' : ''}`);
   if (st.noFluid.length) log(`  вёдра без жидкости (цвет не найден в коде): ${[...new Set(st.noFluid)].join(', ')}`);
   const summary = [...perNs].sort((a, b) => b[1] - a[1]);
   log(`по модам: ${summary.map(([ns, n]) => `${ns} ${n}`).join(', ')}`);
