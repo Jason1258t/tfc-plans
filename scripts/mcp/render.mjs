@@ -22,6 +22,7 @@ import { pathToFileURL } from 'node:url';
 import { mods } from './data.mjs';
 import { codeBlockParts, entityItemModel } from './entityModels.mjs';
 import { fluidLook } from './fluids.mjs';
+import { geoModel, isGeoId } from './geoModels.mjs';
 import {
   blockstatePath,
   findResource,
@@ -490,6 +491,8 @@ export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } 
         const [O, U, V] = fq.P.map((x) => viewRot(place(x), rx, ry, rz));
         const n = orient(fq.N);
         const len = Math.hypot(...n) || 1;
+        // cull — грань видна, только если смотрит на зрителя (полупрозрачный силуэт: без задних граней)
+        if (fq.cull && viewRot(n, rx, ry, rz)[2] <= 1e-6) continue;
         quads.push({
           O,
           U,
@@ -499,6 +502,7 @@ export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } 
           rot: 0,
           shade: shadeOf(n.map((c) => c / len)),
           tint: fq.tint,
+          color: fq.color,
           overlay: fq.overlay,
           nocull: true,
         });
@@ -640,6 +644,9 @@ export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } 
           r = c >> 16;
           g = (c >> 8) & 255;
           bl = c & 255;
+        } else if (q.color != null) {
+          // Заливка цветом 0xAARRGGBB (силуэт игрока под моделью GeckoLib)
+          [r, g, bl, al] = [(q.color >>> 16) & 255, (q.color >>> 8) & 255, q.color & 255, q.color >>> 24];
         } else {
           // Нет текстуры — пурпурно-чёрная клетка, как в игре
           const odd = (Math.floor(a * 2) + Math.floor(b * 2)) % 2;
@@ -893,8 +900,9 @@ function chainText(m) {
  * icon (как в инвентаре: модель предмета, а нет её — блок); без kind — блок, иначе предмет, иначе модель.
  * Возвращает { png | null, lines (что нарисовано, откуда, предупреждения) }.
  */
-export function renderId(layers, id, { kind, state, view = 'gui', size = 256, aa = 4 } = {}) {
+export function renderId(layers, id, { kind, state, view = 'gui', size = 256, aa = 4, ...geo } = {}) {
   if (!id) return { png: null, lines: ['Укажите id блока или предмета (ns:path) или модели (ns:block/…).'] };
+  if (kind === 'geo' || (!kind && isGeoId(id))) return renderGeo(layers, id, { view, size, aa, ...geo });
   const { ns, path: p } = resLoc(id);
   const hasItem = () => Boolean(findResource(layers, modelPath(`${ns}:item/${p}`)));
   let k = kind;
@@ -973,6 +981,19 @@ export function renderId(layers, id, { kind, state, view = 'gui', size = 256, aa
   for (const pm of parts) for (const e of pm.model.errors) lines.push(`❌ ${e}`);
   for (const w of r.warnings) lines.push(`⚠ ${w}`);
   lines.push(`вид: ${view}, ${size}×${size}${aa > 1 ? `, сглаживание ${aa}×` : ''}`);
+  return { png: r.png, lines };
+}
+
+/** Модель GeckoLib (geoModels.mjs): geo — { texture, bones, silhouette } */
+function renderGeo(layers, id, { view, size, aa, texture, bones, silhouette }) {
+  const g = geoModel(layers, id, { texture, bones, silhouette, loadTexture });
+  if (g.error) return { png: null, lines: g.lines };
+  const r = renderModel(layers, [{ model: g.model, x: 0, y: 0 }], { view, size, aa });
+  const lines = [...g.lines];
+  for (const w of [...g.warnings, ...r.warnings.filter((w) => !/^нет текстуры/.test(w))]) lines.push(`⚠ ${w}`);
+  lines.push(
+    `вид: ${view}${view === 'gui' ? ' (сверху, спереди и с правого бока модели)' : ''}, ${size}×${size}; модель смотрит на юг, как сущность в игре: view=south — спереди (грань north файла — перед), +x Bedrock — левый бок`,
+  );
   return { png: r.png, lines };
 }
 

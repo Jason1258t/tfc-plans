@@ -186,7 +186,10 @@ export function resourceLayers(only = null, withDeps = true, skipJars = null, ad
         return j ? (readEntry(j, p)?.data ?? null) : null;
       },
       which: (p) => jarFor(p, skipJars),
-      list: () => [],
+      list: (prefix) => {
+        jarFor('', skipJars);
+        return [...jarIndex.byPath.keys()].filter((n) => n.startsWith(prefix) && !n.endsWith('/'));
+      },
     });
   const mc = minecraftResources();
   if (mc && (!only || withDeps)) layers.push(zipLayer('Minecraft', mc, 'minecraft'));

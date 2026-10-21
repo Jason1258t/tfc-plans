@@ -87,7 +87,9 @@ npm run pack:publish -- <папка данных> --dry-run   # что выло�
   `loot_for` (что выпадает), `loot_sources` (откуда выпадает предмет).
 - Ресурсы без клиента: `model_render` (блок/предмет/модель **картинкой**: блокстейт → `parent` → повороты; из jar,
   KubeJS, ресурспаков и `tools/<мод>/src/main/resources`; аддон из git worktree — `addon=<путь к папке мода>`),
-  `texture_get` (текстура картинкой + палитра, тоже `addon=`),
+  `texture_get` (текстура картинкой + палитра, тоже `addon=`); модель **GeckoLib** — `model_render
+  id=ns:geo/x.geo.json texture=ns:textures/….png` (броня — на силуэте игрока, `bones=`, `silhouette=`; UV за краем
+  и грани на прозрачном — предупреждением),
   `resources_check addon=<папка tools или путь>|mod=<id>` (блокстейты ↔ свойства блока из байткода, модели, текстуры,
   переводы из кода — всё, что уходит в `Component.translatable`, вкл. тернарный оператор; у аддона нет ключа в
   ru_ru — ошибка; PartialModel, добыча; классы — `build/classes`, без `./gradlew compileJava` переводы из кода не
