@@ -85,7 +85,7 @@ function AddonList({ onGuides }: { onGuides: () => void }) {
             {a.replaces?.length ? <> — заодно уберёт (с копией) {a.replaces.join(', ')}</> : null}
           </p>
           {a.blocks.map((b) => (
-            <AddonBlockCard key={b.id} b={b} />
+            <AddonBlockCard key={b.id} b={b} version={a.version} />
           ))}
           <div className="small">
             <b>Проверено</b>
@@ -107,11 +107,12 @@ function AddonList({ onGuides }: { onGuides: () => void }) {
   );
 }
 
-function AddonBlockCard({ b }: { b: AddonBlock }) {
+/** version — в адрес картинки: новая версия аддона — новая иконка, а не старая из кеша браузера (max-age час) */
+function AddonBlockCard({ b, version }: { b: AddonBlock; version: string }) {
   const items = useItems();
   return (
     <div className="power-addon-row power-addon-block">
-      {b.image && <img src={b.image} alt={`${b.name}, вид сверху`} className="power-pixel" />}
+      {b.image && <img src={`${b.image}?v=${version}`} alt={`${b.name}, вид сверху`} className="power-pixel" />}
       <div className="grow">
         <b>{b.name}</b> <span className="faint small">{b.id}</span>
         <p className="small">{b.about}</p>

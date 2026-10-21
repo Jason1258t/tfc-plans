@@ -291,9 +291,10 @@
 }
 
 .power-pixel {
+  /* Иконки аддонов уже нарисованы со сглаживанием (scripts/mcp/render.mjs, 192 px = 96 × 2): уменьшать гладко,
+     pixelated при уменьшении выбрасывает пиксели и рвёт края */
   width: 96px;
   height: 96px;
-  image-rendering: pixelated;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
 }
