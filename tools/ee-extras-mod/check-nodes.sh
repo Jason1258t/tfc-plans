@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Проверка: клеммы моделей = точки крепления проводов во всех 12 положениях обоих блоков (после ./gradlew build)
+# Проверка: клеммы моделей = точки крепления проводов во всех положениях блоков (у соединителей — 24) (после ./gradlew build)
 set -euo pipefail
 cd "$(dirname "$0")"
 export JAVA_HOME="${JAVA_HOME:-$HOME/.gradle/local-tools/jdk21/Contents/Home}"

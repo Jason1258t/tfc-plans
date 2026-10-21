@@ -32,5 +32,11 @@
   "ee_extras.nodes.charge_positive": "Заряд «+» — из сети EE в конденсатор",
   "ee_extras.nodes.charge_negative": "Заряд «−» — из сети EE в конденсатор",
   "ee_extras.nodes.discharge_positive": "Разряд «+» — из конденсатора в сеть EE",
-  "ee_extras.nodes.discharge_negative": "Разряд «−» — из конденсатора в сеть EE"
+  "ee_extras.nodes.discharge_negative": "Разряд «−» — из конденсатора в сеть EE",
+  "ee_extras.cable.rotate_wired": "Сначала снимите провода и кабель — при повороте соединителя EE они бы оборвались",
+  "ee_extras.cable.selected": "Выбран — кликните по второму блоку (Shift + клик — отмена)",
+  "ee_extras.cable.accepts.duplex": "Двухжильный кабель",
+  "ee_extras.cable.accepts.four_core": "Четырёхжильный кабель",
+  "ee_extras.cable.accepts.ee": "Двухжильный кабель или четырёхжильный (ноль и фаза)",
+  "ee_extras.nodes.cable": "Вывод кабеля"
 }

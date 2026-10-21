@@ -5,6 +5,7 @@ import com.george_vi.electroenergetics.CEERegistries;
 import com.george_vi.electroenergetics.devices.device.SimulatedDeviceType;
 import com.george_vi.electroenergetics.simulation.WireType;
 import ee.extras.cable.CableEvents;
+import ee.extras.cable.CableHud;
 import ee.extras.cable.CableInsulatorBlock;
 import ee.extras.cable.CableKind;
 import ee.extras.cable.CableWires;
@@ -21,8 +22,10 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -135,6 +138,7 @@ public class EeExtras {
         modBus.addListener(EeExtras::addToTab);
         modBus.addListener(EeExtras::capabilities);
         CableEvents.register(NeoForge.EVENT_BUS);
+        if (FMLEnvironment.dist == Dist.CLIENT) CableHud.register(modBus, NeoForge.EVENT_BUS);
     }
 
     /** FE — только через заднюю грань (ту, которой блок стоит на конденсаторе или машине), как у преобразователя EE */

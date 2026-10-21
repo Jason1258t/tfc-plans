@@ -5,6 +5,7 @@ import ee.extras.Layout;
 import net.createmod.catnip.math.VoxelShaper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -18,8 +19,12 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  */
 public class FourCoreTerminationBlock extends CableEndBlock {
     static final String[] LABELS = {"node", "phase_1", "phase_2", "phase_3", "neutral"};
-    private static final VoxelShaper SHAPE = VoxelShaper.forDirectional(box(0, 0, 1, 16, 5, 13), Direction.UP);
-    private static final VoxelShaper SHAPE_ROLLED = VoxelShaper.forDirectional(box(3, 0, 0, 15, 5, 16), Direction.UP);
+    /** По положениям CableOrientation: box(0, 0, 1, 16, 5, 13), повёрнутый креном (x, z) → (16 − z, x) o раз */
+    private static final VoxelShaper[] SHAPES = {
+            VoxelShaper.forDirectional(box(0, 0, 1, 16, 5, 13), Direction.UP),
+            VoxelShaper.forDirectional(box(3, 0, 0, 15, 5, 16), Direction.UP),
+            VoxelShaper.forDirectional(box(0, 0, 3, 16, 5, 15), Direction.UP),
+            VoxelShaper.forDirectional(box(1, 0, 0, 13, 5, 16), Direction.UP)};
 
     public FourCoreTerminationBlock(Properties properties) {
         super(properties, CableKind.FOUR_CORE, Layout.FOUR_CORE_TERMINATION);
@@ -32,11 +37,12 @@ public class FourCoreTerminationBlock extends CableEndBlock {
 
     @Override
     public MutableComponent getNodeLabel(Level level, BlockPos pos, BlockState state, int node) {
-        return CEELang.nodeLabel(node >= 0 && node < LABELS.length ? LABELS[node] : "node");
+        if (node == 0) return Component.translatable("ee_extras.nodes.cable");
+        return CEELang.nodeLabel(node > 0 && node < LABELS.length ? LABELS[node] : "node");
     }
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return (state.getValue(ROLL) ? SHAPE_ROLLED : SHAPE).get(state.getValue(FACING));
+        return SHAPES[CableOrientation.of(state)].get(state.getValue(FACING));
     }
 }

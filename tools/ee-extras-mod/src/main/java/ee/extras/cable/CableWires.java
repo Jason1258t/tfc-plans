@@ -1,7 +1,6 @@
 package ee.extras.cable;
 
 import com.george_vi.electroenergetics.CEEItems;
-import com.george_vi.electroenergetics.CEEPartialModels;
 import com.george_vi.electroenergetics.config.CEEConfigs;
 import com.george_vi.electroenergetics.simulation.WireType;
 import dev.engine_room.flywheel.lib.model.baked.PartialModel;
@@ -21,9 +20,14 @@ public final class CableWires {
     /** Пустая модель: жилы не рисуются. Слабые ссылки в PartialModel.ALL — держим полями */
     public static final PartialModel EMPTY_SEGMENT = PartialModel.of(EeExtras.rl("block/empty_wire_segment"));
     public static final PartialModel FOUR_CORE_SEGMENT = PartialModel.of(EeExtras.rl("block/four_core_cable_segment"));
+    /**
+     * Оболочка двухжильного кабеля. CEEPartialModels.DUPLEX_WIRE_SEGMENT в EE 1.1.2 ссылается на block/duplex_wire_segment,
+     * которой в jar нет (кабель рисовался фиолетово-чёрным) — своя модель с родителем block/bundled_wire_segment EE.
+     */
+    public static final PartialModel DUPLEX_SEGMENT = PartialModel.of(EeExtras.rl("block/duplex_cable_segment"));
 
     public static final DeferredHolder<WireType, WireType> DUPLEX = EeExtras.WIRES.register("duplex_cable",
-            () -> new WireType.Builder(CEEPartialModels.DUPLEX_WIRE_SEGMENT)
+            () -> new WireType.Builder(DUPLEX_SEGMENT)
                     .resistance(() -> 1.0E11)
                     .droppedItem(CEEItems.INSULATED_WIRE)
                     .spoolItem(CEEItems.DUPLEX_WIRE_SPOOL::get)
