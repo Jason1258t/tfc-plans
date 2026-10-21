@@ -10,7 +10,7 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { classifyPath } from '../../server/pack-server/lib/paths.mjs';
+import { classifyPath, isStatePath } from '../../server/pack-server/lib/paths.mjs';
 import { isDir } from './detect.mjs';
 
 /** Папки, которые обходим, и что внутри них не берём (сгенерированное модами, черновики программы) */
@@ -48,7 +48,10 @@ function walk(base, rel, out) {
   }
 }
 
-/** Пути сборки в папке игры: [{ path, file, kind }] и сколько пропущено вне белого списка */
+/**
+ * Пути сборки в папке игры: [{ path, file, kind }], сколько пропущено вне белого списка и сколько — состояние
+ * модов (кеши, история, личное: isStatePath), которое в сборку не входит
+ */
 export function listLocal(profile) {
   const r = rootsOf(profile);
   const found = [];
@@ -68,13 +71,18 @@ export function listLocal(profile) {
   }
   const files = [];
   let skipped = 0;
+  let state = 0;
   for (const f of found) {
     if (SKIP.some((re) => re.test(f.path))) continue;
+    if (isStatePath(f.path)) {
+      state++;
+      continue;
+    }
     const c = classifyPath(f.path);
     if (c.error) skipped++;
     else files.push({ ...f, kind: c.kind });
   }
-  return { files, skipped };
+  return { files, skipped, state };
 }
 
 /** sha256 файла потоком */
@@ -125,7 +133,7 @@ export class HashCache {
 
 /** Файлы сборки с хешами: Map путь снимка → { path, file, kind, size, sha256 } */
 export async function scanLocal(profile, { onProgress } = {}) {
-  const { files, skipped } = listLocal(profile);
+  const { files, skipped, state } = listLocal(profile);
   const cache = new HashCache(profile);
   const out = new Map();
   let i = 0;
@@ -135,5 +143,5 @@ export async function scanLocal(profile, { onProgress } = {}) {
     onProgress?.(++i, files.length);
   }
   cache.save();
-  return { files: out, skipped, cache };
+  return { files: out, skipped, state, cache };
 }

@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { modIdsOf } from './jarid.mjs';
-import { loadState, saveState } from './plan.mjs';
+import { loadState, normsOf, saveState } from './plan.mjs';
 import { localPath, stateDir } from './scan.mjs';
 import { mb, progress } from './ui.mjs';
 
@@ -137,6 +137,12 @@ export async function applyPlan({ api, profile, plan, snapshot, cache, backup, s
     manifest.tfcNew.push(`${f.path}.tfc-new`);
   }
   for (const f of plan.same) state.files[f.path] = f.sha256;
+  // Ключи смысла записанного и совпавшего: следующий pull отличит правку игрока от перезаписи игрой
+  state.norms = {
+    ...state.norms,
+    ...normsOf([...toWrite, ...plan.same].map((f) => ({ path: f.path, file: dest(f) }))),
+  };
+  for (const f of plan.remove) delete state.norms[f.path];
 
   // Старые версии обновлённых модов: свой jar игрока с тем же id мода, что у jar сборки
   const duplicates = [];

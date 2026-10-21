@@ -7,11 +7,16 @@
  * - конфиг или скрипт, который игрок поменял после прошлой синхронизации, не перезаписываем молча:
  *   рядом кладём `*.tfc-new` (или перезаписываем с --force, копия остаётся);
  * - клиентские конфиги (`*-client.toml` и т. п.) только добавляются: у каждого игрока свои;
+ * - конфиг, который игрок (или сама игра) поменял, а в сборке он с прошлого pull не менялся, — оставляем молча;
+ *   поменяла только игра (дата в шапке, пустые строки — cli/lib/noise.mjs) — обновляем без .tfc-new;
+ * - состояние модов (кеши, история JEI — isStatePath) не ставим и не убираем;
  * - на сервере (папка с server.properties) моды по умолчанию не трогаем: в сборке хоста есть клиентские моды;
  * - пути, которые отдаёт сайт (аддоны, датапаки и скрипты «ставить»), план не трогает — см. siteOwned в pull.mjs.
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { isClientConfig, isStatePath } from '../../server/pack-server/lib/paths.mjs';
+import { textKey } from './noise.mjs';
 import { stateDir } from './scan.mjs';
 
 /**
@@ -37,7 +42,6 @@ const DEFAULT_SNAP = {
 const DEFAULT_SITE = { client: ['addons', 'kubejs', 'schematics'], server: ['addons', 'kubejs', 'datapacks'] };
 
 const EDITABLE = new Set(['config', 'defaultconfig', 'serverconfig', 'kubejs']);
-const isClientConfig = (p) => /^(config|defaultconfigs)\/.*[-_]client\.(toml|json5?|cfg|properties|txt)$/i.test(p);
 
 /**
  * Что тянуть: { snap: виды снимка, site: виды сайта }. Выбран мир — его датапаки тянем и на клиенте
@@ -80,12 +84,42 @@ export function saveState(profile, state) {
   fs.writeFileSync(path.join(stateDir(profile), 'state.json'), `${JSON.stringify(state, null, 1)}\n`);
 }
 
+/**
+ * Ключи смысла текстовых конфигов (без шума) для state.norms: по ним pull отличает правку игрока от того, что
+ * переписала сама игра. files — [{ path, file }] записанных или совпавших файлов
+ */
+export function normsOf(files) {
+  const out = {};
+  for (const f of files) {
+    if (!f.file) continue;
+    try {
+      const k = textKey(f.path, fs.readFileSync(f.file));
+      if (k) out[f.path] = k;
+    } catch {
+      // файла нет — ключа нет
+    }
+  }
+  return out;
+}
+
+/** Поменял ли игрок файл по смыслу после прошлого pull; null — неизвестно (старый state.json без ключей) */
+function editedByPlayer(state, l) {
+  const was = state.norms?.[l.path];
+  if (!was) return null;
+  try {
+    const k = textKey(l.path, fs.readFileSync(l.file));
+    return k ? k !== was : null;
+  } catch {
+    return null;
+  }
+}
+
 // ---------------------------------------------------------------- план
 
 /**
  * snapshot — снимок с сервера; local — Map из scanLocal; state — что ставили раньше; skip — пути, которые
  * отдаёт сайт (их ставит и убирает pull сайта, план их не видит).
- * Возвращает { add, update, conflict, keepClient, remove, keptModified, extra, same, noWorld }:
+ * Возвращает { add, update, conflict, keepClient, keptLocal, remove, keptModified, extra, same, noWorld }:
  * элементы — { path, kind, sha256, size, local? }.
  */
 export function makePlan(snapshot, local, state, kinds, { force = false, hasWorld = true, skip = new Set() } = {}) {
@@ -95,6 +129,7 @@ export function makePlan(snapshot, local, state, kinds, { force = false, hasWorl
     update: [],
     conflict: [],
     keepClient: [],
+    keptLocal: [],
     remove: [],
     keptModified: [],
     extra: [],
@@ -103,7 +138,7 @@ export function makePlan(snapshot, local, state, kinds, { force = false, hasWorl
   };
   const inSnap = new Set();
   for (const f of snapshot?.files ?? []) {
-    if (!inScope(f.kind) || skip.has(f.path)) continue;
+    if (!inScope(f.kind) || skip.has(f.path) || isStatePath(f.path)) continue;
     inSnap.add(f.path);
     if (f.path.startsWith('world/') && !hasWorld) {
       plan.noWorld.push(f);
@@ -113,12 +148,16 @@ export function makePlan(snapshot, local, state, kinds, { force = false, hasWorl
     if (!l) plan.add.push(f);
     else if (l.sha256 === f.sha256) plan.same.push(f);
     else if (isClientConfig(f.path)) plan.keepClient.push({ ...f, local: l });
-    else if (EDITABLE.has(f.kind) && state.files[f.path] && state.files[f.path] !== l.sha256 && !force)
-      plan.conflict.push({ ...f, local: l });
-    else plan.update.push({ ...f, local: l });
+    else if (EDITABLE.has(f.kind) && state.files[f.path] && state.files[f.path] !== l.sha256 && !force) {
+      // В сборке файл с прошлого pull тот же — менять нечего, правку (игрока или игры) оставляем
+      if (state.files[f.path] === f.sha256) plan.keptLocal.push({ ...f, local: l });
+      // Игра переписала только дату или пустые строки — это не правка игрока, обновляем
+      else if (editedByPlayer(state, l) === false) plan.update.push({ ...f, local: l });
+      else plan.conflict.push({ ...f, local: l });
+    } else plan.update.push({ ...f, local: l });
   }
   for (const [p, l] of local) {
-    if (inSnap.has(p) || !inScope(l.kind) || skip.has(p)) continue;
+    if (inSnap.has(p) || !inScope(l.kind) || skip.has(p) || isStatePath(p)) continue;
     const was = state.files[p];
     if (!was) plan.extra.push(l);
     else if (was === l.sha256 || force) plan.remove.push(l);
