@@ -275,6 +275,7 @@ export function loadModel(layers, id) {
     for (const [k, v] of Object.entries(m.display ?? {})) if (!(k in out.display)) out.display[k] = v;
     if (!out.loader && m.loader) {
       out.loader = m.loader;
+      out.loaderJson = m; // поля загрузчика: model (obj), base/perspectives, children, base_name…
       if (m.children) out.children = m.children;
     }
     cur = typeof m.parent === 'string' ? m.parent : null;

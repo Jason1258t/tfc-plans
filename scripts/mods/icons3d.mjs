@@ -2,8 +2,8 @@
  * Объёмные иконки предметов-блоков: у предмета со своей моделью из элементов (блоки, детали машин) иконка — сама модель
  * под углом инвентаря, а не одна текстура (у модели с развёрткой «текстура» — лист всех граней сразу, на сайте это
  * выглядело кашей). Рисует общий генератор MCP (scripts/mcp/render.mjs: сглаживание 4×, те же правила, что у
- * model_render и иконок аддонов). Предметы из слоёв (item/generated), модели с loader и рисуемые кодом — как раньше,
- * текстурой.
+ * model_render и иконок аддонов), в том числе модели OBJ, composite, separate_transforms и conf_sides IE. Предметы из
+ * слоёв (item/generated), рисуемые кодом (builtin/entity) и прочие загрузчики — как раньше, текстурой.
  *
  * Кеш — по содержимому: хеш файлов цепочки моделей и текстур + размер; одинаковая модель не рисуется дважды
  * (картинка лежит в <cache>/icons3d/<хеш>.png и копируется в icons/<ns>/render/<путь>.png).
@@ -11,11 +11,11 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { renderModel } from '../mcp/render.mjs';
+import { DRAWN_LOADERS, guiModel, renderGenerated, renderModel } from '../mcp/render.mjs';
 import { loadModel } from '../mcp/resources.mjs';
 
 /** Поднять, если изменился рисунок (генератор, размер) — старый кеш не подойдёт */
-const VERSION = 1;
+const VERSION = 4; // 2 — модели OBJ, composite, separate_transforms, conf_sides IE; 3 — без пустых картинок; 4 — без ie_obj и пурпурных
 
 /**
  * findAsset(ns, rel) — файл ресурса из распакованных jar (как в mods.mjs), outIcons — папка icons/ сайта,
@@ -58,18 +58,34 @@ export function makeRenderer({ findAsset, outIcons, cacheDir, size = 96 }) {
       const f = findAsset(ns, `textures/${p}.png`);
       if (f) h.update(t).update(fs.readFileSync(f));
     }
+    // Загрузчик: его поля (части composite, имя текстур conf_sides) и файл OBJ с материалами
+    if (model.loaderJson) {
+      h.update(JSON.stringify(model.loaderJson));
+      const obj = typeof model.loaderJson.model === 'string' ? model.loaderJson.model.split(':') : null;
+      const f = obj && findAsset(obj.length > 1 ? obj[0] : 'minecraft', obj[obj.length - 1]);
+      if (f) h.update(fs.readFileSync(f));
+    }
     return h.digest('hex');
   }
 
   function render(ns, p) {
-    const model = loadModel(layers, `${ns}:item/${p}`);
-    if (model.generated || model.missing.length || model.errors.length) return null;
-    // Рисуется кодом (builtin/entity) или своим загрузчиком (obj, IE) — генератор такие не умеет
-    if (model.entity || model.loader) {
+    const own = loadModel(layers, `${ns}:item/${p}`);
+    if (own.missing.length || own.errors.length) return null;
+    // separate_transforms: в инвентаре — своя модель (бывает и плоской, из слоёв)
+    const model = guiModel(layers, own);
+    const flat = model.generated && model !== own;
+    if (model.generated && !flat) return null;
+    // Рисуется кодом (builtin/entity) или загрузчиком, который генератор не умеет
+    // ie_obj (инструменты IE: бур, рельсотрон…) — видимые части выбирает код, в файле все варианты сразу
+    if (
+      model.entity ||
+      model.loader === 'immersiveengineering:ie_obj' ||
+      (model.loader && !DRAWN_LOADERS.has(model.loader))
+    ) {
       stats.code++;
       return null;
     }
-    if (!model.elements?.length) return null;
+    if (!flat && !model.elements?.length && !model.loader) return null;
     let png;
     const cached = path.join(dir, `${key(model)}.png`);
     if (fs.existsSync(cached)) {
@@ -77,7 +93,12 @@ export function makeRenderer({ findAsset, outIcons, cacheDir, size = 96 }) {
       stats.cached++;
     } else {
       try {
-        png = renderModel(layers, [{ model, x: 0, y: 0 }], { size }).png;
+        const r = flat ? renderGenerated(layers, model, size) : renderModel(layers, [{ model, x: 0, y: 0 }], { size });
+        // Пусто (нет файла OBJ, нет граней) — не иконка: остаётся текстура
+        // Нет текстуры — в игре была бы пурпурная клетка, иконкой это не берём
+        png = r.warnings.some((w) => /нет элементов|нет файла|нет граней|нет текстуры|нет материалов/.test(w))
+          ? null
+          : r.png;
       } catch {
         png = null;
       }

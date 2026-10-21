@@ -1,11 +1,14 @@
 /**
  * Рисунок модели блока/предмета в PNG без клиента — перенос tools/ee-extras-mod/art/iso.py на Node и дополнения:
  * parent (resources.mjs), поворот элемента (rotation: origin/axis/angle/rescale), поворот варианта блокстейта
- * (x, y), uv по умолчанию, rotation грани, display.gui из цепочки, предметы item/generated (слои), multipart.
+ * (x, y), uv по умолчанию, rotation грани, display.gui из цепочки, предметы item/generated (слои), multipart; загрузчики
+ * neoforge:obj и immersiveengineering:ie_obj (файлы .obj/.obj.ie с .mtl, flip_v), composite, separate_transforms
+ * (вид в инвентаре), conf_sides IE (куб из текстур <base_name>_<сторона>_none).
  *
  * Проекция ортографическая, свой буфер глубины, затенение граней как в игре (верх 1.0, низ 0.5, север/юг 0.8,
  * запад/восток 0.6) — по нормали после поворотов. Не рисуется: окраска tintindex (трава, листья — серые), ambient
- * occlusion, эмиссия, анимация (берётся первый кадр), модели с loader (obj и т. п.) — о них предупреждение.
+ * occlusion, эмиссия, анимация (берётся первый кадр), builtin/entity и прочие загрузчики — о них предупреждение. У OBJ
+ * рисуются все группы файла: что из них показывает код (инструменты IE), генератор не знает.
  *
  * Один генератор картинок для MCP (model_render) и иконок аддонов (сайт, выпуск) — запуск из командной строки:
  *   node scripts/mcp/render.mjs <папка ресурсов> <id…> --out <папка> [--size 256] [--kind icon|block|item|model]
@@ -154,6 +157,182 @@ export function loadTexture(layers, id, cache = new Map()) {
   return t;
 }
 
+// ---------------------------------------------------------------- модели с загрузчиком
+
+/** Загрузчики, которые генератор рисует сам (остальные — предупреждение) */
+export const DRAWN_LOADERS = new Set([
+  'neoforge:obj',
+  'forge:obj',
+  'immersiveengineering:ie_obj',
+  'neoforge:composite',
+  'forge:composite',
+  'neoforge:separate_transforms',
+  'forge:separate_transforms',
+  'immersiveengineering:conf_sides',
+]);
+
+/** Ссылка на модель из поля загрузчика: строка или { parent, textures } — модель с подставленными текстурами */
+function inlineModel(layers, ref) {
+  const id = typeof ref === 'string' ? ref : ref?.parent;
+  // Встроенная модель без parent (часть composite с loader obj или своими elements)
+  if (typeof id !== 'string' && ref && typeof ref === 'object' && (ref.loader || ref.elements))
+    return {
+      id: '(встроенная часть)',
+      chain: [{ id: '(встроенная часть)', from: 'модель' }],
+      textures: { ...(ref.textures ?? {}) },
+      elements: Array.isArray(ref.elements) ? ref.elements : null,
+      display: { ...(ref.display ?? {}) },
+      generated: false,
+      entity: false,
+      missing: [],
+      errors: [],
+      loader: ref.loader ?? null,
+      loaderJson: ref,
+      children: ref.children ?? null,
+    };
+  if (typeof id !== 'string') return null;
+  const m = loadModel(layers, id);
+  if (ref && typeof ref === 'object' && ref.textures) m.textures = { ...m.textures, ...ref.textures };
+  return m;
+}
+
+/**
+ * Модель для вида в инвентаре: separate_transforms (NeoForge) — модель perspectives.gui, а нет её — base.
+ * display исходной модели сохраняется, если у выбранной своего нет.
+ */
+export function guiModel(layers, m) {
+  for (let i = 0; i < 4 && /separate_transforms$/.test(m.loader ?? ''); i++) {
+    const j = m.loaderJson ?? {};
+    const g = inlineModel(layers, j.perspectives?.gui ?? j.base);
+    if (!g || !g.chain.length) break;
+    g.display = { ...m.display, ...g.display };
+    m = g;
+  }
+  return m;
+}
+
+/** Части рисунка с раскрытыми загрузчиками: composite — дочерние модели, conf_sides IE — куб из текстур по имени */
+function expandParts(layers, parts, warnings) {
+  const out = [];
+  for (const part of parts) {
+    const m = part.model;
+    const loader = m.loader ?? '';
+    if (/composite$/.test(loader) && !m.elements) {
+      for (const [name, ref] of Object.entries(m.loaderJson?.children ?? m.children ?? {})) {
+        const c = inlineModel(layers, ref);
+        if (c?.chain.length) {
+          c.display = { ...m.display, ...c.display };
+          out.push(...expandParts(layers, [{ ...part, model: c }], warnings));
+        } else warnings.add(`${m.id}: часть «${name}» composite не нашлась`);
+      }
+      continue;
+    }
+    if (loader === 'immersiveengineering:conf_sides' && !m.elements) {
+      // Конденсаторы IE и т. п.: <base_name>_<сторона>_none (по коду IE — side_top_bottom, side_top, all_same…)
+      const base = m.loaderJson?.base_name;
+      const has = (id) => Boolean(findResource(layers, texturePath(id)));
+      const pick = (...ids) => ids.find(has) ?? ids[ids.length - 1];
+      const side = pick(`${base}_side_none`, `${base}_none`);
+      const textures = {
+        up: pick(`${base}_up_none`, `${base}_top_none`, side),
+        down: pick(`${base}_down_none`, `${base}_bottom_none`, side),
+        side,
+      };
+      const faces = Object.fromEntries(
+        ['north', 'south', 'east', 'west', 'up', 'down'].map((f) => [
+          f,
+          { texture: f === 'up' ? '#up' : f === 'down' ? '#down' : '#side' },
+        ]),
+      );
+      out.push({
+        ...part,
+        model: {
+          ...m,
+          textures: { ...m.textures, ...textures },
+          elements: [{ from: [0, 0, 0], to: [16, 16, 16], faces }],
+        },
+      });
+      continue;
+    }
+    out.push(part);
+  }
+  return out;
+}
+
+/**
+ * Геометрия OBJ (neoforge:obj, ie_obj): треугольники в пикселях модели (0–16 = блок) с uv 0–1 (v сверху, как у
+ * картинки; flip_v — как в ObjLoader NeoForge) и текстурой материала (map_Kd: id текстуры или #переменная модели).
+ */
+function objTriangles(layers, m, warnings) {
+  const j = m.loaderJson ?? {};
+  const ref = typeof j.model === 'string' ? j.model : null;
+  if (!ref) {
+    warnings.add(`${m.id}: у загрузчика ${m.loader} нет поля model`);
+    return [];
+  }
+  const { ns, path: p } = resLoc(ref);
+  const file = `assets/${ns}/${p}`;
+  const r = findResource(layers, file);
+  if (!r) {
+    warnings.add(`${m.id}: нет файла ${file}`);
+    return [];
+  }
+  const dir = file.slice(0, file.lastIndexOf('/') + 1);
+  const materials = new Map();
+  const vs = [];
+  const vts = [];
+  const vns = [];
+  const tris = [];
+  let mat = null;
+  const flipV = j.flip_v === true;
+  for (const raw of r.data.toString('utf8').split(/\r?\n/)) {
+    const line = raw.trim();
+    const [cmd, ...a] = line.split(/\s+/);
+    if (cmd === 'v') vs.push(a.slice(0, 3).map(Number));
+    else if (cmd === 'vt') vts.push(a.slice(0, 2).map(Number));
+    else if (cmd === 'vn') vns.push(a.slice(0, 3).map(Number));
+    else if (cmd === 'usemtl') mat = a.join(' ');
+    else if (cmd === 'mtllib') {
+      const mr = findResource(layers, dir + a.join(' '));
+      if (!mr) warnings.add(`${m.id}: нет материалов ${dir}${a.join(' ')}`);
+      let cur = null;
+      for (const ml of mr ? mr.data.toString('utf8').split(/\r?\n/) : []) {
+        const [mc, ...ma] = ml.trim().split(/\s+/);
+        if (mc === 'newmtl') cur = ma.join(' ');
+        else if (mc === 'map_Kd' && cur) materials.set(cur, ma.join(' '));
+      }
+    } else if (cmd === 'f' && a.length >= 3) {
+      const idx = (n, len) => (n < 0 ? len + n : n - 1);
+      const pts = a.map((t) => {
+        const [vi, ti, ni] = t.split('/');
+        return {
+          v: vs[idx(Number(vi), vs.length)],
+          t: ti ? vts[idx(Number(ti), vts.length)] : null,
+          n: ni ? vns[idx(Number(ni), vns.length)] : null,
+        };
+      });
+      if (pts.some((x) => !x.v)) continue;
+      // Текстура материала: map_Kd — id текстуры (ns:block/x) или #переменная модели; нет — #материал / particle
+      const kd = materials.get(mat);
+      const tex =
+        resolveTexture(m.textures, kd && !kd.startsWith('#') ? kd : (kd ?? `#${mat}`)) ??
+        resolveTexture(m.textures, `#${mat}`) ??
+        resolveTexture(m.textures, '#particle');
+      for (let i = 1; i + 1 < pts.length; i++) {
+        const tri = [pts[0], pts[i], pts[i + 1]];
+        tris.push({
+          P: tri.map((x) => [x.v[0] * 16, x.v[1] * 16, x.v[2] * 16]),
+          UV: tri.map((x) => (x.t ? [x.t[0], flipV ? 1 - x.t[1] : x.t[1]] : [0, 0])),
+          N: tri.every((x) => x.n) ? tri.map((x) => x.n).reduce((s, n) => s.map((c, k) => c + n[k]), [0, 0, 0]) : null,
+          tex,
+        });
+      }
+    }
+  }
+  if (!tris.length) warnings.add(`${m.id}: в ${file} нет граней`);
+  return tris;
+}
+
 // ---------------------------------------------------------------- 3D
 
 /**
@@ -176,10 +355,36 @@ export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } 
       view
     ] ?? [30, 225];
 
-  // Грани в пространстве вида (до масштаба): [{ O, U, V (3D), tex, uv, rot, shade }]
+  parts = expandParts(layers, parts, warnings);
+  // Грани в пространстве вида (до масштаба): [{ O, U, V (3D), tex, uv, rot, shade }]; OBJ — треугольники
   const quads = [];
+  const tris = [];
   for (const part of parts) {
     const m = part.model;
+    const place = (p) => {
+      let d = [p[0] - 8, p[1] - 8, p[2] - 8];
+      if (part.x) d = axisRot(d, 'x', -part.x);
+      if (part.y) d = axisRot(d, 'y', -part.y);
+      return d;
+    };
+    if (/(^|:)(ie_)?obj$/.test(m.loader ?? '') && !m.elements) {
+      for (const t of objTriangles(layers, m, warnings)) {
+        const P = t.P.map(place);
+        // Нормаль: из vn файла, а нет — по треугольнику; затенение — как у граней блока
+        let n = t.N;
+        if (part.x) n = n && axisRot(n, 'x', -part.x);
+        if (part.y) n = n && axisRot(n, 'y', -part.y);
+        if (!n) {
+          const e1 = P[1].map((c, k) => c - P[0][k]);
+          const e2 = P[2].map((c, k) => c - P[0][k]);
+          n = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
+        }
+        const len = Math.hypot(...n) || 1;
+        tris.push({ P: P.map((v) => viewRot(v, rx, ry)), UV: t.UV, tex: t.tex, shade: shadeOf(n.map((c) => c / len)) });
+        if (!t.tex) warnings.add(`${m.id}: у материала OBJ нет текстуры`);
+      }
+      continue;
+    }
     if (m.loader && !m.elements)
       warnings.add(`${m.id}: loader ${m.loader} — геометрию задаёт код или файл, не рисуется`);
     if (m.entity) warnings.add(`${m.id}: builtin/entity — рисуется кодом (BlockEntityRenderer), не рисуется`);
@@ -231,27 +436,30 @@ export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } 
       }
     }
   }
-  if (!quads.length) warnings.add('в модели нет элементов');
+  if (!quads.length && !tris.length) warnings.add('в модели нет элементов');
 
   // Масштаб: как iso.py (куб 16³ с полем), но целиком уместить, если модель больше блока
   let minX = Infinity;
   let maxX = -Infinity;
   let minY = Infinity;
   let maxY = -Infinity;
-  for (const q of quads)
-    for (const p of [q.O, q.U, q.V, [q.U[0] + q.V[0] - q.O[0], q.U[1] + q.V[1] - q.O[1]]]) {
-      minX = Math.min(minX, p[0]);
-      maxX = Math.max(maxX, p[0]);
-      minY = Math.min(minY, p[1]);
-      maxY = Math.max(maxY, p[1]);
-    }
+  const corners = [
+    ...quads.flatMap((q) => [q.O, q.U, q.V, [q.U[0] + q.V[0] - q.O[0], q.U[1] + q.V[1] - q.O[1]]]),
+    ...tris.flatMap((t) => t.P),
+  ];
+  for (const p of corners) {
+    minX = Math.min(minX, p[0]);
+    maxX = Math.max(maxX, p[0]);
+    minY = Math.min(minY, p[1]);
+    maxY = Math.max(maxY, p[1]);
+  }
   // Суперсэмплинг: рисуем в ss раз крупнее и усредняем — ровные края, альфа по покрытию
   const ss = Math.max(1, Math.min(8, aa | 0));
   const S = size * ss;
   let scale = (size / (16 * 1.75)) * ss;
   let cx = 0;
   let cy = 0;
-  if (quads.length) {
+  if (corners.length) {
     const span = Math.max(maxX - minX, maxY - minY);
     if (span * scale > S * 0.94) scale = (S * 0.94) / span;
     // Не влезает по центру блока — центрируем по рамке
@@ -340,6 +548,59 @@ export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } 
         img[i4] = r;
         img[i4 + 1] = g;
         img[i4 + 2] = bl;
+        img[i4 + 3] = 255;
+      }
+  }
+  // Треугольники OBJ: барицентрические координаты, uv по вершинам; без отсечения задних граней (в файлах OBJ
+  // порядок обхода бывает любой) — видимое решает буфер глубины
+  for (const tr of tris) {
+    const [A, B, C] = tr.P.map(proj);
+    const det = (B[0] - A[0]) * (C[1] - A[1]) - (C[0] - A[0]) * (B[1] - A[1]);
+    if (Math.abs(det) < 1e-9) continue;
+    let tex = null;
+    if (tr.tex) {
+      tex = loadTexture(layers, tr.tex, texCache);
+      used.set(tr.tex, tex ? (tex.error ? `${tex.from}: ${tex.error}` : tex.from) : null);
+      if (tex?.error) tex = null;
+    }
+    // Запас в полпикселя по краям, как у граней блока: без щелей между треугольниками
+    const pad = 0.5 / Math.max(1e-6, Math.sqrt(Math.abs(det)));
+    const y0 = Math.max(0, Math.floor(Math.min(A[1], B[1], C[1])) - 1);
+    const y1 = Math.min(S - 1, Math.floor(Math.max(A[1], B[1], C[1])) + 1);
+    const x0 = Math.max(0, Math.floor(Math.min(A[0], B[0], C[0])) - 1);
+    const x1 = Math.min(S - 1, Math.floor(Math.max(A[0], B[0], C[0])) + 1);
+    for (let py = y0; py <= y1; py++)
+      for (let px = x0; px <= x1; px++) {
+        const qx = px + 0.5;
+        const qy = py + 0.5;
+        const wb = ((qx - A[0]) * (C[1] - A[1]) - (C[0] - A[0]) * (qy - A[1])) / det;
+        const wc = ((B[0] - A[0]) * (qy - A[1]) - (qx - A[0]) * (B[1] - A[1])) / det;
+        const wa = 1 - wb - wc;
+        if (wa < -pad || wb < -pad || wc < -pad) continue;
+        const z = wa * A[2] + wb * B[2] + wc * C[2];
+        const k = py * S + px;
+        if (z <= depth[k]) continue;
+        let r;
+        let g;
+        let bl;
+        let al;
+        if (tex) {
+          const u = wa * tr.UV[0][0] + wb * tr.UV[1][0] + wc * tr.UV[2][0];
+          const v = wa * tr.UV[0][1] + wb * tr.UV[1][1] + wc * tr.UV[2][1];
+          const tx = Math.min(tex.w - 1, Math.max(0, Math.floor(u * tex.w)));
+          const ty = Math.min(tex.h - 1, Math.max(0, Math.floor(v * tex.h)));
+          const c = tex.rgb[ty * tex.w + tx];
+          al = tex.a[ty * tex.w + tx];
+          r = c >> 16;
+          g = (c >> 8) & 255;
+          bl = c & 255;
+        } else [r, g, bl, al] = [248, 0, 248, 255];
+        if (al < 128) continue;
+        const i4 = k * 4;
+        depth[k] = z;
+        img[i4] = r * tr.shade;
+        img[i4 + 1] = g * tr.shade;
+        img[i4 + 2] = bl * tr.shade;
         img[i4 + 3] = 255;
       }
   }
@@ -486,8 +747,13 @@ export function renderId(layers, id, { kind, state, view = 'gui', size = 256, aa
       lines.push(`свойства в блокстейте: ${[...props].map(([key, s]) => `${key}=${[...s].join('|')}`).join('; ')}`);
   } else {
     const mid = k === 'item' ? `${ns}:item/${p}` : `${ns}:${p}`;
-    const m = loadModel(layers, mid);
+    let m = loadModel(layers, mid);
     lines.push(`модель: ${chainText(m)}`);
+    const gm = guiModel(layers, m);
+    if (gm !== m) {
+      lines.push(`вид в инвентаре (separate_transforms): ${chainText(gm)}`);
+      m = gm;
+    }
     if (!m.chain.length) return { png: null, lines: [...lines, `Модели ${modelPath(mid)} нет.`] };
     if (m.generated) {
       const r = renderGenerated(layers, m, size);
