@@ -273,6 +273,8 @@ export function loadModel(layers, id) {
     for (const [k, v] of Object.entries(m.textures ?? {})) if (!(k in out.textures)) out.textures[k] = v;
     if (!out.elements && Array.isArray(m.elements)) out.elements = m.elements;
     for (const [k, v] of Object.entries(m.display ?? {})) if (!(k in out.display)) out.display[k] = v;
+    // overrides — у ближайшей модели (предметы с состояниями: заряд, наполнение)
+    if (!out.overrides && Array.isArray(m.overrides)) out.overrides = m.overrides;
     if (!out.loader && m.loader) {
       out.loader = m.loader;
       out.loaderJson = m; // поля загрузчика: model (obj), base/perspectives, children, base_name…

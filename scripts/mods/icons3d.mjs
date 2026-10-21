@@ -11,7 +11,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { entityItemModel } from '../mcp/entityModels.mjs';
+import { codeBlockParts, entityItemModel } from '../mcp/entityModels.mjs';
 import { fluidLook } from '../mcp/fluids.mjs';
 import {
   DRAWN_LOADERS,
@@ -25,7 +25,9 @@ import {
 import { loadModel } from '../mcp/resources.mjs';
 
 /** Поднять, если изменился рисунок (генератор, размер) — старый кеш не подойдёт */
-const VERSION = 4; // 2 — модели OBJ, composite, separate_transforms, conf_sides IE; 3 — без пустых картинок; 4 — без ie_obj и пурпурных
+// 2 — модели OBJ, composite, separate_transforms, conf_sides IE; 3 — без пустых картинок; 4 — без ie_obj и пурпурных;
+// 5 — поворот вида как в игре (было зеркально), окраска tintindex, ie_obj с переворотом v, z у display.gui
+const VERSION = 5;
 
 /**
  * findAsset(ns, rel) — файл ресурса из распакованных jar (как в mods.mjs), outIcons — папка icons/ сайта,
@@ -50,7 +52,7 @@ export function makeRenderer({ findAsset, outIcons, cacheDir, size = 96 }) {
   const layers = [layer];
   const dir = path.join(cacheDir, 'icons3d');
   fs.mkdirSync(dir, { recursive: true });
-  const stats = { drawn: 0, cached: 0, failed: 0, code: 0, noFluid: [] };
+  const stats = { drawn: 0, cached: 0, failed: 0, code: 0, codeKinds: new Map(), noFluid: [], failedIds: [] };
 
   /** Файл текстуры по id (ns:path) — в хеш */
   const texFile = (t) => {
@@ -89,6 +91,19 @@ export function makeRenderer({ findAsset, outIcons, cacheDir, size = 96 }) {
       if (f) h.update(fs.readFileSync(f));
     }
     if (model.drawnBy) h.update(model.drawnBy);
+    // Части модели блока (ящики): их цепочки, текстуры и повороты
+    for (const pt of model.codeParts ?? []) {
+      h.update(JSON.stringify([pt.x, pt.y, pt.mat, pt.model.textures]));
+      for (const c of pt.model.chain) {
+        const [cns, cp] = c.id.split(':');
+        const f = findAsset(cns, `models/${cp}.json`);
+        if (f) h.update(fs.readFileSync(f));
+      }
+      for (const v of Object.values(pt.model.textures)) {
+        const f = typeof v === 'string' && !v.startsWith('#') && texFile(v);
+        if (f) h.update(fs.readFileSync(f));
+      }
+    }
     // Загрузчик: его поля (части composite, имя текстур conf_sides) и файл OBJ с материалами
     if (model.loaderJson) {
       h.update(JSON.stringify(model.loaderJson));
@@ -107,6 +122,9 @@ export function makeRenderer({ findAsset, outIcons, cacheDir, size = 96 }) {
     // Рисуется кодом (builtin/entity): сундуки, кровати, шалкеры, знамёна, головы… — перенесённые модели сущностей
     const em = model.entity ? entityItemModel(layers, `${ns}:${p}`, model) : null;
     if (em) model = em;
+    // …или модель блока с поворотом из кода предмета (ящики Functional Storage)
+    const cb = model.entity ? codeBlockParts(layers, `${ns}:${p}`, model) : null;
+    if (cb) model = { ...cb.parts[0].model, entity: false, codeParts: cb.parts, drawnBy: cb.drawnBy };
     // Плоские загрузчики: вёдра и сосуды с жидкостью, броня TFC (вид без отделки, как в JEI)
     const loaderFlat = flatLoaderSpecs(layers, model, `${ns}:${p}`, fluidLook);
     if (loaderFlat && !loaderFlat.specs.length) return null;
@@ -121,6 +139,8 @@ export function makeRenderer({ findAsset, outIcons, cacheDir, size = 96 }) {
       (!loaderFlat && model.loader && !DRAWN_LOADERS.has(model.loader))
     ) {
       stats.code++;
+      const kind = model.entity ? `builtin/entity (${model.chain.at(-2)?.id ?? '?'})` : `загрузчик ${model.loader}`;
+      stats.codeKinds.set(kind, (stats.codeKinds.get(kind) ?? 0) + 1);
       return null;
     }
     if (!flat && !model.elements?.length && !model.loader && !model.quads) return null;
@@ -135,7 +155,7 @@ export function makeRenderer({ findAsset, outIcons, cacheDir, size = 96 }) {
           ? renderFlat(layers, loaderFlat.specs, size)
           : flat
             ? renderGenerated(layers, model, size)
-            : renderModel(layers, [{ model, x: 0, y: 0 }], { size });
+            : renderModel(layers, model.codeParts ?? [{ model, x: 0, y: 0 }], { size });
         // Пусто (нет файла OBJ, нет граней) — не иконка: остаётся текстура
         // Нет текстуры — в игре была бы пурпурная клетка, иконкой это не берём
         png = r.warnings.some((w) => /нет элементов|нет файла|нет граней|нет текстуры|нет материалов/.test(w))
@@ -146,6 +166,7 @@ export function makeRenderer({ findAsset, outIcons, cacheDir, size = 96 }) {
       }
       if (!png) {
         stats.failed++;
+        stats.failedIds.push(`${ns}:${p}`);
         return null;
       }
       fs.writeFileSync(cached, png);

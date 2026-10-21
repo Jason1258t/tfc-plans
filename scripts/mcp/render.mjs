@@ -20,7 +20,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { mods } from './data.mjs';
-import { entityItemModel } from './entityModels.mjs';
+import { codeBlockParts, entityItemModel } from './entityModels.mjs';
 import { fluidLook } from './fluids.mjs';
 import {
   blockstatePath,
@@ -213,6 +213,18 @@ function inlineModel(layers, ref) {
  * display исходной модели сохраняется, если у выбранной своего нет.
  */
 export function guiModel(layers, m) {
+  // Модель без своей геометрии, только с overrides: у предмета по умолчанию все свойства 0 — подходит override, чьи
+  // предикаты ≤ 0, последний из подходящих (ItemOverrides.resolve)
+  if (!m.elements && !m.loader && !m.generated && !m.entity && m.overrides?.length) {
+    const hit = m.overrides.filter((o) => Object.values(o.predicate ?? {}).every((v) => Number(v) <= 0)).at(-1);
+    if (hit && typeof hit.model === 'string') {
+      const o = loadModel(layers, hit.model);
+      if (o.chain.length && !o.missing.length) {
+        o.display = { ...m.display, ...o.display };
+        m = o;
+      }
+    }
+  }
   for (let i = 0; i < 4 && /separate_transforms$/.test(m.loader ?? ''); i++) {
     const j = m.loaderJson ?? {};
     const g = inlineModel(layers, j.perspectives?.gui ?? j.base);
@@ -518,7 +530,9 @@ export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } 
       for (const [name, face] of Object.entries(el.faces ?? {})) {
         if (!NORMALS[name]) continue;
         const [o, pu, pv] = faceQuad(from, to, name);
-        const texId = resolveTexture(m.textures, face.texture);
+        // Текстура грани — имя переменной модели, «#» необязателен (BlockModel.getMaterial)
+        const ref = typeof face.texture === 'string' && !face.texture.startsWith('#') && face.texture in m.textures;
+        const texId = resolveTexture(m.textures, ref ? `#${face.texture}` : face.texture);
         if (!texId) warnings.add(`${m.id}: текстура ${face.texture} не задана`);
         const tint = face.tintindex != null && face.tintindex >= 0 ? (m.tints?.[face.tintindex] ?? null) : null;
         if (face.tintindex != null && face.tintindex >= 0 && tint == null)
@@ -921,6 +935,14 @@ export function renderId(layers, id, { kind, state, view = 'gui', size = 256, aa
       const r = renderFlat(layers, flat.specs, size);
       lines.push(`плоский предмет, загрузчик ${m.loader}: слои ${flat.specs.map((x) => (x.mask ? `${x.id} по форме ${x.mask}` : x.id)).join(', ')}`);
       if (flat.wanted && !flat.fluid) lines.push(`⚠ жидкость ${flat.wanted}: текстуру и цвет из кода определить не вышло — ведро пустое`);
+      for (const [t, from] of r.textures) lines.push(`  текстура ${t}: ${from ?? '❌ нет'}`);
+      for (const w of r.warnings) lines.push(`⚠ ${w}`);
+      return { png: r.png, lines };
+    }
+    const cb = m.entity ? codeBlockParts(layers, `${ns}:${p}`, m) : null;
+    if (cb) {
+      lines.push(`рисуется кодом (builtin/entity) — ${cb.drawnBy}`);
+      const r = renderModel(layers, cb.parts, { view, size, aa });
       for (const [t, from] of r.textures) lines.push(`  текстура ${t}: ${from ?? '❌ нет'}`);
       for (const w of r.warnings) lines.push(`⚠ ${w}`);
       return { png: r.png, lines };

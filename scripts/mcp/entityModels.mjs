@@ -9,7 +9,7 @@
  * entityItemModel(layers, id, own) → модель для renderModel (поле quads — грани в пикселях блока 0–16 с uv,
  * текстурой, окраской и наложением) или null — такой предмет генератор не знает (остаётся текстура).
  */
-import { findResource, texturePath } from './resources.mjs';
+import { blockstatePath, findResource, loadModel, pickVariant, readJsonRes, texturePath } from './resources.mjs';
 import { dyeColors } from './fluids.mjs';
 
 // ---------------------------------------------------------------- матрицы (аффинные 3×4, как PoseStack)
@@ -332,4 +332,27 @@ export function entityItemModel(layers, id, own) {
     quads: g.quads,
     drawnBy: g.kind,
   };
+}
+
+/**
+ * Предметы, чей рендерер рисует модель блока (а не модель сущности): ящики Functional Storage
+ * (FunctionalStorageISTER.renderBlockItem) — модель состояния по умолчанию (facing=down, subfacing=north, не заперт;
+ * DrawerBlock.registerDefaultState) с display.gui модели блока и поворотом Y 180°, X −90°, Y 90° (DrawerISTER,
+ * CompactingDrawerISTER, FluidDrawerISTER). Содержимое ящика не рисуется — в JEI и творческом он пуст.
+ * Возвращает { parts: [{ model, x, y, mat }], drawnBy } или null.
+ */
+export function codeBlockParts(layers, id, own) {
+  if (!own?.entity) return null;
+  const [ns, p] = id.split(':');
+  if (ns !== 'functionalstorage') return null;
+  const bs = readJsonRes(layers, blockstatePath(id));
+  if (!bs?.json) return null;
+  const v = pickVariant(bs.json, { facing: 'down', subfacing: 'north', locked: 'false' });
+  if (!v.parts.length) return null;
+  // R = Ry(180°)·Rx(−90°)·Ry(90°) — строки матрицы 3×3 (поворот вокруг центра блока)
+  const r = mul(mul(R('y', Math.PI), R('x', -Math.PI / 2)), R('y', Math.PI / 2));
+  const mat = [r[0], r[1], r[2], r[4], r[5], r[6], r[8], r[9], r[10]].map((x) => Math.round(x * 1e9) / 1e9);
+  const parts = v.parts.map((x) => ({ model: loadModel(layers, x.model), x: x.x ?? 0, y: x.y ?? 0, mat }));
+  if (parts.some((x) => !x.model.chain.length || x.model.missing.length)) return null;
+  return { parts, drawnBy: `модель блока ${p} (FunctionalStorageISTER)` };
 }
