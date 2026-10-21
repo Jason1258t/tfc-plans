@@ -27,7 +27,7 @@ LAYOUTS = {
     # Двусторонний преобразователь: верхний ряд — заряд (сеть EE → FE), нижний — разряд (FE → сеть EE)
     'bidirectional_converter': (
         [(3, 3), (13, 3), (3, 13), (13, 13)],
-        ['plus', 'minus', 'plus', 'minus'],
+        ['phase', 'phase', 'phase', 'phase'],  # медные, как у преобразователя EE; «+»/«−» — гравировкой
     ),
 }
 
@@ -82,6 +82,8 @@ def texture(terminals, kinds, seed, converter=False):
         put(x, 16 + z, c)
 
     plate(0, 16, 16, 16)
+    if converter:
+        return converter_marks(px, top, terminal, plate)
     # Гравировка «~» под каждым входом (z = 6..7)
     for (cx, cz), k in zip(terminals, kinds):
         if k != 'phase':
@@ -89,8 +91,6 @@ def texture(terminals, kinds, seed, converter=False):
         for dx, dz in ((-1, 7), (0, 6), (1, 7)):
             top(cx + dx, dz, DARKER)
         top(cx + 2, 6, DARKER)
-    if converter:
-        return converter_marks(px, top, terminal, plate)
     # «+» и «−» над выходными клеммами
     for (cx, cz), k in zip(terminals, kinds):
         if k == 'plus':

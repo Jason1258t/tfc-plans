@@ -7,7 +7,7 @@
   "block.ee_extras.single_phase_rectifier.tooltip.nodes": "Медные клеммы — фаза и нейтраль (порядок не важен), красная — «+», синяя — «−».",
   "block.ee_extras.bidirectional_converter": "Двусторонний преобразователь",
   "block.ee_extras.bidirectional_converter.tooltip": "Два преобразователя электроэнергии в одном: заряжает блок FE снизу (конденсатор IE) из сети EE и одновременно отдаёт из него в сеть EE.",
-  "block.ee_extras.bidirectional_converter.tooltip.nodes": "Клеммы у стрелки «↓» — заряд (вход EE), у «↑» — разряд (выход EE, напряжение — колёсиком сверху). У конденсатора IE нужна грань-вход и грань-выход (молотком).",
+  "block.ee_extras.bidirectional_converter.tooltip.nodes": "Клеммы у стрелки «↓» — заряд, у «↑» — разряд (напряжение — колёсиком сверху); подписи — при наведении катушкой. У конденсатора IE нужна грань-вход и грань-выход (молотком).",
   "block.ee_extras.four_core_termination": "Четырёхжильный соединитель",
   "block.ee_extras.four_core_termination.tooltip": "Переход с обычных проводов на четырёхжильный кабель: три фазы и ноль.",
   "block.ee_extras.four_core_termination.tooltip.nodes": "Клеммы: коричневая — L1, чёрная — L2, серая — L3, синяя — N. Кабель — к резиновому выводу.",
@@ -28,5 +28,9 @@
   "ee_extras.cable.same_block": "Кабель нельзя замкнуть на тот же блок",
   "ee_extras.cable.too_far": "Слишком далеко для кабеля",
   "ee_extras.cable.exists": "Эти блоки уже соединены кабелем",
-  "ee_extras.cable.no_nodes": "Не удалось подключить кабель к блоку"
+  "ee_extras.cable.no_nodes": "Не удалось подключить кабель к блоку",
+  "ee_extras.nodes.charge_positive": "Заряд «+» — из сети EE в конденсатор",
+  "ee_extras.nodes.charge_negative": "Заряд «−» — из сети EE в конденсатор",
+  "ee_extras.nodes.discharge_positive": "Разряд «+» — из конденсатора в сеть EE",
+  "ee_extras.nodes.discharge_negative": "Разряд «−» — из конденсатора в сеть EE"
 }

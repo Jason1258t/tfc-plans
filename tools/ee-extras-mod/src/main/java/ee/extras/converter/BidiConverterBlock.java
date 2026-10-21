@@ -13,6 +13,7 @@ import net.createmod.catnip.math.VoxelShaper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -66,8 +67,10 @@ public class BidiConverterBlock extends DirectionalRolledDeviceBlock<BidiConvert
 
     @Override
     public MutableComponent getNodeLabel(Level level, BlockPos pos, BlockState state, int node) {
+        // Свои подписи (ee_extras.nodes.*): у EE нет «заряд/разряд», а «вход/выход» здесь путает — оба про сеть EE
         String[] labels = LAYOUT.labels();
-        return CEELang.nodeLabel(node >= 0 && node < labels.length ? labels[node] : "node");
+        return node >= 0 && node < labels.length ? Component.translatable("ee_extras.nodes." + labels[node])
+                : CEELang.nodeLabel("node");
     }
 
     @Override

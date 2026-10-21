@@ -21,7 +21,7 @@ public record Layout(String id, int inputs, float[][] terminals, String[] labels
      */
     public static final Layout CONVERTER = new Layout("bidirectional_converter", 2,
             new float[][] {{3, 3}, {13, 3}, {3, 13}, {13, 13}},
-            new String[] {"feed_positive", "feed_negative", "load_positive", "load_negative"});
+            new String[] {"charge_positive", "charge_negative", "discharge_positive", "discharge_negative"});
 
     public static final float TERMINAL_Y = 5;
 
