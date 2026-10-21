@@ -14,7 +14,8 @@ import { parseParts, printJobs, PUBLISH, showJob } from './lib/jobs.mjs';
 import { diffFiles, printDiff, publish } from './lib/publish.mjs';
 import { applyPull, planPull, pullChanges, recheckAddons, siteOwned } from './lib/pull.mjs';
 import { scanLocal } from './lib/scan.mjs';
-import { applyPlan, beginBackup, finishBackup, undoLast } from './lib/sync.mjs';
+import { applyChange, planChange, resultsOf } from './lib/changes.mjs';
+import { applyPlan, beginBackup, editBackup, finishBackup, undoLast } from './lib/sync.mjs';
 import { ask, bold, choose, confirm, cyan, date, dim, green, interactive, mb, red, yellow } from './lib/ui.mjs';
 import { checkUpdate } from './lib/update.mjs';
 import { cleanupOld, upgrade } from './lib/upgrade.mjs';
@@ -44,6 +45,8 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
                               --publish none|dry-run|live — что потом; по умолчанию dry-run — только показать)
   tfc admin publish           показать, что изменится на сайте; --live — выложить (текущую сборку, с вопросом)
   tfc admin jobs [id|last]    задания сервера; с id — лог и итог (--follow — следить до конца)
+  tfc admin changes [pull [id…] | reject <id>]   правки конфигов от Claude: список; pull — внести в папку игры
+                              и сервера (покажет и спросит; --dry-run, --yes; вернуть — tfc undo); reject — отклонить
 
 Общее: --profile <имя> — другой профиль; tfc --version — версия; tfc --upgrade — обновить программу
 (--force — скачать заново, даже если версия та же). Настройки: ${configFile()}`;
@@ -414,7 +417,7 @@ function cmdUndo(v) {
   const m = undoLast(profile);
   if (!m) return console.log('Отменять нечего: копий прошлых pull нет.');
   console.log(
-    `${green('Вернул')} как было ${date(m.at)}: убрал добавленные ${m.added.length}, вернул заменённые ${m.replaced.length} и убранные ${m.removed.length}.`,
+    `${green('Вернул')} как было ${date(m.at)}: убрал добавленные ${m.added.length}, вернул заменённые ${m.replaced.length} и убранные ${m.removed.length}${m.edited?.length ? `, правленые конфиги ${m.edited.length}` : ''}.`,
   );
 }
 
@@ -550,6 +553,128 @@ function jobError(e, snapshot) {
   return e;
 }
 
+// ---------------------------------------------------------------- правки конфигов от агента
+
+const CHANGE_STATUS = {
+  pending: yellow('ждёт'),
+  applied: green('применено'),
+  rejected: red('отклонено'),
+  cancelled: dim('отменено'),
+};
+
+function printChange(c, { full = true } = {}) {
+  console.log(
+    `${bold(c.id)} ${CHANGE_STATUS[c.status] ?? c.status} ${dim(`${c.author ?? '?'}, ${date(c.createdAt)}${c.appliedAt ? ` · ${c.appliedBy ?? '?'} ${date(c.appliedAt)}` : ''}`)}`,
+  );
+  if (!full) return;
+  if (c.note) console.log(`  ${c.note}`);
+  for (const e of c.edits ?? [])
+    console.log(`  ${e.path}: ${bold(e.key)} ${JSON.stringify(e.from)} → ${cyan(JSON.stringify(e.to))}`);
+  for (const r of c.results ?? []) console.log(dim(`  ${r.ok ? '✓' : '✗'} ${r.key}: ${r.msg}`));
+}
+
+/** Путь для вывода: от папки игры, папки сервера или мира */
+function shortPath(profile, file) {
+  const rel = (base, label) => {
+    const r = base && path.relative(base, file);
+    return r && !r.startsWith('..') && !path.isAbsolute(r) ? `${label}${r.split(path.sep).join('/')}` : null;
+  };
+  return rel(profile.world, '<мир>/') ?? rel(profile.instance, '') ?? rel(profile.serverDir, '<сервер>/') ?? file;
+}
+
+const ITEM_MARK = {
+  change: green('~'),
+  drift: yellow('~'),
+  add: green('+'),
+  same: dim('='),
+  error: red('✗'),
+  overridden: yellow('!'),
+};
+
+function printItem(profile, it) {
+  const where = it.file ? shortPath(profile, it.file) : '';
+  const e = it.edit;
+  const text = {
+    change: `${where}: ${e.key} ${JSON.stringify(it.cur)} → ${JSON.stringify(e.to)}`,
+    drift: `${where}: ${e.key} ${JSON.stringify(it.cur)} → ${JSON.stringify(e.to)} ${yellow(`(Claude видел ${JSON.stringify(e.from)} — файл меняли после выкладки сборки)`)}`,
+    add: `${where}: ${e.key} = ${JSON.stringify(e.to)} ${dim('(ключа в файле нет — допишу)')}`,
+    same: dim(`${where}: ${e.key} уже ${JSON.stringify(e.to)}`),
+    error: red(`${where ? `${where}: ` : ''}${e.key} — ${it.msg}`),
+    overridden: yellow(`${where} задаёт ${e.key} сам и перекрывает эту правку — поправьте и там`),
+  }[it.state];
+  console.log(`  ${ITEM_MARK[it.state]} ${text}`);
+}
+
+async function adminChanges(a, v, [action, ...ids]) {
+  const { changes } = await a.get('/admin/changes');
+  const pending = changes.filter((c) => c.status === 'pending');
+  if (!action || action === 'list') {
+    if (!pending.length) console.log('Неприменённых правок нет.');
+    for (const c of pending) printChange(c);
+    const done = changes.filter((c) => c.status !== 'pending').slice(0, 5);
+    if (done.length) console.log(dim('\nНедавние:'));
+    for (const c of done) printChange(c, { full: false });
+    if (pending.length)
+      console.log(`\nВнести: ${cyan('tfc admin changes pull')} (покажет, что где поменяется, и спросит)`);
+    return;
+  }
+  if (action === 'reject') {
+    const c = changes.find((x) => x.id === ids[0]);
+    if (!c) throw new Error('tfc admin changes reject <id> — id из tfc admin changes');
+    if (c.status !== 'pending') throw new Error(`правка ${c.id} уже не ждёт (${c.status})`);
+    printChange(c);
+    if (!v.yes && !(interactive() && (await confirm('Отклонить?', false)))) return console.log('Ничего не менял.');
+    await a.post(`/admin/changes/${c.id}`, { status: 'rejected', results: [], updateTime: c.updateTime });
+    return console.log('Отклонено — Claude увидит это в config_changes.');
+  }
+  if (action !== 'pull') throw new Error('tfc admin changes [pull [id…] | reject <id>]');
+  const unknown = ids.filter((id) => !changes.some((c) => c.id === id));
+  if (unknown.length) throw new Error(`нет правки ${unknown.join(', ')} — список: tfc admin changes`);
+  const todo = ids.length ? pending.filter((c) => ids.includes(c.id)) : pending.slice().reverse();
+  if (!todo.length) return console.log(ids.length ? 'Эти правки уже не ждут.' : 'Неприменённых правок нет.');
+  const profile = currentProfile(loadConfig(), v.profile);
+  console.log(`Профиль ${profileTitle(profile)}${profile.serverDir ? dim(` · сервер ${profile.serverDir}`) : ''}`);
+  const backup = beginBackup(profile);
+  let applied = 0;
+  for (const c of todo) {
+    console.log('');
+    printChange(c);
+    const plan = planChange(profile, c);
+    for (const it of plan.items) printItem(profile, it);
+    const results = resultsOf(plan, (f) => shortPath(profile, f));
+    if (!plan.texts.size) {
+      if (results.every((r) => r.ok)) {
+        console.log(dim('  Всё уже так — отмечаю как применённую.'));
+        if (!v['dry-run'])
+          await a.post(`/admin/changes/${c.id}`, { status: 'applied', results, updateTime: c.updateTime });
+      } else console.log(red('  Внести нечего — правка остаётся ждать (отклонить: tfc admin changes reject).'));
+      continue;
+    }
+    if (v['dry-run']) continue;
+    if (!v.yes) {
+      if (!interactive()) throw new Error('подтвердите: tfc admin changes pull --yes');
+      if (!(await confirm('Внести?', true))) {
+        console.log(dim('  Пропустил — правка остаётся ждать.'));
+        continue;
+      }
+    }
+    applyChange(plan, backup, editBackup);
+    applied++;
+    await a.post(`/admin/changes/${c.id}`, { status: 'applied', results, updateTime: c.updateTime }).catch((e) => {
+      console.log(yellow(`  Файлы поправил, но отметить на сервере не вышло: ${e.message}`));
+    });
+    console.log(green('  Внесено.'));
+  }
+  if (v['dry-run']) return console.log(dim('\n--dry-run: ничего не менял'));
+  const dir = finishBackup(profile, backup);
+  if (!applied) return;
+  console.log(`\n${green('Готово.')}${dir ? dim(` Прежние файлы — ${dir}; вернуть: tfc undo`) : ''}`);
+  console.log('Дальше: перезапустите сервер Minecraft, чтобы он перечитал настройки, и залейте сборку —');
+  console.log(
+    `${cyan('tfc publish')} (игроки получат конфиг), ${cyan('tfc admin publish --live')} (сайт и Claude увидят новые значения).`,
+  );
+}
+
 async function cmdAdmin(v, [sub, ...args]) {
   const arg = args[0];
   const a = api(loadConfig());
@@ -599,6 +724,8 @@ async function cmdAdmin(v, [sub, ...args]) {
       throw jobError(e, v.snapshot);
     });
     await startedJob(a, j, v);
+  } else if (sub === 'changes') {
+    await adminChanges(a, v, args);
   } else if (sub === 'jobs') {
     if (!arg) return printJobs(a);
     let id = arg;
@@ -612,7 +739,7 @@ async function cmdAdmin(v, [sub, ...args]) {
     if (j.state === 'failed') process.exitCode = 1;
   } else
     throw new Error(
-      'tfc admin keys | invite <ник> | revoke <id> | history | use <id> | rollback | rebuild | publish | jobs',
+      'tfc admin keys | invite <ник> | revoke <id> | history | use <id> | rollback | rebuild | publish | jobs | changes',
     );
 }
 

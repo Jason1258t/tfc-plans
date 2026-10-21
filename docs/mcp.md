@@ -96,7 +96,9 @@ MCP-сервер сборки — локальная программа, чер�
 | Инструмент | Что делает |
 | --- | --- |
 | `reference_get(section, filter, id)` | разделы справочника сайта: `ores`, `smelt`, `chains`, `metals`, `fuels`, `liquid`, `foods`, `botany`, `greenhouse`, `meals`, `skillet`, `multiblocks`, `power` (с поправками `kubejs/data`) |
-| `config_get(file, key, mod)` | настройки модов по слоям: сохранение мира > `serverconfig/` > `config/` сборки > значение из кода мода. TOML (`<мод>-server/common.toml`, `<мод>/server.toml`) и с 2026-10-21 JSON5 в корне `config/` (`worldborder.json5` и другие моды на Collective; вложенные `*.json5` — импорт с `--all`). Только чтение |
+| `config_get(file, key, mod)` | настройки модов по слоям: сохранение мира > `serverconfig/` > `config/` сборки > значение из кода мода. TOML (`<мод>-server/common.toml`, `<мод>/server.toml`) и с 2026-10-21 JSON5 в корне `config/` (`worldborder.json5` и другие моды на Collective; вложенные `*.json5` — импорт с `--all`). Неприменённые правки помечены ⏳ |
+| `config_propose(note, edits)` | предложить правку TOML-конфигов: `edits: [{ file, key, value }]`, ключ полный (`blocks.crops.cropGrowthModifier`); проверяются ключ, тип и диапазон из кода мода, слой (ключ из сохранения мира — отказ), нет ли уже неприменённой правки того же ключа. Запись в Firestore `configChanges` (подпись `Claude`); файлы меняет хост — `tfc admin changes pull` (docs/tfc-app.md) |
+| `config_changes(status, id, cancel)` | правки и итог хоста по ключам (`pending` по умолчанию, `applied`, `rejected`, `cancelled`, `all`); `cancel=<id>` — отменить неприменённую |
 
 ### Сборка
 
@@ -139,8 +141,8 @@ NeoForge — `minecraft`.
 | --- | --- |
 | `class_find(query*, jar, kind, mixin, platform)` | классы по части имени, полному имени или glob (`*Furnace*`): вид, родитель, jar и мод, у миксинов — цели |
 | `class_info(class*, jar, members, synthetic)` | класс по байткоду: предки с модами, интерфейсы, аннотации, поля с константами, методы с сигнатурами и строками исходника (`:66–89` — для стека краша), миксины на класс, другие jar с тем же классом; ⚠ если общий класс ссылается на классы только клиента (см. ниже) |
-| `class_hierarchy(class*, direction, depth, platform)` | предки и все интерфейсы; дерево наследников и реализаций по всей сборке |
-| `code_refs(target*, kind, jar, subtypes, platform, access, side)` | кто использует — с методом и строкой: класс (`extends`, `new`, вызовы, сигнатуры, аннотации и цели миксинов), метод/поле (`Owner#name`, `*#name`; `subtypes` — вызовы через наследников; сам класс-владелец тоже в ответе), строку (`"tfc:…"`, ключ конфига). У поля — «ЗАПИСЬ»/«чтение» (`access=write` — только кто перезаписывает); у каждого места — сторона кода. ~2–6 с на сборку |
+| `class_hierarchy(class*, jar, direction, depth, platform)` | предки и все интерфейсы; дерево наследников и реализаций по всей сборке |
+| `code_refs(target*, kind, jar, subtypes, self, platform, access, side)` | кто использует — с методом и строкой: класс (`extends`, `new`, вызовы, сигнатуры, аннотации и цели миксинов), метод/поле (`Owner#name`, `*#name`; `subtypes` — вызовы через наследников; сам класс-владелец тоже в ответе; у класса — `self`, чтобы включить и его), строку (`"tfc:…"`, ключ конфига). У поля — «ЗАПИСЬ»/«чтение» (`access=write` — только кто перезаписывает); у каждого места — сторона кода. ~2–6 с на сборку |
 | `event_listeners(event*, subtypes, platform, kubejs)` | кто слушает событие NeoForge: `@SubscribeEvent` с этим событием, его предками и наследниками (priority, `@EventBusSubscriber`), `addListener(…)` с лямбдами и ссылками на методы; скрипты KubeJS — `NativeEvents.onEvent`/`Java.loadClass` с этим классом и события KubeJS (`PlayerEvents.loggedIn` …), которые KubeJS разносит из своего обработчика |
 | `mixins(target, method, class, mod, platform)` | `target` — миксины на класс по методам (`@Inject`/`@Redirect`/`@Overwrite`/MixinExtras, `at`, priority, конфиг), возможные конфликты и ⚠ «миксин на этот класс может уронить выделенный сервер»; `class` — один миксин; `mod` — миксины и конфиги мода; без параметров — обзор: цели без класса, необъявленные конфиги, классы под миксинами многих модов |
 | `decompile(class*, jar, method, grep)` | исходник: моды — Vineflower (кеш `.cache/mcp/decompile`, ~1–4 с первый раз), Minecraft — `-sources.jar`; `method` — только метод |
@@ -217,8 +219,8 @@ ByePregen, рецептов, `ClientRecipeBook`, JEI/EMI, моделей и зв
 
 | Инструмент | Что делает |
 | --- | --- |
-| `model_render(id*, kind, state, view, size)` | **картинка PNG**: блокстейт → вариант → модель с `parent` → объём под поворотом `display.gui` (или вид сверху/сбоку); предмет `item/generated` — слоями. В тексте — цепочка моделей, откуда каждая текстура, предупреждения |
-| `texture_get(path*, size, colors)` | **картинка** текстуры (увеличена без сглаживания) и палитра: частые цвета с долями, размер, кадры анимации, откуда взята |
+| `model_render(id*, kind, state, view, size, addon)` | **картинка PNG**: блокстейт → вариант → модель с `parent` → объём под поворотом `display.gui` (или вид сверху/сбоку); предмет `item/generated` — слоями. В тексте — цепочка моделей, откуда каждая текстура, предупреждения |
+| `texture_get(path*, size, colors, addon)` | **картинка** текстуры (увеличена без сглаживания) и палитра: частые цвета с долями, размер, кадры анимации, откуда взята |
 | `resources_check(addon \| mod, props, filter, limit, verbose)` | проверка мода из `mods/` или аддона из `tools/`: ошибки, предупреждения, «к сведению» |
 
 Рисунок (`scripts/mcp/render.mjs`) — перенос `tools/ee-extras-mod/art/iso.py` с дополнениями: `parent`,
@@ -264,13 +266,30 @@ node scripts/mcp/render.mjs tools/ee-extras-mod ee_extras:four_core_termination 
   есть, переменные `#…` заданы, координаты элементов в −16…32, углы — −45…45 с шагом 22,5, у модели блока
   есть `particle`; модели, на которые никто не ссылается, — «к сведению» (шаблоны для потомков);
 - у предмета есть модель; названия `block.<ns>.<id>` / `item.<ns>.<id>` («/» → «.») и ключи перевода из
-  строк кода есть в `en_us` (нет — ошибка) и `ru_ru` (нет — предупреждение); ключи, собираемые кодом
-  (`key + ".tooltip"`, `"ns.cable." + x`), — сколько таких есть; ключи чужих модов — в их `en_us`;
+  строк кода есть в `en_us` (нет — ошибка) и `ru_ru` (нет — у аддона ошибка: игроки видят ru_ru; у мода из
+  `mods/` — предупреждение). Ключ из кода — это:
+  - строка, которая уходит первым аргументом в `Component.translatable*`, `I18n.get/exists`,
+    `new TranslatableContents` — при любом префиксе (`miner_belt.on`): прямая `ldc` перед вызовом или несколько
+    `ldc` подряд (ветки тернарного оператора `on ? "a.on" : "a.off"` сходятся на одном вызове); у
+    `translatable(key, Object...)` ключ — до `anewarray`, строки-аргументы не путаются с ключом. Ключ не из
+    переводов мода — ищется в `en_us` чужого мода или Minecraft (нет нигде — у аддона предупреждение);
+  - любая строка с префиксом `block.<ns>.`, `item.<ns>.`, `<ns>.` — как раньше;
+  - строка с первой частью своих ключей (`miner_belt.` из `en_us` мода), не переданная в `translatable` прямо
+    (поле, параметр): есть в `en_us` — засчитывается, нет — «к сведению» (может быть не ключом).
+
+  Ключи, собираемые кодом (`key + ".tooltip"`, `"ns.cable." + x`), — сколько таких есть. В строке «проверено» —
+  все сверенные ключи (вкл. названия) и сколько из них из кода;
 - `PartialModel.of(…)` указывает на существующую модель; у блока есть таблица добычи (кроме жидкостей).
 
 Для аддона берутся `src/main/resources` и `build/classes/java/main` (без сборки классов — только ресурсы); старая
 сборка того же аддона в `mods/` файлы не подставляет. Проверено на EE Extras (ошибок нет; на копии с выкинутым
-вариантом блокстейта, ключом перевода и текстурой — находит все), EE 1.1.2 и TFC 4.2.9 (ок. 15 с).
+вариантом блокстейта, ключом перевода и текстурой — находит все), EE 1.1.2 и TFC 4.2.9 (ок. 15 с). Miner Tools
+1.0.0: 16 ключей (15 из кода, все через `translatable`, половина — тернарным оператором), ошибок нет; без
+`miner_belt.gui.any.off` в `ru_ru` — ошибка с местом в коде (`BeltScreen.updateLabels`).
+
+`model_render` и `texture_get` берут ресурсы аддонов из `tools/` основной копии. Правишь аддон в git worktree —
+передай `addon=<путь к папке мода>` (или имя в `tools/`): его ресурсы встают первым слоем вместо одноимённой
+папки из `tools/`, в ответе слой подписан этим путём.
 
 ### Карта мира
 
@@ -299,17 +318,29 @@ TFC 4.2.9 (включая то, как Java читает серые карты).
 `guide_put` откажет, если статью изменили после `guide_get` (условие Firestore на `updateTime`); для новой статьи
 `baseRevision` — `"new"`.
 
-### Контент сайта (только чтение)
+### Контент сайта: задачи, документы-планы, датапаки, схемы
 
 Каждый ответ пишет, сколько чтений Firestore он стоил. Списки читаются с маской полей и кешируются на минуты;
-документ целиком — отдельным запросом. uid, куки и токены в ответы не попадают.
+документ целиком — отдельным запросом. uid, куки и токены в ответы не попадают. Пишут только задачи и документы-планы
+(автор и `updatedBy` — `Claude`); датапаки, скрипты и схемы — только чтение.
 
 | Инструмент | Что делает |
 | --- | --- |
-| `tasks_list(query, status, assignee, group)` / `task_get(id*, doc_chars)` | задачи и группы; задача с чеклистом, вложениями (без содержимого) и документами |
+| `tasks_list(query, status, assignee, group)` / `task_get(id*, doc_chars)` | задачи и группы; задача с чеклистом, вложениями (без содержимого), документами, ссылкой на сайт и `revision` |
+| `groups_list(query)` | группы задач: id, название, значок, порядок — найти группу по имени («фиксы») |
+| `task_create(title*, description, group, priority, status, checklist, icon, assignee, place)` | **запись в общую базу**: задача как с кнопки «Новая задача» (рейтинг 1000, `completedAt` при `done`); `group` — id или название; `checklist` — строки, `{ text, done }` или ресурсы `{ itemId, qty, got }` (предмет проверяется по библиотеке) |
+| `task_update(id*, baseRevision*, …поля task_create, checklist_add)` | **запись**: меняются только переданные поля; `checklist` заменяет чеклист (id прежних пунктов сохраняются), `checklist_add` дописывает; смена статуса ставит/снимает `completedAt`; `"-"` очищает группу, значок, исполнителя |
+| `artifacts_list(query, task)` / `artifact_get(id*, offset, limit)` | документы-планы (`artifacts`): список по названию и задаче (`"-"` — свободные); документ по строкам и его `revision` |
+| `artifact_put(id, baseRevision, title, content, task)` | **запись**: без `id` — новый документ («План: <задача>», если название не дано), с `id` — правка переданных полей; `content` — текст целиком |
 | `datapacks_list(query, install)` / `datapack_get(id*, path)` | датапаки; файл zip — так, как его собирает сайт |
 | `kubejs_site_list(query, install)` / `kubejs_site_get(id*)` | скрипты KubeJS, добавленные на сайте (не скрипты сборки) |
 | `schematics_list(query)` / `schematic_get(id*)` | схемы Create: габариты, блоки, замены |
+
+`task_update` и `artifact_put` с `id` откажут, если задачу/документ изменили после `task_get`/`artifact_get`:
+`baseRevision` — их `revision` (`updateTime` Firestore; сверяется перед записью и условием самой записи). Ревизию
+задачи меняет и сайт — например, сравнение «Что важнее?» правит рейтинг; при отказе перечитай и повтори. Удаления
+нет: временные записи при проверке удаляй разовым скриптом через `scripts/firestore-rest.mjs`. Планы репозитория
+(`docs/plans/*.md`, их десяток) отдельного инструмента не имеют — это обычные файлы, читай их напрямую.
 
 ## Лимиты
 
@@ -324,18 +355,19 @@ TFC 4.2.9 (включая то, как Java читает серые карты).
 ```
 scripts/mcp/
   server.mjs        протокол MCP поверх stdio; ответы — в stdout, журнал — в stderr
-  tools.mjs         базовые инструменты (предметы, рецепты, теги, справочник, конфиги, гайды, jar) и общий список
+  tools.mjs         базовые инструменты (предметы, рецепты, теги, справочник, гайды, jar), общий список и INSTRUCTIONS
   fmt.mjs           общее: page (страницы), clip, named/nameOf (id с названием), words/norm, схемы str/num/paging
   data.mjs          данные public/: слияние модов и KubeJS, как на сайте; кеш по времени изменения файла
   jars.mjs          оглавление и чтение jar без распаковки (и вложенных, и Minecraft + NeoForge), javap
   bytecode.mjs      разбор .class: аннотации, номера строк, ссылки из инструкций, сигнатуры текстом
   code-index.mjs    индекс классов, цели миксинов, neoforge.mods.toml (свой мини-TOML), версии как в Maven/FML
-  firestore.mjs     REST к Firestore: api, listAll, cached; конфиги, гайды
+  firestore.mjs     REST к Firestore: api, listAll, cached; конфиги, правки конфигов, гайды
   site-datapacks.mjs  датапаки сайта как слой рецептов (recipes(site) в data.mjs)
   resources.mjs     слои ресурсов клиента (ресурспаки, KubeJS, аддоны, jar, Minecraft), модель с parent
   render.mjs        растеризатор моделей в PNG (model_render, texture_get) и генератор иконок из командной строки
   tools/<раздел>.mjs  инструменты раздела: code (классы, миксины, декомпиляция, зависимости), logs,
-                      pack, kubejs, books (+books-index), blocks (+blocks-data), site, map (+map-climate,
+                      config (config_get, config_propose, config_changes), pack, kubejs, books (+books-index), blocks (+blocks-data),
+                      site (задачи, группы, документы-планы с записью; датапаки, схемы, скрипты сайта), map (+map-climate,
                       map-png — PNG чтение и запись), resources (model_render, texture_get, resources_check)
 ```
 
@@ -355,8 +387,10 @@ scripts/mcp/
 4. Проверка — node-скрипт в scratchpad, который запускает `server.mjs`, шлёт `initialize`, `tools/list` и вызовы
    и сверяет ответы с прямым чтением файлов, jar или Firestore. Потом `npx oxlint scripts/mcp` и
    `npx prettier --write` на свои файлы.
-5. В Firestore из MCP пишет только `guide_put`. Новая запись — только с проверкой ревизии, как у него.
-6. Перечисли новый инструмент в этом файле и в разделе MCP в `CLAUDE.md`.
+5. В Firestore из MCP пишут только `guide_put`, `task_update`, `artifact_put` (с проверкой ревизии), `task_create`
+   и `config_propose` / `config_changes cancel=…` (своя коллекция `configChanges`, файлы применяет хост). Новая запись — с такой же защитой от затирания чужого.
+6. Перечисли новый инструмент в этом файле (с параметрами) и в разделе MCP в `CLAUDE.md`; если он меняет привычный
+   путь агента (как `log_analyze` для крашей) — и в `INSTRUCTIONS` в `tools.mjs`.
 
 ## Что дальше
 

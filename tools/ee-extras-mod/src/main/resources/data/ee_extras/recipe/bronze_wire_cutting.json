@@ -1,0 +1,15 @@
+{
+  "type": "create:cutting",
+  "ingredients": [
+    {
+      "tag": "c:sheets/bronze"
+    }
+  ],
+  "processing_time": 50,
+  "results": [
+    {
+      "count": 4,
+      "id": "ee_extras:bronze_wire"
+    }
+  ]
+}

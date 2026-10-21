@@ -386,6 +386,7 @@ npm run pack -- <папка инстанса или сервера | zip> [--wor
 | `recipeHints`      | подсказки по типам рецептов: `title`, `body`, `source`                                                                                                                           |
 | `packUpdates`      | записи об обновлениях сборки (создаёт деплой), `notes` — патчноут                                                                                                                |
 | `config`           | конфиги модов из `npm run serverconfig`: `scope`, `path`, `mod`, `values` (TOML), `importedBy`, `importedAt`                                                                     |
+| `configChanges`    | правки конфигов от агента (MCP `config_propose`): `note`, `author`, `status` (pending/applied/rejected/cancelled), `edits` [{`path`, `layer`, `key`, `from`, `to`}], `results`; сайту закрыта, применяет хост — `tfc admin changes` |
 | `settings`         | `world`: профиль и масштабы мира TFC Real World                                                                                                                                  |
 | `onboarding`       | id = uid анонимного входа (свой у каждого браузера): `seen` (ключ подсказок раздела → когда показаны), `off`, `updatedAt`; читать и писать — только свой                         |
 

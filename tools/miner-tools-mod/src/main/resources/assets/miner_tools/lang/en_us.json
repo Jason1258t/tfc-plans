@@ -1,0 +1,18 @@
+{
+  "item.miner_tools.miner_belt": "Miner's Belt",
+  "miner_belt.on": "Miner's Belt: on — filtered items are not picked up",
+  "miner_belt.off": "Miner's Belt: off — everything is picked up",
+  "miner_belt.tooltip.on": "On",
+  "miner_belt.tooltip.off": "Off",
+  "miner_belt.tooltip.empty": "Filter is empty — everything is picked up",
+  "miner_belt.tooltip.filter": "Does not pick up:",
+  "miner_belt.tooltip.filter_any": "Does not pick up (any rock or soil):",
+  "miner_belt.tooltip.use": "Right-click — choose what not to pick up",
+  "miner_belt.tooltip.toggle": "Shift+right-click — toggle. Works in the belt slot or in the inventory",
+  "miner_belt.gui.enabled.on": "Enabled: yes",
+  "miner_belt.gui.enabled.off": "Enabled: no",
+  "miner_belt.gui.enabled.hint": "A disabled belt blocks nothing",
+  "miner_belt.gui.any.on": "Any rock: yes",
+  "miner_belt.gui.any.off": "Any rock: no",
+  "miner_belt.gui.any.hint": "Yes — a sample means every rock and soil type: a granite pebble blocks all pebbles (mossy too), gravel blocks any gravel, dirt any dirt of that kind. No — only the exact item"
+}

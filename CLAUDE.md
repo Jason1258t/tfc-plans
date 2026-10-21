@@ -65,7 +65,9 @@ npm run pack:publish -- <папка данных> --dry-run   # что выло�
   через теги), `recipe_get` (статус, какое правило KubeJS удаляет/меняет — файл:строка, JSON). Рецепты учитывают и
   датапаки сайта «ставить» (источник «датапак сайта <имя>»; неставящиеся — отдельной строкой).
 - Теги: `tag_members`, `tags_of`. Справочник: `reference_get` (руды, плавка, металлы, топливо, еда, ботаника, блюда,
-  сковорода, мультиблоки, power). Настройки: `config_get` (мир > serverconfig > config > значение из кода; только чтение).
+  сковорода, мультиблоки, power). Настройки: `config_get` (мир > serverconfig > config > значение из кода).
+- Правка конфигов: `config_propose` (файлы не трогает; хост вносит `tfc admin changes pull`), `config_changes` —
+  итог и отмена. Конфиги сборки меняй так, а не советом «найди в файле».
 - Код модов: `jar_find` (путь, класс через точки, glob), `jar_read` (по строкам, grep), `jar_javap` (метод; jar можно не
   указывать). Вложенные jar-in-jar и Minecraft+NeoForge («minecraft») — тоже.
 - Отладка сборки: `class_find`, `class_info` (сигнатуры, строки исходника для стека, ⚠ ссылки на клиентские классы),
@@ -84,17 +86,30 @@ npm run pack:publish -- <папка данных> --dry-run   # что выло�
 - Не предметы: `lang_search` (переводы всех jar — блоки, существа, жидкости, эффекты), `block_get`,
   `loot_for` (что выпадает), `loot_sources` (откуда выпадает предмет).
 - Ресурсы без клиента: `model_render` (блок/предмет/модель **картинкой**: блокстейт → `parent` → повороты; из jar,
-  KubeJS, ресурспаков и `tools/<мод>/src/main/resources`), `texture_get` (текстура картинкой + палитра),
-  `resources_check addon=<папка tools>|mod=<id>` (блокстейты ↔ свойства блока из байткода, модели, текстуры,
-  переводы из кода, PartialModel, добыча). **Правил ресурсы аддона — прогони `resources_check` и посмотри `model_render`.**
+  KubeJS, ресурспаков и `tools/<мод>/src/main/resources`; аддон из git worktree — `addon=<путь к папке мода>`),
+  `texture_get` (текстура картинкой + палитра, тоже `addon=`),
+  `resources_check addon=<папка tools или путь>|mod=<id>` (блокстейты ↔ свойства блока из байткода, модели, текстуры,
+  переводы из кода — всё, что уходит в `Component.translatable`, вкл. тернарный оператор; у аддона нет ключа в
+  ru_ru — ошибка; PartialModel, добыча; классы — `build/classes`, без `./gradlew compileJava` переводы из кода не
+  проверяются). **Правил ресурсы аддона — прогони `resources_check` и посмотри `model_render`.**
 - Карта: `map_point` (блок ↔ широта/долгота, города, климат TFC), `map_rocks` (породы и жилы), `map_find` (место → блок),
   `map_regions` (блоки → файлы `r.X.Z.mca` и команды PowerShell).
-- Контент сайта, только чтение: `tasks_list`/`task_get`, `datapacks_list`/`datapack_get`, `kubejs_site_list`/`kubejs_site_get`,
-  `schematics_list`/`schematic_get` — тратят чтения Firestore (пишут сколько), не дёргай в цикле.
+- Контент сайта: `tasks_list`/`task_get`, `groups_list`, `artifacts_list`/`artifact_get` (документы-планы),
+  `datapacks_list`/`datapack_get`, `kubejs_site_list`/`kubejs_site_get`, `schematics_list`/`schematic_get` — тратят
+  чтения Firestore (пишут сколько), не дёргай в цикле. **Запись в общую базу** (подпись `Claude`): `task_create`,
+  `task_update` и `artifact_put` (план к задаче) — правка с `baseRevision` из `task_get`/`artifact_get`, отказ, если
+  изменили после чтения. Задачу или план на сайте заводи ими, а не разовым скриптом.
 - Инструменты раздела — `scripts/mcp/tools/<раздел>.mjs` (`export const TOOLS`), общие помощники — `fmt.mjs`.
 - grep и `unzip` — когда инструмента нет (сырьё, которого нет в данных сайта) или нужно проверить сам MCP.
   Данные MCP — это то, что собрали `npm run mods` / `kubejs`: устарели сборщики — устарел и ответ.
 - После правки `scripts/mcp/` сервер нужно перезапустить (`/mcp` в Claude Code); данные `public/` он перечитывает сам.
+- **Чего-то не хватает в MCP — заводи отдельную сессию на инструмент.** Если при разработке или починке аддона,
+  разборе краша, поиске механики и т. п. нужного инструмента нет, он отвечает неполно/неверно или приходится
+  обходиться grep, `unzip`, разовым скриптом, — предложи новую сессию (свой worktree, ветка `feat/mcp-<кратко>`),
+  которая сделает инструмент по «Как добавить инструмент» в [docs/mcp.md](docs/mcp.md) и задокументирует его там,
+  здесь и при нужде в `INSTRUCTIONS`. В бриф — что искал, каким обходом нашёл и как должен выглядеть ответ.
+  Текущую задачу не останавливай: доделай обходом, в отчёте назови пробел и ссылку на сессию. Крупное, не на один
+  инструмент, — в [docs/plans/mcp-next.md](docs/plans/mcp-next.md).
 
 ## Проверка в браузере
 
@@ -146,7 +161,7 @@ npm run pack:publish -- <папка данных> --dry-run   # что выло�
 ## Firestore
 
 `tasks`, `groups`, `artifacts`, `files` (+`chunks`, пакет `firestore-files`), `datapacks`, `kubejsScripts`, `schematics`, `recipeHints`, `guides` (+`revisions`),
-`packUpdates`, `settings/world`, `config`, `onboarding/{uid}` (какие подсказки знакомства показаны). Поля — в README, «Модель данных».
+`packUpdates`, `settings/world`, `config`, `configChanges` (правки конфигов от агента; сайту закрыта), `onboarding/{uid}` (какие подсказки знакомства показаны). Поля — в README, «Модель данных».
 
 - Авторизации нет: анонимный вход + ник в куке. Правила проверяют форму данных и `nick(...)`, а не владельца.
 - `config` и создание `packUpdates` закрыты для сайта — пишут только скрипты.

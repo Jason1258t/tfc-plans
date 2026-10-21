@@ -2,11 +2,13 @@ import {
   ArrowRight,
   BookmarkPlus,
   Check,
+  ChevronDown,
   Download,
   FileBox,
   Layers,
   Plus,
   RotateCcw,
+  Ruler,
   Search,
   Sparkles,
   Star,
@@ -58,6 +60,9 @@ const DEFAULT_RULES: Rule[] = [
 ];
 
 const AGENT_KEY = 'tfc-tm:schematic-agent';
+/** Какая панель инструментов открыта: умная замена, избранное или ни одной */
+const PANEL_KEY = 'tfc-tm:schematic-panel';
+type ToolPanel = 'smart' | 'favs' | null;
 
 function loadPref<T>(key: string, fallback: T): T {
   try {
@@ -112,6 +117,16 @@ const outName = (name: string) => name.replace(/(\.nbt)?$/i, '_tfc.nbt');
 const replaceSig = (s: Schematic, replace: Map<string, string>) =>
   JSON.stringify([[...replace].filter(([from]) => s.counts.has(from)).sort(), s.shape, s.rev]);
 
+/** Коротко о форме схемы — для свёрнутой строки файла */
+const shapeSummary = (sh: Schematic['shape']) =>
+  [
+    sh.crop && `обрезка ${sh.sides}/${sh.bottom}/${sh.top}`,
+    sh.platform && `площадка ${sh.platformHeight}${sh.platformHollow ? ', пустая' : ''}`,
+    sh.clearAir && 'очистка',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
 const clampPad = (v: string) => Math.min(64, Math.max(0, Math.floor(Number(v)) || 0));
 
 /** Мод предмета — у одноимённых предметов (TFC и ванильный «Медный люк») различается только он */
@@ -142,6 +157,20 @@ export function SchematicsPage() {
   const [rules, setRules] = useState<Rule[]>(loadRules);
   const [overwrite, setOverwrite] = useState(false);
   const [result, setResult] = useState<SmartResult | null>(null);
+  const [panel, setPanel] = useState<ToolPanel>(() => loadPref<ToolPanel>(PANEL_KEY, null));
+  const togglePanel = (p: Exclude<ToolPanel, null>) => {
+    const next = panel === p ? null : p;
+    setPanel(next);
+    savePref(PANEL_KEY, next);
+  };
+  /** Схемы, у которых развёрнуты настройки формы */
+  const [shapeOpen, setShapeOpen] = useState<Set<string>>(new Set());
+  const toggleShape = (key: string) =>
+    setShapeOpen((set) => {
+      const next = new Set(set);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
   const [agentPrefs, setAgentPrefs] = useState(() =>
     loadPref(AGENT_KEY, { enabled: true, hint: 'ванильные материалы → аналоги TerraFirmaCraft' }),
   );
@@ -407,6 +436,17 @@ export function SchematicsPage() {
                     </span>
                   </span>
                   <button
+                    className={cx('btn sm', shapeOpen.has(s.key) && 'active')}
+                    onClick={() => toggleShape(s.key)}
+                    aria-expanded={shapeOpen.has(s.key)}
+                    title="Обрезка краёв, отступы, площадка под схемой, очистка пространства"
+                  >
+                    <Ruler size={14} />
+                    Форма
+                    {shapeSummary(s.shape) && <span className="faint">: {shapeSummary(s.shape)}</span>}
+                    <ChevronDown size={13} className={cx('chev', shapeOpen.has(s.key) && 'open')} />
+                  </button>
+                  <button
                     className="btn sm"
                     onClick={() => setLayersFor(s.key)}
                     title="Вид сверху по слоям: посмотреть блоки, убрать (ПКМ) или заменить (ЛКМ) отдельные"
@@ -456,434 +496,481 @@ export function SchematicsPage() {
                   >
                     <X size={15} />
                   </button>
-                  <div className="schem-shape">
-                    <label
-                      className="toggle sm-toggle"
-                      title="Убрать пустое место по краям: габарит — по крайним блокам, воздух не считается"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={s.shape.crop}
-                        onChange={(e) => setShape(s.key, { crop: e.target.checked })}
-                      />
-                      Обрезать края
-                    </label>
-                    {(
-                      [
-                        ['sides', 'по бокам'],
-                        ['bottom', 'снизу'],
-                        ['top', 'сверху'],
-                      ] as const
-                    ).map(([k, label]) => (
-                      <label key={k} className="schem-pad small">
-                        <span className="faint">Отступ {label}</span>
+                  {shapeOpen.has(s.key) && (
+                    <div className="schem-shape">
+                      <label
+                        className="toggle sm-toggle"
+                        title="Убрать пустое место по краям: габарит — по крайним блокам, воздух не считается"
+                      >
                         <input
-                          type="number"
-                          min={0}
-                          max={64}
-                          value={s.shape[k]}
-                          disabled={!s.shape.crop}
-                          onChange={(e) => setShape(s.key, { [k]: clampPad(e.target.value) })}
+                          type="checkbox"
+                          checked={s.shape.crop}
+                          onChange={(e) => setShape(s.key, { crop: e.target.checked })}
                         />
+                        Обрезать края
                       </label>
-                    ))}
-                    <label className="toggle sm-toggle" title="Слои блока под всей схемой, ниже нижнего отступа">
-                      <input
-                        type="checkbox"
-                        checked={s.shape.platform}
-                        onChange={(e) => setShape(s.key, { platform: e.target.checked })}
-                      />
-                      Площадка
-                    </label>
-                    {s.shape.platform && (
-                      <>
-                        <label className="schem-pad small">
-                          <span className="faint">Высота</span>
+                      {(
+                        [
+                          ['sides', 'по бокам'],
+                          ['bottom', 'снизу'],
+                          ['top', 'сверху'],
+                        ] as const
+                      ).map(([k, label]) => (
+                        <label key={k} className="schem-pad small">
+                          <span className="faint">Отступ {label}</span>
                           <input
                             type="number"
-                            min={1}
-                            max={32}
-                            value={s.shape.platformHeight}
-                            onChange={(e) =>
-                              setShape(s.key, {
-                                platformHeight: Math.min(32, Math.max(1, Math.floor(Number(e.target.value)) || 1)),
-                              })
-                            }
+                            min={0}
+                            max={64}
+                            value={s.shape[k]}
+                            disabled={!s.shape.crop}
+                            onChange={(e) => setShape(s.key, { [k]: clampPad(e.target.value) })}
                           />
                         </label>
-                        {pickingPlatform === s.key ? (
-                          <span className="schem-platform-pick">
+                      ))}
+                      <label className="toggle sm-toggle" title="Слои блока под всей схемой, ниже нижнего отступа">
+                        <input
+                          type="checkbox"
+                          checked={s.shape.platform}
+                          onChange={(e) => setShape(s.key, { platform: e.target.checked })}
+                        />
+                        Площадка
+                      </label>
+                      {s.shape.platform && (
+                        <>
+                          <label className="schem-pad small">
+                            <span className="faint">Высота</span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={32}
+                              value={s.shape.platformHeight}
+                              onChange={(e) =>
+                                setShape(s.key, {
+                                  platformHeight: Math.min(32, Math.max(1, Math.floor(Number(e.target.value)) || 1)),
+                                })
+                              }
+                            />
+                          </label>
+                          {pickingPlatform === s.key ? (
+                            <span className="schem-platform-pick">
+                              <ItemPicker
+                                small
+                                autoFocus
+                                placeholder="Материал площадки…"
+                                onPick={(it) => {
+                                  setShape(s.key, { platformBlock: it.i });
+                                  setPickingPlatform(null);
+                                }}
+                              />
+                              <button
+                                className="btn ghost sm icon"
+                                onClick={() => setPickingPlatform(null)}
+                                aria-label="Отмена"
+                              >
+                                <X size={15} />
+                              </button>
+                            </span>
+                          ) : (
+                            <button
+                              className="btn sm"
+                              onClick={() => setPickingPlatform(s.key)}
+                              title={s.shape.platformBlock}
+                            >
+                              <ItemIcon id={s.shape.platformBlock} size={18} tip={false} />
+                              {itemName(items?.byId.get(s.shape.platformBlock), s.shape.platformBlock)}
+                            </button>
+                          )}
+                          <label
+                            className="toggle sm-toggle"
+                            title="При высоте больше 1: сплошной только верхний слой, ниже — стенки по периметру, пустота внутри и без дна"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={s.shape.platformHollow}
+                              onChange={(e) => setShape(s.key, { platformHollow: e.target.checked })}
+                            />
+                            Пустая
+                          </label>
+                        </>
+                      )}
+                      <label
+                        className="toggle sm-toggle"
+                        title="Записать воздух во все свободные клетки итогового объёма (и в отступы), чтобы при вставке схема расчищала место, а не оставляла то, что там было"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={s.shape.clearAir}
+                          onChange={(e) => setShape(s.key, { clearAir: e.target.checked })}
+                        />
+                        Очистить пространство
+                      </label>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="schem-work">
+            <div className="schem-toolbar">
+              <span className="tool-split">
+                <button
+                  className={cx('btn sm', panel === 'smart' && 'active')}
+                  onClick={() => togglePanel('smart')}
+                  aria-expanded={panel === 'smart'}
+                  title="Правила замены и агент Gemini"
+                >
+                  <Wand2 size={14} className="ai-ico" />
+                  Умная замена
+                  <ChevronDown size={13} className={cx('chev', panel === 'smart' && 'open')} />
+                </button>
+                <button
+                  className={cx('btn sm primary', useAgent && 'agent-run')}
+                  onClick={runSmart}
+                  disabled={!items || !!progress || (!useAgent && !rules.some((r) => r.from.trim()))}
+                  title={
+                    useAgent
+                      ? 'Подобрать замены агентом Gemini (настройки — «Умная замена»)'
+                      : 'Применить правила замены (настройки — «Умная замена»)'
+                  }
+                >
+                  {useAgent ? <Sparkles size={14} /> : <Wand2 size={14} />}
+                  {progress ? `Агент думает… ${progress[0]}/${progress[1]}` : 'Применить'}
+                </button>
+              </span>
+              {result && panel !== 'smart' && (
+                <button className="btn ghost sm" onClick={() => togglePanel('smart')} title="Показать подробности">
+                  заменено {result.applied.size}
+                  {result.failed.length > 0 && <span className="bad-count">· не удалось {result.failed.length}</span>}
+                </button>
+              )}
+              {favorites && (
+                <span className="tool-split">
+                  <button
+                    className={cx('btn sm', panel === 'favs' && 'active')}
+                    onClick={() => togglePanel('favs')}
+                    aria-expanded={panel === 'favs'}
+                    title="Избранные замены — общие для всех схем"
+                  >
+                    <Star size={14} className="fav-star on" />
+                    Избранное
+                    <span className="faint">{favorites.length}</span>
+                    <ChevronDown size={13} className={cx('chev', panel === 'favs' && 'open')} />
+                  </button>
+                  <button
+                    className="btn sm"
+                    disabled={favPlan.length === 0}
+                    onClick={() => setApplyFavsOpen(true)}
+                    title="Подставить избранные замены в блоки загруженных схем, где замены ещё нет"
+                  >
+                    Подставить{favPlan.length > 0 && ` (${favPlan.length})`}
+                  </button>
+                </span>
+              )}
+              <label className="search">
+                <Search size={15} className="faint" />
+                <input placeholder="Фильтр блоков" value={filter} onChange={(e) => setFilter(e.target.value)} />
+              </label>
+              <span className="faint small nowrap">
+                Заменено {replacedTypes} из {blocks.length}
+              </span>
+              {replace.size > 0 && (
+                <button
+                  className="btn ghost sm"
+                  onClick={() => (setReplace(new Map()), setReasons(new Map()), setAlts(new Map()))}
+                >
+                  <RotateCcw size={14} />
+                  Сбросить все
+                </button>
+              )}
+            </div>
+
+            {panel === 'smart' && (
+              <section className="schem-rules">
+                <div className="row">
+                  <p className="faint small grow" style={{ margin: 0 }}>
+                    {useAgent
+                      ? 'Нечёткий поиск подбирает похожие предметы сборки (с учётом правил), агент Gemini выбирает подходящий по форме и материалу.'
+                      : 'Правила по очереди заменяют подстроку в id блока. Замена принимается, только если такой предмет есть в сборке.'}
+                  </p>
+                  {geminiEnabled && (
+                    <label className="toggle sm-toggle agent-toggle">
+                      <input
+                        type="checkbox"
+                        checked={agentPrefs.enabled}
+                        onChange={(e) => updateAgent({ enabled: e.target.checked })}
+                      />
+                      <Sparkles size={13} />
+                      Использовать агента
+                    </label>
+                  )}
+                </div>
+                {useAgent && (
+                  <input
+                    className="input agent-hint"
+                    value={agentPrefs.hint}
+                    placeholder="Пожелания агенту: «дуб → эвкалипт, камень → гранит, стекло оставить»"
+                    aria-label="Пожелания агенту"
+                    onChange={(e) => updateAgent({ hint: e.target.value })}
+                  />
+                )}
+                <ul className="rules">
+                  {rules.map((r, i) => (
+                    <li key={i}>
+                      <input
+                        className="input"
+                        value={r.from}
+                        placeholder={useAgent ? 'подсказка: что (oak)' : 'что (oak)'}
+                        aria-label="Что заменить"
+                        onChange={(e) =>
+                          updateRules(rules.map((x, j) => (j === i ? { ...x, from: e.target.value } : x)))
+                        }
+                      />
+                      <ArrowRight size={14} className="faint" />
+                      <input
+                        className="input"
+                        value={r.to}
+                        placeholder="на что (spruce)"
+                        aria-label="На что заменить"
+                        onChange={(e) => updateRules(rules.map((x, j) => (j === i ? { ...x, to: e.target.value } : x)))}
+                      />
+                      <button
+                        className="btn ghost sm icon"
+                        onClick={() => updateRules(rules.filter((_, j) => j !== i))}
+                        aria-label="Удалить правило"
+                      >
+                        <X size={14} />
+                      </button>
+                    </li>
+                  ))}
+                  <li>
+                    <button className="btn ghost sm" onClick={() => updateRules([...rules, { from: '', to: '' }])}>
+                      <Plus size={14} />
+                      Правило
+                    </button>
+                  </li>
+                </ul>
+                <label className="toggle sm-toggle" style={{ alignSelf: 'flex-start' }}>
+                  <input type="checkbox" checked={overwrite} onChange={(e) => setOverwrite(e.target.checked)} />
+                  Перезаписывать ручные замены
+                </label>
+                {result && (
+                  <div className="rule-result">
+                    <div>
+                      Заменено типов блоков: <b>{result.applied.size}</b>
+                      {result.kind === 'agent' && (
+                        <span className="faint"> · запросов к агенту: {result.requests}</span>
+                      )}
+                      {result.kind === 'agent' && result.kept.length > 0 && (
+                        <>
+                          {' '}
+                          · оставлено как есть: <b>{result.kept.length}</b>
+                        </>
+                      )}
+                      {result.failed.length > 0 && (
+                        <>
+                          {' '}
+                          · не удалось: <b className="bad-count">{result.failed.length}</b>
+                        </>
+                      )}
+                    </div>
+                    {result.failed.length > 0 && (
+                      <details open={result.kind === 'agent'}>
+                        <summary>
+                          {result.kind === 'rules'
+                            ? 'Для этих блоков не нашлось предмета в сборке'
+                            : 'Не удалось подобрать замену'}
+                        </summary>
+                        <ul className="rule-failed">
+                          {result.failed.map((f) => (
+                            <li key={f.source}>
+                              <code>{f.source}</code>
+                              {f.target && (
+                                <>
+                                  {' '}
+                                  → <code className="bad">{f.target}</code>
+                                </>
+                              )}
+                              {'reason' in f && <span className="faint"> — {f.reason}</span>}
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+                    {result.kind === 'agent' && result.kept.length > 0 && (
+                      <details className="kept">
+                        <summary>Оставлены как есть</summary>
+                        <ul className="rule-failed">
+                          {result.kept.map((f) => (
+                            <li key={f.source}>
+                              <code>{f.source}</code>
+                              <span className="faint"> — {f.reason}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {panel === 'favs' && favorites && <FavoritesPanel favorites={favorites} items={items} />}
+
+            <ul className="schem-blocks">
+              {shown.map(({ id, count }) => {
+                const known = items?.byId.get(id);
+                const to = replace.get(id);
+                return (
+                  <li key={id} className={cx('schem-row', to && 'replaced', to === REMOVE && 'removed')}>
+                    <div className="schem-src">
+                      <ItemIcon id={id} size={28} />
+                      <span className="grow schem-names">
+                        <span className="schem-name">{known ? itemName(known) : id.split(':').pop()}</span>
+                        <code className="schem-id">{id}</code>
+                      </span>
+                      {!known && <span className="tag">нет в сборке</span>}
+                      <span className="schem-count">×{count}</span>
+                    </div>
+                    <ArrowRight size={16} className="schem-arrow" />
+                    <div className="schem-dst">
+                      {picking === id ? (
+                        <div className="row grow">
+                          <div className="grow">
                             <ItemPicker
                               small
                               autoFocus
-                              placeholder="Материал площадки…"
+                              placeholder="На что заменить…"
                               onPick={(it) => {
-                                setShape(s.key, { platformBlock: it.i });
-                                setPickingPlatform(null);
+                                setTarget(id, it.i);
+                                setPicking(null);
                               }}
                             />
-                            <button
-                              className="btn ghost sm icon"
-                              onClick={() => setPickingPlatform(null)}
-                              aria-label="Отмена"
-                            >
-                              <X size={15} />
-                            </button>
-                          </span>
-                        ) : (
-                          <button
-                            className="btn sm"
-                            onClick={() => setPickingPlatform(s.key)}
-                            title={s.shape.platformBlock}
-                          >
-                            <ItemIcon id={s.shape.platformBlock} size={18} tip={false} />
-                            {itemName(items?.byId.get(s.shape.platformBlock), s.shape.platformBlock)}
-                          </button>
-                        )}
-                        <label
-                          className="toggle sm-toggle"
-                          title="При высоте больше 1: сплошной только верхний слой, ниже — стенки по периметру, пустота внутри и без дна"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={s.shape.platformHollow}
-                            onChange={(e) => setShape(s.key, { platformHollow: e.target.checked })}
-                          />
-                          Пустая
-                        </label>
-                      </>
-                    )}
-                    <label
-                      className="toggle sm-toggle"
-                      title="Записать воздух во все свободные клетки итогового объёма (и в отступы), чтобы при вставке схема расчищала место, а не оставляла то, что там было"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={s.shape.clearAir}
-                        onChange={(e) => setShape(s.key, { clearAir: e.target.checked })}
-                      />
-                      Очистить пространство
-                    </label>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-
-          <section className="schem-rules">
-            <div className="row">
-              <Wand2 size={16} className="ai-ico" />
-              <h3 className="grow">Умная замена</h3>
-              {geminiEnabled && (
-                <label className="toggle sm-toggle agent-toggle">
-                  <input
-                    type="checkbox"
-                    checked={agentPrefs.enabled}
-                    onChange={(e) => updateAgent({ enabled: e.target.checked })}
-                  />
-                  <Sparkles size={13} />
-                  Использовать агента
-                </label>
-              )}
-            </div>
-            <p className="faint small" style={{ margin: 0 }}>
-              {useAgent
-                ? 'Для каждого блока нечёткий поиск подбирает похожие предметы сборки (с учётом правил ниже), а агент Gemini выбирает из них подходящий по форме и материалу.'
-                : 'Правила применяются по очереди к id блока как замена подстроки. Замена принимается, только если получившийся предмет есть в сборке.'}
-            </p>
-            {useAgent && (
-              <textarea
-                className="input agent-hint"
-                rows={2}
-                value={agentPrefs.hint}
-                placeholder="Пожелания агенту: «дуб → эвкалипт, камень → гранит, стекло оставить»"
-                aria-label="Пожелания агенту"
-                onChange={(e) => updateAgent({ hint: e.target.value })}
-              />
-            )}
-            <ul className="rules">
-              {rules.map((r, i) => (
-                <li key={i} className="row">
-                  <input
-                    className="input"
-                    value={r.from}
-                    placeholder={useAgent ? 'подсказка: что (oak)' : 'что (oak)'}
-                    aria-label="Что заменить"
-                    onChange={(e) => updateRules(rules.map((x, j) => (j === i ? { ...x, from: e.target.value } : x)))}
-                  />
-                  <ArrowRight size={16} className="faint" />
-                  <input
-                    className="input"
-                    value={r.to}
-                    placeholder="на что (spruce)"
-                    aria-label="На что заменить"
-                    onChange={(e) => updateRules(rules.map((x, j) => (j === i ? { ...x, to: e.target.value } : x)))}
-                  />
-                  <button
-                    className="btn ghost icon"
-                    onClick={() => updateRules(rules.filter((_, j) => j !== i))}
-                    aria-label="Удалить правило"
-                  >
-                    <X size={15} />
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <div className="row wrap">
-              <button className="btn sm" onClick={() => updateRules([...rules, { from: '', to: '' }])}>
-                <Plus size={14} />
-                Правило
-              </button>
-              <label className="toggle sm-toggle">
-                <input type="checkbox" checked={overwrite} onChange={(e) => setOverwrite(e.target.checked)} />
-                Перезаписывать ручные замены
-              </label>
-              <span className="grow" />
-              <button
-                className={cx('btn primary', useAgent && 'agent-run')}
-                onClick={runSmart}
-                disabled={!items || !!progress || (!useAgent && !rules.some((r) => r.from.trim()))}
-              >
-                {useAgent ? <Sparkles size={15} /> : <Wand2 size={15} />}
-                {progress ? `Агент думает… ${progress[0]}/${progress[1]}` : 'Применить'}
-              </button>
-            </div>
-            {result && (
-              <div className="rule-result">
-                <div>
-                  Заменено типов блоков: <b>{result.applied.size}</b>
-                  {result.kind === 'agent' && <span className="faint"> · запросов к агенту: {result.requests}</span>}
-                  {result.kind === 'agent' && result.kept.length > 0 && (
-                    <>
-                      {' '}
-                      · оставлено как есть: <b>{result.kept.length}</b>
-                    </>
-                  )}
-                  {result.failed.length > 0 && (
-                    <>
-                      {' '}
-                      · не удалось: <b className="bad-count">{result.failed.length}</b>
-                    </>
-                  )}
-                </div>
-                {result.failed.length > 0 && (
-                  <details open={result.kind === 'agent'}>
-                    <summary>
-                      {result.kind === 'rules'
-                        ? 'Для этих блоков не нашлось предмета в сборке'
-                        : 'Не удалось подобрать замену'}
-                    </summary>
-                    <ul className="rule-failed">
-                      {result.failed.map((f) => (
-                        <li key={f.source}>
-                          <code>{f.source}</code>
-                          {f.target && (
-                            <>
-                              {' '}
-                              → <code className="bad">{f.target}</code>
-                            </>
-                          )}
-                          {'reason' in f && <span className="faint"> — {f.reason}</span>}
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                )}
-                {result.kind === 'agent' && result.kept.length > 0 && (
-                  <details className="kept">
-                    <summary>Оставлены как есть</summary>
-                    <ul className="rule-failed">
-                      {result.kept.map((f) => (
-                        <li key={f.source}>
-                          <code>{f.source}</code>
-                          <span className="faint"> — {f.reason}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                )}
-              </div>
-            )}
-          </section>
-
-          {favorites && (
-            <FavoritesPanel
-              favorites={favorites}
-              items={items}
-              applicable={favPlan.length}
-              onApply={() => setApplyFavsOpen(true)}
-            />
-          )}
-
-          <div className="schem-toolbar">
-            <label className="search">
-              <Search size={15} className="faint" />
-              <input placeholder="Фильтр блоков" value={filter} onChange={(e) => setFilter(e.target.value)} />
-            </label>
-            <span className="faint small">
-              Заменено {replacedTypes} из {blocks.length}
-            </span>
-            {replace.size > 0 && (
-              <button
-                className="btn ghost sm"
-                onClick={() => (setReplace(new Map()), setReasons(new Map()), setAlts(new Map()))}
-              >
-                <RotateCcw size={14} />
-                Сбросить все
-              </button>
-            )}
-          </div>
-
-          <ul className="schem-blocks">
-            {shown.map(({ id, count }) => {
-              const known = items?.byId.get(id);
-              const to = replace.get(id);
-              return (
-                <li key={id} className={cx('schem-row', to && 'replaced', to === REMOVE && 'removed')}>
-                  <div className="schem-src">
-                    <ItemIcon id={id} size={28} />
-                    <span className="grow schem-names">
-                      <span className="schem-name">{known ? itemName(known) : id.split(':').pop()}</span>
-                      <code className="schem-id">{id}</code>
-                    </span>
-                    {!known && <span className="tag">нет в сборке</span>}
-                    <span className="schem-count">×{count}</span>
-                  </div>
-                  <ArrowRight size={16} className="schem-arrow" />
-                  <div className="schem-dst">
-                    {picking === id ? (
-                      <div className="row grow">
-                        <div className="grow">
-                          <ItemPicker
-                            small
-                            autoFocus
-                            placeholder="На что заменить…"
-                            onPick={(it) => {
-                              setTarget(id, it.i);
-                              setPicking(null);
-                            }}
-                          />
-                        </div>
-                        <button className="btn ghost sm icon" onClick={() => setPicking(null)} aria-label="Отмена">
-                          <X size={15} />
-                        </button>
-                      </div>
-                    ) : to === REMOVE ? (
-                      <>
-                        <span className="schem-target schem-removed">
-                          <Trash2 size={18} className="faint" />
-                          <span className="grow schem-names">
-                            <span className="schem-name">Удалён из схемы</span>
-                            <span className="faint small">принтер не будет ставить этот блок</span>
-                          </span>
-                        </span>
-                        <button
-                          className="btn ghost sm icon"
-                          onClick={() => setTarget(id, null)}
-                          aria-label="Вернуть блок"
-                          title="Вернуть блок"
-                        >
-                          <X size={15} />
-                        </button>
-                      </>
-                    ) : to ? (
-                      <>
-                        <button
-                          className="schem-target"
-                          onClick={() => setPicking(id)}
-                          title={reasons.get(id) ? `Агент: ${reasons.get(id)}` : 'Выбрать другой'}
-                        >
-                          <ItemIcon id={to} size={28} />
-                          <span className="grow schem-names">
-                            <span className="schem-name">{itemName(items?.byId.get(to), to)}</span>
-                            <code className="schem-id">{to}</code>
-                          </span>
-                          <span className={cx('tag', 'mod-tag', modOf(to) !== modOf(id) && 'mod-changed')}>
-                            {modOf(to)}
-                          </span>
-                          {reasons.get(id) && <Sparkles size={13} className="ai-ico" aria-label="Выбрано агентом" />}
-                        </button>
-                        {(() => {
-                          const fav = favorites?.find((f) => f.from === id && f.to === to);
-                          return (
-                            <button
-                              className="btn ghost sm icon"
-                              onClick={() =>
-                                fav ? replaceFavoritesStore.remove(fav.id) : setSmartFor({ from: id, to })
-                              }
-                              aria-label={fav ? 'Убрать из избранного' : 'В избранное'}
-                              title={fav ? 'В избранном — нажмите, чтобы убрать' : 'В избранное (с умным дополнением)'}
-                            >
-                              <Star size={15} className={cx('fav-star', fav && 'on')} />
-                            </button>
-                          );
-                        })()}
-                        <button
-                          className="btn ghost sm icon"
-                          onClick={() => setTarget(id, null)}
-                          aria-label="Отменить замену"
-                          title="Отменить замену"
-                        >
-                          <X size={15} />
-                        </button>
-                        {(alts.get(id)?.length ?? 0) > 0 && (
-                          <div className="schem-alts">
-                            <span className="faint small">ещё:</span>
-                            {alts.get(id)!.map((alt) => (
-                              <button
-                                key={alt}
-                                className="alt-chip"
-                                onClick={() => swapAlt(id, alt)}
-                                title={`Заменить на ${alt}`}
-                              >
-                                <ItemIcon id={alt} size={16} tip={false} />
-                                <span>{itemName(items?.byId.get(alt), alt)}</span>
-                              </button>
-                            ))}
                           </div>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        {(() => {
-                          const opts = [
-                            ...new Set((favorites ?? []).filter((f) => f.from === id).map((f) => f.to)),
-                          ].filter((t) => items?.byId.has(t));
-                          return opts.length > 0 ? (
-                            <span className="schem-fav-chips">
-                              {opts.map((t) => (
+                          <button className="btn ghost sm icon" onClick={() => setPicking(null)} aria-label="Отмена">
+                            <X size={15} />
+                          </button>
+                        </div>
+                      ) : to === REMOVE ? (
+                        <>
+                          <span className="schem-target schem-removed">
+                            <Trash2 size={18} className="faint" />
+                            <span className="grow schem-names">
+                              <span className="schem-name">Удалён из схемы</span>
+                              <span className="faint small">принтер не будет ставить этот блок</span>
+                            </span>
+                          </span>
+                          <button
+                            className="btn ghost sm icon"
+                            onClick={() => setTarget(id, null)}
+                            aria-label="Вернуть блок"
+                            title="Вернуть блок"
+                          >
+                            <X size={15} />
+                          </button>
+                        </>
+                      ) : to ? (
+                        <>
+                          <button
+                            className="schem-target"
+                            onClick={() => setPicking(id)}
+                            title={reasons.get(id) ? `Агент: ${reasons.get(id)}` : 'Выбрать другой'}
+                          >
+                            <ItemIcon id={to} size={28} />
+                            <span className="grow schem-names">
+                              <span className="schem-name">{itemName(items?.byId.get(to), to)}</span>
+                              <code className="schem-id">{to}</code>
+                            </span>
+                            <span className={cx('tag', 'mod-tag', modOf(to) !== modOf(id) && 'mod-changed')}>
+                              {modOf(to)}
+                            </span>
+                            {reasons.get(id) && <Sparkles size={13} className="ai-ico" aria-label="Выбрано агентом" />}
+                          </button>
+                          {(() => {
+                            const fav = favorites?.find((f) => f.from === id && f.to === to);
+                            return (
+                              <button
+                                className="btn ghost sm icon"
+                                onClick={() =>
+                                  fav ? replaceFavoritesStore.remove(fav.id) : setSmartFor({ from: id, to })
+                                }
+                                aria-label={fav ? 'Убрать из избранного' : 'В избранное'}
+                                title={
+                                  fav ? 'В избранном — нажмите, чтобы убрать' : 'В избранное (с умным дополнением)'
+                                }
+                              >
+                                <Star size={15} className={cx('fav-star', fav && 'on')} />
+                              </button>
+                            );
+                          })()}
+                          <button
+                            className="btn ghost sm icon"
+                            onClick={() => setTarget(id, null)}
+                            aria-label="Отменить замену"
+                            title="Отменить замену"
+                          >
+                            <X size={15} />
+                          </button>
+                          {(alts.get(id)?.length ?? 0) > 0 && (
+                            <div className="schem-alts">
+                              <span className="faint small">ещё:</span>
+                              {alts.get(id)!.map((alt) => (
                                 <button
-                                  key={t}
-                                  className="fav-chip"
-                                  onClick={() => setTarget(id, t)}
-                                  title={`Из избранного: ${t}`}
+                                  key={alt}
+                                  className="alt-chip"
+                                  onClick={() => swapAlt(id, alt)}
+                                  title={`Заменить на ${alt}`}
                                 >
-                                  <Star size={12} className="fav-star on" />
-                                  <ItemIcon id={t} size={18} tip={false} />
-                                  <span>{itemName(items?.byId.get(t), t)}</span>
+                                  <ItemIcon id={alt} size={16} tip={false} />
+                                  <span>{itemName(items?.byId.get(alt), alt)}</span>
                                 </button>
                               ))}
-                            </span>
-                          ) : null;
-                        })()}
-                        <button className="btn ghost sm schem-choose" onClick={() => setPicking(id)}>
-                          Выбрать замену…
-                        </button>
-                        <button
-                          className="btn ghost sm icon"
-                          onClick={() => setTarget(id, REMOVE)}
-                          aria-label="Убрать блок из схемы"
-                          title="Убрать блок из схемы"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {(() => {
+                            const opts = [
+                              ...new Set((favorites ?? []).filter((f) => f.from === id).map((f) => f.to)),
+                            ].filter((t) => items?.byId.has(t));
+                            return opts.length > 0 ? (
+                              <span className="schem-fav-chips">
+                                {opts.map((t) => (
+                                  <button
+                                    key={t}
+                                    className="fav-chip"
+                                    onClick={() => setTarget(id, t)}
+                                    title={`Из избранного: ${t}`}
+                                  >
+                                    <Star size={12} className="fav-star on" />
+                                    <ItemIcon id={t} size={18} tip={false} />
+                                    <span>{itemName(items?.byId.get(t), t)}</span>
+                                  </button>
+                                ))}
+                              </span>
+                            ) : null;
+                          })()}
+                          <button className="btn ghost sm schem-choose" onClick={() => setPicking(id)}>
+                            Выбрать замену…
+                          </button>
+                          <button
+                            className="btn ghost sm icon"
+                            onClick={() => setTarget(id, REMOVE)}
+                            aria-label="Убрать блок из схемы"
+                            title="Убрать блок из схемы"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         </>
       )}
 

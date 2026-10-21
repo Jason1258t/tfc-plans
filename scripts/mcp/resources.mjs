@@ -105,6 +105,21 @@ export function addonDirs() {
   return out;
 }
 
+/**
+ * Папка аддона по имени в tools/ (ee-extras-mod, ee-extras) или пути к папке мода (в т. ч. в git worktree):
+ * { name, dir, res } — res: src/main/resources или сама папка с assets/; null — не нашлась.
+ */
+export function addonRoot(q) {
+  const hit = addonDirs().find((d) => d.name === q || d.name === `${q}-mod`);
+  const dir = hit?.dir ?? path.resolve(q);
+  const res = fs.existsSync(path.join(dir, 'src/main/resources'))
+    ? path.join(dir, 'src/main/resources')
+    : fs.existsSync(path.join(dir, 'assets'))
+      ? dir
+      : null;
+  return res ? { name: path.basename(dir), dir, res } : null;
+}
+
 /** Ресурсы Minecraft: jar «client-extra» рядом с NeoForge platform */
 export function minecraftResources() {
   const p = platform();
@@ -137,7 +152,7 @@ function jarFor(p, skip = null) {
  * в папке); { jar } — только этот jar (+ то же).
  * Без only — вся сборка.
  */
-export function resourceLayers(only = null, withDeps = true, skipJars = null) {
+export function resourceLayers(only = null, withDeps = true, skipJars = null, addon = null) {
   const layers = [];
   if (!only) {
     const rp = path.join(BASE, 'instance', 'resourcepacks');
@@ -154,7 +169,10 @@ export function resourceLayers(only = null, withDeps = true, skipJars = null) {
       const dir = path.join(KUBEJS, l);
       if (fs.existsSync(path.join(dir, 'assets'))) layers.push(dirLayer(`KubeJS ${l}`, dir, 'kubejs'));
     }
-    for (const a of addonDirs()) layers.push(dirLayer(`аддон tools/${a.name}`, a.res, 'addon'));
+    // addon — папка аддона вне tools/ основной копии (git worktree): вместо одноимённой из tools/ и раньше всех
+    if (addon) layers.push(dirLayer(`аддон ${path.relative(BASE, addon.dir) || addon.dir}`, addon.res, 'addon'));
+    for (const a of addonDirs())
+      if (a.name !== addon?.name) layers.push(dirLayer(`аддон tools/${a.name}`, a.res, 'addon'));
   } else if (only.addon) layers.push(dirLayer(`аддон ${path.relative(BASE, only.addon)}`, only.addon, 'addon'));
   else if (only.jar) layers.push(jarLayer(only.jar));
   // Jar модов — общим индексом (по пути — один jar), а не слоем на каждый

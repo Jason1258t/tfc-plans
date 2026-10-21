@@ -106,33 +106,38 @@
 .schem-rules {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px;
+  gap: 8px;
+  padding: 10px 12px;
   border: 1px solid color-mix(in srgb, var(--amethyst) 35%, var(--border));
   border-radius: var(--radius);
   background: linear-gradient(to bottom, var(--amethyst-soft), var(--surface) 80px);
-}
-
-.schem-rules h3 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
 }
 
 .ai-ico {
   color: var(--amethyst);
 }
 
+/* Правила — плиткой по 2–3 в ряд, а не столбиком на всю ширину */
 .rules {
   list-style: none;
   margin: 0;
   padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 6px 14px;
+}
+
+.rules li {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 6px;
+  min-width: 0;
 }
 
 .rules .input {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
   font-family: var(--font-mono);
   font-size: 13px;
 }
@@ -174,14 +179,64 @@
 
 /* ------------------------------------------------------------------ таблица блоков */
 
-.schem-toolbar {
+/* Рабочая область: панель инструментов прилипает под шапкой, пока листается список блоков */
+.schem-work {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 10px;
 }
 
+.schem-toolbar {
+  position: sticky;
+  top: var(--header-h);
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 0 -8px;
+  padding: 8px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
 .schem-toolbar .search {
-  flex: 1;
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+/* Кнопка раздела + действие раздела — одной плашкой */
+.tool-split {
+  display: inline-flex;
+}
+
+.tool-split > .btn:first-child:not(:last-child) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.tool-split > .btn + .btn {
+  margin-left: -1px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.schem-page .btn.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.chev {
+  transition: transform 0.12s;
+  opacity: 0.7;
+}
+
+.chev.open {
+  transform: rotate(180deg);
+}
+
+.nowrap {
+  white-space: nowrap;
 }
 
 .schem-blocks {
@@ -324,6 +379,13 @@
   }
   .schem-dst {
     padding-left: 38px;
+  }
+  /* На телефоне панель в три строки — не держим её на экране, места и так мало */
+  .schem-toolbar {
+    position: static;
+  }
+  .schem-rules > .row {
+    flex-wrap: wrap;
   }
 }
 
@@ -584,14 +646,13 @@
   border-radius: var(--radius);
   background: var(--surface);
   padding: 8px 12px;
+  max-height: 320px;
+  overflow-y: auto;
 }
 
-.schem-favs > summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  list-style: none;
+.schem-favs > p,
+.schem-favs > .fav-list {
+  margin: 0;
 }
 
 .fav-star {

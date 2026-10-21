@@ -32,6 +32,9 @@ public record Layout(String id, int inputs, float[][] terminals, String[] labels
     public static final float[][] FOUR_CORE_TERMINATION = {
             {8, 2, 13}, {2, 3.5f, 4}, {6, 3.5f, 4}, {10, 3.5f, 4}, {14, 3.5f, 4}};
 
+    /** Отвод фазы (четырёхжильный кабель → фаза и ноль): узел 0 — ввод кабеля, 1 — фаза, 2 — ноль; те же — в art/cables.py */
+    public static final float[][] PHASE_TAP = {{8, 2, 13}, {5, 3.5f, 4}, {11, 3.5f, 4}};
+
     public int plus() {
         return inputs;
     }

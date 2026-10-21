@@ -1,3 +1,4 @@
+import com.george_vi.electroenergetics.content.bundled_wire.BundledWireNodeConfigurator;
 import com.george_vi.electroenergetics.foundation.nodes.NodeConfigurator;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -22,41 +23,73 @@ import org.joml.Vector4f;
  */
 public class CheckNodes {
     static final Path MODELS = Path.of("src/main/resources/assets/ee_extras/models/block/four_core_termination");
+    static final Path TAP_MODELS = Path.of("src/main/resources/assets/ee_extras/models/block/four_core_tap");
+    static final Path EE_MODELS = Path.of("src/main/resources/assets/electroenergetics/models/block/duplex_wire_termination");
+    /** По положению o = ROLL + 2·FLIP (CableOrientation) */
+    static final String[] ORIENT_MODELS = {"block", "block_roll", "block_flip", "block_flip_roll"};
 
-    /** Как CableEndBlock.configurator: крен (x, z) → (16 − z, x) */
-    static NodeConfigurator nodes(float[][] points, boolean rolled) {
+    /** Как CableEndBlock.configurator: o раз крен (x, z) → (16 − z, x) */
+    static NodeConfigurator nodes(float[][] points, int o) {
         NodeConfigurator.Builder b = new NodeConfigurator.Builder();
         for (float[] p : points) {
-            if (rolled) b.add(16 - p[2], p[1], p[0]);
-            else b.add(p[0], p[1], p[2]);
+            float x = p[0], z = p[2];
+            for (int i = 0; i < o; i++) {
+                float t = x;
+                x = 16 - z;
+                z = t;
+            }
+            b.add(x, p[1], z);
         }
         return b.simple();
     }
 
-    /**
-     * Из модели: узел 0 — середина грани вывода кабеля, обращённой наружу (south без крена, west с креном),
-     * узлы 1–4 — центры клемм l1, l2, l3, n
-     */
-    static List<float[]> terminationPoints(boolean rolled) {
+    static Map<String, float[][]> boxes(Path file) {
         try {
-            JsonObject model = JsonParser.parseString(Files.readString(MODELS.resolve(rolled ? "block_roll.json" : "block.json"))).getAsJsonObject();
+            JsonObject model = JsonParser.parseString(Files.readString(file)).getAsJsonObject();
             Map<String, float[][]> boxes = new LinkedHashMap<>();
             for (JsonElement el : model.getAsJsonArray("elements")) {
                 JsonObject o = el.getAsJsonObject();
-                boxes.put(o.get("name").getAsString(), new float[][] {vec(o.getAsJsonArray("from")), vec(o.getAsJsonArray("to"))});
+                if (o.has("name")) boxes.put(o.get("name").getAsString(), new float[][] {vec(o.getAsJsonArray("from")), vec(o.getAsJsonArray("to"))});
             }
-            List<float[]> out = new ArrayList<>();
-            float[][] c = boxes.get("cable_entry");
-            float cx = (c[0][0] + c[1][0]) / 2, cy = (c[0][1] + c[1][1]) / 2, cz = (c[0][2] + c[1][2]) / 2;
-            out.add(rolled ? new float[] {c[0][0], cy, cz} : new float[] {cx, cy, c[1][2]});
-            for (String t : new String[] {"l1", "l2", "l3", "n"}) {
-                float[][] b = boxes.get(t);
-                out.add(new float[] {(b[0][0] + b[1][0]) / 2, (b[0][1] + b[1][1]) / 2, (b[0][2] + b[1][2]) / 2});
-            }
-            return out;
+            return boxes;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /** Середина боковой грани коробки, дальней (outer) или ближней к центру блока по горизонтали */
+    static float[] sideFace(float[][] c, boolean outer) {
+        float cx = (c[0][0] + c[1][0]) / 2, cy = (c[0][1] + c[1][1]) / 2, cz = (c[0][2] + c[1][2]) / 2;
+        float[][] faces = {{c[0][0], cy, cz}, {c[1][0], cy, cz}, {cx, cy, c[0][2]}, {cx, cy, c[1][2]}};
+        float[] best = null;
+        double bd = 0;
+        for (float[] f : faces) {
+            double d = Math.hypot(f[0] - 8, f[2] - 8);
+            if (best == null || (outer ? d > bd : d < bd)) {
+                best = f;
+                bd = d;
+            }
+        }
+        return best;
+    }
+
+    /** Из модели: узел 0 — середина наружной грани вывода кабеля, узлы 1–4 — центры клемм l1, l2, l3, n */
+    static List<float[]> terminationPoints(Path dir, String[] terms, int o) {
+        Map<String, float[][]> boxes = boxes(dir.resolve(ORIENT_MODELS[o] + ".json"));
+        List<float[]> out = new ArrayList<>();
+        out.add(sideFace(boxes.get("cable_entry"), true));
+        for (String t : terms) {
+            float[][] b = boxes.get(t);
+            out.add(new float[] {(b[0][0] + b[1][0]) / 2, (b[0][1] + b[1][1]) / 2, (b[0][2] + b[1][2]) / 2});
+        }
+        return out;
+    }
+
+    static Vec3 rotate(float[] p, int[] r) {
+        var m = BlockModelRotation.by(r[0], r[1]).getRotation().getMatrix();
+        Vector4f v = new Vector4f(p[0] / 16f - .5f, p[1] / 16f - .5f, p[2] / 16f - .5f, 1f);
+        m.transform(v);
+        return new Vec3(v.x + .5, v.y + .5, v.z + .5);
     }
 
     static float[] vec(JsonArray a) {
@@ -98,25 +131,39 @@ public class CheckNodes {
                 }
             }
         }
-        // Четырёхжильный соединитель: клеммы и торец вывода кабеля в сгенерированных моделях (block, block_roll) против
-        // точек проводов его NodeConfigurator (Layout.FOUR_CORE_TERMINATION, крен — как у выпрямителей)
-        for (boolean rolled : new boolean[] {false, true}) {
-            List<float[]> model = terminationPoints(rolled);
-            NodeConfigurator nc = nodes(Layout.FOUR_CORE_TERMINATION, rolled);
+        // Четырёхжильный соединитель: клеммы и торец вывода кабеля в сгенерированных моделях (4 положения) против
+        // точек проводов его NodeConfigurator (Layout.FOUR_CORE_TERMINATION, повороты — как в CableEndBlock)
+        // Отвод фазы — то же для его моделей и Layout.PHASE_TAP
+        for (int o = 0; o < 8; o++) {
+            boolean tap = o >= 4;
+            List<float[]> model = terminationPoints(tap ? TAP_MODELS : MODELS,
+                    tap ? new String[] {"phase", "n"} : new String[] {"l1", "l2", "l3", "n"}, o % 4);
+            NodeConfigurator nc = nodes(tap ? Layout.PHASE_TAP : Layout.FOUR_CORE_TERMINATION, o % 4);
             for (var e : rot.entrySet()) {
                 Map<Integer, Vec3> nodes = nc.getNodes(e.getKey());
-                var m = BlockModelRotation.by(e.getValue()[0], e.getValue()[1]).getRotation().getMatrix();
                 for (int i = 0; i < model.size(); i++) {
-                    float[] p = model.get(i);
-                    Vector4f v = new Vector4f(p[0] / 16f - .5f, p[1] / 16f - .5f, p[2] / 16f - .5f, 1f);
-                    m.transform(v);
-                    Vec3 at = new Vec3(v.x + .5, v.y + .5, v.z + .5);
+                    Vec3 at = rotate(model.get(i), e.getValue());
                     total++;
                     if (at.distanceTo(nodes.get(i)) > 1e-4) {
                         bad++;
-                        System.out.printf("НЕ СОВПАЛО four_core_termination %s крен=%s узел %d: модель %s, провод %s%n",
-                                e.getKey(), rolled, i, at, nodes.get(i));
+                        System.out.printf("НЕ СОВПАЛО %s %s положение %d узел %d: модель %s, провод %s%n",
+                                tap ? "four_core_tap" : "four_core_termination", e.getKey(), o % 4, i, at, nodes.get(i));
                     }
+                }
+            }
+        }
+        // Двухпроводной соединитель EE: внутренняя грань нашей втулки вывода (cable_gland в его моделях) — точка кабеля
+        // EE (BundledWireNodeConfigurator, сторона = положение) во всех 24 положениях, блокстейт EE — те же повороты
+        for (int o = 0; o < 4; o++) {
+            float[] gland = sideFace(boxes(EE_MODELS.resolve(ORIENT_MODELS[o] + ".json")).get("cable_gland"), false);
+            for (var e : rot.entrySet()) {
+                Vec3 node = BundledWireNodeConfigurator.getPos(e.getKey(), 0x1000 | o << 4);
+                Vec3 at = rotate(gland, e.getValue());
+                total++;
+                if (at.distanceTo(node) > 1e-4) {
+                    bad++;
+                    System.out.printf("НЕ СОВПАЛО duplex_wire_termination %s положение %d: вывод %s, кабель EE %s%n",
+                            e.getKey(), o, at, node);
                 }
             }
         }

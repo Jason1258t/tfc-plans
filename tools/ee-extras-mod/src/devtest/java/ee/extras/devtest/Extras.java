@@ -10,6 +10,7 @@ import com.george_vi.electroenergetics.foundation.nodes.InWorldNode;
 import com.george_vi.electroenergetics.foundation.nodes.InWorldNodeConnection;
 import com.george_vi.electroenergetics.simulation.infrastructure.InfrastructureSavedData;
 import ee.extras.EeExtras;
+import ee.extras.cable.CableData;
 import ee.extras.cable.CableEnd;
 import ee.extras.cable.CableKind;
 import ee.extras.cable.CableLaying;
@@ -256,6 +257,38 @@ final class Extras {
     static int phase(CommandSourceStack src) {
         boolean r = CableLaying.cyclePhase(src.getLevel(), H, null);
         src.sendSuccess(() -> Component.literal("фаза переключена: " + r), false);
+        return 1;
+    }
+
+    // Отвод фазы (2.1): четырёхжильный кабель от G, вольтметры «фаза–ноль» и «фаза отвода – L1 у G»
+    static final BlockPos T = G.offset(-4, 0, 10);
+    static final BlockPos VT = T.east(2);
+    static final BlockPos VT_L1 = T.east(4);
+
+    static int tap(CommandSourceStack src) {
+        ServerLevel level = src.getLevel();
+        DevTest.place(level, T, up(EeExtras.PHASE_TAP.get().defaultBlockState()));
+        DevTest.place(level, VT, CEEBlocks.VOLTMETER.getDefaultState());
+        DevTest.place(level, VT_L1, CEEBlocks.VOLTMETER.getDefaultState());
+        boolean ok = CableLaying.connect(level, CableKind.FOUR_CORE, end(level, G), end(level, T));
+        DevTest.wire(level, T, 1, VT, 0);
+        DevTest.wire(level, T, 2, VT, 1);
+        DevTest.wire(level, T, 1, VT_L1, 0);
+        DevTest.wire(level, G, 1, VT_L1, 1);
+        src.sendSuccess(() -> Component.literal("отвод: кабель " + ok + ", фаза L" + CableData.get(level).phase(T)), false);
+        return 1;
+    }
+
+    static int tapPhase(CommandSourceStack src) {
+        boolean r = CableLaying.cyclePhase(src.getLevel(), T, null);
+        src.sendSuccess(() -> Component.literal("отвод: фаза переключена " + r + ", теперь L" + CableData.get(src.getLevel()).phase(T)), false);
+        return 1;
+    }
+
+    static int tapReport(CommandSourceStack src) {
+        DevicesSavedData d = DevicesSavedData.load(src.getLevel());
+        src.sendSuccess(() -> Component.literal("отвод L" + CableData.get(src.getLevel()).phase(T) + ": фаза–ноль "
+                + vm(d, VT) + " В, фаза отвода – L1 " + vm(d, VT_L1) + " В"), false);
         return 1;
     }
 }

@@ -1,0 +1,35 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "MIT"
+
+[[mods]]
+modId = "miner_tools"
+version = "1.0.0"
+displayName = "Miner Tools"
+authors = "TFC Планы"
+description = '''
+Снаряжение шахтёра для сборки TFC Планы. Пояс шахтёра: пока он надет (слот Curios «пояс») или лежит в инвентаре, игрок не подбирает
+выбранные предметы — камешки, гравий, землю. ПКМ поясом — окно фильтра, Shift+ПКМ — включить/выключить.
+'''
+
+[[dependencies.miner_tools]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1.219,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.miner_tools]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1]"
+ordering = "NONE"
+side = "BOTH"
+
+# Без Curios пояс работает из инвентаря
+[[dependencies.miner_tools]]
+modId = "curios"
+type = "optional"
+versionRange = "[9.0,)"
+ordering = "NONE"
+side = "BOTH"

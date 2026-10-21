@@ -24,13 +24,14 @@ import {
   tagsOf,
 } from './data.mjs';
 import { siteRecipes } from './site-datapacks.mjs';
-import { FirestoreError, configDocs, guideDoc, guideDocs, writeGuide } from './firestore.mjs';
+import { FirestoreError, guideDoc, guideDocs, writeGuide } from './firestore.mjs';
 import { clip, dateOf, nameOf, named, norm, num, page, paging, short, str, userRegex, words } from './fmt.mjs';
 import { oneClass, classRecord } from './code-index.mjs';
 import { javap, jarList, jarToc, nestedJars, pathMatcher, readEntry, resolveJar } from './jars.mjs';
 import { TOOLS as blocksTools } from './tools/blocks.mjs';
 import { TOOLS as booksTools } from './tools/books.mjs';
 import { TOOLS as codeTools } from './tools/code.mjs';
+import { TOOLS as configTools } from './tools/config.mjs';
 import { TOOLS as kubejsTools } from './tools/kubejs.mjs';
 import { TOOLS as logsTools } from './tools/logs.mjs';
 import { TOOLS as mapTools } from './tools/map.mjs';
@@ -334,117 +335,6 @@ function referenceGet(a) {
   );
 }
 
-// ---------------------------------------------------------------- конфиги
-
-const ORIGIN = {
-  world: 'сохранение мира',
-  server: 'serverconfig/ сервера',
-  config: 'config/ сборки',
-  default: 'по умолчанию в коде мода',
-};
-
-function flatten(obj, prefix = '', out = new Map()) {
-  for (const [k, v] of Object.entries(obj ?? {})) {
-    const key = prefix ? `${prefix}.${k}` : k;
-    if (v && typeof v === 'object' && !Array.isArray(v) && !Buffer.isBuffer(v)) flatten(v, key, out);
-    else out.set(key, v);
-  }
-  return out;
-}
-
-/** Значения по умолчанию: config-defaults.json (jar → «<modid>-<тип>.toml»), power.json (свои ключи файлов) */
-function defaultFiles() {
-  const files = new Map();
-  const add = (file, key, d) => {
-    if (!files.has(file)) files.set(file, new Map());
-    if (!files.get(file).has(key)) files.get(file).set(key, d);
-  };
-  const byJar = new Map([...mods().values()].map((m) => [m.jar.replace(/\.jar$/, ''), m.id]));
-  for (const c of readJson('config-defaults.json', []) ?? [])
-    for (const k of c.keys)
-      // Ключи-шаблоны («%s» в описании — имя собирается в коде) и без раздела («?») — не настоящие ключи файла
-      if (!k.key.includes('?') && !/%s/.test(k.comment ?? ''))
-        add(`${byJar.get(c.src) ?? c.src}-${c.type}.toml`, k.key, k);
-  for (const v of Object.values(readJson('power.json', null) ?? {}))
-    if (v?.file && Array.isArray(v.keys)) for (const k of v.keys) add(v.file, k.key, k);
-  return files;
-}
-
-async function configCatalog() {
-  const docs = await configDocs();
-  const defaults = defaultFiles();
-  const files = new Map();
-  const get = (p) => {
-    if (!files.has(p)) files.set(p, { path: p, layers: {}, mod: '', defaults: new Map() });
-    return files.get(p);
-  };
-  for (const d of docs) {
-    const f = get(d.path);
-    f.layers[d.scope] = { values: flatten(d.values), at: d.importedAt, source: d.source };
-    f.mod ||= d.mod ?? '';
-  }
-  for (const [p, keys] of defaults) get(p).defaults = keys;
-  return files;
-}
-
-function configKeyLines(f, keyWords) {
-  const keys = new Set(f.defaults.keys());
-  for (const l of Object.values(f.layers)) for (const k of l.values.keys()) keys.add(k);
-  const out = [];
-  for (const key of [...keys].sort()) {
-    if (keyWords.length && !keyWords.every((w) => norm(key).includes(w))) continue;
-    const def = f.defaults.get(key);
-    const layers = ['world', 'server', 'config'].filter((s) => f.layers[s]?.values.has(key));
-    const origin = layers[0] ?? (def ? 'default' : null);
-    const value = origin === 'default' ? def.default : f.layers[origin].values.get(key);
-    const also = layers.slice(1).map((s) => `${s}: ${JSON.stringify(f.layers[s].values.get(key))}`);
-    if (def && origin !== 'default') also.push(`по умолчанию ${JSON.stringify(def.default)}`);
-    const range =
-      def && (def.min !== undefined || def.max !== undefined) ? ` [${def.min ?? ''}..${def.max ?? ''}]` : '';
-    const comment = def?.comment ? ` — ${short(def.comment.replace(/\s+/g, ' '), 160)}` : '';
-    out.push(
-      `${key} = ${short(JSON.stringify(value), 300)}  (${ORIGIN[origin]}${also.length ? `; ${also.join('; ')}` : ''})${range}${comment}`,
-    );
-  }
-  return out;
-}
-
-async function configGet(a) {
-  const files = await configCatalog();
-  const keyWords = words(a.key);
-  if (a.file) {
-    const q = String(a.file).trim();
-    const hit =
-      files.get(q) ??
-      (() => {
-        const l = [...files.keys()].filter((p) => norm(p).includes(norm(q)));
-        if (l.length === 1) return files.get(l[0]);
-        throw new Error(
-          l.length
-            ? `«${q}» подходит к нескольким файлам: ${l.join(', ')}`
-            : `файла «${q}» нет; список — config_get без параметров`,
-        );
-      })();
-    const scopes = Object.entries(hit.layers).map(([s, l]) => `${s} (${l.source ?? '?'}, ${dateOf(l.at)})`);
-    const head = `${hit.path}: импортировано — ${scopes.join(', ') || 'нет'}; значений по умолчанию из кода — ${hit.defaults.size}. Приоритет: world > server > config > default.`;
-    return clip(`${head}\n${page(configKeyLines(hit, keyWords), a, (l) => [l], 60)}`);
-  }
-  if (keyWords.length) {
-    const lines = [...files.values()].flatMap((f) => configKeyLines(f, keyWords).map((l) => `${f.path}: ${l}`));
-    return clip(`Ключи по «${a.key}» во всех файлах:\n${page(lines, a, (l) => [l], 40)}`);
-  }
-  let list = [...files.values()].sort((x, y) => x.path.localeCompare(y.path));
-  if (a.mod) list = list.filter((f) => norm(`${f.path} ${f.mod}`).includes(norm(a.mod)));
-  return `Файлы конфигов (слои: world/server/config — импорт с сервера в Firestore; default — из кода мода):\n${page(
-    list,
-    a,
-    (f) => [
-      `${f.path} — ${[...Object.keys(f.layers), ...(f.defaults.size ? ['default'] : [])].join(', ')}; ключей: ${new Set([...f.defaults.keys(), ...Object.values(f.layers).flatMap((l) => [...l.values.keys()])]).size}`,
-    ],
-    100,
-  )}`;
-}
-
 // ---------------------------------------------------------------- гайды
 
 const CHECKED = ['game', 'server', 'code', 'none'];
@@ -740,21 +630,6 @@ const CORE = [
     handler: referenceGet,
   },
   {
-    name: 'config_get',
-    description:
-      'Настройки модов с учётом слоёв: сохранение мира > serverconfig/ сервера > config/ сборки > значение по умолчанию из кода мода. Без параметров — список файлов; file — ключи файла; key — поиск ключа (во всех файлах или в file). Только чтение.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        file: str('файл, например tfc-server.toml (можно часть имени)'),
-        key: str('слова ключа, например sapling'),
-        mod: str('отбор списка файлов по моду'),
-        ...paging,
-      },
-    },
-    handler: configGet,
-  },
-  {
     name: 'guides_list',
     description: 'Гайды справочника сайта: id, заголовок, раздел/группа, проверено ли, кто правил.',
     inputSchema: {
@@ -857,6 +732,7 @@ export const TOOLS = [
   ...codeTools,
   ...logsTools,
   ...packTools,
+  ...configTools,
   ...kubejsTools,
   ...booksTools,
   ...blocksTools,
@@ -874,4 +750,4 @@ for (const t of TOOLS) {
   };
 }
 
-export const INSTRUCTIONS = `Данные сборки TFC RealWorld для сайта «TFC Планы» (данные: ${PUBLIC}). Используйте вместо grep по public/*.json и распаковки mods/*.jar: ответы уже учитывают KubeJS (удаления, замены, kubejs/data), теги со вложенными и KubeJS, слои конфигов. Факты из jar — jar_find/jar_read/jar_javap. Отладка сборки: class_find/class_info/class_hierarchy, code_refs (кто вызывает, кто пишет поле, сторона кода), event_listeners (кто слушает событие, вкл. KubeJS), mixins (миксины и конфликты), decompile, jar_grep, mods_check (зависимости), log_analyze (лог/краш; level=timeline — хронология игры). Регионы мира — map_regions. Ресурсы без клиента: model_render (модель картинкой), texture_get, resources_check (блокстейты ↔ свойства блока, модели, текстуры, переводы мода или аддона tools/). Рецепты учитывают датапаки сайта. Гайды: guide_get → правка → guide_put с revision.`;
+export const INSTRUCTIONS = `Данные сборки TFC RealWorld для сайта «TFC Планы» (данные: ${PUBLIC}). Используйте вместо grep по public/*.json и распаковки mods/*.jar: ответы уже учитывают KubeJS (удаления, замены, kubejs/data), теги со вложенными и KubeJS, слои конфигов. Факты из jar — jar_find/jar_read/jar_javap. Отладка сборки: class_find/class_info/class_hierarchy, code_refs (кто вызывает, кто пишет поле, сторона кода), event_listeners (кто слушает событие, вкл. KubeJS), mixins (миксины и конфликты), decompile, jar_grep, mods_check (зависимости), log_analyze (лог/краш; level=timeline — хронология игры). Регионы мира — map_regions. Ресурсы без клиента: model_render (модель картинкой), texture_get, resources_check (блокстейты ↔ свойства блока, модели, текстуры, переводы из Component.translatable мода или аддона tools/; аддон из git worktree — addon=<путь>, так же у model_render/texture_get). Рецепты учитывают датапаки сайта. Настройки: config_get; правка конфигов — config_propose (хост применяет), итог — config_changes. Гайды: guide_get → правка → guide_put с revision. Задачи и планы сайта: groups_list, task_create, task_get → task_update с revision; документ-план к задаче — artifact_put (правка — с revision из artifact_get).`;
