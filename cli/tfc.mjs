@@ -17,13 +17,16 @@ import { scanLocal } from './lib/scan.mjs';
 import { applyChange, planChange, resultsOf } from './lib/changes.mjs';
 import { applyPlan, beginBackup, editBackup, finishBackup, undoLast } from './lib/sync.mjs';
 import { ask, bold, choose, confirm, cyan, date, dim, green, interactive, mb, red, yellow } from './lib/ui.mjs';
+import { install, installedPath, isInstalled, uninstall } from './lib/install.mjs';
 import { checkUpdate } from './lib/update.mjs';
 import { cleanupOld, upgrade } from './lib/upgrade.mjs';
-import { BUILD, IS_BINARY } from './lib/version.mjs';
+import { BUILD, CHANNEL, IS_BINARY } from './lib/version.mjs';
 
 const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
 
 Настройка:
+  tfc install                 поставить программу в систему: своя папка и PATH, дальше в любом терминале — tfc
+                              (tfc uninstall — убрать; настройки и ключ останутся)
   tfc init                    указать папку игры (версию) и мир
   tfc login <ключ>            ключ от хоста сборки (--server <адрес>, если сервер другой)
   tfc profiles                профили; tfc use <профиль> — сделать текущим
@@ -50,6 +53,61 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
 
 Общее: --profile <имя> — другой профиль; tfc --version — версия; tfc --upgrade — обновить программу
 (--force — скачать заново, даже если версия та же). Настройки: ${configFile()}`;
+
+// ---------------------------------------------------------------- установка в систему
+
+function printInstalled(r) {
+  console.log(r.same ? `tfc уже стоит: ${r.path}` : `${green(r.updated ? 'Обновил' : 'Установил')} tfc: ${r.path}`);
+  if (r.pathChange === 'added')
+    console.log(
+      process.platform === 'win32'
+        ? `Папка ${r.dir} добавлена в PATH.`
+        : `Папка ${r.dir} добавлена в PATH: ${r.files.join(', ')}.`,
+    );
+  if (r.pathChange === 'manual')
+    console.log(
+      yellow(`PATH поменять не вышло (${r.files[0]}). Добавьте папку ${r.dir} в PATH сами или пишите полный путь.`),
+    );
+  if (r.pathChange === 'added')
+    console.log(
+      `${bold('Откройте новое окно терминала')} — в нём команды пишутся просто: ${cyan('tfc init')}, ${cyan('tfc pull')}.`,
+    );
+  if (r.pathChange === 'already')
+    console.log(`Папка уже в PATH — команды пишутся просто: ${cyan('tfc init')}, ${cyan('tfc pull')}.`);
+  if (!isInstalled()) console.log(dim(`Скачанный файл (${process.execPath}) больше не нужен — его можно удалить.`));
+}
+
+async function cmdInstall(v) {
+  if (CHANNEL === 'npm')
+    return console.log('tfc поставлен через npm — команда tfc уже есть в PATH, ставить ещё раз не нужно.');
+  if (!IS_BINARY) throw new Error('из исходников ставится через npm: npm install -g . в папке проекта (или npm link)');
+  if (!v.yes && interactive() && !(await confirm(`Поставить tfc в ${installedPath()} и добавить в PATH?`, true)))
+    return;
+  printInstalled(install());
+}
+
+async function cmdUninstall(v) {
+  if (CHANNEL === 'npm') return console.log('tfc поставлен через npm — убрать: npm uninstall -g tfc-plans');
+  if (!IS_BINARY) throw new Error('это запуск из исходников — ставить и убирать нечего');
+  if (!v.yes && interactive() && !(await confirm(`Убрать tfc (${installedPath()}) и его папку из PATH?`, false)))
+    return;
+  const r = uninstall();
+  console.log(r.removed ? `${green('Убрал')} ${r.path}` : `Файла ${r.path} и так нет.`);
+  if (r.files.length) console.log(`PATH: ${r.files.join(', ')} — больше без tfc.`);
+  console.log(dim('Настройки и ключ остались: tfc install вернёт всё как было.'));
+}
+
+/** Запуск без команды файлом не из папки установки (двойной клик по скачанному) — предлагаем поставить */
+async function offerInstall() {
+  if (!IS_BINARY || !interactive() || isInstalled()) return;
+  console.log('');
+  try {
+    const q = `${bold('Поставить tfc на этот компьютер')}, чтобы писать просто tfc в любом терминале?`;
+    if (await confirm(q, true)) printInstalled(install());
+  } catch (e) {
+    console.error(red(`Ошибка: ${e.message ?? e}`));
+  }
+}
 
 const opts = {
   profile: { type: 'string' },
@@ -487,7 +545,7 @@ async function cmdBuild(v, parts) {
   // Разборщики живут в репозитории сайта (scripts/); в одном файле tfc для игроков их нет — это команда хоста.
   // Импорт — по пути из переменной, чтобы сборщик (npm run tfc:dist) не тянул scripts/ в файл
   const msg = 'сборка данных доступна только из папки проекта сайта (npm run tfc -- build)';
-  if (IS_BINARY) throw new Error(msg);
+  if (BUILD) throw new Error(msg);
   const profile = currentProfile(loadConfig(), v.profile);
   const packModule = '../scripts/pack.mjs';
   let runPack;
@@ -752,6 +810,8 @@ const COMMANDS = {
   use: cmdUse,
   status: cmdStatus,
   pull: cmdPull,
+  install: cmdInstall,
+  uninstall: cmdUninstall,
   undo: cmdUndo,
   sync: cmdSync,
   publish: cmdPublish,
@@ -776,6 +836,7 @@ async function main(argv) {
   }
   if (!cmd || values.help || cmd === 'help') {
     console.log(HELP);
+    if (!cmd) await offerInstall();
     // Двойной клик по tfc.exe: окно консоли закрылось бы сразу после справки
     if (!cmd && IS_BINARY && process.platform === 'win32' && interactive())
       await ask(dim('\nЭто программа для командной строки (PowerShell). Enter — закрыть'));

@@ -9,7 +9,7 @@ import https from 'node:https';
 import path from 'node:path';
 import { configDir } from './config.mjs';
 import { dim, yellow } from './ui.mjs';
-import { BUILD, targetName } from './version.mjs';
+import { BUILD, CHANNEL, targetName } from './version.mjs';
 
 export const SITE = 'https://tfc-plans-fd2c.web.app';
 const DAY = 24 * 3600 * 1000;
@@ -76,10 +76,12 @@ export async function checkUpdate({ force = false } = {}) {
   }
   if (!cache?.time || !(cache.time > BUILD.time)) return null;
   const file = cache.files?.[targetName()]?.file;
+  const manual =
+    CHANNEL === 'npm'
+      ? `npm install -g ${SITE}/tfc/tfc.tgz`
+      : `скачайте ${file ? `${SITE}/tfc/${file}` : `с ${SITE}/updates`} и замените им старый файл`;
   return [
     yellow(`Вышла новая версия tfc: ${cache.version} (у вас ${BUILD.version}).`),
-    dim(
-      `  Обновить: tfc --upgrade (или скачайте ${file ? `${SITE}/tfc/${file}` : `с ${SITE}/updates`} и замените им старый файл).`,
-    ),
+    dim(`  Обновить: tfc --upgrade (или ${manual}).`),
   ].join('\n');
 }

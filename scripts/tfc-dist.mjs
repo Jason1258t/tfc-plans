@@ -5,8 +5,9 @@
  *
  *   npm run tfc:dist [-- --only macos-arm64,win-x64] [--out dist-tfc] [--no-public]
  *
- * Результат — dist-tfc/: tfc-<ос>-<арх>[.exe] (сам файл), tfc-<ос>-<арх>.zip (его же сжатым — так он лежит на сайте)
- * и version.json; всё это копируется в public/tfc/ (вне git, уходит на хостинг при деплое).
+ * Результат — dist-tfc/: tfc-<ос>-<арх>[.exe] (сам файл), tfc-<ос>-<арх>.zip (его же сжатым — так он лежит на сайте),
+ * tfc.tgz (пакет npm tfc-plans: тот же код одним .mjs, для тех, у кого есть Node.js), установщики install.ps1 и
+ * install.sh (из cli/install/) и version.json; всё это копируется в public/tfc/ (вне git, уходит на хостинг при деплое).
  * Node для других ОС скачивается с nodejs.org той же версии, что запускает скрипт (блоб SEA привязан к версии),
  * сверяется с SHASUMS256.txt и кешируется в .cache/node-dist/.
  */
@@ -103,16 +104,19 @@ async function nodeBinary(target) {
 
 // ---------------------------------------------------------------- сборка
 
-async function bundle(work, version) {
-  const outfile = path.join(work, 'tfc.cjs');
+/** Наименьший Node для пакета npm: в нём нужны встроенные fetch и parseArgs, файлы .ts сборщик уже убрал */
+const NPM_NODE = 20;
+
+async function bundle(work, version, { npm = false } = {}) {
+  const outfile = path.join(work, npm ? 'tfc.mjs' : 'tfc.cjs');
   const res = await build({
     entryPoints: [path.join(ROOT, 'cli/tfc.mjs')],
     outfile,
     bundle: true,
     platform: 'node',
-    format: 'cjs', // SEA в Node 24 запускает только CommonJS
-    target: `node${NODE_VERSION.split('.')[0]}`,
-    define: { __TFC_BUILD__: JSON.stringify(version) },
+    format: npm ? 'esm' : 'cjs', // SEA в Node 24 запускает только CommonJS
+    target: `node${npm ? NPM_NODE : NODE_VERSION.split('.')[0]}`,
+    define: { __TFC_BUILD__: JSON.stringify(npm ? { ...version, channel: 'npm' } : version) },
     metafile: true,
     logLevel: 'warning',
     legalComments: 'none',
@@ -121,7 +125,7 @@ async function bundle(work, version) {
   // Из сайта — только общие модули без импортов (tfc pull) и fflate
   const foreign = Object.keys(res.metafile.inputs).filter(
     (f) =>
-      !/^(cli|server\/pack-server\/lib)\/|^src\/lib\/(datapackFiles|schematicFile|nbt)\.ts$|^node_modules\/fflate\/|^<define:/.test(
+      !/^(cli|server\/pack-server\/lib)\/|^src\/lib\/(datapackFiles|schematicFile|nbt)\.ts$|(^|\/)node_modules\/fflate\/|^<define:/.test(
         f,
       ),
   );
@@ -166,6 +170,47 @@ async function makeBinary(target, blob, outDir) {
   return file;
 }
 
+/**
+ * Версия для npm — semver из времени коммита (UTC): 2026.1021.1435 = 21 октября 14:35. Растёт вместе с version.
+ */
+function npmVersion(time) {
+  const d = new Date(time);
+  return `${d.getUTCFullYear()}.${(d.getUTCMonth() + 1) * 100 + d.getUTCDate()}.${d.getUTCHours() * 100 + d.getUTCMinutes()}`;
+}
+
+/**
+ * Пакет npm tfc-plans: один .mjs без зависимостей (fflate вшит). Ставится с сайта —
+ * npm install -g https://tfc-plans-fd2c.web.app/tfc/tfc.tgz — или из реестра npm, если его туда выложить
+ * (npm publish dist-tfc/tfc.tgz).
+ */
+async function npmPackage(work, version, outDir) {
+  const dir = path.join(work, 'npm');
+  fs.rmSync(dir, { recursive: true, force: true });
+  fs.mkdirSync(dir, { recursive: true });
+  const script = await bundle(dir, version, { npm: true });
+  if (!fs.readFileSync(script, 'utf8').startsWith('#!')) throw new Error('пакет npm: в tfc.mjs нет строки #!');
+  fs.chmodSync(script, 0o755);
+  const pkg = {
+    name: 'tfc-plans',
+    version: npmVersion(version.time),
+    description: 'tfc — сборка TFC RealWorld на вашем ПК: моды, конфиги, KubeJS, датапаки и схемы с сайта «TFC Планы»',
+    homepage: 'https://tfc-plans-fd2c.web.app/updates',
+    repository: { type: 'git', url: 'git+https://github.com/Jason1258t/tfc-plans.git', directory: 'cli' },
+    type: 'module',
+    bin: { tfc: 'tfc.mjs' },
+    files: ['tfc.mjs'],
+    engines: { node: `>=${NPM_NODE}` },
+  };
+  fs.writeFileSync(path.join(dir, 'package.json'), `${JSON.stringify(pkg, null, 2)}\n`);
+  fs.copyFileSync(path.join(ROOT, 'cli', 'README.md'), path.join(dir, 'README.md'));
+  const [{ filename }] = JSON.parse(
+    execFileSync('npm', ['pack', '--json', '--pack-destination', dir], { cwd: dir, encoding: 'utf8' }),
+  );
+  const out = path.join(outDir, 'tfc.tgz');
+  fs.copyFileSync(path.join(dir, filename), out);
+  return { out, version: pkg.version };
+}
+
 /** zip с одним файлом: tfc.exe / tfc; бит «исполняемый» сохраняется (unzip, Архиватор macOS) */
 function zipOne(file, name) {
   const data = fs.readFileSync(file);
@@ -196,23 +241,30 @@ async function main() {
     console.log(`  ${path.basename(bin)} ${mb(fs.statSync(bin).size)} → ${path.basename(zip)} ${mb(z.length)}`);
   }
   // Сайт держит все цели: собранные сейчас не должны стереть остальные из прежнего version.json
+  const npm = await npmPackage(work, version, outDir);
+  const tgz = fs.readFileSync(npm.out);
+  console.log(`  пакет npm tfc-plans ${npm.version} → tfc.tgz ${mb(tgz.length)}`);
+  const installers = ['install.ps1', 'install.sh'];
+  for (const f of installers) fs.copyFileSync(path.join(ROOT, 'cli', 'install', f), path.join(outDir, f));
+
   const vfile = path.join(outDir, 'version.json');
   let prev = {};
   try {
     prev = JSON.parse(fs.readFileSync(vfile, 'utf8'));
   } catch {}
   const keep = prev.version === version.version ? prev.files : {};
+  const npmInfo = { file: 'tfc.tgz', version: npm.version, size: tgz.length, sha256: sha256(tgz) };
   fs.writeFileSync(
     vfile,
-    `${JSON.stringify({ ...version, node: NODE_VERSION, files: { ...keep, ...files } }, null, 2)}\n`,
+    `${JSON.stringify({ ...version, node: NODE_VERSION, files: { ...keep, ...files }, npm: npmInfo }, null, 2)}\n`,
   );
 
   if (!args['no-public']) {
     const pub = path.join(ROOT, 'public', 'tfc');
     fs.rmSync(pub, { recursive: true, force: true });
     fs.mkdirSync(pub, { recursive: true });
-    for (const f of [...Object.values({ ...keep, ...files }).map((x) => x.file), 'version.json'])
-      fs.copyFileSync(path.join(outDir, f), path.join(pub, f));
+    const all = [...Object.values({ ...keep, ...files }).map((x) => x.file), 'tfc.tgz', ...installers, 'version.json'];
+    for (const f of all) fs.copyFileSync(path.join(outDir, f), path.join(pub, f));
     console.log(`[tfc:dist] zip и version.json — в public/tfc/ (уйдут на сайт при деплое)`);
   }
 }
