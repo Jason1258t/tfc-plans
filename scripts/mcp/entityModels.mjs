@@ -32,12 +32,12 @@ function R(axis, a) {
   if (axis === 'y') return [c, 0, s, 0, 0, 1, 0, 0, -s, 0, c, 0];
   return [c, -s, 0, 0, s, c, 0, 0, 0, 0, 1, 0];
 }
-const apply = (m, [x, y, z]) => [
+export const apply = (m, [x, y, z]) => [
   m[0] * x + m[1] * y + m[2] * z + m[3],
   m[4] * x + m[5] * y + m[6] * z + m[7],
   m[8] * x + m[9] * y + m[10] * z + m[11],
 ];
-const applyDir = (m, [x, y, z]) => [
+export const applyDir = (m, [x, y, z]) => [
   m[0] * x + m[1] * y + m[2] * z,
   m[4] * x + m[5] * y + m[6] * z,
   m[8] * x + m[9] * y + m[10] * z,
@@ -45,7 +45,7 @@ const applyDir = (m, [x, y, z]) => [
 const DEG = Math.PI / 180;
 
 /** Стек поз: методы умножают справа, как PoseStack (translate, scale, mulPose) */
-class Pose {
+export class Pose {
   constructor(m = ident()) {
     this.m = m;
   }

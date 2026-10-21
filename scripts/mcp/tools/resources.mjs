@@ -47,6 +47,9 @@ function modelRender(a) {
     state: a.state,
     view: a.view,
     size: Math.min(1024, Math.max(32, Number(a.size ?? 256) | 0)),
+    texture: a.texture,
+    bones: a.bones,
+    silhouette: a.silhouette,
   });
   return r.png ? { text: r.lines.join('\n'), images: [r.png] } : r.lines.join('\n');
 }
@@ -849,15 +852,28 @@ export const TOOLS = [
   {
     name: 'model_render',
     description:
-      'Рисунок модели блока или предмета картинкой PNG (без клиента): блокстейт → вариант (state) → модель с parent, повороты x/y варианта и элементов, uv и rotation граней, display.gui; предмет item/generated — слои. Ищет по слоям: ресурспаки, KubeJS, папки аддонов tools/<мод>/src/main/resources (аддон из git worktree — addon=<путь>), jar модов, Minecraft. В тексте — цепочка моделей, откуда каждая текстура, предупреждения (tint, loader, нет текстуры).',
+      'Рисунок модели блока или предмета картинкой PNG (без клиента): блокстейт → вариант (state) → модель с parent, повороты x/y варианта и элементов, uv и rotation граней, display.gui; предмет item/generated — слои. Модели GeckoLib (assets/<ns>/geo/*.geo.json; kind=geo или id ns:geo/…) — кости и кубы как в GeckoLib 4.8 с текстурой texture=, броня — поверх силуэта игрока; в тексте кости, число кубов, грани с UV за краем текстуры или на прозрачной области. Ищет по слоям: ресурспаки, KubeJS, папки аддонов tools/<мод>/src/main/resources (аддон из git worktree — addon=<путь>), jar модов, Minecraft. В тексте — цепочка моделей, откуда каждая текстура, предупреждения (tint, loader, нет текстуры).',
     inputSchema: {
       type: 'object',
       properties: {
-        id: str('id блока/предмета (ee_extras:four_core_termination) или модели (ns:block/…) при kind=model'),
+        id: str(
+          'id блока/предмета (ee_extras:four_core_termination), модели (ns:block/…) при kind=model или модели GeckoLib (miner_tools:geo/miner_helmet.geo.json)',
+        ),
         kind: {
           type: 'string',
-          enum: ['block', 'item', 'model'],
-          description: 'что рисовать (по умолчанию: блок, если есть блокстейт, иначе предмет, иначе модель)',
+          enum: ['block', 'item', 'model', 'geo'],
+          description:
+            'что рисовать (по умолчанию: блок, если есть блокстейт, иначе предмет, иначе модель; id с geo/ или .geo.json — модель GeckoLib)',
+        },
+        texture: str(
+          'для geo: текстура модели — ns:textures/models/armor/x.png, assets/ns/textures/….png или ns:entity/x (без неё — поиск по имени модели в item/, entity/, armor/, models/armor/, block/)',
+        ),
+        bones: str('для geo: только эти кости с дочерними, через запятую (armorHead)'),
+        silhouette: {
+          type: 'string',
+          enum: ['auto', 'all', 'none'],
+          description:
+            'для geo: полупрозрачный силуэт игрока под бронёй — auto (части под костями armorHead/armorBody/… с кубами, по умолчанию), all (весь игрок), none',
         },
         state: str('состояние блока: facing=north,roll=true (свойства, которых нет, — первый подходящий вариант)'),
         view: {

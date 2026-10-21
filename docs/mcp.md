@@ -219,7 +219,7 @@ ByePregen, рецептов, `ClientRecipeBook`, JEI/EMI, моделей и зв
 
 | Инструмент | Что делает |
 | --- | --- |
-| `model_render(id*, kind, state, view, size, addon)` | **картинка PNG**: блокстейт → вариант → модель с `parent` → объём под поворотом `display.gui` (или вид сверху/сбоку); предмет `item/generated` — слоями. В тексте — цепочка моделей, откуда каждая текстура, предупреждения |
+| `model_render(id*, kind, state, view, size, addon, texture, bones, silhouette)` | **картинка PNG**: блокстейт → вариант → модель с `parent` → объём под поворотом `display.gui` (или вид сверху/сбоку); предмет `item/generated` — слоями; модель GeckoLib (`kind=geo` или id `ns:geo/….geo.json`) с текстурой `texture=`. В тексте — цепочка моделей (у GeckoLib — дерево костей с числом кубов), откуда каждая текстура, предупреждения |
 | `texture_get(path*, size, colors, addon)` | **картинка** текстуры (увеличена без сглаживания) и палитра: частые цвета с долями, размер, кадры анимации, откуда взята |
 | `resources_check(addon \| mod, props, filter, limit, verbose)` | проверка мода из `mods/` или аддона из `tools/`: ошибки, предупреждения, «к сведению» |
 
@@ -238,6 +238,27 @@ Sophisticated Backpacks; модели только с `overrides` — override �
   Storage — модель блока с поворотом из их рендерера;
 - плоские: `fluid_container` NeoForge — ведро с жидкостью (текстура и цвет жидкости — из классов модов,
   `scripts/mcp/fluids.mjs`), `tfc:fluid_container` — пустой сосуд, `tfc:trim` — броня без отделки.
+
+Модели **GeckoLib** (`scripts/mcp/geoModels.mjs`): файлы `assets/<ns>/geo/*.geo.json` (Bedrock 1.12+,
+`minecraft:geometry[0].bones[].cubes[]`) — перенос `BakedModelFactory.Builtin`, `VertexSet`, `GeoQuad.build` и
+`RenderUtil` GeckoLib 4.8.3: x зеркалится, `pivot`/`rotation` костей и кубов (порядок Z, Y, X), `inflate` куба или
+кости, `mirror` куба, UV по граням (`uv`/`uv_size`, отрицательный `uv_size` — отражение, `uv_rotation`) и box UV
+(`uv: [u, v]`). Поза — покой из файла, без анимаций. Модель смотрит на юг, как сущность и броня в игре (поворот 180°
+по Y): `view=south` — спереди (грань `north` файла — перед), `gui` — сверху, спереди и с правого бока модели.
+- `id`: `miner_tools:geo/miner_helmet.geo.json`, `miner_tools:geo/miner_helmet` или `miner_tools:miner_helmet` с
+  `kind=geo`; нет файла — список моделей GeckoLib этого namespace.
+- `texture`: `ns:textures/….png`, `assets/ns/textures/….png` или `ns:entity/x`. Без неё — поиск по имени модели в
+  `<подпапка geo>/`, `entity/`, `models/armor/`, `armor/`, `item/`, `block/` (из найденных — с размером развёртки).
+- Броня (кости `armorHead`, `armorBody`, `armorLeftArm`… шаблона GeckoLib): в покое стоят там же, где части игрока
+  (`GeoArmorRenderer.applyBaseTransformations`), под ними — полупрозрачный силуэт игрока для масштаба:
+  `silhouette=auto` (части под костями брони с кубами), `all`, `none`. `bones=armorHead` — только эти кости.
+- В тексте: дерево костей с кубами, всего кубов и граней, предупреждения — UV за краем развёртки, грани на
+  полностью прозрачной области текстуры (в игре не видны), пропорции текстуры не как у развёртки, нет текстуры.
+- Проверено: каска Miner Tools (`texture=miner_tools:textures/models/armor/miner_helmet.png`,
+  `addon=tools/miner-tools-mod`) и контрольная модель с размеченной текстурой (box UV головы — лицо спереди, метка
+  слева сверху, правый бок с запада, как у скина игрока; отрицательный `uv_size`). Других моделей GeckoLib в jar
+  сборки нет (на 2026-10-22: GeckoLib стоит ради каски; проверены все 237 jar).
+
 Края сглажены: модель рисуется в 4 раза крупнее и усредняется (альфа — по покрытию), грани — с краями
 включительно и запасом в полпикселя, так что на стыках нет щелей; пиксели текстур — ближайшие, как в игре.
 Предмет `item/generated` — плоская текстура, увеличенная с целым масштабом, по центру картинки.
@@ -365,6 +386,7 @@ scripts/mcp/
   site-datapacks.mjs  датапаки сайта как слой рецептов (recipes(site) в data.mjs)
   resources.mjs     слои ресурсов клиента (ресурспаки, KubeJS, аддоны, jar, Minecraft), модель с parent
   render.mjs        растеризатор моделей в PNG (model_render, texture_get) и генератор иконок из командной строки
+  entityModels.mjs  предметы, рисуемые кодом (builtin/entity); geoModels.mjs — модели GeckoLib (.geo.json)
   tools/<раздел>.mjs  инструменты раздела: code (классы, миксины, декомпиляция, зависимости), logs,
                       config (config_get, config_propose, config_changes), pack, kubejs, books (+books-index), blocks (+blocks-data),
                       site (задачи, группы, документы-планы с записью; датапаки, схемы, скрипты сайта), map (+map-climate,
