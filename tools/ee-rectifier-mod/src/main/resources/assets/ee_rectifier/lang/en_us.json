@@ -1,8 +1,0 @@
-{
-  "block.ee_rectifier.three_phase_rectifier": "Three-Phase Rectifier",
-  "block.ee_rectifier.three_phase_rectifier.tooltip": "Three phases in, direct current out. A bridge of six diodes inside.",
-  "block.ee_rectifier.three_phase_rectifier.tooltip.nodes": "Copper terminals: phases 1-3, red: +, blue: -. No neutral needed.",
-  "block.ee_rectifier.single_phase_rectifier": "Single-Phase Rectifier",
-  "block.ee_rectifier.single_phase_rectifier.tooltip": "Phase and neutral in, direct current out. A bridge of four diodes inside.",
-  "block.ee_rectifier.single_phase_rectifier.tooltip.nodes": "Copper terminals: phase and neutral (either way), red: +, blue: -. Add a capacitor on the output for smooth current."
-}

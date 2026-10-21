@@ -230,7 +230,7 @@ node scripts/seed-recipe-hints.mjs
 
 ### Аддоны сборки (вкладка справочника и `tools/`)
 
-Свои моды группы: выпрямители для Electro Energetics (`tools/ee-rectifier-mod`), перегрев нагревателя EE
+Свои моды группы: электрика для Electro Energetics — выпрямители, двусторонний преобразователь, кабели (`tools/ee-extras-mod`), перегрев нагревателя EE
 (`tools/ee-overheat-mod`). Для игроков — вкладка «Аддоны» справочника (описание, рецепты, скачать jar из
 `/addons/`); как делать и проверять свои — [docs/addons.md](docs/addons.md).
 

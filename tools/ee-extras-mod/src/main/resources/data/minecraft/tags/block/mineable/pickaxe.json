@@ -1,0 +1,10 @@
+{
+  "values": [
+    "ee_extras:three_phase_rectifier",
+    "ee_extras:single_phase_rectifier",
+    "ee_extras:bidirectional_converter",
+    "ee_extras:four_core_termination",
+    "ee_extras:duplex_cable_insulator",
+    "ee_extras:four_core_cable_insulator"
+  ]
+}

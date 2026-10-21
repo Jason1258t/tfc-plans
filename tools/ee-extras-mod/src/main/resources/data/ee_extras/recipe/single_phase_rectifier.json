@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "pattern": ["CDC", "DPD", " D "],
+  "key": {
+    "C": { "item": "electroenergetics:connector" },
+    "D": { "item": "electroenergetics:diode" },
+    "P": { "tag": "c:plates/iron" }
+  },
+  "result": { "id": "ee_extras:single_phase_rectifier", "count": 1 }
+}

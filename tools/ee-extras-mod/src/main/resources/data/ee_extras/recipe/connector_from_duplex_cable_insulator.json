@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "ee_extras:duplex_cable_insulator"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "electroenergetics:connector"
+  }
+}

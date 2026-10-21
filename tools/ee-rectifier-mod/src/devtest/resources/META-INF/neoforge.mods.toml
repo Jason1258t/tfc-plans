@@ -1,9 +1,0 @@
-modLoader = "javafml"
-loaderVersion = "[1,)"
-license = "MIT"
-
-# Только для проверочного сервера (test-server.sh), в jar выпрямителя не входит
-[[mods]]
-modId = "ee_rectifier_devtest"
-version = "1.0.0"
-displayName = "EE Rectifier dev test"
