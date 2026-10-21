@@ -166,15 +166,20 @@ def turn(els, o):
 ORIENT_MODELS = ['block', 'block_roll', 'block_flip', 'block_flip_roll']
 
 
-def termination_model(ns, o, display):
+# Клеммы четырёхжильного соединителя: имя, x центра, клетка текстуры (L1, L2, L3, N); отвод фазы — фаза и ноль
+FOUR_TERMS = [('l1', X[0], 0), ('l2', X[1], 1), ('l3', X[2], 2), ('n', X[3], 3)]
+TAP_TERMS = [('phase', 5, 0), ('n', 11, 3)]
+
+
+def termination_model(ns, o, display, terms=FOUR_TERMS):
     t = '#0'
     side = {'texture': t, 'uv': [8, 5.5, 16, 8]}
     els = [box('plate', [0, 0, 1], [16, 2, 7], {
         'north': side, 'east': side, 'south': side, 'west': side,
         'up': {'texture': t, 'uv': [0, 8, 8, 11]}, 'down': {'texture': t, 'uv': [0, 8, 8, 11]}})]
-    for i, x in enumerate(X):
+    for name, x, i in terms:
         uv = {'texture': t, 'uv': [2 * i, 6, 2 * i + 2, 8]}
-        els.append(box(['l1', 'l2', 'l3', 'n'][i], [x - 1.5, 2, 2.5], [x + 1.5, 5, 5.5],
+        els.append(box(name, [x - 1.5, 2, 2.5], [x + 1.5, 5, 5.5],
                        {f: uv for f in ('north', 'east', 'south', 'west', 'up')}))
     rubber = {'texture': t, 'uv': [12, 0, 16, 4]}
     els.append(box('cable_entry', [6, 0, 7], [10, 4, 13], {
@@ -267,6 +272,11 @@ def generate(res, ns, dump, rot, display):
         dump(termination_model(ns, o, display), 'models', 'block', 'four_core_termination', name + '.json')
     dump({'parent': f'{ns}:block/four_core_termination/block'}, 'models', 'item', 'four_core_termination.json')
     dump(blockstate(ns, 'four_core_termination', rot, ORIENT_MODELS), 'blockstates', 'four_core_termination.json')
+    # Отвод фазы: та же плита и ввод кабеля, клеммы — фаза (коричневая) и ноль (синяя); точки — Layout.PHASE_TAP
+    for o, name in enumerate(ORIENT_MODELS):
+        dump(termination_model(ns, o, display, TAP_TERMS), 'models', 'block', 'four_core_tap', name + '.json')
+    dump({'parent': f'{ns}:block/four_core_tap/block'}, 'models', 'item', 'four_core_tap.json')
+    dump(blockstate(ns, 'four_core_tap', rot, ORIENT_MODELS), 'blockstates', 'four_core_tap.json')
 
     for name, base in (('duplex_cable_insulator', hexc('5a5450')), ('four_core_cable_insulator', hexc('3f5a8c'))):
         write(os.path.join(tex, 'block', name + '.png'), insulator_texture(base))
