@@ -7,7 +7,7 @@ config = "ee_extras.mixins.json"
 
 [[mods]]
 modId = "ee_extras"
-version = "2.1.0"
+version = "2.1.1"
 displayName = "EE Extras"
 authors = "TFC Планы"
 description = '''
