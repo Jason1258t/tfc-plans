@@ -9,7 +9,8 @@
  *   или static final int <ИМЯ>_COLOR; <цвет>_dye — DyeColor.textureDiffuseColor Minecraft;
  *   текстура — tfc:block/molten_still у металлов (класс *Metal*, путь metal/…), иначе minecraft:block/water_still;
  *   особняк — анонимный IClientFluidTypeExtensions в jar мода (getStillTexture + getTintColor(FluidStack)), если он
- *   в jar один (More Propulsion: керосин).
+ *   в jar один (More Propulsion: керосин);
+ *   иначе — своя текстура мода block/fluid/<имя>_still без окраски (IE регистрирует так: IEFluids.FluidEntry).
  * Не вышло — null: ведро рисуется как есть, без жидкости.
  */
 import { jarList, jarToc, platform, readEntry, zipEntries, zipRead } from './jars.mjs';
@@ -169,5 +170,11 @@ function lookup(ns, p) {
       };
   }
   if (exts.length === 1) return { still: exts[0].still, tint: exts[0].color >>> 0, from: exts[0].from };
+  // Своя текстура жидкости без окраски (IE: FluidEntry с block/fluid/<имя>_still; Sophisticated Core: block/xp_still)
+  for (const t of [`block/fluid/${base}_still`, `block/${base}_still`, `block/${base}`]) {
+    const file = `assets/${ns}/textures/${t}.png`;
+    if (jarList().some((j) => jarToc(j).some((e) => e.name === file)))
+      return { still: `${ns}:${t}`, tint: 0xffffffff, from: `текстура ${ns}:${t}` };
+  }
   return null;
 }

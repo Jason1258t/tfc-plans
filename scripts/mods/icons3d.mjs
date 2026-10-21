@@ -22,7 +22,7 @@ import {
   renderGenerated,
   renderModel,
 } from '../mcp/render.mjs';
-import { loadModel } from '../mcp/resources.mjs';
+import { loadModel, modJarsLayer, platformLayers } from '../mcp/resources.mjs';
 
 /** Поднять, если изменился рисунок (генератор, размер) — старый кеш не подойдёт */
 // 2 — модели OBJ, composite, separate_transforms, conf_sides IE; 3 — без пустых картинок; 4 — без ie_obj и пурпурных;
@@ -49,7 +49,9 @@ export function makeRenderer({ findAsset, outIcons, cacheDir, size = 96 }) {
     },
     list: () => [],
   };
-  const layers = [layer];
+  // Запасные слои: jar модов (блокстейты — кеш их не распаковывает) и ресурсы Minecraft и NeoForge из кеша сборки
+  // аддонов (текстуры сущностей, модели neoforge:item/*)
+  const layers = [layer, modJarsLayer(), ...platformLayers()];
   const dir = path.join(cacheDir, 'icons3d');
   fs.mkdirSync(dir, { recursive: true });
   const stats = { drawn: 0, cached: 0, failed: 0, code: 0, codeKinds: new Map(), noFluid: [], failedIds: [] };
@@ -59,6 +61,17 @@ export function makeRenderer({ findAsset, outIcons, cacheDir, size = 96 }) {
     const [ns, p] = t.includes(':') ? t.split(':', 2) : ['minecraft', t];
     return findAsset(ns, `textures/${p}.png`);
   };
+  /** Содержимое текстуры для хеша: файл кеша или запасной слой */
+  const texData = (t) => {
+    const f = texFile(t);
+    if (f) return fs.readFileSync(f);
+    const [ns, p] = t.includes(':') ? t.split(':', 2) : ['minecraft', t];
+    for (const l of layers.slice(1)) {
+      const d = l.read(`assets/${ns}/textures/${p}.png`);
+      if (d) return d;
+    }
+    return null;
+  };
 
   function key(model, flat) {
     const h = crypto.createHash('sha1').update(`${VERSION}|${size}`);
@@ -66,8 +79,8 @@ export function makeRenderer({ findAsset, outIcons, cacheDir, size = 96 }) {
     for (const sp of flat?.specs ?? []) {
       h.update(JSON.stringify(sp));
       for (const t of [sp.id, sp.mask]) {
-        const f = t && texFile(t);
-        if (f) h.update(fs.readFileSync(f));
+        const d = t && texData(t);
+        if (d) h.update(d);
       }
     }
     for (const c of model.chain) {
@@ -80,17 +93,20 @@ export function makeRenderer({ findAsset, outIcons, cacheDir, size = 96 }) {
     for (const v of Object.values(model.textures)) {
       const t = deref(v);
       if (typeof t !== 'string' || t.startsWith('#')) continue;
-      const [ns, p] = t.includes(':') ? t.split(':', 2) : ['minecraft', t];
-      const f = findAsset(ns, `textures/${p}.png`);
-      if (f) h.update(t).update(fs.readFileSync(f));
+      const d = texData(t);
+      if (d) h.update(t).update(d);
     }
     // Модель сущности: текстуры её граней
     for (const t of new Set((model.quads ?? []).map((q) => q.tex))) {
-      const f = texFile(t);
+      const d = texData(t);
       h.update(t);
-      if (f) h.update(fs.readFileSync(f));
+      if (d) h.update(d);
     }
     if (model.drawnBy) h.update(model.drawnBy);
+    // …и окраска (знамёна разных цветов — одни текстуры)
+    h.update(JSON.stringify([...new Set((model.quads ?? []).map((q) => `${q.tex}|${q.tint ?? ''}|${q.overlay ? 1 : 0}`))]));
+    // Окраска tintindex (рюкзаки)
+    if (model.tints) h.update(JSON.stringify(model.tints));
     // Части модели блока (ящики): их цепочки, текстуры и повороты
     for (const pt of model.codeParts ?? []) {
       h.update(JSON.stringify([pt.x, pt.y, pt.mat, pt.model.textures]));
@@ -100,8 +116,8 @@ export function makeRenderer({ findAsset, outIcons, cacheDir, size = 96 }) {
         if (f) h.update(fs.readFileSync(f));
       }
       for (const v of Object.values(pt.model.textures)) {
-        const f = typeof v === 'string' && !v.startsWith('#') && texFile(v);
-        if (f) h.update(fs.readFileSync(f));
+        const d = typeof v === 'string' && !v.startsWith('#') && texData(v);
+        if (d) h.update(d);
       }
     }
     // Загрузчик: его поля (части composite, имя текстур conf_sides) и файл OBJ с материалами

@@ -178,6 +178,35 @@ export function resourceLayers(only = null, withDeps = true, skipJars = null) {
   return layers;
 }
 
+/** Слой «jar модов» (общий индекс по путям, как в resourceLayers) — запасной для генератора иконок: блокстейты */
+export function modJarsLayer() {
+  return {
+    label: 'jar модов',
+    kind: 'jars',
+    has: (p) => Boolean(jarFor(p)),
+    read: (p) => {
+      const j = jarFor(p);
+      return j ? (readEntry(j, p)?.data ?? null) : null;
+    },
+    which: (p) => jarFor(p),
+    list: () => [],
+  };
+}
+
+/**
+ * Только ресурсы Minecraft (client-extra jar) и NeoForge (jar platform) — запасной слой для генератора иконок сайта:
+ * его ванильный кеш (mods.mjs) хранит лишь textures/item и textures/block, а моделям сущностей нужны textures/entity,
+ * вёдрам — модели neoforge:item/*.
+ */
+export function platformLayers() {
+  const out = [];
+  const mc = minecraftResources();
+  if (mc) out.push(zipLayer('Minecraft', mc, 'minecraft'));
+  const nf = platform()?.classes;
+  if (nf) out.push(zipLayer('NeoForge', nf, 'minecraft'));
+  return out;
+}
+
 /** Файл из первого слоя, где он есть: { data, layer, from } или null */
 export function findResource(layers, p) {
   for (const l of layers) {
