@@ -108,3 +108,27 @@ export async function writeGuide(id, data, base) {
   guideDocs.reset();
   return d.updateTime;
 }
+
+const toFields = (data) => Object.fromEntries(Object.entries(data).map(([k, v]) => [k, toValue(v)]));
+
+/** Новый документ с id от Firestore → { id, updateTime } */
+export async function createDoc(collection, data) {
+  const d = await api(`${DOCS}/${collection}`, { method: 'POST', body: JSON.stringify({ fields: toFields(data) }) });
+  return { id: d.name.split('/').pop(), updateTime: d.updateTime };
+}
+
+/** Поменять поля документа (остальные не трогать); base — updateTime, с которым документ читали (иначе отказ 400) */
+export async function patchDoc(collection, id, data, base) {
+  const mask = Object.keys(data)
+    .map((k) => `updateMask.fieldPaths=${encodeURIComponent(k)}`)
+    .join('&');
+  const pre = base ? `&currentDocument.updateTime=${encodeURIComponent(base)}` : '&currentDocument.exists=true';
+  const d = await api(`${DOCS}/${collection}/${encodeURIComponent(id)}?${mask}${pre}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ fields: toFields(data) }),
+  });
+  return d.updateTime;
+}
+
+/** Предложенные агентом правки конфигов (configChanges; применяет хост — tfc admin changes) — раз в минуту */
+export const configChangeDocs = cached(60_000, () => listAll('configChanges'));

@@ -96,7 +96,9 @@ MCP-сервер сборки — локальная программа, чер�
 | Инструмент | Что делает |
 | --- | --- |
 | `reference_get(section, filter, id)` | разделы справочника сайта: `ores`, `smelt`, `chains`, `metals`, `fuels`, `liquid`, `foods`, `botany`, `greenhouse`, `meals`, `skillet`, `multiblocks`, `power` (с поправками `kubejs/data`) |
-| `config_get(file, key, mod)` | настройки модов по слоям: сохранение мира > `serverconfig/` > `config/` сборки > значение из кода мода. TOML (`<мод>-server/common.toml`, `<мод>/server.toml`) и с 2026-10-21 JSON5 в корне `config/` (`worldborder.json5` и другие моды на Collective; вложенные `*.json5` — импорт с `--all`). Только чтение |
+| `config_get(file, key, mod)` | настройки модов по слоям: сохранение мира > `serverconfig/` > `config/` сборки > значение из кода мода. TOML (`<мод>-server/common.toml`, `<мод>/server.toml`) и с 2026-10-21 JSON5 в корне `config/` (`worldborder.json5` и другие моды на Collective; вложенные `*.json5` — импорт с `--all`). Неприменённые правки помечены ⏳ |
+| `config_propose(note, edits)` | предложить правку TOML-конфигов: `edits: [{ file, key, value }]`, ключ полный (`blocks.crops.cropGrowthModifier`); проверяются ключ, тип и диапазон из кода мода, слой (ключ из сохранения мира — отказ), нет ли уже неприменённой правки того же ключа. Запись в Firestore `configChanges` (подпись `Claude`); файлы меняет хост — `tfc admin changes pull` (docs/tfc-app.md) |
+| `config_changes(status, id, cancel)` | правки и итог хоста по ключам (`pending` по умолчанию, `applied`, `rejected`, `cancelled`, `all`); `cancel=<id>` — отменить неприменённую |
 
 ### Сборка
 

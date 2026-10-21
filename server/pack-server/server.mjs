@@ -25,6 +25,8 @@
  *   GET    /site/kubejs?name=…      — скрипты KubeJS «Ставить на сервер» (+ названные) player
  *   GET    /site/schematics         — схемы библиотеки (без превью)              player
  *   GET    /site/files/:id          — исходник схемы (.nbt из хранилища сайта)   player
+ *   GET    /admin/changes           — правки конфигов от агента (Firestore configChanges) admin
+ *   POST   /admin/changes/:id       — { status: applied|rejected, results, updateTime } admin
  */
 import fs from 'node:fs';
 import http from 'node:http';
@@ -237,6 +239,17 @@ async function handle(req, res) {
       const k = await keys.revoke(parts[2]);
       console.log(`− ключ ${k.id} «${k.name}» (${k.role}) — ${who.name}`);
       return json(res, 200, { ok: true, revoked: k });
+    }
+  }
+
+  // --- правки конфигов от агента: хост применяет их у себя (tfc admin changes) и отмечает итог
+  if (parts[0] === 'admin' && parts[1] === 'changes') {
+    const who = await authorize(req, 'admin');
+    if (parts.length === 2 && req.method === 'GET') return json(res, 200, { changes: await site.configChanges() });
+    if (parts.length === 3 && req.method === 'POST') {
+      const r = await site.setConfigChange(parts[2], (await readJsonBody(req)) ?? {}, who.name);
+      console.log(`✎ правка конфигов ${r.id}: ${r.status} — ${who.name}`);
+      return json(res, 200, r);
     }
   }
 

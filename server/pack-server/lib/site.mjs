@@ -49,6 +49,7 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
     rest = {
       docs: docsUrl || m.DOCS,
       fromValue: m.fromValue,
+      toValue: m.toValue,
       async auth() {
         if (!tok || tok.until < Date.now()) tok = { value: await m.token(), until: Date.now() + 45 * 60_000 };
         return tok.value;
@@ -57,15 +58,21 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
     return rest;
   }
 
-  async function api(url) {
+  async function api(url, init = {}) {
     const fsr = await firestore();
     let res;
     try {
-      res = await fetch(fsr.docs + url, { headers: { Authorization: `Bearer ${await fsr.auth()}` } });
+      res = await fetch(fsr.docs + url, {
+        ...init,
+        headers: { Authorization: `Bearer ${await fsr.auth()}`, 'Content-Type': 'application/json' },
+      });
     } catch (e) {
       throw new HttpError(502, `Firestore недоступен: ${e.cause?.code ?? e.message}`);
     }
     if (res.status === 404) return null;
+    // Условие записи не выполнено (документ изменили после чтения)
+    if (res.status === 400 && init.method === 'PATCH' && /FAILED_PRECONDITION/.test(await res.clone().text()))
+      throw new HttpError(409, 'Правку изменили после чтения — посмотрите список ещё раз');
     if (!res.ok) {
       const body = await res.text();
       console.error(`Firestore ${res.status} ${url}: ${body.slice(0, 300)}`);
@@ -172,5 +179,59 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
     return target;
   }
 
-  return { datapacks, kubejs, schematics, filePath, reset: () => cache.clear() };
+  /**
+   * Правки конфигов от агента (configChanges, пишет MCP config_propose) — для tfc admin changes. Без кеша:
+   * хост смотрит редко, а после применения список должен сразу показать итог. updateTime — для условной записи.
+   */
+  async function configChanges() {
+    const fsr = await firestore();
+    const out = [];
+    let pageToken = '';
+    do {
+      const r = await api(`/configChanges?pageSize=300${pageToken ? `&pageToken=${pageToken}` : ''}`);
+      for (const d of r?.documents ?? [])
+        out.push({ id: d.name.split('/').pop(), updateTime: d.updateTime, ...fields(fsr, d) });
+      pageToken = r?.nextPageToken ?? '';
+    } while (pageToken);
+    return out.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+  }
+
+  /** Итог правки от хоста: status applied | rejected, results [{ key, ok, msg }]; только если её не меняли */
+  async function setConfigChange(id, { status, results, updateTime }, by) {
+    if (!FILE_ID_RE.test(id)) throw new HttpError(400, 'Неверный id правки');
+    if (!['applied', 'rejected'].includes(status)) throw new HttpError(400, 'status — applied или rejected');
+    if (typeof updateTime !== 'string' || !updateTime) throw new HttpError(400, 'нужен updateTime из списка');
+    const list = Array.isArray(results) ? results.slice(0, 200) : [];
+    const data = {
+      status,
+      appliedAt: Date.now(),
+      appliedBy: String(by).slice(0, 80),
+      results: list.map((r) => ({
+        path: String(r?.path ?? '').slice(0, 300),
+        key: String(r?.key ?? '').slice(0, 300),
+        ok: r?.ok === true,
+        msg: String(r?.msg ?? '').slice(0, 500),
+      })),
+    };
+    const fsr = await firestore();
+    const mask = Object.keys(data)
+      .map((k) => `updateMask.fieldPaths=${k}`)
+      .join('&');
+    const d = await api(`/configChanges/${id}?${mask}&currentDocument.updateTime=${encodeURIComponent(updateTime)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ fields: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, fsr.toValue(v)])) }),
+    });
+    if (!d) throw new HttpError(404, 'Нет такой правки');
+    return { id, updateTime: d.updateTime, ...data };
+  }
+
+  return {
+    datapacks,
+    kubejs,
+    schematics,
+    filePath,
+    configChanges,
+    setConfigChange,
+    reset: () => cache.clear(),
+  };
 }
