@@ -1,0 +1,16 @@
+modLoader = "javafml"
+loaderVersion = "[2,)"
+license = "MIT"
+
+[[mods]]
+modId = "stress_fix_devtest"
+version = "1.0.0"
+displayName = "Stress Fix devtest"
+description = "Только для сервера разработки: /sftest"
+
+[[dependencies.stress_fix_devtest]]
+modId = "stress_fix"
+type = "required"
+versionRange = "[1,)"
+ordering = "AFTER"
+side = "BOTH"
