@@ -141,8 +141,8 @@ NeoForge — `minecraft`.
 | --- | --- |
 | `class_find(query*, jar, kind, mixin, platform)` | классы по части имени, полному имени или glob (`*Furnace*`): вид, родитель, jar и мод, у миксинов — цели |
 | `class_info(class*, jar, members, synthetic)` | класс по байткоду: предки с модами, интерфейсы, аннотации, поля с константами, методы с сигнатурами и строками исходника (`:66–89` — для стека краша), миксины на класс, другие jar с тем же классом; ⚠ если общий класс ссылается на классы только клиента (см. ниже) |
-| `class_hierarchy(class*, direction, depth, platform)` | предки и все интерфейсы; дерево наследников и реализаций по всей сборке |
-| `code_refs(target*, kind, jar, subtypes, platform, access, side)` | кто использует — с методом и строкой: класс (`extends`, `new`, вызовы, сигнатуры, аннотации и цели миксинов), метод/поле (`Owner#name`, `*#name`; `subtypes` — вызовы через наследников; сам класс-владелец тоже в ответе), строку (`"tfc:…"`, ключ конфига). У поля — «ЗАПИСЬ»/«чтение» (`access=write` — только кто перезаписывает); у каждого места — сторона кода. ~2–6 с на сборку |
+| `class_hierarchy(class*, jar, direction, depth, platform)` | предки и все интерфейсы; дерево наследников и реализаций по всей сборке |
+| `code_refs(target*, kind, jar, subtypes, self, platform, access, side)` | кто использует — с методом и строкой: класс (`extends`, `new`, вызовы, сигнатуры, аннотации и цели миксинов), метод/поле (`Owner#name`, `*#name`; `subtypes` — вызовы через наследников; сам класс-владелец тоже в ответе; у класса — `self`, чтобы включить и его), строку (`"tfc:…"`, ключ конфига). У поля — «ЗАПИСЬ»/«чтение» (`access=write` — только кто перезаписывает); у каждого места — сторона кода. ~2–6 с на сборку |
 | `event_listeners(event*, subtypes, platform, kubejs)` | кто слушает событие NeoForge: `@SubscribeEvent` с этим событием, его предками и наследниками (priority, `@EventBusSubscriber`), `addListener(…)` с лямбдами и ссылками на методы; скрипты KubeJS — `NativeEvents.onEvent`/`Java.loadClass` с этим классом и события KubeJS (`PlayerEvents.loggedIn` …), которые KubeJS разносит из своего обработчика |
 | `mixins(target, method, class, mod, platform)` | `target` — миксины на класс по методам (`@Inject`/`@Redirect`/`@Overwrite`/MixinExtras, `at`, priority, конфиг), возможные конфликты и ⚠ «миксин на этот класс может уронить выделенный сервер»; `class` — один миксин; `mod` — миксины и конфиги мода; без параметров — обзор: цели без класса, необъявленные конфиги, классы под миксинами многих модов |
 | `decompile(class*, jar, method, grep)` | исходник: моды — Vineflower (кеш `.cache/mcp/decompile`, ~1–4 с первый раз), Minecraft — `-sources.jar`; `method` — только метод |
@@ -318,18 +318,18 @@ TFC 4.2.9 (включая то, как Java читает серые карты).
 ```
 scripts/mcp/
   server.mjs        протокол MCP поверх stdio; ответы — в stdout, журнал — в stderr
-  tools.mjs         базовые инструменты (предметы, рецепты, теги, справочник, конфиги, гайды, jar) и общий список
+  tools.mjs         базовые инструменты (предметы, рецепты, теги, справочник, гайды, jar), общий список и INSTRUCTIONS
   fmt.mjs           общее: page (страницы), clip, named/nameOf (id с названием), words/norm, схемы str/num/paging
   data.mjs          данные public/: слияние модов и KubeJS, как на сайте; кеш по времени изменения файла
   jars.mjs          оглавление и чтение jar без распаковки (и вложенных, и Minecraft + NeoForge), javap
   bytecode.mjs      разбор .class: аннотации, номера строк, ссылки из инструкций, сигнатуры текстом
   code-index.mjs    индекс классов, цели миксинов, neoforge.mods.toml (свой мини-TOML), версии как в Maven/FML
-  firestore.mjs     REST к Firestore: api, listAll, cached; конфиги, гайды
+  firestore.mjs     REST к Firestore: api, listAll, cached; конфиги, правки конфигов, гайды
   site-datapacks.mjs  датапаки сайта как слой рецептов (recipes(site) в data.mjs)
   resources.mjs     слои ресурсов клиента (ресурспаки, KubeJS, аддоны, jar, Minecraft), модель с parent
   render.mjs        растеризатор моделей в PNG (model_render, texture_get) и генератор иконок из командной строки
   tools/<раздел>.mjs  инструменты раздела: code (классы, миксины, декомпиляция, зависимости), logs,
-                      pack, kubejs, books (+books-index), blocks (+blocks-data), site, map (+map-climate,
+                      config (config_get, config_propose, config_changes), pack, kubejs, books (+books-index), blocks (+blocks-data), site, map (+map-climate,
                       map-png — PNG чтение и запись), resources (model_render, texture_get, resources_check)
 ```
 
@@ -349,8 +349,10 @@ scripts/mcp/
 4. Проверка — node-скрипт в scratchpad, который запускает `server.mjs`, шлёт `initialize`, `tools/list` и вызовы
    и сверяет ответы с прямым чтением файлов, jar или Firestore. Потом `npx oxlint scripts/mcp` и
    `npx prettier --write` на свои файлы.
-5. В Firestore из MCP пишет только `guide_put`. Новая запись — только с проверкой ревизии, как у него.
-6. Перечисли новый инструмент в этом файле и в разделе MCP в `CLAUDE.md`.
+5. В Firestore из MCP пишут только `guide_put` (с проверкой ревизии) и `config_propose` / `config_changes cancel=…`
+   (своя коллекция `configChanges`, файлы применяет хост). Новая запись — с такой же защитой от затирания чужого.
+6. Перечисли новый инструмент в этом файле (с параметрами) и в разделе MCP в `CLAUDE.md`; если он меняет привычный
+   путь агента (как `log_analyze` для крашей) — и в `INSTRUCTIONS` в `tools.mjs`.
 
 ## Что дальше
 
