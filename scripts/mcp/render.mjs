@@ -6,9 +6,31 @@
  * Проекция ортографическая, свой буфер глубины, затенение граней как в игре (верх 1.0, низ 0.5, север/юг 0.8,
  * запад/восток 0.6) — по нормали после поворотов. Не рисуется: окраска tintindex (трава, листья — серые), ambient
  * occlusion, эмиссия, анимация (берётся первый кадр), модели с loader (obj и т. п.) — о них предупреждение.
+ *
+ * Один генератор картинок для MCP (model_render) и иконок аддонов (сайт, выпуск) — запуск из командной строки:
+ *   node scripts/mcp/render.mjs <папка ресурсов> <id…> --out <папка> [--size 256] [--kind icon|block|item|model]
+ *        [--state facing=north] [--view gui] [--aa 4]
+ * Ресурсы — папка с assets/ (tools/<мод>/src/main/resources), чужие parent и текстуры — из jar mods/ и Minecraft.
  */
 import { decodePng, encodePng } from './tools/map-png.mjs';
-import { findResource, resolveTexture, texturePath } from './resources.mjs';
+import fs from 'node:fs';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { mods } from './data.mjs';
+import {
+  blockstatePath,
+  findResource,
+  loadModel,
+  modelPath,
+  parseState,
+  pickVariant,
+  readJsonRes,
+  resLoc,
+  resolveTexture,
+  resourceLayers,
+  statePropsOf,
+  texturePath,
+} from './resources.mjs';
 
 const SHADE = { up: 1.0, down: 0.5, north: 0.8, south: 0.8, east: 0.6, west: 0.6 };
 const DEG = Math.PI / 180;
@@ -135,10 +157,11 @@ export function loadTexture(layers, id, cache = new Map()) {
 // ---------------------------------------------------------------- 3D
 
 /**
- * Рисунок: parts — [{ model (loadModel), x, y }], view — gui | top | bottom | north | south | east | west.
+ * Рисунок: parts — [{ model (loadModel), x, y }], view — gui | top | bottom | north | south | east | west,
+ * aa — суперсэмплинг (4: рисуем 4× и усредняем; 1 — без сглаживания).
  * Возвращает { png, warnings, textures: Map(id → откуда | null) }.
  */
-export function renderModel(layers, parts, { view = 'gui', size = 256 } = {}) {
+export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } = {}) {
   const warnings = new Set();
   const used = new Map();
   const texCache = new Map();
@@ -222,22 +245,25 @@ export function renderModel(layers, parts, { view = 'gui', size = 256 } = {}) {
       minY = Math.min(minY, p[1]);
       maxY = Math.max(maxY, p[1]);
     }
-  let scale = size / (16 * 1.75);
+  // Суперсэмплинг: рисуем в ss раз крупнее и усредняем — ровные края, альфа по покрытию
+  const ss = Math.max(1, Math.min(8, aa | 0));
+  const S = size * ss;
+  let scale = (size / (16 * 1.75)) * ss;
   let cx = 0;
   let cy = 0;
   if (quads.length) {
     const span = Math.max(maxX - minX, maxY - minY);
-    if (span * scale > size * 0.94) scale = (size * 0.94) / span;
+    if (span * scale > S * 0.94) scale = (S * 0.94) / span;
     // Не влезает по центру блока — центрируем по рамке
-    if (Math.max(-minX, maxX, -minY, maxY) * scale > size * 0.47) {
+    if (Math.max(-minX, maxX, -minY, maxY) * scale > S * 0.47) {
       cx = (minX + maxX) / 2;
       cy = (minY + maxY) / 2;
     }
   }
-  const proj = (p) => [size / 2 + (p[0] - cx) * scale, size / 2 - (p[1] - cy) * scale, p[2]];
+  const proj = (p) => [S / 2 + (p[0] - cx) * scale, S / 2 - (p[1] - cy) * scale, p[2]];
 
-  const img = new Uint8Array(size * size * 4);
-  const depth = new Float32Array(size * size).fill(-Infinity);
+  const img = new Uint8Array(S * S * 4);
+  const depth = new Float32Array(S * S).fill(-Infinity);
   for (const q of quads) {
     const O = proj(q.O);
     const U = proj(q.U);
@@ -254,21 +280,26 @@ export function renderModel(layers, parts, { view = 'gui', size = 256 } = {}) {
       if (tex?.error) tex = null;
     }
     const [u0, v0, u1, v1] = q.uv;
+    // Грань с краями включительно и запасом в полпикселя: на стыках граней нет щелей
+    const es = 0.5 / Math.max(1e-6, Math.hypot(du[0], du[1]));
+    const et = 0.5 / Math.max(1e-6, Math.hypot(dv[0], dv[1]));
     const xs = [O[0], U[0], V[0], U[0] + dv[0]];
     const ys = [O[1], U[1], V[1], U[1] + dv[1]];
-    const y0 = Math.max(0, Math.floor(Math.min(...ys)));
-    const y1 = Math.min(size - 1, Math.floor(Math.max(...ys)));
-    const x0 = Math.max(0, Math.floor(Math.min(...xs)));
-    const x1 = Math.min(size - 1, Math.floor(Math.max(...xs)));
+    const y0 = Math.max(0, Math.floor(Math.min(...ys)) - 1);
+    const y1 = Math.min(S - 1, Math.floor(Math.max(...ys)) + 1);
+    const x0 = Math.max(0, Math.floor(Math.min(...xs)) - 1);
+    const x1 = Math.min(S - 1, Math.floor(Math.max(...xs)) + 1);
     for (let py = y0; py <= y1; py++)
       for (let px = x0; px <= x1; px++) {
         const qx = px + 0.5 - O[0];
         const qy = py + 0.5 - O[1];
-        const s = (qx * dv[1] - qy * dv[0]) / det;
-        const t = (du[0] * qy - du[1] * qx) / det;
-        if (s < 0 || s >= 1 || t < 0 || t >= 1) continue;
+        let s = (qx * dv[1] - qy * dv[0]) / det;
+        let t = (du[0] * qy - du[1] * qx) / det;
+        if (s < -es || s > 1 + es || t < -et || t > 1 + et) continue;
+        s = Math.min(0.99999, Math.max(0, s));
+        t = Math.min(0.99999, Math.max(0, t));
         const z = O[2] + s * du[2] + t * dv[2];
-        const k = py * size + px;
+        const k = py * S + px;
         if (z <= depth[k]) continue;
         let a = s;
         let b = t;
@@ -278,6 +309,7 @@ export function renderModel(layers, parts, { view = 'gui', size = 256 } = {}) {
         let bl;
         let al;
         if (tex) {
+          // Ближайший пиксель текстуры, как в игре
           const tx = Math.min(tex.w - 1, Math.max(0, Math.floor(((u0 + (u1 - u0) * a) / 16) * tex.w)));
           const ty = Math.min(tex.h - 1, Math.max(0, Math.floor(((v0 + (v1 - v0) * b) / 16) * tex.h)));
           const c = tex.rgb[ty * tex.w + tx];
@@ -312,7 +344,38 @@ export function renderModel(layers, parts, { view = 'gui', size = 256 } = {}) {
       }
   }
   for (const [id, from] of used) if (!from) warnings.add(`нет текстуры ${id}`);
-  return { png: encodePng(size, size, img), warnings: [...warnings], textures: used };
+  return { png: encodePng(size, size, downsample(img, S, ss)), warnings: [...warnings], textures: used };
+}
+
+/** Уменьшение в ss раз: цвет — среднее с весом альфы, альфа — доля покрытия */
+function downsample(src, S, ss) {
+  if (ss === 1) return src;
+  const size = S / ss;
+  const out = new Uint8Array(size * size * 4);
+  const n = ss * ss;
+  for (let y = 0; y < size; y++)
+    for (let x = 0; x < size; x++) {
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let a = 0;
+      for (let j = 0; j < ss; j++)
+        for (let i = 0; i < ss; i++) {
+          const k = ((y * ss + j) * S + x * ss + i) * 4;
+          const al = src[k + 3];
+          r += src[k] * al;
+          g += src[k + 1] * al;
+          b += src[k + 2] * al;
+          a += al;
+        }
+      const o = (y * size + x) * 4;
+      if (!a) continue;
+      out[o] = Math.round(r / a);
+      out[o + 1] = Math.round(g / a);
+      out[o + 2] = Math.round(b / a);
+      out[o + 3] = Math.round(a / n);
+    }
+  return out;
 }
 
 // ---------------------------------------------------------------- плоское: предметы item/generated, текстуры
@@ -335,10 +398,13 @@ export function renderGenerated(layers, model, size = 256) {
     warnings.push('у предмета нет слоёв layer0…');
     return { png: encodePng(1, 1, new Uint8Array(4)), warnings, textures: used };
   }
+  // Целый масштаб (пиксели текстуры — квадраты одного размера), по центру картинки size×size
   const n = Math.max(...texs.map((t) => t.w));
   const k = Math.max(1, Math.floor(size / n));
   const W = n * k;
-  const img = new Uint8Array(W * W * 4);
+  const C = Math.max(size, W);
+  const off = (C - W) >> 1;
+  const img = new Uint8Array(C * C * 4);
   for (const t of texs)
     for (let y = 0; y < W; y++)
       for (let x = 0; x < W; x++) {
@@ -347,7 +413,7 @@ export function renderGenerated(layers, model, size = 256) {
         const al = t.a[ty * t.w + tx];
         if (!al) continue;
         const c = t.rgb[ty * t.w + tx];
-        const i4 = (y * W + x) * 4;
+        const i4 = ((y + off) * C + x + off) * 4;
         const f = al / 255;
         img[i4] = (c >> 16) * f + img[i4] * (1 - f);
         img[i4 + 1] = ((c >> 8) & 255) * f + img[i4 + 1] * (1 - f);
@@ -356,7 +422,7 @@ export function renderGenerated(layers, model, size = 256) {
       }
   if (Object.keys(model.textures).some((x) => /^layer[1-9]/.test(x)))
     warnings.push('слои выше layer0 часто окрашиваются кодом (tint) — здесь без окраски');
-  return { png: encodePng(W, W, img), warnings, textures: used };
+  return { png: encodePng(C, C, img), warnings, textures: used };
 }
 
 /** Текстура как есть (весь лист, вкл. все кадры), увеличенная без сглаживания до ~size по большей стороне */
@@ -377,3 +443,112 @@ export function textureImage(t, size = 256) {
     }
   return encodePng(W, H, img);
 }
+
+// ---------------------------------------------------------------- по id: блок, предмет, модель
+
+function chainText(m) {
+  const head = m.chain.map((c) => `${c.id} (${c.from})`).join(' → ');
+  const miss = m.missing.length ? ` → ❌ нет ${m.missing.join(', ')}` : '';
+  return `${head}${miss}`;
+}
+
+/**
+ * Рисунок по id: kind — block (блокстейт → вариант state), item (models/item/…), model (ns:block/…),
+ * icon (как в инвентаре: модель предмета, а нет её — блок); без kind — блок, иначе предмет, иначе модель.
+ * Возвращает { png | null, lines (что нарисовано, откуда, предупреждения) }.
+ */
+export function renderId(layers, id, { kind, state, view = 'gui', size = 256, aa = 4 } = {}) {
+  if (!id) return { png: null, lines: ['Укажите id блока или предмета (ns:path) или модели (ns:block/…).'] };
+  const { ns, path: p } = resLoc(id);
+  const hasItem = () => Boolean(findResource(layers, modelPath(`${ns}:item/${p}`)));
+  let k = kind;
+  if (k === 'icon') k = hasItem() ? 'item' : 'block';
+  if (!k) k = findResource(layers, blockstatePath(id)) ? 'block' : hasItem() ? 'item' : 'model';
+  const lines = [];
+  let parts;
+  if (k === 'block') {
+    const bs = readJsonRes(layers, blockstatePath(id));
+    if (!bs)
+      return {
+        png: null,
+        lines: [`Блокстейта ${blockstatePath(id)} нет ни в одном слое (ресурспаки, KubeJS, аддоны, jar, Minecraft).`],
+      };
+    if (!bs.json) return { png: null, lines: [`${blockstatePath(id)} (${bs.from}): JSON не разобрался — ${bs.error}`] };
+    const v = pickVariant(bs.json, parseState(state));
+    lines.push(`блокстейт ${blockstatePath(id)} (${bs.from}); вариант «${v.key}»`);
+    parts = v.parts.map((x) => ({ model: loadModel(layers, x.model), x: x.x ?? 0, y: x.y ?? 0, uvlock: x.uvlock }));
+    for (const [i, x] of v.parts.entries())
+      lines.push(
+        `модель${v.parts.length > 1 ? ` ${i + 1}` : ''}: ${chainText(parts[i].model)}${x.x || x.y ? `; x=${x.x ?? 0} y=${x.y ?? 0}` : ''}`,
+      );
+    const props = statePropsOf(bs.json);
+    if (props.size)
+      lines.push(`свойства в блокстейте: ${[...props].map(([key, s]) => `${key}=${[...s].join('|')}`).join('; ')}`);
+  } else {
+    const mid = k === 'item' ? `${ns}:item/${p}` : `${ns}:${p}`;
+    const m = loadModel(layers, mid);
+    lines.push(`модель: ${chainText(m)}`);
+    if (!m.chain.length) return { png: null, lines: [...lines, `Модели ${modelPath(mid)} нет.`] };
+    if (m.generated) {
+      const r = renderGenerated(layers, m, size);
+      lines.push(
+        `предмет item/generated: слои ${Object.keys(m.textures)
+          .filter((x) => x.startsWith('layer'))
+          .join(', ')}`,
+      );
+      for (const [t, from] of r.textures) lines.push(`  текстура ${t}: ${from ?? '❌ нет'}`);
+      for (const w of r.warnings) lines.push(`⚠ ${w}`);
+      return { png: r.png, lines };
+    }
+    parts = [{ model: m, x: 0, y: 0 }];
+  }
+  const r = renderModel(layers, parts, { view, size, aa });
+  for (const [t, from] of r.textures) lines.push(`  текстура ${t}: ${from ?? '❌ нет'}`);
+  for (const pm of parts) for (const e of pm.model.errors) lines.push(`❌ ${e}`);
+  for (const w of r.warnings) lines.push(`⚠ ${w}`);
+  lines.push(`вид: ${view}, ${size}×${size}${aa > 1 ? `, сглаживание ${aa}×` : ''}`);
+  return { png: r.png, lines };
+}
+
+// ---------------------------------------------------------------- командная строка
+
+function cli(argv) {
+  const opts = { out: '.', size: 256, kind: 'icon', view: 'gui', aa: 4, state: undefined };
+  const pos = [];
+  for (let i = 0; i < argv.length; i++) {
+    const m = argv[i].match(/^--(out|size|kind|view|aa|state)(?:=(.*))?$/);
+    if (m) opts[m[1]] = m[2] ?? argv[++i];
+    else pos.push(argv[i]);
+  }
+  const [res, ...ids] = pos;
+  if (!res || !ids.length) {
+    console.error(
+      'node scripts/mcp/render.mjs <папка ресурсов> <id…> --out <папка> [--size 256] [--kind icon|block|item|model] [--state …] [--view gui] [--aa 4]',
+    );
+    process.exit(2);
+  }
+  const dir = fs.existsSync(path.join(res, 'src/main/resources/assets')) ? path.join(res, 'src/main/resources') : res;
+  if (!fs.existsSync(path.join(dir, 'assets'))) {
+    console.error(`${res}: нет папки assets/`);
+    process.exit(2);
+  }
+  // Старая сборка этого же мода в mods/ не подставляет файлы, которых нет в папке
+  const own = new Set(fs.readdirSync(path.join(dir, 'assets')));
+  const skip = new Set([...mods().values()].filter((m) => own.has(m.id)).map((m) => m.jar));
+  const layers = resourceLayers({ addon: path.resolve(dir) }, true, skip);
+  fs.mkdirSync(opts.out, { recursive: true });
+  let failed = 0;
+  for (const id of ids) {
+    const r = renderId(layers, id, { ...opts, size: Number(opts.size), aa: Number(opts.aa) });
+    const file = path.join(opts.out, `${resLoc(id).path.replaceAll('/', '_')}.png`);
+    if (r.png) fs.writeFileSync(file, r.png);
+    else failed++;
+    const warn = r.lines.filter((l) => /^(⚠|❌)|❌ нет/.test(l.trim()));
+    console.log(`${r.png ? '✓' : '✗'} ${id}${r.png ? ` → ${file}` : `: ${r.lines.at(-1)}`}`);
+    for (const l of warn) console.log(`    ${l.trim()}`);
+  }
+  if (failed) process.exit(1);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href)
+  cli(process.argv.slice(2));

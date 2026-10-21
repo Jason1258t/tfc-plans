@@ -12,150 +12,33 @@ import { classRecord, parseToml } from '../code-index.mjs';
 import { mods, tags } from '../data.mjs';
 import { num, str } from '../fmt.mjs';
 import { jarToc, readEntry, resolveJar } from '../jars.mjs';
-import { loadTexture, renderGenerated, renderModel, textureImage } from '../render.mjs';
+import { loadTexture, renderId, textureImage } from '../render.mjs';
 import {
   addonDirs,
   blockstatePath,
   findResource,
   loadModel,
   modelPath,
+  parseState,
   readJsonRes,
   resLoc,
   resolveTexture,
   resourceLayers,
+  stateText,
+  statePropsOf,
   texturePath,
 } from '../resources.mjs';
 
-// ---------------------------------------------------------------- блокстейты
-
-/** «facing=north,roll=false» → { facing: 'north', roll: 'false' } */
-function parseState(s) {
-  const out = {};
-  for (const part of String(s ?? '').split(',')) {
-    const [k, v] = part.split('=').map((x) => x?.trim());
-    if (k && v != null) out[k] = v;
-  }
-  return out;
-}
-const stateText = (st) =>
-  Object.entries(st)
-    .map(([k, v]) => `${k}=${v}`)
-    .join(',');
-
-/** Подходит ли условие multipart «when» к состоянию */
-function whenMatches(when, st) {
-  if (!when) return true;
-  if (Array.isArray(when.OR)) return when.OR.some((w) => whenMatches(w, st));
-  if (Array.isArray(when.AND)) return when.AND.every((w) => whenMatches(w, st));
-  return Object.entries(when).every(([k, v]) => {
-    const neg = String(v).startsWith('!');
-    const vals = String(v).replace(/^!/, '').split('|');
-    return neg ? !vals.includes(st[k]) : vals.includes(st[k]);
-  });
-}
-
-/** Свойства и значения, упомянутые в блокстейте: Map(свойство → Set(значения)) */
-function statePropsOf(bs) {
-  const props = new Map();
-  const add = (k, v) => (props.get(k) ?? props.set(k, new Set()).get(k)).add(String(v));
-  for (const key of Object.keys(bs.variants ?? {})) for (const [k, v] of Object.entries(parseState(key))) add(k, v);
-  const walk = (w) => {
-    if (!w) return;
-    if (Array.isArray(w.OR)) return w.OR.forEach(walk);
-    if (Array.isArray(w.AND)) return w.AND.forEach(walk);
-    for (const [k, v] of Object.entries(w)) for (const x of String(v).replace(/^!/, '').split('|')) add(k, x);
-  };
-  for (const p of bs.multipart ?? []) walk(p.when);
-  return props;
-}
-
-const firstModel = (v) => (Array.isArray(v) ? v[0] : v);
-
-/** Модели блокстейта для состояния: [{ model, x, y, uvlock }], ключ варианта */
-function pickVariant(bs, want) {
-  if (bs.variants) {
-    const keys = Object.keys(bs.variants);
-    const key =
-      keys.find(
-        (k) =>
-          Object.entries(parseState(k)).every(([p, v]) => want[p] == null || want[p] === v) &&
-          Object.keys(want).every((p) => p in parseState(k) || !k),
-      ) ??
-      keys.find((k) => Object.entries(want).every(([p, v]) => parseState(k)[p] === v)) ??
-      keys[0];
-    const v = firstModel(bs.variants[key]);
-    return { key, parts: v ? [v] : [] };
-  }
-  // multipart: свойства без значения — первое упомянутое значение
-  const st = { ...want };
-  for (const [k, vals] of statePropsOf(bs)) if (st[k] == null) st[k] = [...vals][0];
-  const parts = [];
-  for (const p of bs.multipart ?? []) if (whenMatches(p.when, st)) parts.push(...[p.apply].flat().slice(0, 1));
-  return { key: stateText(st), parts };
-}
-
 // ---------------------------------------------------------------- model_render
 
-function chainText(m) {
-  const head = m.chain.map((c) => `${c.id} (${c.from})`).join(' → ');
-  const miss = m.missing.length ? ` → ❌ нет ${m.missing.join(', ')}` : '';
-  return `${head}${miss}`;
-}
-
 function modelRender(a) {
-  const layers = resourceLayers();
-  const id = String(a.id ?? '').trim();
-  if (!id) return 'Укажите id блока или предмета (ns:path) или модели (ns:block/…).';
-  const { ns, path: p } = resLoc(id);
-  const size = Math.min(1024, Math.max(32, Number(a.size ?? 256) | 0));
-  const view = a.view ?? 'gui';
-  const lines = [];
-  let parts = null;
-  let kind = a.kind;
-  if (!kind) {
-    if (findResource(layers, blockstatePath(id))) kind = 'block';
-    else if (findResource(layers, modelPath(`${ns}:item/${p}`))) kind = 'item';
-    else kind = 'model';
-  }
-  if (kind === 'block') {
-    const bs = readJsonRes(layers, blockstatePath(id));
-    if (!bs)
-      return `Блокстейта ${blockstatePath(id)} нет ни в одном слое (ресурспаки, KubeJS, аддоны, jar, Minecraft).`;
-    if (!bs.json) return `${blockstatePath(id)} (${bs.from}): JSON не разобрался — ${bs.error}`;
-    const v = pickVariant(bs.json, parseState(a.state));
-    lines.push(`блокстейт ${blockstatePath(id)} (${bs.from}); вариант «${v.key}»`);
-    parts = v.parts.map((x) => ({ model: loadModel(layers, x.model), x: x.x ?? 0, y: x.y ?? 0, uvlock: x.uvlock }));
-    for (const [i, x] of v.parts.entries())
-      lines.push(
-        `модель${v.parts.length > 1 ? ` ${i + 1}` : ''}: ${chainText(parts[i].model)}${x.x || x.y ? `; x=${x.x ?? 0} y=${x.y ?? 0}` : ''}`,
-      );
-    const props = statePropsOf(bs.json);
-    if (props.size)
-      lines.push(`свойства в блокстейте: ${[...props].map(([k, s]) => `${k}=${[...s].join('|')}`).join('; ')}`);
-  } else {
-    const mid = kind === 'item' ? `${ns}:item/${p}` : `${ns}:${p}`;
-    const m = loadModel(layers, mid);
-    lines.push(`модель: ${chainText(m)}`);
-    if (!m.chain.length) return `${lines.join('\n')}\nМодели ${modelPath(mid)} нет.`;
-    if (m.generated) {
-      const r = renderGenerated(layers, m, size);
-      lines.push(
-        `предмет item/generated: слои ${Object.keys(m.textures)
-          .filter((k) => k.startsWith('layer'))
-          .join(', ')}`,
-      );
-      for (const [t, from] of r.textures) lines.push(`  текстура ${t}: ${from ?? '❌ нет'}`);
-      for (const w of r.warnings) lines.push(`⚠ ${w}`);
-      return { text: lines.join('\n'), images: [r.png] };
-    }
-    parts = [{ model: m, x: 0, y: 0 }];
-  }
-  const r = renderModel(layers, parts, { view, size });
-  for (const [t, from] of r.textures) lines.push(`  текстура ${t}: ${from ?? '❌ нет'}`);
-  for (const pm of parts) for (const e of pm.model.errors) lines.push(`❌ ${e}`);
-  for (const w of r.warnings) lines.push(`⚠ ${w}`);
-  lines.push(`вид: ${view}, ${size}×${size}`);
-  return { text: lines.join('\n'), images: [r.png] };
+  const r = renderId(resourceLayers(), String(a.id ?? '').trim(), {
+    kind: a.kind,
+    state: a.state,
+    view: a.view,
+    size: Math.min(1024, Math.max(32, Number(a.size ?? 256) | 0)),
+  });
+  return r.png ? { text: r.lines.join('\n'), images: [r.png] } : r.lines.join('\n');
 }
 
 // ---------------------------------------------------------------- texture_get
