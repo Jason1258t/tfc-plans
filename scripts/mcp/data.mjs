@@ -252,7 +252,13 @@ export const recipes = (site = null) =>
       const byOutput = new Map();
       const byInput = new Map();
       for (const r of merged.values()) {
-        const origin = r.k ? 'kubejs-script' : r.s.startsWith('kubejs/') ? 'kubejs-data' : r.dp ? 'site-datapack' : 'mod';
+        const origin = r.k
+          ? 'kubejs-script'
+          : r.s.startsWith('kubejs/')
+            ? 'kubejs-data'
+            : r.dp
+              ? 'site-datapack'
+              : 'mod';
         const rec = recipeRecord(r, origin, rules);
         list.push(rec);
         indexRecipe(rec, byOutput, byInput);
