@@ -8,8 +8,10 @@ export interface McItem {
   e: string;
   /** Имя ru_ru (если отличается) */
   r?: string;
-  /** Путь иконки внутри /icons без .png */
+  /** Путь текстуры внутри /icons без .png (иконка плоских предметов; у блоков — грань для 3D-кубов) */
   t?: string;
+  /** Объёмная иконка модели, как в инвентаре (icons/<ns>/render/…, scripts/mods/icons3d.mjs) — у предметов-блоков */
+  g?: string;
 }
 
 export interface ItemIndex {
@@ -53,7 +55,12 @@ export const textureUrl = (path: string) =>
     ? `${import.meta.env.BASE_URL}icons-kubejs/${path.slice(8)}.png`
     : `${import.meta.env.BASE_URL}icons/${path}.png`;
 
+/** Текстура предмета — для граней кубов (мультиблоки, схемы) */
 export const iconUrl = (it: McItem | undefined) => (it?.t ? textureUrl(it.t) : null);
+
+/** Иконка как в инвентаре: нарисованная модель, а нет её — текстура. smooth — уже сглажена, не pixelated */
+export const guiIcon = (it: McItem | undefined) =>
+  it?.g ? { url: textureUrl(it.g), smooth: true } : it?.t ? { url: textureUrl(it.t), smooth: false } : null;
 
 const norm = (s: string) => s.toLowerCase().replaceAll('ё', 'е');
 

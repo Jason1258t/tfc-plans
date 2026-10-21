@@ -31,6 +31,7 @@ import { isMealClass, writeMeals } from './mods/meals.mjs';
 import { isCuisineClass, isCuisineData } from './mods/cuisine.mjs';
 import { writePower } from './mods/power.mjs';
 import { writeMultiblocks } from './mods/multiblocks.mjs';
+import { makeRenderer } from './mods/icons3d.mjs';
 
 const MC_VERSION = '1.21.1';
 
@@ -578,6 +579,7 @@ export async function buildMods({
   }
 
   fs.rmSync(OUT_ICONS, { recursive: true, force: true });
+  const icons3d = makeRenderer({ findAsset, outIcons: OUT_ICONS, cacheDir: CACHE });
   const items = [];
   const seen = new Set();
 
@@ -623,15 +625,23 @@ export async function buildMods({
         fallbackIcon(p);
       seen.add(id);
       count++;
+      // Модель из элементов (блоки) — ещё и объёмной картинкой, как в инвентаре (g); t — текстура, она нужна и граням
+      // кубов мультиблоков и схем
+      const drawn = icons3d.render(ns, p);
       items.push({
         i: id,
         e: name,
         ...(ru[key] && ru[key] !== name ? { r: ru[key] } : {}),
         ...(tex ? { t: copyIcon(tex) } : {}),
+        ...(drawn ? { g: drawn } : {}),
       });
     }
     if (count) perNs.set(ns, (perNs.get(ns) ?? 0) + count);
   }
+  const st = icons3d.stats;
+  log(
+    `объёмные иконки: нарисовано ${st.drawn}, из кеша ${st.cached}, не вышло ${st.failed}, модель кодом или загрузчиком ${st.code} (эти — текстурой)`,
+  );
   const summary = [...perNs].sort((a, b) => b[1] - a[1]);
   log(`по модам: ${summary.map(([ns, n]) => `${ns} ${n}`).join(', ')}`);
 
