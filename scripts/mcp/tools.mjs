@@ -23,6 +23,7 @@ import {
   tags,
   tagsOf,
 } from './data.mjs';
+import { siteRecipes } from './site-datapacks.mjs';
 import { FirestoreError, configDocs, guideDoc, guideDocs, writeGuide } from './firestore.mjs';
 import { clip, dateOf, nameOf, named, norm, num, page, paging, short, str, userRegex, words } from './fmt.mjs';
 import { oneClass, classRecord } from './code-index.mjs';
@@ -96,14 +97,15 @@ const stripSrc = (o) => {
 
 // ---------------------------------------------------------------- рецепты
 
-function ruleRef(n) {
-  const r = recipes().rules[n];
+function ruleRef(n, cat = recipes()) {
+  const r = cat.rules[n];
   return `${r.kind} ${r.layer}/${r.file.replace(/^[^/]+\//, '')}:${r.line}: ${short(r.code, 200)}`;
 }
 
 function recipeSource(r) {
   if (r.k) return `скрипт KubeJS ${r.s}:${r.k.line}`;
   if (r.s.startsWith('kubejs/')) return `датапак ${r.s}`;
+  if (r.dp) return `${r.s}${r.replaces ? ` (заменяет рецепт ${r.replaces})` : ''}`;
   return r.s;
 }
 
@@ -127,45 +129,86 @@ function recipeFilterArgs(list, a) {
   return l;
 }
 
-function recipesFor(a) {
-  const id = String(a.output ?? '').trim();
-  const list = recipeFilterArgs([...(recipes().byOutput.get(id) ?? [])], a).sort(byActive);
-  const head = `Рецепты, где на выходе ${named(id)} (с учётом KubeJS: удаления, replaceOutput, kubejs/data):`;
-  return `${head}\n${page(list, a, (r) => recipeLines(r))}`;
+/** Хвост ответа: датапаки сайта, которые не ставятся, и предупреждение, если Firestore недоступен */
+function siteTail(site, found) {
+  const out = [];
+  if (found?.length)
+    out.push(
+      `Есть на сайте, но не ставится в мир (датапак без отметки «ставить»): ${found
+        .map((r) => `${r.i} (${r.dp})`)
+        .join('; ')}`,
+    );
+  if (site.note) out.push(site.note);
+  return out.length ? `\n${out.join('\n')}` : '';
 }
 
-function recipesUsing(a) {
+async function recipesFor(a) {
+  const id = String(a.output ?? '').trim();
+  const site = await siteRecipes();
+  const list = recipeFilterArgs([...(site.cat.byOutput.get(id) ?? [])], a).sort(byActive);
+  const head = `Рецепты, где на выходе ${named(id)} (с учётом KubeJS: удаления, replaceOutput, kubejs/data; и датапаков сайта):`;
+  return `${head}\n${page(list, a, (r) => recipeLines(r))}${siteTail(site, site.other?.byOutput.get(id))}`;
+}
+
+async function recipesUsing(a) {
   const id = String(a.input ?? '').trim();
-  const cat = recipes();
+  const site = await siteRecipes();
   const seen = new Map();
-  for (const r of cat.byInput.get(id) ?? []) seen.set(r.i, { r, via: '' });
+  const other = new Map();
+  const add = (map, l, via) => {
+    for (const r of l ?? []) if (!map.has(r.i)) map.set(r.i, { r, via });
+  };
+  add(seen, site.cat.byInput.get(id), '');
+  add(other, site.other?.byInput.get(id), '');
   if (!id.startsWith('#') && a.via_tags !== false) {
     const kind = tags().fluids.has(id) ? 'fluid' : 'item';
-    for (const t of tagsOf(kind, id))
-      for (const r of cat.byInput.get(`#${t}`) ?? []) if (!seen.has(r.i)) seen.set(r.i, { r, via: `через #${t}` });
+    for (const t of tagsOf(kind, id)) {
+      add(seen, site.cat.byInput.get(`#${t}`), `через #${t}`);
+      add(other, site.other?.byInput.get(`#${t}`), `через #${t}`);
+    }
   }
   const list = [...seen.values()].filter((x) => recipeFilterArgs([x.r], a).length).sort((x, y) => byActive(x.r, y.r));
-  const head = `Рецепты, где на входе ${named(id)} (напрямую и через теги, с учётом KubeJS):`;
-  return `${head}\n${page(list, a, ({ r, via }) => recipeLines(r, via))}`;
+  const head = `Рецепты, где на входе ${named(id)} (напрямую и через теги, с учётом KubeJS и датапаков сайта):`;
+  return `${head}\n${page(list, a, ({ r, via }) => recipeLines(r, via))}${siteTail(
+    site,
+    [...other.values()].map((x) => x.r),
+  )}`;
 }
 
-function recipeGet(a) {
-  const r = recipes().byId.get(String(a.id ?? '').trim());
-  if (!r) return `Рецепта ${a.id} нет. Найти: recipes_for / recipes_using.`;
+async function recipeGet(a) {
+  const id = String(a.id ?? '').trim();
+  const site = await siteRecipes();
+  const cat = site.cat;
+  let r = cat.byId.get(id);
+  let notInstalled = false;
+  if (!r && site.other?.byId.get(id)) {
+    r = site.other.byId.get(id);
+    notInstalled = true;
+  }
+  if (!r) return `Рецепта ${a.id} нет. Найти: recipes_for / recipes_using.${siteTail(site)}`;
+  const origin = {
+    mod: '',
+    'kubejs-data': ' (заменяет рецепт мода с тем же id, если был)',
+    'site-datapack': '',
+    'kubejs-script': '',
+  }[r.origin];
   const out = [
-    `${r.i} [${r.t || 'заглушка'}] — ${recipeStatus(r)}`,
-    `источник: ${recipeSource(r)}${r.origin === 'mod' ? '' : r.origin === 'kubejs-data' ? ' (заменяет рецепт мода с тем же id, если был)' : ''}`,
+    `${r.i} [${r.t || 'заглушка'}] — ${notInstalled ? 'не ставится в мир: датапак сайта без отметки «ставить»' : recipeStatus(r)}`,
+    `источник: ${recipeSource(r)}${origin}`,
   ];
+  if (r.dp) out.push(`датапак: datapack_get id=${r.dpId}, файл ${r.file}`);
   if (r.k) out.push(`код KubeJS: ${short(r.k.code, 400)}`);
-  for (const n of r.kjsRemoved) out.push(`удаляет: ${ruleRef(n)}`);
-  for (const n of r.kjsMaybe) out.push(`может удалять (фильтр не разобрать): ${ruleRef(n)}`);
-  for (const n of r.kjsChanged) out.push(`меняет: ${ruleRef(n)}`);
+  for (const n of r.kjsRemoved) out.push(`удаляет: ${ruleRef(n, cat)}`);
+  for (const n of r.kjsMaybe) out.push(`может удалять (фильтр не разобрать): ${ruleRef(n, cat)}`);
+  for (const n of r.kjsChanged) out.push(`меняет: ${ruleRef(n, cat)}`);
   out.push(`выход: ${r.outputs.map(named).join(', ') || '—'}`);
   out.push(`вход: ${r.inputs.map(named).join(', ') || '—'}`);
   if (r.effInputs.join() !== r.inputs.join() || r.effOutputs.join() !== r.outputs.join())
     out.push(`после замен KubeJS — выход: ${r.effOutputs.join(', ')}; вход: ${r.effInputs.join(', ')}`);
-  out.push(`JSON (${r.s.startsWith('kubejs/') ? r.s : `data/${r.i.replace(':', '/recipe/')}.json`}):`);
+  const file = r.file ?? (r.s.startsWith('kubejs/') ? r.s : `data/${r.i.replace(':', '/recipe/')}.json`);
+  out.push(`JSON (${file}):`);
   out.push(short(JSON.stringify(r.j, null, 1), 12000));
+  if (site.note) out.push(site.note);
   return out.join('\n');
 }
 
@@ -621,7 +664,7 @@ const CORE = [
   {
     name: 'recipes_for',
     description:
-      'Как получить предмет: рецепты с ним на выходе. Учитывает KubeJS (удаления, replaceOutput, рецепты скриптов) и kubejs/data; у каждого — статус в игре.',
+      'Как получить предмет: рецепты с ним на выходе. Учитывает KubeJS (удаления, replaceOutput, рецепты скриптов), kubejs/data и датапаки сайта, которые ставятся в мир (неставящиеся — отдельной строкой); у каждого — статус в игре и источник.',
     inputSchema: {
       type: 'object',
       properties: { output: str('id предмета/жидкости или тег «#c:…»'), ...recipeOpts },
@@ -632,7 +675,7 @@ const CORE = [
   {
     name: 'recipes_using',
     description:
-      'Где используется предмет: рецепты с ним на входе — напрямую, через теги, где он состоит, и после replaceInput KubeJS.',
+      'Где используется предмет: рецепты с ним на входе — напрямую, через теги, где он состоит, и после replaceInput KubeJS; с датапаками сайта.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -647,7 +690,7 @@ const CORE = [
   {
     name: 'recipe_get',
     description:
-      'Рецепт по id: статус, источник (мод / kubejs/data / скрипт), какие правила KubeJS его удаляют или меняют (файл:строка), входы/выходы и JSON.',
+      'Рецепт по id: статус, источник (мод / датапак сайта / kubejs/data / скрипт), какие правила KubeJS его удаляют или меняют (файл:строка), входы/выходы и JSON.',
     inputSchema: { type: 'object', properties: { id: str('id рецепта ns:path') }, required: ['id'] },
     handler: recipeGet,
   },

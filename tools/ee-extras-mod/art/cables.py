@@ -112,17 +112,26 @@ def insulator_texture(base):
 
 
 def spool_texture():
-    """Катушка двухпроводного кабеля EE, витки перекрашены полосами цветов жил"""
-    src = ee_png('item/duplex_wire_spool.png')
-    order = ['l1', 'l2', 'l3', 'n']
-    out = []
-    for y, row in enumerate(src):
-        line = []
-        for c in row:
-            cable = c[3] and luma(c) < 60 and c[0] - c[2] < 12
-            line.append(CORES[order[y % 4]][1 + (luma(c) > 35)] if cable else c)
-        out.append(line)
-    return out
+    """
+    Катушка двухпроводного кабеля EE как есть (намотка — чёрная оболочка), только концы жил другие: у EE синий (3×2)
+    и красный хвост; здесь — коричневый L1 и синий N сбоку, серый L3 снизу. Без перекраски намотки — так читается.
+    """
+    px = [list(r) for r in ee_png('item/duplex_wire_spool.png')]
+    for y, row in enumerate(px):
+        for x, c in enumerate(row):
+            if not c[3]:
+                continue
+            blue = c[2] > c[0] + 20
+            red = y >= 13 and x >= 9 and c[0] > c[2] + 15  # хвост внизу: красный с тёмными и светлыми пикселями
+            if blue:
+                key = 'l1' if y == 11 else 'n'
+            elif red:
+                key = 'l3'
+            else:
+                continue
+            dark, mid, hi = CORES[key]
+            row[x] = hi if luma(c) > 70 else mid
+    return px
 
 
 # ---------------------------------------------------------------- модели

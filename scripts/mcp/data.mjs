@@ -54,8 +54,8 @@ export function readJson(name, fallback) {
 
 /** Производные данные: пересчитываются, когда меняется любой из исходных JSON */
 const derived = new Map();
-function memo(key, sources, build) {
-  const inputs = sources.map((s) => readJson(s, null));
+function memo(key, sources, build, extra = []) {
+  const inputs = [...sources.map((s) => readJson(s, null)), ...extra];
   const c = derived.get(key);
   if (c && c.inputs.length === inputs.length && c.inputs.every((x, i) => x === inputs[i])) return c.value;
   const value = build(...inputs);
@@ -214,64 +214,101 @@ function kubejsHits(rules, target) {
   return { removed, maybe, changed };
 }
 
+/** Рецепт из файла датапака: data/<ns>/recipe/<путь>.json → { i, t, j } или null (не рецепт, не JSON) */
+export function datapackRecipe(file, text) {
+  const m = file.match(/^data\/([^/]+)\/recipes?\/(.+)\.json$/);
+  if (!m) return null;
+  let j;
+  try {
+    j = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (!j || typeof j !== 'object') return null;
+  return { i: `${m[1]}:${m[2]}`, t: typeof j.type === 'string' ? j.type : '', j };
+}
+
 /**
  * Каталог как loadRecipes в src/lib/recipes.ts: kubejs/data и рецепты скриптов с тем же id заменяют рецепт мода,
  * удаления KubeJS — только для рецептов из датапаков. Дополнительно: входы/выходы после replaceInput/replaceOutput
  * (когда from и to — строки), чтобы «из чего делают X» находило и рецепты, где X подставил скрипт.
+ *
+ * site — слой датапаков сайта, которые ставятся в мир (siteRecipes в tools.mjs): [{ i, t, j, s, dp }]. Он ложится
+ * поверх модов (рецепт с тем же id заменяется), под kubejs/data и скриптами; удаления KubeJS действуют и на него.
  */
-export const recipes = () =>
-  memo('recipes', ['recipes.json', 'kubejs.json'], (raw, kubejs) => {
-    const merged = new Map((raw ?? []).map((r) => [r.i, r]));
-    for (const r of kubejs?.recipes ?? []) merged.set(r.i, r);
-    const rules = kubejs?.rules ?? [];
-    const list = [];
-    const byOutput = new Map();
-    const byInput = new Map();
-    const index = (map, ref, r) => {
-      const l = map.get(ref);
-      if (l) l.push(r);
-      else map.set(ref, [r]);
-    };
-    for (const r of merged.values()) {
-      const outs = new Set();
-      const ins = new Set();
-      collectRefs(r.j, false, outs, ins);
-      const origin = r.k ? 'kubejs-script' : r.s.startsWith('kubejs/') ? 'kubejs-data' : 'mod';
-      const target = {
-        id: r.i,
-        type: r.t,
-        group: typeof r.j.group === 'string' ? r.j.group : undefined,
-        inputs: [...ins],
-        outputs: [...outs],
-      };
-      const hits = origin === 'kubejs-script' ? { removed: [], maybe: [], changed: [] } : kubejsHits(rules, target);
-      const effIn = new Set(ins);
-      const effOut = new Set(outs);
-      for (const n of hits.changed) {
-        const rule = rules[n];
-        if (typeof rule.from !== 'string' || typeof rule.to !== 'string') continue;
-        const set = rule.kind === 'replaceInput' ? effIn : effOut;
-        const from = rule.from.replace(/^\d+x\s+/, '');
-        if (set.delete(from)) set.add(rule.to.replace(/^\d+x\s+/, ''));
+export const recipes = (site = null) =>
+  memo(
+    site ? 'recipes+site' : 'recipes',
+    ['recipes.json', 'kubejs.json'],
+    (raw, kubejs) => {
+      const merged = new Map((raw ?? []).map((r) => [r.i, r]));
+      for (const r of site ?? []) {
+        const was = merged.get(r.i);
+        merged.set(r.i, was ? { ...r, replaces: was.s } : r);
       }
-      const rec = {
-        ...r,
-        inputs: [...ins],
-        outputs: [...outs],
-        effInputs: [...effIn],
-        effOutputs: [...effOut],
-        removed: isRemoval(r.j),
-        origin,
-        kjsRemoved: hits.removed,
-        kjsMaybe: hits.maybe,
-        kjsChanged: hits.changed,
-      };
-      list.push(rec);
-      for (const o of new Set([...outs, ...effOut])) index(byOutput, o, rec);
-      for (const i of new Set([...ins, ...effIn])) index(byInput, i, rec);
-    }
-    return { list, byId: new Map(list.map((r) => [r.i, r])), byOutput, byInput, rules, kubejs };
-  });
+      for (const r of kubejs?.recipes ?? []) merged.set(r.i, r);
+      const rules = kubejs?.rules ?? [];
+      const list = [];
+      const byOutput = new Map();
+      const byInput = new Map();
+      for (const r of merged.values()) {
+        const origin = r.k ? 'kubejs-script' : r.s.startsWith('kubejs/') ? 'kubejs-data' : r.dp ? 'site-datapack' : 'mod';
+        const rec = recipeRecord(r, origin, rules);
+        list.push(rec);
+        indexRecipe(rec, byOutput, byInput);
+      }
+      return { list, byId: new Map(list.map((r) => [r.i, r])), byOutput, byInput, rules, kubejs };
+    },
+    [site],
+  );
+
+const indexInto = (map, ref, r) => {
+  const l = map.get(ref);
+  if (l) l.push(r);
+  else map.set(ref, [r]);
+};
+
+/** Добавить рецепт в индексы «по выходу» и «по входу» (и после замен KubeJS) */
+export function indexRecipe(rec, byOutput, byInput) {
+  for (const o of new Set([...rec.outputs, ...rec.effOutputs])) indexInto(byOutput, o, rec);
+  for (const i of new Set([...rec.inputs, ...rec.effInputs])) indexInto(byInput, i, rec);
+}
+
+/** Запись каталога: входы/выходы, что с рецептом делает KubeJS */
+export function recipeRecord(r, origin, rules) {
+  const outs = new Set();
+  const ins = new Set();
+  collectRefs(r.j, false, outs, ins);
+  const target = {
+    id: r.i,
+    type: r.t,
+    group: typeof r.j.group === 'string' ? r.j.group : undefined,
+    inputs: [...ins],
+    outputs: [...outs],
+  };
+  const hits = origin === 'kubejs-script' ? { removed: [], maybe: [], changed: [] } : kubejsHits(rules, target);
+  const effIn = new Set(ins);
+  const effOut = new Set(outs);
+  for (const n of hits.changed) {
+    const rule = rules[n];
+    if (typeof rule.from !== 'string' || typeof rule.to !== 'string') continue;
+    const set = rule.kind === 'replaceInput' ? effIn : effOut;
+    const from = rule.from.replace(/^\d+x\s+/, '');
+    if (set.delete(from)) set.add(rule.to.replace(/^\d+x\s+/, ''));
+  }
+  return {
+    ...r,
+    inputs: [...ins],
+    outputs: [...outs],
+    effInputs: [...effIn],
+    effOutputs: [...effOut],
+    removed: isRemoval(r.j),
+    origin,
+    kjsRemoved: hits.removed,
+    kjsMaybe: hits.maybe,
+    kjsChanged: hits.changed,
+  };
+}
 
 /** Состояние рецепта в игре */
 export function recipeStatus(r) {

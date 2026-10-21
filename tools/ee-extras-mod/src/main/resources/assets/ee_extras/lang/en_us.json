@@ -28,5 +28,9 @@
   "ee_extras.cable.same_block": "A cable cannot loop back to the same block",
   "ee_extras.cable.too_far": "Too far for a cable",
   "ee_extras.cable.exists": "These blocks are already connected by a cable",
-  "ee_extras.cable.no_nodes": "Could not attach the cable to the block"
+  "ee_extras.cable.no_nodes": "Could not attach the cable to the block",
+  "ee_extras.nodes.charge_positive": "Charge + (EE grid into the capacitor)",
+  "ee_extras.nodes.charge_negative": "Charge - (EE grid into the capacitor)",
+  "ee_extras.nodes.discharge_positive": "Discharge + (capacitor out to the EE grid)",
+  "ee_extras.nodes.discharge_negative": "Discharge - (capacitor out to the EE grid)"
 }
