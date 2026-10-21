@@ -86,9 +86,12 @@ npm run pack:publish -- <папка данных> --dry-run   # что выло�
 - Не предметы: `lang_search` (переводы всех jar — блоки, существа, жидкости, эффекты), `block_get`,
   `loot_for` (что выпадает), `loot_sources` (откуда выпадает предмет).
 - Ресурсы без клиента: `model_render` (блок/предмет/модель **картинкой**: блокстейт → `parent` → повороты; из jar,
-  KubeJS, ресурспаков и `tools/<мод>/src/main/resources`), `texture_get` (текстура картинкой + палитра),
-  `resources_check addon=<папка tools>|mod=<id>` (блокстейты ↔ свойства блока из байткода, модели, текстуры,
-  переводы из кода, PartialModel, добыча). **Правил ресурсы аддона — прогони `resources_check` и посмотри `model_render`.**
+  KubeJS, ресурспаков и `tools/<мод>/src/main/resources`; аддон из git worktree — `addon=<путь к папке мода>`),
+  `texture_get` (текстура картинкой + палитра, тоже `addon=`),
+  `resources_check addon=<папка tools или путь>|mod=<id>` (блокстейты ↔ свойства блока из байткода, модели, текстуры,
+  переводы из кода — всё, что уходит в `Component.translatable`, вкл. тернарный оператор; у аддона нет ключа в
+  ru_ru — ошибка; PartialModel, добыча; классы — `build/classes`, без `./gradlew compileJava` переводы из кода не
+  проверяются). **Правил ресурсы аддона — прогони `resources_check` и посмотри `model_render`.**
 - Карта: `map_point` (блок ↔ широта/долгота, города, климат TFC), `map_rocks` (породы и жилы), `map_find` (место → блок),
   `map_regions` (блоки → файлы `r.X.Z.mca` и команды PowerShell).
 - Контент сайта: `tasks_list`/`task_get`, `groups_list`, `artifacts_list`/`artifact_get` (документы-планы),
