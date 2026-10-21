@@ -169,6 +169,8 @@ sudo -u tfcpack env DATA_DIR=/var/lib/tfc-pack node cli.mjs key revoke <id>
 | `GET /site/kubejs?name=…` | player | то же для `kubejsScripts` (имя — `fileName`)                                                                                         |
 | `GET /site/schematics`    | player | `{ items }` — записи библиотеки схем без превью                                                                                         |
 | `GET /site/files/:id`     | player | исходник схемы (байты из хранилища сайта); только файлы схем                                                                            |
+| `GET /admin/changes`      | admin  | правки конфигов от агента (Firestore `configChanges`, без кеша) — для `tfc admin changes`                                                 |
+| `POST /admin/changes/:id` | admin  | `{ status: applied\|rejected, results, updateTime }` — итог хоста; запись только если правку не меняли после чтения (иначе 409)            |
 
 `POST /pack/current` отвечает ещё и `job` — id задания сборки (или публикации, если снимок уже собран).
 

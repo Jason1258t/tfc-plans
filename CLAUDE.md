@@ -65,7 +65,9 @@ npm run pack:publish -- <папка данных> --dry-run   # что выло�
   через теги), `recipe_get` (статус, какое правило KubeJS удаляет/меняет — файл:строка, JSON). Рецепты учитывают и
   датапаки сайта «ставить» (источник «датапак сайта <имя>»; неставящиеся — отдельной строкой).
 - Теги: `tag_members`, `tags_of`. Справочник: `reference_get` (руды, плавка, металлы, топливо, еда, ботаника, блюда,
-  сковорода, мультиблоки, power). Настройки: `config_get` (мир > serverconfig > config > значение из кода; только чтение).
+  сковорода, мультиблоки, power). Настройки: `config_get` (мир > serverconfig > config > значение из кода).
+- Правка конфигов: `config_propose` (файлы не трогает; хост вносит `tfc admin changes pull`), `config_changes` —
+  итог и отмена. Конфиги сборки меняй так, а не советом «найди в файле».
 - Код модов: `jar_find` (путь, класс через точки, glob), `jar_read` (по строкам, grep), `jar_javap` (метод; jar можно не
   указывать). Вложенные jar-in-jar и Minecraft+NeoForge («minecraft») — тоже.
 - Отладка сборки: `class_find`, `class_info` (сигнатуры, строки исходника для стека, ⚠ ссылки на клиентские классы),
@@ -146,7 +148,7 @@ npm run pack:publish -- <папка данных> --dry-run   # что выло�
 ## Firestore
 
 `tasks`, `groups`, `artifacts`, `files` (+`chunks`, пакет `firestore-files`), `datapacks`, `kubejsScripts`, `schematics`, `recipeHints`, `guides` (+`revisions`),
-`packUpdates`, `settings/world`, `config`, `onboarding/{uid}` (какие подсказки знакомства показаны). Поля — в README, «Модель данных».
+`packUpdates`, `settings/world`, `config`, `configChanges` (правки конфигов от агента; сайту закрыта), `onboarding/{uid}` (какие подсказки знакомства показаны). Поля — в README, «Модель данных».
 
 - Авторизации нет: анонимный вход + ник в куке. Правила проверяют форму данных и `nick(...)`, а не владельца.
 - `config` и создание `packUpdates` закрыты для сайта — пишут только скрипты.

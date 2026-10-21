@@ -61,8 +61,29 @@ export function beginBackup(profile) {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   return {
     dir: path.join(stateDir(profile), 'backup', stamp),
-    manifest: { at: Date.now(), added: [], replaced: [], removed: [], tfcNew: [], prevState: loadState(profile) },
+    manifest: {
+      at: Date.now(),
+      added: [],
+      replaced: [],
+      removed: [],
+      tfcNew: [],
+      edited: [],
+      prevState: loadState(profile),
+    },
   };
+}
+
+/**
+ * Копия файла перед правкой на месте (tfc admin changes): путь любой — и вне папки версии (папка сервера),
+ * поэтому в описи — полный путь, а копия — под edited/<n>
+ */
+export function editBackup(backup, file) {
+  const m = backup.manifest;
+  if (m.edited.some((e) => e.target === file)) return;
+  const saved = `edited/${m.edited.length}`;
+  fs.mkdirSync(path.join(backup.dir, 'edited'), { recursive: true });
+  fs.copyFileSync(file, path.join(backup.dir, ...saved.split('/')));
+  m.edited.push({ target: file, saved });
 }
 
 /** Убрать файл в копию; list — куда записать путь (replaced или removed) */
@@ -74,7 +95,7 @@ export function toBackup(backup, file, snapPath, list) {
 /** Записать опись копии; ничего не тронули — копии нет (null) */
 export function finishBackup(profile, backup) {
   const m = backup.manifest;
-  if (!(m.added.length + m.replaced.length + m.removed.length + m.tfcNew.length)) return null;
+  if (!(m.added.length + m.replaced.length + m.removed.length + m.tfcNew.length + m.edited.length)) return null;
   fs.mkdirSync(backup.dir, { recursive: true });
   fs.writeFileSync(path.join(backup.dir, 'manifest.json'), `${JSON.stringify(m, null, 1)}\n`);
   pruneBackups(profile);
@@ -180,6 +201,7 @@ export function undoLast(profile) {
     if (f && !added.has(p)) move(path.join(last, 'files', ...p.split('/')), f);
   }
   m.removed = m.removed.filter((p) => !added.has(p));
+  for (const e of m.edited ?? []) fs.copyFileSync(path.join(last, ...e.saved.split('/')), e.target);
   saveState(profile, m.prevState);
   fs.rmSync(last, { recursive: true, force: true });
   return m;
