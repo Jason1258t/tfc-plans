@@ -5,6 +5,12 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **Pack translation `pack-patches/l10n/`** (2026-10-22): Chinese player-facing text in pack KubeJS scripts → lang keys
+  (`Text.translatableWithFallback`, English fallback) + `kubejs/assets/kubejs/lang/{en_us,ru_ru}.json`: item cleaner
+  broadcasts, 27 Create Ore Excavation vein names (ids unchanged), engine refuel, lectern/controller, obsidian, welcome,
+  tooltips. Host copies `kubejs/` over the game folder, restarts, `tfc publish`. In game: not checked (Rhino overloads of
+  `translatableWithFallback`, vein names in finder/atlas). Mod-hardcoded Chinese left: `kaleidoscopetfctavern` grapevine
+  locator, `firmalifehardcore` debug commands.
 - **EE Extras 2.2** (`ee-extras-2.2.0.jar`, replaces ee-rectifier-*.jar — `tfc pull addons` removes the old one): host
   installs and `tfc publish`. Warn players: existing rectifiers carrying more than 6 kW will smoke and burn — replace
   with heavy ones. In game: blocks look, cable and «dashed» spool, two/four-core laying, wrench on the two-wire

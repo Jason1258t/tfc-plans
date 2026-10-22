@@ -156,3 +156,12 @@ MCP `config_propose` (key, type, range and layer check via `config_get`) → Fir
 `tfc undo`, per-key result reported back (`config_changes`). Checked on a local pack server and temp folder (apply,
 mismatch with the old value, reject, cancel from MCP, stale record → 409, undo); JSON5 configs are not edited. Not run on
 the host's real folder.
+
+## Pack patches (`pack-patches/`)
+
+- `l10n/` (2026-10-22): translation of Chinese strings in pack KubeJS scripts. Base — pack snapshot
+  `20261022-095351-d765` (read from the VPS blobs). `apply.py <game folder>` re-applies onto a newer pack (every
+  replacement must match exactly once); ready files next to it. Checked: `node --check`, `apply.py` on a fresh snapshot
+  copy reproduces the stored files, `buildKubejs` on the patched layer — same counts, 0 errors. Not checked in game.
+  Scan of all jars + configs for CJK: the rest is zh_cn lang/manuals, logs, config comments, two mods with hardcoded
+  chat text (see pending.md).
