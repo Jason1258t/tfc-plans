@@ -55,6 +55,8 @@ const MIN_ZOOM = 2;
 const MAX_ZOOM = 96;
 /** Сдвиг мыши, после которого нажатие — перетаскивание, а не клик */
 const DRAG_PX = 4;
+/** Два клика по одной клетке за это время (мс) — двойной */
+const DOUBLE_MS = 350;
 
 type Scope = 'cell' | 'layer' | 'all';
 const SCOPES: [Scope, string][] = [
@@ -137,6 +139,7 @@ interface Menu {
 /**
  * Редактор схемы по слоям: вид сверху на один слой, масштаб колесом, сдвиг перетаскиванием.
  * ЛКМ по блоку — окно замены, ПКМ (можно провести) — убрать блоки. Ctrl+Z / Ctrl+Shift+Z — отмена и повтор.
+ * Двойной клик — выделить группу; Shift+клик — добавить к выделению, Ctrl/Cmd+клик — убрать из него.
  * Выделение — набор блоков (индексы в списке blocks), общий для слоя и 3D; правка схемы его сбрасывает.
  */
 export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, onClose }: Props) {
@@ -185,6 +188,7 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [box, setBox] = useState({ w: 0, h: 0 });
   const drag = useRef<{ x: number; y: number; ox: number; oy: number; moved: boolean } | null>(null);
+  const lastClick = useRef<{ x: number; z: number; t: number } | null>(null);
 
   const layer = grid.layers.get(layerY);
   const below = grid.layers.get(layerY - 1);
@@ -536,8 +540,25 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
     drag.current = null;
     if (!d || d.moved || e.button !== 0) return;
     const c = cellOf(e);
-    if (indexAt(c.x, c.z) < 0) {
+    const idx = indexAt(c.x, c.z);
+    // Второй клик по той же клетке вскоре после первого — двойной
+    const now = e.timeStamp;
+    const last = lastClick.current;
+    const double = !!last && now - last.t < DOUBLE_MS && last.x === c.x && last.z === c.z;
+    lastClick.current = double ? null : { x: c.x, z: c.z, t: now };
+    if (idx < 0) {
+      // Пустое место: закрыть окно, а если его нет и клавиш нет — снять выделение
+      if (menu) setMenu(null);
+      else if (!e.shiftKey && !e.ctrlKey && !e.metaKey) clearSelection();
+      return;
+    }
+    // Shift — добавить, Ctrl/Cmd — убрать из выделения; двойной клик — всю группу, без клавиш — только её
+    if (e.shiftKey || e.ctrlKey || e.metaKey || double) {
       setMenu(null);
+      const cells = double ? groupOf(idx) : [idx];
+      if (e.ctrlKey || e.metaKey) unselect(cells);
+      else if (e.shiftKey) select(cells);
+      else setSel({ of: s, cells: new Set(cells) });
       return;
     }
     // Окно — справа снизу от курсора, но в пределах области
@@ -819,8 +840,9 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
             </div>
           )}
           <div className={cx('layers-hint faint small', mode === '3d' && 'hidden')}>
-            ЛКМ — заменить · ПКМ (можно провести) — убрать · колесо — масштаб · перетаскивание — сдвиг · ↑↓ — слои ·
-            Ctrl+Z / Ctrl+Shift+Z — отмена и повтор · Esc — снять выделение
+            ЛКМ — заменить · двойной клик — выделить группу · Shift — добавить, Ctrl — убрать из выделения · ПКМ (можно
+            провести) — убрать · колесо — масштаб · перетаскивание — сдвиг · ↑↓ — слои · Ctrl+Z / Ctrl+Shift+Z — отмена
+            и повтор · Esc — снять выделение
           </div>
           {selected.size > 0 && (
             <div className="layers-selection small" role="region" aria-label="Выделение">

@@ -43,8 +43,10 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   blocks of the same effective id on the layer, `connectedGroup` in `lib/schematicEdit.ts`, can also search in 3D);
   panel «Выбрано N блоков» (top right): replace / «Убрать» as one undoable edit, «Сбросить», Esc clears. 3D shows
   selected blocks as translucent accent cubes (respects the slice). Browser-tested on a library schematic (group of 36,
-  remove, replace, undo, 3D highlight on the slice); nothing saved to the library. Next: double-click and Shift/Ctrl in
-  the layer view, area selection, picking in 3D. Cell edits change the source itself:
+  remove, replace, undo, 3D highlight on the slice); nothing saved to the library. Layer view clicks (item 2):
+  double-click — select the group (replaces the selection), Shift+click / Shift+double-click — add the block / group,
+  Ctrl/Cmd+click — remove; click on an empty cell closes the dialog, else clears the selection; plain click still opens
+  the dialog. Browser-tested (36 → 72 → 71 → 72, empty-click behaviour). Next: area selection, picking in 3D. Cell edits change the source itself:
   «В библиотеку» uploads a new file and deletes the old one (saving edits to the library not browser-tested — shared
   collection). Adding blocks into empty cells is not supported.
 - **3D** («Слой / 3D», 2026-10-19, three.js as a separate chunk): simplified block shapes (`lib/schematicMesh.ts` —
