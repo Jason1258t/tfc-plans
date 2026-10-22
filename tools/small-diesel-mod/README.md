@@ -36,7 +36,7 @@
 
 ```bash
 ./libs.sh          # Create, CDG и EE из ../../mods для компиляции
-./release.sh       # ресурсы → сборка → проверка клемм → jar сюда и в ../../public/addons + иконки
+./release.sh       # ресурсы → сборка → проверка клемм → jar и иконки (icons/) сюда; на сайт — сборкой сайта
 ./test-server.sh   # сервер разработки: двигатели под нагрузкой, генератор, вода в бак (~2 мин)
 NO_EE=1 ./test-server.sh 'setblock 0 -60 0 small_diesel:small_diesel_engine[facing=up]'   # без EE
 ```

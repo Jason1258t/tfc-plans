@@ -80,8 +80,10 @@ src/components/guides/  GuidesSection, GuideEditor/History/Help, CalcBlock (```c
 server/file-server/  file server for Ubuntu (Node, no deps); migration — scripts/files-migrate.mjs
 server/pack-server/  pack server (snapshots, keys); on the VPS — docs/pack-server.md
 cli/              `tfc` PC app (npm run tfc -- …): sync/publish; docs/tfc-app.md, cli/README.md
-tools/            pack addons — docs/addons.md; on the site — lib/addons.ts, AddonsTab; for tfc — /addons/index.json
-                  (scripts/addons-index.mjs)
+tools/            pack addons — docs/addons.md; card tools/<mod>/addon.json + jar + icons/ → public/addons/ and
+                  /addons/index.json for tfc (scripts/addons-index.mjs, pre dev/build); site — lib/addons.ts (glob of
+                  cards), AddonsTab (list), pages/AddonPage + guides/AddonArticle (/addons/<mod>, Firestore guide
+                  addon-<mod>, section addon, widget ::addon-block)
 scripts/mcp/      agent MCP (stdio) — docs/mcp.md
 scripts/mods/visibility/  hidden items (not visible in game): per-mod rule from mod code (field h in items.json)
 scripts/          mods.mjs + mods/{reference,tags,botany,meals,cuisine,power,multiblocks,geo,manifest,classfile,

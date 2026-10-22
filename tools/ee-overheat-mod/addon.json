@@ -1,0 +1,11 @@
+{
+  "id": "ee_overheat",
+  "name": "EE Heater Overheat — перегрев нагревателя",
+  "version": "1.0.0",
+  "jar": "ee-overheat-1.0.0.jar",
+  "order": 30,
+  "side": "both",
+  "summary": "Электронагреватель Electro Energetics при полном нагреве (≥ 0,9, около 6,8 кВт) даёт чаше Create уровень «перегрев» (superheated): сталь, каолин и другие superheated-рецепты идут на нагревателе.",
+  "needs": "Сервер и все игроки. Electro Energetics 1.1+.",
+  "blocks": []
+}

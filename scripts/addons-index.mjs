@@ -1,25 +1,46 @@
 #!/usr/bin/env node
 /**
- * Список аддонов для программы tfc (`tfc pull addons`): src/lib/addons.ts + sha256 и размер jar из public/addons/
- * → public/addons/index.json. Запускается перед dev/build (после ensure-mods: в worktree jar берутся из основной копии).
+ * Аддоны на сайт: карточки tools/<мод>/addon.json → jar (tools/<мод>/<jar>) и иконки (tools/<мод>/icons/) в
+ * public/addons/ + список для программы tfc (`tfc pull addons`, sha256 и размер jar) → public/addons/index.json.
+ * Запускается перед dev/build. Старые версии jar в public/addons не трогает (ссылки на них остаются рабочими).
  * Jar нет — аддон в список не попадает (предупреждение), сборка сайта не останавливается.
  */
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ADDONS } from '../src/lib/addons.ts';
 
-const DIR = fileURLToPath(new URL('../public/addons', import.meta.url));
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
+const DIR = path.join(ROOT, 'public/addons');
 
-export function addonsIndex(dir = DIR) {
+/** Карточки аддонов из tools/<мод>/addon.json; source — папка от корня репозитория, dir — полный путь */
+export function addonCards(root = ROOT) {
+  const tools = path.join(root, 'tools');
+  return fs
+    .readdirSync(tools, { withFileTypes: true })
+    .filter((d) => d.isDirectory() && fs.existsSync(path.join(tools, d.name, 'addon.json')))
+    .map((d) => {
+      const dir = path.join(tools, d.name);
+      const card = JSON.parse(fs.readFileSync(path.join(dir, 'addon.json'), 'utf8'));
+      return { ...card, source: `tools/${d.name}`, dir };
+    })
+    .sort((a, b) => a.order - b.order);
+}
+
+export function addonsIndex(root = ROOT, dir = DIR) {
   const addons = [];
   const missing = [];
-  for (const a of ADDONS) {
-    const file = path.basename(a.file);
-    const jar = path.join(dir, file);
+  for (const a of addonCards(root)) {
+    const src = path.join(a.dir, a.jar);
+    const jar = path.join(dir, a.jar);
+    if (fs.existsSync(src)) {
+      fs.mkdirSync(dir, { recursive: true });
+      fs.copyFileSync(src, jar);
+    }
+    const icons = path.join(a.dir, 'icons');
+    if (fs.existsSync(icons)) fs.cpSync(icons, path.join(dir, 'icons', a.id), { recursive: true });
     if (!fs.existsSync(jar)) {
-      missing.push(file);
+      missing.push(`${a.source}/${a.jar}`);
       continue;
     }
     const bytes = fs.readFileSync(jar);
@@ -27,8 +48,8 @@ export function addonsIndex(dir = DIR) {
       id: a.id,
       name: a.name,
       version: a.version,
-      file,
-      url: a.file,
+      file: a.jar,
+      url: `/addons/${a.jar}`,
       size: bytes.length,
       sha256: createHash('sha256').update(bytes).digest('hex'),
       side: a.side,
@@ -41,8 +62,7 @@ export function addonsIndex(dir = DIR) {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const { addons, missing } = addonsIndex();
-  if (missing.length)
-    console.warn(`[addons] нет jar в public/addons: ${missing.join(', ')} — в index.json их не будет`);
+  if (missing.length) console.warn(`[addons] нет jar: ${missing.join(', ')} — в index.json их не будет`);
   if (fs.existsSync(DIR) || addons.length) {
     fs.mkdirSync(DIR, { recursive: true });
     fs.writeFileSync(path.join(DIR, 'index.json'), `${JSON.stringify({ addons }, null, 1)}\n`);

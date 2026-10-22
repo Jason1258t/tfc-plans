@@ -16,7 +16,7 @@ import { jarList, jarToc, platform, readEntry, zipEntries, zipRead } from './jar
 import { KUBEJS } from './tools/kubejs.mjs';
 
 const BASE = path.dirname(MODS);
-const TOOLS_DIR = path.join(process.env.TFC_PACK_ROOT ?? BASE, 'tools');
+export const TOOLS_DIR = path.join(process.env.TFC_PACK_ROOT ?? BASE, 'tools');
 
 // ---------------------------------------------------------------- виды слоёв
 

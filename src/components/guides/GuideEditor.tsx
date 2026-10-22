@@ -43,6 +43,7 @@ outputs:
 /** Правка гайда: поля, текст со вставками и живой предпросмотр */
 export function GuideEditor({
   section,
+  id,
   kit,
   guide,
   started,
@@ -53,6 +54,8 @@ export function GuideEditor({
   onGuide,
 }: {
   section: string;
+  /** Id новой статьи (статья аддона — addon-<мод>); без него id выдаст Firestore */
+  id?: string;
   kit: GuideKit;
   /** Актуальная версия из базы (null — новый гайд) */
   guide: Guide | null;
@@ -131,7 +134,7 @@ export function GuideEditor({
     setSaving(true);
     setError(null);
     try {
-      onClose(await saveGuide(guide?.id ?? null, draft, guide?.createdAt));
+      onClose(await saveGuide(guide?.id ?? id ?? null, draft, guide?.createdAt));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setSaving(false);

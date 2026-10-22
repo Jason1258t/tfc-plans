@@ -99,7 +99,7 @@ Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md)
   schematic sources on disk. Checked on prod Firestore (read-only) — 1 flagged datapack and 4 schematics installed; a
   temp key was used and revoked. **Not checked in game.**
 - **Addons** (2026-10-21): from site static (`/addons/index.json` — built by `scripts/addons-index.mjs` before dev/build
-  from `src/lib/addons.ts` + jar sha256; no key needed) → `mods/`; old jar of the same mod (by id in jar) and files in
+  from `tools/*/addon.json` + jar sha256; no key needed) → `mods/`; old jar of the same mod (by id in jar) and files in
   the addon's `replaces` (rw-host-fix — `eratosthenes_portal_clamp.js`) are backed up, with a prompt or `--yes`. That
   `publish` takes jars from `mods/` and sees the removed script — checked by folder analysis without upload. **Not on
   Windows, not with a real upload.**

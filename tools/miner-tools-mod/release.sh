@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Выпуск: текстуры → сборка → jar рядом с исходниками (в git) и на сайт (public/addons, деплой хостинга) + иконки.
+# Выпуск: текстуры → сборка → jar и иконки рядом с исходниками (в git); на сайт их кладёт сборка сайта (scripts/addons-index.mjs), версию — addon.json.
 # Проверка на сервере разработки — отдельно: ./test-server.sh (около минуты).
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -11,10 +11,5 @@ python3 art/gen_helmet.py
 VERSION=$(sed -n 's/^mod_version=//p' gradle.properties)
 rm -f miner-tools-*.jar
 cp "build/libs/miner-tools-$VERSION.jar" .
-# В git worktree public/addons нет: сначала остальные аддоны из основной копии, иначе деплой их потеряет
-MAIN=$(git rev-parse --path-format=absolute --git-common-dir)/..
-if [ ! -d ../../public/addons ] && [ -d "$MAIN/public/addons" ]; then cp -r "$MAIN/public/addons" ../../public/; fi
-mkdir -p ../../public/addons
-cp "build/libs/miner-tools-$VERSION.jar" ../../public/addons/
-(cd ../.. && node scripts/mcp/render.mjs tools/miner-tools-mod miner_tools:miner_belt miner_tools:miner_helmet --out public/addons --size 192)
-echo "готово: miner-tools-$VERSION.jar → tools/miner-tools-mod и public/addons"
+(cd ../.. && node scripts/mcp/render.mjs tools/miner-tools-mod miner_tools:miner_belt miner_tools:miner_helmet --out tools/miner-tools-mod/icons --size 192)
+echo "готово: miner-tools-$VERSION.jar → tools/miner-tools-mod; обновите addon.json и проверьте MCP addon_check"

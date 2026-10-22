@@ -131,6 +131,8 @@ fertiliser blocks, calendar with month labels. `.class` parsing — `scripts/mod
 
 - Since 2026-10-16 a separate reference tab «Гайды» (`?tab=guides`), sections «Электричество», «Аддоны»
   (`&sub=addons`, same articles as on `/addons`), «Мультиблоки», «О сайте»; old URLs redirect.
+- Section `addon` (2026-10-22) — addon pages `/addons/<mod>` (guide id `addon-<mod>`), not listed under «Гайды»;
+  see [addons.md](addons.md).
 - Since 2026-10-15 articles live in Firestore `guides`, editable on the site by anyone, with revision history;
   calculators are described in the article as ```calc blocks, see [docs/plans/guides.md](../plans/guides.md);
   `npm run guides -- pull|push` — files ↔ database.
