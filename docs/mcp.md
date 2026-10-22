@@ -1,461 +1,456 @@
-# MCP сборки (`tfc-pack`)
+# Pack MCP (`tfc-pack`)
 
-MCP-сервер сборки — локальная программа, через которую агент (Claude Code) спрашивает о сборке: предметы,
-рецепты, теги, справочник, настройки, книги модов, карту, гайды и контент сайта. Без него агент ищет grep'ом по
-большим JSON (`public/recipes.json` — 7,7 МБ) и распаковывает jar. С ним ответ приходит коротким, постраничным
-и уже с поправками KubeJS сборки.
+The pack MCP server is a local program the agent (Claude Code) uses to ask about the pack: items, recipes, tags,
+reference, settings, mod books, map, guides and site content. Without it the agent greps large JSON
+(`public/recipes.json` — 7.7 MB) and unzips jars; with it answers are short, paged and already include the pack's
+KubeJS changes.
 
-Людям сервер напрямую не нужен: им пользуется агент. Этот документ — как он устроен, что умеет и как его расширять.
+People don't use it directly. This document covers how it works, what it can do and how to extend it. Tool descriptions
+and output stay in Russian.
 
-## Подключение
+## Connection
 
-- Сервер — `scripts/mcp/server.mjs`, связь через stdio, подключён в `.mcp.json` в корне проекта. Claude Code
-  запускает его сам, когда открыт этот проект.
-- Зависимостей нет: протокол MCP (JSON-RPC 2.0 построчно: `initialize`, `tools/list`, `tools/call`, `ping`)
-  написан в самом сервере, без `@modelcontextprotocol/sdk`. Так его проще перенести на сервер сборки, где Node
-  тоже без зависимостей.
-- Firestore читается от имени `firebase login` или сервисного ключа (`GOOGLE_APPLICATION_CREDENTIALS`), через
-  `scripts/firestore-rest.mjs`. Без входа работает всё, кроме конфигов, гайдов, обновлений сборки и контента сайта.
-- `javap` для `jar_javap` берётся из системного JDK; декомпилятор для `decompile` — Vineflower из кеша Gradle
-  (`~/.gradle/caches/…/org.vineflower`, кладёт сборка аддона) или `TFC_DECOMPILER`, Java — JDK 21 из
-  `~/.gradle/local-tools/jdk21` или системная.
-- **После правки кода в `scripts/mcp/`** сервер нужно перезапустить: `/mcp` в терминальном Claude Code или новая
-  сессия в приложении. Данные (`public/`, jar, KubeJS) он перечитывает сам, когда файлы меняются.
+- Server — `scripts/mcp/server.mjs`, stdio, registered in `.mcp.json` at the project root. Claude Code starts it when
+  the project is open.
+- No dependencies: the MCP protocol (line-delimited JSON-RPC 2.0: `initialize`, `tools/list`, `tools/call`, `ping`) is
+  implemented in the server itself, without `@modelcontextprotocol/sdk`, so it's easy to move to the pack server.
+- Firestore is read as `firebase login` or a service key (`GOOGLE_APPLICATION_CREDENTIALS`) via
+  `scripts/firestore-rest.mjs`. Without login everything works except configs, guides, pack updates and site content.
+- `javap` for `jar_javap` — system JDK; decompiler for `decompile` — Vineflower from the Gradle cache
+  (`~/.gradle/caches/…/org.vineflower`, put there by the addon build) or `TFC_DECOMPILER`; Java — JDK 21 from
+  `~/.gradle/local-tools/jdk21` or system.
+- **After editing code in `scripts/mcp/`** restart the server: `/mcp` in terminal Claude Code or a new session in the
+  app. Data (`public/`, jars, KubeJS) is re-read automatically when files change.
 
-## Откуда данные
+## Data sources
 
-Сервер ничего не собирает сам: он читает то, что собрали скрипты сайта. Устарели данные сайта — устарел и ответ.
+The server builds nothing itself: it reads what the site scripts built. Stale site data → stale answers.
 
-| Что | Откуда | Чем обновить |
+| What | From | Refresh with |
 | --- | --- | --- |
-| Предметы, рецепты, теги, справочник, манифест модов | `public/*.json` | `npm run mods` |
-| Правила и рецепты KubeJS, `kubejs/data` | `public/kubejs.json`, `kubejs-data.json` | `npm run kubejs` |
-| Исходники KubeJS | `instance/kubejs/<слой>/` | `npm run pack:fetch -- --kubejs` |
-| Код модов, книги, переводы, таблицы добычи | `mods/*.jar` (и вложенные jar-in-jar) | `npm run pack:fetch` |
-| Код и исходники Minecraft + NeoForge (имена Mojang) | `tools/<аддон>/build/moddev/artifacts/neoforge-*.jar`, `-sources.jar` | сборка аддона (`./gradlew build`, docs/addons.md) |
-| Переводы ванили | `.cache/assets/minecraft-1.21.1/` | `npm run mods` (кладёт в кеш) |
-| Ресурспаки | `instance/resourcepacks/` | `npm run pack:fetch` |
-| Ресурсы Minecraft и NeoForge (модели, текстуры) | `tools/<аддон>/build/moddev/artifacts/neoforge-*-client-extra-aka-minecraft-resources.jar` и `neoforge-*.jar` | сборка аддона |
-| Ресурсы и классы аддонов | `tools/<мод>/src/main/resources`, `build/classes/java/main` | правка аддона, `./gradlew build` |
-| Конфиги сервера и мира | Firestore `config` | `npm run serverconfig`, `npm run world` |
-| Гайды, задачи, датапаки (и как слой рецептов), схемы, скрипты сайта | Firestore | правки на сайте |
-| Обновления сборки | Firestore `packUpdates` | пишет деплой (`pack-release.mjs`) |
+| Items, recipes, tags, reference, mod manifest | `public/*.json` | `npm run mods` |
+| KubeJS rules and recipes, `kubejs/data` | `public/kubejs.json`, `kubejs-data.json` | `npm run kubejs` |
+| KubeJS sources | `instance/kubejs/<layer>/` | `npm run pack:fetch -- --kubejs` |
+| Mod code, books, translations, loot tables | `mods/*.jar` (and nested jar-in-jar) | `npm run pack:fetch` |
+| Minecraft + NeoForge code and sources (Mojang names) | `tools/<addon>/build/moddev/artifacts/neoforge-*.jar`, `-sources.jar` | addon build (`./gradlew build`, docs/addons.md) |
+| Vanilla translations | `.cache/assets/minecraft-1.21.1/` | `npm run mods` (fills the cache) |
+| Resource packs | `instance/resourcepacks/` | `npm run pack:fetch` |
+| Minecraft and NeoForge resources (models, textures) | `tools/<addon>/build/moddev/artifacts/neoforge-*-client-extra-aka-minecraft-resources.jar` and `neoforge-*.jar` | addon build |
+| Addon resources and classes | `tools/<mod>/src/main/resources`, `build/classes/java/main` | addon edit, `./gradlew build` |
+| Server and world configs | Firestore `config` | `npm run serverconfig`, `npm run world` |
+| Guides, tasks, datapacks (also as a recipe layer), schematics, site scripts | Firestore | site edits |
+| Pack updates | Firestore `packUpdates` | written on deploy (`pack-release.mjs`) |
 
-В git worktree нет ни `public/`, ни `mods/`, ни `instance/`: сервер сам находит основную копию репозитория
-(`git rev-parse --git-common-dir`) и берёт данные оттуда.
+A git worktree has no `public/`, `mods/` or `instance/`: the server finds the main checkout
+(`git rev-parse --git-common-dir`) and reads from there.
 
-Пути можно задать переменными — так сервер будет работать на сервере сборки:
+Paths can be set via env vars (for running on the pack server):
 
-| Переменная | По умолчанию |
+| Variable | Default |
 | --- | --- |
-| `TFC_PACK_ROOT` | корень основной копии репозитория |
-| `TFC_PUBLIC_DIR` | `<корень>/public` |
-| `TFC_MODS_DIR` | `<корень>/mods` |
-| `TFC_INSTANCE_DIR` | `<корень>/instance` |
-| `TFC_KUBEJS_DIR` | `<корень>/instance/kubejs` |
-| `TFC_VANILLA_DIR` | `<корень>/.cache/assets/minecraft-1.21.1` |
-| `TFC_PLATFORM_JAR` / `TFC_PLATFORM_SOURCES` | самый новый `neoforge-X.jar` / `-sources.jar` в `tools/*/build/moddev/artifacts` |
-| `TFC_DECOMPILER` | самый новый Vineflower в кеше Gradle |
+| `TFC_PACK_ROOT` | main checkout root |
+| `TFC_PUBLIC_DIR` | `<root>/public` |
+| `TFC_MODS_DIR` | `<root>/mods` |
+| `TFC_INSTANCE_DIR` | `<root>/instance` |
+| `TFC_KUBEJS_DIR` | `<root>/instance/kubejs` |
+| `TFC_VANILLA_DIR` | `<root>/.cache/assets/minecraft-1.21.1` |
+| `TFC_PLATFORM_JAR` / `TFC_PLATFORM_SOURCES` | newest `neoforge-X.jar` / `-sources.jar` in `tools/*/build/moddev/artifacts` |
+| `TFC_DECOMPILER` | newest Vineflower in the Gradle cache |
 
-## Инструменты
+## Tools
 
-Всего 54. Звёздочка — обязательный параметр. У списков есть `limit` и `offset`: ответ пишет «дальше: offset=…».
+62 in total. Asterisk — required parameter. Lists have `limit` and `offset`; the answer says «дальше: offset=…».
 
-Запросы-регулярки (`query` у `log_analyze`, `regex=true` у поисков, `grep`, `members`) — без учёта регистра;
-встроенные флаги Java/PCRE в начале (`(?i)…`, `(?s)…`) принимаются. Поиск без `regex` понимает «`a|b`» — любое из.
+Regex queries (`query` of `log_analyze`, `regex=true` in searches, `grep`, `members`) are case-insensitive; leading
+Java/PCRE flags (`(?i)…`, `(?s)…`) are accepted. Non-regex search understands «`a|b`» — any of.
 
-### Предметы, рецепты, теги
+### Items, recipes, tags
 
-Слияние источников — как на сайте: рецепты из `kubejs/data` и скриптов заменяют рецепт мода с тем же id;
-удаления KubeJS действуют только на рецепты из датапаков; `replaceInput`/`replaceOutput` учтены во входах и
-выходах.
+Merging is as on the site: recipes from `kubejs/data` and scripts replace a mod recipe with the same id; KubeJS removals
+apply only to datapack recipes; `replaceInput`/`replaceOutput` are applied to inputs and outputs.
 
-Сверх сайта `recipes_for`, `recipes_using` и `recipe_get` учитывают **датапаки сайта** (Firestore `datapacks`):
-отмеченные «ставить» (`install = true`, их кладёт в мир программа `tfc`) — слой поверх модов (рецепт с тем же id
-заменяется, источник — «датапак сайта <имя>»), под `kubejs/data` и скриптами; удаления и замены KubeJS действуют
-и на него. Порядок «`kubejs/data` поверх датапаков мира» принят как у сайта, в игре не проверялся. Неотмеченные
-датапаки — отдельной строкой «есть на сайте, но не ставится». Файлы собирает тот же `src/lib/datapackFiles.ts`,
-что и сайт; коллекция читается целиком (~10 чтений) раз в 10 минут. Без входа в Firestore ответ — без слоя и с
-предупреждением.
+Beyond the site, `recipes_for`, `recipes_using` and `recipe_get` include **site datapacks** (Firestore `datapacks`):
+flagged «ставить» (`install = true`, the `tfc` app puts them into the world) form a layer over mods (same-id recipe
+replaced, source «датапак сайта <name>»), below `kubejs/data` and scripts; KubeJS removals and replacements apply to it.
+The order «`kubejs/data` over world datapacks» follows the site, not checked in game. Unflagged datapacks appear as a
+separate line «есть на сайте, но не ставится». Files are built by the same `src/lib/datapackFiles.ts` as the site; the
+collection is read whole (~10 reads) every 10 minutes. Without Firestore login — no layer, with a warning.
 
-| Инструмент | Что делает |
+| Tool | Does |
 | --- | --- |
-| `items_search(query*, mod)` | поиск предмета по русскому/английскому названию или id |
-| `item_get(id*)` | предмет: мод, jar, теги, число рецептов, еда/топливо/плавка/ботаника |
-| `recipes_for(output*, status, type)` | как получить: рецепты с предметом, жидкостью или тегом на выходе, со статусом в игре |
-| `recipes_using(input*, via_tags, status, type)` | где нужен: напрямую, через теги и после замен KubeJS |
-| `recipe_get(id*)` | рецепт целиком: источник, какое правило KubeJS его удаляет или меняет (файл:строка), JSON |
-| `tag_members(tag*, kind, expand)` | состав тега после модов и KubeJS, с раскрытием вложенных тегов |
-| `tags_of(id*, kind)` | в каких тегах состоит предмет, жидкость или блок |
+| `items_search(query*, mod)` | find an item by Russian/English name or id |
+| `item_get(id*)` | item: mod, jar, tags, recipe count, food/fuel/melting/botany |
+| `recipes_for(output*, status, type)` | how to obtain: recipes with the item, fluid or tag as output, with in-game status |
+| `recipes_using(input*, via_tags, status, type)` | where used: directly, via tags and after KubeJS replacements |
+| `recipe_get(id*)` | full recipe: source, which KubeJS rule removes or changes it (file:line), JSON |
+| `tag_members(tag*, kind, expand)` | tag members after mods and KubeJS, nested tags expanded |
+| `tags_of(id*, kind)` | tags containing an item, fluid or block |
 
-Статус рецепта: «работает», «изменён KubeJS», «удалён KubeJS», «отключён заглушкой датапака» или «работает, но есть
+Recipe status: «работает», «изменён KubeJS», «удалён KubeJS», «отключён заглушкой датапака» or «работает, но есть
 удаление с неразборчивым фильтром».
 
-### Справочник и настройки
+### Reference and settings
 
-| Инструмент | Что делает |
+| Tool | Does |
 | --- | --- |
-| `reference_get(section, filter, id)` | разделы справочника сайта: `ores`, `smelt`, `chains`, `metals`, `fuels`, `liquid`, `foods`, `botany`, `greenhouse`, `meals`, `skillet`, `multiblocks`, `power` (с поправками `kubejs/data`) |
-| `config_get(file, key, mod)` | настройки модов по слоям: сохранение мира > `serverconfig/` > `config/` сборки > значение из кода мода. TOML (`<мод>-server/common.toml`, `<мод>/server.toml`) и с 2026-10-21 JSON5 в корне `config/` (`worldborder.json5` и другие моды на Collective; вложенные `*.json5` — импорт с `--all`). Неприменённые правки помечены ⏳ |
-| `config_propose(note, edits)` | предложить правку TOML-конфигов: `edits: [{ file, key, value }]`, ключ полный (`blocks.crops.cropGrowthModifier`); проверяются ключ, тип и диапазон из кода мода, слой (ключ из сохранения мира — отказ), нет ли уже неприменённой правки того же ключа. Запись в Firestore `configChanges` (подпись `Claude`); файлы меняет хост — `tfc admin changes pull` (docs/tfc-app.md) |
-| `config_changes(status, id, cancel)` | правки и итог хоста по ключам (`pending` по умолчанию, `applied`, `rejected`, `cancelled`, `all`); `cancel=<id>` — отменить неприменённую |
+| `reference_get(section, filter, id)` | site reference sections: `ores`, `smelt`, `chains`, `metals`, `fuels`, `liquid`, `foods`, `botany`, `greenhouse`, `meals`, `skillet`, `multiblocks`, `power` (with `kubejs/data` corrections) |
+| `config_get(file, key, mod)` | mod settings by layer: world save > `serverconfig/` > pack `config/` > value from mod code. TOML (`<mod>-server/common.toml`, `<mod>/server.toml`) and since 2026-10-21 JSON5 at the root of `config/` (`worldborder.json5` and other Collective mods; nested `*.json5` — import with `--all`). Unapplied edits marked ⏳ |
+| `config_propose(note, edits)` | propose a TOML config edit: `edits: [{ file, key, value }]`, full key (`blocks.crops.cropGrowthModifier`); checks key, type and range from mod code, layer (a world-save key is refused), no pending edit of the same key. Writes Firestore `configChanges` (signed `Claude`); the host applies files — `tfc admin changes pull` (docs/tfc-app.md) |
+| `config_changes(status, id, cancel)` | edits and the host's per-key result (`pending` default, `applied`, `rejected`, `cancelled`, `all`); `cancel=<id>` cancels an unapplied one |
 
-### Сборка
+### Pack
 
-| Инструмент | Что делает |
+| Tool | Does |
 | --- | --- |
-| `mods_list(query, sort)` | моды сборки: id, название, версия, jar, число предметов и рецептов |
-| `mod_get(id*)` | мод: sha1, предметы, рецепты по статусам, типы рецептов, теги, конфиги |
-| `pack_updates(id, section, kind, mod, query)` | история обновлений сборки: лента, запись целиком, ченджлог мода с Modrinth, патчноут. Кеш 10 минут |
+| `mods_list(query, sort)` | pack mods: id, name, version, jar, item and recipe counts |
+| `mod_get(id*)` | mod: sha1, items, recipes by status, recipe types, tags, configs |
+| `pack_updates(id, section, kind, mod, query)` | pack update history: feed, full record, mod changelog from Modrinth, patch notes. 10 min cache |
 
-### Исходники KubeJS
+### KubeJS sources
 
-Пометки в ответах: `−` remove, `~` replaceInput/Output, `+` рецепт, `#` тег, `@` свой предмет — то, что сайт
-разобрал из строки. Если файлы новее разбора, инструмент предупредит: пора `npm run kubejs`.
+Marks in answers: `−` remove, `~` replaceInput/Output, `+` recipe, `#` tag, `@` own item — what the site parsed from the
+line. If files are newer than the parse, the tool warns: time for `npm run kubejs`.
 
-| Инструмент | Что делает |
+| Tool | Does |
 | --- | --- |
-| `kubejs_files(layer, folder, path)` | файлы по слоям (`pack`, `world`) и папкам, с числом строк и разобранных записей |
-| `kubejs_search(query*, regex, context, layer, folder, path)` | поиск по тексту скриптов и файлов `data`/`assets`: слова, «`a|b`» — любое из, или регулярка (`regex=true`) |
-| `kubejs_read(path*, grep, notes)` | файл по строкам с пометками разобранного |
+| `kubejs_files(layer, folder, path)` | files by layer (`pack`, `world`) and folder, with line and parsed-record counts |
+| `kubejs_search(query*, regex, context, layer, folder, path)` | search script text and `data`/`assets` files: words, «`a|b`», or regex (`regex=true`) |
+| `kubejs_read(path*, grep, notes)` | file by lines with parse marks |
 
-### Код модов
+### Mod code
 
-| Инструмент | Что делает |
+| Tool | Does |
 | --- | --- |
-| `jar_find(pattern*, jar, nested)` | файлы и классы в jar: часть пути, класс через точки или glob (`data/tfc/**/*.json`) |
-| `jar_read(jar*, path*, grep)` | текстовый файл из jar по строкам |
-| `jar_javap(class*, jar, method)` | байткод класса или одного метода; без `jar` класс находится по индексу |
+| `jar_find(pattern*, jar, nested)` | files and classes in jars: path part, dotted class or glob (`data/tfc/**/*.json`) |
+| `jar_read(jar*, path*, grep)` | text file from a jar by lines |
+| `jar_javap(class*, jar, method)` | bytecode of a class or one method; without `jar` the class is found via the index |
 
-`jar` — имя файла, его часть или id мода; вложенный — `<jar>!<путь>` (или однозначная часть имени), Minecraft +
+`jar` — file name, part of it or mod id; nested — `<jar>!<path>` (or an unambiguous part of the name); Minecraft +
 NeoForge — `minecraft`.
 
-### Отладка сборки: код модов, миксины, зависимости, логи
+### Pack debugging: mod code, mixins, dependencies, logs
 
-Индекс классов — все jar `mods/`, их вложенные библиотеки (jar-in-jar по `META-INF/jarjar/metadata.json`, как у
-загрузчика, и вложенные во вложенные) и Minecraft + NeoForge с именами Mojang из кеша сборки аддона. Строится в
-памяти за ~3,5 с при первом запросе (~75 тыс. классов), потом пересобирается только по изменившимся jar. Разбор
-.class — свой (`bytecode.mjs`), без JDK.
+The class index covers all `mods/` jars, their nested libraries (jar-in-jar via `META-INF/jarjar/metadata.json`, like
+the loader, and nested-in-nested) and Minecraft + NeoForge with Mojang names from the addon build cache. Built in memory
+in ~3.5 s on first request (~75k classes), then rebuilt only for changed jars. `.class` parsing is own
+(`bytecode.mjs`), no JDK.
 
-| Инструмент | Что делает |
+| Tool | Does |
 | --- | --- |
-| `class_find(query*, jar, kind, mixin, platform)` | классы по части имени, полному имени или glob (`*Furnace*`): вид, родитель, jar и мод, у миксинов — цели |
-| `class_info(class*, jar, members, synthetic)` | класс по байткоду: предки с модами, интерфейсы, аннотации, поля с константами, методы с сигнатурами и строками исходника (`:66–89` — для стека краша), миксины на класс, другие jar с тем же классом; ⚠ если общий класс ссылается на классы только клиента (см. ниже) |
-| `class_hierarchy(class*, jar, direction, depth, platform)` | предки и все интерфейсы; дерево наследников и реализаций по всей сборке |
-| `code_refs(target*, kind, jar, subtypes, self, platform, access, side)` | кто использует — с методом и строкой: класс (`extends`, `new`, вызовы, сигнатуры, аннотации и цели миксинов), метод/поле (`Owner#name`, `*#name`; `subtypes` — вызовы через наследников; сам класс-владелец тоже в ответе; у класса — `self`, чтобы включить и его), строку (`"tfc:…"`, ключ конфига). У поля — «ЗАПИСЬ»/«чтение» (`access=write` — только кто перезаписывает); у каждого места — сторона кода. ~2–6 с на сборку |
-| `event_listeners(event*, subtypes, platform, kubejs)` | кто слушает событие NeoForge: `@SubscribeEvent` с этим событием, его предками и наследниками (priority, `@EventBusSubscriber`), `addListener(…)` с лямбдами и ссылками на методы; скрипты KubeJS — `NativeEvents.onEvent`/`Java.loadClass` с этим классом и события KubeJS (`PlayerEvents.loggedIn` …), которые KubeJS разносит из своего обработчика |
-| `mixins(target, method, class, mod, platform)` | `target` — миксины на класс по методам (`@Inject`/`@Redirect`/`@Overwrite`/MixinExtras, `at`, priority, конфиг), возможные конфликты и ⚠ «миксин на этот класс может уронить выделенный сервер»; `class` — один миксин; `mod` — миксины и конфиги мода; без параметров — обзор: цели без класса, необъявленные конфиги, классы под миксинами многих модов |
-| `decompile(class*, jar, method, grep)` | исходник: моды — Vineflower (кеш `.cache/mcp/decompile`, ~1–4 с первый раз), Minecraft — `-sources.jar`; `method` — только метод |
-| `jar_grep(query*, regex, path, jar, nested, context)` | текст в файлах jar (json, toml, lang, mixins.json, data/, assets/), без классов; «`a|b`» — любое из |
-| `mods_check(mod, neoforge, minecraft, side)` | зависимости по `neoforge.mods.toml` всех jar и вложенных: нет мода, не та версия, несовместимые, мод в двух jar, одинаковые классы в разных jar, минимальный NeoForge; `mod` — об одном моде и кто от него зависит |
-| `log_analyze(path, text, level, query)` | лог или краш-репорт (`latest.log`, `crash-*.txt`, `.gz`, папка игры — берёт свежий; или текст стека): ошибки без повторов, стек → мод, обработчики миксинов → мод, расшифровка `NoSuchMethodError`, нет класса, миксин не применился, нет зависимости, битые рецепты и скрипты KubeJS. Краш-репорт: шапка (Connector, Sable просят проверить без них), поток, исключение, моды в стеке, миксины на верхних кадрах, подробности разделов (уровень, блок, сущность), система и сверка списка модов игрока со сборкой. `level=timeline` — хронология игры (см. ниже). IP игроков скрыты |
+| `class_find(query*, jar, kind, mixin, platform)` | classes by name part, full name or glob (`*Furnace*`): kind, parent, jar and mod; mixin targets |
+| `class_info(class*, jar, members, synthetic)` | class from bytecode: ancestors with mods, interfaces, annotations, fields with constants, methods with signatures and source lines (`:66–89` — for crash stacks), mixins on the class, other jars with the same class; ⚠ if a common class references client-only classes (below) |
+| `class_hierarchy(class*, jar, direction, depth, platform)` | ancestors and all interfaces; tree of subclasses and implementations across the pack |
+| `code_refs(target*, kind, jar, subtypes, self, platform, access, side)` | who uses it — with method and line: class (`extends`, `new`, calls, signatures, annotations and mixin targets), method/field (`Owner#name`, `*#name`; `subtypes` — calls via subclasses; the owner class itself included; for a class — `self` to include it), string (`"tfc:…"`, config key). For fields — «ЗАПИСЬ»/«чтение» (`access=write` — only writers); each site shows the code side. ~2–6 s over the pack |
+| `event_listeners(event*, subtypes, platform, kubejs)` | who listens to a NeoForge event: `@SubscribeEvent` with the event, its ancestors and subclasses (priority, `@EventBusSubscriber`), `addListener(…)` with lambdas and method refs; KubeJS scripts — `NativeEvents.onEvent`/`Java.loadClass` with the class and KubeJS events (`PlayerEvents.loggedIn` …) dispatched from KubeJS's own handler |
+| `mixins(target, method, class, mod, platform)` | `target` — mixins on a class by method (`@Inject`/`@Redirect`/`@Overwrite`/MixinExtras, `at`, priority, config), possible conflicts and ⚠ «mixin on this class may crash a dedicated server»; `class` — one mixin; `mod` — a mod's mixins and configs; no params — overview: targets without class, undeclared configs, classes mixed by many mods |
+| `decompile(class*, jar, method, grep)` | source: mods — Vineflower (cache `.cache/mcp/decompile`, ~1–4 s first time), Minecraft — `-sources.jar`; `method` — one method only |
+| `jar_grep(query*, regex, path, jar, nested, context)` | text in jar files (json, toml, lang, mixins.json, data/, assets/), no classes; «`a|b`» |
+| `mods_check(mod, neoforge, minecraft, side)` | dependencies from `neoforge.mods.toml` of all jars and nested: missing mod, wrong version, incompatible, mod in two jars, same classes in different jars, minimum NeoForge; `mod` — one mod and who depends on it |
+| `log_analyze(path, text, level, query)` | log or crash report (`latest.log`, `crash-*.txt`, `.gz`, game folder — takes the newest; or stack text): deduplicated errors, stack → mod, mixin handlers → mod, `NoSuchMethodError` decoding, missing class, mixin not applied, missing dependency, broken recipes and KubeJS scripts. Crash report: header (Connector, Sable ask to retry without them), thread, exception, mods in stack, mixins on top frames, section details (level, block, entity), system and player mod-list diff. `level=timeline` — game chronology (below). Player IPs hidden |
 
-Что сверено с кодом, а не взято по памяти:
+Verified against code, not memory:
 
-- `mods_check` повторяет FML 4.0.42 (`ModSorter.verifyDependencyVersions`, `VersionSupportMatrix`): зависимости
-  другой стороны не проверяются, `optional` проверяется только если мод стоит, `discouraged` — ошибка в логе без
-  остановки; на Minecraft 1.21.1 зависимость засчитывается, если диапазон включает `1.21` (для `minecraft`) или
-  `21.0.166` (для `neoforge`) — поэтому JEI с `[1.21, 1.21.1)` работает. `dependencyOverrides` из `config/fml.toml`
-  не учтены.
-- Миксины (Mixin 0.8.7): цели без класса — только WARN в логе, миксин пропускается (`@Pseudo` — тихо);
-  ошибка применения (инжект не нашёл метод) в конфиге `required` — краш, иначе WARN (`MixinProcessor`).
-- Исходники Minecraft — самой новой версии NeoForge с `-sources.jar` в кеше аддонов (`tools/*/build/moddev/artifacts`
-  и на уровень глубже — `tools/rw-host-fix-mod/devserver/build/…`; сейчас 21.1.251, как у хоста); версию пишет
-  ответ `decompile`. Номера строк Minecraft в стеке игры могут не совпасть: в игре — байткод Mojang, здесь —
-  перекомпилированные исходники. У классов модов номера строк — из байткода, они совпадают со стеком.
-- Сторона кода (`code_refs`, `event_listeners`): «клиент» — пакет `client`, `@OnlyIn(CLIENT)`,
-  `@EventBusSubscriber(Dist.CLIENT)` или параметр клиентского класса (`ClientPlayerNetworkEvent…`); «обе стороны» —
-  обработчик `LevelEvent*`, `EntityJoin/LeaveLevelEvent`, `EntityTickEvent`, `LevelTickEvent`, `PlayerTickEvent`:
-  они приходят и для клиентского мира. Обработчик — метод с `@SubscribeEvent` или с одним параметром-событием
-  (`addListener(this::onX)`). В одиночной игре и «мире хоста» клиент и встроенный сервер — один процесс, статические
-  поля у них общие: так TFC Real World 4.1.4 стирал настройки карты сервера (`onLevelUnload` → `clearServerConfig`).
-- «Только клиент» для предупреждения в `class_info`/`mixins`: `net/minecraft/client`, `net/neoforged/neoforge/client`,
-  `com/mojang/blaze3d` и пакеты `…/client/…` модов. Выделенный сервер такие классы не грузит (RuntimeDistCleaner:
-  «Attempted to load class … for invalid dist DEDICATED_SERVER»); миксин, переписавший общий класс с такими
-  ссылками, может упасть при пересчёте фреймов — так упала первая версия `rw-host-fix`.
+- `mods_check` mirrors FML 4.0.42 (`ModSorter.verifyDependencyVersions`, `VersionSupportMatrix`): dependencies of the
+  other side aren't checked, `optional` only if the mod is present, `discouraged` — log error without stopping; on
+  Minecraft 1.21.1 a dependency counts if the range includes `1.21` (for `minecraft`) or `21.0.166` (for `neoforge`) —
+  hence JEI with `[1.21, 1.21.1)` works. `dependencyOverrides` from `config/fml.toml` not handled.
+- Mixins (Mixin 0.8.7): targets without a class — only WARN, mixin skipped (`@Pseudo` — silently); an apply error
+  (inject didn't find the method) in a `required` config — crash, otherwise WARN (`MixinProcessor`).
+- Minecraft sources — the newest NeoForge with `-sources.jar` in addon caches (`tools/*/build/moddev/artifacts` and one
+  level deeper — `tools/rw-host-fix-mod/devserver/build/…`; now 21.1.251, same as the host); `decompile` prints the
+  version. Minecraft line numbers in a game stack may differ (game — Mojang bytecode, here — recompiled sources). Mod
+  class line numbers come from bytecode and match the stack.
+- Code side (`code_refs`, `event_listeners`): «клиент» — package `client`, `@OnlyIn(CLIENT)`,
+  `@EventBusSubscriber(Dist.CLIENT)` or a client-class parameter (`ClientPlayerNetworkEvent…`); «обе стороны» —
+  handlers of `LevelEvent*`, `EntityJoin/LeaveLevelEvent`, `EntityTickEvent`, `LevelTickEvent`, `PlayerTickEvent`: they
+  fire for the client world too. A handler is a method with `@SubscribeEvent` or a single event parameter
+  (`addListener(this::onX)`). In singleplayer and «host world» client and integrated server share one process and static
+  fields — that's how TFC Real World 4.1.4 wiped the server's map settings (`onLevelUnload` → `clearServerConfig`).
+- "Client only" for the `class_info`/`mixins` warning: `net/minecraft/client`, `net/neoforged/neoforge/client`,
+  `com/mojang/blaze3d` and mods' `…/client/…` packages. A dedicated server doesn't load them (RuntimeDistCleaner:
+  «Attempted to load class … for invalid dist DEDICATED_SERVER»); a mixin that rewrote a common class with such
+  references can fail on frame recomputation — that's how the first `rw-host-fix` crashed.
 
-#### Хронология лога (`log_analyze level=timeline`)
+#### Log timeline (`log_analyze level=timeline`)
 
-Только события игры, по порядку: запуск встроенного/выделенного сервера, вход (с координатами из `PlayerList`),
-выход, смена измерения (Iris «dimension change» и JourneyMap «Dimension change» — одна строка на смену), команды
-(`issued server command`) и их ответы (`[Игрок: …]`: телепорт в точку, смена режима), строки `MinecraftServer` —
-чат, смерти, вход/выход, сохранения (не чаще раза в 30 с), «Can't keep up» и ошибки после входа в мир (по одной на
-вид, ×N — повторы). Чат клиента, повторяющий строку сервера, схлопывается. Шум LOD (Voxy/Roxy), ChunkBuilder,
-ByePregen, рецептов, `ClientRecipeBook`, JEI/EMI, моделей и звуков убран. `query` добавляет к событиям свои строки
-(например, `eratosthenes|portal`).
+Game events only, in order: integrated/dedicated server start, join (with coordinates from `PlayerList`), leave,
+dimension change (Iris «dimension change» and JourneyMap «Dimension change» — one line per change), commands
+(`issued server command`) and their replies (`[Player: …]`: teleport, gamemode change), `MinecraftServer` lines — chat,
+deaths, join/leave, saves (at most once per 30 s), «Can't keep up» and errors after joining (one per kind, ×N repeats).
+Client chat duplicating a server line is collapsed. Noise from LOD (Voxy/Roxy), ChunkBuilder, ByePregen, recipes,
+`ClientRecipeBook`, JEI/EMI, models and sounds removed. `query` adds own lines (e.g. `eratosthenes|portal`).
 
-### Книги модов
+### Mod books
 
-Руководство TFC (Patchouli, со статьями 14 аддонов и KubeJS сборки — 173 статьи, 139 по-русски) и справочник
-инженера Immersive Engineering (133 статьи, по-русски только разделы аддонов). Слои: jar → KubeJS → ресурспаки,
-верхний побеждает. Индекс строится в памяти за ~75 мс при первом запросе.
+TFC field guide (Patchouli, with entries from 14 addons and pack KubeJS — 173 entries, 139 in Russian) and the IE
+engineer's manual (133 entries, Russian only in addon sections). Layers: jar → KubeJS → resource packs, top wins. Index
+built in memory in ~75 ms on first request.
 
-| Инструмент | Что делает |
+| Tool | Does |
 | --- | --- |
-| `books_list(book, category, lang)` | книги; с `book` — оглавление с id статей |
-| `book_search(query*, book, category, lang)` | поиск по тексту (русские слова — по основе: «крица» найдёт «крицы») |
-| `book_entry(id*, book, lang)` | статья читаемым текстом: без разметки, рецепты со статусом в сборке, климат и настройки подставлены |
+| `books_list(book, category, lang)` | books; with `book` — table of contents with entry ids |
+| `book_search(query*, book, category, lang)` | full-text search (Russian words by stem: «крица» finds «крицы») |
+| `book_entry(id*, book, lang)` | entry as readable text: no markup, recipes with pack status, climate and settings substituted |
 
-Не индексируются статьи IE, которые мод собирает кодом (залежи, шейдеры), и сцены Ponder.
+Not indexed: IE entries built by code (deposits, shaders) and Ponder scenes.
 
-### Блоки, существа, добыча
+### Blocks, entities, loot
 
-Библиотека предметов — это только предметы. Блоки без предмета, существа, жидкости, эффекты ищутся по переводам.
+The item library is items only. Blocks without items, entities, fluids, effects are found via translations.
 
-| Инструмент | Что делает |
+| Tool | Does |
 | --- | --- |
-| `lang_search(query*, kind, mod)` | переводы ru/en всех jar, ванили, KubeJS и ресурспаков (~53 тыс. ключей): вид записи, id, мод |
-| `block_get(id*)` | блок: названия, есть ли предмет, теги блока, blockstate и модели, что выпадает |
-| `loot_for(id*, kind, raw)` | таблица добычи блока, существа, сундука: пулы, количества, условия, глобальные модификаторы NeoForge |
-| `loot_sources(item*, kind)` | откуда выпадает предмет: напрямую, через тег, вложенную таблицу, модификатор |
+| `lang_search(query*, kind, mod)` | ru/en translations of all jars, vanilla, KubeJS and resource packs (~53k keys): entry kind, id, mod |
+| `block_get(id*)` | block: names, whether it has an item, block tags, blockstate and models, drops |
+| `loot_for(id*, kind, raw)` | loot table of a block, entity, chest: pools, counts, conditions, NeoForge global modifiers |
+| `loot_sources(item*, kind)` | where an item drops from: directly, via tag, nested table, modifier |
 
-Таблицы из `kubejs/data` перекрывают файлы модов с тем же путём.
+Tables from `kubejs/data` override mod files with the same path.
 
-### Ресурсы клиента: модели, текстуры, проверка
+### Client resources: models, textures, checks
 
-Клиент Minecraft из MCP не запустить (нет монитора), поэтому то, что он делает с ресурсами при загрузке,
-повторено здесь. Ресурсы ищутся по слоям, как в игре (первый, где файл есть): ресурспаки сборки → assets KubeJS →
-папки аддонов `tools/<мод>/src/main/resources` (свежее их jar) → jar модов → Minecraft и NeoForge.
+The Minecraft client can't run from MCP (no display), so what it does with resources at load time is reimplemented
+here. Resources are resolved by layer as in game (first that has the file): pack resource packs → KubeJS assets → addon
+folders `tools/<mod>/src/main/resources` (fresher than their jars) → mod jars → Minecraft and NeoForge.
 
-| Инструмент | Что делает |
+| Tool | Does |
 | --- | --- |
-| `model_render(id*, kind, state, view, size, addon, texture, bones, silhouette)` | **картинка PNG**: блокстейт → вариант → модель с `parent` → объём под поворотом `display.gui` (или вид сверху/сбоку); предмет `item/generated` — слоями; модель GeckoLib (`kind=geo` или id `ns:geo/….geo.json`) с текстурой `texture=`. В тексте — цепочка моделей (у GeckoLib — дерево костей с числом кубов), откуда каждая текстура, предупреждения |
-| `texture_get(path*, size, colors, addon)` | **картинка** текстуры (увеличена без сглаживания) и палитра: частые цвета с долями, размер, кадры анимации, откуда взята |
-| `resources_check(addon \| mod, props, filter, limit, verbose)` | проверка мода из `mods/` или аддона из `tools/`: ошибки, предупреждения, «к сведению» |
+| `model_render(id*, kind, state, view, size, addon, texture, bones, silhouette)` | **PNG image**: blockstate → variant → model with `parent` → 3D under `display.gui` rotation (or top/side view); `item/generated` items — by layers; GeckoLib model (`kind=geo` or id `ns:geo/….geo.json`) with `texture=`. Text: model chain (GeckoLib — bone tree with cube counts), where each texture comes from, warnings |
+| `texture_get(path*, size, colors, addon)` | texture **image** (nearest-neighbour upscale) and palette: frequent colours with shares, size, animation frames, source |
+| `resources_check(addon \| mod, props, filter, limit, verbose)` | check a mod from `mods/` or an addon from `tools/`: errors, warnings, info |
 
-Рисунок (`scripts/mcp/render.mjs`) — перенос `tools/ee-extras-mod/art/iso.py` с дополнениями: `parent`,
-поворот элемента (`rotation`, `rescale`), поворот варианта `x`/`y`, `uv` по умолчанию, `rotation` грани,
-затенение по нормали, полупрозрачность, multipart. Поворот `display.gui` [x, y, z] — как у игры (`rotationXYZ`,
-сверено с иконками Minecraft Wiki: печь — топкой **вправо**, сундук — замком вправо; до 2026-10-21 рисовалось
-зеркально). Окраска `tintindex` — только там, где её цвет известен из кода (рюкзаки, жидкость в вёдрах); трава и
-листья серые; анимация — первый кадр. Умеет OBJ (`neoforge:obj`, `ie_obj` IE, файлы `.obj`/`.obj.ie`; у `ie_obj`
-v перевёрнут, как в IE), `composite`, `separate_transforms` (вид в инвентаре), `conf_sides` IE, рюкзаки
-Sophisticated Backpacks; модели только с `overrides` — override при свойствах 0. Текстуры, которых нет файлом, а
-делает атлас блоков (`paletted_permutations` в `assets/minecraft/atlases/blocks.json` любого мода — перекраска по
-палитре, как `PalettedPermutations` Minecraft), берутся так же: книжные полки, пиломатериалы, лодки, таблички TFC
-по породам (`<текстура>_<дерево>`; `palettedTextures()` в render.mjs).
-Рисуемое кодом — **реестр `scripts/mcp/models/`**, по модулю на мод (перенесено из кода, в игре не проверялось).
-Модуль группы — `{ name, loaders, flat, items, objCallbacks }`: геометрия загрузчика модели, плоские предметы слоями,
-предметы `builtin/entity` (рендерер предмета в коде) и видимые группы OBJ; подключается строкой в `GROUPS`
-(`models/index.mjs`). Движок (`render.mjs`) зовёт реестр через `modelContext` и не знает имён модов; обработчик,
-который упал или не узнал данные после обновления мода, — «не умею»: предмет остаётся текстурой, причина — в
-предупреждения, сборка не останавливается. Что сейчас в группах:
-- `minecraft.mjs` — сундуки, кровати, шалкеры, знамёна, головы (и дракона, и пиглина; зеркальные кубы `mirror`), щит,
-  проводник, расписная ваза — модели сущностей Minecraft (инструменты ModelPart — `scripts/mcp/entityModels.mjs`);
-- `neoforge.mjs` — `composite`, `fluid_container` (ведро с жидкостью: текстура и цвет жидкости — из классов модов,
-  `scripts/mcp/fluids.mjs`; у IE — текстура из `FluidEntry.make("имя", rl("…_still"))`);
-- `tfc.mjs` — сундуки из дерева TFC, `tfc:fluid_container` (пустой сосуд), `tfc:trim` (броня без отделки);
-- `immersiveengineering.mjs` — `conf_sides`, мультиблоки `basic_split` (вся `inner_model`, как у предмета без
-  `SUBMODEL_OFFSET`), образец породы `models/coresample` (столбик из камня, вид спереди без поворота:
-  `getTransforms` = `NO_TRANSFORMS`), конвейеры `models/conveyor` (`models/ieConveyor.mjs`: у предмета нет своей
-  модели или картинки — тот же `ModelConveyor` с умолчаниями: на север, горизонтально, лента выключена, без покраски,
-  стенки есть; перенесены `getBaseConveyor`, `createBakedQuad/Box`, добавки разделителя, экстрактора, вертикального и
-  панель редстоун-конвейера, поворот GUI — матрица `TRANSFORMATION_MAP` → `display.gui.matrix`), ведро зелья
-  `potion_bucket` (цвет пустого зелья), инструменты (`ie_obj` с `callbacks`) — видимые группы OBJ из
-  `*Callbacks.shouldRenderGroup`;
-- `functionalstorage.mjs` — ящики (модель блока с поворотом из `DrawerISTER`), обрамлённые (`framedblock` без
-  оформления — дочерние модели); `computercraft.mjs` — черепаха без улучшений; `sophisticatedbackpacks.mjs` — рюкзак;
-  `cuisinedelight.mjs` — сковорода (отдельная модель `item/cuisine_skillet_base`);
-- `create_submarine.mjs` — барометр-аквариум: модель блока + песок, камень и водоросли (модели блоков ванили с позой
-  рендерера — поле части `affine`), рыба-фуга `PufferfishSmallModel` в спокойном виде, вода (`water_still`,
-  окраска воды, полупрозрачная); покачивание рыбы — в момент 0.
+Renderer (`scripts/mcp/render.mjs`) — port of `tools/ee-extras-mod/art/iso.py` plus: `parent`, element rotation
+(`rotation`, `rescale`), variant `x`/`y` rotation, default `uv`, face `rotation`, normal shading, translucency,
+multipart. `display.gui` [x, y, z] rotation as in game (`rotationXYZ`, checked against Minecraft Wiki icons: furnace
+mouth **right**, chest lock right; drawn mirrored before 2026-10-21). `tintindex` colouring only where the colour is
+known from code (backpacks, fluid in buckets); grass and leaves grey; animation — first frame. Supports OBJ
+(`neoforge:obj`, IE `ie_obj`, `.obj`/`.obj.ie` files; `ie_obj` has v flipped as in IE), `composite`,
+`separate_transforms` (inventory view), IE `conf_sides`, Sophisticated Backpacks; models with only `overrides` — the
+override at properties 0. Textures that exist only via the block atlas (`paletted_permutations` in
+`assets/minecraft/atlases/blocks.json` of any mod — palette recolouring like Minecraft's `PalettedPermutations`) are
+resolved too: TFC bookshelves, lumber, boats, signs by wood (`<texture>_<wood>`; `palettedTextures()` in render.mjs).
 
-**Пустые предметы.** Предмет без данных рисуется так, как его показывает JEI, — без содержимого: ящики Functional
-Storage без предметов, сковорода Cuisine Delight без еды, образец породы IE без минералов (камень), рюкзак без
-улучшений. Наполненный лоток TFC (`pan/filled`) без содержимого не рисуется вовсе — он существует только в руке во
-время промывки и всегда с содержимым; на сайте скрыт (см. ниже). Не перенесено (остаётся текстурой): проходной
-изолятор IE (`feedthrough` — блок-основа + модели коннекторов по типу провода).
+Drawn-by-code models — **registry `scripts/mcp/models/`**, one module per mod (ported from code, not checked in game).
+A group module is `{ name, loaders, flat, items, objCallbacks }`: model-loader geometry, flat layered items,
+`builtin/entity` items (item renderer in code) and visible OBJ groups; registered by a line in `GROUPS`
+(`models/index.mjs`). The engine (`render.mjs`) calls the registry via `modelContext` and knows no mod names; a handler
+that crashed or didn't recognise data after a mod update is «не умею»: the item stays a texture, the reason goes to
+warnings, the build doesn't stop. Current groups:
+- `minecraft.mjs` — chests, beds, shulkers, banners, heads (incl. dragon and piglin; mirrored cubes `mirror`), shield,
+  conduit, decorated pot — Minecraft entity models (ModelPart tools — `scripts/mcp/entityModels.mjs`);
+- `neoforge.mjs` — `composite`, `fluid_container` (fluid bucket: fluid texture and colour from mod classes,
+  `scripts/mcp/fluids.mjs`; IE — texture from `FluidEntry.make("name", rl("…_still"))`);
+- `tfc.mjs` — TFC wood chests, `tfc:fluid_container` (empty vessel), `tfc:trim` (armour without trim);
+- `immersiveengineering.mjs` — `conf_sides`, `basic_split` multiblocks (whole `inner_model`, like an item without
+  `SUBMODEL_OFFSET`), core sample `models/coresample` (stone column, front view unrotated: `getTransforms` =
+  `NO_TRANSFORMS`), conveyors `models/conveyor` (`models/ieConveyor.mjs`: the item has no own model or picture — same
+  `ModelConveyor` with defaults: north, horizontal, belt off, undyed, walls on; ported `getBaseConveyor`,
+  `createBakedQuad/Box`, splitter, extractor, vertical and redstone-panel additions, GUI rotation — `TRANSFORMATION_MAP`
+  matrix → `display.gui.matrix`), potion bucket `potion_bucket` (empty potion colour), tools (`ie_obj` with
+  `callbacks`) — visible OBJ groups from `*Callbacks.shouldRenderGroup`;
+- `functionalstorage.mjs` — drawers (block model rotated per `DrawerISTER`), framed (`framedblock` without decoration —
+  child models); `computercraft.mjs` — turtle without upgrades; `sophisticatedbackpacks.mjs` — backpack;
+  `cuisinedelight.mjs` — skillet (separate model `item/cuisine_skillet_base`);
+- `create_submarine.mjs` — barometer-aquarium: block model + sand, stone and kelp (vanilla block models with the
+  renderer pose — part field `affine`), pufferfish `PufferfishSmallModel` at rest, water (`water_still`, water tint,
+  translucent); fish bobbing at t = 0.
 
-**Скрытые предметы** (`scripts/mods/visibility/`, поле `h` в `items.json` — причина): есть в ресурсах jar, но игрок их
-не видит. Правило — модуль на мод по его коду: Create Connected — условия `FeatureToggle.addCondition` (байткод
-лямбды, `Mods.X.isLoaded()` → установлен ли мод; имя — из `REGISTRATE.block/item`, склеенное в цикле — шаблоном),
-TFC — список `SelfTests.technicalItemsWithNoTab` (лоток с рудой, кучки снега и льда, крица, расплав, свет, литое
-стекло, каменные наковальни). Сайт и MCP не показывают их в поиске, по id они находятся (иконки схем, рецепты),
-`item_get` пишет причину. Упавшее или устаревшее правило — предупреждение в логе `npm run mods`, не остановка.
+**Empty items.** An item without data is drawn as JEI shows it — without contents: Functional Storage drawers without
+items, Cuisine Delight skillet without food, IE core sample without minerals (stone), backpack without upgrades. A filled
+TFC pan (`pan/filled`) isn't drawn at all — it exists only in hand while panning, always with contents; hidden on the
+site (below). Not ported (stays a texture): IE feedthrough insulator (`feedthrough` — base block + connector models by
+wire type).
 
-Модели **GeckoLib** (`scripts/mcp/geoModels.mjs`): файлы `assets/<ns>/geo/*.geo.json` (Bedrock 1.12+,
-`minecraft:geometry[0].bones[].cubes[]`) — перенос `BakedModelFactory.Builtin`, `VertexSet`, `GeoQuad.build` и
-`RenderUtil` GeckoLib 4.8.3: x зеркалится, `pivot`/`rotation` костей и кубов (порядок Z, Y, X), `inflate` куба или
-кости, `mirror` куба, UV по граням (`uv`/`uv_size`, отрицательный `uv_size` — отражение, `uv_rotation`) и box UV
-(`uv: [u, v]`). Поза — покой из файла, без анимаций. Модель смотрит на юг, как сущность и броня в игре (поворот 180°
-по Y): `view=south` — спереди (грань `north` файла — перед), `gui` — сверху, спереди и с правого бока модели.
-- `id`: `miner_tools:geo/miner_helmet.geo.json`, `miner_tools:geo/miner_helmet` или `miner_tools:miner_helmet` с
-  `kind=geo`; нет файла — список моделей GeckoLib этого namespace.
-- `texture`: `ns:textures/….png`, `assets/ns/textures/….png` или `ns:entity/x`. Без неё — поиск по имени модели в
-  `<подпапка geo>/`, `entity/`, `models/armor/`, `armor/`, `item/`, `block/` (из найденных — с размером развёртки).
-- Броня (кости `armorHead`, `armorBody`, `armorLeftArm`… шаблона GeckoLib): в покое стоят там же, где части игрока
-  (`GeoArmorRenderer.applyBaseTransformations`), под ними — полупрозрачный силуэт игрока для масштаба:
-  `silhouette=auto` (части под костями брони с кубами), `all`, `none`. `bones=armorHead` — только эти кости.
-- В тексте: дерево костей с кубами, всего кубов и граней, предупреждения — UV за краем развёртки, грани на
-  полностью прозрачной области текстуры (в игре не видны), пропорции текстуры не как у развёртки, нет текстуры.
-- Проверено: каска Miner Tools (`texture=miner_tools:textures/models/armor/miner_helmet.png`,
-  `addon=tools/miner-tools-mod`) и контрольная модель с размеченной текстурой (box UV головы — лицо спереди, метка
-  слева сверху, правый бок с запада, как у скина игрока; отрицательный `uv_size`). Других моделей GeckoLib в jar
-  сборки нет (на 2026-10-22: GeckoLib стоит ради каски; проверены все 237 jar).
+**Hidden items** (`scripts/mods/visibility/`, field `h` in `items.json` — the reason): present in jar resources but not
+visible to players. One rule module per mod from its code: Create Connected — `FeatureToggle.addCondition` conditions
+(lambda bytecode, `Mods.X.isLoaded()` → is the mod installed; name from `REGISTRATE.block/item`, loop-concatenated →
+template), TFC — `SelfTests.technicalItemsWithNoTab` (ore pan, snow and ice piles, bloom, melt, light, poured glass,
+stone anvils). Site and MCP hide them from search; by id they're still found (schematic icons, recipes), `item_get`
+gives the reason. A failing or stale rule — warning in the `npm run mods` log, not a stop.
 
-Края сглажены: модель рисуется в 4 раза крупнее и усредняется (альфа — по покрытию), грани — с краями
-включительно и запасом в полпикселя, так что на стыках нет щелей; пиксели текстур — ближайшие, как в игре.
-Предмет `item/generated` — плоская текстура, увеличенная с целым масштабом, по центру картинки.
+**GeckoLib** models (`scripts/mcp/geoModels.mjs`): `assets/<ns>/geo/*.geo.json` (Bedrock 1.12+,
+`minecraft:geometry[0].bones[].cubes[]`) — port of GeckoLib 4.8.3 `BakedModelFactory.Builtin`, `VertexSet`,
+`GeoQuad.build` and `RenderUtil`: x mirrored, bone and cube `pivot`/`rotation` (order Z, Y, X), cube or bone
+`inflate`, cube `mirror`, per-face UV (`uv`/`uv_size`, negative `uv_size` mirrors, `uv_rotation`) and box UV
+(`uv: [u, v]`). Pose — rest from the file, no animations. The model faces south like entities and armour in game (180°
+Y): `view=south` — front (file `north` face is the front), `gui` — from above, front and the model's right side.
+- `id`: `miner_tools:geo/miner_helmet.geo.json`, `miner_tools:geo/miner_helmet` or `miner_tools:miner_helmet` with
+  `kind=geo`; no file — list of GeckoLib models in that namespace.
+- `texture`: `ns:textures/….png`, `assets/ns/textures/….png` or `ns:entity/x`. Without it — search by model name in
+  `<geo subfolder>/`, `entity/`, `models/armor/`, `armor/`, `item/`, `block/` (preferring a matching UV size).
+- Armour (GeckoLib template bones `armorHead`, `armorBody`, `armorLeftArm`…): at rest placed where the player parts are
+  (`GeoArmorRenderer.applyBaseTransformations`), over a translucent player silhouette for scale: `silhouette=auto`
+  (parts under armour bones with cubes), `all`, `none`. `bones=armorHead` — only these bones.
+- Text: bone tree with cubes, total cubes and faces, warnings — UV outside the sheet, faces on fully transparent texture
+  areas (invisible in game), texture proportions differ from the sheet, missing texture.
+- Verified: Miner Tools helmet (`texture=miner_tools:textures/models/armor/miner_helmet.png`,
+  `addon=tools/miner-tools-mod`) and a control model with a marked texture (head box UV — face front, mark top-left,
+  right side from the west, like a player skin; negative `uv_size`). No other GeckoLib models in pack jars (2026-10-22:
+  GeckoLib is there for the helmet; all 237 jars checked).
 
-Тот же код — **единственный генератор иконок** аддонов (сайт `public/addons/*.png`, выпуск аддона):
+Edges are anti-aliased: the model is drawn 4× larger and averaged (alpha by coverage), faces include edges plus half a
+pixel, so seams have no gaps; texture pixels are nearest as in game. `item/generated` — flat texture upscaled by an
+integer factor, centred.
+
+The same code is the **only icon generator** for addons (site `public/addons/*.png`, addon release):
 
 ```bash
 node scripts/mcp/render.mjs tools/ee-extras-mod ee_extras:four_core_termination ee_extras:four_core_cable_spool --out out/icons --size 256
 ```
 
-Первый аргумент — папка аддона (или папка с `assets/`), дальше id; файл — `<путь id, «/» → «_»>.png`. По умолчанию
-`--kind icon` (как в инвентаре: модель предмета, нет её — блок), ещё `--state`, `--view`, `--aa` (1 — без
-сглаживания). Чужие `parent` и текстуры — из jar `mods/` и Minecraft. Код выхода 1, если что-то не нарисовалось;
-предупреждения печатаются под строкой файла.
+First argument — addon folder (or a folder with `assets/`), then ids; file — `<id path, "/" → "_">.png`. Default
+`--kind icon` (as in inventory: item model, else block), also `--state`, `--view`, `--aa` (1 — no AA). Foreign `parent`
+and textures come from `mods/` jars and Minecraft. Exit code 1 if something didn't render; warnings under the file line.
 
-`resources_check` сверяет:
+`resources_check` verifies:
 
-- у блока есть блокстейт; его свойства и значения есть у блока; каждое сочетание свойств находит вариант.
-  Свойства — из байткода: `createBlockStateDefinition` класса и предков (вкл. классы EE и Minecraft),
-  значения — из `<clinit>` (`BooleanProperty`, `IntegerProperty`, `DirectionProperty`, `EnumProperty` с
-  `getSerializedName`). Свойство из метода или поля экземпляра (`getFluidProperty()` у TFC) — честно «не разобрано»,
-  и тогда блокстейт не сверяется;
-- блок ↔ класс — по регистрациям в коде (`DeferredRegister.register`, Registrate `block/item`, свои
-  `register(…)` мода с лямбдой); id из цикла — по единственному классу-кандидату;
-- модели и `parent` существуют (чужой namespace мода, которого нет в сборке, — предупреждение), текстуры
-  есть, переменные `#…` заданы, координаты элементов в −16…32, углы — −45…45 с шагом 22,5, у модели блока
-  есть `particle`; модели, на которые никто не ссылается, — «к сведению» (шаблоны для потомков);
-- у предмета есть модель; названия `block.<ns>.<id>` / `item.<ns>.<id>` («/» → «.») и ключи перевода из
-  строк кода есть в `en_us` (нет — ошибка) и `ru_ru` (нет — у аддона ошибка: игроки видят ru_ru; у мода из
-  `mods/` — предупреждение). Ключ из кода — это:
-  - строка, которая уходит первым аргументом в `Component.translatable*`, `I18n.get/exists`,
-    `new TranslatableContents` — при любом префиксе (`miner_belt.on`): прямая `ldc` перед вызовом или несколько
-    `ldc` подряд (ветки тернарного оператора `on ? "a.on" : "a.off"` сходятся на одном вызове); у
-    `translatable(key, Object...)` ключ — до `anewarray`, строки-аргументы не путаются с ключом. Ключ не из
-    переводов мода — ищется в `en_us` чужого мода или Minecraft (нет нигде — у аддона предупреждение);
-  - любая строка с префиксом `block.<ns>.`, `item.<ns>.`, `<ns>.` — как раньше;
-  - строка с первой частью своих ключей (`miner_belt.` из `en_us` мода), не переданная в `translatable` прямо
-    (поле, параметр): есть в `en_us` — засчитывается, нет — «к сведению» (может быть не ключом).
+- a block has a blockstate; its properties and values exist on the block; every property combination finds a variant.
+  Properties from bytecode: `createBlockStateDefinition` of the class and ancestors (incl. EE and Minecraft classes),
+  values from `<clinit>` (`BooleanProperty`, `IntegerProperty`, `DirectionProperty`, `EnumProperty` with
+  `getSerializedName`). A property from an instance method or field (`getFluidProperty()` in TFC) — honestly «не
+  разобрано», and then the blockstate isn't checked;
+- block ↔ class — from registrations in code (`DeferredRegister.register`, Registrate `block/item`, a mod's own
+  `register(…)` with a lambda); loop ids — by a single candidate class;
+- models and `parent` exist (a foreign namespace of a mod not in the pack — warning), textures exist, `#…` variables are
+  set, element coordinates within −16…32, angles −45…45 in 22.5 steps, block models have `particle`; unreferenced models
+  — info (templates for children);
+- an item has a model; names `block.<ns>.<id>` / `item.<ns>.<id>` ("/" → ".") and translation keys from code strings
+  exist in `en_us` (missing — error) and `ru_ru` (missing — error for an addon: players see ru_ru; warning for a mod
+  from `mods/`). A key from code is:
+  - a string passed as the first argument to `Component.translatable*`, `I18n.get/exists`, `new TranslatableContents`
+    — with any prefix (`miner_belt.on`): a direct `ldc` before the call or several `ldc`s in a row (ternary branches
+    `on ? "a.on" : "a.off"` converge on one call); for `translatable(key, Object...)` the key is before `anewarray`,
+    string args aren't confused with the key. A key not in the mod's translations is looked up in another mod's or
+    Minecraft's `en_us` (nowhere — warning for an addon);
+  - any string prefixed `block.<ns>.`, `item.<ns>.`, `<ns>.`;
+  - a string starting with the first segment of the mod's own keys (`miner_belt.` from its `en_us`), not passed to
+    `translatable` directly (field, parameter): present in `en_us` — counted, absent — info (may not be a key).
 
-  Ключи, собираемые кодом (`key + ".tooltip"`, `"ns.cable." + x`), — сколько таких есть. В строке «проверено» —
-  все сверенные ключи (вкл. названия) и сколько из них из кода;
-- `PartialModel.of(…)` указывает на существующую модель; у блока есть таблица добычи (кроме жидкостей).
+  Keys built by code (`key + ".tooltip"`, `"ns.cable." + x`) — only counted. The «проверено» line lists all checked keys
+  (incl. names) and how many came from code;
+- `PartialModel.of(…)` points to an existing model; blocks have a loot table (except fluids).
 
-Для аддона берутся `src/main/resources` и `build/classes/java/main` (без сборки классов — только ресурсы); старая
-сборка того же аддона в `mods/` файлы не подставляет. Проверено на EE Extras (ошибок нет; на копии с выкинутым
-вариантом блокстейта, ключом перевода и текстурой — находит все), EE 1.1.2 и TFC 4.2.9 (ок. 15 с). Miner Tools
-1.0.0: 16 ключей (15 из кода, все через `translatable`, половина — тернарным оператором), ошибок нет; без
-`miner_belt.gui.any.off` в `ru_ru` — ошибка с местом в коде (`BeltScreen.updateLabels`).
+For an addon it uses `src/main/resources` and `build/classes/java/main` (without compiled classes — resources only); an
+older build of the same addon in `mods/` doesn't substitute files. Verified on EE Extras (no errors; on a copy with a
+removed blockstate variant, translation key and texture — all found), EE 1.1.2 and TFC 4.2.9 (~15 s). Miner Tools
+1.0.0: 16 keys (15 from code, all via `translatable`, half via ternaries), no errors; without `miner_belt.gui.any.off`
+in `ru_ru` — an error with the code location (`BeltScreen.updateLabels`).
 
-`model_render` и `texture_get` берут ресурсы аддонов из `tools/` основной копии. Правишь аддон в git worktree —
-передай `addon=<путь к папке мода>` (или имя в `tools/`): его ресурсы встают первым слоем вместо одноимённой
-папки из `tools/`, в ответе слой подписан этим путём.
+`model_render` and `texture_get` take addon resources from `tools/` of the main checkout. Editing an addon in a git
+worktree — pass `addon=<path to the mod folder>` (or a name in `tools/`): its resources become the first layer instead
+of the same-named `tools/` folder; the layer is labelled with that path in the answer.
 
-### Карта мира
+### World map
 
-Проекция — тот же `src/lib/projection.ts`, что у сайта. Климат повторён по байткоду TFC Real World 4.1.4 и
-TFC 4.2.9 (включая то, как Java читает серые карты). Масштаб, профиль и спавн — из конфига сервера.
+Projection — the same `src/lib/projection.ts` as the site. Climate reimplemented from TFC Real World 4.1.4 and TFC
+4.2.9 bytecode (including how Java reads greyscale maps). Scale, profile and spawn — from the server config.
 
-| Инструмент | Что делает |
+| Tool | Does |
 | --- | --- |
-| `map_point(x, z, lat, lon, text, y)` | блок ↔ широта/долгота (принимает и строку из F3), ближайшие города, суша/море, средний климат TFC, поправка на высоту, расстояние от спавна |
-| `map_rocks(x, z, lat, lon, text)` | какие породы возможны на каждой глубине и с какой долей, жилы руд в них |
-| `map_find(query*)` | город, страна или регион → широта/долгота и блок; для страны — её города |
-| `map_regions(x1, z1, x2, z2, x, z, radius, text, dim, kinds, world)` | прямоугольник блоков → файлы `r.X.Z.mca` (`region`, `entities`, `poi`) в папке измерения (`DIM-1` — ад, `DIM1` — энд, `dimensions/<ns>/…`) и команды PowerShell: посмотреть, скопировать, удалить (удаление закомментировано); строка `ls` для сервера |
+| `map_point(x, z, lat, lon, text, y)` | block ↔ lat/lon (also accepts an F3 line), nearest cities, land/sea, average TFC climate, altitude correction, distance from spawn |
+| `map_rocks(x, z, lat, lon, text)` | possible rocks at each depth with shares, ore veins in them |
+| `map_find(query*)` | city, country or region → lat/lon and block; for a country — its cities |
+| `map_regions(x1, z1, x2, z2, x, z, radius, text, dim, kinds, world)` | block rectangle → `r.X.Z.mca` files (`region`, `entities`, `poi`) in the dimension folder (`DIM-1` — nether, `DIM1` — end, `dimensions/<ns>/…`) and PowerShell commands: list, copy, delete (delete commented out); an `ls` line for the server |
 
-Точную породу задаёт сид мира, поэтому `map_rocks` даёт варианты, а не ответ. Границ стран в данных мода нет:
-регион называется по ближайшему городу. С игрой климат и породы не сверялись.
+The world seed picks the exact rock, so `map_rocks` gives options, not an answer. The mod data has no country borders:
+a region is named by the nearest city. Climate and rocks not compared with the game.
 
-### Гайды справочника
+### Reference guides
 
-| Инструмент | Что делает |
+| Tool | Does |
 | --- | --- |
-| `guides_list(section, query)` | гайды: id, заголовок, раздел, проверено ли, кто правил |
-| `guide_search(query*, section)` | поиск по тексту гайдов |
-| `guide_get(id*)` | гайд в формате `npm run guides` и его `revision` |
-| `guide_put(id*, markdown*, baseRevision*)` | **запись в общую базу**: подпись `Claude`, версия — в историю |
+| `guides_list(section, query)` | guides: id, title, section, verified flag, editors |
+| `guide_search(query*, section)` | search guide text |
+| `guide_get(id*)` | guide in `npm run guides` format and its `revision` |
+| `guide_put(id*, markdown*, baseRevision*)` | **write to the shared DB**: signed `Claude`, version goes to history |
 
-`guide_put` откажет, если статью изменили после `guide_get` (условие Firestore на `updateTime`); для новой статьи
-`baseRevision` — `"new"`.
+`guide_put` refuses if the article changed after `guide_get` (Firestore precondition on `updateTime`); for a new article
+`baseRevision` is `"new"`.
 
-### Контент сайта: задачи, документы-планы, датапаки, схемы
+### Site content: tasks, plan docs, datapacks, schematics
 
-Каждый ответ пишет, сколько чтений Firestore он стоил. Списки читаются с маской полей и кешируются на минуты;
-документ целиком — отдельным запросом. uid, куки и токены в ответы не попадают. Пишут только задачи и документы-планы
-(автор и `updatedBy` — `Claude`); датапаки, скрипты и схемы — только чтение.
+Each answer states how many Firestore reads it cost. Lists are read with a field mask and cached for minutes; a full
+document is a separate request. uids, cookies and tokens never appear in answers. Only tasks and plan docs are written
+(author and `updatedBy` — `Claude`); datapacks, scripts and schematics are read-only.
 
-| Инструмент | Что делает |
+| Tool | Does |
 | --- | --- |
-| `tasks_list(query, status, assignee, group)` / `task_get(id*, doc_chars)` | задачи и группы; задача с чеклистом, вложениями (без содержимого), документами, ссылкой на сайт и `revision` |
-| `groups_list(query)` | группы задач: id, название, значок, порядок — найти группу по имени («фиксы») |
-| `task_create(title*, description, group, priority, status, checklist, icon, assignee, place)` | **запись в общую базу**: задача как с кнопки «Новая задача» (рейтинг 1000, `completedAt` при `done`); `group` — id или название; `checklist` — строки, `{ text, done }` или ресурсы `{ itemId, qty, got }` (предмет проверяется по библиотеке) |
-| `task_update(id*, baseRevision*, …поля task_create, checklist_add)` | **запись**: меняются только переданные поля; `checklist` заменяет чеклист (id прежних пунктов сохраняются), `checklist_add` дописывает; смена статуса ставит/снимает `completedAt`; `"-"` очищает группу, значок, исполнителя |
-| `artifacts_list(query, task)` / `artifact_get(id*, offset, limit)` | документы-планы (`artifacts`): список по названию и задаче (`"-"` — свободные); документ по строкам и его `revision` |
-| `artifact_put(id, baseRevision, title, content, task)` | **запись**: без `id` — новый документ («План: <задача>», если название не дано), с `id` — правка переданных полей; `content` — текст целиком |
-| `datapacks_list(query, install)` / `datapack_get(id*, path)` | датапаки; файл zip — так, как его собирает сайт |
-| `kubejs_site_list(query, install)` / `kubejs_site_get(id*)` | скрипты KubeJS, добавленные на сайте (не скрипты сборки) |
-| `schematics_list(query)` / `schematic_get(id*)` | схемы Create: габариты, блоки, замены |
+| `tasks_list(query, status, assignee, group)` / `task_get(id*, doc_chars)` | tasks and groups; a task with checklist, attachments (no content), docs, site link and `revision` |
+| `groups_list(query)` | task groups: id, name, icon, order — find a group by name («фиксы») |
+| `task_create(title*, description, group, priority, status, checklist, icon, assignee, place)` | **write**: a task as from «Новая задача» (rating 1000, `completedAt` when `done`); `group` — id or name; `checklist` — strings, `{ text, done }` or resources `{ itemId, qty, got }` (item checked against the library) |
+| `task_update(id*, baseRevision*, …task_create fields, checklist_add)` | **write**: only passed fields change; `checklist` replaces the checklist (existing item ids kept), `checklist_add` appends; a status change sets/clears `completedAt`; `"-"` clears group, icon, assignee |
+| `artifacts_list(query, task)` / `artifact_get(id*, offset, limit)` | plan docs (`artifacts`): list by title and task (`"-"` — unattached); doc by lines and its `revision` |
+| `artifact_put(id, baseRevision, title, content, task)` | **write**: without `id` — new doc («План: <task>» if no title), with `id` — edit passed fields; `content` — whole text |
+| `datapacks_list(query, install)` / `datapack_get(id*, path)` | datapacks; zip file as the site builds it |
+| `kubejs_site_list(query, install)` / `kubejs_site_get(id*)` | KubeJS scripts added on the site (not pack scripts) |
+| `schematics_list(query)` / `schematic_get(id*)` | Create schematics: size, blocks, replacements |
 
-`task_update` и `artifact_put` с `id` откажут, если задачу/документ изменили после `task_get`/`artifact_get`:
-`baseRevision` — их `revision` (`updateTime` Firestore; сверяется перед записью и условием самой записи). Ревизию
-задачи меняет и сайт — например, сравнение «Что важнее?» правит рейтинг; при отказе перечитай и повтори. Удаления
-нет: временные записи при проверке удаляй разовым скриптом через `scripts/firestore-rest.mjs`. Планы репозитория
-(`docs/plans/*.md`, их десяток) отдельного инструмента не имеют — это обычные файлы, читай их напрямую.
+`task_update` and `artifact_put` with `id` refuse if the task/doc changed after `task_get`/`artifact_get`:
+`baseRevision` is their `revision` (Firestore `updateTime`; checked before writing and as the write's precondition). The
+site also changes task revisions — e.g. the «Что важнее?» comparison edits the rating; on refusal re-read and retry.
+There's no delete: remove temporary records from tests with a one-off script via `scripts/firestore-rest.mjs`. Repo
+plans (`docs/plans/*.md`) have no tool — they're plain files, read them directly.
 
-## Лимиты
+## Limits
 
-- Ответ — не длиннее 20 000 символов: длинное режется, со словами «сузьте запрос».
-- Firestore на бесплатном тарифе — 50 тыс. чтений в сутки на всех. Конфиги кешируются на 5 минут, гайды — на 1,
-  обновления сборки — на 10, списки контента сайта — на 3. Не вызывай инструменты контента сайта в цикле.
-- Первый запрос к рецептам — 1–3 с (загрузка каталога), дальше — десятки миллисекунд.
-- `resources_check` большого мода (TFC) — около 15 с, аддона — меньше секунды; `model_render` — доли секунды.
+- Answers are capped at 20 000 chars: longer ones are cut with «сузьте запрос».
+- Firestore free tier — 50k reads/day for everyone. Configs cached 5 min, guides 1, pack updates 10, site content lists
+  3. Don't call site-content tools in a loop.
+- First recipe request — 1–3 s (catalogue load), then tens of ms.
+- `resources_check` of a big mod (TFC) ~15 s, an addon < 1 s; `model_render` — fractions of a second.
 
-## Устройство кода
+## Code layout
 
 ```
 scripts/mcp/
-  server.mjs        протокол MCP поверх stdio; ответы — в stdout, журнал — в stderr
-  tools.mjs         базовые инструменты (предметы, рецепты, теги, справочник, гайды, jar), общий список и INSTRUCTIONS
-  fmt.mjs           общее: page (страницы), clip, named/nameOf (id с названием), words/norm, схемы str/num/paging
-  data.mjs          данные public/: слияние модов и KubeJS, как на сайте; кеш по времени изменения файла
-  jars.mjs          оглавление и чтение jar без распаковки (и вложенных, и Minecraft + NeoForge), javap
-  bytecode.mjs      разбор .class: аннотации, номера строк, ссылки из инструкций, сигнатуры текстом
-  code-index.mjs    индекс классов, цели миксинов, neoforge.mods.toml (свой мини-TOML), версии как в Maven/FML
-  firestore.mjs     REST к Firestore: api, listAll, cached; конфиги, правки конфигов, гайды
-  site-datapacks.mjs  датапаки сайта как слой рецептов (recipes(site) в data.mjs)
-  resources.mjs     слои ресурсов клиента (ресурспаки, KubeJS, аддоны, jar, Minecraft), модель с parent
-  render.mjs        растеризатор моделей в PNG (model_render, texture_get) и генератор иконок из командной строки
-  entityModels.mjs  инструменты моделей сущностей (ModelPart, поза); geoModels.mjs — модели GeckoLib (.geo.json)
-  models/           реестр «рисует код» по модулю на мод (index.mjs — GROUPS; minecraft, neoforge, tfc, immersiveengineering
-                      + ieConveyor, functionalstorage, computercraft, sophisticatedbackpacks, cuisinedelight, create_submarine)
-  tools/<раздел>.mjs  инструменты раздела: code (классы, миксины, декомпиляция, зависимости), logs,
-                      config (config_get, config_propose, config_changes), pack, kubejs, books (+books-index), blocks (+blocks-data),
-                      site (задачи, группы, документы-планы с записью; датапаки, схемы, скрипты сайта), map (+map-climate,
-                      map-png — PNG чтение и запись), resources (model_render, texture_get, resources_check)
+  server.mjs        MCP protocol over stdio; answers to stdout, log to stderr
+  tools.mjs         base tools (items, recipes, tags, reference, guides, jars), the combined list and INSTRUCTIONS
+  fmt.mjs           shared: page (paging), clip, named/nameOf (id with name), words/norm, schemas str/num/paging
+  data.mjs          public/ data: merging mods and KubeJS as on the site; cache by file mtime
+  jars.mjs          jar listing and reading without unzipping (nested, Minecraft + NeoForge), javap
+  bytecode.mjs      .class parsing: annotations, line numbers, instruction refs, signatures as text
+  code-index.mjs    class index, mixin targets, neoforge.mods.toml (own mini-TOML), Maven/FML versions
+  firestore.mjs     Firestore REST: api, listAll, cached; configs, config edits, guides
+  site-datapacks.mjs  site datapacks as a recipe layer (recipes(site) in data.mjs)
+  resources.mjs     client resource layers (resource packs, KubeJS, addons, jars, Minecraft), model with parent
+  render.mjs        model rasteriser to PNG (model_render, texture_get) and CLI icon generator
+  entityModels.mjs  entity model tools (ModelPart, pose); geoModels.mjs — GeckoLib models (.geo.json)
+  models/           drawn-by-code registry, one module per mod (index.mjs — GROUPS; minecraft, neoforge, tfc,
+                      immersiveengineering + ieConveyor, functionalstorage, computercraft, sophisticatedbackpacks,
+                      cuisinedelight, create_submarine)
+  tools/<section>.mjs  section tools: code (classes, mixins, decompile, deps), logs, config (config_get,
+                      config_propose, config_changes), pack, kubejs, books (+books-index), blocks (+blocks-data), site
+                      (tasks, groups, plan docs with writes; datapacks, schematics, site scripts), map (+map-climate,
+                      map-png — PNG read/write), resources (model_render, texture_get, resources_check)
 ```
 
-Логика слияния данных повторяет сайт (`src/lib/items.ts`, `recipes.ts`, `tags.ts`, `reference.ts`, `meals.ts`):
-те модули тянут React и fetch. Модули без импортов (`recipeFilter.ts`, `recipeRefs.ts`, `projection.ts`)
-импортируются напрямую. Поменял слияние на сайте — поменяй и в `data.mjs`.
+Data merging repeats the site (`src/lib/items.ts`, `recipes.ts`, `tags.ts`, `reference.ts`, `meals.ts`) — those modules
+pull React and fetch. Import-free modules (`recipeFilter.ts`, `recipeRefs.ts`, `projection.ts`) are imported directly.
+Changed merging on the site — change `data.mjs` too.
 
-### Как добавить инструмент
+### Adding a tool
 
-1. Новый раздел — файл `scripts/mcp/tools/<раздел>.mjs` с `export const TOOLS = [{ name, description, inputSchema,
-   handler }]`, и строка импорта в `tools.mjs` (список `TOOLS` в конце). Инструмент в существующий раздел — в его
-   файл.
-2. `handler(args)` возвращает текст (можно `async`) или `{ text, images: [Buffer PNG] }` — картинки уйдут
-   MCP-содержимым `image`. Списки — через `page(list, args, fmt)`, id предметов —
-   через `named(id)`. Ошибка ввода — `throw new Error('…')`: сервер вернёт её как `isError`.
-3. Описание и тексты — по-русски; в описании — что вернёт и откуда данные.
-4. Проверка — node-скрипт в scratchpad, который запускает `server.mjs`, шлёт `initialize`, `tools/list` и вызовы
-   и сверяет ответы с прямым чтением файлов, jar или Firestore. Потом `npx oxlint scripts/mcp` и
-   `npx prettier --write` на свои файлы.
-5. В Firestore из MCP пишут только `guide_put`, `task_update`, `artifact_put` (с проверкой ревизии), `task_create`
-   и `config_propose` / `config_changes cancel=…` (своя коллекция `configChanges`, файлы применяет хост). Новая запись — с такой же защитой от затирания чужого.
-6. Перечисли новый инструмент в этом файле (с параметрами) и в разделе MCP в `CLAUDE.md`; если он меняет привычный
-   путь агента (как `log_analyze` для крашей) — и в `INSTRUCTIONS` в `tools.mjs`.
+1. New section — file `scripts/mcp/tools/<section>.mjs` with `export const TOOLS = [{ name, description, inputSchema,
+   handler }]` and an import line in `tools.mjs` (the `TOOLS` list at the end). A tool in an existing section — into its
+   file.
+2. `handler(args)` returns text (may be `async`) or `{ text, images: [PNG Buffer] }` — images go out as MCP `image`
+   content. Lists — via `page(list, args, fmt)`, item ids — via `named(id)`. Input error — `throw new Error('…')`: the
+   server returns it as `isError`.
+3. Description and texts in Russian; the description says what it returns and where the data comes from.
+4. Verify with a scratchpad node script that starts `server.mjs`, sends `initialize`, `tools/list` and calls, and
+   compares answers with direct reads of files, jars or Firestore. Then `npx oxlint scripts/mcp` and
+   `npx prettier --write` on your files.
+5. Firestore writes from MCP: only `guide_put`, `task_update`, `artifact_put` (with revision check), `task_create` and
+   `config_propose` / `config_changes cancel=…` (own collection `configChanges`, host applies files). A new write needs
+   the same protection against overwriting others.
+6. List the new tool in this file (with parameters); if it changes the agent's usual path (like `log_analyze` for
+   crashes) — also in `INSTRUCTIONS` in `tools.mjs` and the MCP paragraph of `CLAUDE.md`.
 
-## Что дальше
+## What's next
 
-- Заказ на новые инструменты (устройства EE, возможности блоков, Ponder, конфликты рецептов, прогон сервера
-  аддона; приоритет ① сделан) — [plans/mcp-next.md](plans/mcp-next.md).
-- Перенос на сервер сборки (HTTP вместо stdio), чтобы MCP работал с любого устройства без jar и `public/` —
-  этап 4 в [plans/pack-cli.md](plans/pack-cli.md). Инструменты от транспорта не зависят, пути уже задаются
-  переменными.
-- Генерация мира (что и где спавнится) не индексируется: в TFC она зависит от климата и пород, без запуска мода
-  ответ будет неточным.
+- Wishlist of new tools (EE devices, block capabilities, Ponder, recipe conflicts, addon server runs; priority ① done) —
+  [plans/mcp-next.md](plans/mcp-next.md).
+- Moving to the pack server (HTTP instead of stdio) so MCP works from any device without jars and `public/` — stage 4 of
+  [plans/pack-cli.md](plans/pack-cli.md). Tools don't depend on transport; paths are already env-configurable.
+- World generation (what spawns where) isn't indexed: in TFC it depends on climate and rocks; without running the mod
+  the answer would be inaccurate.

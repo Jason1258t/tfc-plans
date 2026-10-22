@@ -1,0 +1,77 @@
+# State: pack addons
+
+Part of [STATE.md](../STATE.md). How to build addons — [docs/addons.md](../addons.md). Site page `/addons` (since
+2026-10-16; old `/reference?tab=addons` redirects; jars for download in `/addons/`). What still waits for the host or a
+game check — [pending.md](pending.md).
+
+## EE Extras (`tools/ee-extras-mod`)
+
+Before 2.0 — EE Rectifiers, `ee_rectifier`; old blocks migrate to new ids via aliases.
+
+- **1.1**: three- and single-phase rectifiers without diodes — stable at any rpm (solves the microTicks = 1 diode
+  instability). Verified on the dev server with a real generator.
+- **2.0** (2026-10-21): bidirectional EE ↔ FE converter (4 terminals: charging and discharging an IE capacitor
+  simultaneously), laying EE two-wire cable (in EE 1.1.2 the spool doesn't lay cable — checked in bytecode), four-core
+  cable, L1/L2/L3/N connector, insulators for two- and four-core cable; four-core can attach to the EE two-wire
+  connector (neutral + phase, wrench switches phase). Verified on the dev server (with IE): electrics, cable integrity,
+  restart, world migration from 1.1, terminals 216/216. **Not checked in game with a player; models not loaded by a
+  client.** The host snapshot of 2026-10-20 still has ee_rectifier (1.x).
+- **2.0.2**: own two-core cable model (EE 1.1.2 lacks the model its wire references — was purple/black), spool
+  highlight and «dashed» preview (written in EE but never called) + cable terminal label under the crosshair; rubber
+  terminal drawn for the EE connector (its models overridden); both connectors — 4 wrench positions instead of 2,
+  placed terminal-towards-player (on walls — up); EE connector with wires is not rotated by wrench. Dev server
+  (`rectest orient`, terminals 300/300).
+- **2.1**: power-line and heavy-current wires — copper busbar, power cable, M, AC, A, bronze, PS (own resistance,
+  current, span up to 256 blocks, sag), tension clamp (tension up to material limit), EE iron wire sags less; phase tap
+  (four-core → phase + neutral, wrench picks phase). Dev server (`rectest lines`, `tap`).
+- **2.2** (2026-10-22; tasks «Сделать выпрямители разной мощности», «Добавить инверторы разной мощности», group
+  «Разработка»): rectifier rating and heating like the EE variac (light — 6 kW, smoke above, burn from ~135 %; double
+  headroom in oil), heavy rectifiers 48 kW (full block with radiators and bushings), grid inverters three- and
+  single-phase, light and heavy (lock to generator phase, feed when DC voltage × 1.05 / 1.57 exceeds the grid; without
+  a grid — own 1 Hz AC). Dev server with a real generator (8 and 100 rpm).
+- Finding: EE 1.1.2 lacks model `block/duplex_wire_segment` (used by `CEEPartialModels.DUPLEX_WIRE_SEGMENT` and by the
+  EE Extras two-core cable shell) — from jar, not checked in game.
+- Site icons are drawn by the shared generator `scripts/mcp/render.mjs` (4× AA, no seams), called by
+  `tools/ee-extras-mod/release.sh`; `art/iso.py` removed. Current site icons were drawn mirrored (before the rotation
+  fix) — redraw on the next release.
+
+## Miner Tools (`tools/miner-tools-mod`, 2026-10-21)
+
+One mod for all miner gear.
+
+- **1.0.0** — miner belt: don't pick up pebbles/gravel/dirt, 9-sample filter via RMB, Shift+RMB toggles, Curios «belt»
+  slot added to the player, Sophisticated Backpacks don't grab them either. 31 checks on the dev server; not in game.
+- **1.1.0** — miner helmet: steel helmet (head slot or Curios «head»), 100 000 FE battery (FE capability like IE items:
+  IE charging station and power pack charge it), lamp 2 FE/t (Shift+RMB / key H), light via LambDynamicLights by
+  component `miner_tools:lit`, falling-block hits (`#minecraft:damages_helmet`; TFC collapse is the same
+  `falling_block`) −50 %. GeckoLib model from Mining Helmet (CysticTurtle85, MIT), own texture. 28 dev-server checks
+  (with IE: station charged to full); **not in game** (model, light, key).
+
+## Create: Stress Fix (`tools/stress-fix-mod`, 2026-10-22)
+
+After relog water wheels stopped and the network showed millions of SU load: Create accumulates an «unloaded part»
+remainder from totals that blocks saved. The addon zeroes it when the whole network is in ticking chunks, logs it;
+`/stressfix [recalc]`. Bug reproduced and fix verified on the dev server; **not in game or with the full pack**; the
+source of the group's mismatch is not established from their logs.
+
+## TFC Real World: Host Fix (`tools/rw-host-fix-mod`, 2026-10-21)
+
+Bug: after the host's death/nether trip everyone is teleported to one point every tick, new chunks are ocean, host
+relog helps. Cause (bytecode + host logs): TFC Real World 4.1.4 on client world unload clears static map settings
+shared with the integrated server → map 80 000 × 40 000, Eratosthenes computes the base «beyond the pole»
+(`northPolarPushback` every tick → Z ≈ −20 100). Mixin on `TFCRealWorldConfig.clearServerConfig` (don't clear while the
+server runs); also nether exit beyond the map edge instead of the KubeJS script `eratosthenes_portal_clamp.js` (its ±19 500
+limit was for a foreign map and it re-triggered itself). Verified on dev server NeoForge 21.1.251 + TFC + TFC RW
+(`test-server.sh`, `/rwtest`).
+
+## EE Heater Overheat (`tools/ee-overheat-mod`)
+
+Mixin on `ResistiveHeaterBlockEntity.calculateHeatLevel` — at heat ≥ 0.9 (~6.8 kW) returns SEETHING, so superheated
+Create recipes run on the EE heater. Built against stubs (`./build.sh`, JDK only). **Not checked in game.** Goes into
+`mods/` of server and clients. With it `steel_heated.js` is unnecessary (but harmless).
+
+## TP Trace (`tools/tp-trace-mod`)
+
+Diagnostics, not for the pack: logs player position jumps and teleports with a stack trace. Verified on the dev server;
+only the jar on the site (`/addons/tp-trace-1.0.0.jar`), not in the addon list. Found the World Border nether limit (see
+[pending.md](pending.md)).
