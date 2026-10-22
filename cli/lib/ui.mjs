@@ -34,11 +34,22 @@ export async function ask(question, def = '') {
   }
 }
 
+/**
+ * Да/нет по стандарту: [Y/n] или [y/N], Enter — вариант по умолчанию. Ответ берём по клавише, а не по букве:
+ * с русской раскладкой те же клавиши дают «н» (Y) и «т» (N) — тоже засчитываются, переключать раскладку не нужно.
+ */
+const YES = ['y', 'yes', 'н', 'нуы'];
+const NO = ['n', 'no', 'т', 'тщ'];
+
 export async function confirm(question, def = false) {
   if (!interactive()) return def;
-  const a = (await ask(`${question} ${dim(def ? '(Д/н)' : '(д/Н)')}`)).toLowerCase();
-  if (!a) return def;
-  return ['д', 'да', 'y', 'yes', 'l'].includes(a);
+  for (;;) {
+    const a = (await ask(`${question} ${dim(def ? '[Y/n]' : '[y/N]')}`)).toLowerCase();
+    if (!a) return def;
+    if (YES.includes(a)) return true;
+    if (NO.includes(a)) return false;
+    console.log(red('  y — да, n — нет'));
+  }
 }
 
 /** Выбор из списка: номер или свой ввод (если allowOther). Возвращает элемент или строку */
