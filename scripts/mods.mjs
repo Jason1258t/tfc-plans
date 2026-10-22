@@ -286,6 +286,47 @@ function prepareJar(file) {
 }
 
 /**
+ * Моды внутри jar (META-INF/jarjar/*.jar): бандлы вроде Create Aeronautics кладут туда целые моды со своими
+ * предметами и рецептами (aeronautics, simulated, offroad). Берём только вложенные моды (есть neoforge.mods.toml)
+ * с assets/ или data/ — библиотеки пропускаем. Распакованные jar кешируются по имени+размеру+дате родителя.
+ */
+function nestedModJars(file) {
+  const st = fs.statSync(file);
+  const key = `${path.basename(file, '.jar')}-${st.size}-${Math.round(st.mtimeMs)}`.replace(/[^\w.+-]/g, '_');
+  const dir = path.join(CACHE, 'nested', key);
+  const done = path.join(dir, '.done-v1');
+  if (!fs.existsSync(done) || fresh) {
+    fs.rmSync(dir, { recursive: true, force: true });
+    fs.mkdirSync(dir, { recursive: true });
+    let zip;
+    try {
+      zip = new AdmZip(file);
+    } catch {
+      return [];
+    }
+    for (const entry of zip.getEntries()) {
+      if (entry.isDirectory || !/^META-INF\/jarjar\/[^/]+\.jar$/.test(entry.entryName)) continue;
+      const data = entry.getData();
+      let inner;
+      try {
+        inner = new AdmZip(data).getEntries();
+      } catch {
+        continue;
+      }
+      const isMod = inner.some((e) => e.entryName === 'META-INF/neoforge.mods.toml');
+      if (!isMod || !inner.some((e) => /^(assets|data)\/[a-z0-9_.-]+\//.test(e.entryName))) continue;
+      fs.writeFileSync(path.join(dir, path.basename(entry.entryName)), data);
+    }
+    fs.writeFileSync(done, new Date().toISOString());
+  }
+  return fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith('.jar'))
+    .sort()
+    .map((f) => path.join(dir, f));
+}
+
+/**
  * JSON из модов бывает «грязным»: BOM в начале, комментарии, висячие запятые.
  * Пытаемся прочитать строго, потом — после чистки; не вышло — null.
  */
@@ -554,11 +595,21 @@ export async function buildMods({
   collectRecipes(recipes, path.join(vanillaDir, 'data'), 'minecraft');
   /** data/ всех источников в порядке загрузки — для справочника */
   const dataDirs = [{ dir: path.join(vanillaDir, 'data'), source: 'minecraft' }];
-  for (const jar of jars) {
-    const res = prepareJar(path.join(MODS_DIR, jar));
+  // Сначала сам jar, за ним вложенные в него моды; один и тот же вложенный jar из разных бандлов — один раз
+  const nestedSeen = new Set();
+  const units = jars.flatMap((jar) => {
+    const file = path.join(MODS_DIR, jar);
+    const nested = nestedModJars(file).filter((f) => !nestedSeen.has(path.basename(f)));
+    for (const f of nested) nestedSeen.add(path.basename(f));
+    if (nested.length) log(`${jar}: вложенные моды — ${nested.map((f) => path.basename(f)).join(', ')}`);
+    return [file, ...nested];
+  });
+  for (const file of units) {
+    const res = prepareJar(file);
     if (!res) continue;
-    collectRecipes(recipes, res.data, jar.replace(/\.jar$/, ''));
-    dataDirs.push({ dir: res.data, source: jar.replace(/\.jar$/, '') });
+    const source = path.basename(file, '.jar');
+    collectRecipes(recipes, res.data, source);
+    dataDirs.push({ dir: res.data, source });
     for (const ns of res.namespaces) {
       // Переопределения ванили внутри модов не должны перебивать оригинал
       if (ns === 'minecraft') continue;
