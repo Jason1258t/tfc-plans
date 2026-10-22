@@ -1,5 +1,5 @@
 import { BookOpen, ListChecks, Plus, Scale, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArtifactPane } from '../components/ArtifactPane';
 import { CompareDialog } from '../components/CompareDialog';
@@ -55,16 +55,21 @@ export function TasksPage() {
   const [dragId, setDragId] = useState<string | null>(null);
   const [dropAt, setDropAt] = useState<{ id: string; after: boolean } | null>(null);
 
-  // Функциональная форма: несколько вызовов подряд не затирают друг друга
-  const setParam = (patch: Record<string, string | null>) =>
-    setParams((prev) => {
-      const next = new URLSearchParams(prev);
-      for (const [k, v] of Object.entries(patch)) {
-        if (v === null) next.delete(k);
-        else next.set(k, v);
-      }
-      return next;
-    });
+  // Несколько вызовов подряд не должны затирать друг друга: функциональная форма setParams в react-router
+  // получает параметры с последнего рендера, а не с прошлого вызова — поэтому копим их в ref
+  const paramsRef = useRef(params);
+  useEffect(() => {
+    paramsRef.current = params;
+  }, [params]);
+  const setParam = (patch: Record<string, string | null>) => {
+    const next = new URLSearchParams(paramsRef.current);
+    for (const [k, v] of Object.entries(patch)) {
+      if (v === null) next.delete(k);
+      else next.set(k, v);
+    }
+    paramsRef.current = next;
+    setParams(next);
+  };
 
   const inScope = useMemo(() => {
     const q = search.trim().toLowerCase();
