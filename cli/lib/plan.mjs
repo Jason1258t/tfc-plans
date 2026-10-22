@@ -39,7 +39,10 @@ const DEFAULT_SNAP = {
   client: ['mod', 'config', 'defaultconfig', 'kubejs', 'resourcepack'],
   server: ['config', 'defaultconfig', 'serverconfig', 'kubejs', 'world-datapack'],
 };
-const DEFAULT_SITE = { client: ['addons', 'kubejs', 'schematics'], server: ['addons', 'kubejs', 'datapacks'] };
+const DEFAULT_SITE = {
+  client: ['addons', 'kubejs', 'schematics'],
+  server: ['addons', 'kubejs', 'datapacks', 'schematics'],
+};
 
 const EDITABLE = new Set(['config', 'defaultconfig', 'serverconfig', 'kubejs']);
 
