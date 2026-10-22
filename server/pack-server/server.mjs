@@ -39,6 +39,7 @@ import { openJobs, PUBLISH } from './lib/jobs.mjs';
 import { openKeys } from './lib/keys.mjs';
 import { openSite } from './lib/site.mjs';
 import { openStore } from './lib/store.mjs';
+import { openUpdates } from './lib/updates.mjs';
 import { HttpError, SHA256_RE } from './lib/util.mjs';
 
 const env = process.env;
@@ -54,6 +55,7 @@ const config = {
 
 const store = await openStore(config.dataDir, config);
 const keys = openKeys(config.dataDir);
+const updates = await openUpdates(config.dataDir, store);
 
 /**
  * Код разборщиков. Сервер запущен из репозитория (npm run dev) — берём его же, git pull не делаем (это рабочая
@@ -92,6 +94,19 @@ async function authorize(req, role) {
   if (!who) throw new HttpError(401, 'Нужен ключ: Authorization: Bearer <ключ>');
   if (role === 'admin' && who.role !== 'admin') throw new HttpError(403, 'Нужен ключ администратора');
   return who;
+}
+
+/** Сделать снимок текущим ({ id } или { rollback: true }) и поставить сборку данных сайта */
+async function makeCurrent(body, by) {
+  const r = await store.setCurrent(body, by);
+  console.log(`★ текущий снимок ${r.previous ?? '—'} → ${r.current} — ${by}`);
+  if (autoBuild) {
+    // Уже собранный (откат) — только публикация; новый — сборка и публикация
+    const kind = built(r.current) ? 'publish' : 'build';
+    if (kind === 'build' || autoPublish !== 'none')
+      r.job = (await jobs.enqueue({ kind, snapshot: r.current, publish: autoPublish, by })).id;
+  }
+  return r;
 }
 
 // ---------------------------------------------------------------- HTTP
@@ -239,15 +254,7 @@ async function handle(req, res) {
     }
     if (route === 'POST /pack/current' && parts.length === 2) {
       const who = await authorize(req, 'admin');
-      const r = await store.setCurrent(await readJsonBody(req), who.name);
-      console.log(`★ текущий снимок ${r.previous ?? '—'} → ${r.current} — ${who.name}`);
-      if (autoBuild) {
-        // Уже собранный (откат) — только публикация; новый — сборка и публикация
-        const kind = built(r.current) ? 'publish' : 'build';
-        if (kind === 'build' || autoPublish !== 'none')
-          r.job = (await jobs.enqueue({ kind, snapshot: r.current, publish: autoPublish, by: who.name })).id;
-      }
-      return json(res, 200, r);
+      return json(res, 200, await makeCurrent(await readJsonBody(req), who.name));
     }
     if (parts[1] === 'snapshots' && parts.length === 2) {
       if (req.method === 'GET') {
@@ -293,6 +300,32 @@ async function handle(req, res) {
       const r = await site.setConfigChange(parts[2], (await readJsonBody(req)) ?? {}, who.name);
       console.log(`✎ правка конфигов ${r.id}: ${r.status} — ${who.name}`);
       return json(res, 200, r);
+    }
+  }
+
+  // --- предложенные обновления сборки: автор выкладывает, хост забирает к себе и одобряет (tfc admin updates)
+  if (parts[0] === 'admin' && parts[1] === 'updates') {
+    const who = await authorize(req, 'admin');
+    if (parts.length === 2 && req.method === 'GET') return json(res, 200, { updates: await updates.list() });
+    if (parts.length === 2 && req.method === 'POST') {
+      const u = await updates.create(await readJsonBody(req), who.name);
+      console.log(`✎ обновление ${u.id}: ${u.files.length} файлов, убрать ${u.remove.length} — ${who.name}`);
+      return json(res, 201, u);
+    }
+    if (parts.length === 3 && req.method === 'GET') {
+      const u = await updates.get(parts[2]);
+      return u ? json(res, 200, u) : json(res, 404, { error: 'Нет такого обновления' });
+    }
+    if (parts.length === 4 && req.method === 'POST' && parts[3] === 'approve') {
+      const body = (await readJsonBody(req)) ?? {};
+      const r = await updates.approve(parts[2], who.name, { force: body.force === true });
+      console.log(`✔ обновление ${parts[2]} → снимок ${r.snapshot.id} — ${who.name}`);
+      return json(res, 200, { ...r, ...(await makeCurrent({ id: r.snapshot.id }, who.name)) });
+    }
+    if (parts.length === 4 && req.method === 'POST' && parts[3] === 'reject') {
+      const u = await updates.reject(parts[2], who.name, ((await readJsonBody(req)) ?? {}).reason);
+      console.log(`✘ обновление ${u.id} отклонено — ${who.name}`);
+      return json(res, 200, u);
     }
   }
 

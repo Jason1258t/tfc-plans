@@ -200,6 +200,6 @@ export class Api {
 function apiError(status, data) {
   const msg = data?.error ?? '';
   if (status === 401) return 'ключ не подошёл — tfc login <ключ>';
-  if (status === 403) return 'нужен ключ администратора сборки';
+  if (status === 403) return msg || 'нужен ключ администратора сборки';
   return `сервер ответил ${status}${msg ? `: ${msg}` : ''}`;
 }
