@@ -90,7 +90,7 @@
 
 ```bash
 ./libs.sh          # Create и EE из ../../mods для компиляции (один раз и при обновлении сборки)
-./release.sh       # ресурсы → сборка → проверка клемм → jar сюда и в ../../public/addons
+./release.sh       # ресурсы → сборка → проверка клемм → jar и иконки (icons/) сюда; на сайт — сборкой сайта
 ./test-server.sh   # сервер разработки: выпрямители (минута-две)
 ./test-server.sh 'forceload add 112 0 150 60' 'rectest heat 3' 'sleep 1' 'rectest heatv 300' 'sleep 30' 'rectest preport'
 ./test-server.sh 'forceload add 112 0 150 60' 'rectest grid 8' 'sleep 1' 'rectest dc 85' 'sleep 6' 'rectest pwatch 8' 'sleep 1' 'rectest preport'

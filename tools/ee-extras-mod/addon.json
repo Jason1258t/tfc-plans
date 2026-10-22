@@ -1,0 +1,279 @@
+{
+  "id": "ee_extras",
+  "name": "EE Extras — электрика для Electro Energetics",
+  "version": "2.3.0",
+  "jar": "ee-extras-2.3.0.jar",
+  "order": 10,
+  "side": "both",
+  "summary": "Блоки для Create Electro Energetics: выпрямители (переменный ток → ровный постоянный) и с 2.2 сетевые инверторы (постоянный → переменный в такт генераторам), лёгкие на 6 кВт и тяжёлые на 48 кВт, с 2.3 — компактный генератор (вал Create → постоянный ток до 1,5 кВт), двусторонний преобразователь EE ↔ FE для конденсаторов IE, рабочий двухпроводной кабель EE (в самом EE 1.1.2 катушка кабель не прокладывает), четырёхжильный кабель для трёхфазной сети, отвод фазы и кабельные изоляторы; с 2.1 — провода ЛЭП и сильноточной разводки (медная шина, силовой кабель, М, АС, А, бронзовый, ПС) и натяжной зажим. До версии 2.0 назывался «EE Rectifiers» (ee_rectifier): поставленные выпрямители при обновлении остаются на месте.",
+  "needs": "Сервер и все игроки (новые блоки). NeoForge 21.1.219+, Create 6.0.10, Electro Energetics 1.1.2+. Старый ee-rectifier-*.jar убрать — tfc pull addons уберёт сам.",
+  "replaces": ["mods/ee-rectifier-1.1.0.jar", "mods/ee-rectifier-1.0.0.jar"],
+  "blocks": [
+    {
+      "id": "ee_extras:three_phase_rectifier",
+      "name": "Трёхфазный выпрямитель",
+      "image": "three_phase_rectifier.png",
+      "recipe": {
+        "pattern": ["CDC", "DPD", "DDD"],
+        "key": {
+          "C": {
+            "item": "electroenergetics:connector"
+          },
+          "D": {
+            "item": "electroenergetics:diode"
+          },
+          "P": {
+            "item": "create:iron_sheet",
+            "tag": "c:plates/iron"
+          }
+        }
+      }
+    },
+    {
+      "id": "ee_extras:single_phase_rectifier",
+      "name": "Однофазный выпрямитель",
+      "image": "single_phase_rectifier.png",
+      "recipe": {
+        "pattern": ["CDC", "DPD", " D "],
+        "key": {
+          "C": {
+            "item": "electroenergetics:connector"
+          },
+          "D": {
+            "item": "electroenergetics:diode"
+          },
+          "P": {
+            "item": "create:iron_sheet",
+            "tag": "c:plates/iron"
+          }
+        }
+      }
+    },
+    {
+      "id": "ee_extras:heavy_three_phase_rectifier",
+      "name": "Тяжёлые выпрямители (трёх- и однофазный)",
+      "image": "heavy_three_phase_rectifier.png",
+      "recipe": {
+        "pattern": ["CRC", "XSX", "RSR"],
+        "key": {
+          "C": {
+            "item": "electroenergetics:connector"
+          },
+          "R": {
+            "item": "electroenergetics:radiator_panel"
+          },
+          "X": {
+            "item": "ee_extras:three_phase_rectifier",
+            "image": "three_phase_rectifier.png",
+            "name": "Трёхфазный выпрямитель"
+          },
+          "S": {
+            "item": "immersiveengineering:plate_steel",
+            "tag": "c:plates/steel"
+          }
+        }
+      }
+    },
+    {
+      "id": "ee_extras:three_phase_inverter",
+      "name": "Трёхфазный инвертор",
+      "image": "three_phase_inverter.png",
+      "recipe": {
+        "pattern": ["CKC", "DPD", "LDL"],
+        "key": {
+          "C": {
+            "item": "electroenergetics:connector"
+          },
+          "K": {
+            "item": "electroenergetics:capacitor"
+          },
+          "D": {
+            "item": "electroenergetics:diode"
+          },
+          "P": {
+            "item": "create:iron_sheet",
+            "tag": "c:plates/iron"
+          },
+          "L": {
+            "item": "electroenergetics:inductor"
+          }
+        }
+      }
+    },
+    {
+      "id": "ee_extras:single_phase_inverter",
+      "name": "Однофазный инвертор",
+      "image": "single_phase_inverter.png",
+      "recipe": {
+        "pattern": ["CKC", "DPD", " L "],
+        "key": {
+          "C": {
+            "item": "electroenergetics:connector"
+          },
+          "K": {
+            "item": "electroenergetics:capacitor"
+          },
+          "D": {
+            "item": "electroenergetics:diode"
+          },
+          "P": {
+            "item": "create:iron_sheet",
+            "tag": "c:plates/iron"
+          },
+          "L": {
+            "item": "electroenergetics:inductor"
+          }
+        }
+      }
+    },
+    {
+      "id": "ee_extras:heavy_three_phase_inverter",
+      "name": "Тяжёлые инверторы (трёх- и однофазный)",
+      "image": "heavy_three_phase_inverter.png",
+      "recipe": {
+        "pattern": ["CRC", "XSX", "RSR"],
+        "key": {
+          "C": {
+            "item": "electroenergetics:connector"
+          },
+          "R": {
+            "item": "electroenergetics:radiator_panel"
+          },
+          "X": {
+            "item": "ee_extras:three_phase_inverter",
+            "image": "three_phase_inverter.png",
+            "name": "Трёхфазный инвертор"
+          },
+          "S": {
+            "item": "immersiveengineering:plate_steel",
+            "tag": "c:plates/steel"
+          }
+        }
+      }
+    },
+    {
+      "id": "ee_extras:compact_kinetic_generator",
+      "name": "Компактный генератор",
+      "image": "compact_kinetic_generator.png",
+      "recipe": {
+        "pattern": ["PCP", "MSM", "PAP"],
+        "key": {
+          "P": {
+            "item": "create:iron_sheet",
+            "tag": "c:plates/iron"
+          },
+          "C": {
+            "item": "electroenergetics:copper_wire_spool"
+          },
+          "M": {
+            "item": "electroenergetics:magnet"
+          },
+          "S": {
+            "item": "create:shaft"
+          },
+          "A": {
+            "item": "create:andesite_alloy"
+          }
+        }
+      }
+    },
+    {
+      "id": "ee_extras:bidirectional_converter",
+      "name": "Двусторонний преобразователь",
+      "image": "bidirectional_converter.png",
+      "recipe": {
+        "pattern": ["VV ", "   ", "   "],
+        "key": {
+          "V": {
+            "item": "electroenergetics:converter"
+          }
+        }
+      }
+    },
+    {
+      "id": "electroenergetics:duplex_wire_spool",
+      "name": "Двухпроводной кабель (катушка EE)"
+    },
+    {
+      "id": "ee_extras:four_core_termination",
+      "name": "Четырёхжильный соединитель",
+      "image": "four_core_termination.png",
+      "recipe": {
+        "pattern": ["TT ", "   ", "   "],
+        "key": {
+          "T": {
+            "item": "electroenergetics:duplex_wire_termination"
+          }
+        }
+      }
+    },
+    {
+      "id": "ee_extras:four_core_tap",
+      "name": "Отвод фазы",
+      "image": "four_core_tap.png",
+      "recipe": {
+        "pattern": ["TW ", "   ", "   "],
+        "key": {
+          "T": {
+            "item": "electroenergetics:duplex_wire_termination"
+          },
+          "W": {
+            "item": "electroenergetics:insulated_wire"
+          }
+        }
+      }
+    },
+    {
+      "id": "ee_extras:acsr_spool",
+      "name": "Провода ЛЭП и сильноточной разводки",
+      "image": "acsr_spool.png"
+    },
+    {
+      "id": "ee_extras:tension_clamp",
+      "name": "Натяжной зажим",
+      "image": "tension_clamp.png",
+      "recipe": {
+        "pattern": ["SR ", "   ", "   "],
+        "key": {
+          "S": {
+            "item": "tfc:metal/sheet/wrought_iron",
+            "tag": "c:sheets/wrought_iron"
+          },
+          "R": {
+            "item": "tfc:metal/rod/wrought_iron",
+            "tag": "c:rods/wrought_iron"
+          }
+        }
+      }
+    },
+    {
+      "id": "ee_extras:four_core_cable_spool",
+      "name": "Катушка четырёхжильного кабеля",
+      "image": "four_core_cable_spool.png",
+      "recipe": {
+        "pattern": ["WWW", "WSW", "WWW"],
+        "key": {
+          "W": {
+            "item": "electroenergetics:insulated_wire"
+          },
+          "S": {
+            "item": "electroenergetics:duplex_wire_spool"
+          }
+        }
+      }
+    },
+    {
+      "id": "ee_extras:duplex_cable_insulator",
+      "name": "Изоляторы двух- и четырёхжильного кабеля",
+      "image": "four_core_cable_insulator.png",
+      "recipe": {
+        "pattern": ["C  ", "   ", "   "],
+        "key": {
+          "C": {
+            "item": "electroenergetics:connector"
+          }
+        }
+      }
+    }
+  ]
+}

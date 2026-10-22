@@ -31,6 +31,28 @@ export function subscribeGuides(section: string, cb: (g: Guide[]) => void, onErr
   };
 }
 
+/** Один гайд по id (статья аддона): null — статьи ещё нет */
+export function subscribeGuide(id: string, cb: (g: Guide | null) => void, onError?: (e: Error) => void) {
+  if (!db) {
+    queueMicrotask(() => cb(null));
+    return () => {};
+  }
+  let unsub = () => {};
+  let cancelled = false;
+  authReady.then(() => {
+    if (cancelled) return;
+    unsub = onSnapshot(
+      doc(db!, 'guides', id),
+      (d) => cb(d.exists() ? { ...(d.data() as Omit<Guide, 'id'>), id: d.id } : null),
+      (e) => onError?.(e),
+    );
+  });
+  return () => {
+    cancelled = true;
+    unsub();
+  };
+}
+
 export type GuideDraft = Omit<Guide, 'id' | 'createdAt' | 'updatedAt'>;
 
 /** Сохранить гайд и его версию одной записью; id === null — новый. Возвращает id */

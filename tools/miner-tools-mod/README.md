@@ -64,7 +64,7 @@
 ```bash
 ./libs.sh          # Curios и GeckoLib из mods/ сборки (в worktree — из основной копии)
 ./test-server.sh   # сервер разработки (+ IE) + /belttest и /helmettest (src/devtest), печатает OK/FAIL; PORT=… — свой порт
-./release.sh       # jar сюда и в public/addons + иконка для сайта
+./release.sh       # jar и иконки (icons/) сюда; на сайт — сборкой сайта
 ```
 
 Проверено на сервере разработки: подбор с поясом в инвентаре и в Curios, выключение, правило «все породы» (на своих

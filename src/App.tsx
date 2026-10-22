@@ -7,6 +7,7 @@ import { TooltipLayer } from './components/Tooltip';
 import { DataProvider } from './data/DataContext';
 import { readNick, writeNick } from './lib/nick';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { AddonPage } from './pages/AddonPage';
 import { AddonsPage } from './pages/AddonsPage';
 import { DocPage } from './pages/DocPage';
 import { DatapacksPage } from './pages/DatapacksPage';
@@ -61,6 +62,7 @@ export default function App() {
             <Route path="/tags" element={<TagsPage />} />
             <Route path="/reference" element={<ReferencePage />} />
             <Route path="/addons" element={<AddonsPage />} />
+            <Route path="/addons/:id" element={<AddonPage />} />
             <Route path="/updates" element={<UpdatesPage />} />
             <Route path="/map" element={<MapRedirect />} />
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -292,7 +292,7 @@ Edges are anti-aliased: the model is drawn 4× larger and averaged (alpha by cov
 pixel, so seams have no gaps; texture pixels are nearest as in game. `item/generated` — flat texture upscaled by an
 integer factor, centred.
 
-The same code is the **only icon generator** for addons (site `public/addons/*.png`, addon release):
+The same code is the **only icon generator** for addons (`tools/<mod>/icons/*.png` → site, addon release):
 
 ```bash
 node scripts/mcp/render.mjs tools/ee-extras-mod ee_extras:four_core_termination ee_extras:four_core_cable_spool --out out/icons --size 256
@@ -367,6 +367,17 @@ a region is named by the nearest city. Climate and rocks not compared with the g
 `guide_put` refuses if the article changed after `guide_get` (Firestore precondition on `updateTime`); for a new article
 `baseRevision` is `"new"`.
 
+### Pack addons
+
+| Tool | Does |
+| --- | --- |
+| `addons_list(root)` | addon cards `tools/*/addon.json`: version, folder, side, blocks; flags source/jar/site version mismatch, missing page |
+| `addon_check(id*, root)` | release check: card vs `gradle.properties`/`build.sh` and jar (modId, version, items), stray jars, block ids, recipes, `icons/`, site page `addon-<mod>` (section, `::addon-block` widgets, version mentioned, jar items not described), deployed version |
+
+`root` — repo root to read cards from (a git worktree with the new release); default — main checkout. The page itself
+is a guide: `guide_get addon-<mod>` → `guide_put`. Reads: one Firestore document per addon plus `/addons/index.json`
+from the site. Release steps — skill `addon-release`.
+
 ### Site content: tasks, plan docs, datapacks, schematics
 
 Each answer states how many Firestore reads it cost. Lists are read with a field mask and cached for minutes; a full
@@ -421,7 +432,8 @@ scripts/mcp/
   tools/<section>.mjs  section tools: code (classes, mixins, decompile, deps), logs, config (config_get,
                       config_propose, config_changes), pack, kubejs, books (+books-index), blocks (+blocks-data), site
                       (tasks, groups, plan docs with writes; datapacks, schematics, site scripts), map (+map-climate,
-                      map-png — PNG read/write), resources (model_render, texture_get, resources_check)
+                      map-png — PNG read/write), resources (model_render, texture_get, resources_check), addons
+                      (addons_list, addon_check)
 ```
 
 Data merging repeats the site (`src/lib/items.ts`, `recipes.ts`, `tags.ts`, `reference.ts`, `meals.ts`) — those modules
