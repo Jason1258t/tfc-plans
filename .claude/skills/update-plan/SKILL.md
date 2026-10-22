@@ -25,8 +25,11 @@ dependents / KubeJS / mixins. Don't call `mod=…` for 60 mods in a row without 
 
 ## 1. Per mod: what changed
 
-`mods_freshness mod=<id>` — our → newest release, newer beta, source, **new required dependencies**, changelogs of
-newer versions. Read the changelogs for:
+`mods_freshness mod=<id> deps=true` — our → newest release, newer beta, source, the **new jar's dependency ranges**
+checked against the pack (✗ — missing mod / version out of range / incompatible; changed ranges vs ours; pack mods
+whose ranges it breaks), changelogs of newer releases, oldest first. More changelogs — the same call with the
+`offset` it prints, without `deps`; betas — `beta=true` (also checks the beta
+jar). Pass `neoforge=<server version>` if known, else the NeoForge range stays «не задана». Read the changelogs for:
 
 - removed/renamed blocks, items, recipes, config options; config format or folder moved (Serilum/Collective moved
   configs to `config/serilum/*.json` in 8.54–8.57);
@@ -34,9 +37,8 @@ newer versions. Read the changelogs for:
 - minimum Minecraft / NeoForge / dependency versions; merged or split mods;
 - "no functional changes" and CI-only notes → safe, even when the major number jumped.
 
-Known gaps of the tool (see 7): changelogs are cut at 20 000 chars with betas first (the oldest releases may be cut
-off — say so); Modrinth changelogs may come as raw HTML; the *new* version's dependency ranges are not shown, only
-newly required mods. Don't guess ranges — put «проверить диапазоны зависимостей в новом jar» into the plan.
+Ranges are what FML checks, not API compatibility: a dependent compiled against the old major (Burning Block vs
+Moonlight 2.x) shows «ок» by range — still «проверить в игре».
 
 ## 2. Per mod: what in the pack touches it
 
@@ -124,6 +126,6 @@ Show the plan to the user **before** writing anything to the site (writes go to 
 
 ## 7. Missing or wrong tool answers
 
-If you had to fall back to grep/unzip/a script (e.g. new version's dependency ranges, an untruncated changelog),
+If you had to fall back to grep/unzip/a script (e.g. a jar the tool couldn't download, a changelog the platform doesn't give),
 finish the plan with the workaround and propose a separate session per CLAUDE.md «If a needed tool is missing»
 (branch `feat/mcp-<short>`, docs/mcp.md «Adding a tool»).

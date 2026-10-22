@@ -110,11 +110,10 @@ export async function freshnessReport({
   });
 }
 
-const CHANGELOG_CAP = 8000;
 const UA = { 'User-Agent': `tfc-plans/1.0 (${SITE})` };
 const stripHtml = (html) =>
   html
-    .replace(/<br\s*\/?>|<\/(?:p|li|h\d|div)>/gi, '\n')
+    .replace(/<br\s*\/?>|<\/(?:p|li|h\d|div|ul|ol)>/gi, '\n')
     .replace(/<li[^>]*>/gi, '- ')
     .replace(/<[^>]+>/g, '')
     .replace(/&nbsp;/g, ' ')
@@ -123,69 +122,154 @@ const stripHtml = (html) =>
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+/** Ченджлог Modrinth бывает сырым HTML (Serilum) — тогда в текст, как у CurseForge */
+const toText = (s) => (/<\/?(?:p|br|li|ul|ol|h\d|div|span|a|b|strong|em)\b[^>]*>/i.test(s) ? stripHtml(s) : s.trim());
+
+/** Обёртка над API CurseForge: get('/mods/…') → data */
+function cfApi(key) {
+  const H = { 'x-api-key': key, Accept: 'application/json' };
+  return async (p) => {
+    const r = await fetch(`https://api.curseforge.com/v1${p}`, { headers: H });
+    if (!r.ok) throw new Error(`CurseForge ${r.status}`);
+    return (await r.json()).data;
+  };
+}
+
+const ghHeaders = () => {
+  const token = githubToken();
+  return { ...UA, Accept: 'application/vnd.github+json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+};
+
+const CF_TYPE = { 1: 'release', 2: 'beta', 3: 'alpha' };
 
 /**
- * Ченджлоги версий новее нашей, до новейшей (релиза, а если есть бета новее — до неё), новые сверху.
- * mod — запись отчёта (FreshMod). Текст обрезается до CHANGELOG_CAP; null — источник не даёт ченджлогов.
+ * Версии новее нашей, до новейшего релиза (beta — до новейшей версии вообще, с бетами), старые сверху.
+ * Бета, которая сама и есть «новейший релиз» (релизов нет), остаётся. mod — запись отчёта (FreshMod).
+ * Возвращает [{ version, type, date, text: () => Promise<string> }] — текст достаётся лениво (у CurseForge это запрос
+ * на версию), чтобы листать страницами; null — источник не даёт ченджлогов.
  */
-export async function modChangelog(mod, key = curseforgeKey()) {
-  const target = mod.beta ?? mod.latest;
+export async function modChangelog(mod, { beta = false, key = curseforgeKey() } = {}) {
+  const target = beta ? (mod.beta ?? mod.latest) : mod.latest;
   if (!mod.current || !target || mod.status === 'ok') return null;
   const from = Date.parse(mod.current.date ?? 0);
   const to = Date.parse(target.date ?? 0);
-  let parts = [];
+  const keep = (type, id) => beta || type === 'release' || id === target.id;
+  let list = [];
   if (mod.source === 'modrinth') {
     const q = `game_versions=${encodeURIComponent(JSON.stringify(['1.21.1']))}`;
     const r = await fetch(`https://api.modrinth.com/v2/project/${mod.project.id}/version?${q}`, { headers: UA });
     if (!r.ok) throw new Error(`Modrinth ${r.status}`);
-    parts = (await r.json())
+    list = (await r.json())
       // Одна версия выходит отдельными файлами под каждый загрузчик — ченджлог берём один раз
       .filter((v, i, all) => {
         const d = Date.parse(v.date_published);
-        return d > from && d <= to && all.findIndex((x) => x.version_number === v.version_number) === i;
+        return (
+          d > from &&
+          d <= to &&
+          keep(v.version_type, v.id) &&
+          all.findIndex((x) => x.version_number === v.version_number) === i
+        );
       })
-      .map(
-        (v) =>
-          `### ${v.version_number} (${v.version_type}, ${v.date_published.slice(0, 10)})\n${(v.changelog ?? '').trim()}`,
-      );
+      .map((v) => ({
+        version: v.version_number,
+        type: v.version_type,
+        date: v.date_published,
+        text: async () => toText(v.changelog ?? ''),
+      }));
   } else if (mod.source === 'curseforge') {
     if (!key) return null;
-    const H = { 'x-api-key': key, Accept: 'application/json' };
-    const get = async (p) => {
-      const r = await fetch(`https://api.curseforge.com/v1${p}`, { headers: H });
-      if (!r.ok) throw new Error(`CurseForge ${r.status}`);
-      return (await r.json()).data;
-    };
-    const files = (await get(`/mods/${mod.project.id}/files?gameVersion=1.21.1&modLoaderType=6&pageSize=50`))
-      .filter((f) => f.id > Number(mod.current.id) && f.id <= Number(target.id))
-      .sort((a, b) => b.id - a.id)
-      .slice(0, 12);
-    for (const f of files)
-      parts.push(
-        `### ${f.fileName} (${f.fileDate.slice(0, 10)})\n${stripHtml(await get(`/mods/${mod.project.id}/files/${f.id}/changelog`))}`,
+    const get = cfApi(key);
+    const cur = Number(mod.current.id);
+    const files = [];
+    // Файлы идут новыми вперёд; листаем, пока не дойдём до нашего (не больше 10 страниц по 50)
+    for (let index = 0; index < 500; index += 50) {
+      const pg = await get(
+        `/mods/${mod.project.id}/files?gameVersion=1.21.1&modLoaderType=6&pageSize=50&index=${index}`,
       );
+      files.push(...pg);
+      if (pg.length < 50 || pg.some((f) => f.id <= cur)) break;
+    }
+    list = files
+      .filter((f) => f.id > cur && f.id <= Number(target.id) && keep(CF_TYPE[f.releaseType], String(f.id)))
+      .filter((f, i, all) => all.findIndex((x) => x.id === f.id) === i)
+      .map((f) => ({
+        version: f.fileName,
+        type: CF_TYPE[f.releaseType] ?? 'release',
+        date: f.fileDate,
+        text: async () => stripHtml(await get(`/mods/${mod.project.id}/files/${f.id}/changelog`)),
+      }));
   } else if (mod.source === 'git') {
-    const token = githubToken();
-    const r = await fetch(`https://api.github.com/repos/${mod.project.id}/releases?per_page=30`, {
-      headers: { ...UA, Accept: 'application/vnd.github+json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    const r = await fetch(`https://api.github.com/repos/${mod.project.id}/releases?per_page=100`, {
+      headers: ghHeaders(),
     });
     if (!r.ok) throw new Error(`GitHub ${r.status}`);
-    parts = (await r.json())
+    list = (await r.json())
       .filter((x) => {
         const d = Date.parse(x.published_at ?? 0);
-        return !x.draft && d > from && d <= to;
+        return !x.draft && d > from && d <= to && keep(x.prerelease ? 'beta' : 'release', x.tag_name);
       })
-      .sort((a, b) => Date.parse(b.published_at) - Date.parse(a.published_at))
-      .slice(0, 12)
-      .map(
-        (x) =>
-          `### ${x.tag_name} (${x.prerelease ? 'beta' : 'release'}, ${x.published_at.slice(0, 10)})\n${(x.body ?? '').trim()}`,
-      );
+      .map((x) => ({
+        version: x.tag_name,
+        type: x.prerelease ? 'beta' : 'release',
+        date: x.published_at,
+        text: async () => (x.body ?? '').trim(),
+      }));
   } else return null;
-  const text = parts.join('\n\n');
-  return text.length > CHANGELOG_CAP ? `${text.slice(0, CHANGELOG_CAP)}\n…` : text;
+  return list.sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+}
+
+/**
+ * Ссылка на jar версии v (обычно mod.latest) с её площадки: Modrinth — основной файл версии, CurseForge — downloadUrl
+ * (если автор закрыл сторонние загрузки — прямой путь CDN), GitHub — файл релиза с тем же именем.
+ */
+export async function versionJarUrl(mod, v, key = curseforgeKey()) {
+  if (mod.source === 'modrinth') {
+    const r = await fetch(`https://api.modrinth.com/v2/version/${v.id}`, { headers: UA });
+    if (!r.ok) throw new Error(`Modrinth ${r.status}`);
+    const files = (await r.json()).files ?? [];
+    return (files.find((f) => f.primary) ?? files[0])?.url ?? null;
+  }
+  if (mod.source === 'curseforge') {
+    if (!key) throw new Error('нет ключа CurseForge (CURSE_FORGE_API_KEY)');
+    const f = await cfApi(key)(`/mods/${mod.project.id}/files/${v.id}`);
+    const id = Number(f.id);
+    return (
+      f.downloadUrl ??
+      `https://mediafilez.forgecdn.net/files/${Math.floor(id / 1000)}/${id % 1000}/${encodeURIComponent(f.fileName)}`
+    );
+  }
+  if (mod.source === 'git') {
+    const r = await fetch(`https://api.github.com/repos/${mod.project.id}/releases/tags/${encodeURIComponent(v.id)}`, {
+      headers: ghHeaders(),
+    });
+    if (!r.ok) throw new Error(`GitHub ${r.status}`);
+    const assets = (await r.json()).assets ?? [];
+    return (
+      (assets.find((x) => x.name === v.file) ?? assets.find((x) => x.name.endsWith('.jar')))?.browser_download_url ??
+      null
+    );
+  }
+  return null;
+}
+
+/** Скачать jar версии v в dir (кеш по имени файла: версии на площадках не перезаливают) → путь к файлу */
+export async function downloadVersionJar(mod, v, dir) {
+  const name = `${mod.source}-${String(v.id ?? v.version).replace(/[^\w.-]+/g, '_')}-${(v.file ?? `${mod.id}.jar`).replace(/[^\w.+-]+/g, '_')}`;
+  const file = path.join(dir, name);
+  if (fs.existsSync(file)) return file;
+  const url = await versionJarUrl(mod, v);
+  if (!url) throw new Error(`у версии ${v.version} нет файла jar`);
+  const r = await fetch(url, { headers: UA, redirect: 'follow' });
+  if (!r.ok) throw new Error(`скачивание ${url}: ${r.status}`);
+  const buf = Buffer.from(await r.arrayBuffer());
+  if (buf.readUInt32LE(0) !== 0x04034b50) throw new Error(`скачанный файл ${url} — не jar`);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(`${file}.part`, buf);
+  fs.renameSync(`${file}.part`, file);
+  return file;
 }
 
 /** Сводка для консоли и MCP: счётчики и состояние источников */
