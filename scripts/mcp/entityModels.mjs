@@ -1,6 +1,6 @@
 /**
  * Предметы, которые игра рисует кодом (модель предмета — builtin/entity): сундуки, кровати, шалкеры, знамёна,
- * головы, щит, проводник, расписная ваза. Геометрия — модели сущностей Minecraft (LayerDefinition: texOffs/addBox,
+ * головы (вкл. дракона и пиглина), щит, проводник, расписная ваза. Геометрия — модели сущностей Minecraft (LayerDefinition: texOffs/addBox,
  * PartPose) и преобразования их рендереров для предмета без мира (BlockEntityWithoutLevelRenderer), перенесённые
  * из исходников Minecraft 1.21.1 / NeoForge 21.1 (net.minecraft.client.renderer.blockentity.*Renderer,
  * net.minecraft.client.model.*Model) и TFC 4.2.9 (сундуки из дерева TFC: TFCChestBlockEntityRenderer).
@@ -71,16 +71,30 @@ export class Pose {
 /**
  * Куб ModelPart.Cube: texOffs (u, v), addBox(x, y, z, w, h, d), рост g (CubeDeformation), только грани faces.
  * Вершины и uv граней — как в конструкторе Cube (Polygon: [0] → (u2, v1), [1] → (u1, v1), [2] → (u1, v2)).
+ * mirror (CubeListBuilder.mirror) — x0 и x1 меняются местами, uv остаются у тех же вершин, нормаль по x — наоборот.
  */
-const box = (u, v, x, y, z, w, h, d, g = 0, faces = null) => ({ u, v, x, y, z, w, h, d, g, faces });
+const box = (u, v, x, y, z, w, h, d, g = 0, faces = null, mirror = false) => ({
+  u,
+  v,
+  x,
+  y,
+  z,
+  w,
+  h,
+  d,
+  g,
+  faces,
+  mirror,
+});
 /** Часть: pose { x, y, z (пиксели), xr, yr, zr (радианы) }, кубы и дочерние части */
 const part = (cubes, pose = {}, children = []) => ({ cubes, pose, children });
 
 function cubeQuads(c) {
-  const x0 = c.x - c.g;
+  let x0 = c.x - c.g;
   const y0 = c.y - c.g;
   const z0 = c.z - c.g;
-  const x1 = c.x + c.w + c.g;
+  let x1 = c.x + c.w + c.g;
+  if (c.mirror) [x0, x1] = [x1, x0];
   const y1 = c.y + c.h + c.g;
   const z1 = c.z + c.d + c.g;
   const V7 = [x0, y0, z0];
@@ -135,7 +149,7 @@ function cubeQuads(c) {
   };
   return Object.entries(all)
     .filter(([name]) => !c.faces || c.faces.includes(name))
-    .map(([, q]) => q);
+    .map(([, [vs, uv, n]]) => [vs, uv, c.mirror ? [-n[0], n[1], n[2]] : n]);
 }
 
 /**
@@ -198,6 +212,34 @@ const BANNER_FLAG = part([box(0, 0, -10, 0, -2, 20, 40, 1)], { y: -32, xr: -0.00
 // SkullModel: голова (+ шапка 0.25 у голов людей), setupAnim(0, 180, 0) — yRot 180°
 const skull = (hat) =>
   part([box(0, 0, -4, -8, -4, 8, 8, 8)], { yr: Math.PI }, hat ? [part([box(32, 0, -4, -8, -4, 8, 8, 8, 0.25)])] : []);
+// DragonHeadModel.createHeadLayer, 256×256: addBox(имя, x, y, z, w, h, d, u, v), «scale» и «nostril» слева — mirror;
+// setupAnim(0, 180, 0): голова yRot 180°, челюсть xRot = (sin 0 + 1)·0.2
+const DRAGON_HEAD = part(
+  [
+    box(176, 44, -6, -1, -24, 12, 5, 16),
+    box(112, 30, -8, -8, -10, 16, 16, 16),
+    box(0, 0, -5, -12, -4, 2, 4, 6, 0, null, true),
+    box(112, 0, -5, -3, -22, 2, 2, 4, 0, null, true),
+    box(0, 0, 3, -12, -4, 2, 4, 6),
+    box(112, 0, 3, -3, -22, 2, 2, 4),
+  ],
+  { yr: Math.PI },
+  [part([box(176, 65, -6, 0, -16, 12, 4, 16)], { y: 4, z: -8, xr: 0.2 })],
+);
+// PiglinHeadModel (PiglinModel.addHead), 64×64; setupAnim(0, 180, 0): уши zRot ∓(cos 0 + 2.5)·0.2
+const PIGLIN_HEAD = part(
+  [
+    box(0, 0, -5, -8, -4, 10, 8, 8),
+    box(31, 1, -2, -4, -5, 4, 4, 1),
+    box(2, 4, 2, -2, -5, 1, 2, 1),
+    box(2, 0, -3, -2, -5, 1, 2, 1),
+  ],
+  { yr: Math.PI },
+  [
+    part([box(51, 6, 0, 0, -2, 1, 5, 4)], { x: 4.5, y: -6, zr: -0.7 }),
+    part([box(39, 6, -1, 0, -2, 1, 5, 4)], { x: -4.5, y: -6, zr: 0.7 }),
+  ],
+);
 // ShieldModel.createLayer, 64×64
 const SHIELD = [part([box(0, 0, -6, -11, -2, 12, 22, 1)]), part([box(26, 0, -1, -3, -1, 2, 6, 6)])];
 // ConduitRenderer.createShellLayer, 32×16
@@ -319,10 +361,21 @@ function build(layers, id, chain) {
       zombie_head: ['minecraft:entity/zombie/zombie', 64, 64, true],
       player_head: ['minecraft:entity/player/wide/steve', 64, 64, true],
     };
+    const own = {
+      dragon_head: [DRAGON_HEAD, 'minecraft:entity/enderdragon/dragon', 256, 256],
+      piglin_head: [PIGLIN_HEAD, 'minecraft:entity/piglin/piglin', 64, 64],
+    }[p];
     const h = heads[p];
-    if (!h || !has(h[0])) return null; // голова дракона и пиглина — свои модели, не перенесены
     // renderSkull(null, 180°): translate(0.5, 0, 0.5), scale(−1, −1, 1)
-    renderPart(base().t(0.5, 0, 0.5).s(-1, -1, 1), skull(h[3]), { id: h[0], w: h[1], h: h[2] }, out);
+    const ps = base().t(0.5, 0, 0.5).s(-1, -1, 1);
+    if (own && has(own[1])) {
+      // DragonHeadModel.renderToBuffer: translate(0, −0.374375, 0), scale 0.75
+      if (p === 'dragon_head') ps.t(0, -0.374375, 0).s(0.75, 0.75, 0.75);
+      renderPart(ps, own[0], { id: own[1], w: own[2], h: own[3] }, out);
+      return { quads: out, kind: 'голова (SkullBlockRenderer)' };
+    }
+    if (!h || !has(h[0])) return null;
+    renderPart(ps, skull(h[3]), { id: h[0], w: h[1], h: h[2] }, out);
     return { quads: out, kind: 'голова (SkullBlockRenderer)' };
   }
   if (id === 'minecraft:shield') {
@@ -367,15 +420,30 @@ export function entityItemModel(layers, id, own) {
 }
 
 /**
+ * builtin/entity, чей рендерер рисует отдельную («standalone») модель предмета: сковорода Cuisine Delight
+ * (SkilletBEWLR → CuisineDelightClient.SKILLET_MODEL; содержимое — только у сковороды с едой, в JEI она пуста)
+ */
+const STANDALONE_ITEM_MODELS = { 'cuisinedelight:cuisine_skillet': 'cuisinedelight:item/cuisine_skillet_base' };
+const STANDALONE_BY = { 'cuisinedelight:cuisine_skillet': 'SkilletBEWLR' };
+
+/**
  * Предметы, чей рендерер рисует модель блока (а не модель сущности): ящики Functional Storage
  * (FunctionalStorageISTER.renderBlockItem) — модель состояния по умолчанию (facing=down, subfacing=north, не заперт;
  * DrawerBlock.registerDefaultState) с display.gui модели блока и поворотом Y 180°, X −90°, Y 90° (DrawerISTER,
  * CompactingDrawerISTER, FluidDrawerISTER). Содержимое ящика не рисуется — в JEI и творческом он пуст.
+ * Плюс отдельные модели предметов (STANDALONE_ITEM_MODELS).
  * Возвращает { parts: [{ model, x, y, mat }], drawnBy } или null.
  */
 export function codeBlockParts(layers, id, own) {
   if (!own?.entity) return null;
   const [ns, p] = id.split(':');
+  // Отдельная модель предмета, которую рендерер рисует как обычный предмет (со своим display)
+  const standalone = STANDALONE_ITEM_MODELS[id];
+  if (standalone) {
+    const model = loadModel(layers, standalone);
+    if (!model.chain.length || model.missing.length) return null;
+    return { parts: [{ model, x: 0, y: 0 }], drawnBy: `модель ${standalone} (${STANDALONE_BY[id]})` };
+  }
   if (ns !== 'functionalstorage') return null;
   const bs = readJsonRes(layers, blockstatePath(id));
   if (!bs?.json) return null;

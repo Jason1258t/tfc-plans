@@ -10,7 +10,9 @@
  *   текстура — tfc:block/molten_still у металлов (класс *Metal*, путь metal/…), иначе minecraft:block/water_still;
  *   особняк — анонимный IClientFluidTypeExtensions в jar мода (getStillTexture + getTintColor(FluidStack)), если он
  *   в jar один (More Propulsion: керосин);
- *   иначе — своя текстура мода block/fluid/<имя>_still без окраски (IE регистрирует так: IEFluids.FluidEntry).
+ *   регистрация вызовом make("имя", rl("…_still"), …) в статическом поле — эта текстура без окраски (IEFluids.FluidEntry:
+ *   high_power_biodiesel → biodiesel_still, phenolic_resin → resin_still);
+ *   иначе — своя текстура мода block/fluid/<имя>_still без окраски.
  * Не вышло — null: ведро рисуется как есть, без жидкости.
  */
 import { jarList, jarToc, platform, readEntry, zipEntries, zipRead } from './jars.mjs';
@@ -28,6 +30,7 @@ function nsInfo(ns) {
   if (nsCache.has(ns)) return nsCache.get(ns);
   const records = [];
   const exts = [];
+  const stills = [];
   for (const jar of jarList()) {
     const toc = jarToc(jar);
     if (!toc.some((e) => e.name.startsWith(`assets/${ns}/`))) continue;
@@ -64,7 +67,21 @@ function nsInfo(ns) {
         }
         for (const k of ['args', 'array']) if (x[k]) walk(x[k], depth + 1);
       };
-      for (const val of v.statics.values()) walk(val);
+      for (const val of v.statics.values()) {
+        walk(val);
+        // make("имя", rl("block/fluid/x_still"), …) — текстура still по имени жидкости
+        if (val?.call && typeof val.args?.[0] === 'string') {
+          const st = val.args.find(
+            (a) => a?.call && a.args?.every((x) => typeof x === 'string') && /_still$/.test(a.args.at(-1)),
+          );
+          if (st)
+            stills.push({
+              name: val.args[0],
+              still: st.args.length === 2 ? st.args.join(':') : `${ns}:${st.args[0]}`,
+              from: cls.name,
+            });
+        }
+      }
       for (const f of cls.fields) {
         const m = f.name.match(/^([A-Z0-9_]+)_COLOR$/);
         if (m && colorLike(f.constant)) records.push({ name: m[1], color: f.constant, metal, from: cls.name });
@@ -99,7 +116,7 @@ function nsInfo(ns) {
       }
     }
   }
-  const info = { records, exts };
+  const info = { records, exts, stills };
   nsCache.set(ns, info);
   return info;
 }
@@ -156,7 +173,7 @@ function lookup(ns, p) {
   const names = new Set([base]);
   for (const pre of ['aged_', 'inferior_', 'molten_']) if (base.startsWith(pre)) names.add(base.slice(pre.length));
   for (const suf of ['_wine', '_fluid']) if (base.endsWith(suf)) names.add(base.slice(0, -suf.length));
-  const { records, exts } = nsInfo(ns);
+  const { records, exts, stills } = nsInfo(ns);
   for (const n of names) {
     const hits = records.filter((r) => r.name === n.toUpperCase());
     // Металл ищем среди металлов, остальное — среди не-металлов (у TFC и BEER, и COPPER есть в разных списках)
@@ -169,6 +186,8 @@ function lookup(ns, p) {
         from: hit.from,
       };
   }
+  const st = stills.find((x) => x.name === base);
+  if (st) return { still: st.still, tint: 0xffffffff, from: st.from };
   if (exts.length === 1) return { still: exts[0].still, tint: exts[0].color >>> 0, from: exts[0].from };
   // Своя текстура жидкости без окраски (IE: FluidEntry с block/fluid/<имя>_still; Sophisticated Core: block/xp_still)
   for (const t of [`block/fluid/${base}_still`, `block/${base}_still`, `block/${base}`]) {

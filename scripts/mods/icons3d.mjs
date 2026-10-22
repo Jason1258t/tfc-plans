@@ -18,16 +18,18 @@ import {
   flatLoaderSpecs,
   guiModel,
   ieObjDrawable,
+  palettedTextures,
   renderFlat,
   renderGenerated,
   renderModel,
 } from '../mcp/render.mjs';
-import { loadModel, modJarsLayer, platformLayers } from '../mcp/resources.mjs';
+import { loadModel, modJarsLayer, platformLayers, resolveTexture } from '../mcp/resources.mjs';
 
 /** Поднять, если изменился рисунок (генератор, размер) — старый кеш не подойдёт */
 // 2 — модели OBJ, composite, separate_transforms, conf_sides IE; 3 — без пустых картинок; 4 — без ie_obj и пурпурных;
-// 5 — поворот вида как в игре (было зеркально), окраска tintindex, ie_obj с переворотом v, z у display.gui
-const VERSION = 5;
+// 5 — поворот вида как в игре (было зеркально), окраска tintindex, ie_obj с переворотом v, z у display.gui;
+// 6 — текстуры атласа (paletted_permutations), головы дракона и пиглина, жидкости IE по make(…_still), загрузчики IE
+const VERSION = 6;
 
 /**
  * findAsset(ns, rel) — файл ресурса из распакованных jar (как в mods.mjs), outIcons — папка icons/ сайта,
@@ -70,8 +72,20 @@ export function makeRenderer({ findAsset, outIcons, cacheDir, size = 96 }) {
       const d = l.read(`assets/${ns}/textures/${p}.png`);
       if (d) return d;
     }
+    // Текстура из атласа (paletted_permutations): основа и обе палитры
+    const pal = palettedTextures().get(`${ns}:${p}`);
+    if (pal) {
+      const parts = [pal.base, pal.key, pal.perm].map((x) => texData(x));
+      if (parts.every(Boolean)) return Buffer.concat(parts);
+    }
     return null;
   };
+  /** Слой предмета item/generated — текстура, которую делает атлас (палитры TFC: пиломатериалы, лодки…) */
+  const paletteLayer = (model) =>
+    Object.entries(model.textures).some(([k, v]) => {
+      const t = /^layer\d+$/.test(k) && resolveTexture(model.textures, v);
+      return t && !texFile(t) && palettedTextures().has(t.includes(':') ? t : `minecraft:${t}`);
+    });
 
   function key(model, flat) {
     const h = crypto.createHash('sha1').update(`${VERSION}|${size}`);
@@ -147,7 +161,8 @@ export function makeRenderer({ findAsset, outIcons, cacheDir, size = 96 }) {
     const loaderFlat = flatLoaderSpecs(layers, model, `${ns}:${p}`, fluidLook);
     if (loaderFlat && !loaderFlat.specs.length) return null;
     if (loaderFlat?.wanted && !loaderFlat.fluid) stats.noFluid.push(loaderFlat.wanted);
-    const flat = (model.generated && model !== own) || Boolean(loaderFlat);
+    // Плоский предмет рисуем, только если его текстура не лежит файлом: вид в инвентаре своей моделью или слой из атласа
+    const flat = (model.generated && (model !== own || paletteLayer(model))) || Boolean(loaderFlat);
     if (model.generated && !flat) return null;
     // Рисуется кодом (builtin/entity) или загрузчиком, который генератор не умеет
     // ie_obj с callbacks, чей код не перенесён (render.mjs IE_ITEM_CALLBACKS), — в файле все варианты сразу
