@@ -203,3 +203,9 @@ the step is centred.
   Modrinth and git live; on a GitHub error git rows are kept from the report. Checked: script, browser, fallback with
   GitHub 403. 2026-10-22: skill `update-plan` («план обновления», `.claude/skills/update-plan/`) turns the report
   into a plan; tried on the 5 red mods (plan shown to the user; site task — see the plan doc, part 5).
+- Integration analysis (2026-10-22, task «Разработать скилл для анализа сборки и интеграций», group «Разработка»):
+  skill `integration-plan` (`.claude/skills/integration-plan/`) — pack inventory by MCP → candidate mod by its jar →
+  overlaps with TFC/energy/Create → routes (config / KubeJS / datapack / addon / don't install) → plan doc on the
+  task (someone else's report is not overwritten, a new doc «Анализ интеграции: …» is added). MCP can't read jars
+  outside `mods/` — candidates are read by `unzip`/`javap` for now (skill step 7). Step 1 tried on «химия»; not yet run
+  end to end on a real candidate.
