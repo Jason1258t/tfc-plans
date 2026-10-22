@@ -14,6 +14,7 @@
  *   npm run deploy:site                 — собрать и выложить
  *   npm run deploy:site -- --dry-run    — что будет выложено, ничего не меняя
  *   … --no-build                        — взять готовую dist/
+ *   … --force                           — выложить, даже если ничего не изменилось (проверка выкладки)
  * Авторизация — как у scripts/firestore-rest.mjs (сервисный ключ или firebase login).
  */
 import { execFileSync } from 'node:child_process';
@@ -119,7 +120,7 @@ async function main() {
     for (const p of list.slice(0, 20)) log(`  ${sign} ${p}`);
     if (list.length > 20) log(`  ${sign} … и ещё ${list.length - 20}`);
   }
-  if (!site.added.length && !site.changed.length && !site.removed.length && sameConfig) {
+  if (!site.added.length && !site.changed.length && !site.removed.length && sameConfig && !argv.includes('--force')) {
     log('на сайте уже это — выкладывать нечего');
     return;
   }
