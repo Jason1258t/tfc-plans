@@ -29,7 +29,8 @@ export function openJobs(dataDir, { repoDir, managedRepo, repoUrl, repoBranch, h
   /** id → задание; старые читаются с диска при старте */
   const jobs = new Map();
   for (const n of fs.readdirSync(jobsDir)) {
-    if (!/^j.*\.json$/.test(n) || n.endsWith('.result.json')) continue;
+    // .spec.json — копия для процесса (state «running»): прочитанная как задание, она затирала настоящее
+    if (!/^j.*\.json$/.test(n) || n.endsWith('.result.json') || n.endsWith('.spec.json')) continue;
     try {
       const j = JSON.parse(fs.readFileSync(path.join(jobsDir, n), 'utf8'));
       if (j.state === 'running' || j.state === 'queued') {
