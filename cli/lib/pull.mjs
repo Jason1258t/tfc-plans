@@ -12,14 +12,16 @@
  * Старое уходит в ту же копию, что и файлы сборки (beginBackup в sync.mjs), `tfc undo` отменяет весь pull.
  *
  * Сайт и сборка не спорят за файл (siteOwned): у аддонов главный сайт — jar другой версии того же аддона и файлы
- * из `replaces` из сборки не ставятся; у датапаков и скриптов главная сборка — путь, который есть в снимке,
- * сайт не трогает.
+ * из `replaces` из сборки не ставятся; у датапаков тоже главный сайт — `tfc-plans-<id>.zip` и копия под именем,
+ * которое даёт кнопка «Скачать» на сайте (zipName), из сборки не ставятся, а ручная копия рядом с поставленной
+ * убирается (две версии одного датапака в мире спорили бы); `tfc publish` их в сборку не заливает
+ * (siteDatapackPaths). У скриптов главная сборка — путь, который есть в снимке, сайт не трогает.
  */
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { strToU8, zipSync } from 'fflate';
-import { datapackFiles } from '../../src/lib/datapackFiles.ts';
+import { datapackFiles, zipName } from '../../src/lib/datapackFiles.ts';
 import { schematicFromLibrary } from '../../src/lib/schematicFile.ts';
 import { modIdsOf } from './jarid.mjs';
 import { loadState, saveState } from './plan.mjs';
@@ -67,6 +69,33 @@ export function datapackZip(pack) {
 
 const KUBEJS_NAME_RE = /^[a-z0-9_][a-z0-9_.-]{0,79}\.js$/;
 
+/** Куда tfc pull ставит датапак сайта */
+const SITE_DATAPACK_RE = /^world\/datapacks\/tfc-plans-[^/]+\.zip$/;
+const datapackPath = (d) => `world/datapacks/tfc-plans-${d.id}.zip`;
+/** Как датапак называется, если его скачали с сайта кнопкой «Скачать» и положили в мир руками */
+const manualDatapackPath = (d) => `world/datapacks/${zipName(d)}`;
+
+/**
+ * Датапаки сайта в папке мира — их раздаёт сайт (tfc pull), в сборку их не заливаем: иначе в мире у игроков
+ * окажется по две копии, а правка на сайте не дойдёт (копия из снимка главнее). Это поставленное tfc pull
+ * (`tfc-plans-*.zip`, state.pulled) и ручные копии отмеченных «Ставить в мир» под именем со страницы.
+ * Возвращает (путь) → название датапака или null.
+ */
+export async function siteDatapackPaths(api, profile) {
+  const names = new Map();
+  for (const r of Object.values(loadState(profile).pulled?.datapacks ?? {})) names.set(r.path, r.name);
+  try {
+    const { items } = await api.get('/site/datapacks');
+    for (const d of items) {
+      names.set(datapackPath(d), d.name);
+      names.set(manualDatapackPath(d), d.name);
+    }
+  } catch {
+    // список с сайта не получили — узнаём только по имени tfc-plans-* и по тому, что ставил pull
+  }
+  return (p) => names.get(p) ?? (SITE_DATAPACK_RE.test(p) ? p.slice(16) : null);
+}
+
 /**
  * Что хотим поставить: [{ id, name, path, bytes() }]; path — как в снимке.
  * unknown — названные, которых на сайте нет; all — для подсказки.
@@ -80,7 +109,8 @@ async function wanted(api, kind, names, profile) {
       items: r.items.map((d) => ({
         id: d.id,
         name: d.name,
-        path: `world/datapacks/tfc-plans-${d.id}.zip`,
+        path: datapackPath(d),
+        manual: manualDatapackPath(d),
         bytes: async () => datapackZip(d),
       })),
     };
@@ -270,6 +300,18 @@ export async function planPull(api, profile, kind, names = [], { force = false }
     else if (disk === rec.sha256) plan.remove.push(item);
     else plan.keptModified.push(item);
   }
+  // Ручная копия датапака (скачан кнопкой «Скачать» и положен в мир) рядом с поставленным — убрать
+  if (kind === 'datapacks')
+    for (const it of [...plan.add, ...plan.update, ...plan.same, ...plan.conflict]) {
+      const file = it.manual && it.manual !== it.path ? localPath(profile, it.manual) : null;
+      if (file && fs.existsSync(file))
+        plan.obsolete.push({
+          id: it.manual,
+          name: `копия «${it.name}», скачанная с сайта вручную`,
+          path: it.manual,
+          file,
+        });
+    }
   if (kind === 'addons') {
     const skip = new Set([...target, ...plan.remove.map((x) => x.path), ...plan.keptModified.map((x) => x.path)]);
     plan.obsolete = addonObsolete(profile, [...plan.add, ...plan.update, ...plan.same], skip);
@@ -292,12 +334,21 @@ const targets = (p) => [...p.add, ...p.update, ...p.same, ...p.conflict];
 export function siteOwned(plans, snapshot, state) {
   const snapPaths = new Set((snapshot?.files ?? []).map((f) => f.path));
   for (const p of plans) {
-    if (p.kind === 'addons') continue;
+    // У аддонов и датапаков главный сайт — их пути из снимка план сайта не уступает
+    if (p.kind === 'addons' || p.kind === 'datapacks') continue;
     for (const k of ['add', 'update', 'same', 'conflict', 'remove', 'keptModified'])
       p[k] = p[k].filter((x) => !snapPaths.has(x.path));
   }
   const skip = new Set();
   for (const p of plans) for (const x of [...targets(p), ...p.remove, ...p.keptModified]) skip.add(x.path);
+  // Датапаки сайта, залитые в сборку раньше (tfc-plans-*.zip и ручные копии), снимок не ставит и не убирает:
+  // ими распоряжается сайт
+  const dp = plans.find((p) => p.kind === 'datapacks');
+  if (dp) {
+    for (const x of dp.obsolete) skip.add(x.path);
+    for (const x of targets(dp)) if (x.manual) skip.add(x.manual);
+    for (const sp of snapPaths) if (SITE_DATAPACK_RE.test(sp)) skip.add(sp);
+  }
   const addons = plans.find((p) => p.kind === 'addons');
   let overrides = state.addonOverrides ?? [];
   if (addons) {

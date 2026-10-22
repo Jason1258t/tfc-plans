@@ -12,7 +12,7 @@ import { detectVersions, findInstances, findWorlds, gameDirOf, isDir, isServerDi
 import { bytesOf, changes, loadState, makePlan, PARTS, scopeOf } from './lib/plan.mjs';
 import { parseParts, printJobs, PUBLISH, showJob } from './lib/jobs.mjs';
 import { diffFiles, printDiff, publish } from './lib/publish.mjs';
-import { applyPull, planPull, pullChanges, recheckAddons, siteOwned } from './lib/pull.mjs';
+import { applyPull, planPull, pullChanges, recheckAddons, siteDatapackPaths, siteOwned } from './lib/pull.mjs';
 import { scanLocal } from './lib/scan.mjs';
 import { applyChange, planChange, resultsOf } from './lib/changes.mjs';
 import { applyPlan, beginBackup, editBackup, finishBackup, undoLast } from './lib/sync.mjs';
@@ -372,7 +372,8 @@ function printSite(p, names) {
     p.remove,
   );
   if (p.obsolete.length) {
-    console.log(`  ${red('−')} убрать — старые версии и то, что заменяет аддон (с копией): ${p.obsolete.length}`);
+    const why = p.kind === 'datapacks' ? 'копии, скачанные вручную' : 'старые версии и то, что заменяет аддон';
+    console.log(`  ${red('−')} убрать — ${why} (с копией): ${p.obsolete.length}`);
     for (const x of p.obsolete) console.log(dim(`      ${x.path} ${dim(`— ${x.name}`)}`));
   }
   line(yellow('!'), 'там ваш файл — рядом положу .tfc-new (перезаписать: --force)', p.conflict);
@@ -494,12 +495,24 @@ async function cmdPublish(v) {
   const a = api(cfg);
   const current = await a.current();
   const { files: local, skipped, state } = await scan(profile);
+  // Датапаки сайта раздаёт сайт (tfc pull) — в сборку их не берём
+  const siteDp = await siteDatapackPaths(a, profile);
+  const fromSite = [];
+  for (const [p, f] of local)
+    if (f.kind === 'world-datapack' && siteDp(p)) {
+      fromSite.push(`${p.slice(16)} — «${siteDp(p)}»`);
+      local.delete(p);
+    }
   if (!local.size) throw new Error(`в ${profile.instance} нечего заливать`);
   const ver = detectVersions(profile.instance);
   const { mc, loader } = await gameVersion(a, v, ver, current, profile.instance);
   console.log(`Профиль ${profileTitle(profile)}${mc ? dim(` · Minecraft ${mc}${loader ? `, ${loader}` : ''}`) : ''}`);
   if (skipped) console.log(dim(`(пропущено вне белого списка: ${skipped})`));
   if (state) console.log(dim(`(состояние модов — кеши, история JEI и т. п. — не заливаю: ${state})`));
+  if (fromSite.length) {
+    console.log(dim(`(датапаки сайта — их ставит tfc pull с сайта, в сборку не беру: ${fromSite.length})`));
+    for (const x of fromSite) console.log(dim(`    ${x}`));
+  }
   if (!profile.world) console.log(yellow('Мир не выбран — датапаки и календарь мира не попадут в сборку (tfc init).'));
   await publish({
     api: a,
