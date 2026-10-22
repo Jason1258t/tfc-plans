@@ -110,7 +110,9 @@ Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md)
   2026-10-22 later: own version `versions/<name>/<name>.json` (copy of the NeoForge json with `id` = name, inherits
   1.21.1) so TLauncher lists it; profile `lastVersionId` = name; works without launcher_profiles.json (TLauncher-only
   `.minecraft`: temp file for the installer, no profile written); Java also from `.tlauncher`. TLauncher's
-  per-version game dir setting — **unverified** (its config samples show no such key). Progress: `spinner` /
+  game dir = the version folder — **confirmed by the host** (plays `.minecraft/versions/TerraFirma Rebirth 2` via
+  TLauncher). `tfc init` lists `<.minecraft>/versions/*` with `mods/` (label «TLauncher / .minecraft» + loader);
+  `detectVersions` reads `<dir>/<name>.json` (`--fml.neoForgeVersion`, `--fml.mcVersion`, `inheritsFrom`). Progress: `spinner` /
   `withSpinner` in ui.mjs (prepare, file scan, NeoForge installer phases in Russian, placing files); progress bar
   shows speed and ETA, redraws every second.
 - Site content (stage 5): datapacks → `<world>/datapacks/tfc-plans-<id>.zip`, kubejs → `kubejs/server_scripts/<fileName>`,
