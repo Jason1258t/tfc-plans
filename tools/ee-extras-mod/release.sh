@@ -15,7 +15,7 @@ mkdir -p ../../public/addons
 cp "build/libs/ee-extras-$VERSION.jar" ../../public/addons/
 # Иконки для сайта — общим генератором MCP (сглаживание, те же правила, что у model_render); 192 px — сайт
 # показывает их 96 px, на экранах с двойной плотностью — пиксель в пиксель
-ICONS="three_phase_rectifier single_phase_rectifier heavy_three_phase_rectifier heavy_single_phase_rectifier
+ICONS="compact_kinetic_generator three_phase_rectifier single_phase_rectifier heavy_three_phase_rectifier heavy_single_phase_rectifier
   three_phase_inverter single_phase_inverter heavy_three_phase_inverter heavy_single_phase_inverter bidirectional_converter four_core_termination
   duplex_cable_insulator four_core_cable_insulator four_core_cable_spool four_core_tap
   copper_busbar_spool power_cable_spool stranded_copper_spool acsr_spool aluminum_spool bronze_spool steel_spool tension_clamp"

@@ -18,18 +18,23 @@ import net.minecraft.world.level.block.state.BlockState;
  * поэтому на воздухе: номинал — около 29 000 (без дыма), дым с ~103 % номинала, сгорает от ~137 %;
  * в масле дым с ~200 %, сгорает от ~270 %, и то не сразу — температура растёт медленнее с каждым градусом.
  */
-final class Heat {
+public final class Heat {
     static final double NOMINAL_SHARE = 0.75;
 
     private Heat() {}
 
     static float update(float temp, double watts, Tier tier) {
-        double heat = Math.abs(watts) * 1300 / (tier.watts / NOMINAL_SHARE);
+        return update(temp, watts, tier.watts);
+    }
+
+    /** То же для блока со своим номиналом (компактные генераторы), Вт */
+    public static float update(float temp, double watts, double nominal) {
+        double heat = Math.abs(watts) * 1300 / (nominal / NOMINAL_SHARE);
         return ElectricalDevice.updateTemp(temp, (float) Math.min(heat, 10_000));
     }
 
     /** true — блок сгорел (устройство EE уже удалено, дальше в этом тике его не трогать) */
-    static boolean handle(Level level, BlockPos pos, DevicesSavedData devices, float temp) {
+    public static boolean handle(Level level, BlockPos pos, DevicesSavedData devices, float temp) {
         boolean oil = false;
         if (level.isLoaded(pos)) {
             BlockState state = level.getBlockState(pos);

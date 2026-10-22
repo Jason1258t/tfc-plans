@@ -88,5 +88,8 @@
   "block.ee_extras.heavy_three_phase_inverter.tooltip.nodes": "Copper caps: phases 1-3 (to the grid), red: +, blue: - (from a battery or converter).",
   "block.ee_extras.heavy_single_phase_inverter": "Heavy Single-Phase Inverter",
   "block.ee_extras.heavy_single_phase_inverter.tooltip": "Direct current to phase and neutral in step with the grid, rated 48 kW. Feeds the grid when the DC voltage × 1.57 is above the grid amplitude; with no grid it makes its own 1 Hz AC.",
-  "block.ee_extras.heavy_single_phase_inverter.tooltip.nodes": "Copper caps: phase and neutral (to the grid), red: +, blue: - (from a battery or converter)."
+  "block.ee_extras.heavy_single_phase_inverter.tooltip.nodes": "Copper caps: phase and neutral (to the grid), red: +, blue: - (from a battery or converter).",
+  "block.ee_extras.compact_kinetic_generator": "Compact Generator",
+  "block.ee_extras.compact_kinetic_generator.tooltip": "Create shaft to direct current: 6 W and 0.5 V per RPM (1.5 kW at 128 V at 256 RPM), shaft load 8 SU per RPM. Rated 1.2 kW: above ~200 RPM at full load it smokes.",
+  "block.ee_extras.compact_kinetic_generator.tooltip.nodes": "Shaft at the back face; red terminal: +, blue: -."
 }

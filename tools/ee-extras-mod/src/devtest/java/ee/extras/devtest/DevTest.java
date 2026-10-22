@@ -135,7 +135,15 @@ public class DevTest {
                         .executes(c -> Power.dc(c.getSource(), com.mojang.brigadier.arguments.DoubleArgumentType.getDouble(c, "v")))))
                 .then(Commands.literal("pwatch").then(Commands.argument("t", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 400))
                         .executes(c -> Power.watch(c.getSource(), com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "t")))))
-                .then(Commands.literal("preport").executes(c -> Power.report(c.getSource()))));
+                .then(Commands.literal("preport").executes(c -> Power.report(c.getSource())))
+                .then(Commands.literal("kgen").then(Commands.argument("rpm", com.mojang.brigadier.arguments.IntegerArgumentType.integer(0, 256))
+                        .then(Commands.argument("heaters", com.mojang.brigadier.arguments.IntegerArgumentType.integer(0, 32))
+                                .executes(c -> Compact.build(c.getSource(),
+                                        com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "rpm"),
+                                        com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "heaters"))))))
+                .then(Commands.literal("krpm").then(Commands.argument("rpm", com.mojang.brigadier.arguments.IntegerArgumentType.integer(0, 256))
+                        .executes(c -> Compact.rpm(c.getSource(), com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "rpm")))))
+                .then(Commands.literal("kreport").executes(c -> Compact.report(c.getSource()))));
     }
 
     static BlockPos battery(BlockPos base, int i) {
