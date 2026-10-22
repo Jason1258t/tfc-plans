@@ -26,3 +26,6 @@ Part of [STATE.md](../STATE.md). Renderer details — [docs/mcp.md](../mcp.md#cl
   is not visible in the icon by code (OBJ front face is south).
 - KubeJS items (`icons-kubejs/`) are still textures; models from `kubejs/assets` and resource packs are not used by site
   icons (MCP `model_render` uses them): e.g. Firmalife buckets are wooden in game.
+- 2026-10-22: icons are rendered on the pack server too (VPS): Minecraft/NeoForge resources downloaded when there is no
+  platform jar (`scripts/mods/platform-assets.mjs`); publish never removes renders if a build drew none. Details —
+  [infra.md](infra.md), plan — [plans/vps-publish.md](../plans/vps-publish.md).

@@ -43,8 +43,8 @@ npm run dev            # Vite; builds the mod library first if needed (scripts/e
 npx tsc -b             # types (part of build)
 npx oxlint src scripts # lint; old set-state-in-effect / only-export-components warnings — don't fix in passing
 npx prettier --write <files>   # singleQuote, printWidth 120; don't run on all of src
-npm run deploy:site    # deploy site edits without rebuilding mod data (no jars needed; works from a worktree)
-npx firebase deploy --only hosting           # full build + pack-release + upload
+npm run deploy:site    # deploy the site; pack data on Hosting stays as the pack server published it (no jars; works from a worktree)
+# npx firebase deploy --only hosting — blocked (would upload local pack data); pack data → pack server, see docs/pack-server.md
 npx firebase deploy --only firestore:rules
 npm run mods | serverconfig | kubejs | world | pack | guides | pack:fetch | pack:publish | freshness   # see docs/architecture.md
 ```
@@ -89,7 +89,8 @@ things — [docs/plans/mcp-next.md](docs/plans/mcp-next.md).
 - Server world: `horizontal_scale = 100000`, `vertical_scale = 50000` (not mod defaults), ~200 m/block.
 - Gemini free tier: limit is requests per minute — pack big jobs into one request.
 - Firestore free tier: 50k reads/day. Heavy stuff (icons, maps, catalogues) — static only.
-- Deploying from a worktree: jars, `.env.local` and `public/` data are not in git. Site-only change →
-  `npm run deploy:site`; mod-data change → symlink jars first (see the `ship` skill). Guards stop builds without mods.
+- Pack data (items, recipes, icons, KubeJS) on the site is published **only by the pack server** after `tfc publish`
+  (`docs/plans/vps-publish.md`); a Mac deploy used to roll it back to a stale local `public/`. Builder changes reach the
+  site via `tfc admin rebuild --pull` + `tfc admin publish --live`.
 - Guides live only in Firestore: `npm run guides -- pull` before `push`, or use MCP `guide_get`/`guide_put`. In calc
   YAML the short `{ … }` form splits values on commas — quote formulas with commas.

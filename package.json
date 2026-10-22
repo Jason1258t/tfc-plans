@@ -16,7 +16,7 @@
     "freshness": "node scripts/freshness.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
-    "deploy": "firebase deploy",
+    "deploy": "firebase deploy --only firestore,auth && node scripts/deploy-site.mjs",
     "deploy:site": "node scripts/deploy-site.mjs",
     "deploy:rules": "firebase deploy --only firestore:rules",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" scripts/*.mjs",

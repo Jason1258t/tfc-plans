@@ -173,16 +173,28 @@ async function main() {
   const out = path.resolve(opt('--out') ?? path.join(ROOT, 'public/pack-freshness.json'));
   const manifestFile = opt('--manifest') ? path.resolve(opt('--manifest')) : firstExisting('public/pack-manifest.json');
   try {
+    // Деплой сайта без данных сборки (TFC_SITE_ONLY): снимок — тот, что на сайте (его выложил сервер сборки), а не
+    // public/ этой машины, который может отставать
+    let manifest = null;
+    if (process.env.TFC_SITE_ONLY && !opt('--manifest')) {
+      const r = await fetch(`${SITE}/pack-manifest.json`, { cache: 'no-store' });
+      if (!r.ok || !(r.headers.get('content-type') ?? '').includes('json'))
+        throw new Error(`снимок сборки с сайта не скачался: ${r.status}`);
+      manifest = await r.json();
+    }
     if (opt('--if-older') && fs.existsSync(out)) {
-      const age = Date.now() - JSON.parse(fs.readFileSync(out, 'utf8')).generatedAt;
-      if (age < parseAge(opt('--if-older'))) {
+      const prev = JSON.parse(fs.readFileSync(out, 'utf8'));
+      const age = Date.now() - prev.generatedAt;
+      if (age < parseAge(opt('--if-older')) && (!manifest || prev.manifestBuiltAt === manifest.builtAt)) {
         log(`отчёт свежий (${Math.round(age / 60e3)} мин) — не пересобираю`);
         return;
       }
     }
-    if (!manifestFile) throw new Error('нет public/pack-manifest.json (npm run mods)');
-    const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8'));
-    if (!manifest.mods?.length) throw new Error(`в ${manifestFile} нет модов`);
+    if (!manifest) {
+      if (!manifestFile) throw new Error('нет public/pack-manifest.json (npm run mods)');
+      manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8'));
+    }
+    if (!manifest.mods?.length) throw new Error(`в снимке ${manifestFile ?? 'с сайта'} нет модов`);
     const report = await freshnessReport({ manifest });
     if (report.sources.modrinth.state === 'error' && report.sources.curseforge.state !== 'ok')
       throw new Error(`источники недоступны: ${summary(report)}`);

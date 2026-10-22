@@ -32,16 +32,15 @@ Pick by what changed:
 | Changed | Command (run in `$MAIN`) |
 | --- | --- |
 | `firestore.rules` | `npx firebase deploy --only firestore:rules` — **first**, before hosting |
-| Site code only (`src/`, `public/` static, no `scripts/mods/…`) | `npm run deploy:site` |
-| Mod data builders (`scripts/mods/…`, `mods.mjs`) | `npx firebase deploy --only hosting` (needs jars in `$MAIN/mods/`) |
+| Site code (`src/`, `public/` static, `firebase.json` headers) | `npm run deploy:site` |
+| Pack data builders (`scripts/mods/…`, `mods.mjs`, `kubejs.mjs`, `scripts/mcp/render.mjs`, `scripts/mcp/models/…`) | no site deploy from the Mac: push, then the pack server rebuilds — `tfc admin rebuild --pull` (dry run, check the summary: icons drawn, removals), then `tfc admin publish --live`. Ask before the live step. |
 | Docs, agent files, `tools/` addon sources, `cli/`, `server/` only | no site deploy (addon jars/`tfc` builds have their own release steps — docs/addons.md, docs/tfc-app.md) |
 
-- Deploying from a worktree is only for the rare case main can't be used; then mod-data changes need
-  `ln -s $MAIN/mods/*.jar mods/` first, site-only changes use `npm run deploy:site` (`TFC_KEEP_MODS=1` takes mod data
-  from `$MAIN/public/`).
-- If `$MAIN/public/` mod data may be stale vs the pack server: `npm run pack:fetch -- --data` before `deploy:site`.
-- Guards: build stops without mods (`TFC_ALLOW_NO_MODS=1`), `pack-release` refuses at 0 mods or > half lost
-  (`ALLOW_MODS_DROP=1`) — bypass only if mods were really removed. `SKIP_PACK_RELEASE=1` skips the pack-update record.
+- **Pack data on Hosting is set only by the pack server** (`scripts/publish-data.mjs`). `npm run deploy:site`
+  (`scripts/deploy-site.mjs`) builds the site with `TFC_SITE_ONLY=1` and keeps the data roots
+  (`scripts/data-roots.mjs`) of the live release by hash — no jars, no `public/` data, works from a worktree.
+- `npx firebase deploy --only hosting` is blocked by predeploy (it would upload this machine's `public/` data);
+  `ALLOW_FULL_HOSTING_DEPLOY=1` only for a first deploy or an emergency, with the user's go-ahead.
 - Pack server code changed (`server/pack-server`)? Updating the VPS is a separate step (docs/pack-server.md) — ask.
 
 ## 4. Push and clean up

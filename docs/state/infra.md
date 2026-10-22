@@ -12,9 +12,12 @@ Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md)
   on an assembled copy in scratchpad: mods, KubeJS, test configs, calendar).
 - Guard against building without mods (worktree without jars): the library build stops if `mods/` is empty but the
   previous build had mods (`TFC_ALLOW_NO_MODS=1` bypass); `pack-release` writes nothing at 0 mods or a loss of more
-  than half (`ALLOW_MODS_DROP=1`). `npm run deploy:site` (`TFC_KEEP_MODS=1`) deploys site edits without jars: mod data
-  ready-made, in a worktree taken from the main checkout with `.env.local`, addons, resource packs and KubeJS;
-  `predeploy-check` blocks a site built without Firebase settings.
+  than half (`ALLOW_MODS_DROP=1`). `predeploy-check` blocks a site built without Firebase settings.
+- **Pack data is published only by the pack server** (2026-10-22, `docs/plans/vps-publish.md`): `npm run deploy:site`
+  = `scripts/deploy-site.mjs` — site built with `TFC_SITE_ONLY=1`, new Hosting version from `firebase.json` config,
+  data roots (`scripts/data-roots.mjs`) carried over from the live release by hash; `firebase deploy --only hosting` is
+  blocked (`ALLOW_FULL_HOSTING_DEPLOY=1`). Freshness report in site-only mode uses the live manifest. Dry run checked
+  against prod (config identical to the live one, 16 356 data files kept, `/__/firebase/*` kept).
 
 - Mods inside jars (`META-INF/jarjar/*.jar` with `neoforge.mods.toml` and assets/data) are read like top-level jars
   (2026-10-22): Create Aeronautics bundle → `aeronautics` 46, `simulated` 86, `offroad` 7 items (+125 recipes). The
@@ -71,10 +74,18 @@ Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md)
   2 icons and 5 data files on Hosting. First attempt failed: Firestore can't store nested arrays
   (`createentitycontrol-common.toml`, `blocks_limit`) — `toValue` now writes inner arrays as `{ __array }`. Old test
   snapshot `20261020-120830-b1bc` remains in history.
-- **Mod data on the site now comes from the server:** `npm run deploy:site` from the main checkout uploads its
-  `public/` — if mod data there is stale, run `npm run pack:fetch -- --data` first. A jar-less site build with
-  `TFC_PACK_URL`/`TFC_PACK_TOKEN` in `.env.local` takes mod data from the server; `npm run pack:fetch` — pack from the
-  server into the project.
+- **Mod data on the site comes from the server.** A jar-less dev build with `TFC_PACK_URL`/`TFC_PACK_TOKEN` in
+  `.env.local` takes mod data from the server; `npm run pack:fetch` — pack from the server into the project.
+- **3D icons on the VPS** (2026-10-22): the build repo was 111 commits behind (pre-icons), so the 22.10 dry run wanted to
+  remove 8559 renders. The renderer is pure Node; the worker sets `TFC_MODS_DIR` to the snapshot's `mods/` before
+  importing builders; without a NeoForge platform jar the build downloads `client.jar` + Mojang mappings and the
+  NeoForge universal jar (`scripts/mods/platform-assets.mjs`, `<DATA>/cache/platform/`; dye colours read from the
+  obfuscated class via mappings — identical to the platform jar). `.build.json` has `render` stats. AdmZip in
+  visibility/multiblocks/manifest read whole jars into memory (OOM at 640 MB) → `scripts/mods/zipfile.mjs` (offset
+  reads). Checked locally with `worker.mjs` on a 234-jar snapshot, heap 640: renders 8559 + 129 aeronautics, peak RSS
+  785 MB, 42 s warm (cold render ~1–2 min on the Mac); dry run vs prod — 0 removals, 1 changed file.
+- **Publish guard:** a build without renders keeps `icons/*/render/` on the site; > 300 removals need
+  `allowRemovals` (`tfc admin publish --live --allow-removals`). `AUTO_PUBLISH=live` builds pull fresh code first.
 - VPS code updated 2026-10-20 (`7684766`).
 
 ## `tfc` app (`cli/`, stage 3+)

@@ -16,7 +16,9 @@ npm run pack:publish -- <data folder> --dry-run           # what would be publis
 npm run freshness [-- --if-older 6h --soft]              # mod freshness (Modrinth + CurseForge) → public/pack-freshness.json
 ```
 
-`predeploy` of hosting runs `pack-release.mjs`; skip with `SKIP_PACK_RELEASE=1`. `prebuild`/`predev` run `freshness.mjs
+Pack data on Hosting (`scripts/data-roots.mjs`) is published only by the pack server (`publish-data.mjs`, which also runs
+`pack-release.mjs`); `npm run deploy:site` (`deploy-site.mjs`) keeps it from the live release; plain
+`firebase deploy --only hosting` is blocked by predeploy (`ALLOW_FULL_HOSTING_DEPLOY=1`). `prebuild`/`predev` run `freshness.mjs
 --if-older 6h --soft` (network or key problems only warn). `CURSE_FORGE_API_KEY` in `.env.local` (no `VITE_` — never
 in the bundle).
 
@@ -36,7 +38,7 @@ The site is a static SPA. All "pack knowledge" is built locally by scripts and d
 | `instance/kubejs/<layer>/` | `kubejs.mjs` | `public/kubejs.json`, `kubejs-items.json`, `icons-kubejs/` (pack items from startup_scripts + assets), `kubejs-data.json` (food and skillet from `kubejs/data` — the site replaces mod data with them) |
 | world save (`<world>/data/`) | `world.mjs` | Firestore `config/world__{file}` — TFC calendar (month length set by command) |
 | server config zip/folder | `serverconfig.mjs` | Firestore `config/{scope}__{path}` |
-| manifest diff at deploy | `pack-release.mjs` (predeploy) | Firestore `packUpdates/{id}` |
+| manifest diff at publish | `pack-release.mjs` (from `publish-data.mjs` on the pack server) | Firestore `packUpdates/{id}` |
 | manifest + Modrinth/CurseForge | `freshness.mjs` (prebuild) + `src/lib/freshness.ts` | `public/pack-freshness.json` |
 
 - Scripts write Firestore via REST as `firebase login` or a service key (`GOOGLE_APPLICATION_CREDENTIALS`)

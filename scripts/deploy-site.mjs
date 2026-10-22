@@ -75,6 +75,8 @@ async function main() {
   const files = new Map(); // «/путь» → { hash }
   const local = new Map(); // «/путь» → файл в dist/ (то, что, может быть, придётся загрузить)
   let dataKept = 0;
+  // /__/ — служебные файлы Firebase (init.js): их кладёт сам Hosting, переносим как есть
+  for (const [p, hash] of published) if (p.startsWith('/__/')) files.set(p, { hash });
   for (const [p, hash] of published)
     if (isDataPath(p)) {
       files.set(p, { hash });

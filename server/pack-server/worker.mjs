@@ -5,10 +5,12 @@
  *
  * build:
  *   1. снимок → <DATA>/work/<снимок>/ — жёсткие ссылки на blobs (копия, если ссылка невозможна);
- *   2. scripts/pack.mjs (runPack) с выходом в <DATA>/data/<снимок>.tmp-<задание>/, кеш jar — <DATA>/cache/;
+ *   2. scripts/pack.mjs (runPack) с выходом в <DATA>/data/<снимок>.tmp-<задание>/, кеш jar — <DATA>/cache/
+ *      (там же кеш объёмных иконок и ресурсы Minecraft/NeoForge для них — cache/platform/);
  *      с parts — только эти части поверх прошлой сборки того же снимка;
  *   3. рядом: .firestore.json (документы config — пишутся при публикации), .index.json (файлы и sha256 — для
- *      npm run pack:fetch), .build.json; потом папка переименовывается в data/<снимок>/;
+ *      npm run pack:fetch), .build.json (со счётом объёмных иконок render); потом папка переименовывается в
+ *      data/<снимок>/;
  *   4. publish dry-run | live — scripts/publish-data.mjs.
  * publish: только шаг 4 по уже собранной data/<снимок>/.
  * Итог — <DATA>/jobs/<id>.result.json.

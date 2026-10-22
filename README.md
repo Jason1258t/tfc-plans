@@ -53,15 +53,17 @@ npm run dev
 (он не в git, но эти значения не секретные: веб-конфиг Firebase и так виден в браузере).
 
 ```bash
-npm run deploy          # сборка + hosting + правила + auth
+npm run deploy          # правила + auth + сайт
 npm run deploy:rules    # только правила Firestore
-npm run deploy:site     # только сайт, данные модов — готовые (jar в mods/ не нужны)
+npm run deploy:site     # только сайт (jar в mods/ не нужны)
 ```
 
-`deploy:site` (переменная `TFC_KEEP_MODS=1`) — для правок кода сайта: библиотека предметов, рецепты и прочее из модов
-не пересобираются, а в git worktree копируются из `public/` основной копии. Там же сборка сама берёт `.env.local`,
-аддоны, ресурспаки и разбор KubeJS. Перед выкладкой `scripts/predeploy-check.mjs` проверяет, что сайт собран
-с настройками Firebase.
+**Данные сборки** (предметы, рецепты, иконки, разбор KubeJS — список в `scripts/data-roots.mjs`) на сайт выкладывает
+только [сервер сборки](docs/pack-server.md) после `tfc publish`. `deploy:site` (`scripts/deploy-site.mjs`) собирает
+сайт без них и выкладывает новую версию, в которую данные сборки переходят из текущего релиза как есть — по хешам,
+ничего не скачивая. Раньше деплой с ПК заливал свою `public/` и откатывал данные (2026-10-22). Перед выкладкой
+`scripts/predeploy-check.mjs` проверяет, что сайт собран с настройками Firebase. Обычный
+`firebase deploy --only hosting` остановится (`ALLOW_FULL_HOSTING_DEPLOY=1` — только первая выкладка или авария).
 
 Сайт: https://tfc-plans-fd2c.web.app
 
@@ -283,7 +285,7 @@ jar с порядком источников. Скрипты KubeJS (`ServerEven
 ## Обновления сборки
 
 `npm run mods` пишет снимок `public/pack-manifest.json`: моды с версиями и sha1 jar, id предметов,
-отпечатки рецептов (FNV-1a JSON). При деплое хостинга (`predeploy` в `firebase.json`) `scripts/pack-release.mjs`
+отпечатки рецептов (FNV-1a JSON). При публикации с сервера сборки (`scripts/publish-data.mjs`) `scripts/pack-release.mjs`
 сравнивает его с опубликованным на сайте и, если сборка изменилась, создаёт в Firestore `packUpdates/{id}`:
 
 - моды: добавлены / убраны / обновлены (было → стало), ченджлоги с Modrinth по sha1 jar;

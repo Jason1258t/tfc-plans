@@ -1,6 +1,6 @@
 # VPS publish: complete and safe live publishing of site data
 
-Status: approved 2026-10-22, in progress.
+Status: approved 2026-10-22; code done and checked locally, VPS rollout — see «Rollout log» at the end.
 
 ## Context
 
@@ -170,3 +170,12 @@ more than 300 files, stops unless `allowRemovals` is passed (`tfc admin publish 
 - VPS dry run, measured (time, RSS, swap), then the live publish of `d765` and a check of the site in the browser
   preview (`dev-wt` is not needed: check the prod site pages for addon items and 3D icons).
 - Not checked in game (not relevant). The cold render time on the VPS will only be known at step 4.2.
+
+## Rollout log
+
+- 2026-10-22, implementation notes beyond the plan:
+  - The OOM risk was not the renderer: AdmZip in `scripts/mods/visibility/bytecode.mjs` (all jars at once),
+    `multiblocks.mjs` (IE jars kept) and `manifest.mjs` read whole jars → `scripts/mods/zipfile.mjs`.
+  - Dye colours without the platform jar: read from the obfuscated `client.jar` via Mojang mappings (identical values).
+  - `pack-freshness.json` (from `main`) is a site file; in site-only mode its report uses the live manifest.
+  - `npm run deploy` = rules + auth + `deploy-site.mjs`.
