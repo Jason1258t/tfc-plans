@@ -95,17 +95,14 @@ export function posOfIndex(s: Schematic, index: number): Vec | null {
   return b ? posOf(b) : null;
 }
 
-const NEIGHBOURS: Vec[] = [
-  [1, 0, 0],
-  [-1, 0, 0],
-  [0, 0, 1],
-  [0, 0, -1],
-  [0, 1, 0],
-  [0, -1, 0],
-];
+/** Соседи по граням, рёбрам и углам: изогнутая оболочка из блоков идёт «лесенкой» и касается только рёбрами */
+const NEIGHBOURS: Vec[] = [];
+for (let dy = -1; dy <= 1; dy++)
+  for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) if (dx || dy || dz) NEIGHBOURS.push([dx, dy, dz]);
+const FLAT_NEIGHBOURS = NEIGHBOURS.filter(([, dy]) => dy === 0);
 
 /**
- * Группа блоков: соединённые гранями блоки, для которых same() верно (обычно — тот же вид), начиная со start.
+ * Группа блоков: соединённые (гранями, рёбрами или углами) блоки, для которых same() верно (обычно — тот же вид), начиная со start.
  * layerOnly — только по горизонтали, в слое start. Возвращает индексы в списке blocks, start — первым.
  */
 export function connectedGroup(
@@ -118,7 +115,7 @@ export function connectedGroup(
   const p = posOfIndex(s, start);
   if (!p) return [];
   const [sx, sy, sz] = grid.size;
-  const dirs = layerOnly ? NEIGHBOURS.slice(0, 4) : NEIGHBOURS;
+  const dirs = layerOnly ? FLAT_NEIGHBOURS : NEIGHBOURS;
   const seen = new Set([start]);
   const out = [start];
   const queue: Vec[] = [p];
