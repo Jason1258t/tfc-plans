@@ -207,6 +207,7 @@ public class EeExtras {
             LinesClient.register(modBus, NeoForge.EVENT_BUS);
             GeneratorClient.register(modBus);
             modBus.addListener((FMLClientSetupEvent e) -> WireFixCheck.log());
+            WireDiag.register(NeoForge.EVENT_BUS);
         }
     }
 

@@ -1,6 +1,8 @@
 package ee.extras.mixin;
 
 import com.george_vi.electroenergetics.client.WireVisual;
+import com.george_vi.electroenergetics.foundation.nodes.InWorldNodeConnection;
+import com.george_vi.electroenergetics.simulation.WireType;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
@@ -36,11 +38,14 @@ import org.spongepowered.asm.mixin.injection.At;
  */
 @Mixin(value = WireVisual.class, remap = false)
 public abstract class WireVisualMixin implements WireVisualFixed {
+    @Shadow @Final private InWorldNodeConnection connection;
+    @Shadow @Final private WireType wireType;
     @Shadow @Final private List<TransformedInstance> instances;
     @Shadow private TransformedInstance startInstance;
     @Shadow private TransformedInstance endInstance;
 
     @Unique private final List<Instance> eeExtras$created = new ArrayList<>();
+    @Unique private volatile long eeExtras$lastFrame;
 
     @WrapOperation(method = {"recreateInstances", "createWire"}, at = @At(value = "INVOKE",
             target = "Ldev/engine_room/flywheel/api/instance/Instancer;createInstance()Ldev/engine_room/flywheel/api/instance/Instance;"))
@@ -55,6 +60,7 @@ public abstract class WireVisualMixin implements WireVisualFixed {
         synchronized (this) {
             original.call(ctx);
             eeExtras$sweep();
+            eeExtras$lastFrame = System.nanoTime();
         }
     }
 
@@ -73,6 +79,41 @@ public abstract class WireVisualMixin implements WireVisualFixed {
             for (Instance instance : eeExtras$created) instance.delete();
             eeExtras$created.clear();
         }
+    }
+
+    @Override
+    public InWorldNodeConnection eeExtrasConnection() {
+        return connection;
+    }
+
+    @Override
+    public WireType eeExtrasWireType() {
+        return wireType;
+    }
+
+    @Override
+    public List<? extends Instance> eeExtrasSegments() {
+        return instances;
+    }
+
+    @Override
+    public Instance eeExtrasStart() {
+        return startInstance;
+    }
+
+    @Override
+    public Instance eeExtrasEnd() {
+        return endInstance;
+    }
+
+    @Override
+    public int eeExtrasCreated() {
+        return eeExtras$created.size();
+    }
+
+    @Override
+    public long eeExtrasLastFrame() {
+        return eeExtras$lastFrame;
     }
 
     /** Удаляет отрезки, которых нет ни в списке провода, ни среди концевых изоляторов (повторное delete безвредно) */
