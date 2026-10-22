@@ -53,3 +53,14 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   back to ours. Verified via stdio: World Border 5.0 needs Collective [8.40,) (pack 8.39 ✗), Liquid Fuel 3.0.0 needs
   Create [6.0.4,) (ok), Deep Seas 3.0.0→3.3.0 (4 releases; with betas 10, `offset=5` → 3.4.1), Moonlight on CurseForge
   from 2.29.8 (67 releases), Collective HTML → text; `mods_check` unchanged.
+- **2026-10-22, candidate jars** (66 tools, `tools/candidates.mjs`): `candidate_get` registers a jar that is not in the
+  pack (local path, Modrinth slug/version with sha1 check, or a direct Modrinth CDN / forgecdn / GitHub link; download
+  only with `download=true`) into `.cache/mcp/candidates/` and summarises it: mods, license, deps via `depContext`
+  (as a swap if the mod is already in the pack), jar-in-jar, content by lang keys with ru_ru, recipes by type, tags
+  (pack overlap via `tags()`), worldgen/biome modifiers, `ModConfigSpec` classes, mixin targets × pack mixins.
+  `jar=candidate:<file>` (and `candidate:<file>!<nested>`) works in `jar_find`/`jar_read`/`jar_grep`/`jar_javap`/
+  `class_find`/`class_info`/`class_hierarchy`/`decompile`; candidate classes live in a separate index
+  (`candidateIndex`), not in the pack's. Verified via stdio on Create: Power Grid 0.6.2 (Modrinth): counts match
+  `unzip -l`/lang (113 recipes, 37 tags, 77 blocks, 1057 classes, 3 mixin configs / 18+5+6 mixins), deps ok against
+  the pack, `decompile CThermal`, pack `class_find` doesn't see candidate classes. Going Nuclear isn't on Modrinth
+  under NeoForge 1.21.1 and Destroy has no 1.21.1 NeoForge build there — for them `path=` or `url=`.

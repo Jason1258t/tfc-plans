@@ -59,7 +59,8 @@ No tests. Verification — in the browser (below) and one-off node scripts in th
 
 Local stdio server (`scripts/mcp/`, `.mcp.json`; in a worktree it reads `public/` and `mods/` of the main checkout).
 **For game facts, recipes, tags, configs, mod code, logs, guides and site content use it first**, not grep over
-`public/*.json` (recipes.json is 7.7 MB) or unzipping jars. Crash / "what broke" → start with `log_analyze`. Editing
+`public/*.json` (recipes.json is 7.7 MB) or unzipping jars. Crash / "what broke" → start with `log_analyze`. A mod not in the pack (integration analysis) → `candidate_get`, then jar tools with
+`jar=candidate:<file>`. Editing
 addon resources → `resources_check` + `model_render`; releasing an addon to the site → skill `addon-release`
 (`addon_check`). Pack config changes → `config_propose`, not "edit the file". Other pack file changes
 (KubeJS scripts, lang, resources, whole files) → `npm run tfc -- admin propose <overlay dir> --note …` (agent key in

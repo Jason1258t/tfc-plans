@@ -6,6 +6,8 @@
  *   - вложенные библиотеки jar-in-jar: id «<jar>!META-INF/jarjar/<lib>.jar» (по metadata.json, как у загрузчика);
  *   - Minecraft + NeoForge с именами Mojang (platform): классы и исходники из кеша сборки аддонов
  *     (tools/<мод>/build/moddev/artifacts) или TFC_PLATFORM_JAR / TFC_PLATFORM_SOURCES.
+ *   - кандидаты — jar модов не из сборки (.cache/mcp/candidates рядом с mods/, кладёт candidate_get): id
+ *     «candidate:<файл>», в индекс классов и данные сборки не входят.
  * jarList() — только jar из mods/, как раньше; jarToc/readEntry/resolveJar понимают все виды.
  */
 import { execFile } from 'node:child_process';
@@ -183,6 +185,39 @@ export const platformAssets = () => assetJars;
 export const PLATFORM = 'minecraft';
 export const PLATFORM_SOURCES = 'minecraft-sources';
 
+// ---------------------------------------------------------------- кандидаты: jar не из сборки
+
+export const CANDIDATE = 'candidate:';
+export const CANDIDATES = path.join(path.dirname(MODS), '.cache', 'mcp', 'candidates');
+export const isCandidate = (id) => typeof id === 'string' && id.startsWith(CANDIDATE);
+export function candidateList() {
+  return fs.existsSync(CANDIDATES)
+    ? fs
+        .readdirSync(CANDIDATES)
+        .filter((f) => f.endsWith('.jar'))
+        .sort()
+    : [];
+}
+
+/** «candidate:<имя, часть имени>[!<вложенный>]» → id кандидата */
+function resolveCandidate(s) {
+  const rest = s.slice(CANDIDATE.length);
+  const bang = rest.indexOf('!');
+  const q = (bang < 0 ? rest : rest.slice(0, bang)).trim();
+  const files = candidateList();
+  let file = files.includes(q) ? q : files.includes(`${q}.jar`) ? `${q}.jar` : null;
+  if (!file) {
+    const hits = files.filter((f) => f.toLowerCase().includes(q.toLowerCase()));
+    if (hits.length === 1) file = hits[0];
+    else if (hits.length) throw new Error(`«${s}» подходит к нескольким кандидатам: ${hits.join(', ')}`);
+    else
+      throw new Error(
+        `кандидат «${q}» не найден${files.length ? ` (есть: ${files.join(', ')})` : ' (кандидатов нет)'} — сначала candidate_get`,
+      );
+  }
+  return `${CANDIDATE}${file}${bang < 0 ? '' : rest.slice(bang)}`;
+}
+
 // ---------------------------------------------------------------- архивы: jar модов, вложенные, platform
 
 const NESTED = /^META-INF\/jarjar\/[^/]+\.jar$/;
@@ -199,9 +234,13 @@ function archiveSig(id) {
   }
   // У вложенного признак — время внешнего jar из mods/: внутренние без него не меняются
   const bang = id.indexOf('!');
-  const file = path.join(MODS, bang < 0 ? id : id.slice(0, bang));
+  const file = outerFile(bang < 0 ? id : id.slice(0, bang));
   return { file: bang < 0 ? file : null, sig: fs.statSync(file).mtimeMs };
 }
+
+/** Файл внешнего jar: из mods/ или кандидат */
+const outerFile = (id) =>
+  isCandidate(id) ? path.join(CANDIDATES, path.basename(id.slice(CANDIDATE.length))) : path.join(MODS, id);
 
 /** Байты архива для zipEntries/zipRead: путь к файлу или Buffer вложенного jar */
 function archive(id) {
@@ -273,7 +312,7 @@ export function allJars() {
 /** Файл архива на диске (для javap и декомпилятора): вложенный jar кладётся в кеш */
 export function jarFile(jar) {
   if (jar === PLATFORM) return platform().classes;
-  if (!jar.includes('!')) return path.join(MODS, jar);
+  if (!jar.includes('!')) return outerFile(jar);
   const { src, sig } = archive(jar);
   const dir = path.join(path.dirname(MODS), '.cache', 'mcp', 'nested');
   const file = path.join(dir, `${jar.replace(/[^\w.-]+/g, '_')}`);
@@ -289,9 +328,10 @@ export function jarFile(jar) {
 /** jar по имени файла, имени без .jar, id мода из манифеста или однозначной части имени;
  *  all — ещё вложенные jar и Minecraft + NeoForge («minecraft», «neoforge») */
 export function resolveJar(q, all = false) {
-  const files = jarList();
   const s = String(q ?? '').trim();
   if (!s) throw new Error('не указан jar');
+  if (s.toLowerCase().startsWith(CANDIDATE)) return resolveCandidate(CANDIDATE + s.slice(CANDIDATE.length));
+  const files = jarList();
   if (files.includes(s)) return s;
   if (files.includes(`${s}.jar`)) return `${s}.jar`;
   const m = mods().get(s);

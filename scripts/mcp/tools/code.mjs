@@ -25,6 +25,7 @@ import {
   valueText,
 } from '../bytecode.mjs';
 import {
+  candidateIndex,
   classIndex,
   classRecord,
   compareVersions,
@@ -47,6 +48,7 @@ import {
   PLATFORM,
   PLATFORM_SOURCES,
   allJars,
+  isCandidate,
   jarFile,
   jarList,
   jarToc,
@@ -153,8 +155,8 @@ function clientWarning(c, forMixin) {
 function classFind(a) {
   const q = String(a.query ?? '').trim();
   if (!q) throw new Error('пустой запрос');
-  const idx = classIndex();
   const jar = anyJar(a.jar);
+  const idx = isCandidate(jar) ? candidateIndex(jar) : classIndex();
   let test;
   if (/[*?]/.test(q)) {
     const re = new RegExp(
@@ -227,7 +229,7 @@ function classInfo(a) {
     `${dotted(name)} — ${mods ? `${mods} ` : ''}${classKind(c)} (Java ${c.major - 44}${c.source ? `, ${c.source}` : ''}) — ${where(rec.jar)}`,
   );
   if (others.length) out.push(`тот же класс ещё в: ${others.map((r) => where(r.jar)).join('; ')}`);
-  const chain = superChain(name).slice(1);
+  const chain = superChain(name, rec.jar).slice(1);
   if (chain.length)
     out.push(
       `extends ${chain
@@ -240,7 +242,11 @@ function classInfo(a) {
   if (c.interfaces.length) out.push(`implements ${c.interfaces.map((i) => javaName(i)).join(', ')}`);
   if (c.signature?.includes('<')) out.push(`generic: ${short(c.signature, 300)}`);
   for (const an of c.annotations) out.push(annotationText(an));
-  if (rec.mixin) {
+  if (rec.mixin && isCandidate(rec.jar))
+    out.push(
+      `это миксин → ${rec.mixin.map(dotted).join(', ')}; кандидат не из сборки — конфиги и пересечения с миксинами сборки: candidate_get jar="${rec.jar}"`,
+    );
+  else if (rec.mixin) {
     const reg = mixinRegistry().byClass.get(name);
     out.push(
       `это миксин → ${rec.mixin.map(dotted).join(', ')}; ${reg ? `конфиг ${reg.config} (${reg.side})` : 'НЕ указан ни в одном конфиге миксинов — не применяется'} — подробно: mixins class="${dotted(name)}"`,
@@ -288,7 +294,7 @@ function classHierarchy(a) {
   const out = [`${dotted(name)} — ${where(classRecord(name, jar).jar)}`];
   if (dir !== 'down') {
     out.push('Предки:');
-    for (const [i, s] of superChain(name).entries()) {
+    for (const [i, s] of superChain(name, jar).entries()) {
       if (!i) continue;
       const loc = s.rec ? modOf(s.rec.jar) : isRuntimeClass(s.name) ? 'JDK/библиотека' : 'нет в сборке';
       out.push(`  ${'  '.repeat(i - 1)}↑ ${dotted(s.name)} [${loc}]`);
@@ -1340,7 +1346,7 @@ export const TOOLS = [
       type: 'object',
       properties: {
         query: str('name part, full name or glob'),
-        jar: str('only this jar: name, part, mod id, «minecraft»'),
+        jar: str('only this jar: name, part, mod id, «minecraft» or «candidate:<file>» (candidate_get)'),
         kind: str('class, interface, enum, record, abstract, mixin'),
         mixin: bool('mixins only'),
         platform: bool('also search Minecraft + NeoForge'),
@@ -1358,7 +1364,7 @@ export const TOOLS = [
       type: 'object',
       properties: {
         class: str('class: full name, slash-separated or simple (if unambiguous)'),
-        jar: str('if the class is in several jars'),
+        jar: str('if the class is in several jars; «candidate:<file>» — a candidate jar (candidate_get)'),
         members: str('only fields and methods whose name matches the regex'),
         synthetic: bool('show synthetic members (lambdas, bridges)'),
       },
@@ -1377,7 +1383,7 @@ export const TOOLS = [
         direction: str('up, down or both (default)'),
         depth: { type: 'integer', description: 'depth down (20)' },
         platform: bool('subclasses in Minecraft + NeoForge too'),
-        jar: str('if the class is in several jars'),
+        jar: str('if the class is in several jars; «candidate:<file>» — a candidate jar (candidate_get)'),
         ...paging,
       },
       required: ['class'],
@@ -1450,7 +1456,7 @@ export const TOOLS = [
       type: 'object',
       properties: {
         class: str('class (nested — via $ or dot)'),
-        jar: str('if the class is in several jars'),
+        jar: str('if the class is in several jars; «candidate:<file>» — a candidate jar (candidate_get)'),
         method: str('method name or regex'),
         grep: str('only lines matching the regex'),
         offset: { type: 'integer', description: 'start line' },
@@ -1470,7 +1476,7 @@ export const TOOLS = [
         query: str('text (case-insensitive; «a|b» — any of) or a regex with regex=true'),
         regex: bool('query is a regular expression'),
         path: str('glob or part of the file path inside the jar'),
-        jar: str('only this jar (incl. nested or «minecraft»)'),
+        jar: str('only this jar (incl. nested, «minecraft» or «candidate:<file>»)'),
         nested: bool('also search nested jars'),
         context: { type: 'integer', description: 'context lines (0–5)' },
         ...paging,
