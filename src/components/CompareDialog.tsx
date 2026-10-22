@@ -1,6 +1,7 @@
+import { ArrowUpDown } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { tasksStore } from '../data/store';
-import { elo, pickPair, sortTasks } from '../lib/tasks';
+import { elo, pickPair, sortTasks, swapRatings } from '../lib/tasks';
 import { PRIORITIES, type Task } from '../types';
 import './CompareDialog.css';
 import { ItemIcon } from './ItemIcon';
@@ -25,7 +26,7 @@ export function CompareDialog({ tasks, onClose }: Props) {
 
   const a = pairIds && tasks.find((t) => t.id === pairIds[0]);
   const b = pairIds && tasks.find((t) => t.id === pairIds[1]);
-  const ranking = useMemo(() => sortTasks(tasks, 'rating').slice(0, 8), [tasks]);
+  const ranking = useMemo(() => sortTasks(tasks, 'rating'), [tasks]);
 
   const next = (prev: [string, string]) => {
     const p = pickPair(tasks, prev);
@@ -37,6 +38,12 @@ export function CompareDialog({ tasks, onClose }: Props) {
     next([winner.id, loser.id]);
     setCount((c) => c + 1);
     await Promise.all([tasksStore.update(winner.id, { rating: w }), tasksStore.update(loser.id, { rating: l })]);
+  };
+
+  /** Поменять местами две соседние строки рейтинга: нижняя встаёт выше */
+  const swap = async (upper: Task, lower: Task) => {
+    const [u, l] = swapRatings(upper.rating, lower.rating);
+    await Promise.all([tasksStore.update(upper.id, { rating: u }), tasksStore.update(lower.id, { rating: l })]);
   };
 
   return (
@@ -67,12 +74,25 @@ export function CompareDialog({ tasks, onClose }: Props) {
       {ranking.length > 0 && (
         <div>
           <div className="label">Рейтинг</div>
+          <div className="faint small">Наведите между строками и нажмите ⇅, чтобы поменять две задачи местами.</div>
           <ol className="cmp-rank">
-            {ranking.map((t) => (
+            {ranking.map((t, i) => (
               <li key={t.id}>
                 <span className="imp-dot" style={{ background: PRIORITIES[t.priority].color }} />
                 <span className="grow">{t.title}</span>
                 <span className="faint">{t.rating}</span>
+                {i < ranking.length - 1 && (
+                  <button
+                    className="cmp-swap"
+                    title="Поменять местами с задачей ниже"
+                    aria-label={`Поменять местами «${t.title}» и «${ranking[i + 1].title}»`}
+                    onClick={() => swap(t, ranking[i + 1])}
+                  >
+                    <span>
+                      <ArrowUpDown size={13} />
+                    </span>
+                  </button>
+                )}
               </li>
             ))}
           </ol>

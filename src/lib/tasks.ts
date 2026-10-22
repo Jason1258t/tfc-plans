@@ -60,3 +60,11 @@ export function pickPair(tasks: Task[], avoid?: [string, string]): [Task, Task] 
   }
   return null;
 }
+
+/**
+ * Обмен соседей в рейтинге: нижняя задача встаёт выше верхней. Рейтинги меняются местами,
+ * при равных — поднятая получает на очко больше, чтобы порядок действительно сменился.
+ */
+export function swapRatings(upper: number, lower: number): [number, number] {
+  return upper > lower ? [lower, upper] : [upper, upper + 1];
+}
