@@ -152,6 +152,7 @@ sudo -u tfcpack env DATA_DIR=/var/lib/tfc-pack node cli.mjs key revoke <id>
 | `GET /pack/snapshots`     | player | `{ current, snapshots: [сводки, новые сверху] }`                                                                                        |
 | `GET /pack/snapshots/:id` | player | снимок целиком                                                                                                                          |
 | `GET /blobs/:sha256`      | player | файл; `Range` — докачка оборванного                                                                                                     |
+| `POST /blobs/pack`       | player | `{ sha256: [...] }` (до 5000 файлов по 4 МБ, всего до 64 МБ) → gzip из записей «sha256 (64) + размер (12 цифр) + содержимое»: мелкие файлы одним запросом |
 | `POST /blobs/missing`     | admin  | `{ sha256: [...] }` → `{ missing: [...] }` — что заливать                                                                               |
 | `PUT /blobs/:sha256`      | admin  | залить файл (тело — содержимое); хеш не сошёлся — 409, уже есть — 200 `existed`                                                         |
 | `POST /pack/snapshots`    | admin  | `{ note, mc, loader, files: [{ path, sha256, size?, kind? }] }` → сводка; 400 `problems` — плохие пути, 409 `missing` — не залиты файлы |
