@@ -3,7 +3,7 @@
 Part of [STATE.md](../STATE.md). How to build addons — [docs/addons.md](../addons.md). Site page `/addons` (since
 2026-10-16; old `/reference?tab=addons` redirects; jars for download in `/addons/`). Since 2026-10-22 each addon has a
 page `/addons/<mod>`: card `tools/<mod>/addon.json` (+ jar, `icons/`) in git, description — Firestore guide
-`addon-<mod>` (section `addon`, widget `::addon-block`), editable on the site; release — skill `addon-release`, MCP
+`addon-<mod>` (section `addon`, widget `::addon-block`), editable on the site; development — skill `addon-dev` (2026-10-22), release — skill `addon-release`, MCP
 `addons_list` / `addon_check`. Texts moved from the former `src/lib/addons.ts` as is (signed Claude). What still waits for the host or a
 game check — [pending.md](pending.md).
 
