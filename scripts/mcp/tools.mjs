@@ -31,6 +31,7 @@ import { javap, jarList, jarToc, nestedJars, pathMatcher, readEntry, resolveJar 
 import { TOOLS as addonsTools } from './tools/addons.mjs';
 import { TOOLS as blocksTools } from './tools/blocks.mjs';
 import { TOOLS as booksTools } from './tools/books.mjs';
+import { TOOLS as candidatesTools } from './tools/candidates.mjs';
 import { TOOLS as codeTools } from './tools/code.mjs';
 import { TOOLS as configTools } from './tools/config.mjs';
 import { TOOLS as kubejsTools } from './tools/kubejs.mjs';
@@ -681,7 +682,9 @@ const CORE = [
       type: 'object',
       properties: {
         pattern: str('pattern'),
-        jar: str('search one jar: file name, name part, mod id, nested «jar!META-INF/jarjar/x.jar» or «minecraft»'),
+        jar: str(
+          'search one jar: file name, name part, mod id, nested «jar!META-INF/jarjar/x.jar», «minecraft» or «candidate:<file>» (candidate_get)',
+        ),
         nested: { type: 'boolean', description: 'also search nested jars (jar-in-jar)' },
         ...paging,
       },
@@ -695,7 +698,7 @@ const CORE = [
     inputSchema: {
       type: 'object',
       properties: {
-        jar: str('jar: file name, name part, mod id, nested or «minecraft»'),
+        jar: str('jar: file name, name part, mod id, nested, «minecraft» or «candidate:<file>» (candidate_get)'),
         path: str('path inside the jar'),
         grep: str('regular expression'),
         offset: num('start line'),
@@ -712,7 +715,9 @@ const CORE = [
     inputSchema: {
       type: 'object',
       properties: {
-        jar: str('jar (optional): file name, name part, mod id, nested or «minecraft»'),
+        jar: str(
+          'jar (optional): file name, name part, mod id, nested, «minecraft» or «candidate:<file>» (candidate_get)',
+        ),
         class: str('dotted class name or .class path'),
         method: str('method or field name'),
         offset: num('start line'),
@@ -729,6 +734,7 @@ export const TOOLS = [
   ...codeTools,
   ...logsTools,
   ...packTools,
+  ...candidatesTools,
   ...configTools,
   ...kubejsTools,
   ...booksTools,
@@ -748,4 +754,4 @@ for (const t of TOOLS) {
   };
 }
 
-export const INSTRUCTIONS = `TFC RealWorld pack data for the «TFC Планы» site (data: ${PUBLIC}). Use instead of grep over public/*.json and unzipping mods/*.jar: answers already include KubeJS (removals, replacements, kubejs/data), tags with nested and KubeJS members, config layers. Jar facts — jar_find/jar_read/jar_javap. Pack debugging: class_find/class_info/class_hierarchy, code_refs (callers, field writers, code side), event_listeners (event handlers incl. KubeJS), mixins (mixins and conflicts), decompile, jar_grep, mods_check (dependencies), log_analyze (log/crash; level=timeline — game chronology). World regions — map_regions. Resources without a client: model_render (model as an image), texture_get, resources_check (blockstates ↔ block properties, models, textures, translation keys from Component.translatable of a mod or a tools/ addon; addon from a git worktree — addon=<path>, same for model_render/texture_get). Recipes include site datapacks. Settings: config_get; config edits — config_propose (host applies), result — config_changes. Guides: guide_get → edit → guide_put with revision. Pack addons: addons_list, addon_check (release check: card tools/<mod>/addon.json, jar, icons, site page = guide addon-<mod>). Site tasks and plans: groups_list, task_create, task_get → task_update with revision; plan doc for a task — artifact_put (edits with revision from artifact_get). Tool output is in Russian.`;
+export const INSTRUCTIONS = `TFC RealWorld pack data for the «TFC Планы» site (data: ${PUBLIC}). Use instead of grep over public/*.json and unzipping mods/*.jar: answers already include KubeJS (removals, replacements, kubejs/data), tags with nested and KubeJS members, config layers. Jar facts — jar_find/jar_read/jar_javap. Pack debugging: class_find/class_info/class_hierarchy, code_refs (callers, field writers, code side), event_listeners (event handlers incl. KubeJS), mixins (mixins and conflicts), decompile, jar_grep, mods_check (dependencies), candidate_get (a candidate mod jar not in the pack: summary, then the jar tools with jar="candidate:<file>"), log_analyze (log/crash; level=timeline — game chronology). World regions — map_regions. Resources without a client: model_render (model as an image), texture_get, resources_check (blockstates ↔ block properties, models, textures, translation keys from Component.translatable of a mod or a tools/ addon; addon from a git worktree — addon=<path>, same for model_render/texture_get). Recipes include site datapacks. Settings: config_get; config edits — config_propose (host applies), result — config_changes. Guides: guide_get → edit → guide_put with revision. Pack addons: addons_list, addon_check (release check: card tools/<mod>/addon.json, jar, icons, site page = guide addon-<mod>). Site tasks and plans: groups_list, task_create, task_get → task_update with revision; plan doc for a task — artifact_put (edits with revision from artifact_get). Tool output is in Russian.`;

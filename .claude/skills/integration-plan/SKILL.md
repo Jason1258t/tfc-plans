@@ -56,25 +56,35 @@ and what's **already there** (a second radiation, a second electricity model, a 
 
 Pages, changelogs and reports say what the author or a chatbot claims; the plan relies on the jar.
 
-1. **Ask before downloading** (CLAUDE.md safety: name the file, source, size). Official source only: Modrinth /
-   CurseForge / the author's GitHub release, the build for NeoForge 1.21.1. Put it in its own empty folder in the
-   scratchpad, never into `mods/`.
-2. **MCP tools only see pack jars** (`resolveJar` reads `mods/` and nested jars). Until there's a tool for candidate
-   jars, read it directly: `unzip -l`, `unzip -p <jar> META-INF/neoforge.mods.toml`, `unzip -p … <path>` for data and
-   lang, `javap -p -classpath <jar> <class>` for code. Don't run the jar. Then propose the MCP tool (see 7).
+1. **Register the jar with MCP `candidate_get`** (never into `mods/`). Official source only: Modrinth / CurseForge /
+   the author's GitHub release, the build for NeoForge 1.21.1:
+   - Modrinth — `candidate_get modrinth=<slug> [version=…]`: without `download=true` it only reports file, source,
+     size, license and sides. **Ask the user** (CLAUDE.md safety: name the file, source, size), then repeat with
+     `download=true` (sha1 checked against Modrinth). Unknown slug → it suggests similar projects;
+   - CurseForge / GitHub — a direct file link: `candidate_get url=<cdn link>` (same two steps), or download it yourself
+     after the user's yes into its own empty folder in the scratchpad and `candidate_get path=<jar>`;
+   - `candidate_get` with no args — candidates already registered (`.cache/mcp/candidates/`).
+   Don't run the jar.
+2. **Read the summary, then drill down.** The summary answers most of the table below in one call: mods, license, deps
+   checked against the pack (as `mods_check`), jar-in-jar, side, content counts with ru_ru, recipes by type, tags,
+   worldgen, config classes, mixin targets shared with pack mods. Full lists — `section=` one of
+   `content`, `recipes`, `tags`, `worldgen`, `config`, `mixins`. Files and code — the usual jar tools with `jar="candidate:<file>"`: `jar_find`, `jar_read`,
+   `jar_grep`, `class_find`, `class_info`, `decompile` (config defaults, registries), `jar_javap`. For each shared
+   mixin target — `mixins target=<class>` on the pack (the summary lists them). Candidates are never in the pack index:
+   `class_find`/`code_refs`/`mixins` without `jar` stay pack-only.
 3. What to get from it:
 
 | Question | Where in the jar |
 | --- | --- |
-| mod id, version, Minecraft/NeoForge ranges, required deps and their ranges vs the pack (Create, Flywheel, Ponder, Architectury…) | `META-INF/neoforge.mods.toml`, `META-INF/jarjar/metadata.json`; pack versions — `mods_list` / `mods_check mod=<dep>` |
+| mod id, version, Minecraft/NeoForge ranges, required deps and their ranges vs the pack (Create, Flywheel, Ponder, Architectury…) | `candidate_get` summary (from `META-INF/neoforge.mods.toml` + jar-in-jar); NeoForge ranges vs the server — `mods_check neoforge=…` for pack mods |
 | license and redistribution (the pack server hands jars to players) | `license` in the toml, LICENSE file, the project page; closed license → «уточнить у автора» |
 | client/server side | `side` of deps, `displayTest`, client-only classes |
-| content: blocks, items, fluids, entities | `assets/<id>/lang/en_us.json` (+ `ru_ru.json` — is there Russian?), `assets/<id>/blockstates/` |
-| recipes and recipe types — data or hardcoded | `data/<id>/recipe/`, `data/<id>/recipe_type`, registries in code |
-| tags it provides and expects (`c:` vs own) | `data/*/tags/` |
-| worldgen (ores, structures, biomes) — can it be switched off | `data/<id>/worldgen/`, `neoforge/biome_modifier/`, config classes |
-| configs: what's tunable (explosions, fallout, rates) | config classes (`ModConfigSpec` builders) / default toml |
-| mixins and their targets — clashes with pack mods | `*.mixins.json` + `javap`; then `mixins target=<class>` on the pack for each target |
+| content: blocks, items, fluids, entities | summary counts; names — `section=content query=block` (or `item`, `fluid_type`, …) (en / ru) |
+| recipes and recipe types — data or hardcoded | `section=recipes` (by type), a file — `jar_read`; recipe type registries — `class_find jar=candidate:…` |
+| tags it provides and expects (`c:` vs own) | `section=tags` (marks tags the pack already has); expected tags — `jar_grep query='"tag": "c:'` |
+| worldgen (ores, structures, biomes) — can it be switched off | `section=worldgen` (biome modifiers with biomes/features), switches — `section=config` |
+| configs: what's tunable (explosions, fallout, rates) | `section=config` → `decompile class=<config class> jar=candidate:…` |
+| mixins and their targets — clashes with pack mods | `section=mixins` (targets mixed by pack mods first); then `mixins target=<class>` on the pack |
 | extension points for our addon (registries, events, data-driven fuels) | public API packages, events it posts |
 
 Mark every fact by source: «по jar», «по странице мода», «по отчёту (не проверено)».
@@ -151,6 +161,7 @@ Show it to the user **before** writing to the site. Structure:
 
 ## 7. Missing tools
 
-Reading a candidate jar by `unzip`/`javap` is a workaround: MCP has no tool for jars outside the pack. Finish the
-analysis, then propose a separate session per CLAUDE.md «If a needed tool is missing» (branch `feat/mcp-<short>`,
-docs/mcp.md «Adding a tool») — unless one is already proposed or done (check docs/state/mcp.md).
+Candidate jars are covered by `candidate_get` + `jar=candidate:<file>`. If a question about a candidate still needs
+`unzip`/`javap` by hand (a section that's missing, a wrong count), finish the analysis by the workaround, then propose
+a separate session per CLAUDE.md «If a needed tool is missing» (branch `feat/mcp-<short>`, docs/mcp.md «Adding a
+tool») — unless one is already proposed or done (check docs/state/mcp.md).

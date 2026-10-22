@@ -32,6 +32,7 @@ The server builds nothing itself: it reads what the site scripts built. Stale si
 | KubeJS rules and recipes, `kubejs/data` | `public/kubejs.json`, `kubejs-data.json` | `npm run kubejs` |
 | KubeJS sources | `instance/kubejs/<layer>/` | `npm run pack:fetch -- --kubejs` |
 | Mod code, books, translations, loot tables | `mods/*.jar` (and nested jar-in-jar) | `npm run pack:fetch` |
+| Candidate mods (not in the pack) | `.cache/mcp/candidates/*.jar` next to `mods/` | `candidate_get` (path / Modrinth / link) |
 | Minecraft + NeoForge code and sources (Mojang names) | `tools/<addon>/build/moddev/artifacts/neoforge-*.jar`, `-sources.jar` | addon build (`./gradlew build`, docs/addons.md) |
 | Vanilla translations | `.cache/assets/minecraft-1.21.1/` | `npm run mods` (fills the cache) |
 | Resource packs | `instance/resourcepacks/` | `npm run pack:fetch` |
@@ -59,7 +60,7 @@ Paths can be set via env vars (for running on the pack server):
 
 ## Tools
 
-62 in total. Asterisk — required parameter. Lists have `limit` and `offset`; the answer says «дальше: offset=…».
+66 in total. Asterisk — required parameter. Lists have `limit` and `offset`; the answer says «дальше: offset=…».
 
 Regex queries (`query` of `log_analyze`, `regex=true` in searches, `grep`, `members`) are case-insensitive; leading
 Java/PCRE flags (`(?i)…`, `(?s)…`) are accepted. Non-regex search understands «`a|b`» — any of.
@@ -128,6 +129,19 @@ line. If files are newer than the parse, the tool warns: time for `npm run kubej
 
 `jar` — file name, part of it or mod id; nested — `<jar>!<path>` (or an unambiguous part of the name); Minecraft +
 NeoForge — `minecraft`.
+
+### Candidate mods (not in the pack)
+
+For integration analysis (skill `integration-plan`): read a mod that isn't installed without unzip/javap.
+
+| Tool | Does |
+| --- | --- |
+| `candidate_get(jar, path, modrinth, version, url, download, section, query)` | registers a candidate jar into `.cache/mcp/candidates/`: `path` — local file (scratchpad), `modrinth` — slug/id (newest NeoForge 1.21.1 release or `version`; unknown slug → search hints), `url` — direct link from cdn.modrinth.com / forgecdn.net / GitHub. **Without `download=true` nothing is downloaded** — it reports file, source and size to ask the user. Summary: mods and versions, license, deps checked against the pack like `mods_check` (as a replacement if the mod is already in the pack), jar-in-jar vs pack versions, side, content by `block./item./fluid…` lang keys with ru_ru coverage, blockstates, recipes by type, tags (`c:`), worldgen and biome modifiers, other data, `ModConfigSpec` classes, mixin configs and targets also mixed by pack mods. `section=` `content`, `recipes`, `tags`, `worldgen`, `config` or `mixins` — full lists (`query` filters; tags show if the pack has the same tag). No args — registered candidates |
+
+After `candidate_get`, `jar="candidate:<file or part>"` (nested: `candidate:<file>!META-INF/jarjar/x.jar`) works in
+`jar_find`, `jar_read`, `jar_grep`, `jar_javap`, `class_find`, `class_info`, `class_hierarchy` (ancestors) and
+`decompile`. Candidates never enter the pack class index, recipes or items: `class_find` without `jar`, `mixins`,
+`code_refs` stay pack-only.
 
 ### Pack debugging: mod code, mixins, dependencies, logs
 
@@ -422,6 +436,7 @@ scripts/mcp/
   jars.mjs          jar listing and reading without unzipping (nested, Minecraft + NeoForge), javap
   bytecode.mjs      .class parsing: annotations, line numbers, instruction refs, signatures as text
   code-index.mjs    class index, mixin targets, neoforge.mods.toml (own mini-TOML), Maven/FML versions
+  (candidates)      jars.mjs `candidate:` ids, code-index.mjs `candidateIndex`, tools/candidates.mjs `candidate_get`
   firestore.mjs     Firestore REST: api, listAll, cached; configs, config edits, guides
   site-datapacks.mjs  site datapacks as a recipe layer (recipes(site) in data.mjs)
   resources.mjs     client resource layers (resource packs, KubeJS, addons, jars, Minecraft), model with parent
@@ -434,7 +449,7 @@ scripts/mcp/
                       config_propose, config_changes), pack, kubejs, books (+books-index), blocks (+blocks-data), site
                       (tasks, groups, plan docs with writes; datapacks, schematics, site scripts), map (+map-climate,
                       map-png — PNG read/write), resources (model_render, texture_get, resources_check), addons
-                      (addons_list, addon_check)
+                      (addons_list, addon_check), candidates (candidate_get)
 ```
 
 Data merging repeats the site (`src/lib/items.ts`, `recipes.ts`, `tags.ts`, `reference.ts`, `meals.ts`) — those modules

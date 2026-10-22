@@ -4,7 +4,7 @@
  * классов) и пересобирается по одному jar, когда тот поменялся.
  */
 import { ACC, parseClassFull } from './bytecode.mjs';
-import { PLATFORM, allJars, jarToc, platform, readEntry, zipEntries, zipRead } from './jars.mjs';
+import { PLATFORM, allJars, isCandidate, jarToc, platform, readEntry, zipEntries, zipRead } from './jars.mjs';
 
 // ---------------------------------------------------------------- классы
 
@@ -76,6 +76,21 @@ export function classIndex() {
   return index;
 }
 
+const candidateIdx = new Map(); // jar кандидата → { toc, byName }
+
+/** Классы jar-кандидата (не из сборки): отдельный индекс, в индекс сборки не входит */
+export function candidateIndex(jar) {
+  const toc = jarToc(jar);
+  const c = candidateIdx.get(jar);
+  if (c && c.toc === toc) return c;
+  const all = scanJar(jar);
+  const byName = new Map();
+  for (const r of all) byName.set(r.name, [r]);
+  const idx = { toc, all, byName };
+  candidateIdx.set(jar, idx);
+  return idx;
+}
+
 /** Имя класса из запроса: «net.foo.Bar», «net/foo/Bar», «Bar$Inner», «Bar» (если однозначно) → [internal names] */
 export function findClasses(q, jar) {
   const s = String(q ?? '')
@@ -83,7 +98,7 @@ export function findClasses(q, jar) {
     .replace(/\.class$/, '')
     .replace(/^L(.+);$/, '$1');
   if (!s) throw new Error('не указан класс');
-  const idx = classIndex();
+  const idx = isCandidate(jar) ? candidateIndex(jar) : classIndex();
   const internal = s.replaceAll('.', '/');
   const inJar = (n) => !jar || idx.byName.get(n).some((r) => r.jar === jar);
   if (idx.byName.has(internal) && inJar(internal)) return [internal];
@@ -130,6 +145,7 @@ export function oneClass(q, jar) {
 
 /** Записи класса (может быть в нескольких jar) и выбор одной: указанный jar, jar мода, потом platform */
 export function classRecord(name, jar) {
+  if (isCandidate(jar)) return candidateIndex(jar).byName.get(name)?.[0] ?? null;
   const recs = classIndex().byName.get(name) ?? [];
   if (jar) return recs.find((r) => r.jar === jar) ?? null;
   return recs.find((r) => !r.jar.includes('!') && r.jar !== PLATFORM) ?? recs[0] ?? null;
@@ -145,14 +161,15 @@ export const isRuntimeClass = (n) =>
     n,
   );
 
-/** Цепочка предков: [{ name, rec|null }] до java/lang/Object или до класса вне сборки */
-export function superChain(name) {
+/** Цепочка предков: [{ name, rec|null }] до java/lang/Object или до класса вне сборки; jar — кандидат: его классы
+ *  первыми */
+export function superChain(name, jar) {
   const out = [];
   const seen = new Set();
   let cur = name;
   while (cur && !seen.has(cur)) {
     seen.add(cur);
-    const rec = classRecord(cur);
+    const rec = (isCandidate(jar) ? classRecord(cur, jar) : null) ?? classRecord(cur);
     out.push({ name: cur, rec });
     if (!rec) break;
     cur = rec.super;
