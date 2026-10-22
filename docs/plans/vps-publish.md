@@ -1,6 +1,6 @@
 # VPS publish: complete and safe live publishing of site data
 
-Status: done 2026-10-22 (first live publish from the VPS with renders). Open: `AUTO_PUBLISH=live` decision, VPS loader fix install, `tfc` rebuild — see «Rollout log».
+Status: done 2026-10-22 — live publish with renders, `AUTO_PUBLISH=live`. Open: a `tfc` build with `--allow-removals`.
 
 ## Context
 
@@ -200,3 +200,5 @@ more than 300 files, stops unless `allowRemovals` is passed (`tfc admin publish 
   the stale site manifest. Checked on the site: manifest 240 mods (addons included), 13 668 items, 32 addon items with
   icons (PNG served), 3D icons of addons, TFC and Create Aeronautics.
   - Note: the publish log says «packUpdates: будет запись» even when the record already existed (409) — wording only.
+- 2026-10-22 19:01 UTC — the user set `AUTO_PUBLISH=live` in `/etc/tfc-pack.env` and updated the VPS to `ad3cff2`
+  (loader fix); log: «после смены текущего — сборка, публикация live»; all job records kept their state.
