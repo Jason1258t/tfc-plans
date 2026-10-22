@@ -182,7 +182,9 @@ the host's real folder.
   the host's state in sync (next `publish` — nothing to upload). Verified end-to-end on a local server (scratch dirs):
   propose, self-approve refused, pull into both folders, undo, approve, host status/publish clean, player pull, conflict
   409, reject. Direct snapshot edits by the agent — intentionally not provided (user's call).
-- Agent key `claude-agent` (admin) lives in `~/.config/tfc/config.json` on the Mac; the old lost `claude` key revoked.
+- Deployed to the VPS 2026-10-22 (`install.sh`, service restarted, health OK). Agent key `claude-agent` (admin) — in
+  `~/.config/tfc/config.json` on the Mac (never printed); the old lost `claude` key revoked. First update:
+  `u20261022-150945-83a0` (pack-patches/l10n).
 
 ## Pack patches (`pack-patches/`)
 
