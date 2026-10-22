@@ -218,8 +218,13 @@ export function SchematicsPage() {
 
   const shown = useMemo(() => {
     const q = filter.trim().toLowerCase();
-    if (!q) return blocks;
-    return blocks.filter(({ id }) => {
+    // Удалённые блоки — в конец списка, чтобы не мешались
+    const removedLast = (list: typeof blocks) => [
+      ...list.filter(({ id }) => replace.get(id) !== REMOVE),
+      ...list.filter(({ id }) => replace.get(id) === REMOVE),
+    ];
+    if (!q) return removedLast(blocks);
+    return removedLast(blocks).filter(({ id }) => {
       const to = replace.get(id);
       const hay = [
         id,
