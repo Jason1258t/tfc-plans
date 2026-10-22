@@ -35,6 +35,7 @@ public/items.json
 public/recipes.json
 public/reference.json
 public/pack-manifest.json
+public/pack-freshness.json
 public/geo.json
 public/geo/
 public/tags.json
