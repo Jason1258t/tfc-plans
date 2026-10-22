@@ -70,6 +70,7 @@
   position: absolute;
   left: 8px;
   top: 8px;
+  z-index: 2;
   max-width: calc(100% - 16px);
   display: flex;
   flex-direction: column;

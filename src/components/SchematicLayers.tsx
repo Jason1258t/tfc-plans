@@ -16,7 +16,7 @@ import {
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { iconUrl, itemName, useItems } from '../lib/items';
-import { EMPTY_BLOCKS, REMOVE, type Schematic } from '../lib/schematic';
+import { EMPTY_BLOCKS, REMOVE, type Schematic, type Vec } from '../lib/schematic';
 import {
   buildGrid,
   canRedo,
@@ -193,7 +193,9 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
   /** Рамка выделения (Shift+перетаскивание) в клетках: от и до, включительно; off — снимет выделение */
   const [area, setArea] = useState<{ x0: number; z0: number; x1: number; z1: number; off: boolean } | null>(null);
   /** Прошлый клик: клетка, время и был ли блок выделен до него — для двойного клика с Shift */
-  const lastClick = useRef<{ x: number; z: number; t: number; was: boolean } | null>(null);
+  const lastClick = useRef<{ key: string; t: number; was: boolean } | null>(null);
+  /** 3D: блок под курсором (индекс в списке blocks, -1 — нет) */
+  const [hover3d, setHover3d] = useState(-1);
 
   const layer = grid.layers.get(layerY);
   const below = grid.layers.get(layerY - 1);
@@ -608,29 +610,15 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
     if (!d || d.moved || e.button !== 0) return;
     const c = cellOf(e);
     const idx = indexAt(c.x, c.z);
-    // Второй клик по той же клетке вскоре после первого — двойной
-    const now = e.timeStamp;
-    const last = lastClick.current;
-    const double = !!last && now - last.t < DOUBLE_MS && last.x === c.x && last.z === c.z;
-    const was = idx >= 0 && selected.has(idx);
-    lastClick.current = double ? null : { x: c.x, z: c.z, t: now, was };
     if (idx < 0) {
       // Пустое место: закрыть окно, а если его нет и Shift не нажат — снять выделение
+      lastClick.current = null;
       if (menu) setMenu(null);
       else if (!e.shiftKey) clearSelection();
       return;
     }
-    // Shift — переключить блок (повторный Shift+клик снимает); двойной клик — всю группу, без Shift — только её.
-    // Первый клик двойного уже переключил блок — решаем по тому, был ли он выделен до него
-    if (e.shiftKey) {
+    if (selectClick(idx, `${c.x},${layerY},${c.z}`, e.shiftKey, e.timeStamp, false)) {
       setMenu(null);
-      if (double) toggle(groupOf(idx), !!last?.was);
-      else toggle([idx], was);
-      return;
-    }
-    if (double) {
-      setMenu(null);
-      setSel({ of: s, cells: new Set(groupOf(idx)) });
       return;
     }
     // Окно — справа снизу от курсора, но в пределах области
@@ -648,12 +636,8 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
 
   const menuIdx = menu ? indexAt(menu.x, menu.z) : -1;
   const info = menuIdx >= 0 ? cellInfo(s, menuIdx) : null;
-  const hoverInfo = hover
-    ? (() => {
-        const i = indexAt(hover.x, hover.z);
-        return i >= 0 ? cellInfo(s, i) : null;
-      })()
-    : null;
+  const hoverIdx = mode === '3d' ? hover3d : hover ? indexAt(hover.x, hover.z) : -1;
+  const hoverInfo = hoverIdx >= 0 ? cellInfo(s, hoverIdx) : null;
 
   /** Клетки, к которым применяется действие окна */
   const scopeCells = (name: string): number[] => {
@@ -675,8 +659,43 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
     setMenu(null);
   };
 
-  /** Группа на слое: соединённые блоки того же вида (с общими заменами — как видно на рисунке) */
-  const groupOf = (index: number) => {
+  /**
+   * Клик выделения — на слое и в 3D. Shift — переключить блок (повторный Shift+клик снимает), двойной клик — всю
+   * группу; без Shift двойной клик выделяет только её. Первый клик двойного уже переключил блок — решаем по тому,
+   * был ли он выделен до него. false — обычный одиночный клик, его разбирает вызывающий.
+   */
+  const selectClick = (idx: number, key: string, shift: boolean, now: number, volume: boolean) => {
+    const last = lastClick.current;
+    const double = !!last && now - last.t < DOUBLE_MS && last.key === key;
+    const was = selected.has(idx);
+    lastClick.current = double ? null : { key, t: now, was };
+    if (shift) {
+      if (double) toggle(groupOf(idx, volume), !!last?.was);
+      else toggle([idx], was);
+      return true;
+    }
+    if (double) {
+      setSel({ of: s, cells: new Set(groupOf(idx, volume)) });
+      return true;
+    }
+    return false;
+  };
+
+  /** 3D: клик — выделить блок (Shift — переключить), двойной — группу по объёму, мимо схемы — снять выделение */
+  const pick3d = (pos: Vec | null, e: { shiftKey: boolean; timeStamp: number }) => {
+    const idx = pos ? indexAtPos(pos) : -1;
+    if (idx < 0) {
+      lastClick.current = null;
+      if (!e.shiftKey) clearSelection();
+      return;
+    }
+    if (!selectClick(idx, pos!.join(','), e.shiftKey, e.timeStamp, true)) setSel({ of: s, cells: new Set([idx]) });
+  };
+  const indexAtPos = ([x, y, z]: Vec) =>
+    x >= 0 && z >= 0 && x < sx && z < sz ? (grid.layers.get(y)?.[x + z * sx] ?? -1) : -1;
+
+  /** Группа: соединённые блоки того же вида (с общими заменами — как видно на рисунке); на слое или по объёму */
+  const groupOf = (index: number, volume = false) => {
     const name = names[stateOf(s, index)];
     const eff = name && effective(name);
     return connectedGroup(
@@ -687,7 +706,7 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
         const n = names[stateOf(s, i)];
         return !!n && effective(n) === eff;
       },
-      true,
+      !volume,
     );
   };
   const menuGroup = info ? groupOf(info.index) : [];
@@ -892,13 +911,16 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
                 maxY={cut ? layerY : undefined}
                 textured={textured}
                 selected={selectedPos}
+                onPick={pick3d}
+                onHover={(p) => setHover3d(p ? indexAtPos(p) : -1)}
               />
               <div className="layers-hint faint small">
-                ЛКМ — вращать · ПКМ — сдвигать · колесо — масштаб · ↑↓ — слой среза · формы блоков упрощены
+                Клик — выделить блок · двойной клик — группу · Shift — добавить, повторно — снять · ЛКМ — вращать · ПКМ
+                — сдвигать · колесо — масштаб · ↑↓ — слой среза · формы блоков упрощены
               </div>
             </Suspense>
           )}
-          {mode === '2d' && hoverInfo && !menu && (
+          {hoverInfo && !menu && (
             <div className="layers-hover small">
               <b>{shownName(effective(hoverInfo.name))}</b>
               <code>{effective(hoverInfo.name)}</code>
