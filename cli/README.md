@@ -69,8 +69,8 @@ npm install -g https://tfc-plans-fd2c.web.app/tfc/tfc.tgz
    Программа сама ищет версии в Prism Launcher, MultiMC, CurseForge, Modrinth и ATLauncher и предлагает выбрать.
    Нужной нет в списке — введите путь к папке, где лежит `mods/`. Можно и сразу: `tfc init --instance <папка> --world <мир>`.
 
-   Сборки ещё нет — `tfc init --launcher`: поставит NeoForge, папку `.minecraft/versions/TFC-RealWorld/` и профиль
-   «TFC RealWorld» в официальный Minecraft Launcher и скачает сборку (спросит ключ и память; `--memory 6`,
+   Сборки ещё нет — `tfc init --launcher`: поставит NeoForge, версию TFC-RealWorld в `.minecraft/versions/` (её папка —
+   папка игры; видна и в TLauncher) и профиль «TFC RealWorld» в официальный Minecraft Launcher и скачает сборку (спросит ключ и память; `--memory 6`,
    `--mc-dir`, `--name`). Лаунчер перед этим запустить хотя бы раз и закрыть; Java 21 берётся та, что скачал лаунчер.
 
 3. Войдите ключом:

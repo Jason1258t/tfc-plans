@@ -53,29 +53,95 @@ export async function choose(question, items, label, { allowOther = false } = {}
   }
 }
 
-/** Полоса загрузки: одна строка, обновляется на месте (в файл/пайп — только итог) */
+const cols = () => process.stdout.columns || 80;
+/** Строка, которую перерисовываем на месте: обрезаем по ширине, иначе терминал переносит и \r не помогает */
+const line = (text) => {
+  // oxlint-disable-next-line no-control-regex -- длина без цветовых кодов
+  const plain = text.replace(/\x1b\[[0-9;]*m/g, '');
+  const max = cols() - 1;
+  return plain.length > max ? `${plain.slice(0, max - 1)}…` : text;
+};
+const secs = (ms) =>
+  ms < 60_000 ? `${Math.floor(ms / 1000)} с` : `${Math.floor(ms / 60_000)} мин ${Math.floor((ms % 60_000) / 1000)} с`;
+
+/**
+ * Долгий шаг без процентов (сверка с сервером, установщик NeoForge): крутилка и секунды раз в 200 мс — видно,
+ * что программа жива. Не терминал — одна строка в начале. update — сменить текст, end — стереть строку.
+ */
+export function spinner(text) {
+  const t0 = Date.now();
+  let cur = text;
+  let i = 0;
+  const frames = '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏';
+  const draw = () => {
+    if (!tty) return;
+    process.stdout.write(
+      `\r\x1b[2K${line(`  ${cyan(frames[i++ % frames.length])} ${dim(secs(Date.now() - t0))}  ${cur}`)}`,
+    );
+  };
+  if (!tty) console.log(`  ${text}…`);
+  draw();
+  const timer = setInterval(draw, 200);
+  timer.unref?.();
+  return {
+    update(t) {
+      cur = t;
+      draw();
+    },
+    end() {
+      clearInterval(timer);
+      if (tty) process.stdout.write('\r\x1b[2K');
+    },
+  };
+}
+
+/** Обёртка: шаг под крутилкой, крутилка гаснет и при ошибке */
+export async function withSpinner(text, fn) {
+  const sp = spinner(text);
+  try {
+    return await fn(sp);
+  } finally {
+    sp.end();
+  }
+}
+
+/**
+ * Полоса загрузки: одна строка, обновляется на месте (в файл/пайп — только итог). Скорость и сколько осталось;
+ * перерисовка и по таймеру — если байты встали (медленный файл), секунды всё равно идут.
+ */
 export function progress(title, total) {
   let done = 0;
   let last = 0;
+  const t0 = Date.now();
   const draw = (force) => {
     const now = Date.now();
     if (!tty || (!force && now - last < 100)) return;
     last = now;
     const pct = total ? Math.min(100, Math.floor((done / total) * 100)) : 100;
-    const w = 24;
+    const w = 20;
     const bar = '█'.repeat(Math.round((pct / 100) * w)).padEnd(w, '░');
-    process.stdout.write(`\r  ${title} ${bar} ${pct}% ${dim(`${mb(done)} из ${mb(total)}`)}   `);
+    const el = now - t0;
+    const speed = el > 1000 ? done / (el / 1000) : 0;
+    // Коротко, чтобы влезло и в окно в 80 знаков: «осталось» важнее прошедшего времени
+    const tailText = speed ? `${mb(speed)}/с · ещё ~${secs(Math.max(0, ((total - done) / speed) * 1000))}` : secs(el);
+    process.stdout.write(
+      `\r\x1b[2K${line(`  ${title} ${bar} ${pct}% ${dim(`${mb(done)} из ${mb(total)} · ${tailText}`)}`)}`,
+    );
   };
+  const timer = setInterval(() => draw(true), 1000);
+  timer.unref?.();
+  draw(true);
   return {
     add(n) {
       done += n;
       draw(false);
     },
     end() {
+      clearInterval(timer);
       done = total;
       draw(true);
       if (tty) process.stdout.write('\n');
-      else console.log(`  ${title}: ${mb(total)}`);
+      else console.log(`  ${title}: ${mb(total)} за ${secs(Date.now() - t0)}`);
     },
   };
 }

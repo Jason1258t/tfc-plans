@@ -16,7 +16,21 @@ import { applyPull, planPull, pullChanges, recheckAddons, siteDatapackPaths, sit
 import { scanLocal } from './lib/scan.mjs';
 import { applyChange, planChange, resultsOf } from './lib/changes.mjs';
 import { applyPlan, beginBackup, editBackup, finishBackup, undoLast } from './lib/sync.mjs';
-import { ask, bold, choose, confirm, cyan, date, dim, green, interactive, mb, red, yellow } from './lib/ui.mjs';
+import {
+  ask,
+  bold,
+  choose,
+  confirm,
+  cyan,
+  date,
+  dim,
+  green,
+  interactive,
+  mb,
+  red,
+  withSpinner,
+  yellow,
+} from './lib/ui.mjs';
 import { install, installedPath, isInstalled, uninstall } from './lib/install.mjs';
 import {
   DEFAULT_NAME,
@@ -224,7 +238,10 @@ async function cmdInit(v) {
   if (!cfg.token) console.log(`Дальше: ${cyan('tfc login <ключ>')} — ключ выдаёт хост сборки.`);
 }
 
-/** tfc init --launcher: своя версия в официальном лаунчере (cli/lib/vanilla.mjs), профиль tfc на её папку, pull */
+/**
+ * tfc init --launcher: своя версия в .minecraft/versions (официальный лаунчер и TLauncher; cli/lib/vanilla.mjs),
+ * профиль tfc на её папку, pull
+ */
 async function initLauncher(v, cfg) {
   if (!cfg.token) {
     if (!interactive()) throw new Error('сначала ключ: tfc login <ключ>, потом tfc init --launcher');
@@ -243,17 +260,17 @@ async function initLauncher(v, cfg) {
   if (current?.mc && current.mc !== '1.21.1') console.log(yellow(`Сборка для Minecraft ${current.mc}.`));
   const mcDir = path.resolve(v['mc-dir'] ?? defaultMinecraftDir());
   const folder = v.name ?? DEFAULT_NAME;
-  if (!/^[\w][\w .-]{0,60}$/.test(folder) || folder === versionId(nf) || folder === current?.mc)
+  if (!/^[\w][\w.-]{0,60}$/.test(folder) || folder === versionId(nf) || folder === current?.mc)
     throw new Error(`имя папки «${folder}» не подходит — латиница, цифры, «-», «_», и не имя версии`);
   const gameDir = path.join(mcDir, 'versions', folder);
   let memory = Number(v.memory ?? defaultMemoryGb());
   if (!v.memory && interactive()) memory = Number(await ask('Сколько памяти отдать игре, ГБ', String(memory)));
   if (!Number.isInteger(memory) || memory < 2 || memory > 64) throw new Error('память — целое число ГБ, 2–64');
 
-  console.log(`Minecraft Launcher: ${mcDir}`);
+  console.log(`Папка Minecraft: ${mcDir}`);
   console.log(`  NeoForge ${nf}${isNeoforgeInstalled(mcDir, nf) ? dim(' — уже стоит') : ''}`);
-  console.log(`  папка игры: ${gameDir}`);
-  console.log(`  профиль лаунчера «TFC RealWorld», память ${memory} ГБ`);
+  console.log(`  версия ${bold(folder)} — её папка и будет папкой игры: ${gameDir}`);
+  console.log(`  профиль Minecraft Launcher «TFC RealWorld», память ${memory} ГБ`);
   if (launcherRunning()) {
     console.log(yellow('Minecraft Launcher открыт — закройте его: при выходе он перепишет профили своей копией.'));
     if (!interactive()) throw new Error('закройте Minecraft Launcher и повторите');
@@ -262,18 +279,21 @@ async function initLauncher(v, cfg) {
   }
   if (!v.yes && interactive() && !(await confirm('Поставить?', true))) return;
 
-  const r = await installToLauncher({
-    mcDir,
-    nf,
-    gameDir,
-    title: 'TFC RealWorld',
-    memoryGb: memory,
-    onStep: (s) => console.log(dim(`${s}…`)),
-  });
-  console.log(
-    `${green(r.installed ? 'NeoForge поставлен' : 'NeoForge уже был')}, профиль лаунчера «TFC RealWorld» — на ${gameDir}`,
+  const r = await withSpinner('Готовлю установку', (sp) =>
+    installToLauncher({
+      mcDir,
+      nf,
+      name: folder,
+      title: 'TFC RealWorld',
+      memoryGb: memory,
+      onStep: (s) => sp.update(s),
+    }),
   );
-  console.log(dim(`Прежние профили лаунчера — копией: ${r.backups.map((b) => path.basename(b)).join(', ')}`));
+  console.log(`${green(r.installed ? 'NeoForge поставлен' : 'NeoForge уже был')}, версия ${bold(folder)} готова.`);
+  if (r.profiles) {
+    console.log(`Профиль Minecraft Launcher «TFC RealWorld» — на ${gameDir}`);
+    console.log(dim(`Прежние профили лаунчера — копией: ${r.backups.map((b) => path.basename(b)).join(', ')}`));
+  }
 
   // Повторный запуск — тот же профиль tfc, а не новый
   const same = Object.keys(cfg.profiles).find((n) => cfg.profiles[n].instance === gameDir);
@@ -284,9 +304,12 @@ async function initLauncher(v, cfg) {
   console.log(`${green('Сохранено')} — профиль ${profileTitle({ name, ...cfg.profiles[name] })} (текущий)`);
   if (v.yes || !interactive() || (await confirm('Скачать сборку сейчас?', true))) {
     await cmdPull({ ...v, profile: name, yes: true }, []);
-    console.log(`Дальше: откройте Minecraft Launcher, профиль ${bold('TFC RealWorld')} → «Играть».`);
-  } else console.log(`Дальше: ${cyan('tfc pull')}, потом в лаунчере — профиль ${bold('TFC RealWorld')}.`);
+    console.log(launchHint(folder));
+  } else console.log(`Дальше: ${cyan('tfc pull')}. ${launchHint(folder)}`);
 }
+
+const launchHint = (folder) =>
+  `Играть: Minecraft Launcher — профиль ${bold('TFC RealWorld')}; TLauncher — версия ${bold(folder)} в списке версий.`;
 
 async function cmdLogin(v, [key]) {
   if (!key) throw new Error('tfc login <ключ>');
@@ -319,15 +342,18 @@ function cmdUse(v, [name]) {
 
 // ---------------------------------------------------------------- игроки
 
-async function scan(profile) {
-  const t = Date.now();
-  const res = await scanLocal(profile, {
-    onProgress: (i, n) =>
-      process.stdout.isTTY && Date.now() - t > 1500 && process.stdout.write(`\r  читаю файлы ${i}/${n}   `),
-  });
-  if (process.stdout.isTTY && Date.now() - t > 1500) process.stdout.write('\r'.padEnd(40) + '\r');
-  return res;
+/** Хеши файлов папки игры; sp — крутилка шага (prepare), иначе своя */
+async function scan(profile, sp) {
+  if (!sp) return withSpinner('Сверяю файлы папки игры', (s) => scan(profile, s));
+  return scanLocal(profile, { onProgress: (i, n) => sp.update(`Сверяю файлы папки игры: ${i} из ${n}`) });
 }
+
+const KIND_TITLE = {
+  datapacks: 'датапаки сайта',
+  kubejs: 'скрипты KubeJS сайта',
+  schematics: 'схемы',
+  addons: 'аддоны',
+};
 
 /** Аргументы pull/status: сначала части (mods, kubejs…), дальше — имена с сайта (tfc pull datapacks "Фикс") */
 function splitArgs(args) {
@@ -351,6 +377,10 @@ function splitArgs(args) {
  * названное с сайта, сборку не трогаем.
  */
 async function prepare(v, args) {
+  return withSpinner('Связываюсь с сервером сборки', (sp) => prepareSteps(v, args, sp));
+}
+
+async function prepareSteps(v, args, sp) {
   const { parts, names } = splitArgs(args);
   const cfg = loadConfig();
   const profile = currentProfile(cfg, v.profile);
@@ -371,6 +401,7 @@ async function prepare(v, args) {
       if (parts.length) notes.push(`датапаки сайта: мир не выбран — пропускаю (tfc init --world <мир>)`);
       continue;
     }
+    sp.update(`Смотрю ${KIND_TITLE[kind] ?? kind}`);
     sitePlans.push(await planPull(a, profile, kind, names, { force: v.force }));
   }
   const state = loadState(profile);
@@ -383,7 +414,7 @@ async function prepare(v, args) {
   let local = null;
   let cache = null;
   if (scope.snap.length) {
-    ({ files: local, cache } = await scan(profile));
+    ({ files: local, cache } = await scan(profile, sp));
     plan = makePlan(current, local, state, scope.snap, { force: v.force, hasWorld: !!profile.world, skip: owned.skip });
     plan.extra = plan.extra.filter((f) => !pulled.has(f.path));
   }

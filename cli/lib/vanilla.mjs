@@ -8,7 +8,7 @@
  * сам (<.minecraft>/runtime), иначе JAVA_HOME и PATH. Установщик сам добавляет профиль «NeoForge» — его
  * возвращаем как было: игроку нужен наш профиль с отдельной папкой. Старые файлы профилей — копией рядом.
  */
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -66,7 +66,14 @@ function findJavaBins(dir, depth, out = []) {
 
 /** Java 21+: сначала та, что скачал лаунчер, потом JAVA_HOME и PATH. { bin, major } или null */
 export function findJava(mcDir) {
-  const roots = [path.join(mcDir, 'runtime')];
+  const home = os.homedir();
+  // Java лаунчера: официального (runtime/) и TLauncher (своя папка .tlauncher)
+  const roots = [
+    path.join(mcDir, 'runtime'),
+    path.join(process.env.APPDATA || home, '.tlauncher'),
+    path.join(home, '.tlauncher'),
+    path.join(home, 'Library', 'Application Support', 'tlauncher'),
+  ];
   if (process.platform === 'win32' && process.env.LOCALAPPDATA)
     // Лаунчер из Microsoft Store
     roots.push(
@@ -132,12 +139,13 @@ const writeJson = (f, v) => fs.writeFileSync(f, `${JSON.stringify(v, null, 2)}\n
  * Поставить NeoForge nf в mcDir (если ещё нет) и профиль лаунчера на папку gameDir.
  * Возвращает { installed: поставили ли NeoForge сейчас, java, backups: копии файлов профилей, log }.
  */
-export async function installToLauncher({ mcDir, nf, gameDir, title, memoryGb, onStep = () => {} }) {
+export async function installToLauncher({ mcDir, nf, name, title, memoryGb, onStep = () => {} }) {
+  const gameDir = path.join(mcDir, 'versions', name);
   if (!isDir(mcDir))
     throw new Error(`нет папки Minecraft Launcher ${mcDir} — поставьте лаунчер и запустите его хотя бы раз`);
   const files = profileFiles(mcDir);
-  if (!files.length)
-    throw new Error(`в ${mcDir} нет launcher_profiles.json — запустите Minecraft Launcher хотя бы раз и закройте его`);
+  if (!files.length && !isDir(path.join(mcDir, 'versions')))
+    throw new Error(`в ${mcDir} нет ни профилей, ни versions/ — запустите лаунчер хотя бы раз и закройте его`);
 
   // Копии файлов профилей до любых правок
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -167,25 +175,26 @@ export async function installToLauncher({ mcDir, nf, gameDir, title, memoryGb, o
     const main = path.join(mcDir, PROFILE_FILES[0]);
     const madeMain = !fs.existsSync(main);
     if (madeMain) writeJson(main, { profiles: {}, settings: {}, version: 3 });
-    onStep(`Ставлю NeoForge ${nf} — скачает Minecraft 1.21.1 и библиотеки, около 150 МБ`);
+    const step = `Ставлю NeoForge ${nf}`;
+    onStep(step);
     log = path.join(cacheDir(), 'neoforge', `install-${nf}.log`);
-    const r = spawnSync(java.bin, ['-jar', jar, '--install-client', mcDir], {
-      cwd: path.dirname(jar),
-      encoding: 'utf8',
-      maxBuffer: 64 * 1024 ** 2,
-      windowsHide: true,
-    });
-    fs.writeFileSync(log, `${r.stdout ?? ''}${r.stderr ?? ''}`);
+    const r = await runInstaller(java.bin, jar, mcDir, (l) => onStep(`${step}: ${l}`));
+    fs.writeFileSync(log, r.out);
     if (madeMain) fs.rmSync(main, { force: true });
-    if (r.status !== 0 || !isNeoforgeInstalled(mcDir, nf)) {
-      const tail = `${r.stdout ?? ''}${r.stderr ?? ''}`.trim().split('\n').slice(-4).join('\n  ');
-      throw new Error(`установщик NeoForge не справился (лог — ${log}):\n  ${tail || r.error?.message || ''}`);
+    if (r.code !== 0 || !isNeoforgeInstalled(mcDir, nf)) {
+      const tail = r.out.trim().split('\n').slice(-4).join('\n  ');
+      throw new Error(`установщик NeoForge не справился (лог — ${log}):\n  ${tail || r.error || ''}`);
     }
     installed = true;
   }
 
-  // Профиль: установщик правит «NeoForge» — возвращаем как было, свой профиль добавляем во все файлы профилей
+  // Своя версия <name> в versions/<name>/<name>.json — копия версии NeoForge под нашим именем: её видят и
+  // официальный лаунчер, и TLauncher (он берёт список из versions/), а папка версии — она же папка игры
   fs.mkdirSync(path.join(gameDir, 'mods'), { recursive: true });
+  const nfJson = readJson(path.join(mcDir, 'versions', versionId(nf), `${versionId(nf)}.json`));
+  writeJson(path.join(gameDir, `${name}.json`), { ...nfJson, id: name });
+
+  // Профиль: установщик правит «NeoForge» — возвращаем как было, свой профиль добавляем во все файлы профилей
   const now = new Date().toISOString();
   for (const f of files) {
     const prev = before.get(f);
@@ -199,7 +208,7 @@ export async function installToLauncher({ mcDir, nf, gameDir, title, memoryGb, o
       name: title,
       type: 'custom',
       icon: old.icon ?? 'Furnace',
-      lastVersionId: versionId(nf),
+      lastVersionId: name,
       gameDir,
       javaArgs: javaArgs(old.javaArgs, memoryGb),
       created: old.created ?? now,
@@ -207,7 +216,38 @@ export async function installToLauncher({ mcDir, nf, gameDir, title, memoryGb, o
     };
     writeJson(f, cur);
   }
-  return { installed, java, backups, log };
+  return { installed, java, backups, log, gameDir, profiles: files.length };
+}
+
+/** Установщик NeoForge без окна; onLine — последняя осмысленная строка его вывода (для крутилки) */
+function runInstaller(java, jar, mcDir, onLine) {
+  return new Promise((resolve) => {
+    let out = '';
+    let tail = '';
+    const p = spawn(java, ['-jar', jar, '--install-client', mcDir], { cwd: path.dirname(jar), windowsHide: true });
+    // Вывод установщика — тысячи строк по-английски; показываем этап и счётчик
+    let libs = 0;
+    let steps = 0;
+    const feed = (d) => {
+      const text = d.toString();
+      out += text;
+      tail += text;
+      const lines = tail.split(/\r?\n/);
+      tail = lines.pop();
+      let phase = null;
+      for (const l of lines) {
+        if (/^Considering minecraft client jar/i.test(l)) phase = 'качаю Minecraft 1.21.1';
+        else if (/^Considering library/i.test(l)) phase = `качаю библиотеки: ${++libs}`;
+        else if (/^Processor:/i.test(l)) phase = `перестраиваю Minecraft под NeoForge: шаг ${++steps}`;
+        else if (/^Injecting profile/i.test(l)) phase = 'дописываю версию';
+      }
+      if (phase) onLine(phase);
+    };
+    p.stdout.on('data', feed);
+    p.stderr.on('data', feed);
+    p.on('error', (e) => resolve({ code: -1, out, error: e.message }));
+    p.on('close', (code) => resolve({ code, out }));
+  });
 }
 
 /** Аргументы JVM: прежние, только с новым -Xmx; без прежних — как у лаунчера по умолчанию */

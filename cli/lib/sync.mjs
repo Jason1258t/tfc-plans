@@ -12,7 +12,7 @@ import { modIdsOf } from './jarid.mjs';
 import { loadState, normsOf, saveState } from './plan.mjs';
 import { localPath, stateDir } from './scan.mjs';
 import { cacheDir } from './config.mjs';
-import { mb, progress } from './ui.mjs';
+import { mb, progress, spinner } from './ui.mjs';
 
 const BACKUPS = 5;
 
@@ -224,14 +224,22 @@ export async function applyPlan({ api, profile, plan, snapshot, cache, backup, s
     keep(f, 'removed');
     delete state.files[f.path];
   }
-  for (const f of toWrite) {
+  const added = new Set(plan.add);
+  const sp = toWrite.length > 50 ? spinner('Раскладываю файлы') : null;
+  for (const [i, f] of toWrite.entries()) {
     const target = dest(f);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fromCache(blob(f.sha256), target);
     cache.remember(target, f.sha256);
     state.files[f.path] = f.sha256;
-    if (plan.add.includes(f)) manifest.added.push(f.path);
+    if (added.has(f)) manifest.added.push(f.path);
+    // Копирование синхронное — раз в 20 файлов отдаём ход, чтобы крутилка шла
+    if (sp && i % 20 === 19) {
+      sp.update(`Раскладываю файлы: ${i + 1} из ${toWrite.length}`);
+      await new Promise((r) => setImmediate(r));
+    }
   }
+  sp?.end();
   for (const f of plan.conflict) {
     const target = `${dest(f)}.tfc-new`;
     fromCache(blob(f.sha256), target);

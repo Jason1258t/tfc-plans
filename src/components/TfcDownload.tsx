@@ -188,9 +188,10 @@ tfc pull            # докачать и обновить сборку`}
             <code>{os === 'win' ? '.\\tfc.exe' : './tfc'}</code> вместо <code>tfc</code>.
           </span>
           <p className="faint small" style={{ margin: '6px 0 0' }}>
-            Сборки ещё нет совсем — одна команда <code>tfc init --launcher</code>: поставит NeoForge, отдельную папку
-            игры и профиль «TFC RealWorld» в официальный Minecraft Launcher и скачает сборку (спросит ключ и память).
-            Лаунчер до этого запустите хотя бы раз, а перед установкой закройте.
+            Сборки ещё нет совсем — одна команда <code>tfc init --launcher</code>: поставит NeoForge и версию
+            TFC-RealWorld с отдельной папкой игры в <code>.minecraft/versions</code> (её видят и официальный Minecraft
+            Launcher — профиль «TFC RealWorld», и TLauncher) и скачает сборку (спросит ключ и память). Лаунчер до этого
+            запустите хотя бы раз, а перед установкой закройте.
           </p>
         </li>
       </ol>
