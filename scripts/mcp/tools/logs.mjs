@@ -721,17 +721,17 @@ export const TOOLS = [
   {
     name: 'log_analyze',
     description:
-      'Разбор лога или краш-репорта (latest.log, debug.log, crash-*.txt, .gz, папка игры/сервера — берёт свежий; или text — вставленный стек): ошибки без повторов, стек → jar и мод, обработчики миксинов → мод, расшифровка NoSuchMethodError/нет класса/миксин не применился/не хватает зависимости/битые данные и скрипты KubeJS. IP игроков скрыты.',
+      'Analyse a log or crash report (latest.log, debug.log, crash-*.txt, .gz, game/server folder — takes the newest; or text — a pasted stack): deduplicated errors, stack → jar and mod, mixin handlers → mod, decoding NoSuchMethodError/missing class/mixin not applied/missing dependency/broken data and KubeJS scripts. Player IPs hidden.',
     inputSchema: {
       type: 'object',
       properties: {
-        path: str('файл лога/краш-репорта или папка игры/сервера'),
-        text: str('или сам текст (стек, кусок лога)'),
+        path: str('log/crash report file or game/server folder'),
+        text: str('or the text itself (stack, log excerpt)'),
         level: str(
-          'error (по умолчанию: ERROR/FATAL и важные WARN), warn, all или timeline — хронология игры: входы/выходы с координатами, смены измерения, команды и их ответы, чат, смерти, сохранения, лаги, ошибки после входа; шум LOD/рецептов/JEI убран',
+          'error (default: ERROR/FATAL and important WARN), warn, all or timeline — game chronology: joins/leaves with coordinates, dimension changes, commands and replies, chat, deaths, saves, lag, errors after joining; LOD/recipe/JEI noise removed',
         ),
         query: str(
-          'регулярка, регистр не учитывается ((?i) можно, не нужен); в error/warn/all — только такие сообщения, в timeline — добавить строки к событиям',
+          'regex, case-insensitive ((?i) allowed, not needed); in error/warn/all — only such messages, in timeline — extra lines added to events',
         ),
         ...paging,
       },

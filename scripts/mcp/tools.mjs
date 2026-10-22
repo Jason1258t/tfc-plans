@@ -525,19 +525,19 @@ const recipeOpts = {
   status: {
     type: 'string',
     enum: ['all', 'active', 'removed'],
-    description: 'all (по умолчанию; работающие сверху), active — работают в игре, removed — удалены',
+    description: 'all (default; working ones first), active — work in game, removed — removed',
   },
-  type: str('тип рецепта, например tfc:anvil или create:mixing'),
+  type: str('recipe type, e.g. tfc:anvil or create:mixing'),
   ...paging,
 };
 
 const CORE = [
   {
     name: 'items_search',
-    description: 'Поиск предметов сборки по русскому/английскому названию или id. Возвращает id, названия и мод.',
+    description: 'Search pack items by Russian/English name or id. Returns id, names and mod.',
     inputSchema: {
       type: 'object',
-      properties: { query: str('слова названия или id'), mod: str('namespace мода, например tfc'), ...paging },
+      properties: { query: str('name words or id'), mod: str('mod namespace, e.g. tfc'), ...paging },
       required: ['query'],
     },
     handler: itemsSearch,
@@ -545,10 +545,10 @@ const CORE = [
   {
     name: 'item_get',
     description:
-      'Предмет по id: названия, мод и jar, теги (с KubeJS), сколько рецептов получения/использования, еда/топливо/плавка/ботаника.',
+      'Item by id: names, mod and jar, tags (with KubeJS), number of recipes producing/using it, food/fuel/melting/botany.',
     inputSchema: {
       type: 'object',
-      properties: { id: str('id предмета, например tfc:metal/ingot/copper') },
+      properties: { id: str('item id, e.g. tfc:metal/ingot/copper') },
       required: ['id'],
     },
     handler: itemGet,
@@ -556,10 +556,10 @@ const CORE = [
   {
     name: 'recipes_for',
     description:
-      'Как получить предмет: рецепты с ним на выходе. Учитывает KubeJS (удаления, replaceOutput, рецепты скриптов), kubejs/data и датапаки сайта, которые ставятся в мир (неставящиеся — отдельной строкой); у каждого — статус в игре и источник.',
+      'How to obtain an item: recipes with it as output. Includes KubeJS (removals, replaceOutput, script recipes), kubejs/data and site datapacks installed into the world (non-installed ones on a separate line); each with in-game status and source.',
     inputSchema: {
       type: 'object',
-      properties: { output: str('id предмета/жидкости или тег «#c:…»'), ...recipeOpts },
+      properties: { output: str('item/fluid id or tag «#c:…»'), ...recipeOpts },
       required: ['output'],
     },
     handler: recipesFor,
@@ -567,12 +567,12 @@ const CORE = [
   {
     name: 'recipes_using',
     description:
-      'Где используется предмет: рецепты с ним на входе — напрямую, через теги, где он состоит, и после replaceInput KubeJS; с датапаками сайта.',
+      'Where an item is used: recipes with it as input — directly, via tags it belongs to, and after KubeJS replaceInput; includes site datapacks.',
     inputSchema: {
       type: 'object',
       properties: {
-        input: str('id предмета/жидкости или тег «#…»'),
-        via_tags: { type: 'boolean', description: 'искать и через теги (по умолчанию да)' },
+        input: str('item/fluid id or tag «#…»'),
+        via_tags: { type: 'boolean', description: 'also search via tags (default yes)' },
         ...recipeOpts,
       },
       required: ['input'],
@@ -582,20 +582,20 @@ const CORE = [
   {
     name: 'recipe_get',
     description:
-      'Рецепт по id: статус, источник (мод / датапак сайта / kubejs/data / скрипт), какие правила KubeJS его удаляют или меняют (файл:строка), входы/выходы и JSON.',
-    inputSchema: { type: 'object', properties: { id: str('id рецепта ns:path') }, required: ['id'] },
+      'Recipe by id: status, source (mod / site datapack / kubejs/data / script), which KubeJS rules remove or change it (file:line), inputs/outputs and JSON.',
+    inputSchema: { type: 'object', properties: { id: str('recipe id ns:path') }, required: ['id'] },
     handler: recipeGet,
   },
   {
     name: 'tag_members',
     description:
-      'Состав тега после слияния модов и KubeJS: источники, операции KubeJS (файл:строка), значения с названиями.',
+      'Tag members after merging mods and KubeJS: sources, KubeJS operations (file:line), values with names.',
     inputSchema: {
       type: 'object',
       properties: {
-        tag: str('тег, с # или без'),
-        kind: { type: 'string', enum: KINDS, description: 'вид тега (по умолчанию item)' },
-        expand: { type: 'boolean', description: 'раскрывать вложенные теги (по умолчанию да)' },
+        tag: str('tag, with or without #'),
+        kind: { type: 'string', enum: KINDS, description: 'tag kind (default item)' },
+        expand: { type: 'boolean', description: 'expand nested tags (default yes)' },
         ...paging,
       },
       required: ['tag'],
@@ -604,7 +604,7 @@ const CORE = [
   },
   {
     name: 'tags_of',
-    description: 'В каких тегах состоит предмет/жидкость/блок (с вложенными тегами и KubeJS).',
+    description: 'Which tags contain an item/fluid/block (with nested tags and KubeJS).',
     inputSchema: {
       type: 'object',
       properties: { id: str('id'), kind: { type: 'string', enum: KINDS }, ...paging },
@@ -614,17 +614,14 @@ const CORE = [
   },
   {
     name: 'reference_get',
-    description: `Справочник сборки (как на сайте, с поправками kubejs/data). Разделы: ${Object.entries(SECTION_HELP)
-      .map(([k, v]) => `${k} — ${v}`)
-      .join(
-        '; ',
-      )}. Без section — список разделов. filter — слова (по JSON записи и названиям предметов), id — одна запись целиком.`,
+    description:
+      'Pack reference (as on the site, with kubejs/data corrections). Sections: ores — ore veins; smelt — ore/powder smelting: item id → fluid, mB, °C; chains — ore processing chains; metals — metals: fluid, melting point, heat capacity (modMelt — the mod value); fuels — TFC solid fuel; liquid — liquid fuel: families, engines, burners; foods — TFC food: hunger, saturation, water, decay, nutrients; botany — plants/trees/crops: climate, life cycle; greenhouse — Firmalife greenhouse; meals — composite meals; skillet — Cuisine Delight skillet; multiblocks — IE multiblocks; power — electricity: ee.*, ie.*, create.*, att.* (settings — config_get). kubejs/data overrides mod data where it exists. Without section — list of sections. filter — words (over record JSON and item names), id — one record in full.',
     inputSchema: {
       type: 'object',
       properties: {
         section: { type: 'string', enum: Object.keys(SECTIONS) },
-        filter: str('слова для отбора'),
-        id: str('id записи — показать целиком'),
+        filter: str('words to filter by'),
+        id: str('record id — show in full'),
         ...paging,
       },
     },
@@ -632,30 +629,30 @@ const CORE = [
   },
   {
     name: 'guides_list',
-    description: 'Гайды справочника сайта: id, заголовок, раздел/группа, проверено ли, кто правил.',
+    description: 'Site reference guides: id, title, section/group, verified flag, editors.',
     inputSchema: {
       type: 'object',
-      properties: { section: str('раздел, например power'), query: str('слова в id/заголовке/«коротко»'), ...paging },
+      properties: { section: str('section, e.g. power'), query: str('words in id/title/summary'), ...paging },
     },
     handler: guidesList,
   },
   {
     name: 'guide_get',
     description:
-      'Гайд целиком в формате файла npm run guides (YAML-заголовок + Markdown) и его revision для guide_put. Длинный — по строкам (offset/limit).',
+      'Whole guide in npm run guides file format (YAML header + Markdown) and its revision for guide_put. Long ones by lines (offset/limit).',
     inputSchema: {
       type: 'object',
-      properties: { id: str('id гайда'), offset: num('с какой строки'), limit: num('сколько строк') },
+      properties: { id: str('guide id'), offset: num('start line'), limit: num('how many lines') },
       required: ['id'],
     },
     handler: guideGet,
   },
   {
     name: 'guide_search',
-    description: 'Поиск по тексту гайдов: какие статьи упоминают слова, со строками совпадений.',
+    description: 'Full-text search in guides: which articles mention the words, with matching lines.',
     inputSchema: {
       type: 'object',
-      properties: { query: str('слова'), section: str('раздел'), ...paging },
+      properties: { query: str('words'), section: str('section'), ...paging },
       required: ['query'],
     },
     handler: guideSearch,
@@ -663,13 +660,13 @@ const CORE = [
   {
     name: 'guide_put',
     description:
-      'Сохранить гайд (запись в общую базу сайта, подпись Claude, версия — в историю). markdown — как из guide_get (YAML-заголовок + текст) или только текст (остальные поля не меняются). Отказ, если статья изменилась после чтения: baseRevision — revision из guide_get, для новой статьи "new".',
+      'Save a guide (write to the shared site database, signed Claude, version goes to history). markdown — as from guide_get (YAML header + text) or text only (other fields unchanged). Refused if the article changed after reading: baseRevision — revision from guide_get, "new" for a new article.',
     inputSchema: {
       type: 'object',
       properties: {
-        id: str('id (латиница, цифры, дефис)'),
-        markdown: str('содержимое'),
-        baseRevision: str('revision из guide_get или "new"'),
+        id: str('id (latin, digits, hyphen)'),
+        markdown: str('content'),
+        baseRevision: str('revision from guide_get or "new"'),
       },
       required: ['id', 'markdown', 'baseRevision'],
     },
@@ -678,15 +675,13 @@ const CORE = [
   {
     name: 'jar_find',
     description:
-      'Поиск файлов и классов в jar сборки (mods/). Шаблон: часть пути, имя класса через точки (net.dries007.tfc.config) или glob (data/tfc/**/*.json, *Config.class). Классы удобнее — class_find, текст в файлах — jar_grep.',
+      'Find files and classes in pack jars (mods/). Pattern: path part, dotted class name (net.dries007.tfc.config) or glob (data/tfc/**/*.json, *Config.class). For classes prefer class_find, for text in files — jar_grep.',
     inputSchema: {
       type: 'object',
       properties: {
-        pattern: str('шаблон'),
-        jar: str(
-          'искать в одном jar: имя файла, часть имени, id мода, вложенный «jar!META-INF/jarjar/x.jar» или «minecraft»',
-        ),
-        nested: { type: 'boolean', description: 'искать и во вложенных jar (jar-in-jar)' },
+        pattern: str('pattern'),
+        jar: str('search one jar: file name, name part, mod id, nested «jar!META-INF/jarjar/x.jar» or «minecraft»'),
+        nested: { type: 'boolean', description: 'also search nested jars (jar-in-jar)' },
         ...paging,
       },
       required: ['pattern'],
@@ -695,15 +690,15 @@ const CORE = [
   },
   {
     name: 'jar_read',
-    description: 'Текстовый файл из jar (json, toml, lang, mcmeta, js…) по строкам; grep — только строки по регулярке.',
+    description: 'Text file from a jar (json, toml, lang, mcmeta, js…) by lines; grep — only lines matching a regex.',
     inputSchema: {
       type: 'object',
       properties: {
-        jar: str('jar: имя файла, часть имени, id мода, вложенный или «minecraft»'),
-        path: str('путь внутри jar'),
-        grep: str('регулярное выражение'),
-        offset: num('с какой строки'),
-        limit: num('сколько строк (300)'),
+        jar: str('jar: file name, name part, mod id, nested or «minecraft»'),
+        path: str('path inside the jar'),
+        grep: str('regular expression'),
+        offset: num('start line'),
+        limit: num('how many lines (300)'),
       },
       required: ['jar', 'path'],
     },
@@ -712,15 +707,15 @@ const CORE = [
   {
     name: 'jar_javap',
     description:
-      'Байткод класса (javap -c -p -constants); method — только этот метод/поле. jar можно не указывать — класс найдётся по индексу. Читаемый код — decompile.',
+      'Class bytecode (javap -c -p -constants); method — only this method/field. jar is optional — the class is found via the index. Readable code — decompile.',
     inputSchema: {
       type: 'object',
       properties: {
-        jar: str('jar (необязательно): имя файла, часть имени, id мода, вложенный или «minecraft»'),
-        class: str('класс через точки или путь .class'),
-        method: str('имя метода или поля'),
-        offset: num('с какой строки'),
-        limit: num('сколько строк (400)'),
+        jar: str('jar (optional): file name, name part, mod id, nested or «minecraft»'),
+        class: str('dotted class name or .class path'),
+        method: str('method or field name'),
+        offset: num('start line'),
+        limit: num('how many lines (400)'),
       },
       required: ['class'],
     },

@@ -198,19 +198,19 @@ function bookEntry(a) {
 
 // ---------------------------------------------------------------- описания
 
-const bookArg = str('книга: id (tfc:field_guide, immersiveengineering:manual) или часть id/названия; tfc, ie');
-const langArg = str('язык: ru (по умолчанию; нет перевода — английский) или en');
+const bookArg = str('book: id (tfc:field_guide, immersiveengineering:manual) or part of id/name; tfc, ie');
+const langArg = str('language: ru (default; falls back to English) or en');
 
 export const TOOLS = [
   {
     name: 'books_list',
     description:
-      'Внутриигровые книги сборки: руководство TFC (Patchouli, со статьями аддонов и KubeJS сборки) и справочник Immersive Engineering (с разделами аддонов). Без book — список книг (категории, статьи, языки, откуда статьи); с book — оглавление: категории и id статей.',
+      'In-game pack books: TFC field guide (Patchouli, with addon and pack KubeJS entries) and the Immersive Engineering manual (with addon sections). Without book — list of books (categories, entries, languages, entry sources); with book — table of contents: categories and entry ids.',
     inputSchema: {
       type: 'object',
       properties: {
         book: bookArg,
-        category: str('только категория (id или часть названия)'),
+        category: str('only this category (id or part of the name)'),
         lang: langArg,
         ...paging,
       },
@@ -220,13 +220,13 @@ export const TOOLS = [
   {
     name: 'book_search',
     description:
-      'Поиск по тексту статей внутриигровых книг (все слова запроса, русские — по основе слова; текст на русском, если перевода нет — на английском; рецепты и предметы на страницах — с названиями). Ответ: статья, категория и строки совпадений.',
+      'Full-text search in in-game book entries (all query words; Russian matched by stem; text in Russian, English where untranslated; recipes and items on pages with names). Answer: entry, category and matching lines.',
     inputSchema: {
       type: 'object',
       properties: {
-        query: str('слова для поиска'),
+        query: str('search words'),
         book: bookArg,
-        category: str('только категория (id или часть названия)'),
+        category: str('only this category (id or part of the name)'),
         lang: langArg,
         ...paging,
       },
@@ -237,17 +237,17 @@ export const TOOLS = [
   {
     name: 'book_entry',
     description:
-      'Статья внутриигровой книги целиком, читаемым текстом: страницы по порядку, ссылки как [→ статья], клавиши и настройки подставлены, рецепты/мультиблоки/предметы — id с названием и статусом рецепта в сборке (удалён KubeJS и т. п.). Страницы — offset/limit.',
+      'Whole in-game book entry as readable text: pages in order, links as [→ entry], keys and settings substituted, recipes/multiblocks/items — id with name and pack recipe status (removed by KubeJS etc.). Pages — offset/limit.',
     inputSchema: {
       type: 'object',
       properties: {
         id: str(
-          'id статьи (metalworking/bloomery, tfc:metalworking/bloomery#якорь, immersiveengineering:arc_furnace) или название',
+          'entry id (metalworking/bloomery, tfc:metalworking/bloomery#anchor, immersiveengineering:arc_furnace) or title',
         ),
         book: bookArg,
         lang: langArg,
-        limit: { type: 'integer', description: 'сколько страниц (по умолчанию 100)' },
-        offset: { type: 'integer', description: 'с какой страницы (для «дальше»)' },
+        limit: { type: 'integer', description: 'how many pages (default 100)' },
+        offset: { type: 'integer', description: 'start page (for «дальше»)' },
       },
       required: ['id'],
     },

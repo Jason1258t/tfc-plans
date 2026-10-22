@@ -56,7 +56,7 @@ export const dateOf = (ms) => (ms ? new Date(ms).toISOString().slice(0, 16).repl
 
 export const str = (description) => ({ type: 'string', description });
 export const num = (description) => ({ type: 'integer', description });
-export const paging = { limit: num('сколько записей (по умолчанию 20)'), offset: num('с какой записи (для «дальше»)') };
+export const paging = { limit: num('how many records (default 20)'), offset: num('start offset (for «дальше»)') };
 
 /**
  * Регулярка из запроса агента. Регистр и так не учитывается; встроенные флаги в начале, как в Java/PCRE

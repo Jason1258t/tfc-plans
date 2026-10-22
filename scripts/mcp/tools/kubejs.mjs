@@ -377,32 +377,32 @@ function kubejsRead(a) {
 // ---------------------------------------------------------------- описание
 
 const where = {
-  layer: str('слой: pack (сборка) или world (мир сервера)'),
-  folder: str(`папка слоя: ${FOLDERS.join(', ')}`),
-  path: str('часть пути файла, например recipes/tfc'),
+  layer: str('layer: pack (the pack) or world (server world)'),
+  folder: str(`layer folder: ${FOLDERS.join(', ')}`),
+  path: str('part of the file path, e.g. recipes/tfc'),
 };
 
 export const TOOLS = [
   {
     name: 'kubejs_files',
     description:
-      'Файлы KubeJS сборки (instance/kubejs/<слой>/…): число строк и что из файла разобрано в public/kubejs.json (правила remove/replace, рецепты, теги, предметы); предупреждает, если файлы новее разбора. По умолчанию — скрипты, data/assets — через folder или path.',
+      'Pack KubeJS files (instance/kubejs/<layer>/…): line count and what public/kubejs.json parsed from each file (remove/replace rules, recipes, tags, items); warns if files are newer than the parse. Default — scripts; data/assets via folder or path.',
     inputSchema: {
       type: 'object',
-      properties: { ...where, limit: num('сколько файлов (по умолчанию 100)'), offset: paging.offset },
+      properties: { ...where, limit: num('how many files (default 100)'), offset: paging.offset },
     },
     handler: kubejsFiles,
   },
   {
     name: 'kubejs_search',
     description:
-      'Поиск по тексту скриптов и файлов KubeJS сборки (все слова в строке или регулярка): файл:строка с соседними строками и пометками разобранного (правило/рецепт/тег/предмет).',
+      'Search text of pack KubeJS scripts and files (all words on a line, or a regex): file:line with neighbouring lines and parse marks (rule/recipe/tag/item).',
     inputSchema: {
       type: 'object',
       properties: {
-        query: str('слова (все в одной строке); «a|b» — любое из; регулярка — при regex=true'),
-        regex: { type: 'boolean', description: 'query — регулярное выражение (без учёта регистра)' },
-        context: num('соседних строк до и после (по умолчанию 2, до 10)'),
+        query: str('words (all on one line); «a|b» — any of; regex with regex=true'),
+        regex: { type: 'boolean', description: 'query is a regular expression (case-insensitive)' },
+        context: num('neighbouring lines before and after (default 2, max 10)'),
         ...where,
         ...paging,
       },
@@ -413,15 +413,17 @@ export const TOOLS = [
   {
     name: 'kubejs_read',
     description:
-      'Файл KubeJS сборки по строкам (offset — с какой строки, limit, grep) с пометками строк, которые public/kubejs.json разобрал как правило remove/replaceInput/replaceOutput, рецепт, тег или свой предмет, и списком этих записей.',
+      'Pack KubeJS file by lines (offset — start line, limit, grep) with marks on lines that public/kubejs.json parsed as a remove/replaceInput/replaceOutput rule, recipe, tag or own item, plus a list of those records.',
     inputSchema: {
       type: 'object',
       properties: {
-        path: str('путь от instance/kubejs, например pack/server_scripts/recipes/misc.js (можно без слоя, если один)'),
-        offset: num('с какой строки (1 — начало)'),
-        limit: num('сколько строк (по умолчанию 200)'),
-        grep: str('только строки с совпадением (регулярка или подстрока)'),
-        notes: num('сколько строк с записями разбора перечислить (по умолчанию 60)'),
+        path: str(
+          'path from instance/kubejs, e.g. pack/server_scripts/recipes/misc.js (layer can be omitted if unambiguous)',
+        ),
+        offset: num('start line (1 — beginning)'),
+        limit: num('how many lines (default 200)'),
+        grep: str('only matching lines (regex or substring)'),
+        notes: num('how many lines with parse records to list (default 60)'),
       },
       required: ['path'],
     },

@@ -592,38 +592,38 @@ function mapRegions(a) {
 }
 
 const pointProps = {
-  x: numIn('X блока'),
-  z: numIn('Z блока'),
-  lat: numIn('широта, градусы (север +)'),
-  lon: numIn('долгота, градусы (восток +)'),
-  text: str('координаты строкой: «x z», «x y z», строка F3 (XYZ: …), «51.5 -0.12» или «51.5N 0.12W»'),
+  x: numIn('block X'),
+  z: numIn('block Z'),
+  lat: numIn('latitude, degrees (north +)'),
+  lon: numIn('longitude, degrees (east +)'),
+  text: str('coordinates as a string: «x z», «x y z», F3 line (XYZ: …), «51.5 -0.12» or «51.5N 0.12W»'),
 };
 
 export const TOOLS = [
   {
     name: 'map_point',
     description:
-      'Точка мира TFC Real World: блок X/Z ↔ широта/долгота (та же проекция, что на сайте), ближайшие города и регион (по городам geo.json), суша/море, средний климат TFC (температура, осадки, разброс, класс Кёппена — код мода koppen_from_map, по байткоду), поправка на высоту y, расстояние и направление от спавна. Масштаб, профиль и спавн — из конфига сервера.',
+      'TFC Real World world point: block X/Z ↔ latitude/longitude (same projection as the site), nearest cities and region (by geo.json cities), land/sea, average TFC climate (temperature, rainfall, variation, Köppen class — mod code koppen_from_map, from bytecode), altitude correction for y, distance and direction from spawn. Scale, profile and spawn — from the server config.',
     inputSchema: {
       type: 'object',
-      properties: { ...pointProps, y: numIn('высота блока — температура на этой высоте') },
+      properties: { ...pointProps, y: numIn('block height — temperature at this altitude') },
     },
     handler: mapPoint,
   },
   {
     name: 'map_rocks',
     description:
-      'Какие породы и жилы руд возможны в точке: тип области по картам мода (море/суша, горячие точки, высота) → слои пород пресета TFC по глубине с долями → жилы (reference ores) в этих породах. Точную породу задаёт сид мира — инструмент даёт варианты, не ответ.',
+      'Which rocks and ore veins are possible at a point: area type from mod maps (sea/land, hotspots, elevation) → TFC preset rock layers by depth with shares → veins (reference ores) in those rocks. The world seed picks the exact rock — the tool gives options, not an answer.',
     inputSchema: { type: 'object', properties: { ...pointProps, ...paging } },
     handler: mapRocks,
   },
   {
     name: 'map_find',
     description:
-      'Где искать место: город, страна, регион или континент (рус./англ. название из geo.json мода) → широта/долгота и блок X/Z в нашем мире, путь регионов, расстояние и направление от спавна. Для страны/региона — его города.',
+      "Find a place: city, country, region or continent (Russian/English name from the mod's geo.json) → latitude/longitude and block X/Z in our world, region path, distance and direction from spawn. For a country/region — its cities.",
     inputSchema: {
       type: 'object',
-      properties: { query: str('название города, страны или региона'), ...paging },
+      properties: { query: str('city, country or region name'), ...paging },
       required: ['query'],
     },
     handler: async (a) => mapFind(await world(), a),
@@ -631,23 +631,23 @@ export const TOOLS = [
   {
     name: 'map_regions',
     description:
-      'Прямоугольник блоков → файлы региона сохранения r.X.Z.mca (region — блоки, entities — существа, poi — порталы/кровати) с папкой измерения (DIM-1, DIM1, dimensions/…) и готовые команды PowerShell: посмотреть, скопировать, удалить (удаление закомментировано). Для сброса места или переноса куска мира.',
+      'Block rectangle → save region files r.X.Z.mca (region — blocks, entities — entities, poi — portals/beds) with the dimension folder (DIM-1, DIM1, dimensions/…) and ready PowerShell commands: list, copy, delete (delete commented out). For resetting an area or moving a piece of the world.',
     inputSchema: {
       type: 'object',
       properties: {
-        x1: numIn('угол 1: X блока'),
-        z1: numIn('угол 1: Z блока'),
-        x2: numIn('угол 2: X блока'),
-        z2: numIn('угол 2: Z блока'),
-        x: numIn('или центр: X'),
-        z: numIn('или центр: Z'),
-        radius: numIn('с x/z: половина стороны квадрата, блоков'),
-        text: str('или строкой: «x1 z1 x2 z2», «x z» (+ radius), строка F3'),
+        x1: numIn('corner 1: block X'),
+        z1: numIn('corner 1: block Z'),
+        x2: numIn('corner 2: block X'),
+        z2: numIn('corner 2: block Z'),
+        x: numIn('or centre: X'),
+        z: numIn('or centre: Z'),
+        radius: numIn('with x/z: half the square side, in blocks'),
+        text: str('or as a string: «x1 z1 x2 z2», «x z» (+ radius), F3 line'),
         dim: str(
-          'измерение: overworld (по умолчанию), the_nether (ад — координаты адские), the_end, rocketnautics:moon…',
+          'dimension: overworld (default), the_nether (nether — nether coordinates), the_end, rocketnautics:moon…',
         ),
-        kinds: str('какие папки: region,entities,poi (по умолчанию все)'),
-        world: str('путь к папке мира на ПК — подставится в команды'),
+        kinds: str('which folders: region,entities,poi (default all)'),
+        world: str('path to the world folder on the PC — substituted into the commands'),
       },
     },
     handler: mapRegions,

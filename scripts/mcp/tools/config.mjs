@@ -267,13 +267,13 @@ export const TOOLS = [
   {
     name: 'config_get',
     description:
-      'Настройки модов с учётом слоёв: сохранение мира > serverconfig/ сервера > config/ сборки > значение по умолчанию из кода мода. Без параметров — список файлов; file — ключи файла; key — поиск ключа (во всех файлах или в file). Неприменённые правки (config_propose) помечены ⏳.',
+      'Mod settings with layers: world save > server serverconfig/ > pack config/ > default value from mod code. No params — list of files; file — keys of a file; key — key search (all files or within file). Unapplied edits (config_propose) are marked ⏳.',
     inputSchema: {
       type: 'object',
       properties: {
-        file: str('файл, например tfc-server.toml (можно часть имени)'),
-        key: str('слова ключа, например sapling'),
-        mod: str('отбор списка файлов по моду'),
+        file: str('file, e.g. tfc-server.toml (part of the name is fine)'),
+        key: str('key words, e.g. sapling'),
+        mod: str('filter the file list by mod'),
         ...paging,
       },
     },
@@ -282,20 +282,20 @@ export const TOOLS = [
   {
     name: 'config_propose',
     description:
-      'Предложить правку конфигов сборки (TOML): запись в Firestore configChanges, файлы хоста не меняются. Хост смотрит и применяет командой tfc admin changes pull (правит файлы в папке игры и сервера с копией, tfc undo — вернуть). Ключ — полное имя из config_get (blocks.crops.cropGrowthModifier); проверяются тип и диапазон из кода мода. Одна запись — одна осмысленная правка (несколько ключей вместе), note — зачем, по-русски. Это запись в общую базу.',
+      "Propose a pack config edit (TOML): writes Firestore configChanges, the host's files are not touched. The host reviews and applies with tfc admin changes pull (edits files in the game and server folders with a backup, tfc undo reverts). Key — full name from config_get (blocks.crops.cropGrowthModifier); type and range are checked against mod code. One record = one meaningful change (several keys together); note — why, in Russian. This is a write to the shared database.",
     inputSchema: {
       type: 'object',
       properties: {
-        note: str('зачем правка: что изменится для игроков (это прочитает хост)'),
+        note: str('why: what changes for players (the host reads this), in Russian'),
         edits: {
           type: 'array',
-          description: 'правки: { file: "tfc-server.toml", key: "blocks.crops.cropGrowthModifier", value: 5 }',
+          description: 'edits: { file: "tfc-server.toml", key: "blocks.crops.cropGrowthModifier", value: 5 }',
           items: {
             type: 'object',
             properties: {
-              file: str('файл конфига, как в config_get'),
-              key: str('полный ключ с разделами'),
-              value: { description: 'новое значение (число, true/false, строка, массив)' },
+              file: str('config file, as in config_get'),
+              key: str('full key with sections'),
+              value: { description: 'new value (number, true/false, string, array)' },
             },
             required: ['file', 'key', 'value'],
           },
@@ -308,13 +308,13 @@ export const TOOLS = [
   {
     name: 'config_changes',
     description:
-      'Предложенные правки конфигов (config_propose) и что с ними сделал хост: status=pending (по умолчанию) | applied | rejected | cancelled | all; id — одна с итогом по ключам; cancel=<id> — отменить свою неприменённую.',
+      'Proposed config edits (config_propose) and what the host did with them: status=pending (default) | applied | rejected | cancelled | all; id — one edit with per-key result; cancel=<id> — cancel your own unapplied edit.',
     inputSchema: {
       type: 'object',
       properties: {
         status: { type: 'string', enum: ['pending', 'applied', 'rejected', 'cancelled', 'all'] },
-        id: str('id правки'),
-        cancel: str('id неприменённой правки — отменить'),
+        id: str('edit id'),
+        cancel: str('id of an unapplied edit — cancel it'),
         ...paging,
       },
     },
