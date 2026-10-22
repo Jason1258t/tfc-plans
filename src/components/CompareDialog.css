@@ -42,9 +42,13 @@
   padding: 0;
   list-style: none;
   counter-reset: r;
+  max-height: 340px;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .cmp-rank li {
+  position: relative;
   counter-increment: r;
   display: flex;
   align-items: center;
@@ -59,6 +63,48 @@
   width: 18px;
   color: var(--text-3);
   font-size: 12px;
+}
+
+.cmp-swap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -6px;
+  z-index: 1;
+  height: 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+/* Кружок со стрелкой на стыке строк: виден, когда курсор между ними */
+.cmp-swap > span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--accent);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--accent);
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.12s;
+}
+
+.cmp-swap:hover > span,
+.cmp-swap:focus-visible > span {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .cmp-swap > span {
+    opacity: 0.6;
+  }
 }
 
 @media (max-width: 520px) {
