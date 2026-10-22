@@ -37,6 +37,14 @@ Before 2.0 — EE Rectifiers, `ee_rectifier`; old blocks migrate to new ids via 
   (efficiency 75 %; EE generator ~99 % by bytecode: 48 × magnets × rpm W vs 48 × (magnets + 0.125) SU/rpm), heating
   rating 1.2 kW (smokes above ~200 rpm at full load, doesn't burn). Dev server from a creative motor
   (`rectest kgen|krpm|kreport`): U²/R exact, cap at 1 536 W, stress 8 SU/rpm; terminals 720/720.
+- **Insulator-string «fan» (open)**: a swinging EE hanging glass insulator string leaves frozen copies until relog.
+  2.1.0 wrapped `WireVisual.recreateInstances` (Flywheel calls it from frame and light plans in parallel); 2.1.2
+  wraps `beginFrame`/`updateLight`/`delete` + sweeps segments dropped from the visual's lists, logs «исправление …
+  применено». Host log 2026-10-22: mixin applied, fan still there — so the cause is elsewhere. **2.3.2**: client
+  command `/eeextras wires` (`WireDiag`) compares EE client wire list, Flywheel wire visuals (orphan / duplicate /
+  not updated > 2 s) and Flywheel instance counts per model; waiting for the host's log with it. Also ask whether
+  F3+A (full Flywheel reset + EE `recreateVisuals`) clears the fan. Host plays a host world (integrated server) with
+  Sodium, Iris (shaders off), Sable, Liubai (Flywheel limiter), Voxy.
 - Finding: EE 1.1.2 lacks model `block/duplex_wire_segment` (used by `CEEPartialModels.DUPLEX_WIRE_SEGMENT` and by the
   EE Extras two-core cable shell) — from jar, not checked in game.
 - Site icons are drawn by the shared generator `scripts/mcp/render.mjs` (4× AA, no seams), called by
