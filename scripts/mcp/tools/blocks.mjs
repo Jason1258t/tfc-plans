@@ -630,13 +630,13 @@ export const TOOLS = [
   {
     name: 'lang_search',
     description:
-      'Поиск по переводам (ru_ru/en_us) всех jar, ванили, KubeJS сборки и ресурспаков: по ключу, id или тексту. Возвращает вид записи (block, item, entity, fluid/fluid_type, effect, biome, enchantment, …), id и мод; у блоков — пометка «без предмета». Так находятся блоки без предмета, существа, жидкости, эффекты, которых нет в items_search.',
+      'Search translations (ru_ru/en_us) of all jars, vanilla, pack KubeJS and resource packs: by key, id or text. Returns entry kind (block, item, entity, fluid/fluid_type, effect, biome, enchantment, …), id and mod; blocks get a «без предмета» mark. Finds blocks without items, entities, fluids, effects that items_search lacks.',
     inputSchema: {
       type: 'object',
       properties: {
-        query: str('слова текста, ключ или id'),
-        kind: str('вид записи — первая часть ключа: block, item, entity, fluid (у TFC), fluid_type, effect, biome, …'),
-        mod: str('namespace мода'),
+        query: str('text words, key or id'),
+        kind: str('entry kind — first part of the key: block, item, entity, fluid (TFC), fluid_type, effect, biome, …'),
+        mod: str('mod namespace'),
         ...paging,
       },
       required: ['query'],
@@ -646,10 +646,10 @@ export const TOOLS = [
   {
     name: 'block_get',
     description:
-      'Блок по id: названия, мод, есть ли предмет, теги блока (с KubeJS), blockstate и модели (из какого источника), что выпадает (таблица добычи blocks/… с глобальными модификаторами).',
+      'Block by id: names, mod, whether it has an item, block tags (with KubeJS), blockstate and models (with source), drops (loot table blocks/… with global modifiers).',
     inputSchema: {
       type: 'object',
-      properties: { id: str('id блока, например tfc:rock/raw/granite') },
+      properties: { id: str('block id, e.g. tfc:rock/raw/granite') },
       required: ['id'],
     },
     handler: blockGet,
@@ -657,13 +657,13 @@ export const TOOLS = [
   {
     name: 'loot_for',
     description:
-      'Что выпадает: таблица добычи по id (tfc:blocks/…, tfc:entities/deer) или по id блока/существа/сундука. Источник с учётом перекрытия (поздний jar, kubejs/data), пулы с количествами и условиями кратко, вложенные таблицы, глобальные модификаторы NeoForge. raw — ещё и JSON.',
+      'What drops: loot table by id (tfc:blocks/…, tfc:entities/deer) or by block/entity/chest id. Source with overrides resolved (later jar, kubejs/data), pools with counts and conditions in brief, nested tables, NeoForge global modifiers. raw — also the JSON.',
     inputSchema: {
       type: 'object',
       properties: {
-        id: str('id таблицы или блока/существа'),
-        kind: kindOpt('искать только таблицы этого вида'),
-        raw: { type: 'boolean', description: 'показать JSON таблицы' },
+        id: str('table id or block/entity id'),
+        kind: kindOpt('search only tables of this kind'),
+        raw: { type: 'boolean', description: 'show the table JSON' },
         ...paging,
       },
       required: ['id'],
@@ -673,12 +673,12 @@ export const TOOLS = [
   {
     name: 'loot_sources',
     description:
-      'Откуда выпадает предмет: все таблицы добычи (блоки, существа, сундуки, шлюз и др.), где он есть напрямую, через тег, через вложенную таблицу или глобальный модификатор. Тег «#…» — таблицы с этим тегом и с любым его предметом.',
+      'Where an item drops from: all loot tables (blocks, entities, chests, gameplay etc.) containing it directly, via a tag, via a nested table or a global modifier. Tag «#…» — tables with this tag or any of its items.',
     inputSchema: {
       type: 'object',
       properties: {
-        item: str('id предмета или тег «#c:…»'),
-        kind: kindOpt('только таблицы этого вида'),
+        item: str('item id or tag «#c:…»'),
+        kind: kindOpt('only tables of this kind'),
         ...paging,
       },
       required: ['item'],

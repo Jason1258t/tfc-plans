@@ -6,7 +6,7 @@ reference, settings, mod books, map, guides and site content. Without it the age
 KubeJS changes.
 
 People don't use it directly. This document covers how it works, what it can do and how to extend it. Tool descriptions
-and output stay in Russian.
+and parameter descriptions are in English (the agent reads them); tool output stays in Russian.
 
 ## Connection
 
@@ -436,7 +436,8 @@ Changed merging on the site — change `data.mjs` too.
 2. `handler(args)` returns text (may be `async`) or `{ text, images: [PNG Buffer] }` — images go out as MCP `image`
    content. Lists — via `page(list, args, fmt)`, item ids — via `named(id)`. Input error — `throw new Error('…')`: the
    server returns it as `isError`.
-3. Description and texts in Russian; the description says what it returns and where the data comes from.
+3. Tool and parameter descriptions in English (short: what it returns and where the data comes from); answer
+   text in Russian. Keep Russian UI labels and values the tool matches («дальше», «ставить») verbatim.
 4. Verify with a scratchpad node script that starts `server.mjs`, sends `initialize`, `tools/list` and calls, and
    compares answers with direct reads of files, jars or Firestore. Then `npx oxlint scripts/mcp` and
    `npx prettier --write` on your files.

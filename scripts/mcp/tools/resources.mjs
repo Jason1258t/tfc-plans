@@ -852,38 +852,38 @@ export const TOOLS = [
   {
     name: 'model_render',
     description:
-      'Рисунок модели блока или предмета картинкой PNG (без клиента): блокстейт → вариант (state) → модель с parent, повороты x/y варианта и элементов, uv и rotation граней, display.gui; предмет item/generated — слои. Модели GeckoLib (assets/<ns>/geo/*.geo.json; kind=geo или id ns:geo/…) — кости и кубы как в GeckoLib 4.8 с текстурой texture=, броня — поверх силуэта игрока; в тексте кости, число кубов, грани с UV за краем текстуры или на прозрачной области. Ищет по слоям: ресурспаки, KubeJS, папки аддонов tools/<мод>/src/main/resources (аддон из git worktree — addon=<путь>), jar модов, Minecraft. В тексте — цепочка моделей, откуда каждая текстура, предупреждения (tint, loader, нет текстуры).',
+      'Render a block or item model as a PNG image (no client): blockstate → variant (state) → model with parent, variant and element x/y rotations, face uv and rotation, display.gui; item/generated items — layers. GeckoLib models (assets/<ns>/geo/*.geo.json; kind=geo or id ns:geo/…) — bones and cubes as in GeckoLib 4.8 with texture=, armour over a player silhouette; text lists bones, cube count, faces with UV outside the texture or on transparent areas. Resolves by layer: resource packs, KubeJS, addon folders tools/<mod>/src/main/resources (addon from a git worktree — addon=<path>), mod jars, Minecraft. Text: model chain, source of each texture, warnings (tint, loader, missing texture).',
     inputSchema: {
       type: 'object',
       properties: {
         id: str(
-          'id блока/предмета (ee_extras:four_core_termination), модели (ns:block/…) при kind=model или модели GeckoLib (miner_tools:geo/miner_helmet.geo.json)',
+          'block/item id (ee_extras:four_core_termination), model (ns:block/…) with kind=model, or GeckoLib model (miner_tools:geo/miner_helmet.geo.json)',
         ),
         kind: {
           type: 'string',
           enum: ['block', 'item', 'model', 'geo'],
           description:
-            'что рисовать (по умолчанию: блок, если есть блокстейт, иначе предмет, иначе модель; id с geo/ или .geo.json — модель GeckoLib)',
+            'what to draw (default: block if it has a blockstate, else item, else model; id with geo/ or .geo.json — GeckoLib model)',
         },
         texture: str(
-          'для geo: текстура модели — ns:textures/models/armor/x.png, assets/ns/textures/….png или ns:entity/x (без неё — поиск по имени модели в item/, entity/, armor/, models/armor/, block/)',
+          'for geo: model texture — ns:textures/models/armor/x.png, assets/ns/textures/….png or ns:entity/x (without it — search by model name in item/, entity/, armor/, models/armor/, block/)',
         ),
-        bones: str('для geo: только эти кости с дочерними, через запятую (armorHead)'),
+        bones: str('for geo: only these bones with children, comma-separated (armorHead)'),
         silhouette: {
           type: 'string',
           enum: ['auto', 'all', 'none'],
           description:
-            'для geo: полупрозрачный силуэт игрока под бронёй — auto (части под костями armorHead/armorBody/… с кубами, по умолчанию), all (весь игрок), none',
+            'for geo: translucent player silhouette under armour — auto (parts under armorHead/armorBody/… bones with cubes, default), all (whole player), none',
         },
-        state: str('состояние блока: facing=north,roll=true (свойства, которых нет, — первый подходящий вариант)'),
+        state: str('block state: facing=north,roll=true (missing properties — first matching variant)'),
         view: {
           type: 'string',
           enum: ['gui', 'top', 'bottom', 'north', 'south', 'east', 'west'],
-          description: 'вид: gui — как в инвентаре (по умолчанию), top — сверху, стороны — с этой стороны',
+          description: 'view: gui — as in inventory (default), top — from above, a side — from that side',
         },
-        size: num('размер картинки в пикселях (256, до 1024)'),
+        size: num('image size in pixels (256, max 1024)'),
         addon: str(
-          'папка аддона (путь, например .claude/worktrees/…/tools/miner-tools-mod, или имя в tools/): ресурсы берутся из неё вместо tools/ основной копии',
+          'addon folder (path, e.g. .claude/worktrees/…/tools/miner-tools-mod, or a name in tools/): resources are taken from it instead of tools/ of the main checkout',
         ),
       },
       required: ['id'],
@@ -893,14 +893,14 @@ export const TOOLS = [
   {
     name: 'texture_get',
     description:
-      'Текстура картинкой (увеличена без сглаживания) и палитра: частые цвета с долями, размер, кадры анимации, откуда взята (ресурспак / KubeJS / аддон / jar / Minecraft).',
+      'Texture as an image (nearest-neighbour upscale) and palette: frequent colours with shares, size, animation frames, source (resource pack / KubeJS / addon / jar / Minecraft).',
     inputSchema: {
       type: 'object',
       properties: {
-        path: str('ns:block/x или assets/ns/textures/….png'),
-        size: num('размер картинки по большей стороне (256)'),
-        colors: num('сколько цветов палитры (12, до 32)'),
-        addon: str('папка аддона (путь или имя в tools/) вместо tools/ основной копии — как у model_render'),
+        path: str('ns:block/x or assets/ns/textures/….png'),
+        size: num('image size on the longer side (256)'),
+        colors: num('how many palette colours (12, max 32)'),
+        addon: str('addon folder (path or name in tools/) instead of tools/ of the main checkout — as in model_render'),
       },
       required: ['path'],
     },
@@ -909,16 +909,18 @@ export const TOOLS = [
   {
     name: 'resources_check',
     description:
-      'Проверка ресурсов мода или аддона без клиента: у каждого блока есть блокстейт и он покрывает все сочетания свойств (свойства — из байткода createBlockStateDefinition с предками), значения свойств верные, модели и parent существуют (вкл. чужие namespace и Minecraft), текстуры есть, координаты и углы элементов допустимы, у предметов есть модель, ключи перевода из кода (всё, что уходит в Component.translatable — вкл. ветки тернарного оператора, и строки с префиксом ключей мода) и названия блоков/предметов есть в en_us и ru_ru (у аддона нет в ru_ru — ошибка), PartialModel.of указывает на модель, есть добыча блоков.',
+      "Check a mod's or addon's resources without a client: every block has a blockstate covering all property combinations (properties from createBlockStateDefinition bytecode incl. ancestors), property values valid, models and parents exist (incl. foreign namespaces and Minecraft), textures exist, element coordinates and angles valid, items have models, translation keys from code (everything passed to Component.translatable — incl. ternary branches — and strings with the mod's key prefixes) and block/item names exist in en_us and ru_ru (missing in ru_ru is an error for an addon), PartialModel.of points to a model, blocks have loot.",
     inputSchema: {
       type: 'object',
       properties: {
-        addon: str('аддон: папка в tools/ (ee-extras-mod) или путь к папке мода; классы — build/classes/java/main'),
-        mod: str('или мод из mods/: id или jar'),
-        props: { type: 'boolean', description: 'показать свойства блоков из байткода' },
-        filter: str('только сообщения с этими словами (например id блока)'),
-        limit: num('строк в каждом разделе (60)'),
-        verbose: { type: 'boolean', description: 'показывать «к сведению» (по умолчанию да)' },
+        addon: str(
+          'addon: folder in tools/ (ee-extras-mod) or path to the mod folder; classes — build/classes/java/main',
+        ),
+        mod: str('or a mod from mods/: id or jar'),
+        props: { type: 'boolean', description: 'show block properties from bytecode' },
+        filter: str('only messages with these words (e.g. a block id)'),
+        limit: num('lines per section (60)'),
+        verbose: { type: 'boolean', description: 'show info-level messages (default yes)' },
       },
     },
     handler: resourcesCheck,

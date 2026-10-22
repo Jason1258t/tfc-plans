@@ -4,7 +4,8 @@ Full reference (tools, data sources, limits, code layout, "Adding a tool") — [
 
 - Tools of a section — `tools/<section>.mjs` (`export const TOOLS`), shared helpers — `fmt.mjs`, server instructions —
   `INSTRUCTIONS` in `tools.mjs`.
-- Tool descriptions and output are in Russian (the user reads them in transcripts).
+- Tool and parameter descriptions are in English (agent-facing, fewer tokens); tool output is in Russian (the user
+  reads it in transcripts).
 - After editing code here the server must be restarted (`/mcp` in terminal Claude Code or a new session); data in
   `public/` is re-read automatically.
 - Data merging repeats the site (`src/lib/items.ts`, `recipes.ts`, `tags.ts`, `reference.ts`, `meals.ts`): changed the

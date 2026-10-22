@@ -317,15 +317,15 @@ export const TOOLS = [
   {
     name: 'mods_list',
     description:
-      'Моды сборки (pack-manifest.json): id, название, версия, jar, число предметов и рецептов мода. Поиск по словам в id/названии/jar, сортировка по id или по числу предметов/рецептов.',
+      'Pack mods (pack-manifest.json): id, name, version, jar, item and recipe counts. Search by words in id/name/jar, sort by id or by item/recipe count.',
     inputSchema: {
       type: 'object',
       properties: {
-        query: str('слова для поиска (id, название, имя jar); пусто — все'),
+        query: str('search words (id, name, jar name); empty — all'),
         sort: {
           type: 'string',
           enum: ['id', 'items', 'recipes'],
-          description: 'порядок: id (по умолчанию), items, recipes',
+          description: 'order: id (default), items, recipes',
         },
         ...paging,
       },
@@ -335,10 +335,10 @@ export const TOOLS = [
   {
     name: 'mod_get',
     description:
-      'Один мод сборки: версия, jar, sha1, предметы, рецепты (работают / удалены KubeJS / отключены / изменены), типы рецептов, теги, конфиг (значения из кода и импортированные файлы).',
+      'One pack mod: version, jar, sha1, items, recipes (working / removed by KubeJS / disabled / changed), recipe types, tags, config (values from code and imported files).',
     inputSchema: {
       type: 'object',
-      properties: { id: str('id мода (namespace), имя jar или слова из названия') },
+      properties: { id: str('mod id (namespace), jar name or words from the name') },
       required: ['id'],
     },
     handler: modGet,
@@ -346,19 +346,19 @@ export const TOOLS = [
   {
     name: 'pack_updates',
     description:
-      'История обновлений сборки (Firestore packUpdates, пишет деплой): без id — лента с датами и сводкой; с id — запись: моды добавлены/убраны/обновлены, предметы, рецепты, новые типы рецептов; section — полный список (items/recipes с kind, mods), ченджлог мода с Modrinth (changelog + mod), патчноут (notes). Кеш 10 мин.',
+      'Pack update history (Firestore packUpdates, written on deploy): without id — feed with dates and summary; with id — the record: mods added/removed/updated, items, recipes, new recipe types; section — full list (items/recipes with kind, mods), mod changelog from Modrinth (changelog + mod), patch notes (notes). 10 min cache.',
     inputSchema: {
       type: 'object',
       properties: {
-        id: str('id записи из ленты'),
-        section: { type: 'string', enum: SECTIONS, description: 'часть записи целиком' },
+        id: str('record id from the feed'),
+        section: { type: 'string', enum: SECTIONS, description: 'part of the record in full' },
         kind: {
           type: 'string',
           enum: ['added', 'removed', 'changed'],
-          description: 'для items/recipes: added (по умолчанию), removed, changed (только рецепты)',
+          description: 'for items/recipes: added (default), removed, changed (recipes only)',
         },
-        mod: str('для changelog: id мода'),
-        query: str('для items/recipes/mods: слова фильтра'),
+        mod: str('for changelog: mod id'),
+        query: str('for items/recipes/mods: filter words'),
         ...paging,
       },
     },

@@ -1314,15 +1314,15 @@ export const TOOLS = [
   {
     name: 'class_find',
     description:
-      'Поиск классов во всех jar сборки (с вложенными jar-in-jar; Minecraft+NeoForge — platform=true): часть имени, полное имя или glob (*Furnace*, net.dries007.tfc.**.Firepit*). Вид класса, родитель, jar и мод; у миксинов — цели.',
+      'Find classes in all pack jars (incl. nested jar-in-jar; Minecraft+NeoForge — platform=true): name part, full name or glob (*Furnace*, net.dries007.tfc.**.Firepit*). Class kind, parent, jar and mod; mixin targets.',
     inputSchema: {
       type: 'object',
       properties: {
-        query: str('часть имени, полное имя или glob'),
-        jar: str('только этот jar: имя, часть, id мода, «minecraft»'),
+        query: str('name part, full name or glob'),
+        jar: str('only this jar: name, part, mod id, «minecraft»'),
         kind: str('class, interface, enum, record, abstract, mixin'),
-        mixin: bool('только миксины'),
-        platform: bool('искать и в Minecraft + NeoForge'),
+        mixin: bool('mixins only'),
+        platform: bool('also search Minecraft + NeoForge'),
         ...paging,
       },
       required: ['query'],
@@ -1332,14 +1332,14 @@ export const TOOLS = [
   {
     name: 'class_info',
     description:
-      'Класс по байткоду: jar и мод (и другие jar с тем же классом), цепочка предков, интерфейсы, аннотации, поля (с константами), методы с сигнатурами и диапазоном строк исходника (для стека краша), миксины на этот класс и наследники.',
+      'Class from bytecode: jar and mod (and other jars with the same class), ancestor chain, interfaces, annotations, fields (with constants), methods with signatures and source line ranges (for crash stacks), mixins on this class and subclasses.',
     inputSchema: {
       type: 'object',
       properties: {
-        class: str('класс: полное имя, через / или простое (если однозначно)'),
-        jar: str('если класс есть в нескольких jar'),
-        members: str('только поля и методы, чьё имя подходит под регулярку'),
-        synthetic: bool('показывать синтетические (лямбды, мосты)'),
+        class: str('class: full name, slash-separated or simple (if unambiguous)'),
+        jar: str('if the class is in several jars'),
+        members: str('only fields and methods whose name matches the regex'),
+        synthetic: bool('show synthetic members (lambdas, bridges)'),
       },
       required: ['class'],
     },
@@ -1348,15 +1348,15 @@ export const TOOLS = [
   {
     name: 'class_hierarchy',
     description:
-      'Иерархия класса: предки (с модами) и все интерфейсы; вниз — дерево наследников и реализаций по всей сборке (кто расширяет Block, кто реализует интерфейс).',
+      'Class hierarchy: ancestors (with mods) and all interfaces; down — tree of subclasses and implementations across the pack (who extends Block, who implements an interface).',
     inputSchema: {
       type: 'object',
       properties: {
-        class: str('класс или интерфейс'),
-        direction: str('up, down или both (по умолчанию)'),
-        depth: { type: 'integer', description: 'глубина вниз (20)' },
-        platform: bool('наследники и в Minecraft + NeoForge'),
-        jar: str('если класс есть в нескольких jar'),
+        class: str('class or interface'),
+        direction: str('up, down or both (default)'),
+        depth: { type: 'integer', description: 'depth down (20)' },
+        platform: bool('subclasses in Minecraft + NeoForge too'),
+        jar: str('if the class is in several jars'),
         ...paging,
       },
       required: ['class'],
@@ -1366,18 +1366,18 @@ export const TOOLS = [
   {
     name: 'code_refs',
     description:
-      'Кто использует по байткоду всех jar (метод:строка): класс (extends, new, вызовы, поля, сигнатуры, аннотации и цели миксинов), метод или поле (Owner#name, Owner.name, *#name — любой владелец; subtypes — и через наследников) или строку в коде ("tfc:metal/ingot", ключ конфига). У полей — запись/чтение (access=write — кто перезаписывает), у каждого места — сторона: клиент (пакет client, @OnlyIn, клиентское событие) или событие, которое приходит и для клиентского мира. ~3–5 с на всю сборку.',
+      'Who uses it, from bytecode of all jars (method:line): class (extends, new, calls, fields, signatures, annotations and mixin targets), method or field (Owner#name, Owner.name, *#name — any owner; subtypes — also via subclasses) or a string in code ("tfc:metal/ingot", config key). Fields show write/read (access=write — who overwrites), each site shows the side: client (client package, @OnlyIn, client event) or an event that also fires for the client world. ~3–5 s over the pack.',
     inputSchema: {
       type: 'object',
       properties: {
-        target: str('класс, Owner#member или "строка"'),
-        kind: str('class, method, field или string — если не понятно из записи'),
-        jar: str('искать только в этом jar'),
-        subtypes: bool('для метода/поля: вызовы через наследников владельца (виртуальные)'),
-        platform: bool('искать и в Minecraft + NeoForge (долго, много совпадений)'),
-        self: bool('для класса: включать сам класс (для метода/поля он и так в ответе)'),
-        access: str('для поля: read — только чтение, write — только запись (putfield/putstatic)'),
-        side: bool('false — не помечать сторону кода (клиент/обе стороны)'),
+        target: str('class, Owner#member or "string"'),
+        kind: str('class, method, field or string — if not clear from the target'),
+        jar: str('search only this jar'),
+        subtypes: bool("for a method/field: calls via the owner's subclasses (virtual)"),
+        platform: bool('also search Minecraft + NeoForge (slow, many matches)'),
+        self: bool("for a class: include the class itself (for a method/field it's always included)"),
+        access: str('for a field: read — reads only, write — writes only (putfield/putstatic)'),
+        side: bool("false — don't mark the code side (client/both sides)"),
         ...paging,
       },
       required: ['target'],
@@ -1387,16 +1387,16 @@ export const TOOLS = [
   {
     name: 'event_listeners',
     description:
-      'Кто слушает событие NeoForge по всей сборке: методы @SubscribeEvent с этим событием (и с его предками/наследниками), addListener(…) с лямбдами и ссылками на методы, сторона кода; плюс скрипты KubeJS — NativeEvents.onEvent/Java.loadClass с этим классом и события KubeJS (PlayerEvents.loggedIn и т. п.), которые KubeJS разносит из своего обработчика. ~3–6 с.',
+      'Who listens to a NeoForge event across the pack: @SubscribeEvent methods with this event (and its ancestors/subclasses), addListener(…) with lambdas and method refs, code side; plus KubeJS scripts — NativeEvents.onEvent/Java.loadClass with this class and KubeJS events (PlayerEvents.loggedIn etc.) that KubeJS dispatches from its own handler. ~3–6 s.',
     inputSchema: {
       type: 'object',
       properties: {
         event: str(
-          'класс события: EntityTravelToDimensionEvent, LevelEvent$Unload, net.neoforged….PlayerChangedDimensionEvent',
+          'event class: EntityTravelToDimensionEvent, LevelEvent$Unload, net.neoforged….PlayerChangedDimensionEvent',
         ),
-        subtypes: bool('false — без обработчиков наследников события (по умолчанию с ними)'),
-        platform: bool('искать и в Minecraft + NeoForge'),
-        kubejs: bool('false — без скриптов KubeJS'),
+        subtypes: bool('false — without handlers of event subclasses (default: included)'),
+        platform: bool('also search Minecraft + NeoForge'),
+        kubejs: bool('false — without KubeJS scripts'),
         ...paging,
       },
       required: ['event'],
@@ -1406,16 +1406,16 @@ export const TOOLS = [
   {
     name: 'mixins',
     description:
-      'Миксины сборки. target — все миксины на класс по методам (@Inject/@Redirect/@Overwrite/MixinExtras: куда, at, priority, конфиг) и возможные конфликты; class — один миксин целиком; mod/jar — миксины мода, конфиги, цели, которых нет в сборке; без параметров — обзор: цели без класса, необъявленные конфиги, классы под миксинами нескольких модов.',
+      "Pack mixins. target — all mixins on a class by method (@Inject/@Redirect/@Overwrite/MixinExtras: where, at, priority, config) and possible conflicts; class — one mixin in full; mod/jar — a mod's mixins, configs, targets missing from the pack; no params — overview: targets without class, undeclared configs, classes mixed by several mods.",
     inputSchema: {
       type: 'object',
       properties: {
-        target: str('целевой класс (net.minecraft.world.level.block.Block)'),
-        method: str('с target: только инжекторы в эти методы (регулярка: tick|onPlace)'),
-        class: str('класс-миксин'),
-        mod: str('id мода или jar'),
-        jar: str('jar (для mod/class)'),
-        platform: bool('учитывать миксины внутри Minecraft+NeoForge'),
+        target: str('target class (net.minecraft.world.level.block.Block)'),
+        method: str('with target: only injectors into these methods (regex: tick|onPlace)'),
+        class: str('mixin class'),
+        mod: str('mod id or jar'),
+        jar: str('jar (for mod/class)'),
+        platform: bool('include mixins inside Minecraft+NeoForge'),
         ...paging,
       },
     },
@@ -1424,16 +1424,16 @@ export const TOOLS = [
   {
     name: 'decompile',
     description:
-      'Исходник класса: моды — декомпиляция Vineflower (кеш .cache/mcp/decompile), Minecraft+NeoForge — исходники среды разработки. method — только этот метод (регулярка), grep — строки. В шапке — строки исходника мода по методам (для сверки со стеком краша).',
+      "Class source: mods — Vineflower decompilation (cache .cache/mcp/decompile), Minecraft+NeoForge — dev environment sources. method — only this method (regex), grep — lines. The header lists the mod's source lines per method (to match a crash stack).",
     inputSchema: {
       type: 'object',
       properties: {
-        class: str('класс (вложенный — через $ или точку)'),
-        jar: str('если класс есть в нескольких jar'),
-        method: str('имя метода или регулярка'),
-        grep: str('только строки по регулярке'),
-        offset: { type: 'integer', description: 'с какой строки' },
-        limit: { type: 'integer', description: 'сколько строк (400)' },
+        class: str('class (nested — via $ or dot)'),
+        jar: str('if the class is in several jars'),
+        method: str('method name or regex'),
+        grep: str('only lines matching the regex'),
+        offset: { type: 'integer', description: 'start line' },
+        limit: { type: 'integer', description: 'how many lines (400)' },
       },
       required: ['class'],
     },
@@ -1442,16 +1442,16 @@ export const TOOLS = [
   {
     name: 'jar_grep',
     description:
-      'Поиск текста по файлам всех jar (json, toml, mcmeta, lang, js, mixins.json, data/ и assets/), без классов: где упоминается id, ключ, путь. path — glob по пути (data/**/recipe/*.json), context — строк вокруг.',
+      'Search text in files of all jars (json, toml, mcmeta, lang, js, mixins.json, data/ and assets/), no classes: where an id, key or path is mentioned. path — glob on the file path (data/**/recipe/*.json), context — lines around.',
     inputSchema: {
       type: 'object',
       properties: {
-        query: str('текст (без учёта регистра; «a|b» — любой из) или регулярка с regex=true'),
-        regex: bool('query — регулярное выражение'),
-        path: str('glob или часть пути файла внутри jar'),
-        jar: str('только этот jar (в т. ч. вложенный или «minecraft»)'),
-        nested: bool('искать и во вложенных jar'),
-        context: { type: 'integer', description: 'строк контекста (0–5)' },
+        query: str('text (case-insensitive; «a|b» — any of) or a regex with regex=true'),
+        regex: bool('query is a regular expression'),
+        path: str('glob or part of the file path inside the jar'),
+        jar: str('only this jar (incl. nested or «minecraft»)'),
+        nested: bool('also search nested jars'),
+        context: { type: 'integer', description: 'context lines (0–5)' },
         ...paging,
       },
       required: ['query'],
@@ -1461,14 +1461,14 @@ export const TOOLS = [
   {
     name: 'mods_check',
     description:
-      'Проверка зависимостей сборки по neoforge.mods.toml всех jar (и вложенных): нет обязательного мода, не та версия, несовместимые вместе, мод в двух jar, одинаковые классы в разных jar, минимальная версия NeoForge. mod — зависимости одного мода, кто от него зависит, что он несёт внутри.',
+      "Check pack dependencies from neoforge.mods.toml of all jars (and nested): missing required mod, wrong version, incompatible together, mod in two jars, same classes in different jars, minimum NeoForge version. mod — one mod's dependencies, who depends on it, what it bundles.",
     inputSchema: {
       type: 'object',
       properties: {
-        mod: str('id мода или jar — подробно об одном'),
-        neoforge: str('версия NeoForge сервера для проверки (например 21.1.248)'),
-        minecraft: str('версия Minecraft (1.21.1)'),
-        side: str('server или client — без зависимостей другой стороны'),
+        mod: str('mod id or jar — details about one'),
+        neoforge: str('server NeoForge version to check against (e.g. 21.1.248)'),
+        minecraft: str('Minecraft version (1.21.1)'),
+        side: str('server or client — skip dependencies of the other side'),
         ...paging,
       },
     },

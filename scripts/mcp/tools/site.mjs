@@ -701,57 +701,57 @@ async function schematicGet(a) {
 // ---------------------------------------------------------------- описание
 
 const TASK_PROPS = {
-  title: str('название (до 300 символов)'),
-  description: str('описание, Markdown'),
-  group: str('id или название группы (groups_list); "-" — без группы'),
+  title: str('title (up to 300 chars)'),
+  description: str('description, Markdown'),
+  group: str('group id or name (groups_list); "-" — no group'),
   priority: {
     type: 'integer',
     enum: [0, 1, 2, 3],
-    description: 'важность: 0 низкая, 1 обычная (по умолчанию), 2 высокая, 3 критическая',
+    description: 'priority: 0 low, 1 normal (default), 2 high, 3 critical',
   },
   status: {
     type: 'string',
     enum: ['todo', 'doing', 'done'],
-    description: 'надо сделать (по умолчанию) / в работе / готово',
+    description: 'todo (default) / doing / done',
   },
   checklist: {
     type: 'array',
     description:
-      'пункты: { text, done } — галочка; { itemId, qty, got, text? } — ресурс собрать (id предмета из items_search); можно просто строку',
+      'items: { text, done } — checkbox; { itemId, qty, got, text? } — resource to collect (item id from items_search); a plain string also works',
     items: {
       type: ['object', 'string'],
       properties: {
-        text: str('текст пункта'),
-        done: { type: 'boolean', description: 'отмечен' },
-        itemId: str('id предмета — пункт-ресурс'),
-        qty: num('сколько нужно (1)'),
-        got: num('сколько уже есть (0)'),
+        text: str('item text'),
+        done: { type: 'boolean', description: 'checked' },
+        itemId: str('item id — resource item'),
+        qty: num('how many needed (1)'),
+        got: num('how many already collected (0)'),
       },
     },
   },
-  icon: str('значок задачи — id предмета; "-" — убрать'),
-  assignee: str('кто делает (ник); "-" — никто'),
+  icon: str('task icon — item id; "-" — remove'),
+  assignee: str('who does it (nick); "-" — nobody'),
   place: {
     type: 'object',
-    description: 'место в мире — показывается на карте',
-    properties: { x: num('блок X'), z: num('блок Z'), label: str('подпись') },
+    description: 'place in the world — shown on the map',
+    properties: { x: num('block X'), z: num('block Z'), label: str('label') },
   },
 };
 
-const install = { type: 'boolean', description: 'только отмеченные «ставить» (true) или только неотмеченные (false)' };
+const install = { type: 'boolean', description: 'only flagged «ставить» (true) or only unflagged (false)' };
 
 export const TOOLS = [
   {
     name: 'tasks_list',
     description:
-      'Задачи сайта (Firestore tasks) и группы: поиск по словам (название, описание, чеклист), отбор по статусу, исполнителю, группе. Сначала незавершённые и важные. Только чтение; список кешируется на 3 мин.',
+      'Site tasks (Firestore tasks) and groups: search by words (title, description, checklist), filter by status, assignee, group. Unfinished and important first. Read-only; list cached for 3 min.',
     inputSchema: {
       type: 'object',
       properties: {
-        query: str('слова'),
-        status: { type: 'string', enum: ['todo', 'doing', 'done'], description: 'надо сделать / в работе / готово' },
-        assignee: str('ник исполнителя (часть); "-" — без исполнителя'),
-        group: str('id или часть названия группы; "-" — без группы'),
+        query: str('words'),
+        status: { type: 'string', enum: ['todo', 'doing', 'done'], description: 'todo / doing / done' },
+        assignee: str('assignee nick (part); "-" — unassigned'),
+        group: str('group id or part of its name; "-" — no group'),
         ...paging,
       },
     },
@@ -760,12 +760,12 @@ export const TOOLS = [
   {
     name: 'task_get',
     description:
-      'Задача целиком: описание, чеклист (ресурсы с названиями), место, вложения (имя/размер/id, без содержимого) и привязанные документы. id — из tasks_list или слова названия.',
+      'Whole task: description, checklist (resources with names), place, attachments (name/size/id, no content) and linked docs. id — from tasks_list or title words.',
     inputSchema: {
       type: 'object',
       properties: {
-        id: str('id задачи или слова названия'),
-        doc_chars: num('сколько символов документа показать (4000)'),
+        id: str('task id or title words'),
+        doc_chars: num('how many doc characters to show (4000)'),
       },
       required: ['id'],
     },
@@ -774,13 +774,13 @@ export const TOOLS = [
   {
     name: 'groups_list',
     description:
-      'Группы задач сайта (Firestore groups): id, название, значок, порядок; поиск по словам — чтобы найти группу по имени («фиксы»). Число задач — если список задач уже в кеше.',
-    inputSchema: { type: 'object', properties: { query: str('слова названия'), ...paging } },
+      'Site task groups (Firestore groups): id, name, icon, order; search by words to find a group by name («фиксы»). Task counts if the task list is already cached.',
+    inputSchema: { type: 'object', properties: { query: str('name words'), ...paging } },
     handler: counted(groupsList),
   },
   {
     name: 'task_create',
-    description: `Создать задачу на сайте (**запись в общую базу**, автор Claude) — как кнопка «Новая задача»: рейтинг 1000, createdAt/updatedAt, completedAt при status=done. Вернёт id, ссылку и revision. Подробный план — отдельным документом: artifact_put task=<id>.`,
+    description: `Create a site task (**write to the shared database**, author Claude) — like the «Новая задача» button: rating 1000, createdAt/updatedAt, completedAt when status=done. Returns id, link and revision. A detailed plan goes in a separate doc: artifact_put task=<id>.`,
     inputSchema: {
       type: 'object',
       properties: TASK_PROPS,
@@ -791,14 +791,14 @@ export const TOOLS = [
   {
     name: 'task_update',
     description:
-      'Поменять поля задачи (**запись в общую базу**); переданные поля заменяются, остальные не трогаются. Отказ, если задачу изменили после чтения: baseRevision — revision из task_get. checklist заменяет весь чеклист (id прежних пунктов сохраняются по предмету/тексту), checklist_add — дописывает.',
+      'Change task fields (**write to the shared database**); passed fields are replaced, others untouched. Refused if the task changed after reading: baseRevision — revision from task_get. checklist replaces the whole checklist (existing item ids kept by item/text), checklist_add appends.',
     inputSchema: {
       type: 'object',
       properties: {
-        id: str('id задачи (20 символов)'),
-        baseRevision: str('revision из task_get'),
+        id: str('task id (20 chars)'),
+        baseRevision: str('revision from task_get'),
         ...TASK_PROPS,
-        checklist_add: { ...TASK_PROPS.checklist, description: 'пункты, дописываемые в конец чеклиста' },
+        checklist_add: { ...TASK_PROPS.checklist, description: 'items appended to the end of the checklist' },
       },
       required: ['id', 'baseRevision'],
     },
@@ -807,12 +807,12 @@ export const TOOLS = [
   {
     name: 'artifacts_list',
     description:
-      'Документы-планы сайта (Firestore artifacts, раздел «Документы» и планы в задачах): id, название, задача, автор. Поиск по словам названия; task — документы задачи ("-" — свободные). Текст — artifact_get.',
+      'Site plan docs (Firestore artifacts, the «Документы» section and plans in tasks): id, title, task, author. Search by title words; task — docs of a task ("-" — unattached). Text — artifact_get.',
     inputSchema: {
       type: 'object',
       properties: {
-        query: str('слова названия'),
-        task: str('id или слова названия задачи; "-" — без задачи'),
+        query: str('name words'),
+        task: str('task id or title words; "-" — no task'),
         ...paging,
       },
     },
@@ -820,13 +820,13 @@ export const TOOLS = [
   },
   {
     name: 'artifact_get',
-    description: 'Документ-план целиком (Markdown по строкам), его задача и revision для artifact_put.',
+    description: 'Whole plan doc (Markdown by lines), its task and revision for artifact_put.',
     inputSchema: {
       type: 'object',
       properties: {
-        id: str('id документа или слова названия'),
-        offset: num('с какой строки'),
-        limit: num('сколько строк (300)'),
+        id: str('doc id or title words'),
+        offset: num('start line'),
+        limit: num('how many lines (300)'),
       },
       required: ['id'],
     },
@@ -835,36 +835,37 @@ export const TOOLS = [
   {
     name: 'artifact_put',
     description:
-      'Создать или поменять документ-план (**запись в общую базу**, подпись Claude). Без id — новый документ (название по умолчанию «План: <задача>»). С id — меняются только переданные title/content/task; нужен baseRevision из artifact_get, отказ, если документ изменили после чтения. content заменяет текст целиком.',
+      'Create or change a plan doc (**write to the shared database**, signed Claude). Without id — new doc (default title «План: <задача>»). With id — only the passed title/content/task change; needs baseRevision from artifact_get, refused if the doc changed after reading. content replaces the whole text.',
     inputSchema: {
       type: 'object',
       properties: {
-        id: str('id документа; пусто — создать новый'),
-        baseRevision: str('revision из artifact_get (для правки)'),
-        title: str('название'),
-        content: str('текст Markdown целиком'),
-        task: str('id или слова названия задачи, к которой привязать; "-" — отвязать'),
+        id: str('doc id; empty — create a new one'),
+        baseRevision: str('revision from artifact_get (for edits)'),
+        title: str('title'),
+        content: str('whole Markdown text'),
+        task: str('id or title words of the task to attach to; "-" — detach'),
       },
     },
     handler: counted(artifactPut),
   },
   {
     name: 'datapacks_list',
-    description: 'Датапаки сайта (Firestore datapacks): имя, namespace, ставится ли в мир, автор. Только чтение.',
-    inputSchema: { type: 'object', properties: { query: str('слова'), install, ...paging } },
+    description:
+      'Site datapacks (Firestore datapacks): name, namespace, whether installed into the world, author. Read-only.',
+    inputSchema: { type: 'object', properties: { query: str('words'), install, ...paging } },
     handler: counted(datapacksList),
   },
   {
     name: 'datapack_get',
     description:
-      'Датапак: записи (вид, путь, тип рецепта, исходный рецепт), в каких задачах упомянут; path — один файл zip целиком (как собирает сайт, вкл. pack.mcmeta), по строкам.',
+      'Datapack: records (kind, path, recipe type, source recipe), tasks mentioning it; path — one zip file in full (as the site builds it, incl. pack.mcmeta), by lines.',
     inputSchema: {
       type: 'object',
       properties: {
-        id: str('id или имя датапака'),
-        path: str('путь файла в zip (можно конец пути)'),
-        offset: num('с какой строки'),
-        limit: num('сколько строк (300)'),
+        id: str('datapack id or name'),
+        path: str('file path in the zip (path ending is fine)'),
+        offset: num('start line'),
+        limit: num('how many lines (300)'),
       },
       required: ['id'],
     },
@@ -873,16 +874,16 @@ export const TOOLS = [
   {
     name: 'kubejs_site_list',
     description:
-      'Скрипты KubeJS, добавленные на сайте (Firestore kubejsScripts, для server_scripts/): имя файла, ставится ли на сервер, автор. Скрипты самой сборки — не здесь.',
-    inputSchema: { type: 'object', properties: { query: str('слова в имени файла'), install, ...paging } },
+      "KubeJS scripts added on the site (Firestore kubejsScripts, for server_scripts/): file name, whether installed on the server, author. The pack's own scripts are not here.",
+    inputSchema: { type: 'object', properties: { query: str('words in the file name'), install, ...paging } },
     handler: counted(kubejsSiteList),
   },
   {
     name: 'kubejs_site_get',
-    description: 'Текст скрипта KubeJS с сайта по строкам.',
+    description: 'Site KubeJS script text by lines.',
     inputSchema: {
       type: 'object',
-      properties: { id: str('id или имя файла'), offset: num('с какой строки'), limit: num('сколько строк (300)') },
+      properties: { id: str('id or file name'), offset: num('start line'), limit: num('how many lines (300)') },
       required: ['id'],
     },
     handler: counted(kubejsSiteGet),
@@ -890,15 +891,15 @@ export const TOOLS = [
   {
     name: 'schematics_list',
     description:
-      'Схемы Create в библиотеке сайта (Firestore schematics): имя, файл, габариты, число блоков и замен. Поиск по словам, в т. ч. по id блоков в заменах.',
-    inputSchema: { type: 'object', properties: { query: str('слова'), ...paging } },
+      'Create schematics in the site library (Firestore schematics): name, file, size, block and replacement counts. Search by words, incl. block ids in replacements.',
+    inputSchema: { type: 'object', properties: { query: str('words'), ...paging } },
     handler: counted(schematicsList),
   },
   {
     name: 'schematic_get',
     description:
-      'Схема: файл, габариты, настройки скачивания (обрезка, платформа), описание, замены блоков с названиями. Материалы в базе не хранятся.',
-    inputSchema: { type: 'object', properties: { id: str('id или имя схемы') }, required: ['id'] },
+      'Schematic: file, size, download settings (crop, platform), description, block replacements with names. Materials are not stored in the database.',
+    inputSchema: { type: 'object', properties: { id: str('schematic id or name') }, required: ['id'] },
     handler: counted(schematicGet),
   },
 ];
