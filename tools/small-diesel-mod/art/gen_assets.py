@@ -1,38 +1,27 @@
 """
 Текстуры, модели и состояния блоков Small Diesel. Запуск: python3 art/gen_assets.py
-Модели — «лицом вверх» (у двигателя сверху выходит вал, у генератора сверху клеммы), положения — поворотами блокстейта,
-как у плит Electro Energetics. Клеммы генератора — те же числа, что Terminals.CENTERS и Terminals.Y;
-совпадение с точками проводов во всех положениях проверяет art/CheckNodes.java (./check-nodes.sh).
-Палитра: сталь — как у плит EE, латунь — как у двигателей Create Diesel Generators.
+Модели — по образцу настоящих машин (art/kit.py: коробки с материалами граней, атлас собирается сам), «лицом вверх»,
+положения — поворотами блокстейта, как у плит Electro Energetics:
+- двигатель — горизонтальный одноцилиндровый дизель (как S195): ось коленвала — Y модели, вал выходит сверху (лицевая
+  грань, его рисует блок-сущность), сторона −Z модели — верх, когда вал горизонтальный;
+- генератор — дизель-генераторная установка на раме: дизель, генератор, клеммная коробка с «+» и «−» сверху.
+Клеммы генератора — те же числа, что Terminals.CENTERS и Terminals.Y; совпадение с точками проводов во всех положениях
+проверяет art/CheckNodes.java (./check-nodes.sh).
 """
+import copy
 import json
 import os
-import random
 
-from png import write
+import kit
+from kit import BLUE, BRASS, DARK, DARKER, HI, RED, RUBBER, SOOT, Mat, Model, hexc
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RES = os.path.join(HERE, '..', 'src', 'main', 'resources', 'assets', 'small_diesel')
 NS = 'small_diesel'
 
-
-def hexc(h, a=255):
-    return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), a)
-
-
-FILL = [hexc(c) for c in ['8f9691'] * 5 + ['9aa49d'] * 4 + ['a8b3ab']]
-RIM, EDGE, CORNER = hexc('828784'), hexc('595858'), hexc('494848')
-DARK, DARKER, HI = hexc('60635f'), hexc('505351'), hexc('b4c1b8')
-SOOT = [hexc(c) for c in ['2b2a2a', '363434', '403e3d', '4a4746']]
-BRASS = [hexc(c) for c in ['7a5418', 'a8772a', 'd0a046', 'eecb6e']]
-COPPER = [hexc(c) for c in ['b26247', 'c87456', 'd67b5b', 'e3826c']]
-RED = [hexc(c) for c in ['7a2420', '9c2f27', 'b8392d', 'd4503f']]
-BLUE = [hexc(c) for c in ['1f2a44', '2b3a5e', '3a4d78', '4d6394']]
-CLEAR = (0, 0, 0, 0)
-
-# Клеммы генератора (Terminals.java): «+» (4, 8), «−» (12, 8), центр на высоте 14,5
-TERMINALS = [((4, 8), 'plus'), ((12, 8), 'minus')]
-TERMINAL_Y = 14.5
+# Клеммы генератора (Terminals.java): «+» (12.25, 6), «−» (12.25, 10), центр на высоте 14
+TERMINALS = [((12.25, 6), 'plus'), ((12.25, 10), 'minus')]
+TERMINAL_Y = 14
 
 ROT = {
     'up': {},
@@ -54,136 +43,121 @@ DISPLAY = {
     'fixed': {'scale': [0.5, 0.5, 0.5]},
 }
 
-# Области текстуры 32×32 (в единицах uv 0..16): верх, бок корпуса, низ, кромка, латунь, сажа, клеммы
-UV_TOP = [0, 8, 8, 16]
-UV_SIDE = [8, 0, 16, 6]
-UV_BOTTOM = [8, 8, 16, 16]
-UV_RIM = [8, 6, 16, 6.5]
-UV_BRASS = [0, 0, 4, 2]
-UV_SOOT = [0, 2, 2, 4]
-UV_TERM = {'plus': [2, 6, 4, 8], 'minus': [4, 6, 6, 8]}
+# ---------------------------------------------------------------- материалы
+
+PAINT = [hexc('263b2b'), hexc('3d5e44'), hexc('4a6f52')]  # заводская эмаль дизеля — тёмно-зелёная
+ENGINE = kit.painted('engine', PAINT)
+TANK = kit.painted('tank', [PAINT[0], hexc('4f7a58'), hexc('5c8a66')])
+ENGINE_PLAIN = Mat('engine_plain', kit.noise([PAINT[1]] * 3 + [PAINT[2]]))
+ENGINE_RIBS = kit.ribs('engine_ribs', [PAINT[2], PAINT[1], PAINT[0]], across=True)
+IRON = kit.painted('iron', [hexc('2e302f'), hexc('4b4e4c'), hexc('575a58')])  # чугун маховика, рама
+STEEL = kit.steel()
+ALT_RIBS = kit.ribs('alt_ribs', [hexc('a8b3ab'), hexc('8f9691'), hexc('60635f')], across=True)
+GRILLE = kit.mesh('grille', [hexc('707571'), hexc('1d1e1d'), hexc('595858')])
+def radiator_core():
+    """Радиатор, как у настоящих дизелей: окрашенная рамка, тёмная сердцевина — частые горизонтальные пластины
+    охлаждения, едва заметные вертикальные трубки"""
+    frame, fin, gap, tube = PAINT[0], hexc('454946'), hexc('2c2f2d'), hexc('505451')
+
+    def paint(w, h, rng):
+        def px(x, y):
+            if x in (0, w - 1) or y in (0, h - 1):
+                return frame
+            if y % 2:
+                return gap
+            return tube if x % 4 == 2 else fin
+        return kit.grid(w, h, px)
+    return Mat('radiator', paint)
 
 
-def texture(seed, kind):
-    rng = random.Random(seed)
-    px = [[CLEAR] * 32 for _ in range(32)]
-
-    def plate(x0, y0, w, h):
-        for y in range(h):
-            for x in range(w):
-                border = x in (0, w - 1) or y in (0, h - 1)
-                corner = x in (0, w - 1) and y in (0, h - 1)
-                rim = h > 6 and (x in (1, w - 2) or y in (1, h - 2))
-                px[y0 + y][x0 + x] = CORNER if corner else EDGE if border else RIM if rim else rng.choice(FILL)
-
-    def block4(x0, y0, pal):
-        for y in range(4):
-            for x in range(4):
-                edge = x in (0, 3) or y in (0, 3)
-                px[y0 + y][x0 + x] = pal[0] if (x in (0, 3) and y in (0, 3)) else pal[1] if edge else pal[2]
-        px[y0 + 1][x0 + 1] = pal[3]
-
-    def top(x, z, c):
-        px[16 + z][x] = c
-
-    plate(0, 16, 16, 16)
-    if kind == 'engine':
-        # Головка цилиндра: болты по углам, решётка клапанной крышки
-        for x, z in ((3, 3), (12, 3), (3, 12), (12, 12)):
-            top(x, z, BRASS[2])
-        for z in range(5, 11, 2):
-            for x in range(4, 12):
-                top(x, z, DARK)
-    else:
-        # «+» под красной клеммой, «−» под синей; посередине знак постоянного тока «=»
-        for dx, dz in ((0, -1), (-1, 0), (0, 0), (1, 0), (0, 1)):
-            top(4 + dx, 12 + dz, RED[2])
-        for dx in (-1, 0, 1):
-            top(12 + dx, 12, BLUE[3])
-        for x in (7, 8, 9):
-            top(x, 7, DARKER)
-            top(x, 9, DARKER)
-    for x in range(5, 12):
-        top(x, 1, HI)
-    # Бок корпуса 16×12: рёбра охлаждения в верхней половине, латунная табличка внизу
-    for y in range(12):
-        for x in range(16):
-            border = x in (0, 15) or y in (0, 11)
-            c = EDGE if border else (DARK if (y < 6 and x % 2 == 0) else rng.choice(FILL))
-            px[y][16 + x] = c
-    for x in range(4, 12):
-        px[8][16 + x] = BRASS[2]
-        px[9][16 + x] = BRASS[1]
-    for x in range(16):
-        px[12][16 + x] = EDGE if x in (0, 15) else RIM
-    plate(16, 16, 16, 16)
-    block4(0, 0, BRASS)
-    block4(4, 0, BRASS)
-    block4(0, 4, SOOT)
-    block4(4, 12, RED)
-    block4(8, 12, BLUE)
-    return px
+RADIATOR = radiator_core()
+BRASS_M = Mat('brass', kit.noise(BRASS[1:4], BRASS[0]))
+EXHAUST = Mat('exhaust', kit.noise(SOOT[1:], SOOT[0]))
+FILTER = kit.ribs('filter', [hexc('3a3c3e'), hexc('2c2e30'), hexc('1c1d1f')], period=3, across=True)
+PLATE = kit.nameplate('plate')
+PLUS = kit.terminal('plus', RED)
+MINUS = kit.terminal('minus', BLUE)
+GLAND = Mat('gland', kit.noise(RUBBER[1:3], RUBBER[0]))
 
 
-def faces(uv, **extra):
-    f = {k: {'texture': '#0', 'uv': uv} for k in ('north', 'east', 'south', 'west', 'up', 'down')}
-    f.update(extra)
-    return f
+def flywheel_face():
+    """Торец маховика: светлый обод, тёмный диск, четыре спицы, ступица (через неё выходит полувал Create)"""
+    def draw(c):
+        cx, cy = c.w // 2, c.h // 2
+        c.rect(0, 0, c.w - 1, c.h - 1, hexc('8a8f8b'), fill=False)
+        c.rect(1, 1, c.w - 2, c.h - 2, hexc('262827'))
+        for x in range(1, c.w - 1):
+            c.put(x, cy, hexc('5d615e'))
+        for y in range(1, c.h - 1):
+            c.put(cx, y, hexc('5d615e'))
+        c.rect(cx - 1, cy - 1, cx, cy, hexc('a3a8a4'))
+    return kit.drawn('flywheel', IRON, draw)
 
 
-def roll(t):
-    """(x, z) → (16 − z, x): так же, как Terminals.roll"""
-    return (16 - t[1], t[0])
+# ---------------------------------------------------------------- двигатель
 
 
-def r(a, b, rolled):
-    if not rolled:
-        return a, b
-    return [16 - b[2], a[1], a[0]], [16 - a[2], b[1], b[0]]
+def engine():
+    """Горизонтальный одноцилиндровый дизель: картер вокруг оси, цилиндр к −X с радиатором на торце,
+    топливный бак сверху с латунной крышкой, воздушный фильтр и глушитель с трубой на стороне +X, маховик у вала,
+    рама-салазки снизу (сторона +Z)"""
+    m = Model(64, 2100)
+    # Салазки
+    for y0, y1 in ((2, 4), (9.5, 11.5)):
+        m.box([1, y0, 14.5], [15, y1, 16], IRON, cull=('south',))
+    # Картер вокруг оси и крышка шестерён сзади
+    m.box([5, 2, 4.5], [12.5, 12.5, 14.5], ENGINE)
+    m.box([5.5, 1, 5.5], [12, 2, 13], ENGINE_PLAIN)
+    # Цилиндр с рёбрами, головка, радиатор на торце
+    m.box([2, 3.5, 4.5], [5, 10.5, 12], ENGINE_RIBS, up=ENGINE_PLAIN, down=ENGINE_PLAIN)
+    m.box([0.5, 3, 3.5], [2, 11, 12.5], ENGINE, west=RADIATOR)
+    m.box([1, 4, 12.5], [4.5, 6, 14.5], IRON)  # опора цилиндра
+    # Бак сверху, крышка горловины
+    m.box([2, 3, 1.5], [11.5, 11, 4.5], TANK)
+    m.box([3.5, 5, 0.5], [5.5, 7, 1.5], BRASS_M)
+    # Воздушный фильтр, глушитель и выхлопная труба, табличка
+    m.box([11.5, 3, 2], [14.5, 6.5, 5], FILTER, up=ENGINE_PLAIN, down=ENGINE_PLAIN)
+    m.box([12.5, 7, 4.5], [15, 11.5, 8], EXHAUST)
+    m.box([13, 9, 1.5], [14.5, 10.5, 4.5], EXHAUST)
+    m.box([12.5, 5.5, 9], [12.75, 9.5, 12.5], PLATE)
+    # Маховик (стальной обод, спицы — на торце) у выхода вала
+    m.box([3, 12.5, 4], [13, 15, 12], IRON, up=flywheel_face())
+    m.box([4, 12.5, 3], [12, 14.95, 13], IRON)  # торец чуть ниже — без мерцания с первым
+    return m
 
 
-def body(els, rolled, top_y):
-    """Опорная плита, корпус с рёбрами, кромка крышки — общее у двигателя и генератора"""
-    side = {'texture': '#0', 'uv': UV_SIDE}
-    els.append({'name': 'base', 'from': [1, 0, 1], 'to': [15, 2, 15], 'faces': faces(UV_RIM, down={'texture': '#0', 'uv': UV_BOTTOM, 'cullface': 'down'})})
-    els.append({'name': 'body', 'from': [2, 2, 2], 'to': [14, top_y, 14], 'faces': {
-        'north': side, 'east': side, 'south': side, 'west': side,
-        'up': {'texture': '#0', 'uv': UV_TOP, **({'rotation': 90} if rolled else {})}}})
+# ---------------------------------------------------------------- дизель-генератор
 
 
-def engine_model(name):
-    """Двигатель: корпус, головка цилиндра, латунная крышка горловины, выхлопная труба; вал выходит сверху (блок-сущность)"""
-    tex = f'{NS}:block/{name}'
-    els = []
-    body(els, False, 10)
-    top = {'texture': '#0', 'uv': UV_TOP}
-    side = {'texture': '#0', 'uv': UV_SIDE}
-    els.append({'name': 'head', 'from': [3, 10, 3], 'to': [13, 13, 13], 'faces': {
-        'north': side, 'east': side, 'south': side, 'west': side, 'up': top}})
-    els.append({'name': 'filler', 'from': [10, 10, 13], 'to': [13, 12, 15], 'faces': faces(UV_BRASS)})
-    els.append({'name': 'exhaust', 'from': [3, 10, 13], 'to': [5, 15, 15], 'faces': faces(UV_SOOT)})
-    return {'credit': NS, 'textures': {'0': tex, 'particle': tex}, 'elements': els, 'display': DISPLAY}
+def genset():
+    """Дизель-генераторная установка: рама с баком, дизель (радиатор на торце −X, блок, клапанная крышка,
+    глушитель), генератор с рёбрами вдоль оси X и решёткой на торце, клеммная коробка с «+» и «−» и кабельным вводом"""
+    m = Model(64, 2101)
+    m.box([0.5, 0, 1.5], [15.5, 1.5, 14.5], IRON, cull=('down',))  # рама с топливным баком
+    m.box([14, 1.5, 12], [15, 2.5, 13.5], BRASS_M)  # горловина бака
+    # Дизель
+    m.box([0.5, 1.5, 3], [2.5, 11, 13], ENGINE, west=RADIATOR)
+    m.box([2.5, 1.5, 4], [9, 6.5, 12], ENGINE)  # картер
+    m.box([3, 6.5, 4.5], [8.5, 10.5, 11.5], ENGINE_RIBS, up=ENGINE_PLAIN, down=None)  # блок цилиндров
+    m.box([3.5, 10.5, 5], [8, 11.5, 11], ENGINE_PLAIN)  # клапанная крышка
+    m.box([4, 6.5, 2.5], [6.5, 9, 4.5], FILTER, up=ENGINE_PLAIN, down=ENGINE_PLAIN)  # воздушный фильтр
+    m.box([4, 11.5, 7.5], [7.5, 13, 10], EXHAUST)  # глушитель
+    m.box([6.5, 13, 8], [7.5, 14.5, 9], EXHAUST)
+    m.box([3, 2.5, 11.75], [6.5, 5, 12], PLATE)
+    # Генератор — ось X, центр (y 6.5, z 8)
+    m.box([9.05, 2.5, 3.5], [14.95, 10.5, 12.5], ALT_RIBS, east=STEEL, west=STEEL, up=STEEL, down=None)
+    m.box([9, 1.5, 4.5], [15, 11.5, 11.5], ALT_RIBS, east=GRILLE, west=STEEL, down=None)
+    # Клеммная коробка сверху, кабельный ввод сбоку
+    m.box([10, 11.5, 4.5], [14.5, 12.5, 11.5], STEEL)
+    m.box([9.75, 12.5, 4.25], [14.75, 13, 11.75], STEEL)
+    m.box([14.75, 11.75, 7.25], [15.5, 12.5, 8.75], GLAND)
+    lo = TERMINAL_Y - 1
+    for (x, z), k in TERMINALS:
+        m.box([x - 1, lo, z - 1], [x + 1, lo + 2, z + 1], PLUS if k == 'plus' else MINUS, name=k)
+    return m
 
 
-def generator_model(name, rolled):
-    """Генератор: тот же корпус, крышка с клеммами «+» и «−», латунная крышка горловины, выхлопная труба сбоку"""
-    tex = f'{NS}:block/{name}'
-    els = []
-    body(els, rolled, 12)
-    rim = {'texture': '#0', 'uv': UV_RIM}
-    els.append({'name': 'lid', 'from': [1, 12, 1], 'to': [15, 13, 15], 'faces': {
-        'north': rim, 'east': rim, 'south': rim, 'west': rim,
-        'up': {'texture': '#0', 'uv': UV_TOP, **({'rotation': 90} if rolled else {})},
-        'down': {'texture': '#0', 'uv': UV_BOTTOM}}})
-    a, b = r([7, 13, 12], [9, 14, 14], rolled)
-    els.append({'name': 'filler', 'from': a, 'to': b, 'faces': faces(UV_BRASS)})
-    a, b = r([7, 3, 14], [9, 11, 16], rolled)
-    els.append({'name': 'exhaust', 'from': a, 'to': b, 'faces': faces(UV_SOOT)})
-    lo = TERMINAL_Y - 1.5
-    for t, k in TERMINALS:
-        x, z = roll(t) if rolled else t
-        els.append({'name': k, 'from': [x - 2, lo, z - 2], 'to': [x + 2, lo + 3, z + 2], 'faces': faces(UV_TERM[k])})
-    return {'credit': NS, 'textures': {'0': tex, 'particle': tex}, 'elements': els, 'display': DISPLAY}
+# ---------------------------------------------------------------- вывод
 
 
 def dump(obj, *path):
@@ -193,19 +167,32 @@ def dump(obj, *path):
         json.dump(obj, f, indent=2)
 
 
+def lying(display, view_y=-135):
+    d = copy.deepcopy(display)
+    d['gui'] = {'rotation': kit.lying(view_y=view_y), 'scale': [0.625, 0.625, 0.625]}
+    return d
+
+
 os.makedirs(os.path.join(RES, 'textures', 'block'), exist_ok=True)
 
 name = 'small_diesel_engine'
-write(os.path.join(RES, 'textures', 'block', name + '.png'), texture(2100, 'engine'))
-dump(engine_model(name), 'models', 'block', name + '.json')
+m = engine()
+m.save(os.path.join(RES, 'textures', 'block', name + '.png'))
+dump(m.json(f'{NS}:block/{name}', lying(DISPLAY, 45), NS), 'models', 'block', name + '.json')
 dump({'parent': f'{NS}:block/{name}'}, 'models', 'item', name + '.json')
 dump({'variants': {f'facing={f}': {'model': f'{NS}:block/{name}', **rot} for f, rot in ROT.items()}},
      'blockstates', name + '.json')
 
 name = 'small_diesel_generator'
-write(os.path.join(RES, 'textures', 'block', name + '.png'), texture(2101, 'generator'))
-for rolled, fn in ((False, 'block'), (True, 'block_roll')):
-    dump(generator_model(name, rolled), 'models', 'block', name, fn + '.json')
+m = genset()
+m.save(os.path.join(RES, 'textures', 'block', name + '.png'))
+tex = f'{NS}:block/{name}'
+# Иконка — с другой стороны (радиатор и дизель на виду, генератор сзади)
+display = copy.deepcopy(DISPLAY)
+display['gui'] = {'rotation': [30, 135, 0], 'scale': [0.625, 0.625, 0.625]}
+dump(m.json(tex, display, NS), 'models', 'block', name, 'block.json')
+m.els = kit.rolled(m.els)
+dump(m.json(tex, display, NS), 'models', 'block', name, 'block_roll.json')
 dump({'parent': f'{NS}:block/{name}/block'}, 'models', 'item', name + '.json')
 variants = {}
 for facing, rot in ROT.items():
