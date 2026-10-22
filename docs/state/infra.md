@@ -16,6 +16,11 @@ Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md)
   ready-made, in a worktree taken from the main checkout with `.env.local`, addons, resource packs and KubeJS;
   `predeploy-check` blocks a site built without Firebase settings.
 
+- Mods inside jars (`META-INF/jarjar/*.jar` with `neoforge.mods.toml` and assets/data) are read like top-level jars
+  (2026-10-22): Create Aeronautics bundle → `aeronautics` 46, `simulated` 86, `offroad` 7 items (+125 recipes). The
+  pack manifest still lists only top-level jars. Dyed symmetric sails are blocks without items (drop the white sail,
+  only `white_symmetric_sail` has an item model) — absent on purpose.
+
 ## Imported from the server
 
 - Server config (`config/`, layer `config`; the host PC is the server): `tfc-server.toml`, `tfc-common.toml`,
