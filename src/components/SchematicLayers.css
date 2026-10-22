@@ -240,3 +240,26 @@
 .view3d ~ .layers-hint {
   z-index: 2;
 }
+
+/* Выделение: панель действий справа сверху (слева сверху — подсказка блока под курсором) */
+.layers-selection {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 320px;
+  max-width: calc(100% - 16px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  box-shadow: var(--shadow-sm);
+  z-index: 2;
+}
+
+.layers-menu-select {
+  flex-wrap: wrap;
+  gap: 4px;
+}

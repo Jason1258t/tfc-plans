@@ -89,6 +89,57 @@ export function stateOf(s: Schematic, index: number): number {
   return st?.type === T.Int ? st.value : -1;
 }
 
+/** Позиция блока по индексу в списке blocks */
+export function posOfIndex(s: Schematic, index: number): Vec | null {
+  const b = blocksOf(s)[index];
+  return b ? posOf(b) : null;
+}
+
+const NEIGHBOURS: Vec[] = [
+  [1, 0, 0],
+  [-1, 0, 0],
+  [0, 0, 1],
+  [0, 0, -1],
+  [0, 1, 0],
+  [0, -1, 0],
+];
+
+/**
+ * Группа блоков: соединённые гранями блоки, для которых same() верно (обычно — тот же вид), начиная со start.
+ * layerOnly — только по горизонтали, в слое start. Возвращает индексы в списке blocks, start — первым.
+ */
+export function connectedGroup(
+  s: Schematic,
+  grid: Grid,
+  start: number,
+  same: (index: number) => boolean,
+  layerOnly = false,
+): number[] {
+  const p = posOfIndex(s, start);
+  if (!p) return [];
+  const [sx, sy, sz] = grid.size;
+  const dirs = layerOnly ? NEIGHBOURS.slice(0, 4) : NEIGHBOURS;
+  const seen = new Set([start]);
+  const out = [start];
+  const queue: Vec[] = [p];
+  while (queue.length) {
+    const [x, y, z] = queue.pop()!;
+    for (const [dx, dy, dz] of dirs) {
+      const nx = x + dx;
+      const ny = y + dy;
+      const nz = z + dz;
+      if (nx < 0 || nz < 0 || ny < 0 || nx >= sx || ny >= sy || nz >= sz) continue;
+      const idx = grid.layers.get(ny)?.[nx + nz * sx] ?? -1;
+      if (idx < 0 || seen.has(idx)) continue;
+      seen.add(idx);
+      if (!same(idx)) continue;
+      out.push(idx);
+      queue.push([nx, ny, nz]);
+    }
+  }
+  return out;
+}
+
 /** Свойства записи палитры — для стрелок направления на рисунке */
 export function propsByState(s: Schematic): Map<string, string>[] {
   return (paletteLists(s.parsed.root.value)[0] ?? []).map((e) => new Map(propsOf(e)));

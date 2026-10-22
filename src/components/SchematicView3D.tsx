@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { useItems } from '../lib/items';
-import type { Schematic } from '../lib/schematic';
+import type { Schematic, Vec } from '../lib/schematic';
 import { buildMesh } from '../lib/schematicMesh';
 import { disposeMesh, meshObject, newRenderer } from '../lib/schematicRender';
 
@@ -12,13 +12,21 @@ interface Props {
   /** Срез: слои выше не показываются */
   maxY?: number;
   textured: boolean;
+  /** Выделенные блоки — подсвечиваются поверх */
+  selected?: Vec[];
+}
+
+function disposeMarks(m: THREE.InstancedMesh) {
+  m.geometry.dispose();
+  (m.material as THREE.Material).dispose();
+  m.dispose();
 }
 
 /**
  * 3D-просмотр схемы: упрощённые формы блоков, вращение ЛКМ, сдвиг ПКМ, масштаб колесом.
  * Рисует только при движении камеры или смене схемы — в покое видеокарту не грузит.
  */
-export default function SchematicView3D({ schematic, replace, maxY, textured }: Props) {
+export default function SchematicView3D({ schematic, replace, maxY, textured, selected }: Props) {
   const items = useItems();
   const wrapRef = useRef<HTMLDivElement>(null);
   const three = useRef<{
@@ -27,6 +35,7 @@ export default function SchematicView3D({ schematic, replace, maxY, textured }: 
     camera: THREE.PerspectiveCamera;
     controls: OrbitControls;
     mesh: THREE.Mesh | null;
+    marks: THREE.InstancedMesh | null;
     render: () => void;
   } | null>(null);
   const [stats, setStats] = useState<string | null>(null);
@@ -55,12 +64,13 @@ export default function SchematicView3D({ schematic, replace, maxY, textured }: 
     };
     const ro = new ResizeObserver(resize);
     ro.observe(wrap);
-    three.current = { renderer, scene, camera, controls, mesh: null, render };
+    three.current = { renderer, scene, camera, controls, mesh: null, marks: null, render };
     resize();
     return () => {
       ro.disconnect();
       controls.dispose();
       if (three.current?.mesh) disposeMesh(three.current.mesh);
+      if (three.current?.marks) disposeMarks(three.current.marks);
       renderer.dispose();
       renderer.domElement.remove();
       three.current = null;
@@ -102,6 +112,32 @@ export default function SchematicView3D({ schematic, replace, maxY, textured }: 
       cancelled = true;
     };
   }, [schematic, replace, items, maxY, textured]);
+
+  // Подсветка выделения — полупрозрачные кубы чуть больше блока; срез прячет и их
+  useEffect(() => {
+    const t = three.current;
+    if (!t) return;
+    if (t.marks) {
+      t.scene.remove(t.marks);
+      disposeMarks(t.marks);
+      t.marks = null;
+    }
+    const shown = (selected ?? []).filter((p) => maxY === undefined || p[1] <= maxY);
+    if (shown.length) {
+      const color = getComputedStyle(wrapRef.current!).getPropertyValue('--accent').trim() || '#4c8a2b';
+      const marks = new THREE.InstancedMesh(
+        new THREE.BoxGeometry(1.04, 1.04, 1.04),
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.45, depthWrite: false }),
+        shown.length,
+      );
+      const m = new THREE.Matrix4();
+      shown.forEach(([x, y, z], i) => marks.setMatrixAt(i, m.makeTranslation(x + 0.5, y + 0.5, z + 0.5)));
+      marks.renderOrder = 1;
+      t.marks = marks;
+      t.scene.add(marks);
+    }
+    t.render();
+  }, [selected, maxY]);
 
   return (
     <div className="view3d" ref={wrapRef}>
