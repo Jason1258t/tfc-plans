@@ -12,9 +12,10 @@ its one-liner in STATE.md.
   survive; 2.0.2 — cable, EE connector terminal, highlight and label, wrench rotation; 2.1 — wires and spools, sag and
   rendering of spans > 128 blocks, clamp by click, spool tooltips, recipes; 2.2 — blocks, JEI, inverters with motors and
   several per grid; grid sync only at microTicks = 1. Details — [addons.md](addons.md).
-- **EE Extras 2.3 + Small Diesel 1.0.0** (2026-10-22, `ee-extras-2.3.0.jar`, `small-diesel-1.0.0.jar`): host installs
-  both and `tfc publish` (EE Extras 2.3 includes 2.2). In game: compact generator look and rotating half-shaft, small
-  engine and generator look, bucket by hand and Create pipes into the tank, JEI/EMI recipes, a real CDG engine driving
+- **EE Extras 2.3.1 + Small Diesel 1.0.1** (2026-10-22, `ee-extras-2.3.1.jar`, `small-diesel-1.0.1.jar`; 2.3.1/1.0.1
+  — new looks only): host installs both and `tfc publish` (EE Extras 2.3.1 includes 2.2–2.3). In game: new models of the
+  generator, rectifiers, inverters, small engine and genset (terminals of both generators moved into terminal boxes —
+  placed wires should follow), rotating half-shaft, bucket by hand and Create pipes into the tank, JEI/EMI recipes, a real CDG engine driving
   compact generators, fuels other than diesel. Details — [addons.md](addons.md).
 - **`rw-host-fix`** (`rw-host-fix-1.0.0.jar`): host uploads via `tfc publish` together with deleting
   `kubejs/server_scripts/event/eratosthenes_portal_clamp.js`; check host death and portal — the map no longer «drifts».
