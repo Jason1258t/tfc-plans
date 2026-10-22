@@ -11,6 +11,7 @@
 | Тяжёлые выпрямители `heavy_three_phase_rectifier`, `heavy_single_phase_rectifier` (2.2) | как у лёгких того же вида, клеммы — шапки проходных изоляторов (высота 14) | как у лёгких, номинал 48 кВт | `CRC / XSX / RSR`: C — опорный изолятор, R — радиаторная панель EE, X — лёгкий выпрямитель того же вида, S — `#c:plates/steel` |
 | Инверторы `three_phase_inverter`, `single_phase_inverter` (2.2) | медные 0–2 (у однофазного 0 — фаза, 1 — нейтраль) — выход, красная — «+», синяя — «−» (вход) | нагрузка + источники ЭДС в такт сети с запасом (`InverterDevice`) | `CKC / DPD / LDL` (однофазный `CKC / DPD / _L_`): K — конденсатор EE, L — индуктор EE |
 | Тяжёлые инверторы `heavy_three_phase_inverter`, `heavy_single_phase_inverter` (2.2) | как у лёгких | номинал 48 кВт | как тяжёлые выпрямители, X — лёгкий инвертор |
+| Компактный генератор `compact_kinetic_generator` (2.3) | красная 0 — «+», синяя 1 — «−» (сверху, высота 14,5); вал Create — в задней грани | `generator/GeneratorDevice`: источник с запасом, как щёточный узел EE | `PCP / MSM / PAP`: C — катушка медного провода EE, M — электромагнитный блок EE, S — вал, A — андезитовый сплав |
 | Двусторонний преобразователь `bidirectional_converter` | медные; 0 «+», 1 «−» — заряд (сеть EE → FE), 2 «+», 3 «−» — разряд (FE → сеть EE); подписи — `ee_extras.nodes.*` | два преобразователя EE: нагрузка + источник с запасом, FE — с блока за задней гранью | 2 × преобразователь EE |
 | Четырёхжильный соединитель `four_core_termination` | 1 L1, 2 L2, 3 L3, 4 N; узел 0 — кабель | только узлы | 2 × двухпроводной соединитель EE (и обратно) |
 | Отвод фазы `four_core_tap` (2.1) | 1 фаза, 2 ноль; узел 0 — кабель | только узлы; для кабеля — «двухпроводной конец с выбором фазы», как соединитель EE | двухпроводной соединитель EE + изолированный провод |
@@ -51,6 +52,13 @@
   отдача < 0 — `off`. Знак: `voltageSourceWithResistance(n1, n2, …, E)` поднимает n2 над n1 (у творческой батареи EE
   контакт 0 — «−»), `getVoltageAt(a, b)` = U(a) − U(b). Замер по `SimulationResults` — только при microTicks = 1
   (при большем EE отдаёт напряжение без знака). В `/cee device_data` — `Mode`, `Amplitude`, `PhaseError`.
+- `generator/` — компактный генератор (2.3). Блок кинетический, как щёточный узел EE (`DirectionalKineticElectricBlock`,
+  вал — только в задней грани), плюс крен, вода и масло, как у плит EE. Числа — от генератора EE 1.1.2 (по байткоду:
+  выработка 48 × магниты × об/мин Вт, нагрузка на вал 48 × (магниты + 0,125) SU на 1 об/мин, ЭДС = выработка / 100 А):
+  8 SU на 1 об/мин (`BlockStressValues.IMPACTS`), 6 Вт и 0,5 В на 1 об/мин, номинал нагрева 1,2 кВт. Устройство
+  `GeneratorDevice` — как `GeneratingDevice` EE (запас ≤ 10 тиков мощности, `energyLimitedSource`); приток каждый тик
+  ставит блок-сущность (неизрасходованное пропадает, как у EE). Полувал на клиенте — `GeneratorClient`
+  (`OrientedRotatingVisual` / `KineticBlockEntityRenderer` с `SHAFT_HALF`, смотрит назад).
 - `converter/` — двусторонний преобразователь. Формулы — как у `ConverterDevice` EE 1.1.2 (по байткоду): заряд — резистор
   max(20 Ом, U² / свободное место в запасе), разряд — `energyLimitedSource` с запасом, оба запаса до
   `converterMaxPowerKw`, перевод `wattFeTConversionRate`. FE: сначала через грань, которой касается сосед, потом
@@ -87,6 +95,7 @@
 ./test-server.sh 'forceload add 112 0 150 60' 'rectest heat 3' 'sleep 1' 'rectest heatv 300' 'sleep 30' 'rectest preport'
 ./test-server.sh 'forceload add 112 0 150 60' 'rectest grid 8' 'sleep 1' 'rectest dc 85' 'sleep 6' 'rectest pwatch 8' 'sleep 1' 'rectest preport'
 IE=1 ./test-server.sh 'forceload add 0 0 64 80' 'rectest bidi' 'rectest bidipower 120 100' 'sleep 5' 'rectest bidireport'
+./test-server.sh 'forceload add 150 -10 180 20' 'rectest kgen 64 10' 'sleep 4' 'rectest kreport' 'rectest krpm 256' 'sleep 4' 'rectest kreport'
 ./test-server.sh 'forceload add 0 0 64 80' 'rectest cables' 'rectest cablepower 100' 'sleep 4' 'rectest cablereport' 'rectest phase'
 ```
 
@@ -95,6 +104,12 @@ IE=1 ./test-server.sh 'forceload add 0 0 64 80' 'rectest bidi' 'rectest bidipowe
 `~/.gradle/local-tools/jdk21` (см. docs/addons.md, «Среда»).
 
 ## Что проверено
+
+**2.3 (2026-10-22), сервер разработки** (`rectest kgen|krpm|kreport`, `src/devtest/.../Compact.java`): компактный
+генератор от творческого мотора, лицом вверх и на восток — вал входит сзади в обоих; 64 об/мин: без нагрузки 32 В, на
+10 нагревателях 31,5 В / 220,6 Вт (= U²/R); 256 об/мин: 128 В, под нагрузкой упор в 1 536 Вт, напряжение 83 В; нагрузка
+сети 8 SU на 1 об/мин; мотор стоп — 0 В. 128 % номинала — 24 500 за 30 с (расчётный предел 37 400, дым с 30 000).
+Клеммы: 720 из 720. Не проверено: клиент (вид, вращение полувала), с настоящим дизельным двигателем и аккумулятором EE.
 
 **2.2 (2026-10-22), сервер разработки** (`rectest heat|heatv|island|grid|dc|pwatch|preport`, `src/devtest/.../Power.java`):
 лёгкий и тяжёлый трёхфазные выпрямители на 15,5 кВт — лёгкий сгорел за 20–50 с, тяжёлый — 9 200 (расчёт 9 390), без
