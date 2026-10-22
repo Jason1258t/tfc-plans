@@ -11,6 +11,7 @@ import dev.engine_room.flywheel.api.instance.Instance;
 import dev.engine_room.flywheel.api.model.Model;
 import dev.engine_room.flywheel.api.visual.Visual;
 import dev.engine_room.flywheel.backend.engine.AbstractInstancer;
+import dev.engine_room.flywheel.backend.engine.InstanceHandleImpl;
 import dev.engine_room.flywheel.backend.engine.InstancerKey;
 import dev.engine_room.flywheel.impl.visualization.VisualManagerImpl;
 import dev.engine_room.flywheel.impl.visualization.VisualizationManagerImpl;
@@ -121,7 +122,7 @@ public final class WireDiag {
             if (type != null && type.getModel() != null) {
                 Model model = Models.partial(type.getModel());
                 names.put(model, type.getModel().modelLocation().toString());
-                for (Instance i : wire.eeExtrasSegments()) if (i.handle().isVisible()) visible++;
+                for (Instance i : wire.eeExtrasSegments()) if (shown(i)) visible++;
                 expected.merge(model, visible, Integer::sum);
             }
             PartialModel end = type == null ? null : type.getEndPointModel();
@@ -129,8 +130,8 @@ public final class WireDiag {
                 Model model = Models.partial(end);
                 names.put(model, end.modelLocation().toString());
                 int ends = 0;
-                if (wire.eeExtrasStart() != null && wire.eeExtrasStart().handle().isVisible()) ends++;
-                if (wire.eeExtrasEnd() != null && wire.eeExtrasEnd().handle().isVisible()) ends++;
+                if (wire.eeExtrasStart() != null && shown(wire.eeExtrasStart())) ends++;
+                if (wire.eeExtrasEnd() != null && shown(wire.eeExtrasEnd())) ends++;
                 expected.merge(model, ends, Integer::sum);
             }
             int live = wire.eeExtrasSegments().size() + 2;
@@ -168,6 +169,15 @@ public final class WireDiag {
         say(extra.isEmpty() ? "Лишних кусков во Flywheel нет" : "Лишние куски во Flywheel (ничьи): " + String.join(", ", extra));
         for (String d : details) log(d);
         say("Подробности по гирляндам — в logs/latest.log, строки «[провода EE]»");
+    }
+
+    /**
+     * Кусок сейчас в Flywheel. {@code handle().isVisible()} не годится: у непрямой отрисовки (GL 4.6, видеокарты
+     * NVIDIA/AMD) состояние видимого куска — страница, а не AbstractInstancer, и isVisible() всегда false.
+     */
+    private static boolean shown(Instance instance) {
+        if (!(instance.handle() instanceof InstanceHandleImpl<?> handle)) return instance.handle().isVisible();
+        return !(handle.state instanceof InstanceHandleImpl.Hidden<?>) && !(handle.state instanceof InstanceHandleImpl.Deleted<?>);
     }
 
     private static String pos(ClientLevel level, InWorldNode node) {

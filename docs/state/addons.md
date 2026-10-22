@@ -37,7 +37,14 @@ Before 2.0 — EE Rectifiers, `ee_rectifier`; old blocks migrate to new ids via 
   (efficiency 75 %; EE generator ~99 % by bytecode: 48 × magnets × rpm W vs 48 × (magnets + 0.125) SU/rpm), heating
   rating 1.2 kW (smokes above ~200 rpm at full load, doesn't burn). Dev server from a creative motor
   (`rectest kgen|krpm|kreport`): U²/R exact, cap at 1 536 W, stress 8 SU/rpm; terminals 720/720.
-- **Insulator-string «fan» (open)**: a swinging EE hanging glass insulator string leaves frozen copies until relog.
+- **Insulator-string «fan» — cause found, fixed in 2.3.3**: the host's `/eeextras wires` showed 971 segments in
+  the one garland's visual. EE 1.1.2 `QuadraticWireHelper.wirePointsRaw` (used only by `WireVisual.recreateInstances`
+  for wire types without `shouldScaleLast`, i.e. hanging insulators) appends to the reused `WirePoints` buffer without
+  `clear()` (unlike `wirePoints`), so every move/light update keeps the old points. `WirePointsRawMixin` (common)
+  clears it at HEAD; dev server: 3 recomputes 27 points without the fix, 9 with it. Not checked in game. The earlier
+  thread lock and sweep (below) stay — harmless. `WireDiag` counted every segment as orphan on the indirect backend
+  (`isVisible()` is false for page states) — fixed.
+- Earlier attempts: a swinging EE hanging glass insulator string leaves frozen copies until relog.
   2.1.0 wrapped `WireVisual.recreateInstances` (Flywheel calls it from frame and light plans in parallel); 2.1.2
   wraps `beginFrame`/`updateLight`/`delete` + sweeps segments dropped from the visual's lists, logs «исправление …
   применено». Host log 2026-10-22: mixin applied, fan still there — so the cause is elsewhere. **2.3.2**: client
