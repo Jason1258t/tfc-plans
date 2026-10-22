@@ -66,7 +66,8 @@ npm install -g https://tfc-plans-fd2c.web.app/tfc/tfc.tgz
    tfc init
    ```
 
-   Программа сама ищет версии в Prism Launcher, MultiMC, CurseForge, Modrinth и ATLauncher и предлагает выбрать.
+   Программа сама ищет версии в TLauncher (`.minecraft/versions/<имя>`), Prism Launcher, MultiMC, CurseForge, Modrinth
+   и ATLauncher и предлагает выбрать.
    Нужной нет в списке — введите путь к папке, где лежит `mods/`. Можно и сразу: `tfc init --instance <папка> --world <мир>`.
 
    Сборки ещё нет — `tfc init --launcher`: поставит NeoForge, версию TFC-RealWorld в `.minecraft/versions/` (её папка —

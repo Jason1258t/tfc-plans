@@ -192,8 +192,8 @@ async function cmdInit(v) {
       [...found, fresh],
       (f) =>
         f.fresh
-          ? `${bold('Поставить сборку заново')} ${dim(`в Minecraft Launcher — ${path.join(defaultMinecraftDir(), 'versions', DEFAULT_NAME)}`)}`
-          : `${f.name} ${dim(`${f.launcher} · ${f.dir}`)}`,
+          ? `${bold('Поставить сборку заново')} ${dim(`для Minecraft Launcher и TLauncher — ${path.join(defaultMinecraftDir(), 'versions', DEFAULT_NAME)}`)}`
+          : `${f.name} ${dim(`${[f.launcher, detectVersions(f.dir).loader].filter(Boolean).join(', ')} · ${f.dir}`)}`,
       { allowOther: true },
     );
     if (dir === fresh) return initLauncher(v, cfg);

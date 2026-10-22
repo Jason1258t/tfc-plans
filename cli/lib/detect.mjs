@@ -43,9 +43,26 @@ function launcherRoots() {
   ];
 }
 
+/** Папка официального лаунчера и TLauncher по умолчанию (.minecraft) */
+export function defaultMinecraftDir() {
+  const home = os.homedir();
+  if (process.platform === 'win32')
+    return path.join(process.env.APPDATA || path.join(home, 'AppData', 'Roaming'), '.minecraft');
+  if (process.platform === 'darwin') return path.join(home, 'Library', 'Application Support', 'minecraft');
+  return path.join(home, '.minecraft');
+}
+
 /** Найденные инстансы: [{ name, dir, launcher }] — только с модами */
 export function findInstances() {
   const out = [];
+  // TLauncher (и tfc init --launcher): папка версии в .minecraft/versions/<имя> — она же папка игры
+  const versions = path.join(defaultMinecraftDir(), 'versions');
+  if (isDir(versions))
+    for (const e of fs.readdirSync(versions, { withFileTypes: true })) {
+      const dir = path.join(versions, e.name);
+      if (e.isDirectory() && isDir(path.join(dir, 'mods')))
+        out.push({ name: e.name, dir, launcher: 'TLauncher / .minecraft' });
+    }
   for (const root of launcherRoots()) {
     if (!isDir(root)) continue;
     for (const e of fs.readdirSync(root, { withFileTypes: true })) {
@@ -105,6 +122,17 @@ export function detectVersions(instanceDir) {
     if (l) res.loader ??= l;
   } catch {
     /* не CurseForge */
+  }
+  // Папка версии в .minecraft/versions (TLauncher): рядом лежит <имя>.json — NeoForge в аргументах или в родителе
+  try {
+    const v = JSON.parse(fs.readFileSync(path.join(instanceDir, `${path.basename(instanceDir)}.json`), 'utf8'));
+    const args = (v.arguments?.game ?? []).filter((a) => typeof a === 'string');
+    const arg = (k) => (args.includes(k) ? args[args.indexOf(k) + 1] : null);
+    const nf = arg('--fml.neoForgeVersion') ?? /^neoforge-(.+)$/.exec(v.inheritsFrom ?? '')?.[1];
+    if (nf) res.loader ??= `neoforge-${nf}`;
+    res.mc ??= arg('--fml.mcVersion') ?? (/^\d+\.\d+(\.\d+)?$/.test(v.inheritsFrom ?? '') ? v.inheritsFrom : null);
+  } catch {
+    /* не папка версии */
   }
   const libs = path.join(instanceDir, 'libraries', 'net', 'neoforged', 'neoforge');
   if (!res.loader && isDir(libs)) {

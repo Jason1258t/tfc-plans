@@ -14,22 +14,15 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { cacheDir } from './config.mjs';
-import { isDir } from './detect.mjs';
+import { defaultMinecraftDir, isDir } from './detect.mjs';
+
+export { defaultMinecraftDir };
 
 const MAVEN = 'https://maven.neoforged.net/releases/net/neoforged/neoforge';
 /** Лаунчер из Microsoft Store / Xbox держит профили в своём файле рядом с обычным */
 const PROFILE_FILES = ['launcher_profiles.json', 'launcher_profiles_microsoft_store.json'];
 export const PROFILE_ID = 'tfc-realworld';
 export const DEFAULT_NAME = 'TFC-RealWorld';
-
-/** Папка официального лаунчера по умолчанию */
-export function defaultMinecraftDir() {
-  const home = os.homedir();
-  if (process.platform === 'win32')
-    return path.join(process.env.APPDATA || path.join(home, 'AppData', 'Roaming'), '.minecraft');
-  if (process.platform === 'darwin') return path.join(home, 'Library', 'Application Support', 'minecraft');
-  return path.join(home, '.minecraft');
-}
 
 /** Файлы профилей, что есть в папке лаунчера */
 export const profileFiles = (mcDir) => PROFILE_FILES.map((n) => path.join(mcDir, n)).filter((f) => fs.existsSync(f));
