@@ -139,6 +139,14 @@ Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md)
   (`GET /site/datapacks|kubejs|schematics`, `/site/files/:id`): reads Firestore with the service key, lists cached 5 min,
   schematic sources on disk. Checked on prod Firestore (read-only) — 1 flagged datapack and 4 schematics installed; a
   temp key was used and revoked. **Not checked in game.**
+- **Players' uploaded schematics** (2026-10-22): Create stores a schematic a player uploads in the Schematic Table
+  at `<server gamedir>/schematics/uploaded/<nick>/<file>` and the cannon builds from that copy (client hologram —
+  local `schematics/<file>`; checked in Create 6.0.10 `SchematicItem.loadSchematic`, `ServerSchematicLoader`).
+  The host plays the world from his client, so the copies are in his folder. `tfc pull` (schematics part; now also
+  default on server profiles, where the `schematics/` root is skipped) replaces `uploaded/*/<library file name>`
+  when the hash differs (`uploadedCopies` in `cli/lib/pull.mjs`), backed up, not recorded in `pulled`. A cannon
+  already printing caches the template until the schematic is taken out. Scratch test (client + server profile,
+  real library sources): 16/16. **Not checked in game.**
 - **Addons** (2026-10-21): from site static (`/addons/index.json` — built by `scripts/addons-index.mjs` before dev/build
   from `tools/*/addon.json` + jar sha256; no key needed) → `mods/`; old jar of the same mod (by id in jar) and files in
   the addon's `replaces` (rw-host-fix — `eratosthenes_portal_clamp.js`) are backed up, with a prompt or `--yes`. That

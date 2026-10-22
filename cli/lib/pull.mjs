@@ -1,6 +1,7 @@
 /**
  * `tfc pull`, часть «сайт» — контент сайта в папку игры (снимок сборки — plan.mjs и sync.mjs, вместе — cli/tfc.mjs): датапаки «Ставить в мир» → `<мир>/datapacks/tfc-plans-<id>.zip`,
- * скрипты KubeJS «Ставить на сервер» → `kubejs/server_scripts/<fileName>`, схемы библиотеки → `schematics/`.
+ * скрипты KubeJS «Ставить на сервер» → `kubejs/server_scripts/<fileName>`, схемы библиотеки → `schematics/`
+ * (и на сервере — копии игроков в `schematics/uploaded/<ник>/`, uploadedCopies).
  * Берёт с сервера сборки (раздел /site), сайт закрыт App Check. Аддоны сборки → `mods/` — со статики сайта
  * (/addons/index.json и jar, ключ не нужен): старый jar того же мода и файлы, которые аддон заменяет (`replaces`),
  * убираются с копией. Файлы собираются теми же модулями, что и
@@ -153,20 +154,22 @@ async function wanted(api, kind, names, profile) {
       let file = schematicFileName(s);
       if (used.has(file.toLowerCase())) file = file.replace(/\.nbt$/, `-${s.id.slice(0, 6)}.nbt`);
       used.add(file.toLowerCase());
+      let memo; // один раз на схему: её же сверяем с копиями игроков на сервере
       return {
         id: s.id,
         name: s.name,
         path: `schematics/${file}`,
-        bytes: async () => {
-          const src = path.join(cacheDir, s.fileId);
-          if (!fs.existsSync(src)) {
-            fs.mkdirSync(cacheDir, { recursive: true });
-            fs.writeFileSync(`${src}.part`, await api.bytes(`/site/files/${encodeURIComponent(s.fileId)}`));
-            fs.renameSync(`${src}.part`, src);
-          }
-          return schematicFromLibrary(new Uint8Array(fs.readFileSync(src)), s);
-        },
+        bytes: () => (memo ??= build()),
       };
+      async function build() {
+        const src = path.join(cacheDir, s.fileId);
+        if (!fs.existsSync(src)) {
+          fs.mkdirSync(cacheDir, { recursive: true });
+          fs.writeFileSync(`${src}.part`, await api.bytes(`/site/files/${encodeURIComponent(s.fileId)}`));
+          fs.renameSync(`${src}.part`, src);
+        }
+        return schematicFromLibrary(new Uint8Array(fs.readFileSync(src)), s);
+      }
     });
   return { items, unknown, all: list.map((s) => ({ id: s.id, name: s.name })) };
 }
@@ -267,7 +270,10 @@ export async function planPull(api, profile, kind, names = [], { force = false }
     obsolete: [],
   };
   const target = new Set();
+  // На сервере схемы игрокам не нужны в schematics/: Create читает там только загруженные копии (ниже)
+  const server = kind === 'schematics' && profile.side === 'server';
   for (const it of w.items) {
+    if (server) continue;
     const file = localPath(profile, it.path);
     if (!file) {
       plan.noWorld.push(it);
@@ -300,6 +306,7 @@ export async function planPull(api, profile, kind, names = [], { force = false }
     else if (disk === rec.sha256) plan.remove.push(item);
     else plan.keptModified.push(item);
   }
+  if (kind === 'schematics') plan.update.push(...(await uploadedCopies(profile, w.items)));
   // Ручная копия датапака (скачан кнопкой «Скачать» и положен в мир) рядом с поставленным — убрать
   if (kind === 'datapacks')
     for (const it of [...plan.add, ...plan.update, ...plan.same, ...plan.conflict]) {
@@ -318,6 +325,45 @@ export async function planPull(api, profile, kind, names = [], { force = false }
     plan.skip = skip;
   }
   return { ...plan, unknown: w.unknown ?? [], all: w.all ?? [] };
+}
+
+/**
+ * Копии схем игроков на сервере. Стол схем Create загружает файл игрока в `schematics/uploaded/<ник>/<файл>`
+ * на сервере (у хоста — в его папке игры: мир открыт из его клиента), и пушка строит по этой копии, а не по файлу
+ * у игрока. Игрок после `tfc pull` видит новую голограмму, а пушка строит старую. Поэтому pull на сервере
+ * заменяет копии с тем же именем, что у схемы библиотеки. В `pulled` их не пишем: это файлы игроков, при снятии
+ * схемы с сайта не убираем. Старое — в копию pull, `tfc undo` вернёт.
+ */
+async function uploadedCopies(profile, items) {
+  const dir = path.join(profile.instance, 'schematics', 'uploaded');
+  if (!fs.existsSync(dir)) return [];
+  const players = fs
+    .readdirSync(dir, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name);
+  const out = [];
+  for (const it of items) {
+    const name = path.posix.basename(it.path);
+    for (const nick of players) {
+      const rel = `schematics/uploaded/${nick}/${name}`;
+      const file = localPath(profile, rel);
+      const disk = file && fileSha(file);
+      if (!disk) continue;
+      const bytes = await it.bytes();
+      const sha256 = sha(bytes);
+      if (disk !== sha256)
+        out.push({
+          id: `${it.id}@${nick}`,
+          name: `${it.name} — копия на сервере у ${nick}`,
+          path: rel,
+          file,
+          bytes,
+          sha256,
+          copy: true,
+        });
+    }
+  }
+  return out;
 }
 
 export const pullChanges = (p) =>
@@ -410,7 +456,8 @@ export function applyPull(profile, plans, backup, overrides) {
       fs.writeFileSync(x.file, x.bytes);
       if (p.add.includes(x)) manifest.added.push(x.path);
     }
-    for (const x of [...p.add, ...p.update, ...p.same]) mine[x.id] = { path: x.path, sha256: x.sha256, name: x.name };
+    for (const x of [...p.add, ...p.update, ...p.same])
+      if (!x.copy) mine[x.id] = { path: x.path, sha256: x.sha256, name: x.name };
     for (const x of p.conflict) {
       fs.writeFileSync(`${x.file}.tfc-new`, x.bytes);
       manifest.tfcNew.push(`${x.path}.tfc-new`);

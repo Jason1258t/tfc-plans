@@ -503,6 +503,8 @@ function printSite(p, names) {
     console.log(`  ${red('−')} убрать — ${why} (с копией): ${p.obsolete.length}`);
     for (const x of p.obsolete) console.log(dim(`      ${x.path} ${dim(`— ${x.name}`)}`));
   }
+  if (p.update.some((x) => x.copy))
+    console.log(dim('      пушка, которая уже строит схему, держит старую: вынуть схему из пушки и вставить снова'));
   line(yellow('!'), 'там ваш файл — рядом положу .tfc-new (перезаписать: --force)', p.conflict);
   line(dim('·'), 'ставил я, но вы меняли — оставляю', p.keptModified);
   if (p.unknown.length) {
