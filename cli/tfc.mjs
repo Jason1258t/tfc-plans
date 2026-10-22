@@ -43,6 +43,7 @@ import {
   PROFILE_ID,
   versionId,
 } from './lib/vanilla.mjs';
+import { markApproved, printUpdate, propose, pullUpdates } from './lib/updates.mjs';
 import { checkUpdate } from './lib/update.mjs';
 import { cleanupOld, upgrade } from './lib/upgrade.mjs';
 import { BUILD, CHANNEL, IS_BINARY } from './lib/version.mjs';
@@ -72,6 +73,9 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
   tfc publish                 залить сборку из папки игры на сервер (--note "что поменял", --yes, --force)
   tfc build [mods,kubejs,config,world]   собрать данные сайта локально в ./tfc-out — посмотреть до заливки
   tfc admin keys | invite <ник> [--admin] | revoke <id> | history | use <id> | rollback
+  tfc admin updates [pull [id…] | approve <id> | reject <id>]   обновления сборки от Claude: список; pull — забрать
+                              в папку игры и сервера (вернуть — tfc undo); approve — сделать новой сборкой для всех
+  tfc admin propose <папка>   предложить обновление: файлы из папки (kubejs/…, config/…), --remove <путь>, --note
   tfc admin rebuild [mods,kubejs,config,world]   пересобрать данные сайта на сервере (--pull — свежий код,
                               --publish none|dry-run|live — что потом; по умолчанию dry-run — только показать)
   tfc admin publish           показать, что изменится на сайте; --live — выложить (текущую сборку, с вопросом);
@@ -158,6 +162,7 @@ const opts = {
   undo: { type: 'boolean' },
   'dry-run': { type: 'boolean' },
   'no-current': { type: 'boolean' },
+  remove: { type: 'string', multiple: true },
   admin: { type: 'boolean' },
   pull: { type: 'boolean' },
   publish: { type: 'string' },
@@ -870,6 +875,58 @@ async function adminChanges(a, v, [action, ...ids]) {
   );
 }
 
+async function adminUpdates(a, v, [action, ...ids]) {
+  const { updates } = await a.get('/admin/updates');
+  const pending = updates.filter((u) => u.status === 'pending');
+  const find = (id) => {
+    const u = updates.find((x) => x.id === id);
+    if (!u) throw new Error(`нет обновления ${id ?? ''} — список: tfc admin updates`);
+    if (u.status !== 'pending') throw new Error(`обновление ${u.id} уже не ждёт (${u.status})`);
+    return u;
+  };
+  if (!action || action === 'list') {
+    if (!pending.length) console.log('Ждущих обновлений нет.');
+    for (const u of pending) printUpdate(u);
+    const done = updates.filter((u) => u.status !== 'pending').slice(0, 5);
+    if (done.length) console.log(dim('\nНедавние:'));
+    for (const u of done) printUpdate(u, { full: false });
+    if (pending.length)
+      console.log(
+        `\nЗабрать к себе: ${cyan('tfc admin updates pull')}, после проверки — ${cyan('tfc admin updates approve <id>')}`,
+      );
+    return;
+  }
+  if (action === 'pull') {
+    const todo = ids.length ? ids.map(find) : pending.slice().reverse();
+    if (!todo.length) return console.log('Ждущих обновлений нет.');
+    const profile = currentProfile(loadConfig(), v.profile);
+    console.log(`Профиль ${profileTitle(profile)}${profile.serverDir ? dim(` · сервер ${profile.serverDir}`) : ''}`);
+    return pullUpdates(a, profile, todo, { yes: v.yes, dryRun: v['dry-run'] });
+  }
+  if (action === 'approve' || action === 'reject') {
+    const u = find(ids[0]);
+    printUpdate(u);
+    const q = action === 'approve' ? 'Сделать новой сборкой для всех игроков?' : 'Отклонить?';
+    if (!v.yes && !(interactive() && (await confirm(q, action === 'approve')))) return console.log('Ничего не менял.');
+    if (action === 'reject') {
+      await a.post(`/admin/updates/${u.id}/reject`, { reason: v.note ?? '' });
+      return console.log('Отклонено. Если забирали его к себе — вернуть файлы: tfc undo');
+    }
+    const r = await a.post(`/admin/updates/${u.id}/approve`, { force: !!v.force }).catch((e) => {
+      if (e.data?.conflicts)
+        throw new Error(`${e.message}:\n${e.data.conflicts.map((p) => `  ! ${p}`).join('\n')}\nПоверх них — с --force`);
+      throw e;
+    });
+    console.log(`${green('Готово:')} сборка ${r.snapshot.id} — теперь текущая, игроки получат её по tfc pull.`);
+    if (r.job) console.log(dim(`Данные сайта пересобираются: tfc admin jobs ${r.job} --follow`));
+    const cfg = loadConfig();
+    if (Object.keys(cfg.profiles ?? {}).length)
+      await markApproved(currentProfile(cfg, v.profile), r.update, r.snapshot);
+    return;
+  }
+  throw new Error('tfc admin updates [pull [id…] | approve <id> | reject <id>]');
+}
+
 async function cmdAdmin(v, [sub, ...args]) {
   const arg = args[0];
   const a = api(loadConfig());
@@ -894,6 +951,10 @@ async function cmdAdmin(v, [sub, ...args]) {
       console.log(
         `${s.id === current ? green('●') : ' '} ${s.id}  ${date(s.createdAt)}  ${s.author ?? ''} ${dim(`${s.fileCount} файлов, ${mb(s.totalSize)}`)} ${s.note ?? ''}`,
       );
+  } else if (sub === 'propose') {
+    await propose(a, { dir: arg, remove: v.remove ?? [], note: v.note, yes: v.yes, dryRun: v['dry-run'] });
+  } else if (sub === 'updates') {
+    await adminUpdates(a, v, args);
   } else if (sub === 'use') {
     if (!arg) throw new Error('tfc admin use <id снимка>');
     await a.post('/pack/current', { id: arg });
@@ -943,7 +1004,7 @@ async function cmdAdmin(v, [sub, ...args]) {
     if (j.state === 'failed') process.exitCode = 1;
   } else
     throw new Error(
-      'tfc admin keys | invite <ник> | revoke <id> | history | use <id> | rollback | rebuild | publish | jobs | changes',
+      'tfc admin keys | invite <ник> | revoke <id> | history | use <id> | rollback | updates | propose | rebuild | publish | jobs | changes',
     );
 }
 

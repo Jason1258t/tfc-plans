@@ -13,9 +13,12 @@ npm run pack -- <version folder|zip> [--world …] [--only …] [--out …] [--d
 npm run guides -- pull <folder> | push <file.md|folder>   # guides ↔ Markdown files (author — TFC_NICK)
 npm run pack:fetch [-- --kubejs] [--data|--data-only]     # current pack from the pack server → instance/pack/ + mods/ (and data)
 npm run pack:publish -- <data folder> --dry-run           # what would be published (Hosting diff, config, packUpdates)
+npm run freshness [-- --if-older 6h --soft]              # mod freshness (Modrinth + CurseForge) → public/pack-freshness.json
 ```
 
-`predeploy` of hosting runs `pack-release.mjs`; skip with `SKIP_PACK_RELEASE=1`.
+`predeploy` of hosting runs `pack-release.mjs`; skip with `SKIP_PACK_RELEASE=1`. `prebuild`/`predev` run `freshness.mjs
+--if-older 6h --soft` (network or key problems only warn). `CURSE_FORGE_API_KEY` in `.env.local` (no `VITE_` — never
+in the bundle).
 
 ## Data: where it comes from
 
@@ -29,11 +32,12 @@ The site is a static SPA. All "pack knowledge" is built locally by scripts and d
 
 | Source (not in git) | Script | Output |
 | --- | --- | --- |
-| `mods/*.jar` | `mods.mjs` (+ `reference`, `manifest`, `geo`, `tags`, `botany`, `meals`, `cuisine`, `power`, `multiblocks`, `icons3d`) | `public/items.json`, `icons/` (+ `icons/<ns>/render/` — 3D block icons), `recipes.json`, `reference.json`, `pack-manifest.json`, `geo.json`, `geo/`, `tags.json`, `botany.json`, `meals.json`, `power.json`, `multiblocks.json`, `multiblocks/` |
+| `mods/*.jar` (+ mods nested in `META-INF/jarjar/`) | `mods.mjs` (+ `reference`, `manifest`, `geo`, `tags`, `botany`, `meals`, `cuisine`, `power`, `multiblocks`, `icons3d`) | `public/items.json`, `icons/` (+ `icons/<ns>/render/` — 3D block icons), `recipes.json`, `reference.json`, `pack-manifest.json`, `geo.json`, `geo/`, `tags.json`, `botany.json`, `meals.json`, `power.json`, `multiblocks.json`, `multiblocks/` |
 | `instance/kubejs/<layer>/` | `kubejs.mjs` | `public/kubejs.json`, `kubejs-items.json`, `icons-kubejs/` (pack items from startup_scripts + assets), `kubejs-data.json` (food and skillet from `kubejs/data` — the site replaces mod data with them) |
 | world save (`<world>/data/`) | `world.mjs` | Firestore `config/world__{file}` — TFC calendar (month length set by command) |
 | server config zip/folder | `serverconfig.mjs` | Firestore `config/{scope}__{path}` |
 | manifest diff at deploy | `pack-release.mjs` (predeploy) | Firestore `packUpdates/{id}` |
+| manifest + Modrinth/CurseForge | `freshness.mjs` (prebuild) + `src/lib/freshness.ts` | `public/pack-freshness.json` |
 
 - Scripts write Firestore via REST as `firebase login` or a service key (`GOOGLE_APPLICATION_CREDENTIALS`)
   (`scripts/firestore-rest.mjs`); rules don't apply. Same way is handy to read the DB from node.

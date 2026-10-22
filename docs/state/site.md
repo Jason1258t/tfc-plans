@@ -176,3 +176,9 @@ the step is centred.
 - TFC Real World map: projection from the mod, normal view and layers, click → coordinates, cities, distances, spawn;
   world parameters from the imported server config.
 - Pack updates: a record on deploy + model-written patch notes.
+- Pack freshness `/freshness` (switch «Лента обновлений / Свежесть модов» on both pages, 2026-10-22): static report
+  from the build, filter by colour, search, «Перепроверить Modrinth» (live from the browser, CurseForge rows kept),
+  «Скачать отчёт (JSON)». First run: 234 mods — Modrinth 175, CurseForge 54, not found 5 (hand-built: `tfcr-fixes`,
+  `woodencog-…-TFCR`, `TFCBetterBlastFurnace-TFCR`, `tfc_ability_fix`, `kaleidoscopetfctavern`); red 5, orange 31,
+  yellow 62. Checked in the browser (desktop + 375 px) and the recheck button. Version parsing checked on 11 cases.
+  Next: the pack devs' git as a third source (user will give the link), then the «план обновления» skill.

@@ -46,7 +46,7 @@ npx prettier --write <files>   # singleQuote, printWidth 120; don't run on all o
 npm run deploy:site    # deploy site edits without rebuilding mod data (no jars needed; works from a worktree)
 npx firebase deploy --only hosting           # full build + pack-release + upload
 npx firebase deploy --only firestore:rules
-npm run mods | serverconfig | kubejs | world | pack | guides | pack:fetch | pack:publish   # see docs/architecture.md
+npm run mods | serverconfig | kubejs | world | pack | guides | pack:fetch | pack:publish | freshness   # see docs/architecture.md
 ```
 
 No tests. Verification — in the browser (below) and one-off node scripts in the scratchpad.
@@ -57,7 +57,9 @@ Local stdio server (`scripts/mcp/`, `.mcp.json`; in a worktree it reads `public/
 **For game facts, recipes, tags, configs, mod code, logs, guides and site content use it first**, not grep over
 `public/*.json` (recipes.json is 7.7 MB) or unzipping jars. Crash / "what broke" → start with `log_analyze`. Editing
 addon resources → `resources_check` + `model_render`; releasing an addon to the site → skill `addon-release`
-(`addon_check`). Pack config changes → `config_propose`, not "edit the file". Site
+(`addon_check`). Pack config changes → `config_propose`, not "edit the file". Other pack file changes
+(KubeJS scripts, lang, resources, whole files) → `npm run tfc -- admin propose <overlay dir> --note …` (agent key in
+`~/.config/tfc`; base on the current snapshot, `tfc admin updates` to see status); the host pulls and approves. Site
 tasks/plans/guides → its write tools (signed `Claude`, with `baseRevision`), not ad-hoc scripts. Site-content tools cost
 Firestore reads — don't loop them. Tool reference — [docs/mcp.md](docs/mcp.md).
 

@@ -9,10 +9,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "prebuild": "node scripts/ensure-mods.mjs && node scripts/addons-index.mjs",
-    "predev": "node scripts/ensure-mods.mjs && node scripts/addons-index.mjs",
+    "prebuild": "node scripts/ensure-mods.mjs && node scripts/addons-index.mjs && node scripts/freshness.mjs --if-older 6h --soft",
+    "predev": "node scripts/ensure-mods.mjs && node scripts/addons-index.mjs && node scripts/freshness.mjs --if-older 6h --soft",
     "mods": "node scripts/mods.mjs",
     "items": "node scripts/mods.mjs",
+    "freshness": "node scripts/freshness.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "deploy": "firebase deploy",

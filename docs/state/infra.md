@@ -16,6 +16,11 @@ Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md)
   ready-made, in a worktree taken from the main checkout with `.env.local`, addons, resource packs and KubeJS;
   `predeploy-check` blocks a site built without Firebase settings.
 
+- Mods inside jars (`META-INF/jarjar/*.jar` with `neoforge.mods.toml` and assets/data) are read like top-level jars
+  (2026-10-22): Create Aeronautics bundle → `aeronautics` 46, `simulated` 86, `offroad` 7 items (+125 recipes). The
+  pack manifest still lists only top-level jars. Dyed symmetric sails are blocks without items (drop the white sail,
+  only `white_symmetric_sail` has an item model) — absent on purpose.
+
 ## Imported from the server
 
 - Server config (`config/`, layer `config`; the host PC is the server): `tfc-server.toml`, `tfc-common.toml`,
@@ -156,3 +161,23 @@ MCP `config_propose` (key, type, range and layer check via `config_get`) → Fir
 `tfc undo`, per-key result reported back (`config_changes`). Checked on a local pack server and temp folder (apply,
 mismatch with the old value, reject, cancel from MCP, stale record → 409, undo); JSON5 configs are not edited. Not run on
 the host's real folder.
+
+## Proposed pack updates (2026-10-22)
+
+- Server `lib/updates.mjs` + `/admin/updates` (create, list, approve → snapshot = current + files − remove and made
+  current with the site build job, reject); author can't approve (403); paths changed in the pack since the proposal →
+  409 `conflicts` (`--force`). CLI: `tfc admin propose <dir>`, `tfc admin updates [pull|approve|reject]`; pull writes
+  into the game folder (backup for `tfc undo`) and `mods|config|defaultconfigs|kubejs` of the server dir; approve marks
+  the host's state in sync (next `publish` — nothing to upload). Verified end-to-end on a local server (scratch dirs):
+  propose, self-approve refused, pull into both folders, undo, approve, host status/publish clean, player pull, conflict
+  409, reject. Direct snapshot edits by the agent — intentionally not provided (user's call).
+- Agent key `claude-agent` (admin) lives in `~/.config/tfc/config.json` on the Mac; the old lost `claude` key revoked.
+
+## Pack patches (`pack-patches/`)
+
+- `l10n/` (2026-10-22): translation of Chinese strings in pack KubeJS scripts. Base — pack snapshot
+  `20261022-095351-d765` (read from the VPS blobs). `apply.py <game folder>` re-applies onto a newer pack (every
+  replacement must match exactly once); ready files next to it. Checked: `node --check`, `apply.py` on a fresh snapshot
+  copy reproduces the stored files, `buildKubejs` on the patched layer — same counts, 0 errors. Not checked in game.
+  Scan of all jars + configs for CJK: the rest is zh_cn lang/manuals, logs, config comments, two mods with hardcoded
+  chat text (see pending.md).

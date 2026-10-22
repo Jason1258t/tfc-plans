@@ -18,6 +18,7 @@ When finishing work: update the topic file, and this index only if a line below 
 
 ## In progress / waiting (details — [pending.md](state/pending.md))
 
+- Host: copy `pack-patches/l10n/kubejs` (Chinese KubeJS messages → ru/en) into the game folder + `tfc publish`.
 - Host: install **EE Extras 2.3** (2.2 + compact generator) and **Small Diesel 1.0.0** + `tfc publish`; warn players
   that rectifiers over 6 kW will burn.
 - Host: **`rw-host-fix`** + delete `eratosthenes_portal_clamp.js`; delete corrupted chunks Z ≈ −22 000…−18 400.
@@ -27,6 +28,8 @@ When finishing work: update the topic file, and this index only if a line below 
 - In game: two-core cable shell model, datapacks `electroenergetics_missing` and `pellet_arc_furnace`, map scale,
   pumpjack, steel on EE heater, all addons (Miner Tools, Stress Fix, EE Extras 2.x, Small Diesel).
 - `tfc` app: Windows/Linux binaries, real launcher folder, real upload — not run.
+- Pack freshness (`/freshness`, MCP `mods_freshness`): user will give the pack devs' git link — third source for 5
+  hand-built jars; then the «план обновления» skill (`docs/plans/mod-freshness.md`).
 
 ## Postponed by the user
 

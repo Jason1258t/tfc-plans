@@ -8,6 +8,7 @@ import { useData } from '../data/DataContext';
 import { datapacksStore } from '../data/store';
 import { generatePatchNotes, geminiEnabled, geminiErrorText } from '../lib/gemini';
 import { useItems, type ItemIndex } from '../lib/items';
+import { UpdatesNav } from './FreshnessPage';
 import {
   datapackRisks,
   markUpdatesSeen,
@@ -35,6 +36,7 @@ export function UpdatesPage() {
 
   return (
     <main className="upd-page">
+      <UpdatesNav />
       <div className="upd-head">
         <h1>Обновления сборки</h1>
         <p className="faint small">
