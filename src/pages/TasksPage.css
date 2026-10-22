@@ -119,6 +119,31 @@
   opacity: 1;
 }
 
+/* перетаскивание групп */
+.groups li.dragging {
+  opacity: 0.4;
+}
+
+.groups li.drop-before::before,
+.groups li.drop-after::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+  pointer-events: none;
+}
+
+.groups li.drop-before::before {
+  top: -1px;
+}
+
+.groups li.drop-after::after {
+  bottom: -1px;
+}
+
 /* ------------------------------------------------------------------ список */
 
 .tasks-main {
