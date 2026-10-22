@@ -126,9 +126,19 @@ function AddonBlockCard({ b, version }: { b: AddonBlock; version: string }) {
                 <span
                   key={`${x}-${y}`}
                   className="power-recipe-cell"
-                  title={k ? (k.tag ? `#${k.tag}` : itemName(items?.byId.get(k.item), k.item)) : ''}
+                  title={k ? (k.tag ? `#${k.tag}` : (k.name ?? itemName(items?.byId.get(k.item), k.item))) : ''}
                 >
-                  {k && <ItemIcon id={k.item} size={28} tip={false} />}
+                  {k?.image ? (
+                    <img
+                      src={`${k.image}?v=${version}`}
+                      alt={k.name ?? k.item}
+                      width={28}
+                      height={28}
+                      className="power-pixel"
+                    />
+                  ) : (
+                    k && <ItemIcon id={k.item} size={28} tip={false} />
+                  )}
                 </span>
               );
             }),

@@ -5,6 +5,8 @@ import com.george_vi.electroenergetics.CEECreativeTab;
 import com.george_vi.electroenergetics.CEEItems;
 import com.george_vi.electroenergetics.config.CEEConfigs;
 import com.george_vi.electroenergetics.CEERegistries;
+import com.george_vi.electroenergetics.devices.device.DevicesSavedData;
+import com.george_vi.electroenergetics.devices.device.SimulatedDevice;
 import com.george_vi.electroenergetics.devices.device.SimulatedDeviceType;
 import com.george_vi.electroenergetics.simulation.WireType;
 import ee.extras.cable.CableEvents;
@@ -24,9 +26,11 @@ import ee.extras.converter.BidiConverterDevice;
 import com.mojang.logging.LogUtils;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -48,7 +52,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
  * Дополнения к Create Electro Energetics для сборки TFC Планы (до 2.0 — «EE Rectifiers», modId ee_rectifier):
- * выпрямители, двусторонний преобразователь EE ↔ FE, двух- и четырёхжильные кабели (катушка двухпроводного кабеля EE
+ * выпрямители и сетевые инверторы двух ступеней мощности, двусторонний преобразователь EE ↔ FE, двух- и четырёхжильные кабели (катушка двухпроводного кабеля EE
  * в 1.1.2 не доделана — прокладку делает этот мод), кабельные изоляторы.
  */
 @Mod(EeExtras.MOD_ID)
@@ -66,8 +70,21 @@ public class EeExtras {
             DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MOD_ID);
     public static final DeferredRegister<WireType> WIRES = DeferredRegister.create(CEERegistries.WIRE_TYPE, MOD_ID);
 
-    public static final Kind THREE_PHASE = new Kind(Layout.THREE_PHASE);
-    public static final Kind SINGLE_PHASE = new Kind(Layout.SINGLE_PHASE);
+    public static final Kind<RectifierDevice> THREE_PHASE = new Kind<>(Layout.THREE_PHASE, Tier.LIGHT, RectifierDevice::new);
+    public static final Kind<RectifierDevice> SINGLE_PHASE = new Kind<>(Layout.SINGLE_PHASE, Tier.LIGHT, RectifierDevice::new);
+    public static final Kind<RectifierDevice> HEAVY_THREE_PHASE = new Kind<>(Layout.THREE_PHASE, Tier.HEAVY, RectifierDevice::new);
+    public static final Kind<RectifierDevice> HEAVY_SINGLE_PHASE = new Kind<>(Layout.SINGLE_PHASE, Tier.HEAVY, RectifierDevice::new);
+    public static final Kind<InverterDevice> THREE_PHASE_INVERTER =
+            new Kind<>(Layout.THREE_PHASE_INVERTER, Tier.LIGHT, InverterDevice::new);
+    public static final Kind<InverterDevice> SINGLE_PHASE_INVERTER =
+            new Kind<>(Layout.SINGLE_PHASE_INVERTER, Tier.LIGHT, InverterDevice::new);
+    public static final Kind<InverterDevice> HEAVY_THREE_PHASE_INVERTER =
+            new Kind<>(Layout.THREE_PHASE_INVERTER, Tier.HEAVY, InverterDevice::new);
+    public static final Kind<InverterDevice> HEAVY_SINGLE_PHASE_INVERTER =
+            new Kind<>(Layout.SINGLE_PHASE_INVERTER, Tier.HEAVY, InverterDevice::new);
+    /** Порядок во вкладке творческого режима */
+    static final Kind<?>[] POWER = {SINGLE_PHASE, THREE_PHASE, HEAVY_SINGLE_PHASE, HEAVY_THREE_PHASE,
+            SINGLE_PHASE_INVERTER, THREE_PHASE_INVERTER, HEAVY_SINGLE_PHASE_INVERTER, HEAVY_THREE_PHASE_INVERTER};
 
     public static final DeferredHolder<SimulatedDeviceType<?>, SimulatedDeviceType<BidiConverterDevice>> CONVERTER_DEVICE =
             DEVICES.register("bidirectional_converter", () -> new SimulatedDeviceType<BidiConverterDevice>(
@@ -100,19 +117,27 @@ public class EeExtras {
     public static final DeferredItem<FourCoreSpoolItem> FOUR_CORE_SPOOL = ITEMS.register("four_core_cable_spool",
             () -> new FourCoreSpoolItem(new Item.Properties().stacksTo(16)));
 
-    /** Блок, предмет и тип устройства EE одного выпрямителя */
-    public static final class Kind {
-        public final DeferredHolder<SimulatedDeviceType<?>, SimulatedDeviceType<RectifierDevice>> device;
-        public final DeferredBlock<RectifierBlock> block;
+    /** Устройство EE выпрямителя или инвертора */
+    interface Factory<D extends SimulatedDevice> {
+        D create(Level level, BlockPos pos, DevicesSavedData devices, SimulatedDeviceType<?> type, Layout layout, Tier tier);
+    }
+
+    /** Блок, предмет и тип устройства EE одного выпрямителя или инвертора; id — приставка ступени + id раскладки */
+    public static final class Kind<D extends SimulatedDevice> {
+        public final Tier tier;
+        public final DeferredHolder<SimulatedDeviceType<?>, SimulatedDeviceType<D>> device;
+        public final DeferredBlock<PowerBlock<D>> block;
         public final DeferredItem<Item> item;
 
-        Kind(Layout layout) {
-            String id = layout.id();
-            device = DEVICES.register(id, () -> new SimulatedDeviceType<RectifierDevice>(rl(id),
-                    (type, level, pos, devices) -> new RectifierDevice(level, pos, devices, type, layout)));
-            block = BLOCKS.register(id, () -> new RectifierBlock(metal(), layout, device::get));
+        Kind(Layout layout, Tier tier, Factory<D> factory) {
+            this.tier = tier;
+            String id = tier.prefix + layout.id();
+            device = DEVICES.register(id, () -> new SimulatedDeviceType<D>(rl(id),
+                    (type, level, pos, devices) -> factory.create(level, pos, devices, type, layout, tier)));
+            block = BLOCKS.register(id, () -> new PowerBlock<>(metal(), layout, tier, device::get));
             item = ITEMS.register(id, () -> new TooltipBlockItem(block.get(), new Item.Properties()));
-            alias(id);
+            // Выпрямители 1.x (ee_rectifier) — только лёгкие
+            if (tier == Tier.LIGHT && layout.id().endsWith("_rectifier")) alias(id);
         }
     }
 
@@ -172,7 +197,8 @@ public class EeExtras {
     /** Во вкладку творческого режима Electro Energetics, рядом с остальной электрикой */
     private static void addToTab(BuildCreativeModeTabContentsEvent event) {
         if (!event.getTabKey().equals(CEECreativeTab.CREATIVE_TAB.getKey())) return;
-        for (Supplier<? extends Item> item : new Supplier[] {SINGLE_PHASE.item, THREE_PHASE.item, CONVERTER_ITEM,
+        for (Kind<?> k : POWER) event.accept(k.item.get());
+        for (Supplier<? extends Item> item : new Supplier[] {CONVERTER_ITEM,
                 FOUR_CORE_TERMINATION_ITEM, PHASE_TAP_ITEM, DUPLEX_INSULATOR_ITEM, FOUR_CORE_INSULATOR_ITEM, FOUR_CORE_SPOOL})
             event.accept(item.get());
         for (LineWire w : LineWire.values()) {

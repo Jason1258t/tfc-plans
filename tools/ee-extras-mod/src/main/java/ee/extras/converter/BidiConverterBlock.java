@@ -7,7 +7,7 @@ import com.george_vi.electroenergetics.foundation.nodes.NodeConfigurator;
 import com.simibubi.create.foundation.block.IBE;
 import ee.extras.EeExtras;
 import ee.extras.Layout;
-import ee.extras.RectifierBlock;
+import ee.extras.PowerBlock;
 import java.util.Map;
 import net.createmod.catnip.math.VoxelShaper;
 import net.minecraft.core.BlockPos;
@@ -31,8 +31,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 public class BidiConverterBlock extends DirectionalRolledDeviceBlock<BidiConverterDevice> implements IBE<BidiConverterBlockEntity> {
     private static final VoxelShaper SHAPE = VoxelShaper.forDirectional(box(0, 0, 0, 16, 7, 16), Direction.UP);
     private static final Layout LAYOUT = Layout.CONVERTER;
-    private final NodeConfigurator nodes = RectifierBlock.nodes(LAYOUT, false);
-    private final NodeConfigurator nodesRolled = RectifierBlock.nodes(LAYOUT, true);
+    private final NodeConfigurator nodes = PowerBlock.nodes(LAYOUT, false);
+    private final NodeConfigurator nodesRolled = PowerBlock.nodes(LAYOUT, true);
 
     public BidiConverterBlock(Properties properties) {
         super(properties);

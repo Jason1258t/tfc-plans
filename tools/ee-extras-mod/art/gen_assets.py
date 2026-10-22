@@ -24,6 +24,15 @@ LAYOUTS = {
         [(3, 3), (13, 3), (3, 13), (13, 13)],
         ['phase', 'phase', 'plus', 'minus'],
     ),
+    # Инверторы: те же клеммы, что у выпрямителей; вместо диода — знак преобразователя «= / ~»
+    'three_phase_inverter': (
+        [(3, 3), (8, 3), (13, 3), (3, 13), (13, 13)],
+        ['phase', 'phase', 'phase', 'plus', 'minus'],
+    ),
+    'single_phase_inverter': (
+        [(3, 3), (13, 3), (3, 13), (13, 13)],
+        ['phase', 'phase', 'plus', 'minus'],
+    ),
     # Двусторонний преобразователь: верхний ряд — заряд (сеть EE → FE), нижний — разряд (FE → сеть EE)
     'bidirectional_converter': (
         [(3, 3), (13, 3), (3, 13), (13, 13)],
@@ -53,7 +62,13 @@ BLUE = [hexc(c) for c in ['1f2a44', '2b3a5e', '3a4d78', '4d6394']]
 CLEAR = (0, 0, 0, 0)
 
 
-def texture(terminals, kinds, seed, converter=False):
+# Тяжёлые блоки (Tier.HEAVY): те же раскладки, клемма — проходной изолятор с медной шапкой, центр шапки на высоте 14
+HEAVY = ['three_phase_rectifier', 'single_phase_rectifier', 'three_phase_inverter', 'single_phase_inverter']
+HEAVY_Y = 14
+CERAMIC = [hexc(c) for c in ['6b3a26', '8a4b30', 'a65c3a', 'c27453']]  # глазурь изоляторов, как у EE
+
+
+def texture(terminals, kinds, seed, converter=False, inverter=False):
     """32×32: верх (0..15, 16..31), низ (16..31, 16..31), бок (16..31, 11..15), клеммы медь/«+»/«−» (0/4/8, 12)"""
     rng = random.Random(seed)
     px = [[CLEAR] * 32 for _ in range(32)]
@@ -99,11 +114,29 @@ def texture(terminals, kinds, seed, converter=False):
         elif k == 'minus':
             for dx in (-1, 0, 1):
                 top(cx + dx, 9, BLUE[3])
-    # Символ диода между выходами (x 6..10, z 10..14): треугольник ▶ и черта |
-    for z in range(10, 15):
-        for x in range(6, 7 + 2 - abs(z - 12)):
-            top(x, z, DARK)
-        top(10, z, DARKER)
+    if inverter:
+        # Знак инвертора между клеммами постоянного тока (x 6..10, z 9..15): рамка, диагональ, «=» вверху слева,
+        # «~» внизу справа
+        for i in range(5):
+            top(6 + i, 9, DARKER)
+            top(6 + i, 15, DARKER)
+        for z in range(9, 16):
+            top(6, z, DARKER)
+            top(10, z, DARKER)
+        for i in range(5):
+            top(9 - i // 2 if i < 4 else 7, 10 + i, DARK)
+        top(7, 10, HI)
+        top(8, 10, HI)
+        top(7, 11, HI)
+        top(8, 11, HI)
+        for dx, dz in ((0, 13), (1, 12), (2, 13)):
+            top(7 + dx, dz + 1, HI)
+    else:
+        # Символ диода между выходами (x 6..10, z 10..14): треугольник ▶ и черта |
+        for z in range(10, 15):
+            for x in range(6, 7 + 2 - abs(z - 12)):
+                top(x, z, DARK)
+            top(10, z, DARKER)
     for x in range(5, 9):
         top(x, 1, HI)
 
@@ -114,6 +147,29 @@ def texture(terminals, kinds, seed, converter=False):
     terminal(0, 12, COPPER)
     terminal(4, 12, RED)
     terminal(8, 12, BLUE)
+    return px
+
+
+def heavy_parts(px, seed):
+    """Тяжёлый блок — дорисовать в свободные места текстуры: бок корпуса (16..29, 0..9) с рёбрами жёсткости,
+    радиаторное ребро (0..7, 0..9), глазурь изолятора с юбками (8..13, 0..3)"""
+    rng = random.Random(seed)
+    for y in range(10):
+        for x in range(14):
+            border = x in (0, 13) or y in (0, 9)
+            c = EDGE if border else RIM if y in (1, 8) else rng.choice(FILL)
+            if not border and x in (4, 9):
+                c = DARK
+            px[y][16 + x] = c
+    for x in range(2, 12):  # табличка
+        px[3][16 + x] = DARKER
+        px[5][16 + x] = DARKER
+    for y in range(10):
+        for x in range(8):
+            px[y][x] = DARKER if x in (0, 7) else DARK if y % 3 == 0 else rng.choice(FILL[:5])
+    for y in range(4):
+        for x in range(6):
+            px[y][8 + x] = CERAMIC[0] if y == 3 else CERAMIC[3] if (x == 1 and y < 3) else CERAMIC[1 + (y % 2)]
     return px
 
 
@@ -202,6 +258,51 @@ def model(name, terminals, kinds, rolled):
     return {'credit': 'ee_extras', 'textures': {'0': tex, 'particle': tex}, 'elements': els, 'display': DISPLAY}
 
 
+def heavy_model(name, terminals, kinds, rolled):
+    """Целый блок: корпус 14×10×14, по бокам радиаторные рёбра, крышка, на ней проходные изоляторы с шапками"""
+    tex = f'{NS}:block/heavy_{name}'
+    els = []
+    body = {'texture': '#0', 'uv': [8, 0, 15, 5]}
+    els.append({'name': 'body', 'from': [1, 0, 1], 'to': [15, 10, 15], 'faces': {
+        'north': body, 'east': body, 'south': body, 'west': body,
+        'down': {'texture': '#0', 'uv': [8, 8, 15, 15], 'cullface': 'down'}}})
+    fin = {'texture': '#0', 'uv': [0, 0, 4, 5]}
+    fin_edge = {'texture': '#0', 'uv': [0, 0, 0.5, 5]}
+    # Рёбра — по сторонам, вдоль которых нет клемм (при крене — на других сторонах, как и клеммы)
+    for z in (2.5, 5.5, 8.5, 11.5):
+        for x0 in (0, 15):
+            a, b = ([x0, 1, z], [x0 + 1, 9, z + 1])
+            if rolled:
+                a, b = [16 - b[2], 1, a[0]], [16 - a[2], 9, b[0]]
+            els.append({'from': a, 'to': b, 'faces': {
+                'north': fin, 'south': fin, 'east': fin, 'west': fin,
+                'up': fin_edge, 'down': fin_edge}})
+    side = {'texture': '#0', 'uv': [8, 5.5, 16, 6]}
+    up = {'texture': '#0', 'uv': [0, 8, 8, 16], **({'rotation': 90} if rolled else {})}
+    els.append({'name': 'lid', 'from': [0, 10, 0], 'to': [16, 11, 16], 'faces': {
+        'north': side, 'east': side, 'south': side, 'west': side, 'up': up,
+        'down': {'texture': '#0', 'uv': [8, 8, 16, 16]}}})
+    ceramic = {f: {'texture': '#0', 'uv': [4, 0, 7, 2]} for f in ('north', 'east', 'south', 'west')}
+    for t, k in zip(terminals, kinds):
+        x, z = roll(t) if rolled else t
+        els.append({'name': 'bushing', 'from': [x - 1.5, 11, z - 1.5], 'to': [x + 1.5, HEAVY_Y - 1, z + 1.5],
+                    'faces': dict(ceramic, up={'texture': '#0', 'uv': [4, 0, 5.5, 1.5]})})
+        u = UV_TERM[k]
+        cap = {f: {'texture': '#0', 'uv': [u[0], u[1], u[0] + 1, u[1] + 1]} for f in ('north', 'east', 'south', 'west', 'up', 'down')}
+        els.append({'name': k, 'from': [x - 1, HEAVY_Y - 1, z - 1], 'to': [x + 1, HEAVY_Y + 1, z + 1], 'faces': cap})
+    return {'credit': 'ee_extras', 'textures': {'0': tex, 'particle': tex}, 'elements': els, 'display': DISPLAY}
+
+
+def blockstate(model_dir):
+    variants = {}
+    for facing, rot in ROT.items():
+        for logged in ('dry', 'oillogged', 'waterlogged'):
+            for rolled in (False, True):
+                key = f'facing={facing},logged_state={logged},roll={str(rolled).lower()}'
+                variants[key] = {'model': f'{NS}:block/{model_dir}/' + ('block_roll' if rolled else 'block'), **rot}
+    return {'variants': variants}
+
+
 def dump(obj, *path):
     full = os.path.join(RES, *path)
     os.makedirs(os.path.dirname(full), exist_ok=True)
@@ -211,18 +312,23 @@ def dump(obj, *path):
 
 for i, (name, (terminals, kinds)) in enumerate(LAYOUTS.items()):
     os.makedirs(os.path.join(RES, 'textures', 'block'), exist_ok=True)
+    # Сид — по прежнему порядку (у старых блоков текстура не меняется), у новых — свой
+    seed = {'three_phase_rectifier': 1258, 'single_phase_rectifier': 1259, 'bidirectional_converter': 1260}.get(name, 1300 + i)
+    inverter = name.endswith('_inverter')
     write(os.path.join(RES, 'textures', 'block', name + '.png'),
-          texture(terminals, kinds, 1258 + i, converter=name == 'bidirectional_converter'))
+          texture(terminals, kinds, seed, converter=name == 'bidirectional_converter', inverter=inverter))
     for rolled, fn in ((False, 'block'), (True, 'block_roll')):
         dump(model(name, terminals, kinds, rolled), 'models', 'block', name, fn + '.json')
     dump({'parent': f'{NS}:block/{name}/block'}, 'models', 'item', name + '.json')
-    variants = {}
-    for facing, rot in ROT.items():
-        for logged in ('dry', 'oillogged', 'waterlogged'):
-            for rolled in (False, True):
-                key = f'facing={facing},logged_state={logged},roll={str(rolled).lower()}'
-                variants[key] = {'model': f'{NS}:block/{name}/' + ('block_roll' if rolled else 'block'), **rot}
-    dump({'variants': variants}, 'blockstates', name + '.json')
+    dump(blockstate(name), 'blockstates', name + '.json')
+    if name in HEAVY:
+        heavy = 'heavy_' + name
+        write(os.path.join(RES, 'textures', 'block', heavy + '.png'),
+              heavy_parts(texture(terminals, kinds, seed, inverter=inverter), seed + 100))
+        for rolled, fn in ((False, 'block'), (True, 'block_roll')):
+            dump(heavy_model(name, terminals, kinds, rolled), 'models', 'block', heavy, fn + '.json')
+        dump({'parent': f'{NS}:block/{heavy}/block'}, 'models', 'item', heavy + '.json')
+        dump(blockstate(heavy), 'blockstates', heavy + '.json')
 import cables  # noqa: E402 — кабели, соединитель, изоляторы, катушка (art/cables.py)
 
 cables.generate(RES, NS, dump, ROT, DISPLAY)
