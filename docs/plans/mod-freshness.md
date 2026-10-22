@@ -1,6 +1,6 @@
 # Plan: pack freshness (how far behind each mod is)
 
-Status: parts 1–4 and the git source done (2026-10-22). Next: part 5 (skill).
+Status: all parts done (2026-10-22). Tool gaps found by part 5 — below.
 
 ## Goal
 
@@ -52,5 +52,20 @@ one place right. Not special-cased.
    гит» (live, CurseForge rows kept from the report), «Скачать отчёт (JSON)».
 4. MCP `mods_freshness(status, mod, refresh, format)` — the same report live (10 min cache); with `mod` — changelogs
    between our and the newest version.
-5. Next: skill «план обновления» — reads `mods_freshness`, then `mods_check` (dependencies), KubeJS and site datapacks
-   that touch the mod, addons that depend on it, changelogs; writes the plan into a site task.
+5. Skill `update-plan` (`.claude/skills/update-plan/SKILL.md`, «план обновления»): scope (pack / colour / list) →
+   `mods_freshness mod=…` changelogs → `mods_check`, `mod_get`, one `kubejs_search` regex, `datapacks_list`,
+   `kubejs_site_list`, `addons_list`, `mixins`, configs, site code that reads the mod's data → risk groups
+   (безопасно / проверить / рискованно / не сейчас), order (libraries with dependents), in-game checks → shown to the
+   user, then a site task (`task_create`) + plan doc (`artifact_put`). Tried 2026-10-22 on the 5 red mods: found the
+   Collective config move (`.json5` → `config/serilum/*.json`, affects the pending World Border edit), Moonlight 3.x vs
+   Burning Block built for 2.x, Liquid Fuel mixins sharing `BlazeBurnerBlockEntity.tick` with woodencog, Deep Seas
+   newest only beta.
+
+## Tool gaps (from the part 5 trial)
+
+- The **new** version's dependency ranges aren't shown (only newly required mods): e.g. which Collective World Border
+  5.0 needs. Wanted: `mods_freshness mod=… deps=true` — download the new jar (cached), read its `neoforge.mods.toml`,
+  check against the pack like `mods_check`.
+- Changelogs are cut at 20 000 chars with betas first, so the oldest releases disappear (Deep Seas cut at 3.4.1,
+  CurseForge returns Moonlight only from 3.6.0). Wanted: releases only by default, oldest-first paging.
+- Modrinth changelogs from Serilum come as raw HTML — convert like CurseForge.
