@@ -12,7 +12,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { MODS } from './data.mjs';
-import { jarList, jarToc, platform, readEntry, zipEntries, zipRead } from './jars.mjs';
+import { jarList, jarToc, platform, platformAssets, readEntry, zipEntries, zipRead } from './jars.mjs';
 import { KUBEJS } from './tools/kubejs.mjs';
 
 const BASE = path.dirname(MODS);
@@ -217,13 +217,15 @@ export function modJarsLayer() {
 /**
  * Только ресурсы Minecraft (client-extra jar) и NeoForge (jar platform) — запасной слой для генератора иконок сайта:
  * его ванильный кеш (mods.mjs) хранит лишь textures/item и textures/block, а моделям сущностей нужны textures/entity,
- * вёдрам — модели neoforge:item/*.
+ * вёдрам — модели neoforge:item/*. Без NeoForge platform — скачанные jar (scripts/mods/platform-assets.mjs).
  */
 export function platformLayers() {
   const out = [];
-  const mc = minecraftResources();
+  // Нет NeoForge platform (сервер сборки) — client.jar Minecraft и universal jar NeoForge (setPlatformAssets)
+  const extra = platformAssets();
+  const mc = minecraftResources() ?? extra.minecraft;
   if (mc) out.push(zipLayer('Minecraft', mc, 'minecraft'));
-  const nf = platform()?.classes;
+  const nf = platform()?.classes ?? extra.neoforge;
   if (nf) out.push(zipLayer('NeoForge', nf, 'minecraft'));
   return out;
 }

@@ -20,7 +20,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import AdmZip from 'adm-zip';
+import { openJar } from './zipfile.mjs';
 import { argTypes, clinitValues, instructions, parseClass } from './classfile.mjs';
 import { readNbt, T } from '../../src/lib/nbt.ts';
 import { assetLookup, formedModel } from './multiblock-models.mjs';
@@ -192,7 +192,7 @@ export async function writeMultiblocks(jarPaths, recipes, lang, outFile, outDir,
     const jar = path.basename(jarPath, '.jar');
     let zip;
     try {
-      zip = new AdmZip(jarPath);
+      zip = openJar(jarPath);
     } catch {
       continue;
     }

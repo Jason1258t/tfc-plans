@@ -104,7 +104,16 @@ async function makeCurrent(body, by) {
     // Уже собранный (откат) — только публикация; новый — сборка и публикация
     const kind = built(r.current) ? 'publish' : 'build';
     if (kind === 'build' || autoPublish !== 'none')
-      r.job = (await jobs.enqueue({ kind, snapshot: r.current, publish: autoPublish, by })).id;
+      // Живая выкладка — только свежим кодом разборщиков: старый код собрал бы неполные данные (2026-10-22)
+      r.job = (
+        await jobs.enqueue({
+          kind,
+          snapshot: r.current,
+          publish: autoPublish,
+          pull: kind === 'build' && autoPublish === 'live',
+          by,
+        })
+      ).id;
   }
   return r;
 }
@@ -348,6 +357,7 @@ async function handle(req, res) {
       parts: isPublish ? [] : (body.parts ?? []),
       pull: !isPublish && !!body.pull,
       publish,
+      allowRemovals: !!body.allowRemovals,
       by: who.name,
     });
     console.log(`+ задание ${j.id} (${j.kind}, ${snapshot}, публикация ${publish}) — ${who.name}`);

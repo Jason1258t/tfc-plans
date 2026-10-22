@@ -110,7 +110,11 @@ sudo -u tfcpack env DATA_DIR=/var/lib/tfc-pack node cli.mjs key revoke <id>
   с ролями Cloud Datastore User и Firebase Hosting Admin.
 - **Пробный режим по умолчанию.** После смены снимка публикация только показывает, что изменится (`AUTO_PUBLISH=dry-run`).
   Выложить — `tfc admin publish --live` (то же, что `POST /admin/publish {"dryRun": false}`; только текущий снимок)
-  или `AUTO_PUBLISH=live`. Ход и итог заданий — `tfc admin jobs`.
+  или `AUTO_PUBLISH=live` (тогда сборка нового снимка сначала подтягивает свежий код разборщиков). Ход и итог
+  заданий — `tfc admin jobs`.
+- **Защита публикации.** Сборка без объёмных иконок (старый код, нет jar для генератора) не убирает их с сайта;
+  больше 300 удалений за раз — только с `--allow-removals`. Объёмные иконки рисуются на сервере (чистый Node);
+  ресурсы Minecraft и NeoForge для них сборка качает сама в `<DATA>/cache/platform/`.
 - **Память.** Сборка модов без лимита берёт до ~1,2 ГБ, с `BUILD_HEAP_MB=640` — около 0,9 ГБ (меньше ~400 —
   не хватает). Если процесс убит (OOM), в задании так и написано; тогда — своп или машина с памятью побольше.
 
@@ -161,7 +165,7 @@ sudo -u tfcpack env DATA_DIR=/var/lib/tfc-pack node cli.mjs key revoke <id>
 | `POST /admin/keys`        | admin  | `{ name, role }` → `{ id, key, ... }`                                                                                                   |
 | `DELETE /admin/keys/:id`  | admin  | отозвать                                                                                                                                |
 | `POST /admin/rebuild`     | admin  | `{ snapshot?, parts?: [mods, kubejs, config, world], pull?, publish?: none \| dry-run \| live }` → 202 задание; без `snapshot` — текущий |
-| `POST /admin/publish`     | admin  | `{ snapshot?, dryRun? }` → 202 задание; по умолчанию пробно, `dryRun: false` — выложить (только текущий снимок)                        |
+| `POST /admin/publish`     | admin  | `{ snapshot?, dryRun?, allowRemovals? }` → 202 задание; по умолчанию пробно, `dryRun: false` — выложить (только текущий снимок); `allowRemovals` — разрешить убрать с сайта больше 300 файлов |
 | `GET /jobs`               | admin  | `{ running, queued, jobs }` — последние 100 заданий                                                                                    |
 | `GET /jobs/:id?from=N`    | admin  | задание: `state` (queued, running, done, failed), `error`, `result` (сборка, отчёт публикации, пик памяти), `log` с байта N, `logSize` |
 | `GET /data[?snapshot=]`   | player | собранные данные снимка (по умолчанию текущего): `{ snapshot, build, files: [{ path, sha256, size }] }`; 404 — ещё не собраны          |

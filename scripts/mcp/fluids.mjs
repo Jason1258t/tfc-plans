@@ -15,7 +15,8 @@
  *   иначе — своя текстура мода block/fluid/<имя>_still без окраски.
  * Не вышло — null: ведро рисуется как есть, без жидкости.
  */
-import { jarList, jarToc, platform, readEntry, zipEntries, zipRead } from './jars.mjs';
+import fs from 'node:fs';
+import { jarList, jarToc, platform, platformAssets, readEntry, zipEntries, zipRead } from './jars.mjs';
 import { clinitValues, instructions, parseClass } from '../mods/classfile.mjs';
 
 const WATER_STILL = 'minecraft:block/water_still';
@@ -139,14 +140,37 @@ let dyes = null;
 export function dyeColors() {
   if (dyes) return dyes;
   dyes = new Map();
-  const jar = platform()?.classes;
-  const e = jar && zipEntries(jar).find((x) => x.name === 'net/minecraft/world/item/DyeColor.class');
+  let jar = platform()?.classes;
+  let cls = 'net/minecraft/world/item/DyeColor';
+  let names = null; // имя поля в jar → имя Mojang (обфусцированный client.jar)
+  if (!jar) ({ jar, cls, names } = obfuscated('net.minecraft.world.item.DyeColor'));
+  const e = jar && cls && zipEntries(jar).find((x) => x.name === `${cls}.class`);
   if (e)
     for (const c of clinitValues(parseClass(zipRead(jar, e))).constants) {
       const color = c.args.find(colorLike);
-      if (color != null) dyes.set(c.name, color);
+      if (color != null) dyes.set(names?.get(c.name) ?? c.name, color);
     }
   return dyes;
+}
+
+/** Класс Minecraft в обфусцированном client.jar по карте имён Mojang: { jar, cls, names: поле → имя Mojang } */
+function obfuscated(name) {
+  const { minecraft: jar, mappings } = platformAssets();
+  if (!jar || !mappings || !fs.existsSync(mappings)) return {};
+  const lines = fs.readFileSync(mappings, 'utf8').split('\n');
+  const at = lines.findIndex((l) => l.startsWith(`${name} -> `));
+  if (at < 0) return {};
+  const cls = lines[at]
+    .slice(name.length + 4)
+    .replace(/:$/, '')
+    .replaceAll('.', '/');
+  const names = new Map();
+  for (const l of lines.slice(at + 1)) {
+    if (!l.startsWith(' ')) break;
+    const m = l.match(/^\s+[\w.$[\]]+ (\w+) -> (\w+)$/); // поле: «тип имя -> обфусцированное»
+    if (m) names.set(m[2], m[1]);
+  }
+  return { jar, cls, names };
 }
 
 const cache = new Map();

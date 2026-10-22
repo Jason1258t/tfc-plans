@@ -204,6 +204,7 @@ async function packDir(
     instanceDir = path.join(ROOT, 'instance'),
     cacheDir,
     dryRun = false,
+    neoforge = null,
   },
 ) {
   const root = findRoot(unpacked);
@@ -219,10 +220,12 @@ async function packDir(
 
   const parts = {};
   const firestore = [];
+  let render = null;
 
   const modsDir = path.join(root, 'mods');
   if (want('mods') && isDir(modsDir)) {
-    await buildMods({ modsDir, outDir, cacheDir });
+    const built = await buildMods({ modsDir, outDir, cacheDir, neoforge });
+    render = built.render;
     parts.mods = {
       at,
       from: from(modsDir),
@@ -281,14 +284,14 @@ async function packDir(
   if (!Object.keys(parts).length) throw new Error('ничего не нашлось для разбора');
   if (dryRun) {
     log(`--dry-run: в Firestore не пишу (документов было бы ${firestore.length}), sources.json не трогаю`);
-    return { root, world: world.dir, parts, firestore };
+    return { root, world: world.dir, parts, firestore, render };
   }
   if (firestore.length) {
     await writeConfigDocs(firestore);
     log(`записано в Firestore config: ${firestore.length}`);
   }
   writeSources(path.join(instanceDir, 'sources.json'), parts);
-  return { root, world: world.dir, parts, firestore };
+  return { root, world: world.dir, parts, firestore, render };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {

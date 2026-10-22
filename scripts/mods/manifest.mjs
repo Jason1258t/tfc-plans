@@ -5,8 +5,8 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import AdmZip from 'adm-zip';
 import { cfFingerprint } from '../../src/lib/freshness.ts';
+import { openJar } from './zipfile.mjs';
 
 /** FNV-1a 32 бита — такой же считает сайт (src/lib/hash.ts), чтобы сверять рецепты датапаков со сборкой */
 export function fnv1a(str) {
@@ -38,7 +38,7 @@ function modInfo(file) {
   let toml = null;
   let implVersion = null;
   try {
-    const zip = new AdmZip(file);
+    const zip = openJar(file);
     const t = zip.getEntry('META-INF/neoforge.mods.toml');
     if (t) toml = modsToml(t.getData().toString('utf8'));
     const mf = zip.getEntry('META-INF/MANIFEST.MF');

@@ -5,10 +5,12 @@
  *
  * build:
  *   1. снимок → <DATA>/work/<снимок>/ — жёсткие ссылки на blobs (копия, если ссылка невозможна);
- *   2. scripts/pack.mjs (runPack) с выходом в <DATA>/data/<снимок>.tmp-<задание>/, кеш jar — <DATA>/cache/;
+ *   2. scripts/pack.mjs (runPack) с выходом в <DATA>/data/<снимок>.tmp-<задание>/, кеш jar — <DATA>/cache/
+ *      (там же кеш объёмных иконок и ресурсы Minecraft/NeoForge для них — cache/platform/);
  *      с parts — только эти части поверх прошлой сборки того же снимка;
  *   3. рядом: .firestore.json (документы config — пишутся при публикации), .index.json (файлы и sha256 — для
- *      npm run pack:fetch), .build.json; потом папка переименовывается в data/<снимок>/;
+ *      npm run pack:fetch), .build.json (со счётом объёмных иконок render); потом папка переименовывается в
+ *      data/<снимок>/;
  *   4. publish dry-run | live — scripts/publish-data.mjs.
  * publish: только шаг 4 по уже собранной data/<снимок>/.
  * Итог — <DATA>/jobs/<id>.result.json.
@@ -16,13 +18,17 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { runPack } from '../../scripts/pack.mjs';
-import { dataFiles, publishData } from '../../scripts/publish-data.mjs';
 
 const spec = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 const DATA = path.resolve(spec.dataDir);
 const log = (...a) => console.log('[job]', ...a);
 const snapDir = (id) => path.join(DATA, 'data', id);
+
+// Генератор объёмных иконок (MCP) читает jar из TFC_MODS_DIR, путь берётся при загрузке модуля — поэтому до импорта
+// разборщиков; без него он искал бы jar в mods/ копии репозитория, где их нет
+process.env.TFC_MODS_DIR = path.join(DATA, 'work', spec.snapshot, 'mods');
+const { runPack } = await import('../../scripts/pack.mjs');
+const { dataFiles, publishData } = await import('../../scripts/publish-data.mjs');
 
 /** Снимок → папка версии из жёстких ссылок на blobs. Блоб — только чтение: разборщик его не испортит */
 function materialize(snap, dir) {
@@ -61,9 +67,15 @@ async function build() {
 
   let only = spec.parts;
   let baseDocs = [];
+  let prevInfo = null;
   if (only.length && fs.existsSync(final)) {
     // Части поверх прошлой сборки: копия, а не ссылки — разборщики переписывают файлы на месте
     fs.cpSync(final, out, { recursive: true });
+    try {
+      prevInfo = JSON.parse(fs.readFileSync(path.join(out, '.build.json'), 'utf8'));
+    } catch {
+      /* прошлая сборка без сведений */
+    }
     try {
       baseDocs = JSON.parse(fs.readFileSync(path.join(out, '.firestore.json'), 'utf8'));
     } catch {
@@ -83,6 +95,7 @@ async function build() {
     instanceDir: instance,
     cacheDir: path.join(DATA, 'cache'),
     dryRun: true, // в Firestore пишет публикация, не сборка
+    neoforge: snap.loader ?? null,
   });
 
   // Документы config: пересобранные части заменяют свои, остальные — из прошлой сборки
@@ -109,6 +122,8 @@ async function build() {
     files: files.length,
     bytes: files.reduce((n, f) => n + f.size, 0),
     configDocs: docs.length,
+    // Объёмные иконки: без них публикация не трогает icons/*/render/ (publish-data.mjs)
+    render: r.render ?? (only.length && !only.includes('mods') ? (prevInfo?.render ?? null) : null),
     seconds: Math.round((Date.now() - t) / 1000),
   };
   fs.writeFileSync(path.join(out, '.build.json'), JSON.stringify(info, null, 1));
@@ -132,6 +147,7 @@ try {
     result.publish = await publishData({
       dataDir: dir,
       dryRun: spec.publish !== 'live',
+      allowRemovals: !!spec.allowRemovals,
       message: `сервер сборки: снимок ${spec.snapshot} (${spec.by})`,
     });
   }

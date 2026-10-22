@@ -3,7 +3,7 @@
  * по байткоду и имена, под которыми регистрируется предмет. Всё работает «по образцу»: незнакомый байткод — ответ
  * «не знаю» (null), а не исключение, чтобы обновление мода не роняло сборку сайта.
  */
-import AdmZip from 'adm-zip';
+import { openJar } from '../zipfile.mjs';
 import { argTypes, clinitValues, instructions, parseClass } from '../classfile.mjs';
 
 // ---------------------------------------------------------------- jar и классы
@@ -25,7 +25,7 @@ function modIdsOf(zip, depth = 0) {
     for (const e of zip.getEntries())
       if (/^META-INF\/jarjar\/[^/]+\.jar$/.test(e.entryName))
         try {
-          for (const id of modIdsOf(new AdmZip(e.getData()), depth + 1)) ids.add(id);
+          for (const id of modIdsOf(openJar(e.getData()), depth + 1)) ids.add(id);
         } catch {
           /* битый вложенный jar — пропускаем */
         }
@@ -37,7 +37,7 @@ export function jarSet(jarPaths) {
   const jars = [];
   for (const file of jarPaths) {
     try {
-      const zip = new AdmZip(file);
+      const zip = openJar(file);
       jars.push({ file, zip, mods: modIdsOf(zip), cache: new Map() });
     } catch {
       /* не zip */
