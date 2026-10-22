@@ -26,6 +26,8 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   materials into a task checklist, shared **schematic library** (source + replacements + shape).
 - Layout (2026-10-21): sticky toolbar above the block list (smart replace + «Применить», favourites + «Подставить»,
   filter); smart-replace and favourites panels collapse (one open, remembered); shape is behind the «Форма» button.
+- Block list order (2026-10-22): blocks missing from the pack library (not air) and without a replacement go first,
+  removed ones last; checked in the browser on a test schematic with a fake block.
 - Shape on download: crop to outermost blocks, margins (sides/bottom/top), «очистить пространство» = explicit air in
   all free cells (not for multi-palette schematics, up to 2M cells). Platform: N layers of a chosen block under the
   schematic (below the bottom margin); «пустая» — solid top layer, below only the perimeter without a floor.
