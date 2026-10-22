@@ -96,6 +96,7 @@ export function searchItems(query) {
   if (!words.length) return [];
   const scored = [];
   for (const it of items().list) {
+    if (it.h) continue; // скрытые (в игре не видно) — как на сайте
     const hay = [norm(it.r ?? ''), norm(it.e), it.i];
     let score = 0;
     let ok = true;

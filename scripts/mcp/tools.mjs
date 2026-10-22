@@ -59,7 +59,8 @@ function itemGet(a) {
   const it = items().byId.get(id);
   const out = [];
   if (it) out.push(itemLine(it));
-  else out.push(`${id} — в библиотеке предметов нет (это может быть блок без предмета, жидкость или опечатка).`);
+  if (it?.h) out.push(`⚠ в игре не видно (на сайте скрыт): ${it.h}`);
+  if (!it) out.push(`${id} — в библиотеке предметов нет (это может быть блок без предмета, жидкость или опечатка).`);
   const ns = id.split(':')[0];
   const m = mods().get(ns);
   if (m) out.push(`мод: ${m.name} ${m.version}, ${m.jar}`);

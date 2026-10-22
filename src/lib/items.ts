@@ -12,6 +12,8 @@ export interface McItem {
   t?: string;
   /** Объёмная иконка модели, как в инвентаре (icons/<ns>/render/…, scripts/mods/icons3d.mjs) — у предметов-блоков */
   g?: string;
+  /** Скрыт: в игре его не видно (мод выключает или прячет из JEI) — причина; в поиске и списках не показывается */
+  h?: string;
 }
 
 export interface ItemIndex {
@@ -74,6 +76,7 @@ export function searchItems(idx: ItemIndex, query: string, limit = 30): McItem[]
   if (!words.length) return [];
   const scored: { it: McItem; score: number }[] = [];
   for (const it of idx.list) {
+    if (it.h) continue;
     const ru = norm(it.r ?? '');
     const en = norm(it.e);
     const id = it.i;
@@ -106,6 +109,6 @@ export function searchItems(idx: ItemIndex, query: string, limit = 30): McItem[]
 
 /** Лучшее совпадение для свободного названия (используется при разборе ответа Gemini) */
 export function matchItem(idx: ItemIndex, name: string): McItem | undefined {
-  const exact = idx.list.find((it) => norm(it.r ?? '') === norm(name) || norm(it.e) === norm(name));
+  const exact = idx.list.find((it) => !it.h && (norm(it.r ?? '') === norm(name) || norm(it.e) === norm(name)));
   return exact ?? searchItems(idx, name, 1)[0];
 }

@@ -143,7 +143,10 @@ export function parseClass(buf) {
     methods.push(m);
   }
 
-  /** BootstrapMethods: у лямбд второй аргумент — MethodHandle на тело лямбды */
+  /**
+   * BootstrapMethods: у лямбд второй аргумент — MethodHandle на тело лямбды; у склейки строк (StringConcatFactory)
+   * аргумент — рецепт: «\u0001» — место переменной части. args.method — сам bootstrap-метод.
+   */
   const bootstrap = [];
   for (const a of attributes()) {
     if (a.name !== 'BootstrapMethods') continue;
@@ -151,14 +154,16 @@ export function parseClass(buf) {
     const count = buf.readUInt16BE(q);
     q += 2;
     for (let i = 0; i < count; i++) {
-      q += 2; // сам bootstrap-метод
+      const bsm = cp[buf.readUInt16BE(q)];
+      q += 2;
       const argc = buf.readUInt16BE(q);
       q += 2;
       const args = [];
       for (let j = 0; j < argc; j++, q += 2) {
         const c = cp[buf.readUInt16BE(q)];
-        args.push(c?.tag === MHANDLE ? { handle: ref(c.a) } : null);
+        args.push(c?.tag === MHANDLE ? { handle: ref(c.a) } : c?.tag === STRING ? { string: utf(c.a) } : null);
       }
+      args.method = bsm?.tag === MHANDLE ? ref(bsm.a) : null;
       bootstrap.push(args);
     }
   }

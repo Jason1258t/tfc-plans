@@ -32,6 +32,7 @@ import { isCuisineClass, isCuisineData } from './mods/cuisine.mjs';
 import { writePower } from './mods/power.mjs';
 import { writeMultiblocks } from './mods/multiblocks.mjs';
 import { makeRenderer } from './mods/icons3d.mjs';
+import { hiddenItems } from './mods/visibility/index.mjs';
 
 const MC_VERSION = '1.21.1';
 
@@ -661,6 +662,20 @@ export async function buildMods({
     else log(`UI-текстура не найдена: ${ref}`);
   }
 
+  // Предметы, которых игрок не видит (мод их выключает или прячет из JEI): в библиотеке с пометкой h — причина
+  const vis = hiddenItems(
+    jars.map((j) => path.join(MODS_DIR, j)),
+    items.map((it) => it.i),
+  );
+  for (const it of items) if (vis.hidden.has(it.i)) it.h = vis.hidden.get(it.i);
+  if (vis.hidden.size) {
+    const by = new Map();
+    for (const [id, why] of vis.hidden) by.set(why, [...(by.get(why) ?? []), id]);
+    log(`скрыто (в игре не видно): ${vis.hidden.size}`);
+    for (const [why, ids] of by)
+      log(`  ${why}: ${ids.length} — ${ids.slice(0, 8).join(', ')}${ids.length > 8 ? '…' : ''}`);
+  }
+  for (const w of vis.warnings) log(`  видимость: ${w}`);
   fs.writeFileSync(OUT_JSON, JSON.stringify(items));
   writeRecipes(recipes, OUT_RECIPES);
   const ref = buildReference(dataDirs, recipes, parseLooseJson, fluidNames);

@@ -43,7 +43,9 @@ let cached: { idx: ItemIndex; docs: Doc[]; byStem: Map<string, number[]> } | nul
 function getIndex(idx: ItemIndex) {
   if (cached?.idx === idx) return cached;
   // w — путь id словами: «tfc:wood/planks/oak» → «wood planks oak»
-  const docs: Doc[] = idx.list.map((it) => ({ ...it, w: it.i.split(':')[1].replace(/[/_]/g, ' ') }));
+  const docs: Doc[] = idx.list
+    .filter((it) => !it.h)
+    .map((it) => ({ ...it, w: it.i.split(':')[1].replace(/[/_]/g, ' ') }));
   const byStem = new Map<string, number[]>();
   docs.forEach((d, n) => {
     for (const st of new Set(tokens(`${d.e} ${d.r ?? ''} ${d.w}`).map(stem))) {
