@@ -14,7 +14,14 @@ interface Props {
   textured: boolean;
   /** Выделенные блоки — подсвечиваются поверх */
   selected?: Vec[];
+  /** Клик ЛКМ без сдвига камеры: блок под курсором (null — мимо) */
+  onPick?: (pos: Vec | null, e: { shiftKey: boolean; timeStamp: number }) => void;
+  /** Блок под курсором (null — нет) */
+  onHover?: (pos: Vec | null) => void;
 }
+
+/** Сдвиг мыши, после которого нажатие — поворот камеры, а не клик */
+const CLICK_PX = 4;
 
 function disposeMarks(m: THREE.InstancedMesh) {
   m.geometry.dispose();
@@ -26,7 +33,7 @@ function disposeMarks(m: THREE.InstancedMesh) {
  * 3D-просмотр схемы: упрощённые формы блоков, вращение ЛКМ, сдвиг ПКМ, масштаб колесом.
  * Рисует только при движении камеры или смене схемы — в покое видеокарту не грузит.
  */
-export default function SchematicView3D({ schematic, replace, maxY, textured, selected }: Props) {
+export default function SchematicView3D({ schematic, replace, maxY, textured, selected, onPick, onHover }: Props) {
   const items = useItems();
   const wrapRef = useRef<HTMLDivElement>(null);
   const three = useRef<{
@@ -36,11 +43,20 @@ export default function SchematicView3D({ schematic, replace, maxY, textured, se
     controls: OrbitControls;
     mesh: THREE.Mesh | null;
     marks: THREE.InstancedMesh | null;
+    /** Рамка блока под курсором */
+    cursor: THREE.LineSegments;
     render: () => void;
   } | null>(null);
   const [stats, setStats] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const framed = useRef(false);
+  // Обработчики — через ref: сцена создаётся один раз, а они меняются с каждой отрисовкой
+  const pickRef = useRef(onPick);
+  const hoverRef = useRef(onHover);
+  useEffect(() => {
+    pickRef.current = onPick;
+    hoverRef.current = onHover;
+  });
 
   // Сцена — один раз
   useEffect(() => {
@@ -64,9 +80,76 @@ export default function SchematicView3D({ schematic, replace, maxY, textured, se
     };
     const ro = new ResizeObserver(resize);
     ro.observe(wrap);
-    three.current = { renderer, scene, camera, controls, mesh: null, marks: null, render };
+    const cursor = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(1.02, 1.02, 1.02)),
+      new THREE.LineBasicMaterial({ color: getComputedStyle(wrap).getPropertyValue('--text').trim() || '#fff' }),
+    );
+    cursor.visible = false;
+    scene.add(cursor);
+    three.current = { renderer, scene, camera, controls, mesh: null, marks: null, cursor, render };
     resize();
+
+    // Блок под курсором: луч до геометрии схемы, чуть дальше точки попадания — внутрь грани
+    const ray = new THREE.Raycaster();
+    const blockAt = (e: PointerEvent): Vec | null => {
+      const mesh = three.current?.mesh;
+      if (!mesh) return null;
+      const r = renderer.domElement.getBoundingClientRect();
+      ray.setFromCamera(
+        new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1),
+        camera,
+      );
+      const hit = ray.intersectObject(mesh, false)[0];
+      if (!hit) return null;
+      const p = hit.point.addScaledVector(ray.ray.direction, 0.01);
+      return [Math.floor(p.x), Math.floor(p.y), Math.floor(p.z)];
+    };
+    const showCursor = (pos: Vec | null) => {
+      const same =
+        pos && cursor.visible && cursor.position.equals(new THREE.Vector3(pos[0] + 0.5, pos[1] + 0.5, pos[2] + 0.5));
+      if (same || (!pos && !cursor.visible)) return;
+      cursor.visible = !!pos;
+      if (pos) cursor.position.set(pos[0] + 0.5, pos[1] + 0.5, pos[2] + 0.5);
+      render();
+      hoverRef.current?.(pos);
+    };
+
+    let down: { x: number; y: number } | null = null;
+    let frame = 0;
+    let last: PointerEvent | null = null;
+    const onDown = (e: PointerEvent) => {
+      down = e.button === 0 ? { x: e.clientX, y: e.clientY } : null;
+    };
+    const onUp = (e: PointerEvent) => {
+      const d = down;
+      down = null;
+      if (!d || e.button !== 0 || Math.hypot(e.clientX - d.x, e.clientY - d.y) >= CLICK_PX) return;
+      pickRef.current?.(blockAt(e), { shiftKey: e.shiftKey, timeStamp: e.timeStamp });
+    };
+    // Наведение — не чаще кадра, и не во время поворота камеры
+    const onMove = (e: PointerEvent) => {
+      last = e;
+      if (e.buttons || frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        if (last && !last.buttons) showCursor(blockAt(last));
+      });
+    };
+    const onLeave = () => showCursor(null);
+    const el = renderer.domElement;
+    el.addEventListener('pointerdown', onDown);
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerleave', onLeave);
+
     return () => {
+      cancelAnimationFrame(frame);
+      el.removeEventListener('pointerdown', onDown);
+      el.removeEventListener('pointerup', onUp);
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerleave', onLeave);
+      cursor.geometry.dispose();
+      (cursor.material as THREE.Material).dispose();
       ro.disconnect();
       controls.dispose();
       if (three.current?.mesh) disposeMesh(three.current.mesh);

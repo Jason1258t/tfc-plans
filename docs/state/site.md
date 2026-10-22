@@ -50,7 +50,13 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   layer's blocks inside it (explicit air skipped); the frame may go past the edge; plain drag still pans. Shift is a
   **toggle** (user's wish, no Ctrl/Cmd variants): Shift+click on a selected block unselects it, Shift+double-click
   unselects the group if the block was selected before, a frame whose blocks are all selected turns red and unselects
-  them. Toggle tested with synthetic events: 1→0, frame 84→0, group 19→0. Tested with synthetic pointer events
+  them. Toggle tested with synthetic events: 1→0, frame 84→0, group 19→0. **3D picking** (item 4): raycast against the
+  schematic mesh (hit point nudged 0.01 along the ray, floored → block cell); click — select the block, double-click —
+  volume group, Shift — toggle, click past the model — clear; hover shows a wire box and the same block tooltip as the
+  layer view. Groups (layer and 3D) count face, edge and corner neighbours — curved shells step diagonally (airship
+  envelope: 106 face-connected → 3904 with diagonals). Browser-tested on cargoairship: group 3904, Shift −1/+1, clear,
+  remove (7250→3346 blocks) and undo. Item 5 (3D «object» by frame) postponed by the user. Gotcha: after HMR the 3D
+  view kept the old instance without listeners — reload the page when testing 3D changes. Tested with synthetic pointer events
   (the browser tool can't hold Shift while dragging): +80, −11, +50 → replace 119 with stone, undo. Next: picking in 3D. Cell edits change the source itself:
   «В библиотеку» uploads a new file and deletes the old one (saving edits to the library not browser-tested — shared
   collection). Adding blocks into empty cells is not supported.
