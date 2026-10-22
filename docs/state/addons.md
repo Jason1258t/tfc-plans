@@ -40,8 +40,13 @@ Before 2.0 — EE Rectifiers, `ee_rectifier`; old blocks migrate to new ids via 
 - Finding: EE 1.1.2 lacks model `block/duplex_wire_segment` (used by `CEEPartialModels.DUPLEX_WIRE_SEGMENT` and by the
   EE Extras two-core cable shell) — from jar, not checked in game.
 - Site icons are drawn by the shared generator `scripts/mcp/render.mjs` (4× AA, no seams), called by
-  `tools/ee-extras-mod/release.sh`; `art/iso.py` removed. Current site icons were drawn mirrored (before the rotation
-  fix) — redraw on the next release.
+  `tools/ee-extras-mod/release.sh`; `art/iso.py` removed. Icons redrawn in 2.3.1 (no longer mirrored).
+- **2.3.1** (2026-10-22, user's request «ближе к реальным приборам»): looks only. Compact generator — foot-mounted
+  TEFC-style machine, axis along FACING, terminal box on the −Z side of the model (up when the shaft is horizontal):
+  `Layout.COMPACT_GENERATOR` moved to {6.5, 0.5}, {9.5, 0.5} at height 8.5 (placed wires re-render to the new spot).
+  Light rectifiers/inverters — power module on a finned heatsink with terminal strips; heavy — floor cabinet (door,
+  louvres or fan, heatsink, bushings). Models built by `art/machines.py` on `art/kit.py` (per-face materials, auto
+  atlas, roll transform; same kit in small-diesel-mod). Terminals 720/720, resources_check clean; not checked in game.
 
 ## Small Diesel (`tools/small-diesel-mod`, 2026-10-22)
 
@@ -55,6 +60,10 @@ SU·tick, by CDG 1.3.8 bytecode).
   rating 1.2 kW. Dev server (`./test-server.sh`, `/sdtest`): burned fuel = load × capacity × time to the SU·tick at
   12.5 % and 37.5 % load, 0 mB idle, stops on empty tank, tank rejects water; generator burned = delivered (≤0.3 %),
   cap 1 500 W; loads without EE (engine only); terminals 24/24. No engine sound. Not checked in game.
+- **1.0.1** (2026-10-22): looks only — engine as a horizontal single-cylinder diesel (S195-like: radiator at the
+  cylinder end, tank, filter, muffler, flywheel at the shaft, skids; hitbox height 13 → 15), generator as a genset on a
+  frame (diesel + alternator + terminal box): `Terminals` moved to {12.25, 6}, {12.25, 10} at height 14. User rejected
+  a coarse brass radiator grille — now dark core with fine fins. Terminals 24/24; not checked in game.
 
 ## Miner Tools (`tools/miner-tools-mod`, 2026-10-21)
 

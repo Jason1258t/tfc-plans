@@ -25,7 +25,7 @@ import net.neoforged.neoforge.fluids.FluidUtil;
  * на соседний вал), топливо — трубой Create с любой другой грани или ведром рукой.
  */
 public class EngineBlock extends DirectionalKineticBlock implements IBE<EngineBlockEntity> {
-    private static final VoxelShaper SHAPE = VoxelShaper.forDirectional(box(1, 0, 1, 15, 13, 15), Direction.UP);
+    private static final VoxelShaper SHAPE = VoxelShaper.forDirectional(box(1, 0, 1, 15, 15, 15), Direction.UP);
 
     public EngineBlock(Properties properties) {
         super(properties);

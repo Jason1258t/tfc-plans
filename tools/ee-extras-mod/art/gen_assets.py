@@ -310,127 +310,30 @@ def dump(obj, *path):
         json.dump(obj, f, indent=2)
 
 
+import machines  # noqa: E402 — генератор, выпрямители и инверторы по образцу настоящих (art/machines.py)
+
 for i, (name, (terminals, kinds)) in enumerate(LAYOUTS.items()):
     os.makedirs(os.path.join(RES, 'textures', 'block'), exist_ok=True)
     # Сид — по прежнему порядку (у старых блоков текстура не меняется), у новых — свой
     seed = {'three_phase_rectifier': 1258, 'single_phase_rectifier': 1259, 'bidirectional_converter': 1260}.get(name, 1300 + i)
-    inverter = name.endswith('_inverter')
-    write(os.path.join(RES, 'textures', 'block', name + '.png'),
-          texture(terminals, kinds, seed, converter=name == 'bidirectional_converter', inverter=inverter))
-    for rolled, fn in ((False, 'block'), (True, 'block_roll')):
-        dump(model(name, terminals, kinds, rolled), 'models', 'block', name, fn + '.json')
-    dump({'parent': f'{NS}:block/{name}/block'}, 'models', 'item', name + '.json')
-    dump(blockstate(name), 'blockstates', name + '.json')
-    if name in HEAVY:
-        heavy = 'heavy_' + name
-        write(os.path.join(RES, 'textures', 'block', heavy + '.png'),
-              heavy_parts(texture(terminals, kinds, seed, inverter=inverter), seed + 100))
+    if name == 'bidirectional_converter':
+        write(os.path.join(RES, 'textures', 'block', name + '.png'), texture(terminals, kinds, seed, converter=True))
         for rolled, fn in ((False, 'block'), (True, 'block_roll')):
-            dump(heavy_model(name, terminals, kinds, rolled), 'models', 'block', heavy, fn + '.json')
+            dump(model(name, terminals, kinds, rolled), 'models', 'block', name, fn + '.json')
+    else:
+        inverter = name.endswith('_inverter')
+        machines.emit(name, machines.converter(name, terminals, kinds, inverter, seed), RES, NS, dump, DISPLAY)
+        heavy = 'heavy_' + name
+        machines.emit(heavy, machines.heavy_converter(heavy, terminals, kinds, inverter, seed + 100), RES, NS, dump,
+                      DISPLAY)
         dump({'parent': f'{NS}:block/{heavy}/block'}, 'models', 'item', heavy + '.json')
         dump(blockstate(heavy), 'blockstates', heavy + '.json')
+    dump({'parent': f'{NS}:block/{name}/block'}, 'models', 'item', name + '.json')
+    dump(blockstate(name), 'blockstates', name + '.json')
 # ---------------------------------------------------------------- компактный кинетический генератор (2.3)
 
-# Те же числа, что Layout.COMPACT_GENERATOR и Layout.GENERATOR_Y: «+» (4, 8), «−» (12, 8), центр клемм на высоте 14,5
-GENERATOR = [((4, 8), 'plus'), ((12, 8), 'minus')]
-GENERATOR_Y = 14.5
-
-
-def generator_texture(seed):
-    """32×32: крышка (0..15, 16..31), бок корпуса 12×10 (16..27, 0..9), кромка крышки (16..31, 11), низ (16..31, 16..31),
-    клеммы медь/«+»/«−» (0/4/8, 12), подшипник (28..31, 0..3)"""
-    rng = random.Random(seed)
-    px = [[CLEAR] * 32 for _ in range(32)]
-
-    def plate(x0, y0, w, h):
-        for y in range(h):
-            for x in range(w):
-                border = x in (0, w - 1) or y in (0, h - 1)
-                corner = x in (0, w - 1) and y in (0, h - 1)
-                rim = h > 6 and (x in (1, w - 2) or y in (1, h - 2))
-                px[y0 + y][x0 + x] = CORNER if corner else EDGE if border else RIM if rim else rng.choice(FILL)
-
-    def terminal(x0, y0, pal):
-        for y in range(4):
-            for x in range(4):
-                edge = x in (0, 3) or y in (0, 3)
-                px[y0 + y][x0 + x] = pal[0] if (x in (0, 3) and y in (0, 3)) else pal[1] if edge else pal[2]
-        px[y0 + 1][x0 + 1] = pal[3]
-
-    def top(x, z, c):
-        px[16 + z][x] = c
-
-    plate(0, 16, 16, 16)
-    # Знак генератора между клеммами: кружок с «=» (постоянный ток)
-    for x, z in ((7, 5), (8, 5), (9, 5), (6, 6), (10, 6), (6, 7), (10, 7), (6, 8), (10, 8), (7, 9), (8, 9), (9, 9)):
-        top(x, z, DARKER)
-    for x in (7, 8, 9):
-        top(x, 7, HI)
-    for x in (7, 8, 9):
-        top(x, 12, DARKER)
-        top(x, 13, DARKER)
-    # «+» под красной клеммой, «−» под синей
-    for dx, dz in ((0, -1), (-1, 0), (0, 0), (1, 0), (0, 1)):
-        top(4 + dx, 12 + dz, RED[2])
-    for dx in (-1, 0, 1):
-        top(12 + dx, 12, BLUE[3])
-    for x in range(5, 12):
-        top(x, 1, HI)
-    # Бок корпуса: рёбра охлаждения через пиксель, табличка
-    for y in range(10):
-        for x in range(12):
-            border = x in (0, 11) or y in (0, 9)
-            c = EDGE if border else (DARK if x % 2 == 0 else rng.choice(FILL))
-            px[y][16 + x] = c
-    for x in range(3, 9):
-        px[4][16 + x] = HI
-        px[5][16 + x] = RIM
-    for x in range(16):
-        px[11][16 + x] = EDGE if x in (0, 15) else RIM
-    for y in range(4):
-        for x in range(4):
-            px[y][28 + x] = DARKER if x in (0, 3) or y in (0, 3) else DARK
-    plate(16, 16, 16, 16)
-    terminal(0, 12, COPPER)
-    terminal(4, 12, RED)
-    terminal(8, 12, BLUE)
-    return px
-
-
-def generator_model(name, rolled):
-    """Корпус 12×10×12 на подшипнике (из него выходит полувал Create — рисует блок-сущность), крышка, клеммы сверху"""
-    tex = f'{NS}:block/{name}'
-
-    def r(a, b):
-        if not rolled:
-            return a, b
-        return [16 - b[2], a[1], a[0]], [16 - a[2], b[1], b[0]]
-
-    els = []
-    bearing = {f: {'texture': '#0', 'uv': [14, 0, 16, 2]} for f in ('north', 'east', 'south', 'west', 'up', 'down')}
-    for a, b in (([5, 0, 5], [11, 2, 6]), ([5, 0, 10], [11, 2, 11]), ([5, 0, 6], [6, 2, 10]), ([10, 0, 6], [11, 2, 10])):
-        a, b = r(a, b)
-        els.append({'name': 'bearing', 'from': a, 'to': b, 'faces': bearing})
-    side = {'texture': '#0', 'uv': [8, 0, 14, 5]}
-    els.append({'name': 'body', 'from': [2, 2, 2], 'to': [14, 12, 14], 'faces': {
-        'north': side, 'east': side, 'south': side, 'west': side,
-        'down': {'texture': '#0', 'uv': [8, 8, 14, 14]}}})
-    rim = {'texture': '#0', 'uv': [8, 5.5, 15, 6]}
-    up = {'texture': '#0', 'uv': [0, 8, 8, 16], **({'rotation': 90} if rolled else {})}
-    els.append({'name': 'lid', 'from': [1, 12, 1], 'to': [15, 13, 15], 'faces': {
-        'north': rim, 'east': rim, 'south': rim, 'west': rim, 'up': up,
-        'down': {'texture': '#0', 'uv': [8, 8, 15, 15]}}})
-    for t, k in GENERATOR:
-        x, z = roll(t) if rolled else t
-        lo = GENERATOR_Y - 1.5
-        els.append({'name': k, 'from': [x - 2, lo, z - 2], 'to': [x + 2, lo + 3, z + 2], 'faces': faces(UV_TERM[k])})
-    return {'credit': 'ee_extras', 'textures': {'0': tex, 'particle': tex}, 'elements': els, 'display': DISPLAY}
-
-
 name = 'compact_kinetic_generator'
-write(os.path.join(RES, 'textures', 'block', name + '.png'), generator_texture(1400))
-for rolled, fn in ((False, 'block'), (True, 'block_roll')):
-    dump(generator_model(name, rolled), 'models', 'block', name, fn + '.json')
+machines.emit(name, machines.compact_generator(1400), RES, NS, dump, machines.lying_display(DISPLAY))
 dump({'parent': f'{NS}:block/{name}/block'}, 'models', 'item', name + '.json')
 dump(blockstate(name), 'blockstates', name + '.json')
 import cables  # noqa: E402 — кабели, соединитель, изоляторы, катушка (art/cables.py)

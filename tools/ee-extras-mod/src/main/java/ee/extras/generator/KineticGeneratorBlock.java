@@ -36,8 +36,8 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
- * Компактный кинетический генератор: вал Create — в задней грани, клеммы постоянного тока «+» и «−» — на лицевой
- * (FACING, раскладка Layout.COMPACT_GENERATOR). Блок кинетический, как щёточный узел EE (DirectionalKineticElectricBlock),
+ * Компактный кинетический генератор: вал Create — в задней грани, ось машины — по FACING, клеммы постоянного тока «+»
+ * и «−» — в клеммной коробке на корпусе (раскладка Layout.COMPACT_GENERATOR). Блок кинетический, как щёточный узел EE (DirectionalKineticElectricBlock),
  * а поведение в воде и масле, крен и повороты — как у плит EE (DirectionalRolledDeviceBlock).
  */
 public class KineticGeneratorBlock extends DirectionalKineticElectricBlock<GeneratorDevice>

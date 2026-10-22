@@ -32,12 +32,13 @@ public record Layout(String id, int inputs, float[][] terminals, String[] labels
             new String[] {"charge_positive", "charge_negative", "discharge_positive", "discharge_negative"});
 
     /**
-     * Компактные генераторы (2.3), кинетический и топливный: две клеммы сверху — 0 «+» (красная), 1 «−» (синяя), центр
-     * на высоте GENERATOR_Y. Здесь inputs = 0, поэтому plus() = 0, minus() = 1.
+     * Компактный генератор (2.3, вид — с 2.3.1 машина на лапах с осью по FACING): две клеммы в клеммной коробке на
+     * корпусе (сторона −Z модели — наверху, когда вал горизонтальный) — 0 «+» (красная), 1 «−» (синяя), центр на высоте
+     * GENERATOR_Y. Здесь inputs = 0, поэтому plus() = 0, minus() = 1.
      */
     public static final Layout COMPACT_GENERATOR = new Layout("compact_generator", 0,
-            new float[][] {{4, 8}, {12, 8}}, new String[] {"load_positive", "load_negative"});
-    public static final float GENERATOR_Y = 14.5f;
+            new float[][] {{6.5f, 0.5f}, {9.5f, 0.5f}}, new String[] {"load_positive", "load_negative"});
+    public static final float GENERATOR_Y = 8.5f;
 
     /**
      * Четырёхжильный соединитель, {x, y, z} в пикселях лицом вверх: узел 0 — торец вывода кабеля, 1–4 — клеммы L1, L2,

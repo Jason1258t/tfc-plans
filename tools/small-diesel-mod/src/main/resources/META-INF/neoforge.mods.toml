@@ -4,7 +4,7 @@ license = "MIT"
 
 [[mods]]
 modId = "small_diesel"
-version = "1.0.0"
+version = "1.0.1"
 displayName = "Small Diesel"
 authors = "TFC Планы"
 description = '''

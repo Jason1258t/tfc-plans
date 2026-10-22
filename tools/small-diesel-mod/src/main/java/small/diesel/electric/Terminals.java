@@ -8,8 +8,9 @@ import com.george_vi.electroenergetics.foundation.nodes.NodeConfigurator;
  * art/gen_assets.py.
  */
 public final class Terminals {
-    public static final float[][] CENTERS = {{4, 8}, {12, 8}};
-    public static final float Y = 14.5f;
+    /** Клеммная коробка на генераторе установки (с 1.0.1): «+» ближе к северной стороне модели, «−» — к южной */
+    public static final float[][] CENTERS = {{12.25f, 6}, {12.25f, 10}};
+    public static final float Y = 14;
     public static final String[] LABELS = {"load_positive", "load_negative"};
 
     private Terminals() {}
