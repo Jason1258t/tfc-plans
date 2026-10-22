@@ -38,6 +38,7 @@ import { itemName, useItems } from '../lib/items';
 import {
   applyRules,
   changesIn,
+  EMPTY_BLOCKS,
   shapedSize,
   exportSchematic,
   invalidTargets,
@@ -218,13 +219,15 @@ export function SchematicsPage() {
 
   const shown = useMemo(() => {
     const q = filter.trim().toLowerCase();
-    // Удалённые блоки — в конец списка, чтобы не мешались
-    const removedLast = (list: typeof blocks) => [
-      ...list.filter(({ id }) => replace.get(id) !== REMOVE),
-      ...list.filter(({ id }) => replace.get(id) === REMOVE),
-    ];
-    if (!q) return removedLast(blocks);
-    return removedLast(blocks).filter(({ id }) => {
+    // Нераспознанные без замены (кроме воздуха) — наверх, их надо разобрать; удалённые — в конец, чтобы не мешались
+    const rank = (id: string) => {
+      const to = replace.get(id);
+      if (to === REMOVE) return 2;
+      return !to && items && !items.byId.has(id) && !EMPTY_BLOCKS.has(id) ? 0 : 1;
+    };
+    const ordered = (list: typeof blocks) => [0, 1, 2].flatMap((r) => list.filter(({ id }) => rank(id) === r));
+    if (!q) return ordered(blocks);
+    return ordered(blocks).filter(({ id }) => {
       const to = replace.get(id);
       const hay = [
         id,

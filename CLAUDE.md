@@ -25,6 +25,10 @@ comments, commit messages, guides, MCP tool output. Keep Russian UI labels verba
   edit: `git worktree add .claude/worktrees/<short> -b feat/<short> main` (or EnterWorktree). Branches: `feat/`,
   `refactor/`, `fix/` + latin kebab-case. The main folder `/Users/ivan/vscodeProjects/tfc-taskmanager` stays on
   `main`: never edit or switch branches there. Without a worktree — read and answer only.
+- **Work log on the site** for dev and fix work (groups «Разработка» and «Фиксы»): at the start find the task
+  (`tasks_list group=…`) or create one there (`task_create`), set `doing` + assignee `Claude`; at the end — `done` and a
+  short Russian note in the description: what changed for players, what was checked, what wasn't. Found a separate
+  problem along the way — a new task in the right group. A few Firestore reads per task — fine, don't loop.
 - Deploy only from clean `main` after the merge, never from a feature branch (use the dev server to check).
 - Commit message: `Раздел: что сделано`, one line; merge commit `Слияние feat/<short>: что сделано`.
 - Firestore rules change with the code: deploy `firestore:rules` first, then hosting.
