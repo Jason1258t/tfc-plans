@@ -234,28 +234,44 @@ Sophisticated Backpacks; модели только с `overrides` — override �
 делает атлас блоков (`paletted_permutations` в `assets/minecraft/atlases/blocks.json` любого мода — перекраска по
 палитре, как `PalettedPermutations` Minecraft), берутся так же: книжные полки, пиломатериалы, лодки, таблички TFC
 по породам (`<текстура>_<дерево>`; `palettedTextures()` в render.mjs).
-Рисуемое кодом — как в JEI (перенесено из кода, в игре не проверялось):
-- инструменты IE (`ie_obj` с `callbacks`) — видимые группы OBJ из `*Callbacks.shouldRenderGroup` (`IE_ITEM_CALLBACKS`);
-- `builtin/entity` (`scripts/mcp/entityModels.mjs`) — сундуки (ванильные и из дерева TFC), кровати, шалкеры, знамёна,
-  головы (и дракона, и пиглина; зеркальные кубы `mirror`), щит, проводник, расписная ваза — модели сущностей
-  Minecraft; ящики Functional Storage (и обрамлённые: `functionalstorage:framedblock` без оформления — дочерние модели)
-  — модель блока с поворотом из их рендерера; сковорода Cuisine Delight — отдельная модель `item/cuisine_skillet_base`;
-- мультиблоки IE (`immersiveengineering:basic_split`: коксовая и доменная печь, плавильня) — вся `inner_model`, как
-  у предмета без `SUBMODEL_OFFSET`; черепахи CC (`computercraft:turtle`) — модель семейства без улучшений; образец
-  породы IE (`models/coresample`) — столбик из камня, вид спереди без поворота (`getTransforms` = `NO_TRANSFORMS`);
-  конвейеры IE (`models/conveyor`, `scripts/mcp/ieConveyor.mjs`) — у предмета нет своей модели или картинки, это
-  тот же `ModelConveyor` с умолчаниями (на север, горизонтально, лента выключена, без покраски, стенки есть):
-  перенесены `getBaseConveyor`, `createBakedQuad/Box`, добавки разделителя, экстрактора, вертикального и панель
-  редстоун-конвейера (OBJ, группа `panel`), поворот GUI — матрица из `TRANSFORMATION_MAP` (`display.gui.matrix`);
-- плоские: `fluid_container` NeoForge — ведро с жидкостью (текстура и цвет жидкости — из классов модов,
-  `scripts/mcp/fluids.mjs`; у IE — текстура из `FluidEntry.make("имя", rl("…_still"))`), ведро зелья IE
-  (`potion_bucket`, цвет пустого зелья), `tfc:fluid_container` — пустой сосуд, `tfc:trim` — броня без отделки.
+Рисуемое кодом — **реестр `scripts/mcp/models/`**, по модулю на мод (перенесено из кода, в игре не проверялось).
+Модуль группы — `{ name, loaders, flat, items, objCallbacks }`: геометрия загрузчика модели, плоские предметы слоями,
+предметы `builtin/entity` (рендерер предмета в коде) и видимые группы OBJ; подключается строкой в `GROUPS`
+(`models/index.mjs`). Движок (`render.mjs`) зовёт реестр через `modelContext` и не знает имён модов; обработчик,
+который упал или не узнал данные после обновления мода, — «не умею»: предмет остаётся текстурой, причина — в
+предупреждения, сборка не останавливается. Что сейчас в группах:
+- `minecraft.mjs` — сундуки, кровати, шалкеры, знамёна, головы (и дракона, и пиглина; зеркальные кубы `mirror`), щит,
+  проводник, расписная ваза — модели сущностей Minecraft (инструменты ModelPart — `scripts/mcp/entityModels.mjs`);
+- `neoforge.mjs` — `composite`, `fluid_container` (ведро с жидкостью: текстура и цвет жидкости — из классов модов,
+  `scripts/mcp/fluids.mjs`; у IE — текстура из `FluidEntry.make("имя", rl("…_still"))`);
+- `tfc.mjs` — сундуки из дерева TFC, `tfc:fluid_container` (пустой сосуд), `tfc:trim` (броня без отделки);
+- `immersiveengineering.mjs` — `conf_sides`, мультиблоки `basic_split` (вся `inner_model`, как у предмета без
+  `SUBMODEL_OFFSET`), образец породы `models/coresample` (столбик из камня, вид спереди без поворота:
+  `getTransforms` = `NO_TRANSFORMS`), конвейеры `models/conveyor` (`models/ieConveyor.mjs`: у предмета нет своей
+  модели или картинки — тот же `ModelConveyor` с умолчаниями: на север, горизонтально, лента выключена, без покраски,
+  стенки есть; перенесены `getBaseConveyor`, `createBakedQuad/Box`, добавки разделителя, экстрактора, вертикального и
+  панель редстоун-конвейера, поворот GUI — матрица `TRANSFORMATION_MAP` → `display.gui.matrix`), ведро зелья
+  `potion_bucket` (цвет пустого зелья), инструменты (`ie_obj` с `callbacks`) — видимые группы OBJ из
+  `*Callbacks.shouldRenderGroup`;
+- `functionalstorage.mjs` — ящики (модель блока с поворотом из `DrawerISTER`), обрамлённые (`framedblock` без
+  оформления — дочерние модели); `computercraft.mjs` — черепаха без улучшений; `sophisticatedbackpacks.mjs` — рюкзак;
+  `cuisinedelight.mjs` — сковорода (отдельная модель `item/cuisine_skillet_base`);
+- `create_submarine.mjs` — барометр-аквариум: модель блока + песок, камень и водоросли (модели блоков ванили с позой
+  рендерера — поле части `affine`), рыба-фуга `PufferfishSmallModel` в спокойном виде, вода (`water_still`,
+  окраска воды, полупрозрачная); покачивание рыбы — в момент 0.
 
-Не перенесено (остаётся текстурой) и почему: проходной изолятор IE (`feedthrough` — блок-основа + модели
-коннекторов по типу провода), барометр Create Submarine (аквариум: модель блока + песок, водоросли, вода и
-рыба-фугу из рендерера блока), наполненная сковорода TFC (`pan/filled` без содержимого кодом не рисуется). Предметы
-Create Connected без текстур (катализаторы для неустановленных модов) выключены `FeatureToggle` и убраны модом из
-творческого и JEI.
+**Пустые предметы.** Предмет без данных рисуется так, как его показывает JEI, — без содержимого: ящики Functional
+Storage без предметов, сковорода Cuisine Delight без еды, образец породы IE без минералов (камень), рюкзак без
+улучшений. Наполненный лоток TFC (`pan/filled`) без содержимого не рисуется вовсе — он существует только в руке во
+время промывки и всегда с содержимым; на сайте скрыт (см. ниже). Не перенесено (остаётся текстурой): проходной
+изолятор IE (`feedthrough` — блок-основа + модели коннекторов по типу провода).
+
+**Скрытые предметы** (`scripts/mods/visibility/`, поле `h` в `items.json` — причина): есть в ресурсах jar, но игрок их
+не видит. Правило — модуль на мод по его коду: Create Connected — условия `FeatureToggle.addCondition` (байткод
+лямбды, `Mods.X.isLoaded()` → установлен ли мод; имя — из `REGISTRATE.block/item`, склеенное в цикле — шаблоном),
+TFC — список `SelfTests.technicalItemsWithNoTab` (лоток с рудой, кучки снега и льда, крица, расплав, свет, литое
+стекло, каменные наковальни). Сайт и MCP не показывают их в поиске, по id они находятся (иконки схем, рецепты),
+`item_get` пишет причину. Упавшее или устаревшее правило — предупреждение в логе `npm run mods`, не остановка.
 
 Модели **GeckoLib** (`scripts/mcp/geoModels.mjs`): файлы `assets/<ns>/geo/*.geo.json` (Bedrock 1.12+,
 `minecraft:geometry[0].bones[].cubes[]`) — перенос `BakedModelFactory.Builtin`, `VertexSet`, `GeoQuad.build` и
@@ -404,7 +420,9 @@ scripts/mcp/
   site-datapacks.mjs  датапаки сайта как слой рецептов (recipes(site) в data.mjs)
   resources.mjs     слои ресурсов клиента (ресурспаки, KubeJS, аддоны, jar, Minecraft), модель с parent
   render.mjs        растеризатор моделей в PNG (model_render, texture_get) и генератор иконок из командной строки
-  entityModels.mjs  предметы, рисуемые кодом (builtin/entity); geoModels.mjs — модели GeckoLib (.geo.json)
+  entityModels.mjs  инструменты моделей сущностей (ModelPart, поза); geoModels.mjs — модели GeckoLib (.geo.json)
+  models/           реестр «рисует код» по модулю на мод (index.mjs — GROUPS; minecraft, neoforge, tfc, immersiveengineering
+                      + ieConveyor, functionalstorage, computercraft, sophisticatedbackpacks, cuisinedelight, create_submarine)
   tools/<раздел>.mjs  инструменты раздела: code (классы, миксины, декомпиляция, зависимости), logs,
                       config (config_get, config_propose, config_changes), pack, kubejs, books (+books-index), blocks (+blocks-data),
                       site (задачи, группы, документы-планы с записью; датапаки, схемы, скрипты сайта), map (+map-climate,

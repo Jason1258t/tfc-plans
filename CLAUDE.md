@@ -208,7 +208,9 @@ server/file-server/  сервер файлов для Ubuntu (Node без зав
 server/pack-server/  сервер сборки (снимки, ключи); стоит на VPS — docs/pack-server.md
 cli/              программа tfc для ПК (npm run tfc -- …): sync/publish сборки; инструкция — docs/tfc-app.md, cli/README.md
 tools/            аддоны сборки — docs/addons.md; на сайте — lib/addons.ts, AddonsTab; для tfc — /addons/index.json (scripts/addons-index.mjs)
-scripts/mcp/      MCP сборки для агента (stdio): data.mjs — слияние данных как на сайте, jars.mjs, firestore.mjs, tools.mjs
+scripts/mcp/      MCP сборки для агента (stdio): data.mjs — слияние данных как на сайте, jars.mjs, firestore.mjs, tools.mjs;
+                  render.mjs — движок рисунка моделей, models/ — что рисует код, по модулю на мод (реестр, docs/mcp.md)
+scripts/mods/visibility/  скрытые предметы (в игре не видно): правило по коду мода на файл (поле h в items.json)
 scripts/          mods.mjs + mods/{reference,tags,botany,meals,cuisine,power,multiblocks,geo,manifest,classfile,config-defaults}.mjs, serverconfig.mjs,
                   kubejs.mjs, pack-release.mjs, pack.mjs (вся папка сборки); firestore-rest.mjs — общий доступ к Firestore
 docs/plans/       планы фич со статусами; docs/STATE.md — текущее состояние

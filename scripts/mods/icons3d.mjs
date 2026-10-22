@@ -11,10 +11,10 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { codeBlockParts, entityItemModel } from '../mcp/entityModels.mjs';
 import { fluidLook } from '../mcp/fluids.mjs';
 import {
   DRAWN_LOADERS,
+  codeModel,
   flatLoaderSpecs,
   guiModel,
   ieObjDrawable,
@@ -28,8 +28,9 @@ import { loadModel, modJarsLayer, platformLayers, resolveTexture } from '../mcp/
 /** Поднять, если изменился рисунок (генератор, размер) — старый кеш не подойдёт */
 // 2 — модели OBJ, composite, separate_transforms, conf_sides IE; 3 — без пустых картинок; 4 — без ie_obj и пурпурных;
 // 5 — поворот вида как в игре (было зеркально), окраска tintindex, ie_obj с переворотом v, z у display.gui;
-// 6 — текстуры атласа (paletted_permutations), головы дракона и пиглина, жидкости IE по make(…_still), загрузчики IE
-const VERSION = 6;
+// 6 — текстуры атласа (paletted_permutations), головы дракона и пиглина, жидкости IE по make(…_still), загрузчики IE;
+// 7 — барометр Create Submarine (поза частей affine)
+const VERSION = 7;
 
 /**
  * findAsset(ns, rel) — файл ресурса из распакованных jar (как в mods.mjs), outIcons — папка icons/ сайта,
@@ -125,7 +126,14 @@ export function makeRenderer({ findAsset, outIcons, cacheDir, size = 96 }) {
     if (model.tints) h.update(JSON.stringify(model.tints));
     // Части модели блока (ящики): их цепочки, текстуры и повороты
     for (const pt of model.codeParts ?? []) {
-      h.update(JSON.stringify([pt.x, pt.y, pt.mat, pt.model.textures]));
+      h.update(JSON.stringify([pt.x, pt.y, pt.mat, pt.affine, pt.model.textures]));
+      // Грани модели сущности внутри части (рыба и вода барометра): их текстуры и окраска
+      for (const t of new Set((pt.model.quads ?? []).map((q) => q.tex))) {
+        const d = texData(t);
+        h.update(`${t}|`);
+        if (d) h.update(d);
+      }
+      if (pt.model.quads) h.update(JSON.stringify(pt.model.quads.map((q) => [q.P, q.uv, q.tint ?? null])));
       for (const c of pt.model.chain) {
         const [cns, cp] = c.id.split(':');
         const f = findAsset(cns, `models/${cp}.json`);
@@ -151,12 +159,12 @@ export function makeRenderer({ findAsset, outIcons, cacheDir, size = 96 }) {
     if (own.missing.length || own.errors.length) return null;
     // separate_transforms: в инвентаре — своя модель (бывает и плоской, из слоёв)
     let model = guiModel(layers, own);
-    // Рисуется кодом (builtin/entity): сундуки, кровати, шалкеры, знамёна, головы… — перенесённые модели сущностей
-    const em = model.entity ? entityItemModel(layers, `${ns}:${p}`, model) : null;
-    if (em) model = em;
-    // …или модель блока с поворотом из кода предмета (ящики Functional Storage)
-    const cb = model.entity ? codeBlockParts(layers, `${ns}:${p}`, model) : null;
-    if (cb) model = { ...cb.parts[0].model, entity: false, codeParts: cb.parts, drawnBy: cb.drawnBy };
+    // Рисуется кодом (builtin/entity) — реестр scripts/mcp/models/: модели сущностей (сундуки, головы…) или модели
+    // блоков с поворотом из кода предмета (ящики Functional Storage, барометр Create Submarine)
+    const code = model.entity ? codeModel(layers, `${ns}:${p}`, model) : null;
+    if (code?.quads) model = { ...model, entity: false, elements: null, quads: code.quads, drawnBy: code.drawnBy };
+    else if (code?.parts)
+      model = { ...code.parts[0].model, entity: false, codeParts: code.parts, drawnBy: code.drawnBy };
     // Плоские загрузчики: вёдра и сосуды с жидкостью, броня TFC (вид без отделки, как в JEI)
     const loaderFlat = flatLoaderSpecs(layers, model, `${ns}:${p}`, fluidLook);
     if (loaderFlat && !loaderFlat.specs.length) return null;
