@@ -32,6 +32,14 @@ public record Layout(String id, int inputs, float[][] terminals, String[] labels
             new String[] {"charge_positive", "charge_negative", "discharge_positive", "discharge_negative"});
 
     /**
+     * Компактные генераторы (2.3), кинетический и топливный: две клеммы сверху — 0 «+» (красная), 1 «−» (синяя), центр
+     * на высоте GENERATOR_Y. Здесь inputs = 0, поэтому plus() = 0, minus() = 1.
+     */
+    public static final Layout COMPACT_GENERATOR = new Layout("compact_generator", 0,
+            new float[][] {{4, 8}, {12, 8}}, new String[] {"load_positive", "load_negative"});
+    public static final float GENERATOR_Y = 14.5f;
+
+    /**
      * Четырёхжильный соединитель, {x, y, z} в пикселях лицом вверх: узел 0 — торец вывода кабеля, 1–4 — клеммы L1, L2,
      * L3, N в ряд. Здесь, а не в блоке, чтобы CheckNodes читал без загрузки классов блоков Minecraft.
      */

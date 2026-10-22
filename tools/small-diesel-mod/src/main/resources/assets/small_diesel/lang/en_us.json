@@ -1,0 +1,10 @@
+{
+  "block.small_diesel.small_diesel_engine": "Small Diesel Engine",
+  "block.small_diesel.small_diesel_engine.tooltip": "A quarter of the regular CDG diesel engine at the same speed (diesel: 1,536 SU at 96 RPM). Burns fuel by network load: at full load a quarter of the regular engine's use (diesel: 1 mB per 4 s), with no load nothing.",
+  "block.small_diesel.small_diesel_engine.tooltip.more": "Shaft out of the front face; fuel (same as CDG engines: diesel, gasoline, biodiesel, ethanol, plant oil) by pipe from other faces or by bucket.",
+  "block.small_diesel.small_diesel_generator": "Small Diesel Generator",
+  "block.small_diesel.small_diesel_generator.tooltip": "CDG fuel to 100 V direct current, up to 1.5 kW, rated 1.2 kW (smokes at full power). Burns fuel by load, efficiency as an engine with an EE Extras compact generator: diesel at 1.5 kW - 1 mB per ~3 s, a bucket per ~51 min.",
+  "block.small_diesel.small_diesel_generator.tooltip.more": "Red terminal: +, blue: -; fuel by pipe from any face or by bucket.",
+  "small_diesel.goggles.burn": "Fuel use:",
+  "small_diesel.goggles.mb_per_minute": " mB/min"
+}

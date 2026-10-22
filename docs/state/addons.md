@@ -29,11 +29,29 @@ Before 2.0 — EE Rectifiers, `ee_rectifier`; old blocks migrate to new ids via 
   headroom in oil), heavy rectifiers 48 kW (full block with radiators and bushings), grid inverters three- and
   single-phase, light and heavy (lock to generator phase, feed when DC voltage × 1.05 / 1.57 exceeds the grid; without
   a grid — own 1 Hz AC). Dev server with a real generator (8 and 100 rpm).
+- **2.3** (2026-10-22; task «Сделать компактные генераторы», group «Разработка»): compact generator — one block, Create
+  shaft in the back face → DC terminals on top; 6 W and 0.5 V per rpm (256 rpm — 1.5 kW at 128 V), 8 SU per rpm
+  (efficiency 75 %; EE generator ~99 % by bytecode: 48 × magnets × rpm W vs 48 × (magnets + 0.125) SU/rpm), heating
+  rating 1.2 kW (smokes above ~200 rpm at full load, doesn't burn). Dev server from a creative motor
+  (`rectest kgen|krpm|kreport`): U²/R exact, cap at 1 536 W, stress 8 SU/rpm; terminals 720/720.
 - Finding: EE 1.1.2 lacks model `block/duplex_wire_segment` (used by `CEEPartialModels.DUPLEX_WIRE_SEGMENT` and by the
   EE Extras two-core cable shell) — from jar, not checked in game.
 - Site icons are drawn by the shared generator `scripts/mcp/render.mjs` (4× AA, no seams), called by
   `tools/ee-extras-mod/release.sh`; `art/iso.py` removed. Current site icons were drawn mirrored (before the rotation
   fix) — redraw on the next release.
+
+## Small Diesel (`tools/small-diesel-mod`, 2026-10-22)
+
+Addon to Create Diesel Generators (a separate mod at the user's request; same task as EE Extras 2.3). Fuels and their
+numbers come from the CDG registry `createdieselgenerators:fuel_type` (`normal` engine: 1 mB = strength / burn_rate
+SU·tick, by CDG 1.3.8 bytecode).
+
+- **1.0.0**: small diesel engine — CDG engine speed, ¼ of its capacity (diesel 1 536 SU at 96 rpm), fuel burned by
+  network load (load = network stress / capacity × capacity × ticks), nothing when idle; small diesel generator (only
+  with EE, optional dependency) — DC 100 V, up to 1.5 kW, 75 % efficiency (same as engine + compact generator), heating
+  rating 1.2 kW. Dev server (`./test-server.sh`, `/sdtest`): burned fuel = load × capacity × time to the SU·tick at
+  12.5 % and 37.5 % load, 0 mB idle, stops on empty tank, tank rejects water; generator burned = delivered (≤0.3 %),
+  cap 1 500 W; loads without EE (engine only); terminals 24/24. No engine sound. Not checked in game.
 
 ## Miner Tools (`tools/miner-tools-mod`, 2026-10-21)
 

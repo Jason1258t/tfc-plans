@@ -136,6 +136,34 @@ public class CheckNodes {
             }
           }
         }
+        // Компактный кинетический генератор (2.3): центры клемм «plus»/«minus» в его моделях (без крена и с креном)
+        // против точек проводов NodeConfigurator блока (Layout.COMPACT_GENERATOR, высота Layout.GENERATOR_Y)
+        for (String name : new String[] {"compact_kinetic_generator"}) {
+            for (boolean rolled : new boolean[] {false, true}) {
+                Map<String, float[][]> boxes = boxes(Path.of("src/main/resources/assets/ee_extras/models/block", name,
+                        (rolled ? "block_roll" : "block") + ".json"));
+                NodeConfigurator.Builder b = new NodeConfigurator.Builder();
+                for (float[] t : Layout.COMPACT_GENERATOR.terminals()) {
+                    float[] p = rolled ? Layout.roll(t) : t;
+                    b.add(p[0], Layout.GENERATOR_Y, p[1]);
+                }
+                NodeConfigurator nc = b.simple();
+                String[] terms = {"plus", "minus"};
+                for (var e : rot.entrySet()) {
+                    Map<Integer, Vec3> nodes = nc.getNodes(e.getKey());
+                    for (int i = 0; i < terms.length; i++) {
+                        float[][] c = boxes.get(terms[i]);
+                        Vec3 at = rotate(new float[] {(c[0][0] + c[1][0]) / 2, (c[0][1] + c[1][1]) / 2, (c[0][2] + c[1][2]) / 2}, e.getValue());
+                        total++;
+                        if (at.distanceTo(nodes.get(i)) > 1e-4) {
+                            bad++;
+                            System.out.printf("НЕ СОВПАЛО %s %s крен=%s клемма %s: модель %s, провод %s%n",
+                                    name, e.getKey(), rolled, terms[i], at, nodes.get(i));
+                        }
+                    }
+                }
+            }
+        }
         // Четырёхжильный соединитель: клеммы и торец вывода кабеля в сгенерированных моделях (4 положения) против
         // точек проводов его NodeConfigurator (Layout.FOUR_CORE_TERMINATION, повороты — как в CableEndBlock)
         // Отвод фазы — то же для его моделей и Layout.PHASE_TAP

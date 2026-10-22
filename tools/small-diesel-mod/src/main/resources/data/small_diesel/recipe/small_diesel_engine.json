@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "PTP",
+    "FES",
+    "PPP"
+  ],
+  "key": {
+    "P": {
+      "tag": "c:plates/iron"
+    },
+    "T": {
+      "item": "create:fluid_tank"
+    },
+    "F": {
+      "item": "minecraft:flint_and_steel"
+    },
+    "E": {
+      "item": "createdieselgenerators:engine_piston"
+    },
+    "S": {
+      "item": "create:shaft"
+    }
+  },
+  "result": {
+    "id": "small_diesel:small_diesel_engine",
+    "count": 1
+  }
+}

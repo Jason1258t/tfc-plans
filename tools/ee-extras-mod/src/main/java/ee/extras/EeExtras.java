@@ -23,6 +23,11 @@ import ee.extras.lines.Tension;
 import ee.extras.converter.BidiConverterBlock;
 import ee.extras.converter.BidiConverterBlockEntity;
 import ee.extras.converter.BidiConverterDevice;
+import ee.extras.generator.GeneratorClient;
+import ee.extras.generator.GeneratorDevice;
+import ee.extras.generator.KineticGeneratorBlock;
+import ee.extras.generator.KineticGeneratorBlockEntity;
+import com.simibubi.create.api.stress.BlockStressValues;
 import com.mojang.logging.LogUtils;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
@@ -52,7 +57,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
  * Дополнения к Create Electro Energetics для сборки TFC Планы (до 2.0 — «EE Rectifiers», modId ee_rectifier):
- * выпрямители и сетевые инверторы двух ступеней мощности, двусторонний преобразователь EE ↔ FE, двух- и четырёхжильные кабели (катушка двухпроводного кабеля EE
+ * выпрямители и сетевые инверторы двух ступеней мощности, компактный кинетический генератор, двусторонний преобразователь EE ↔ FE, двух- и четырёхжильные кабели (катушка двухпроводного кабеля EE
  * в 1.1.2 не доделана — прокладку делает этот мод), кабельные изоляторы.
  */
 @Mod(EeExtras.MOD_ID)
@@ -97,6 +102,18 @@ public class EeExtras {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BidiConverterBlockEntity>> CONVERTER_BE =
             BLOCK_ENTITIES.register("bidirectional_converter", () -> BlockEntityType.Builder
                     .of(BidiConverterBlockEntity::new, CONVERTER.get()).build(null));
+
+    public static final DeferredHolder<SimulatedDeviceType<?>, SimulatedDeviceType<GeneratorDevice>> KINETIC_GENERATOR_DEVICE =
+            DEVICES.register("compact_kinetic_generator", () -> new SimulatedDeviceType<GeneratorDevice>(
+                    rl("compact_kinetic_generator"), (type, level, pos, devices) ->
+                            new GeneratorDevice(level, pos, devices, type, KineticGeneratorBlockEntity.NOMINAL)));
+    public static final DeferredBlock<KineticGeneratorBlock> KINETIC_GENERATOR = BLOCKS.register("compact_kinetic_generator",
+            () -> new KineticGeneratorBlock(metal()));
+    public static final DeferredItem<Item> KINETIC_GENERATOR_ITEM = ITEMS.register("compact_kinetic_generator",
+            () -> new TooltipBlockItem(KINETIC_GENERATOR.get(), new Item.Properties()));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<KineticGeneratorBlockEntity>> KINETIC_GENERATOR_BE =
+            BLOCK_ENTITIES.register("compact_kinetic_generator", () -> BlockEntityType.Builder
+                    .of(KineticGeneratorBlockEntity::new, KINETIC_GENERATOR.get()).build(null));
 
     public static final DeferredBlock<FourCoreTerminationBlock> FOUR_CORE_TERMINATION = BLOCKS.register(
             "four_core_termination", () -> new FourCoreTerminationBlock(metal()));
@@ -180,11 +197,15 @@ public class EeExtras {
         WIRES.register(modBus);
         modBus.addListener(EeExtras::addToTab);
         modBus.addListener((FMLCommonSetupEvent e) -> e.enqueueWork(Tension::tuneIronSag));
+        // Нагрузка на вал — через реестр Create: её же показывают подсказка предмета и очки инженера
+        modBus.addListener((FMLCommonSetupEvent e) -> e.enqueueWork(() -> BlockStressValues.IMPACTS.register(
+                KINETIC_GENERATOR.get(), () -> KineticGeneratorBlockEntity.STRESS_PER_RPM)));
         modBus.addListener(EeExtras::capabilities);
         CableEvents.register(NeoForge.EVENT_BUS);
         if (FMLEnvironment.dist == Dist.CLIENT) {
             CableHud.register(modBus, NeoForge.EVENT_BUS);
             LinesClient.register(modBus, NeoForge.EVENT_BUS);
+            GeneratorClient.register(modBus);
             modBus.addListener((FMLClientSetupEvent e) -> WireFixCheck.log());
         }
     }
@@ -198,7 +219,7 @@ public class EeExtras {
     private static void addToTab(BuildCreativeModeTabContentsEvent event) {
         if (!event.getTabKey().equals(CEECreativeTab.CREATIVE_TAB.getKey())) return;
         for (Kind<?> k : POWER) event.accept(k.item.get());
-        for (Supplier<? extends Item> item : new Supplier[] {CONVERTER_ITEM,
+        for (Supplier<? extends Item> item : new Supplier[] {KINETIC_GENERATOR_ITEM, CONVERTER_ITEM,
                 FOUR_CORE_TERMINATION_ITEM, PHASE_TAP_ITEM, DUPLEX_INSULATOR_ITEM, FOUR_CORE_INSULATOR_ITEM, FOUR_CORE_SPOOL})
             event.accept(item.get());
         for (LineWire w : LineWire.values()) {

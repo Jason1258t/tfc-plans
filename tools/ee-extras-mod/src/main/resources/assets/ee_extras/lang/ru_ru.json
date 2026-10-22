@@ -88,5 +88,8 @@
   "block.ee_extras.heavy_three_phase_inverter.tooltip.nodes": "Медные шапки — фазы 1–3 (в сеть), красная — «+», синяя — «−» (от батареи или преобразователя).",
   "block.ee_extras.heavy_single_phase_inverter": "Тяжёлый однофазный инвертор",
   "block.ee_extras.heavy_single_phase_inverter.tooltip": "Постоянный ток → фаза и нейтраль в такт сети, номинал 48 кВт. Отдаёт, когда напряжение со стороны «+/−» × 1,57 выше амплитуды сети; без сети сам даёт переменный ток 1 Гц.",
-  "block.ee_extras.heavy_single_phase_inverter.tooltip.nodes": "Медные шапки — фаза и нейтраль (в сеть), красная — «+», синяя — «−» (от батареи или преобразователя)."
+  "block.ee_extras.heavy_single_phase_inverter.tooltip.nodes": "Медные шапки — фаза и нейтраль (в сеть), красная — «+», синяя — «−» (от батареи или преобразователя).",
+  "block.ee_extras.compact_kinetic_generator": "Компактный генератор",
+  "block.ee_extras.compact_kinetic_generator.tooltip": "Вал Create → постоянный ток: 6 Вт и 0,5 В на 1 об/мин (256 об/мин — 1,5 кВт при 128 В), нагрузка на вал 8 SU на 1 об/мин. Номинал 1,2 кВт: выше ~200 об/мин под полной нагрузкой дымит.",
+  "block.ee_extras.compact_kinetic_generator.tooltip.nodes": "Вал — в задней грани; красная клемма — «+», синяя — «−»."
 }

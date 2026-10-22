@@ -1,0 +1,10 @@
+{
+  "block.small_diesel.small_diesel_engine": "Малый дизельный двигатель",
+  "block.small_diesel.small_diesel_engine.tooltip": "Четверть обычного дизельного двигателя CDG на тех же оборотах (дизель — 1 536 SU на 96 об/мин). Топливо горит по нагрузке сети: под полной — четверть расхода обычного двигателя (дизель — 1 мБ за 4 с), без нагрузки — ничего.",
+  "block.small_diesel.small_diesel_engine.tooltip.more": "Вал — из лицевой грани; топливо (как у двигателей CDG: дизель, бензин, биодизель, этанол, растительное масло) — трубой с других граней или ведром.",
+  "block.small_diesel.small_diesel_generator": "Малый дизельный генератор",
+  "block.small_diesel.small_diesel_generator.tooltip": "Топливо CDG → постоянный ток 100 В, до 1,5 кВт, номинал 1,2 кВт (на полной мощности дымит). Топливо горит по нагрузке, КПД как у двигателя с компактным генератором EE Extras: дизель на 1,5 кВт — 1 мБ за ~3 с, ведро на ~51 мин.",
+  "block.small_diesel.small_diesel_generator.tooltip.more": "Красная клемма — «+», синяя — «−»; топливо — трубой с любой грани или ведром.",
+  "small_diesel.goggles.burn": "Расход топлива:",
+  "small_diesel.goggles.mb_per_minute": " мБ/мин"
+}

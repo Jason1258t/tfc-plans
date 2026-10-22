@@ -18,13 +18,14 @@ When finishing work: update the topic file, and this index only if a line below 
 
 ## In progress / waiting (details — [pending.md](state/pending.md))
 
-- Host: install **EE Extras 2.2** + `tfc publish`; warn players that rectifiers over 6 kW will burn.
+- Host: install **EE Extras 2.3** (2.2 + compact generator) and **Small Diesel 1.0.0** + `tfc publish`; warn players
+  that rectifiers over 6 kW will burn.
 - Host: **`rw-host-fix`** + delete `eratosthenes_portal_clamp.js`; delete corrupted chunks Z ≈ −22 000…−18 400.
 - Host: **World Border** nether limit (`worldborder.json5`) → disable or widen; remove `tp-trace`.
 - Host: apply crop growth config change `MjQFPQkIf9SHOdEjopy4` (`tfc admin changes pull`).
 - Host: `arc-furnace-matadora` resource pack in `server.properties`; `ee-overheat` into `mods/`.
 - In game: two-core cable shell model, datapacks `electroenergetics_missing` and `pellet_arc_furnace`, map scale,
-  pumpjack, steel on EE heater, all addons (Miner Tools, Stress Fix, EE Extras 2.x).
+  pumpjack, steel on EE heater, all addons (Miner Tools, Stress Fix, EE Extras 2.x, Small Diesel).
 - `tfc` app: Windows/Linux binaries, real launcher folder, real upload — not run.
 - EE Extras icons on the site are mirrored — redraw on the next addon release.
 

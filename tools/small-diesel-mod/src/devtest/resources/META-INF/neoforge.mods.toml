@@ -1,0 +1,16 @@
+modLoader = "javafml"
+loaderVersion = "[2,)"
+license = "MIT"
+
+[[mods]]
+modId = "small_diesel_devtest"
+version = "1.0.0"
+displayName = "Small Diesel devtest"
+description = "Только для сервера разработки: /sdtest"
+
+[[dependencies.small_diesel_devtest]]
+modId = "small_diesel"
+type = "required"
+versionRange = "[1,)"
+ordering = "AFTER"
+side = "BOTH"
