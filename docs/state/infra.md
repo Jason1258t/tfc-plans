@@ -107,6 +107,12 @@ Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md)
   `*.tfc-<time>`; then `tfc pull`. Also an item in interactive `tfc init`. Checked on macOS with fake `.minecraft`
   folders against the real VPS (install 21 s, rerun idempotent, Store-only file, error texts, menu in a TTY). **Not
   checked:** the real launcher starting the profile, Windows/Linux, the game itself.
+  2026-10-22 later: own version `versions/<name>/<name>.json` (copy of the NeoForge json with `id` = name, inherits
+  1.21.1) so TLauncher lists it; profile `lastVersionId` = name; works without launcher_profiles.json (TLauncher-only
+  `.minecraft`: temp file for the installer, no profile written); Java also from `.tlauncher`. TLauncher's
+  per-version game dir setting — **unverified** (its config samples show no such key). Progress: `spinner` /
+  `withSpinner` in ui.mjs (prepare, file scan, NeoForge installer phases in Russian, placing files); progress bar
+  shows speed and ETA, redraws every second.
 - Site content (stage 5): datapacks → `<world>/datapacks/tfc-plans-<id>.zip`, kubejs → `kubejs/server_scripts/<fileName>`,
   schematics → `schematics/` (with replacements and shape). An unflagged item removes only our unchanged file; a foreign
   file with the same name → `*.tfc-new`; tracked in `pulled` in `.tfc/state.json`. Content via the pack server
