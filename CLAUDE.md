@@ -46,7 +46,7 @@ npx prettier --write <files>   # singleQuote, printWidth 120; don't run on all o
 npm run deploy:site    # deploy site edits without rebuilding mod data (no jars needed; works from a worktree)
 npx firebase deploy --only hosting           # full build + pack-release + upload
 npx firebase deploy --only firestore:rules
-npm run mods | serverconfig | kubejs | world | pack | guides | pack:fetch | pack:publish   # see docs/architecture.md
+npm run mods | serverconfig | kubejs | world | pack | guides | pack:fetch | pack:publish | freshness   # see docs/architecture.md
 ```
 
 No tests. Verification — in the browser (below) and one-off node scripts in the scratchpad.

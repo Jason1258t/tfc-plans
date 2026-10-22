@@ -39,3 +39,7 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   player silhouette, bone tree, UV/transparency warnings. Miner Tools helmet renders; no other GeckoLib models in pack
   jars.
 - Config edits by agent (`config_propose` → host) — see [infra.md](infra.md#agent-config-edits-2026-10-21).
+- **2026-10-22, `mods_freshness`**: report from `src/lib/freshness.ts` (shared with the site), changelogs of newer
+  versions (Modrinth deduped by version, CurseForge HTML → text). Verified via stdio script: filters, paging, json,
+  Modrinth mod (JEI), CurseForge mods (Sophisticated Backpacks, FTB Quests), hand-built mod (`tfcr_fixes`). First call
+  ~11 s while the manifest has no `cf` fingerprints (reads all jars), then cached.

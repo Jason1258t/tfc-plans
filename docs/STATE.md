@@ -28,6 +28,8 @@ When finishing work: update the topic file, and this index only if a line below 
 - In game: two-core cable shell model, datapacks `electroenergetics_missing` and `pellet_arc_furnace`, map scale,
   pumpjack, steel on EE heater, all addons (Miner Tools, Stress Fix, EE Extras 2.x, Small Diesel).
 - `tfc` app: Windows/Linux binaries, real launcher folder, real upload — not run.
+- Pack freshness (`/freshness`, MCP `mods_freshness`): user will give the pack devs' git link — third source for 5
+  hand-built jars; then the «план обновления» skill (`docs/plans/mod-freshness.md`).
 
 ## Postponed by the user
 

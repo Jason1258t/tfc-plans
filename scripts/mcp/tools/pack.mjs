@@ -3,7 +3,9 @@
  * (Firestore packUpdates, пишет scripts/pack-release.mjs при деплое). Firestore — только чтение и с кешем.
  */
 import { DOCS, fromValue } from '../../firestore-rest.mjs';
-import { isActive, items, mods, readJson, recipes, tags } from '../data.mjs';
+import { STATUS_LABEL, STATUS_ORDER } from '../../../src/lib/freshness.ts';
+import { freshnessReport, modChangelog, summary as freshSummary } from '../../freshness.mjs';
+import { MODS, isActive, items, mods, readJson, recipes, tags } from '../data.mjs';
 import { FirestoreError, api, cached, configDocs, listAll } from '../firestore.mjs';
 import { dateOf, named, norm, page, paging, short, str, words } from '../fmt.mjs';
 
@@ -313,6 +315,71 @@ async function packUpdates(a) {
   return out.join('\n');
 }
 
+// ---------------------------------------------------------------- свежесть сборки
+
+const FRESH_TTL = 10 * 60e3;
+let freshCache = null;
+
+/** Отчёт о свежести: живой расчёт по снимку сборки (Modrinth + CurseForge), кеш 10 мин */
+async function freshReport(refresh) {
+  const manifest = readJson('pack-manifest.json', null);
+  if (!manifest?.mods?.length) throw new Error('pack-manifest.json не собран (npm run mods).');
+  if (!refresh && freshCache && freshCache.builtAt === manifest.builtAt && Date.now() - freshCache.at < FRESH_TTL)
+    return freshCache.report;
+  const report = await freshnessReport({ manifest, modsDirs: [MODS] });
+  freshCache = { at: Date.now(), builtAt: manifest.builtAt, report };
+  return report;
+}
+
+const OUTDATED = ['red', 'orange', 'yellow', 'unknown'];
+
+const freshLine = (m) => {
+  const cur = m.current?.version ?? m.version;
+  const to =
+    m.latest && m.status !== 'ok'
+      ? ` → ${m.latest.version}${m.latest.type !== 'release' ? ` [${m.latest.type}]` : ''}`
+      : '';
+  const beta = m.beta ? ` (есть ${m.beta.type} ${m.beta.version})` : '';
+  const date = m.latest?.date && m.status !== 'ok' ? `, вышла ${m.latest.date.slice(0, 10)}` : '';
+  const deps = m.newDeps?.length ? `; новые обязательные зависимости: ${m.newDeps.map((d) => d.name).join(', ')}` : '';
+  return `[${STATUS_LABEL[m.status]}] ${m.id} — ${m.project?.title ?? m.name}: ${cur}${to}${beta}${date}${m.source ? ` · ${m.source}` : ''}${deps}${m.note ? ` · ${m.note}` : ''}`;
+};
+
+async function modsFreshness(a) {
+  const report = await freshReport(a.refresh);
+  const when = `проверено ${new Date(report.generatedAt).toLocaleString('ru-RU')}`;
+  if (a.mod) {
+    const w = words(a.mod);
+    const m =
+      report.mods.find((x) => x.id === a.mod || x.jar === a.mod) ??
+      report.mods.find((x) => w.every((t) => norm(`${x.id} ${x.name} ${x.jar} ${x.project?.title ?? ''}`).includes(t)));
+    if (!m) throw new Error(`мод «${a.mod}» не найден в сборке (mods_list)`);
+    if (a.format === 'json') return JSON.stringify(m, null, 1);
+    const out = [freshLine(m), `jar: ${m.jar}; версия в mods.toml: ${m.version}`];
+    if (m.project?.url) out.push(`страница: ${m.project.url}`);
+    if (m.latest?.url && m.status !== 'ok')
+      out.push(`новая версия: ${m.latest.url}${m.latest.file ? ` (${m.latest.file})` : ''}`);
+    if (m.status === 'missing')
+      out.push('Нет ни на Modrinth, ни на CurseForge по файлу jar — вероятно, собран вручную.');
+    try {
+      const log = await modChangelog(m);
+      if (log) out.push('', 'Ченджлоги версий новее нашей:', log);
+      else if (log === '') out.push('', 'Ченджлогов у версий нет.');
+    } catch (e) {
+      out.push('', `Ченджлоги не получены: ${e.message}`);
+    }
+    return out.join('\n');
+  }
+  const status = a.status ?? 'outdated';
+  const list = report.mods.filter((m) =>
+    status === 'all' ? true : status === 'outdated' ? OUTDATED.includes(m.status) : m.status === status,
+  );
+  if (a.format === 'json') return JSON.stringify({ ...report, mods: list }, null, 1);
+  const head = `Свежесть сборки (${when}): ${freshSummary(report)}`;
+  if (!list.length) return `${head}\nПо фильтру «${status}» модов нет.`;
+  return `${head}\n${page(list, a, (m) => [freshLine(m)], 60)}`;
+}
+
 export const TOOLS = [
   {
     name: 'mods_list',
@@ -363,5 +430,25 @@ export const TOOLS = [
       },
     },
     handler: packUpdates,
+  },
+  {
+    name: 'mods_freshness',
+    description:
+      'How far behind each pack mod is: newest version for MC 1.21.1 NeoForge from Modrinth (by jar sha1) and CurseForge (by jar fingerprint), lag colour by the first differing number of x.y.z (red — x, orange — y, yellow — z/pre-release), newer betas, new required dependencies. Sorted red → orange → yellow → unknown → missing → ok. With mod — one mod plus changelogs of the versions newer than ours. Live, 10 min cache. Input for planning a full or partial pack update.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        status: {
+          type: 'string',
+          enum: ['outdated', ...STATUS_ORDER, 'all'],
+          description: 'filter: outdated (default: red+orange+yellow+unknown), one status, or all',
+        },
+        mod: str('one mod: id, jar name or words from the name — details and changelogs'),
+        refresh: { type: 'boolean', description: 'recheck now, ignoring the 10 min cache' },
+        format: { type: 'string', enum: ['text', 'json'], description: 'text (default) or the raw report JSON' },
+        ...paging,
+      },
+    },
+    handler: modsFreshness,
   },
 ];

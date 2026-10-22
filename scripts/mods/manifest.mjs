@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import AdmZip from 'adm-zip';
+import { cfFingerprint } from '../../src/lib/freshness.ts';
 
 /** FNV-1a 32 бита — такой же считает сайт (src/lib/hash.ts), чтобы сверять рецепты датапаков со сборкой */
 export function fnv1a(str) {
@@ -59,8 +60,8 @@ function modInfo(file) {
   };
 }
 
-/** sha1 jar (для поиска версии на Modrinth); кеш по имени+размеру+дате */
-function sha1s(files, cacheFile) {
+/** sha1 jar (Modrinth) и отпечаток CurseForge (отчёт о свежести сборки); кеш по имени+размеру+дате */
+function fileHashes(files, cacheFile) {
   let cache = {};
   try {
     cache = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
@@ -72,16 +73,22 @@ function sha1s(files, cacheFile) {
   for (const f of files) {
     const st = fs.statSync(f);
     const key = `${path.basename(f)}:${st.size}:${Math.round(st.mtimeMs)}`;
-    next[key] = cache[key] ?? createHash('sha1').update(fs.readFileSync(f)).digest('hex');
-    out[f] = next[key];
+    let entry = cache[key];
+    // Старый кеш хранил только строку sha1 — пересчитываем, чтобы добавить отпечаток CurseForge
+    if (!entry || typeof entry === 'string') {
+      const data = fs.readFileSync(f);
+      entry = { sha1: createHash('sha1').update(data).digest('hex'), cf: cfFingerprint(data) };
+    }
+    next[key] = entry;
+    out[f] = entry;
   }
   fs.writeFileSync(cacheFile, JSON.stringify(next));
   return out;
 }
 
 export function writeManifest({ jarPaths, items, recipes, outFile, cacheDir }) {
-  const hashes = sha1s(jarPaths, path.join(cacheDir, 'jar-sha1.json'));
-  const mods = jarPaths.map((f) => ({ ...modInfo(f), jar: path.basename(f), sha1: hashes[f] }));
+  const hashes = fileHashes(jarPaths, path.join(cacheDir, 'jar-sha1.json'));
+  const mods = jarPaths.map((f) => ({ ...modInfo(f), jar: path.basename(f), ...hashes[f] }));
   const recipeHashes = {};
   const types = new Set();
   for (const [id, r] of [...recipes].sort((a, b) => (a[0] < b[0] ? -1 : 1))) {

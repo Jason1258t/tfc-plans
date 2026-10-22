@@ -15,6 +15,7 @@ import { RecipesPage } from './pages/RecipesPage';
 import { TagsPage } from './pages/TagsPage';
 import { FilesPage } from './pages/FilesPage';
 import { ReferencePage } from './pages/ReferencePage';
+import { FreshnessPage } from './pages/FreshnessPage';
 import { UpdatesPage } from './pages/UpdatesPage';
 import { SchematicsPage } from './pages/SchematicsPage';
 import { TasksPage } from './pages/TasksPage';
@@ -64,6 +65,7 @@ export default function App() {
             <Route path="/addons" element={<AddonsPage />} />
             <Route path="/addons/:id" element={<AddonPage />} />
             <Route path="/updates" element={<UpdatesPage />} />
+            <Route path="/freshness" element={<FreshnessPage />} />
             <Route path="/map" element={<MapRedirect />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
