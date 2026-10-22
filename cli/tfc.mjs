@@ -18,6 +18,17 @@ import { applyChange, planChange, resultsOf } from './lib/changes.mjs';
 import { applyPlan, beginBackup, editBackup, finishBackup, undoLast } from './lib/sync.mjs';
 import { ask, bold, choose, confirm, cyan, date, dim, green, interactive, mb, red, yellow } from './lib/ui.mjs';
 import { install, installedPath, isInstalled, uninstall } from './lib/install.mjs';
+import {
+  DEFAULT_NAME,
+  defaultMemoryGb,
+  defaultMinecraftDir,
+  installToLauncher,
+  isNeoforgeInstalled,
+  launcherRunning,
+  neoforgeVersion,
+  PROFILE_ID,
+  versionId,
+} from './lib/vanilla.mjs';
 import { checkUpdate } from './lib/update.mjs';
 import { cleanupOld, upgrade } from './lib/upgrade.mjs';
 import { BUILD, CHANNEL, IS_BINARY } from './lib/version.mjs';
@@ -28,6 +39,9 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
   tfc install                 поставить программу в систему: своя папка и PATH, дальше в любом терминале — tfc
                               (tfc uninstall — убрать; настройки и ключ останутся)
   tfc init                    указать папку игры (версию) и мир
+  tfc init --launcher         поставить сборку в Minecraft Launcher: NeoForge, папка .minecraft/versions/TFC-RealWorld
+                              и профиль лаунчера, потом скачать сборку (--memory 6 — ГБ памяти игре, --name <папка>,
+                              --mc-dir <папка лаунчера>, если она не стандартная)
   tfc login <ключ>            ключ от хоста сборки (--server <адрес>, если сервер другой)
   tfc profiles                профили; tfc use <профиль> — сделать текущим
 
@@ -115,6 +129,10 @@ const opts = {
   instance: { type: 'string' },
   world: { type: 'string' },
   'no-world': { type: 'boolean' },
+  launcher: { type: 'boolean' },
+  'mc-dir': { type: 'string' },
+  name: { type: 'string' },
+  memory: { type: 'string' },
   'server-dir': { type: 'string' },
   note: { type: 'string' },
   mc: { type: 'string' },
@@ -148,16 +166,23 @@ const profileTitle = (p) => `${bold(p.name)}: ${p.instance}${p.world ? dim(` · 
 
 async function cmdInit(v) {
   const cfg = loadConfig();
+  if (v.launcher) return initLauncher(v, cfg);
   let dir = v.instance;
   if (!dir) {
-    if (!interactive()) throw new Error('укажите папку: tfc init --instance <папка версии>');
+    if (!interactive()) throw new Error('укажите папку: tfc init --instance <папка версии> (или tfc init --launcher)');
     const found = findInstances();
     console.log(found.length ? 'Нашёл версии в лаунчерах:' : 'Версий в известных лаунчерах не нашёл.');
-    dir = found.length
-      ? await choose('Какая папка — игра', found, (f) => `${f.name} ${dim(`${f.launcher} · ${f.dir}`)}`, {
-          allowOther: true,
-        })
-      : await ask('Путь к папке версии (там, где mods/)');
+    const fresh = { fresh: true };
+    dir = await choose(
+      'Какая папка — игра',
+      [...found, fresh],
+      (f) =>
+        f.fresh
+          ? `${bold('Поставить сборку заново')} ${dim(`в Minecraft Launcher — ${path.join(defaultMinecraftDir(), 'versions', DEFAULT_NAME)}`)}`
+          : `${f.name} ${dim(`${f.launcher} · ${f.dir}`)}`,
+      { allowOther: true },
+    );
+    if (dir === fresh) return initLauncher(v, cfg);
     if (typeof dir === 'object') dir = dir.dir;
   }
   dir = path.resolve(dir.replace(/^~(?=$|[\\/])/, process.env.HOME || process.env.USERPROFILE || '~'));
@@ -197,6 +222,70 @@ async function cmdInit(v) {
     ),
   );
   if (!cfg.token) console.log(`Дальше: ${cyan('tfc login <ключ>')} — ключ выдаёт хост сборки.`);
+}
+
+/** tfc init --launcher: своя версия в официальном лаунчере (cli/lib/vanilla.mjs), профиль tfc на её папку, pull */
+async function initLauncher(v, cfg) {
+  if (!cfg.token) {
+    if (!interactive()) throw new Error('сначала ключ: tfc login <ключ>, потом tfc init --launcher');
+    const key = await ask('Ключ от хоста сборки (начинается с tfc_)');
+    await cmdLogin(v, [key]);
+    Object.assign(cfg, loadConfig());
+  }
+  const current = await api(cfg).current();
+  const nf = neoforgeVersion(v.loader || current?.loader);
+  if (!nf)
+    throw new Error(
+      current
+        ? `в сборке непонятная версия загрузчика «${current.loader}» — укажите --loader 21.1.248`
+        : 'на сервере ещё нет сборки',
+    );
+  if (current?.mc && current.mc !== '1.21.1') console.log(yellow(`Сборка для Minecraft ${current.mc}.`));
+  const mcDir = path.resolve(v['mc-dir'] ?? defaultMinecraftDir());
+  const folder = v.name ?? DEFAULT_NAME;
+  if (!/^[\w][\w .-]{0,60}$/.test(folder) || folder === versionId(nf) || folder === current?.mc)
+    throw new Error(`имя папки «${folder}» не подходит — латиница, цифры, «-», «_», и не имя версии`);
+  const gameDir = path.join(mcDir, 'versions', folder);
+  let memory = Number(v.memory ?? defaultMemoryGb());
+  if (!v.memory && interactive()) memory = Number(await ask('Сколько памяти отдать игре, ГБ', String(memory)));
+  if (!Number.isInteger(memory) || memory < 2 || memory > 64) throw new Error('память — целое число ГБ, 2–64');
+
+  console.log(`Minecraft Launcher: ${mcDir}`);
+  console.log(`  NeoForge ${nf}${isNeoforgeInstalled(mcDir, nf) ? dim(' — уже стоит') : ''}`);
+  console.log(`  папка игры: ${gameDir}`);
+  console.log(`  профиль лаунчера «TFC RealWorld», память ${memory} ГБ`);
+  if (launcherRunning()) {
+    console.log(yellow('Minecraft Launcher открыт — закройте его: при выходе он перепишет профили своей копией.'));
+    if (!interactive()) throw new Error('закройте Minecraft Launcher и повторите');
+    await ask('Закройте лаунчер и нажмите Enter');
+    if (launcherRunning()) throw new Error('лаунчер всё ещё открыт — закройте его и повторите');
+  }
+  if (!v.yes && interactive() && !(await confirm('Поставить?', true))) return;
+
+  const r = await installToLauncher({
+    mcDir,
+    nf,
+    gameDir,
+    title: 'TFC RealWorld',
+    memoryGb: memory,
+    onStep: (s) => console.log(dim(`${s}…`)),
+  });
+  console.log(
+    `${green(r.installed ? 'NeoForge поставлен' : 'NeoForge уже был')}, профиль лаунчера «TFC RealWorld» — на ${gameDir}`,
+  );
+  console.log(dim(`Прежние профили лаунчера — копией: ${r.backups.map((b) => path.basename(b)).join(', ')}`));
+
+  // Повторный запуск — тот же профиль tfc, а не новый
+  const same = Object.keys(cfg.profiles).find((n) => cfg.profiles[n].instance === gameDir);
+  const name = v.profile || same || (cfg.profiles.main ? 'launcher' : 'main');
+  cfg.profiles[name] = { instance: gameDir, world: null, side: 'client', launcher: { mcDir, profile: PROFILE_ID } };
+  cfg.profile = name;
+  saveConfig(cfg);
+  console.log(`${green('Сохранено')} — профиль ${profileTitle({ name, ...cfg.profiles[name] })} (текущий)`);
+  if (v.yes || !interactive() || (await confirm('Скачать сборку сейчас?', true))) {
+    await cmdPull({ ...v, profile: name, yes: true }, []);
+    console.log(`Дальше: откройте Minecraft Launcher, профиль ${bold('TFC RealWorld')} → «Играть».`);
+  } else console.log(`Дальше: ${cyan('tfc pull')}, потом в лаунчере — профиль ${bold('TFC RealWorld')}.`);
 }
 
 async function cmdLogin(v, [key]) {
