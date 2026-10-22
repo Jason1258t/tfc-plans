@@ -37,7 +37,14 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
 - **Layer editor** («Слои», 2026-10-19, `components/SchematicLayers.tsx`, `lib/schematicEdit.ts`): top view of one
   layer with icons and facing arrows, wheel zoom, drag pan, ↑↓ layers, layer below shown pale; LMB — replace (this
   block / same on layer / global), RMB drag — remove; Ctrl+Z undo, Ctrl+Shift+Z / Ctrl+Y redo (physical key, works in
-  Russian layout; global replacements from the dialog are undoable too). Cell edits change the source itself:
+  Russian layout; global replacements from the dialog are undoable too). **Selection** (2026-10-22, item 1 of task
+  «Улучшения редактора схем крупные»): a set of block indices shared by the layer view and 3D, dropped on any
+  schematic edit; entry points so far — «Выделить» / «Выделить группу» in the cell dialog (group = edge-connected
+  blocks of the same effective id on the layer, `connectedGroup` in `lib/schematicEdit.ts`, can also search in 3D);
+  panel «Выбрано N блоков» (top right): replace / «Убрать» as one undoable edit, «Сбросить», Esc clears. 3D shows
+  selected blocks as translucent accent cubes (respects the slice). Browser-tested on a library schematic (group of 36,
+  remove, replace, undo, 3D highlight on the slice); nothing saved to the library. Next: double-click and Shift/Ctrl in
+  the layer view, area selection, picking in 3D. Cell edits change the source itself:
   «В библиотеку» uploads a new file and deletes the old one (saving edits to the library not browser-tested — shared
   collection). Adding blocks into empty cells is not supported.
 - **3D** («Слой / 3D», 2026-10-19, three.js as a separate chunk): simplified block shapes (`lib/schematicMesh.ts` —

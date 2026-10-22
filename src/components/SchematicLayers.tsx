@@ -8,6 +8,7 @@ import {
   Plus,
   Redo2,
   RotateCcw,
+  SquareDashedMousePointer,
   Trash2,
   Undo2,
   X,
@@ -21,8 +22,10 @@ import {
   canRedo,
   canUndo,
   cellInfo,
+  connectedGroup,
   editCells,
   namesByState,
+  posOfIndex,
   propsByState,
   redoEdit,
   revertEdits,
@@ -112,6 +115,17 @@ function takeAction(s: Schematic, dir: 'undo' | 'redo') {
   return a;
 }
 
+const NO_CELLS: ReadonlySet<number> = new Set();
+
+/** «блок / блока / блоков» */
+function plural(n: number) {
+  const d = n % 10;
+  const dd = n % 100;
+  if (d === 1 && dd !== 11) return 'блок';
+  if (d >= 2 && d <= 4 && (dd < 12 || dd > 14)) return 'блока';
+  return 'блоков';
+}
+
 interface Menu {
   x: number;
   z: number;
@@ -123,6 +137,7 @@ interface Menu {
 /**
  * Редактор схемы по слоям: вид сверху на один слой, масштаб колесом, сдвиг перетаскиванием.
  * ЛКМ по блоку — окно замены, ПКМ (можно провести) — убрать блоки. Ctrl+Z / Ctrl+Shift+Z — отмена и повтор.
+ * Выделение — набор блоков (индексы в списке blocks), общий для слоя и 3D; правка схемы его сбрасывает.
  */
 export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, onClose }: Props) {
   const items = useItems();
@@ -143,6 +158,20 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
   const [menu, setMenu] = useState<Menu | null>(null);
   const [scope, setScope] = useState<Scope>('cell');
   const [highlight, setHighlight] = useState<string | null>(null);
+  /** Выделение — к той версии схемы, где оно сделано: после правки индексы другие, и оно пропадает */
+  const [sel, setSel] = useState<{ of: Schematic; cells: ReadonlySet<number> } | null>(null);
+  const selected = sel && sel.of === s ? sel.cells : NO_CELLS;
+  const select = (cells: Iterable<number>) => {
+    const next = new Set(selected);
+    for (const c of cells) next.add(c);
+    setSel({ of: s, cells: next });
+  };
+  const unselect = (cells: Iterable<number>) => {
+    const next = new Set(selected);
+    for (const c of cells) next.delete(c);
+    setSel({ of: s, cells: next });
+  };
+  const clearSelection = () => setSel(null);
   /** Клетки под ПКМ, пока кнопку не отпустили: рисуются убранными, применяются одной правкой */
   const [stroke, setStrokeState] = useState<Set<number> | null>(null);
   // Ref — события мыши приходят быстрее перерисовки, а набор нужен сразу
@@ -248,6 +277,7 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
         // Список выбора предмета закрывается сам (и гасит событие); здесь — окно замены, потом редактор
         e.preventDefault();
         if (menu) setMenu(null);
+        else if (selected.size) clearSelection();
         else onClose();
         return;
       }
@@ -273,7 +303,7 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [menu, onClose, undo, redo, sy]);
+  }, [menu, selected, onClose, undo, redo, sy]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -423,6 +453,23 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
     ctx.lineWidth = 1.5;
     ctx.strokeRect(ox, oy, sx * zoom, sz * zoom);
 
+    // Выделение — заливка и рамка поверх блока (и поверх воздуха и убранных)
+    if (selected.size && layer) {
+      ctx.fillStyle = accent;
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = Math.max(1, Math.min(3, zoom / 8));
+      for (let z = z0; z < z1; z++)
+        for (let x = x0; x < x1; x++) {
+          if (!selected.has(layer[x + z * sx])) continue;
+          const px = ox + x * zoom;
+          const py = oy + z * zoom;
+          ctx.globalAlpha = 0.35;
+          ctx.fillRect(px, py, zoom, zoom);
+          ctx.globalAlpha = 1;
+          ctx.strokeRect(px + 1, py + 1, zoom - 2, zoom - 2);
+        }
+    }
+
     const outline = (c: { x: number; z: number } | null, col: string) => {
       if (!c) return;
       ctx.strokeStyle = col;
@@ -495,7 +542,7 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
     }
     // Окно — справа снизу от курсора, но в пределах области
     const W = 300;
-    const H = 330;
+    const H = 370;
     setMenu({
       x: c.x,
       z: c.z,
@@ -534,6 +581,38 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
     else changeCells(editCells(s, scopeCells(info.name), to));
     setMenu(null);
   };
+
+  /** Группа на слое: соединённые блоки того же вида (с общими заменами — как видно на рисунке) */
+  const groupOf = (index: number) => {
+    const name = names[stateOf(s, index)];
+    const eff = name && effective(name);
+    return connectedGroup(
+      s,
+      grid,
+      index,
+      (i) => {
+        const n = names[stateOf(s, i)];
+        return !!n && effective(n) === eff;
+      },
+      true,
+    );
+  };
+  const menuGroup = info ? groupOf(info.index) : [];
+  const menuSelected = info ? selected.has(info.index) : false;
+
+  /** Действие над выделением — одна правка, её можно отменить */
+  const applySelection = (to: string) => {
+    if (!selected.size) return;
+    if (to !== REMOVE && !items?.byId.has(to)) return;
+    changeCells(editCells(s, [...selected], to));
+    clearSelection();
+    setMenu(null);
+  };
+  const selectedOnLayer = layer ? layer.reduce((a, i) => a + (i >= 0 && selected.has(i) ? 1 : 0), 0) : 0;
+  const selectedPos = useMemo(
+    () => [...selected].map((i) => posOfIndex(s, i)).filter((p) => p !== null),
+    [s, selected],
+  );
 
   /** Блоки текущего слоя (с общими заменами) — легенда */
   const legend = (() => {
@@ -714,7 +793,13 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
           />
           {mode === '3d' && (
             <Suspense fallback={<div className="view3d faint small">Загружаю 3D…</div>}>
-              <SchematicView3D schematic={s} replace={replace} maxY={cut ? layerY : undefined} textured={textured} />
+              <SchematicView3D
+                schematic={s}
+                replace={replace}
+                maxY={cut ? layerY : undefined}
+                textured={textured}
+                selected={selectedPos}
+              />
               <div className="layers-hint faint small">
                 ЛКМ — вращать · ПКМ — сдвигать · колесо — масштаб · ↑↓ — слой среза · формы блоков упрощены
               </div>
@@ -735,8 +820,31 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
           )}
           <div className={cx('layers-hint faint small', mode === '3d' && 'hidden')}>
             ЛКМ — заменить · ПКМ (можно провести) — убрать · колесо — масштаб · перетаскивание — сдвиг · ↑↓ — слои ·
-            Ctrl+Z / Ctrl+Shift+Z — отмена и повтор
+            Ctrl+Z / Ctrl+Shift+Z — отмена и повтор · Esc — снять выделение
           </div>
+          {selected.size > 0 && (
+            <div className="layers-selection small" role="region" aria-label="Выделение">
+              <div className="row">
+                <SquareDashedMousePointer size={15} className="faint" />
+                <span className="grow">
+                  Выбрано <b>{selected.size}</b> {plural(selected.size)}
+                  {selectedOnLayer !== selected.size && <span className="faint"> · на слое {selectedOnLayer}</span>}
+                </span>
+                <button className="btn ghost sm" onClick={clearSelection} title="Снять выделение (Esc)">
+                  Сбросить
+                </button>
+              </div>
+              <div className="row">
+                <span className="grow">
+                  <ItemPicker small placeholder="Заменить выбранные на…" onPick={(it) => applySelection(it.i)} />
+                </span>
+                <button className="btn sm danger" onClick={() => applySelection(REMOVE)}>
+                  <Trash2 size={14} />
+                  Убрать
+                </button>
+              </div>
+            </div>
+          )}
           {mode === '2d' && menu && info && (
             <div className="layers-menu" style={{ left: menu.left, top: menu.top }}>
               <div className="row">
@@ -764,6 +872,26 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
                 ))}
               </div>
               <ItemPicker small autoFocus placeholder="Заменить на…" onPick={(it) => apply(it.i)} />
+              <div className="row layers-menu-select">
+                <button
+                  className="btn ghost sm"
+                  onClick={() => {
+                    if (menuSelected) unselect([info.index]);
+                    else select([info.index]);
+                    setMenu(null);
+                  }}
+                >
+                  <SquareDashedMousePointer size={14} />
+                  {menuSelected ? 'Снять выделение' : 'Выделить'}
+                </button>
+                <button
+                  className="btn ghost sm"
+                  onClick={() => (select(menuGroup), setMenu(null))}
+                  title="Соединённые блоки этого вида на слое — добавить к выделению"
+                >
+                  Выделить группу <span className="faint">({menuGroup.length})</span>
+                </button>
+              </div>
               <div className="row">
                 <button className="btn sm danger" onClick={() => apply(REMOVE)}>
                   <Trash2 size={14} />
