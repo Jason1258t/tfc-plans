@@ -46,7 +46,10 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   remove, replace, undo, 3D highlight on the slice); nothing saved to the library. Layer view clicks (item 2):
   double-click — select the group (replaces the selection), Shift+click / Shift+double-click — add the block / group,
   Ctrl/Cmd+click — remove; click on an empty cell closes the dialog, else clears the selection; plain click still opens
-  the dialog. Browser-tested (36 → 72 → 71 → 72, empty-click behaviour). Next: area selection, picking in 3D. Cell edits change the source itself:
+  the dialog. Browser-tested (36 → 72 → 71 → 72, empty-click behaviour). Area (item 3): Shift+drag — dashed frame adds the
+  layer's blocks inside it (explicit air skipped), Ctrl/Cmd+drag — red frame removes them; the frame may go past the
+  edge; plain drag still pans, Shift+click without moving still adds one block. Tested with synthetic pointer events
+  (the browser tool can't hold Shift while dragging): +80, −11, +50 → replace 119 with stone, undo. Next: picking in 3D. Cell edits change the source itself:
   «В библиотеку» uploads a new file and deletes the old one (saving edits to the library not browser-tested — shared
   collection). Adding blocks into empty cells is not supported.
 - **3D** («Слой / 3D», 2026-10-19, three.js as a separate chunk): simplified block shapes (`lib/schematicMesh.ts` —

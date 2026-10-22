@@ -139,7 +139,8 @@ interface Menu {
 /**
  * Редактор схемы по слоям: вид сверху на один слой, масштаб колесом, сдвиг перетаскиванием.
  * ЛКМ по блоку — окно замены, ПКМ (можно провести) — убрать блоки. Ctrl+Z / Ctrl+Shift+Z — отмена и повтор.
- * Двойной клик — выделить группу; Shift+клик — добавить к выделению, Ctrl/Cmd+клик — убрать из него.
+ * Двойной клик — выделить группу; Shift+клик — добавить к выделению, Ctrl/Cmd+клик — убрать из него;
+ * с теми же клавишами перетаскивание — рамка: блоки в ней (без воздуха) добавляются к выделению или убираются.
  * Выделение — набор блоков (индексы в списке blocks), общий для слоя и 3D; правка схемы его сбрасывает.
  */
 export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, onClose }: Props) {
@@ -187,7 +188,10 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [box, setBox] = useState({ w: 0, h: 0 });
-  const drag = useRef<{ x: number; y: number; ox: number; oy: number; moved: boolean } | null>(null);
+  /** Нажатая ЛКМ: сдвиг вида или (с Shift / Ctrl / Cmd) рамка выделения */
+  const drag = useRef<{ x: number; y: number; ox: number; oy: number; moved: boolean; area: boolean } | null>(null);
+  /** Рамка выделения в клетках: от и до (включительно), remove — убрать из выделения */
+  const [area, setArea] = useState<{ x0: number; z0: number; x1: number; z1: number; remove: boolean } | null>(null);
   const lastClick = useRef<{ x: number; z: number; t: number } | null>(null);
 
   const layer = grid.layers.get(layerY);
@@ -482,6 +486,24 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
     };
     outline(hover, color('--text'));
     outline(menu, accent);
+
+    if (area) {
+      // Рамка выделения: пунктир, при снятии — красный
+      const col = area.remove ? danger : accent;
+      const rx = ox + Math.min(area.x0, area.x1) * zoom;
+      const rz = oy + Math.min(area.z0, area.z1) * zoom;
+      const rw = (Math.abs(area.x1 - area.x0) + 1) * zoom;
+      const rh = (Math.abs(area.z1 - area.z0) + 1) * zoom;
+      ctx.fillStyle = col;
+      ctx.globalAlpha = 0.12;
+      ctx.fillRect(rx, rz, rw, rh);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.strokeRect(rx + 1, rz + 1, rw - 2, rh - 2);
+      ctx.setLineDash([]);
+    }
   });
 
   // ---------------------------------------------------------------- мышь
@@ -513,7 +535,12 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
       setStroke(new Set(idx >= 0 ? [idx] : []));
       return;
     }
-    drag.current = { x: e.clientX, y: e.clientY, ox: view.ox, oy: view.oy, moved: false };
+    const withKeys = e.shiftKey || e.ctrlKey || e.metaKey;
+    drag.current = { x: e.clientX, y: e.clientY, ox: view.ox, oy: view.oy, moved: false, area: withKeys };
+    if (withKeys) {
+      const c = clampCell(cellOf(e));
+      setArea({ x0: c.x, z0: c.z, x1: c.x, z1: c.z, remove: !e.shiftKey });
+    }
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
@@ -526,7 +553,31 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
     const dy = e.clientY - d.y;
     if (!d.moved && Math.hypot(dx, dy) < DRAG_PX) return;
     d.moved = true;
-    setView((v) => ({ ...v, ox: d.ox + dx, oy: d.oy + dy }));
+    if (d.area) {
+      const end = clampCell(c);
+      setArea((a) => a && { ...a, x1: end.x, z1: end.z });
+      setMenu(null);
+    } else setView((v) => ({ ...v, ox: d.ox + dx, oy: d.oy + dy }));
+  };
+
+  /** Клетка в пределах схемы — рамку можно тянуть и за край */
+  const clampCell = (c: { x: number; z: number }) => ({
+    x: Math.min(sx - 1, Math.max(0, c.x)),
+    z: Math.min(sz - 1, Math.max(0, c.z)),
+  });
+
+  /** Блоки слоя в рамке, кроме воздуха (его замена заполнила бы пустоту) */
+  const areaCells = (a: NonNullable<typeof area>) => {
+    const out: number[] = [];
+    if (!layer) return out;
+    for (let z = Math.min(a.z0, a.z1); z <= Math.max(a.z0, a.z1); z++)
+      for (let x = Math.min(a.x0, a.x1); x <= Math.max(a.x0, a.x1); x++) {
+        const idx = layer[x + z * sx];
+        if (idx < 0) continue;
+        const name = names[stateOf(s, idx)];
+        if (name && !EMPTY_BLOCKS.has(effective(name))) out.push(idx);
+      }
+    return out;
   };
 
   const onPointerUp = (e: React.PointerEvent) => {
@@ -538,6 +589,13 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
     }
     const d = drag.current;
     drag.current = null;
+    if (d?.area) setArea(null);
+    if (d?.area && d.moved && area) {
+      // Shift — добавить блоки рамки к выделению, Ctrl/Cmd — убрать
+      if (area.remove) unselect(areaCells(area));
+      else select(areaCells(area));
+      return;
+    }
     if (!d || d.moved || e.button !== 0) return;
     const c = cellOf(e);
     const idx = indexAt(c.x, c.z);
@@ -808,7 +866,7 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
-            onPointerCancel={() => ((drag.current = null), setStroke(null))}
+            onPointerCancel={() => ((drag.current = null), setStroke(null), setArea(null))}
             onPointerLeave={() => setHover(null)}
             onContextMenu={(e) => e.preventDefault()}
           />
@@ -840,9 +898,9 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
             </div>
           )}
           <div className={cx('layers-hint faint small', mode === '3d' && 'hidden')}>
-            ЛКМ — заменить · двойной клик — выделить группу · Shift — добавить, Ctrl — убрать из выделения · ПКМ (можно
-            провести) — убрать · колесо — масштаб · перетаскивание — сдвиг · ↑↓ — слои · Ctrl+Z / Ctrl+Shift+Z — отмена
-            и повтор · Esc — снять выделение
+            ЛКМ — заменить · двойной клик — выделить группу · Shift — добавить, Ctrl — убрать из выделения (клик или
+            рамка) · ПКМ (можно провести) — убрать · колесо — масштаб · перетаскивание — сдвиг · ↑↓ — слои · Ctrl+Z /
+            Ctrl+Shift+Z — отмена и повтор · Esc — снять выделение
           </div>
           {selected.size > 0 && (
             <div className="layers-selection small" role="region" aria-label="Выделение">
