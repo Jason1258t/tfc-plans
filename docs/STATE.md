@@ -18,7 +18,8 @@ When finishing work: update the topic file, and this index only if a line below 
 
 ## In progress / waiting (details — [pending.md](state/pending.md))
 
-- Host: copy `pack-patches/l10n/kubejs` (Chinese KubeJS messages → ru/en) into the game folder + `tfc publish`.
+- Host: pack update `u20261022-150945-83a0` (Chinese KubeJS messages → ru/en): `tfc admin updates pull`, check in game,
+  `tfc admin updates approve`.
 - Host: install **EE Extras 2.3** (2.2 + compact generator) and **Small Diesel 1.0.0** + `tfc publish`; warn players
   that rectifiers over 6 kW will burn.
 - Host: **`rw-host-fix`** + delete `eratosthenes_portal_clamp.js`; delete corrupted chunks Z ≈ −22 000…−18 400.
