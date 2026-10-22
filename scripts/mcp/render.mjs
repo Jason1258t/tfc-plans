@@ -20,9 +20,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { mods } from './data.mjs';
+import { jarList, readEntry } from './jars.mjs';
 import { codeBlockParts, entityItemModel } from './entityModels.mjs';
 import { fluidLook } from './fluids.mjs';
 import { geoModel, isGeoId } from './geoModels.mjs';
+import { conveyorParts } from './ieConveyor.mjs';
 import {
   blockstatePath,
   findResource,
@@ -127,11 +129,68 @@ function shadeOf([nx, ny, nz]) {
 
 // ---------------------------------------------------------------- текстуры
 
+let paletted = null;
+/**
+ * Текстуры, которых нет файлом: их делает атлас блоков при загрузке ресурсов — источник paletted_permutations в
+ * assets/minecraft/atlases/blocks.json любого мода (TFC: полки tfc:block/wood/bookshelf/top_<дерево>, side_<дерево>,
+ * пиломатериалы и таблички по палитрам дерева). Имя — <текстура>_<перестановка>. Карта id → { base, key, perm }.
+ */
+export function palettedTextures() {
+  if (paletted) return paletted;
+  paletted = new Map();
+  for (const jar of jarList()) {
+    const e = readEntry(jar, 'assets/minecraft/atlases/blocks.json');
+    let j = null;
+    try {
+      j = e ? JSON.parse(e.data.toString('utf8')) : null;
+    } catch {
+      /* битый атлас — пропускаем */
+    }
+    for (const src of j?.sources ?? []) {
+      if (src.type?.replace(/^minecraft:/, '') !== 'paletted_permutations') continue;
+      for (const t of src.textures ?? [])
+        for (const [name, perm] of Object.entries(src.permutations ?? {}))
+          paletted.set(`${resLoc(t).ns}:${resLoc(t).path}_${name}`, { base: t, key: src.palette_key, perm });
+    }
+  }
+  return paletted;
+}
+
+/**
+ * Перекраска как в PalettedPermutations Minecraft 1.21.1: пиксель с цветом i-го пикселя ключа палитры (без учёта
+ * альфы) → i-й пиксель палитры перестановки, альфа — произведение; цвета не из ключа остаются (непрозрачными).
+ */
+function palettedImage(layers, spec) {
+  const read = (id) => {
+    const r = findResource(layers, texturePath(id));
+    return r ? { ...decodePng(r.data), from: r.from } : null;
+  };
+  const base = read(spec.base);
+  const key = read(spec.key);
+  const perm = read(spec.perm);
+  if (!base || !key || !perm || key.rgb.length !== perm.rgb.length) return null;
+  const map = new Map();
+  for (let i = 0; i < key.rgb.length; i++) if (key.a[i]) map.set(key.rgb[i], i);
+  const rgb = new Array(base.rgb.length);
+  const a = new Uint8Array(base.rgb.length);
+  for (let i = 0; i < base.rgb.length; i++) {
+    const k = map.get(base.rgb[i]);
+    rgb[i] = k == null ? base.rgb[i] : perm.rgb[k];
+    a[i] = k == null || !base.a[i] ? base.a[i] : Math.floor((base.a[i] * perm.a[k]) / 255);
+  }
+  return { width: base.width, height: base.height, rgb, a, from: `${base.from}, палитра ${spec.perm}` };
+}
+
 /** Текстура: { w, h, rgb, a, frames, from } или null; анимированная — первый кадр (квадрат по ширине) */
 export function loadTexture(layers, id, cache = new Map()) {
   if (cache.has(id)) return cache.get(id);
   let t = null;
   const r = findResource(layers, texturePath(id));
+  const pal = !r && palettedTextures().get(id.includes(':') ? id : `minecraft:${id}`);
+  if (pal) {
+    const png = palettedImage(layers, pal);
+    t = png && { w: png.width, h: png.height, fullH: png.height, rgb: png.rgb, a: png.a, frames: 1, from: png.from };
+  }
   if (r) {
     try {
       const png = decodePng(r.data);
@@ -174,6 +233,11 @@ export const DRAWN_LOADERS = new Set([
   'forge:separate_transforms',
   'immersiveengineering:conf_sides',
   'sophisticatedbackpacks:backpack',
+  'immersiveengineering:basic_split',
+  'computercraft:turtle',
+  'immersiveengineering:models/coresample',
+  'functionalstorage:framedblock',
+  'immersiveengineering:models/conveyor',
 ]);
 
 /**
@@ -187,14 +251,16 @@ const BACKPACK_TINTS = { 0: 0xcc613a, 1: 0x622e1a };
 /** Ссылка на модель из поля загрузчика: строка или { parent, textures } — модель с подставленными текстурами */
 function inlineModel(layers, ref) {
   const id = typeof ref === 'string' ? ref : ref?.parent;
-  // Встроенная модель без parent (часть composite с loader obj или своими elements)
-  if (typeof id !== 'string' && ref && typeof ref === 'object' && (ref.loader || ref.elements))
+  // Встроенная модель со своим загрузчиком или elements (часть composite с loader obj, inner_model IE); parent — только
+  // ради display и текстур
+  if (ref && typeof ref === 'object' && (ref.loader || ref.elements)) {
+    const par = typeof id === 'string' ? loadModel(layers, id) : null;
     return {
       id: '(встроенная часть)',
       chain: [{ id: '(встроенная часть)', from: 'модель' }],
-      textures: { ...(ref.textures ?? {}) },
+      textures: { ...(par?.textures ?? {}), ...(ref.textures ?? {}) },
       elements: Array.isArray(ref.elements) ? ref.elements : null,
-      display: { ...(ref.display ?? {}) },
+      display: { ...(par?.display ?? {}), ...(ref.display ?? {}) },
       generated: false,
       entity: false,
       missing: [],
@@ -203,6 +269,7 @@ function inlineModel(layers, ref) {
       loaderJson: ref,
       children: ref.children ?? null,
     };
+  }
   if (typeof id !== 'string') return null;
   const m = loadModel(layers, id);
   if (ref && typeof ref === 'object' && ref.textures) m.textures = { ...m.textures, ...ref.textures };
@@ -242,13 +309,80 @@ function expandParts(layers, parts, warnings) {
   for (const part of parts) {
     const m = part.model;
     const loader = m.loader ?? '';
-    if (/composite$/.test(loader) && !m.elements) {
+    // Обрамлённые ящики Functional Storage (FramedModel.Baked): без оформления (FramedDrawerModelData) — дочерние
+    // модели как есть, как у composite
+    if ((/composite$/.test(loader) || loader === 'functionalstorage:framedblock') && !m.elements) {
       for (const [name, ref] of Object.entries(m.loaderJson?.children ?? m.children ?? {})) {
         const c = inlineModel(layers, ref);
         if (c?.chain.length) {
           c.display = { ...m.display, ...c.display };
           out.push(...expandParts(layers, [{ ...part, model: c }], warnings));
         } else warnings.add(`${m.id}: часть «${name}» composite не нашлась`);
+      }
+      continue;
+    }
+    // Мультиблоки IE (коксовая и доменная печь, плавильня): BakedBasicSplitModel без SUBMODEL_OFFSET (предмет) отдаёт
+    // всю inner_model целиком; display — от модели предмета
+    if (loader === 'immersiveengineering:basic_split' && !m.elements) {
+      const c = inlineModel(layers, m.loaderJson?.inner_model);
+      if (c?.chain.length) {
+        c.display = { ...c.display, ...m.display };
+        out.push(...expandParts(layers, [{ ...part, model: c }], warnings));
+      } else warnings.add(`${m.id}: у basic_split нет inner_model`);
+      continue;
+    }
+    // Черепаха CC (TurtleModelParts): без улучшений, наклейки и окраски — модель семейства из поля model (на Рождество
+    // в игре ещё колпак — не рисуем)
+    if (loader === 'computercraft:turtle' && !m.elements) {
+      const c = inlineModel(layers, m.loaderJson?.model);
+      if (c?.chain.length) {
+        c.display = { ...c.display, ...m.display };
+        out.push(...expandParts(layers, [{ ...part, model: c }], warnings));
+      } else warnings.add(`${m.id}: нет модели черепахи ${m.loaderJson?.model}`);
+      continue;
+    }
+    // Образец породы IE без данных (ModelCoresample, minerals = null): столбик 4×16×4 из minecraft:block/stone, грани
+    // по 4 пикселя развёртки; getTransforms — NO_TRANSFORMS (таблица transformationMap в коде не используется), так что
+    // в инвентаре он виден прямо спереди, без поворота
+    if (loader === 'immersiveengineering:models/coresample' && !m.elements) {
+      const f = (uv) => ({ uv, texture: '#stone' });
+      out.push({
+        ...part,
+        model: {
+          ...m,
+          loader: null,
+          textures: { stone: 'minecraft:block/stone' },
+          display: { gui: { rotation: [0, 0, 0] } },
+          elements: [
+            {
+              from: [6, 0, 6],
+              to: [10, 16, 10],
+              faces: {
+                down: f([6, 6, 10, 10]),
+                up: f([6, 6, 10, 10]),
+                north: f([0, 0, 4, 16]),
+                east: f([4, 0, 8, 16]),
+                south: f([8, 0, 12, 16]),
+                west: f([12, 0, 16, 16]),
+              },
+            },
+          ],
+        },
+      });
+      continue;
+    }
+    // Конвейеры IE (ieConveyor.mjs): грани ModelConveyor с умолчаниями предмета и поворот GUI из его кода
+    if (loader === 'immersiveengineering:models/conveyor' && !m.elements) {
+      const c = conveyorParts(m.loaderJson?.conveyorType);
+      if (!c) {
+        warnings.add(`${m.id}: конвейер ${m.loaderJson?.conveyorType} — тип не перенесён`);
+        continue;
+      }
+      const display = { gui: { matrix: c.gui } };
+      out.push({ ...part, model: { ...m, loader: null, quads: c.quads, display } });
+      if (c.panel) {
+        const pm = loadModel(layers, c.panel.model);
+        if (pm.chain.length) out.push({ ...part, model: { ...pm, display, objGroups: c.panel.groups } });
       }
       continue;
     }
@@ -394,6 +528,8 @@ function objTriangles(layers, m, warnings) {
       });
       if (pts.some((x) => !x.v)) continue;
       if (cb && group != null && !cb.show(group)) continue;
+      // Видимые группы задал вызывающий (панель редстоун-конвейера IE — VisibilityList.show("panel"))
+      if (m.objGroups && !m.objGroups.includes(group)) continue;
       // Текстура материала: map_Kd — id текстуры (ns:block/x) или #переменная модели; нет — #материал / particle
       const kd = materials.get(mat);
       const tex =
@@ -428,19 +564,26 @@ export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } 
   const warnings = new Set();
   const used = new Map();
   const texCache = new Map();
+  // Загрузчики раскрываем до выбора поворота: display.gui бывает только у раскрытой модели (черепаха CC)
+  parts = expandParts(layers, parts, warnings);
   let rx;
   let ry;
   let rz = 0;
+  let guiMatrix = null;
   if (view === 'gui') {
     const gui = parts.find((p) => p.model.display.gui)?.model.display.gui;
+    // Поворот, заданный кодом модели матрицей (конвейеры IE: applyTransform по своей таблице)
+    guiMatrix = gui?.matrix ?? null;
     [rx, ry, rz = 0] = gui?.rotation ?? [30, 225, 0];
     if (!gui) warnings.add('нет display.gui в цепочке parent — взят поворот [30, 225, 0] (как у block/block)');
   } else
     [rx, ry] = { top: [90, 0], bottom: [-90, 0], south: [0, 0], north: [0, 180], east: [0, 90], west: [0, -90] }[
       view
     ] ?? [30, 225];
-
-  parts = expandParts(layers, parts, warnings);
+  const M = guiMatrix;
+  const view3 = M
+    ? ([x, y, z]) => [M[0] * x + M[1] * y + M[2] * z, M[3] * x + M[4] * y + M[5] * z, M[6] * x + M[7] * y + M[8] * z]
+    : (p) => viewRot(p, rx, ry, rz);
   // Грани в пространстве вида (до масштаба): [{ O, U, V (3D), tex, uv, rot, shade }]; OBJ — треугольники
   const quads = [];
   const tris = [];
@@ -474,7 +617,7 @@ export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } 
         }
         const len = Math.hypot(...n) || 1;
         tris.push({
-          P: P.map((v) => viewRot(v, rx, ry, rz)),
+          P: P.map((v) => view3(v)),
           UV: t.UV,
           tex: t.tex,
           tint: t.tint,
@@ -488,11 +631,11 @@ export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } 
     // граней (кубы замкнуты — видимое решает буфер глубины), наложение (узор знамени) — поверх той же грани
     if (m.quads) {
       for (const fq of m.quads) {
-        const [O, U, V] = fq.P.map((x) => viewRot(place(x), rx, ry, rz));
+        const [O, U, V] = fq.P.map((x) => view3(place(x)));
         const n = orient(fq.N);
         const len = Math.hypot(...n) || 1;
         // cull — грань видна, только если смотрит на зрителя (полупрозрачный силуэт: без задних граней)
-        if (fq.cull && viewRot(n, rx, ry, rz)[2] <= 1e-6) continue;
+        if (fq.cull && view3(n)[2] <= 1e-6) continue;
         quads.push({
           O,
           U,
@@ -542,9 +685,9 @@ export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } 
         if (face.tintindex != null && face.tintindex >= 0 && tint == null)
           warnings.add('tintindex: окраску задаёт код — грань без неё');
         quads.push({
-          O: viewRot(toBlock(o), rx, ry, rz),
-          U: viewRot(toBlock(pu), rx, ry, rz),
-          V: viewRot(toBlock(pv), rx, ry, rz),
+          O: view3(toBlock(o)),
+          U: view3(toBlock(pu)),
+          V: view3(toBlock(pv)),
           tex: texId,
           uv: face.uv ?? defaultUv(from, to, name),
           rot: ((face.rotation ?? 0) % 360) / 90,
@@ -787,6 +930,7 @@ const LEATHER_COLOR = 0xffa06540;
  * Плоские предметы с загрузчиком (как их видно в JEI и творческом):
  *   neoforge:fluid_container — base, маска fluid, залитая текстурой still жидкости с её окраской (fluids.mjs), cover
  *     (cover_is_mask, по умолчанию да, — base по форме cover); жидкость не определилась — пустое ведро (base);
+ *   immersiveengineering:potion_bucket — так же, жидкость — зелье IE цвета пустого зелья;
  *   tfc:fluid_container (ContainedFluidModel) — сосуд пустой: base;
  *   tfc:trim (TrimmedItemModel) — без отделки: armor и overlay, оба с tintindex 0 (кожаная броня — LEATHER_COLOR).
  * Возвращает null, если это не такой загрузчик.
@@ -794,15 +938,23 @@ const LEATHER_COLOR = 0xffa06540;
 export function flatLoaderSpecs(layers, model, itemId, look) {
   const tex = (k) => resolveTexture(model.textures, `#${k}`);
   const j = model.loaderJson ?? {};
-  if (/^(neoforge|forge):fluid_container$/.test(model.loader ?? '')) {
+  // Ведро зелья IE (PotionBucketModel): ведро NeoForge с жидкостью immersiveengineering:potion, окраска — цвет зелья;
+  // у предмета без зелья (PotionContents.EMPTY) — BASE_POTION_COLOR Minecraft
+  const potion = model.loader === 'immersiveengineering:potion_bucket';
+  if (/^(neoforge|forge):fluid_container$/.test(model.loader ?? '') || potion) {
     const specs = [];
     if (tex('base')) specs.push({ id: tex('base') });
-    const f = typeof j.fluid === 'string' && look ? look(j.fluid) : null;
+    const f = potion
+      ? { still: 'immersiveengineering:block/fluid/potion_still', tint: 0xff385dc6 }
+      : typeof j.fluid === 'string' && look
+        ? look(j.fluid)
+        : null;
     if (f && tex('fluid')) specs.push({ id: f.still, mask: tex('fluid'), tint: f.tint });
     const cover = tex('cover');
     if (cover && j.cover_is_mask !== false) {
       if (tex('base')) specs.push({ id: tex('base'), mask: cover });
     } else if (cover) specs.push({ id: cover });
+    if (potion) return { specs, fluid: 'immersiveengineering:potion', wanted: 'immersiveengineering:potion' };
     return { specs, fluid: f ? j.fluid : null, wanted: j.fluid ?? null };
   }
   if (model.loader === 'tfc:fluid_container') return { specs: tex('base') ? [{ id: tex('base') }] : [] };

@@ -230,14 +230,32 @@ ByePregen, рецептов, `ClientRecipeBook`, JEI/EMI, моделей и зв
 зеркально). Окраска `tintindex` — только там, где её цвет известен из кода (рюкзаки, жидкость в вёдрах); трава и
 листья серые; анимация — первый кадр. Умеет OBJ (`neoforge:obj`, `ie_obj` IE, файлы `.obj`/`.obj.ie`; у `ie_obj`
 v перевёрнут, как в IE), `composite`, `separate_transforms` (вид в инвентаре), `conf_sides` IE, рюкзаки
-Sophisticated Backpacks; модели только с `overrides` — override при свойствах 0.
+Sophisticated Backpacks; модели только с `overrides` — override при свойствах 0. Текстуры, которых нет файлом, а
+делает атлас блоков (`paletted_permutations` в `assets/minecraft/atlases/blocks.json` любого мода — перекраска по
+палитре, как `PalettedPermutations` Minecraft), берутся так же: книжные полки, пиломатериалы, лодки, таблички TFC
+по породам (`<текстура>_<дерево>`; `palettedTextures()` в render.mjs).
 Рисуемое кодом — как в JEI (перенесено из кода, в игре не проверялось):
 - инструменты IE (`ie_obj` с `callbacks`) — видимые группы OBJ из `*Callbacks.shouldRenderGroup` (`IE_ITEM_CALLBACKS`);
 - `builtin/entity` (`scripts/mcp/entityModels.mjs`) — сундуки (ванильные и из дерева TFC), кровати, шалкеры, знамёна,
-  головы (кроме дракона и пиглина), щит, проводник, расписная ваза — модели сущностей Minecraft; ящики Functional
-  Storage — модель блока с поворотом из их рендерера;
+  головы (и дракона, и пиглина; зеркальные кубы `mirror`), щит, проводник, расписная ваза — модели сущностей
+  Minecraft; ящики Functional Storage (и обрамлённые: `functionalstorage:framedblock` без оформления — дочерние модели)
+  — модель блока с поворотом из их рендерера; сковорода Cuisine Delight — отдельная модель `item/cuisine_skillet_base`;
+- мультиблоки IE (`immersiveengineering:basic_split`: коксовая и доменная печь, плавильня) — вся `inner_model`, как
+  у предмета без `SUBMODEL_OFFSET`; черепахи CC (`computercraft:turtle`) — модель семейства без улучшений; образец
+  породы IE (`models/coresample`) — столбик из камня, вид спереди без поворота (`getTransforms` = `NO_TRANSFORMS`);
+  конвейеры IE (`models/conveyor`, `scripts/mcp/ieConveyor.mjs`) — у предмета нет своей модели или картинки, это
+  тот же `ModelConveyor` с умолчаниями (на север, горизонтально, лента выключена, без покраски, стенки есть):
+  перенесены `getBaseConveyor`, `createBakedQuad/Box`, добавки разделителя, экстрактора, вертикального и панель
+  редстоун-конвейера (OBJ, группа `panel`), поворот GUI — матрица из `TRANSFORMATION_MAP` (`display.gui.matrix`);
 - плоские: `fluid_container` NeoForge — ведро с жидкостью (текстура и цвет жидкости — из классов модов,
-  `scripts/mcp/fluids.mjs`), `tfc:fluid_container` — пустой сосуд, `tfc:trim` — броня без отделки.
+  `scripts/mcp/fluids.mjs`; у IE — текстура из `FluidEntry.make("имя", rl("…_still"))`), ведро зелья IE
+  (`potion_bucket`, цвет пустого зелья), `tfc:fluid_container` — пустой сосуд, `tfc:trim` — броня без отделки.
+
+Не перенесено (остаётся текстурой) и почему: проходной изолятор IE (`feedthrough` — блок-основа + модели
+коннекторов по типу провода), барометр Create Submarine (аквариум: модель блока + песок, водоросли, вода и
+рыба-фугу из рендерера блока), наполненная сковорода TFC (`pan/filled` без содержимого кодом не рисуется). Предметы
+Create Connected без текстур (катализаторы для неустановленных модов) выключены `FeatureToggle` и убраны модом из
+творческого и JEI.
 
 Модели **GeckoLib** (`scripts/mcp/geoModels.mjs`): файлы `assets/<ns>/geo/*.geo.json` (Bedrock 1.12+,
 `minecraft:geometry[0].bones[].cubes[]`) — перенос `BakedModelFactory.Builtin`, `VertexSet`, `GeoQuad.build` и
