@@ -187,4 +187,5 @@ the step is centred.
   repos from `local-mods/README.md` of github.com/GranniXXie/TerraFirmaRebirth), only for mods still not found; all
   5 hand-built jars matched (tfcr-fixes 1.7.7 → 1.7.12 yellow, other 4 current). The recheck button now rechecks
   Modrinth and git live; on a GitHub error git rows are kept from the report. Checked: script, browser, fallback with
-  GitHub 403. Next: the «план обновления» skill.
+  GitHub 403. 2026-10-22: skill `update-plan` («план обновления», `.claude/skills/update-plan/`) turns the report
+  into a plan; tried on the 5 red mods (plan shown to the user; site task — see the plan doc, part 5).
