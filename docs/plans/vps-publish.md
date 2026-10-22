@@ -1,6 +1,6 @@
 # VPS publish: complete and safe live publishing of site data
 
-Status: approved 2026-10-22; code done and checked locally, VPS rollout — see «Rollout log» at the end.
+Status: done 2026-10-22 (first live publish from the VPS with renders). Open: `AUTO_PUBLISH=live` decision, VPS loader fix install, `tfc` rebuild — see «Rollout log».
 
 ## Context
 
@@ -192,3 +192,11 @@ more than 300 files, stops unless `allowRemovals` is passed (`tfc admin publish 
     - `AUTO_PUBLISH=live`: host's decision;
     - new `tfc` build with `--allow-removals` and the render line in the summary (the old binary works; the flag is only
       needed when the guard stops a publish).
+- 2026-10-22 18:31 UTC — **live publish** of `20261022-154041-2be2` by the host (`tfc admin publish --live --yes`;
+  the first attempt never reached the server — the confirmation defaults to «no»). Hosting: 54 files uploaded,
+  0 removed, 16 466 files, 8704 renders; config: 4 docs (new `miner_tools-helmet-server.toml`). «Обновления»: the
+  snapshot changed only EE Extras 2.3.1 → 2.3.3 since the hand-written record, so the agent wrote that record
+  (`0889664e…`, base = `d765` manifest) **before** the publish; the publish got 409 — no «+6 mods» duplicate against
+  the stale site manifest. Checked on the site: manifest 240 mods (addons included), 13 668 items, 32 addon items with
+  icons (PNG served), 3D icons of addons, TFC and Create Aeronautics.
+  - Note: the publish log says «packUpdates: будет запись» even when the record already existed (409) — wording only.
