@@ -1,14 +1,17 @@
 /**
- * Рисунок модели блока/предмета в PNG без клиента — перенос tools/ee-extras-mod/art/iso.py на Node и дополнения:
- * parent (resources.mjs), поворот элемента (rotation: origin/axis/angle/rescale), поворот варианта блокстейта
- * (x, y), uv по умолчанию, rotation грани, display.gui из цепочки, предметы item/generated (слои), multipart; загрузчики
- * neoforge:obj и immersiveengineering:ie_obj (файлы .obj/.obj.ie с .mtl, flip_v), composite, separate_transforms
- * (вид в инвентаре), conf_sides IE (куб из текстур <base_name>_<сторона>_none).
+ * Рисунок модели блока/предмета в PNG без клиента («движок») — перенос tools/ee-extras-mod/art/iso.py на Node и
+ * дополнения: parent (resources.mjs), поворот элемента (rotation: origin/axis/angle/rescale), поворот варианта
+ * блокстейта (x, y), uv по умолчанию, rotation грани, display.gui из цепочки (или матрица display.gui.matrix),
+ * предметы item/generated (слои), multipart, текстуры атласа (paletted_permutations); форматы моделей neoforge:obj и
+ * immersiveengineering:ie_obj (файлы .obj/.obj.ie с .mtl, flip_v), separate_transforms (вид в инвентаре).
+ *
+ * Правила конкретных модов — что рисует код (builtin/entity, загрузчики composite, конвейеры IE, рюкзаки, вёдра…) —
+ * не здесь, а в реестре scripts/mcp/models/ (по модулю на мод); движок вызывает его и при ошибке обработчика
+ * оставляет предмет текстурой.
  *
  * Проекция ортографическая, свой буфер глубины, затенение граней как в игре (верх 1.0, низ 0.5, север/юг 0.8,
- * запад/восток 0.6) — по нормали после поворотов. Не рисуется: окраска tintindex (трава, листья — серые), ambient
- * occlusion, эмиссия, анимация (берётся первый кадр), builtin/entity и прочие загрузчики — о них предупреждение. У OBJ
- * рисуются все группы файла: что из них показывает код (инструменты IE), генератор не знает.
+ * запад/восток 0.6) — по нормали после поворотов. Не рисуется: окраска tintindex, если её цвет неизвестен (трава,
+ * листья — серые), ambient occlusion, эмиссия, анимация (берётся первый кадр).
  *
  * Один генератор картинок для MCP (model_render) и иконок аддонов (сайт, выпуск) — запуск из командной строки:
  *   node scripts/mcp/render.mjs <папка ресурсов> <id…> --out <папка> [--size 256] [--kind icon|block|item|model]
@@ -21,10 +24,9 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { mods } from './data.mjs';
 import { jarList, readEntry } from './jars.mjs';
-import { codeBlockParts, entityItemModel } from './entityModels.mjs';
 import { fluidLook } from './fluids.mjs';
 import { geoModel, isGeoId } from './geoModels.mjs';
-import { conveyorParts } from './ieConveyor.mjs';
+import { codeItemModel, expandLoader, flatLoader, objCallback, registryLoaders } from './models/index.mjs';
 import {
   blockstatePath,
   findResource,
@@ -222,31 +224,18 @@ export function loadTexture(layers, id, cache = new Map()) {
 
 // ---------------------------------------------------------------- модели с загрузчиком
 
-/** Загрузчики, которые генератор рисует сам (остальные — предупреждение) */
+/**
+ * Загрузчики, которые генератор рисует сам: форматы моделей (OBJ, separate_transforms) — движок, правила модов —
+ * реестр scripts/mcp/models/ (по модулю на мод). Остальные — предупреждение, предмет остаётся текстурой.
+ */
 export const DRAWN_LOADERS = new Set([
   'neoforge:obj',
   'forge:obj',
   'immersiveengineering:ie_obj',
-  'neoforge:composite',
-  'forge:composite',
   'neoforge:separate_transforms',
   'forge:separate_transforms',
-  'immersiveengineering:conf_sides',
-  'sophisticatedbackpacks:backpack',
-  'immersiveengineering:basic_split',
-  'computercraft:turtle',
-  'immersiveengineering:models/coresample',
-  'functionalstorage:framedblock',
-  'immersiveengineering:models/conveyor',
+  ...registryLoaders(),
 ]);
-
-/**
- * Рюкзак Sophisticated Backpacks (BackpackDynamicModel): части block/backpack_<часть> с текстурой clips из модели
- * предмета. Без улучшений (как в JEI и творческом) — основа, карманы слева, справа и спереди, лямки (лямок нет только
- * на спине игрока). Цвета ткани и окантовки по умолчанию — BackpackWrapper.DEFAULT_MAIN_COLOR / DEFAULT_ACCENT_COLOR.
- */
-const BACKPACK_PARTS = ['base', 'left_pouch', 'right_pouch', 'front_pouch', 'straps'];
-const BACKPACK_TINTS = { 0: 0xcc613a, 1: 0x622e1a };
 
 /** Ссылка на модель из поля загрузчика: строка или { parent, textures } — модель с подставленными текстурами */
 function inlineModel(layers, ref) {
@@ -303,171 +292,44 @@ export function guiModel(layers, m) {
   return m;
 }
 
-/** Части рисунка с раскрытыми загрузчиками: composite — дочерние модели, conf_sides IE — куб из текстур по имени */
+/**
+ * Помощники для обработчиков реестра (scripts/mcp/models/): ресурсы, модели, раскрытие вложенных частей,
+ * предупреждения. warnings — Set, куда пишут обработчики.
+ */
+export function modelContext(layers, warnings = new Set()) {
+  return {
+    layers,
+    warn: (msg) => warnings.add(msg),
+    loadModel: (id) => loadModel(layers, id),
+    inlineModel: (ref) => inlineModel(layers, ref),
+    has: (tex) => Boolean(findResource(layers, texturePath(tex))),
+    readJson: (p) => readJsonRes(layers, p),
+    expand: (parts) => expandParts(layers, parts, warnings),
+    resolveTexture,
+    blockstatePath,
+    pickVariant,
+    fluidLook,
+  };
+}
+
+/** Части рисунка с раскрытыми загрузчиками (реестр models/: composite, конвейеры IE, рюкзаки…) */
 function expandParts(layers, parts, warnings) {
+  const ctx = modelContext(layers, warnings);
   const out = [];
   for (const part of parts) {
     const m = part.model;
-    const loader = m.loader ?? '';
-    // Обрамлённые ящики Functional Storage (FramedModel.Baked): без оформления (FramedDrawerModelData) — дочерние
-    // модели как есть, как у composite
-    if ((/composite$/.test(loader) || loader === 'functionalstorage:framedblock') && !m.elements) {
-      for (const [name, ref] of Object.entries(m.loaderJson?.children ?? m.children ?? {})) {
-        const c = inlineModel(layers, ref);
-        if (c?.chain.length) {
-          c.display = { ...m.display, ...c.display };
-          out.push(...expandParts(layers, [{ ...part, model: c }], warnings));
-        } else warnings.add(`${m.id}: часть «${name}» composite не нашлась`);
-      }
-      continue;
-    }
-    // Мультиблоки IE (коксовая и доменная печь, плавильня): BakedBasicSplitModel без SUBMODEL_OFFSET (предмет) отдаёт
-    // всю inner_model целиком; display — от модели предмета
-    if (loader === 'immersiveengineering:basic_split' && !m.elements) {
-      const c = inlineModel(layers, m.loaderJson?.inner_model);
-      if (c?.chain.length) {
-        c.display = { ...c.display, ...m.display };
-        out.push(...expandParts(layers, [{ ...part, model: c }], warnings));
-      } else warnings.add(`${m.id}: у basic_split нет inner_model`);
-      continue;
-    }
-    // Черепаха CC (TurtleModelParts): без улучшений, наклейки и окраски — модель семейства из поля model (на Рождество
-    // в игре ещё колпак — не рисуем)
-    if (loader === 'computercraft:turtle' && !m.elements) {
-      const c = inlineModel(layers, m.loaderJson?.model);
-      if (c?.chain.length) {
-        c.display = { ...c.display, ...m.display };
-        out.push(...expandParts(layers, [{ ...part, model: c }], warnings));
-      } else warnings.add(`${m.id}: нет модели черепахи ${m.loaderJson?.model}`);
-      continue;
-    }
-    // Образец породы IE без данных (ModelCoresample, minerals = null): столбик 4×16×4 из minecraft:block/stone, грани
-    // по 4 пикселя развёртки; getTransforms — NO_TRANSFORMS (таблица transformationMap в коде не используется), так что
-    // в инвентаре он виден прямо спереди, без поворота
-    if (loader === 'immersiveengineering:models/coresample' && !m.elements) {
-      const f = (uv) => ({ uv, texture: '#stone' });
-      out.push({
-        ...part,
-        model: {
-          ...m,
-          loader: null,
-          textures: { stone: 'minecraft:block/stone' },
-          display: { gui: { rotation: [0, 0, 0] } },
-          elements: [
-            {
-              from: [6, 0, 6],
-              to: [10, 16, 10],
-              faces: {
-                down: f([6, 6, 10, 10]),
-                up: f([6, 6, 10, 10]),
-                north: f([0, 0, 4, 16]),
-                east: f([4, 0, 8, 16]),
-                south: f([8, 0, 12, 16]),
-                west: f([12, 0, 16, 16]),
-              },
-            },
-          ],
-        },
-      });
-      continue;
-    }
-    // Конвейеры IE (ieConveyor.mjs): грани ModelConveyor с умолчаниями предмета и поворот GUI из его кода
-    if (loader === 'immersiveengineering:models/conveyor' && !m.elements) {
-      const c = conveyorParts(m.loaderJson?.conveyorType);
-      if (!c) {
-        warnings.add(`${m.id}: конвейер ${m.loaderJson?.conveyorType} — тип не перенесён`);
-        continue;
-      }
-      const display = { gui: { matrix: c.gui } };
-      out.push({ ...part, model: { ...m, loader: null, quads: c.quads, display } });
-      if (c.panel) {
-        const pm = loadModel(layers, c.panel.model);
-        if (pm.chain.length) out.push({ ...part, model: { ...pm, display, objGroups: c.panel.groups } });
-      }
-      continue;
-    }
-    if (loader === 'sophisticatedbackpacks:backpack' && !m.elements) {
-      const clips = resolveTexture(m.textures, '#clips');
-      for (const name of BACKPACK_PARTS) {
-        const c = loadModel(layers, `sophisticatedbackpacks:block/backpack_${name}`);
-        if (!c.chain.length || c.missing.length) {
-          warnings.add(`${m.id}: нет части рюкзака backpack_${name}`);
-          continue;
-        }
-        if (clips) c.textures = { ...c.textures, clips };
-        c.display = { ...c.display, ...m.display };
-        c.tints = BACKPACK_TINTS;
-        out.push({ ...part, model: c });
-      }
-      continue;
-    }
-    if (loader === 'immersiveengineering:conf_sides' && !m.elements) {
-      // Конденсаторы IE и т. п.: <base_name>_<сторона>_none (по коду IE — side_top_bottom, side_top, all_same…)
-      const base = m.loaderJson?.base_name;
-      const has = (id) => Boolean(findResource(layers, texturePath(id)));
-      const pick = (...ids) => ids.find(has) ?? ids[ids.length - 1];
-      const side = pick(`${base}_side_none`, `${base}_none`);
-      const textures = {
-        up: pick(`${base}_up_none`, `${base}_top_none`, side),
-        down: pick(`${base}_down_none`, `${base}_bottom_none`, side),
-        side,
-      };
-      const faces = Object.fromEntries(
-        ['north', 'south', 'east', 'west', 'up', 'down'].map((f) => [
-          f,
-          { texture: f === 'up' ? '#up' : f === 'down' ? '#down' : '#side' },
-        ]),
-      );
-      out.push({
-        ...part,
-        model: {
-          ...m,
-          textures: { ...m.textures, ...textures },
-          elements: [{ from: [0, 0, 0], to: [16, 16, 16], faces }],
-        },
-      });
-      continue;
-    }
-    out.push(part);
+    const got = m.loader && !m.elements ? expandLoader(ctx, part) : null;
+    if (got) out.push(...got);
+    else out.push(part);
   }
   return out;
 }
 
-/**
- * Инструменты IE (ie_obj с полем callbacks): какие группы OBJ видны у предмета без улучшений и насадок — как в JEI
- * и творческом. Перенесено из shouldRenderGroup / getTextureReplacement / getRenderColor классов
- * blusunrize.immersiveengineering.client.models.obj.callback.item.*Callbacks (IE 1.21.1-12.4.2).
- */
-const IE_ITEM_CALLBACKS = {
-  // DrillCallbacks: без головки — только рама и рукоять
-  'immersiveengineering:drill': { show: (g) => g === 'drill_frame' || g === 'drill_grip' },
-  // ChemthrowerCallbacks: base, grip, cage, tanks, tank; large_tank и multi_tank — с улучшениями
-  'immersiveengineering:chemthrower': { show: (g) => ['base', 'grip', 'cage', 'tanks', 'tank'].includes(g) },
-  // RailgunCallbacks: всё, кроме прицела и ускорителя (barrel_top виден без ускорителя)
-  'immersiveengineering:railgun': { show: (g) => g !== 'upgrade_scope' && g !== 'upgrade_speed' },
-  // RevolverCallbacks: frame, cylinder, barrel, cosmetic_compensator; все материалы — текстура item/revolvers/revolver
-  'immersiveengineering:revolver': {
-    show: (g) => ['frame', 'cylinder', 'barrel', 'cosmetic_compensator'].includes(g),
-    texture: 'immersiveengineering:item/revolvers/revolver',
-  },
-  // ShieldCallbacks: всё, кроме вспышки и электрошока
-  'immersiveengineering:shield': { show: (g) => g !== 'flash' && g !== 'shock' },
-  // BuzzsawCallbacks: без диска и улучшений — корпус и прочее, что не перечислено
-  'immersiveengineering:buzzsaw': {
-    show: (g) =>
-      !['blade', 'upgrade_lube', 'upgrade_launcher', 'upgrade_waterproof'].includes(g) && !/^upgrade_blades\d$/.test(g),
-  },
-  // PowerpackCallbacks (проход 0): без знамён, антенны, индукции и катушки Теслы
-  'immersiveengineering:powerpack': {
-    show: (g) =>
-      !['banner', 'big_banner', 'banner_post', 'antenna', 'induction', 'induction_tubes', 'tesla_coil'].includes(g),
-  },
-  // FluorescentTubeCallbacks: трубка — белый × 0.3 (не горит), остальное — 0.067
-  'immersiveengineering:fluorescent_tube': { show: () => true, tint: (g) => (g === 'tube' ? 0x4d4d4d : 0x111111) },
-};
+/** ie_obj рисуем, если видимость групп не задаёт код (нет callbacks) или её код перенесён (objCallbacks реестра) */
+export const ieObjDrawable = (m) => !m.loaderJson?.callbacks || Boolean(objCallback(m.loaderJson.callbacks));
 
-/** ie_obj рисуем, если видимость групп не задаёт код (нет callbacks) или её код перенесён в IE_ITEM_CALLBACKS */
-export const ieObjDrawable = (m) => !m.loaderJson?.callbacks || Boolean(IE_ITEM_CALLBACKS[m.loaderJson.callbacks]);
+/** Модель предмета builtin/entity из реестра: { quads | parts, drawnBy } или null (см. models/index.mjs) */
+export const codeModel = (layers, id, own, warnings) => codeItemModel(modelContext(layers, warnings), id, own);
 
 /**
  * Геометрия OBJ (neoforge:obj, ie_obj): треугольники в пикселях модели (0–16 = блок) с uv 0–1 (v сверху, как у
@@ -497,8 +359,8 @@ function objTriangles(layers, m, warnings) {
   let group = null;
   // ie_obj переворачивает v всегда (PolygonUtils.toBakedQuad IE: sprite.getV(1 − v)), NeoForge — по flip_v
   const flipV = j.flip_v === true || m.loader === 'immersiveengineering:ie_obj';
-  // Инструменты IE: какие группы видны и чем перекрашены — по коду их ItemCallback (IE_ITEM_CALLBACKS)
-  const cb = m.loader === 'immersiveengineering:ie_obj' ? IE_ITEM_CALLBACKS[j.callbacks] : null;
+  // Инструменты IE: какие группы видны и чем перекрашены — по коду их ItemCallback (objCallbacks реестра)
+  const cb = m.loader === 'immersiveengineering:ie_obj' ? objCallback(j.callbacks) : null;
   for (const raw of r.data.toString('utf8').split(/\r?\n/)) {
     const line = raw.trim();
     const [cmd, ...a] = line.split(/\s+/);
@@ -604,12 +466,41 @@ export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } 
         ];
       return d;
     };
-    const place = (p) => orient([p[0] - 8, p[1] - 8, p[2] - 8]);
+    // part.affine — поза, которую задаёт код рендерера (PoseStack 3×4 в долях блока 0–1: translate/scale/mulPose),
+    // применяется после поворотов варианта: содержимое аквариума барометра Create Submarine и т. п.
+    const A = part.affine;
+    const affPos = A
+      ? (c) => {
+          const [x, y, z] = c.map((k) => (k + 8) / 16);
+          return [
+            (A[0] * x + A[1] * y + A[2] * z + A[3]) * 16 - 8,
+            (A[4] * x + A[5] * y + A[6] * z + A[7]) * 16 - 8,
+            (A[8] * x + A[9] * y + A[10] * z + A[11]) * 16 - 8,
+          ];
+        }
+      : (c) => c;
+    const dir = A
+      ? (n) => {
+          // Нормаль — обратно-транспонированной матрицей (верно и при неравномерном масштабе): матрица алгебраических
+          // дополнений со знаком определителя; длина 1
+          const d = orient(n);
+          const [a, b, c, , e, f, g, , h, i, j] = A;
+          const sg = Math.sign(a * (f * j - g * i) - b * (e * j - g * h) + c * (e * i - f * h)) || 1;
+          const r = [
+            (f * j - g * i) * d[0] + (g * h - e * j) * d[1] + (e * i - f * h) * d[2],
+            (c * i - b * j) * d[0] + (a * j - c * h) * d[1] + (b * h - a * i) * d[2],
+            (b * g - c * f) * d[0] + (c * e - a * g) * d[1] + (a * f - b * e) * d[2],
+          ];
+          const len = (Math.hypot(...r) || 1) * sg;
+          return r.map((k) => k / len);
+        }
+      : orient;
+    const place = (p) => affPos(orient([p[0] - 8, p[1] - 8, p[2] - 8]));
     if (/(^|:)(ie_)?obj$/.test(m.loader ?? '') && !m.elements) {
       for (const t of objTriangles(layers, m, warnings)) {
         const P = t.P.map(place);
         // Нормаль: из vn файла, а нет — по треугольнику; затенение — как у граней блока
-        let n = t.N && orient(t.N);
+        let n = t.N && dir(t.N);
         if (!n) {
           const e1 = P[1].map((c, k) => c - P[0][k]);
           const e2 = P[2].map((c, k) => c - P[0][k]);
@@ -632,7 +523,7 @@ export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } 
     if (m.quads) {
       for (const fq of m.quads) {
         const [O, U, V] = fq.P.map((x) => view3(place(x)));
-        const n = orient(fq.N);
+        const n = dir(fq.N);
         const len = Math.hypot(...n) || 1;
         // cull — грань видна, только если смотрит на зрителя (полупрозрачный силуэт: без задних граней)
         if (fq.cull && view3(n)[2] <= 1e-6) continue;
@@ -673,7 +564,7 @@ export function renderModel(layers, parts, { view = 'gui', size = 256, aa = 4 } 
         }
         return place(v);
       };
-      const normalOf = (n) => orient(er && er.angle ? axisRot(n, er.axis, er.angle) : n);
+      const normalOf = (n) => dir(er && er.angle ? axisRot(n, er.axis, er.angle) : n);
       for (const [name, face] of Object.entries(el.faces ?? {})) {
         if (!NORMALS[name]) continue;
         const [o, pu, pv] = faceQuad(from, to, name);
@@ -923,46 +814,14 @@ export function renderGenerated(layers, model, size = 256) {
   return r;
 }
 
-/** DyedItemColor.LEATHER_COLOR Minecraft 1.21.1 — кожаная броня без окраски */
-const LEATHER_COLOR = 0xffa06540;
-
 /**
- * Плоские предметы с загрузчиком (как их видно в JEI и творческом):
- *   neoforge:fluid_container — base, маска fluid, залитая текстурой still жидкости с её окраской (fluids.mjs), cover
- *     (cover_is_mask, по умолчанию да, — base по форме cover); жидкость не определилась — пустое ведро (base);
- *   immersiveengineering:potion_bucket — так же, жидкость — зелье IE цвета пустого зелья;
- *   tfc:fluid_container (ContainedFluidModel) — сосуд пустой: base;
- *   tfc:trim (TrimmedItemModel) — без отделки: armor и overlay, оба с tintindex 0 (кожаная броня — LEATHER_COLOR).
- * Возвращает null, если это не такой загрузчик.
+ * Плоские предметы с загрузчиком (как их видно в JEI и творческом) — реестр models/ (flat): вёдра NeoForge и IE,
+ * сосуды и броня TFC. { specs, fluid?, wanted? } или null, если это не такой загрузчик.
  */
 export function flatLoaderSpecs(layers, model, itemId, look) {
-  const tex = (k) => resolveTexture(model.textures, `#${k}`);
-  const j = model.loaderJson ?? {};
-  // Ведро зелья IE (PotionBucketModel): ведро NeoForge с жидкостью immersiveengineering:potion, окраска — цвет зелья;
-  // у предмета без зелья (PotionContents.EMPTY) — BASE_POTION_COLOR Minecraft
-  const potion = model.loader === 'immersiveengineering:potion_bucket';
-  if (/^(neoforge|forge):fluid_container$/.test(model.loader ?? '') || potion) {
-    const specs = [];
-    if (tex('base')) specs.push({ id: tex('base') });
-    const f = potion
-      ? { still: 'immersiveengineering:block/fluid/potion_still', tint: 0xff385dc6 }
-      : typeof j.fluid === 'string' && look
-        ? look(j.fluid)
-        : null;
-    if (f && tex('fluid')) specs.push({ id: f.still, mask: tex('fluid'), tint: f.tint });
-    const cover = tex('cover');
-    if (cover && j.cover_is_mask !== false) {
-      if (tex('base')) specs.push({ id: tex('base'), mask: cover });
-    } else if (cover) specs.push({ id: cover });
-    if (potion) return { specs, fluid: 'immersiveengineering:potion', wanted: 'immersiveengineering:potion' };
-    return { specs, fluid: f ? j.fluid : null, wanted: j.fluid ?? null };
-  }
-  if (model.loader === 'tfc:fluid_container') return { specs: tex('base') ? [{ id: tex('base') }] : [] };
-  if (model.loader === 'tfc:trim') {
-    const tint = /^minecraft:leather_/.test(itemId ?? '') ? LEATHER_COLOR : undefined;
-    return { specs: ['armor', 'overlay'].filter(tex).map((k) => ({ id: tex(k), tint })) };
-  }
-  return null;
+  const ctx = modelContext(layers);
+  if (look) ctx.fluidLook = look;
+  return flatLoader(ctx, model, itemId);
 }
 
 /**
@@ -1102,18 +961,19 @@ export function renderId(layers, id, { kind, state, view = 'gui', size = 256, aa
       for (const w of r.warnings) lines.push(`⚠ ${w}`);
       return { png: r.png, lines };
     }
-    const cb = m.entity ? codeBlockParts(layers, `${ns}:${p}`, m) : null;
-    if (cb) {
-      lines.push(`рисуется кодом (builtin/entity) — ${cb.drawnBy}`);
-      const r = renderModel(layers, cb.parts, { view, size, aa });
+    const cw = new Set();
+    const code = m.entity ? codeModel(layers, `${ns}:${p}`, m, cw) : null;
+    for (const w of cw) lines.push(`⚠ ${w}`);
+    if (code?.parts) {
+      lines.push(`рисуется кодом (builtin/entity) — ${code.drawnBy}`);
+      const r = renderModel(layers, code.parts, { view, size, aa });
       for (const [t, from] of r.textures) lines.push(`  текстура ${t}: ${from ?? '❌ нет'}`);
       for (const w of r.warnings) lines.push(`⚠ ${w}`);
       return { png: r.png, lines };
     }
-    const em = m.entity ? entityItemModel(layers, `${ns}:${p}`, m) : null;
-    if (em) {
-      lines.push(`рисуется кодом (builtin/entity) — перенесённая модель: ${em.drawnBy}`);
-      m = em;
+    if (code?.quads) {
+      lines.push(`рисуется кодом (builtin/entity) — перенесённая модель: ${code.drawnBy}`);
+      m = { ...m, entity: false, elements: null, quads: code.quads, drawnBy: code.drawnBy };
     }
     if (m.generated) {
       const r = renderGenerated(layers, m, size);
