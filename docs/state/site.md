@@ -181,4 +181,8 @@ the step is centred.
   «Скачать отчёт (JSON)». First run: 234 mods — Modrinth 175, CurseForge 54, not found 5 (hand-built: `tfcr-fixes`,
   `woodencog-…-TFCR`, `TFCBetterBlastFurnace-TFCR`, `tfc_ability_fix`, `kaleidoscopetfctavern`); red 5, orange 31,
   yellow 62. Checked in the browser (desktop + 375 px) and the recheck button. Version parsing checked on 11 cases.
-  Next: the pack devs' git as a third source (user will give the link), then the «план обновления» skill.
+  2026-10-22, third source «Гит сборки»: GitHub releases of the pack devs (`PACK_GIT` in `src/lib/freshness.ts`,
+  repos from `local-mods/README.md` of github.com/GranniXXie/TerraFirmaRebirth), only for mods still not found; all
+  5 hand-built jars matched (tfcr-fixes 1.7.7 → 1.7.12 yellow, other 4 current). The recheck button now rechecks
+  Modrinth and git live; on a GitHub error git rows are kept from the report. Checked: script, browser, fallback with
+  GitHub 403. Next: the «план обновления» skill.

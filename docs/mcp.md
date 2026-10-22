@@ -105,7 +105,7 @@ Recipe status: «работает», «изменён KubeJS», «удалён K
 | `mods_list(query, sort)` | pack mods: id, name, version, jar, item and recipe counts |
 | `mod_get(id*)` | mod: sha1, items, recipes by status, recipe types, tags, configs |
 | `pack_updates(id, section, kind, mod, query)` | pack update history: feed, full record, mod changelog from Modrinth, patch notes. 10 min cache |
-| `mods_freshness(status, mod, refresh, format)` | how far behind each mod is (Modrinth by sha1, CurseForge by fingerprint, needs `CURSE_FORGE_API_KEY`): colour by x/y/z lag, newer betas, new required deps; `mod` — one mod + changelogs of newer versions; `format=json` — raw report. Live, 10 min cache. Plan — [plans/mod-freshness.md](plans/mod-freshness.md) |
+| `mods_freshness(status, mod, refresh, format)` | how far behind each mod is (Modrinth by sha1, CurseForge by fingerprint, needs `CURSE_FORGE_API_KEY`; pack devs' GitHub releases by jar name, optional `GITHUB_TOKEN` / `gh` login): colour by x/y/z lag, newer betas, new required deps; `mod` — one mod + changelogs of newer versions; `format=json` — raw report. Live, 10 min cache. Plan — [plans/mod-freshness.md](plans/mod-freshness.md) |
 
 ### KubeJS sources
 

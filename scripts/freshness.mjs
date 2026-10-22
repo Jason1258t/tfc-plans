@@ -1,15 +1,19 @@
 #!/usr/bin/env node
 /**
  * Свежесть сборки → public/pack-freshness.json: для каждого мода из pack-manifest.json — новейшая версия под
- * 1.21.1 NeoForge с Modrinth (по sha1) или CurseForge (по отпечатку jar) и цвет отставания. Расчёт —
+ * 1.21.1 NeoForge с Modrinth (по sha1), CurseForge (по отпечатку jar) или из релизов GitHub разработчиков сборки (по
+ * имени jar) и цвет отставания. Расчёт —
  * src/lib/freshness.ts (тот же у сайта и MCP), план — docs/plans/mod-freshness.md.
  *
  *   npm run freshness                      — собрать отчёт и показать сводку
  *   … -- --if-older 6h --soft              — так зовёт prebuild: свежий отчёт не трогает, ошибки не роняют сборку
  *   … -- --manifest <файл> --out <файл>    — другой снимок / куда писать
  * Ключ CurseForge — CURSE_FORGE_API_KEY в окружении или .env.local (в worktree — и основной копии). Без ключа
- * CurseForge пропускается. Отпечатков нет в старом снимке — считаются по jar из mods/, если они есть.
+ * CurseForge пропускается. GITHUB_TOKEN там же или вход gh CLI — необязателен (без него у GitHub 60 запросов в час
+ * с адреса, гиту нужно ~10).
+ * Отпечатков нет в старом снимке — считаются по jar из mods/, если они есть.
  */
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -24,12 +28,14 @@ const log = (...a) => console.log('[freshness]', ...a);
 /** Корни, где искать .env.local, public/ и mods/: эта копия, потом основная (в worktree) */
 const roots = (root = ROOT) => [root, mainCheckoutRoot()].filter(Boolean);
 
-/** CURSE_FORGE_API_KEY: окружение, потом .env.local */
-export function curseforgeKey(root = ROOT) {
-  if (process.env.CURSE_FORGE_API_KEY) return process.env.CURSE_FORGE_API_KEY;
+/** Переменная name: окружение, потом .env.local */
+function envKey(name, root = ROOT) {
+  if (process.env[name]) return process.env[name];
   for (const r of roots(root)) {
     try {
-      const m = /^\s*CURSE_FORGE_API_KEY\s*=\s*(.*?)\s*$/m.exec(fs.readFileSync(path.join(r, '.env.local'), 'utf8'));
+      const m = new RegExp(`^\\s*${name}\\s*=\\s*(.*?)\\s*$`, 'm').exec(
+        fs.readFileSync(path.join(r, '.env.local'), 'utf8'),
+      );
       const key = m?.[1].replace(/^(['"])(.*)\1$/, '$2');
       if (key) return key;
     } catch {
@@ -37,6 +43,24 @@ export function curseforgeKey(root = ROOT) {
     }
   }
   return null;
+}
+
+/** CURSE_FORGE_API_KEY: окружение, потом .env.local */
+export const curseforgeKey = (root = ROOT) => envKey('CURSE_FORGE_API_KEY', root);
+/** GITHUB_TOKEN: окружение, .env.local, потом вход gh CLI, если он есть; без токена — 60 запросов в час */
+let ghToken;
+function githubToken(root = ROOT) {
+  if (ghToken === undefined) {
+    ghToken = envKey('GITHUB_TOKEN', root);
+    if (!ghToken)
+      try {
+        ghToken =
+          execFileSync('gh', ['auth', 'token'], { encoding: 'utf8', timeout: 5000, stdio: 'pipe' }).trim() || null;
+      } catch {
+        ghToken = null;
+      }
+  }
+  return ghToken;
 }
 
 const firstExisting = (rel, root) =>
@@ -79,6 +103,7 @@ export async function freshnessReport({
   }
   return buildReport(mods, {
     curseforgeKey: key ?? undefined,
+    githubToken: githubToken() ?? undefined,
     ownIds: own,
     userAgent: `tfc-plans/1.0 (${SITE})`,
     manifestBuiltAt: manifest.builtAt,
@@ -140,6 +165,23 @@ export async function modChangelog(mod, key = curseforgeKey()) {
     for (const f of files)
       parts.push(
         `### ${f.fileName} (${f.fileDate.slice(0, 10)})\n${stripHtml(await get(`/mods/${mod.project.id}/files/${f.id}/changelog`))}`,
+      );
+  } else if (mod.source === 'git') {
+    const token = githubToken();
+    const r = await fetch(`https://api.github.com/repos/${mod.project.id}/releases?per_page=30`, {
+      headers: { ...UA, Accept: 'application/vnd.github+json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    });
+    if (!r.ok) throw new Error(`GitHub ${r.status}`);
+    parts = (await r.json())
+      .filter((x) => {
+        const d = Date.parse(x.published_at ?? 0);
+        return !x.draft && d > from && d <= to;
+      })
+      .sort((a, b) => Date.parse(b.published_at) - Date.parse(a.published_at))
+      .slice(0, 12)
+      .map(
+        (x) =>
+          `### ${x.tag_name} (${x.prerelease ? 'beta' : 'release'}, ${x.published_at.slice(0, 10)})\n${(x.body ?? '').trim()}`,
       );
   } else return null;
   const text = parts.join('\n\n');

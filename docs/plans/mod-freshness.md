@@ -1,7 +1,6 @@
 # Plan: pack freshness (how far behind each mod is)
 
-Status: parts 1–4 done (2026-10-22). Next: the pack devs' git as a third source for hand-built jars (link pending
-from the user), then part 5 (skill).
+Status: parts 1–4 and the git source done (2026-10-22). Next: part 5 (skill).
 
 ## Goal
 
@@ -21,6 +20,15 @@ differing number of `x.y.z`: `x` — red, `y` — orange, `z` and further — ye
   Needs `CURSE_FORGE_API_KEY` (`.env.local`; no `VITE_` prefix — never in the browser bundle).
 - First probe (2026-10-22, 234 mods): Modrinth found 175 (75 outdated), CurseForge — most of the remaining 59 (FTB,
   Sophisticated, KubeJS, Moonlight…); unmatched — hand-built jars (`tfcr-fixes`, `*-TFCR`).
+- **Git of the pack devs** — for mods still not found: GitHub releases of the repos in `PACK_GIT`
+  (`src/lib/freshness.ts`; the list comes from `local-mods/README.md` of github.com/GranniXXie/TerraFirmaRebirth — add
+  a repo there when the devs add one). One `GET /repos/{repo}/releases?per_page=30` per repo (9 now). A mod matches a
+  repo when a release asset has the same jar «shape» (lowercase, digits → `#`, separators unified — GitHub turns `+`
+  into `.`); current = the release holding our exact file (else compared by version from the file name), latest = the
+  newest non-prerelease, a newer prerelease is the beta. Version from the asset name (`fileVersion`). Without a token
+  GitHub allows 60 requests/hour per IP; the script takes `GITHUB_TOKEN` (env / `.env.local`) or `gh auth token`.
+  The site rechecks git live from the browser; on a GitHub error the report's git rows are kept. Changelog for MCP —
+  release bodies between our release date and the newest. Result 2026-10-22: all 5 hand-built jars found.
 
 ## Version comparison
 
@@ -40,8 +48,8 @@ one place right. Not special-cased.
 2. `scripts/freshness.mjs` (`npm run freshness`) → `public/pack-freshness.json`. Runs in `prebuild` with
    `--if-older 6h --soft`: network or key problems never stop the build. Without a CurseForge key — CurseForge marked
    `skipped`.
-3. Page `/freshness` (link from «Обновления»): the static report, filter by colour, search, «Перепроверить Modrinth»
-   (live, CurseForge rows kept from the report), «Скачать отчёт (JSON)».
+3. Page `/freshness` (link from «Обновления»): the static report, filter by colour, search, «Перепроверить Modrinth и
+   гит» (live, CurseForge rows kept from the report), «Скачать отчёт (JSON)».
 4. MCP `mods_freshness(status, mod, refresh, format)` — the same report live (10 min cache); with `mod` — changelogs
    between our and the newest version.
 5. Next: skill «план обновления» — reads `mods_freshness`, then `mods_check` (dependencies), KubeJS and site datapacks

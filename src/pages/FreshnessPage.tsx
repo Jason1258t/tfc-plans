@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   buildReport,
-  curseforgeFound,
+  sourceFound,
   STATUS_LABEL,
   STATUS_ORDER,
   type FreshMod,
@@ -30,7 +30,7 @@ export function UpdatesNav() {
 type Filter = 'outdated' | 'all' | FreshStatus;
 const OUTDATED: FreshStatus[] = ['red', 'orange', 'yellow', 'unknown'];
 
-const SOURCE_LABEL = { modrinth: 'Modrinth', curseforge: 'CurseForge', own: 'наш аддон' } as const;
+const SOURCE_LABEL = { modrinth: 'Modrinth', curseforge: 'CurseForge', git: 'Гит сборки', own: 'наш аддон' } as const;
 
 const fmtDate = (d?: string) => (d ? new Date(d).toLocaleDateString('ru-RU') : '');
 
@@ -49,7 +49,7 @@ export function FreshnessPage() {
       .catch(() => setReport(null));
   }, []);
 
-  /** Перепроверка в браузере: Modrinth заново, CurseForge — из отчёта (ключ в браузер не попадает) */
+  /** Перепроверка в браузере: Modrinth и гит сборки заново, CurseForge — из отчёта (ключ в браузер не попадает) */
   const recheck = async () => {
     setBusy(true);
     setError(null);
@@ -69,7 +69,8 @@ export function FreshnessPage() {
       }
       const next = await buildReport(mods, {
         ownIds: report?.mods.filter((m) => m.status === 'own').map((m) => m.id),
-        curseforgeKnown: report ? curseforgeFound(report) : undefined,
+        curseforgeKnown: report ? sourceFound(report, 'curseforge') : undefined,
+        gitKnown: report ? sourceFound(report, 'git') : undefined,
         curseforgeState: report?.sources.curseforge,
         manifestBuiltAt: report?.manifestBuiltAt,
       });
@@ -110,10 +111,14 @@ export function FreshnessPage() {
       <div className="upd-head">
         <h1>Свежесть сборки</h1>
         <p className="faint small">
-          Новейшие версии модов под Minecraft 1.21.1 NeoForge с Modrinth и CurseForge (по файлу jar, не по названию).
-          Цвет — по первой отличающейся цифре версии x.y.z: <span className="fresh-chip red">x</span>{' '}
-          <span className="fresh-chip orange">y</span> <span className="fresh-chip yellow">z</span>. Цвет считается по
-          последнему релизу, беты показаны рядом. Совместимость с нашими скриптами и датапаками здесь не проверяется.
+          Новейшие версии модов под Minecraft 1.21.1 NeoForge с Modrinth, CurseForge и{' '}
+          <a href="https://github.com/GranniXXie/TerraFirmaRebirth" target="_blank" rel="noreferrer">
+            гита разработчиков сборки
+          </a>{' '}
+          (по файлу jar, не по названию). Цвет — по первой отличающейся цифре версии x.y.z:{' '}
+          <span className="fresh-chip red">x</span> <span className="fresh-chip orange">y</span>{' '}
+          <span className="fresh-chip yellow">z</span>. Цвет считается по последнему релизу, беты показаны рядом.
+          Совместимость с нашими скриптами и датапаками здесь не проверяется.
         </p>
       </div>
 
@@ -126,8 +131,9 @@ export function FreshnessPage() {
               {report ? (
                 <>
                   Проверено {timeAgo(report.generatedAt)} · модов {report.mods.length}
-                  {(['modrinth', 'curseforge'] as const).map((k) => {
+                  {(['modrinth', 'curseforge', 'git'] as const).map((k) => {
                     const s = report.sources[k];
+                    if (!s) return null;
                     return (
                       <span key={k} className={cx(s.state !== 'ok' && 'fresh-warn')}>
                         {' '}
@@ -147,7 +153,7 @@ export function FreshnessPage() {
             </div>
             <button className="btn sm" onClick={() => void recheck()} disabled={busy}>
               <RefreshCw size={14} className={cx(busy && 'spin')} />
-              {busy ? 'Проверяю…' : 'Перепроверить Modrinth'}
+              {busy ? 'Проверяю…' : 'Перепроверить Modrinth и гит'}
             </button>
             {report && (
               <button className="btn sm ghost" onClick={download}>
