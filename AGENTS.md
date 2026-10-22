@@ -1,4 +1,4 @@
-# Агентам
+# For agents
 
-Инструкции для ИИ-агентов — в [CLAUDE.md](CLAUDE.md), текущее состояние проекта — в [docs/STATE.md](docs/STATE.md).
-Прочитай оба файла перед работой и обнови `docs/STATE.md`, если состояние изменилось.
+Agent instructions — [CLAUDE.md](CLAUDE.md); current project state — [docs/STATE.md](docs/STATE.md) (a short index,
+topic details in `docs/state/`). Read both before work and update the relevant `docs/state/` file when the state changes.
