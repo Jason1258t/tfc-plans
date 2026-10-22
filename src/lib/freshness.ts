@@ -1,7 +1,8 @@
 /**
  * Свежесть сборки: насколько каждый мод отстаёт от новейшей версии под Minecraft 1.21.1 + NeoForge.
  * Общий модуль сайта и Node (scripts/freshness.mjs, MCP mods_freshness): без React и без ключей в коде.
- * Источники — Modrinth по sha1 jar и CurseForge по отпечатку (murmur2), план — docs/plans/mod-freshness.md.
+ * Источники — Modrinth по sha1 jar, CurseForge по отпечатку (murmur2) и релизы GitHub разработчиков сборки (по имени
+ * jar), план — docs/plans/mod-freshness.md.
  * Цвет — по первой отличающейся цифре x.y.z: x — красный, y — оранжевый, z и дальше — жёлтый.
  */
 
@@ -9,7 +10,7 @@ export const GAME = { mc: '1.21.1', loader: 'neoforge' } as const;
 
 export type FreshStatus = 'red' | 'orange' | 'yellow' | 'unknown' | 'missing' | 'own' | 'ok';
 export type FreshLevel = 'major' | 'minor' | 'patch' | 'pre';
-export type FreshSource = 'modrinth' | 'curseforge' | 'own';
+export type FreshSource = 'modrinth' | 'curseforge' | 'git' | 'own';
 export type ReleaseType = 'release' | 'beta' | 'alpha';
 
 /** Мод из pack-manifest.json (cf — отпечаток CurseForge, есть у снимков после этого изменения) */
@@ -24,7 +25,7 @@ export interface ManifestMod {
 
 export interface FreshVersion {
   version: string;
-  /** id версии Modrinth или файла CurseForge — по нему MCP достаёт ченджлоги */
+  /** id версии Modrinth, файла CurseForge или тег релиза GitHub — по нему MCP достаёт ченджлоги */
   id?: string;
   date?: string;
   type?: ReleaseType;
@@ -71,7 +72,8 @@ export interface FreshReport {
   generatedAt: number;
   manifestBuiltAt?: number;
   game: { mc: string; loader: string };
-  sources: { modrinth: SourceState; curseforge: SourceState };
+  /** git — нет в отчётах до появления этого источника */
+  sources: { modrinth: SourceState; curseforge: SourceState; git?: SourceState };
   counts: Record<FreshStatus, number>;
   mods: FreshMod[];
 }
@@ -457,6 +459,113 @@ export async function checkCurseForge(
   return out;
 }
 
+// ---------------------------------------------------------------- гит сборки
+
+/**
+ * Репозитории разработчиков сборки с собственными сборками модов (их нет на Modrinth и CurseForge), список —
+ * local-mods/README.md в репозитории сборки. Мод сопоставляется с репозиторием по имени jar в релизах.
+ */
+export const PACK_GIT = {
+  pack: 'https://github.com/GranniXXie/TerraFirmaRebirth',
+  repos: [
+    'GranniXXie/tfcr-fixes',
+    'GranniXXie/woodencog-TFCR',
+    'GranniXXie/tfcbetterbf-TFCR',
+    'GranniXXie/tfc-ability-fix',
+    'GranniXXie/kaleidoscopetfctavern-TFCR',
+    'GranniXXie/electroenergetics-TFCR',
+    'GranniXXie/firmalife-TFCR',
+    'GranniXXie/cosmo-return-clamp',
+    'GranniXXie/Friendship',
+  ],
+};
+
+const GITHUB = 'https://api.github.com';
+
+export interface GhRelease {
+  tag_name: string;
+  name?: string | null;
+  html_url: string;
+  published_at: string | null;
+  draft: boolean;
+  prerelease: boolean;
+  body?: string | null;
+  assets: { name: string }[];
+}
+
+/**
+ * Форма имени jar без чисел и разделителей: «tfcr-fixes-1.7.7.jar» и «tfcr-fixes-1.7.12.jar» совпадают. GitHub
+ * заменяет «+» в именах файлов на «.», поэтому все разделители одинаковы.
+ */
+export const jarShape = (name: string) =>
+  name
+    .toLowerCase()
+    .replace(/\.jar$/, '')
+    .replace(/\d+/g, '#')
+    .replace(/[^a-z#]+/g, '-');
+
+const sameFile = (a: string, b: string) =>
+  a.toLowerCase().replace(/[^a-z0-9]+/g, '-') === b.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+const ghVer = (r: GhRelease, file: string): FreshVersion => ({
+  version: fileVersion(file),
+  id: r.tag_name,
+  date: r.published_at ?? undefined,
+  type: r.prerelease ? 'beta' : 'release',
+  url: r.html_url,
+  file,
+});
+
+/**
+ * Моды из релизов GitHub (PACK_GIT): по одному запросу на репозиторий. Без токена у GitHub 60 запросов в час с адреса.
+ */
+export async function checkGit(
+  mods: ManifestMod[],
+  opts: CheckOpts & { githubToken?: string; repos?: string[] } = {},
+): Promise<Map<string, Found>> {
+  const f = opts.fetch ?? fetch;
+  const headers: Record<string, string> = { Accept: 'application/vnd.github+json' };
+  if (opts.userAgent) headers['User-Agent'] = opts.userAgent;
+  if (opts.githubToken) headers.Authorization = `Bearer ${opts.githubToken}`;
+  const out = new Map<string, Found>();
+  if (!mods.length) return out;
+  const byShape = new Map<string, ManifestMod[]>();
+  for (const m of mods) byShape.set(jarShape(m.jar), [...(byShape.get(jarShape(m.jar)) ?? []), m]);
+
+  await pool(opts.repos ?? PACK_GIT.repos, opts.concurrency ?? 6, async (repo) => {
+    const r = await f(`${GITHUB}/repos/${repo}/releases?per_page=30`, { headers });
+    if (!r.ok)
+      throw new Error(
+        `GitHub ${r.status} ${repo}${r.status === 403 || r.status === 429 ? ' (лимит запросов — задайте GITHUB_TOKEN)' : ''}`,
+      );
+    const releases = ((await r.json()) as GhRelease[])
+      .filter((x) => !x.draft && x.published_at)
+      .sort((a, b) => Date.parse(b.published_at as string) - Date.parse(a.published_at as string));
+    const jarOf = (x: GhRelease, shape: string) =>
+      x.assets.find((a) => /\.jar$/i.test(a.name) && jarShape(a.name) === shape)?.name;
+    for (const [shape, list] of byShape) {
+      const withJar = releases.filter((x) => jarOf(x, shape));
+      if (!withJar.length) continue;
+      const rel = withJar.find((x) => !x.prerelease);
+      const newest = withJar[0];
+      const latest = rel ?? newest;
+      const beta = rel && newest !== rel ? newest : undefined;
+      for (const mod of list) {
+        const cur = releases.find((x) => x.assets.some((a) => sameFile(a.name, mod.jar)));
+        out.set(mod.id, {
+          source: 'git',
+          project: { id: repo, url: `https://github.com/${repo}`, title: repo.split('/')[1] },
+          current: cur ? ghVer(cur, jarOf(cur, shape) as string) : { version: fileVersion(mod.jar), file: mod.jar },
+          latest: ghVer(latest, jarOf(latest, shape) as string),
+          ...(beta ? { beta: ghVer(beta, jarOf(beta, shape) as string) } : {}),
+          ...(cur ? {} : { note: 'нашего файла нет среди релизов — сравнение по номеру версии' }),
+        });
+      }
+    }
+  });
+  return out;
+}
+
 // ---------------------------------------------------------------- отчёт
 
 /** Статус мода по найденным версиям; сравниваются строки платформы (наш файл и новый), не mods.toml */
@@ -508,10 +617,17 @@ export interface BuildOpts extends CheckOpts {
   /** Уже известные находки CurseForge (сайт перепроверяет только Modrinth) */
   curseforgeKnown?: Map<string, Found>;
   curseforgeState?: SourceState;
+  /** Токен GitHub (необязателен: без него 60 запросов в час) */
+  githubToken?: string;
+  /** Находки гита из прошлого отчёта — на случай, если GitHub сейчас не ответил */
+  gitKnown?: Map<string, Found>;
   manifestBuiltAt?: number;
 }
 
-/** Отчёт целиком: Modrinth по sha1, CurseForge — для тех, кого нет на Modrinth. Ошибка источника не роняет отчёт. */
+/**
+ * Отчёт целиком: Modrinth по sha1, CurseForge — для тех, кого нет на Modrinth, гит сборки — для оставшихся.
+ * Ошибка источника не роняет отчёт.
+ */
 export async function buildReport(mods: ManifestMod[], opts: BuildOpts = {}): Promise<FreshReport> {
   const own = new Set(opts.ownIds ?? []);
   const sources: FreshReport['sources'] = {
@@ -538,7 +654,18 @@ export async function buildReport(mods: ManifestMod[], opts: BuildOpts = {}): Pr
       sources.curseforge = { state: 'error', note: (e as Error).message, checkedAt: Date.now() };
     }
   }
-  const list = sortMods(mods.map((m) => classify(m, mr.get(m.id) ?? cf.get(m.id), own.has(m.id))));
+  let git = new Map<string, Found>();
+  try {
+    git = await checkGit(
+      mods.filter((m) => !mr.has(m.id) && !cf.has(m.id) && !own.has(m.id)),
+      opts,
+    );
+    sources.git = { state: 'ok', found: git.size, checkedAt: Date.now() };
+  } catch (e) {
+    git = opts.gitKnown ?? git;
+    sources.git = { state: 'error', note: (e as Error).message, checkedAt: Date.now() };
+  }
+  const list = sortMods(mods.map((m) => classify(m, mr.get(m.id) ?? cf.get(m.id) ?? git.get(m.id), own.has(m.id))));
   return {
     version: 1,
     generatedAt: Date.now(),
@@ -550,11 +677,11 @@ export async function buildReport(mods: ManifestMod[], opts: BuildOpts = {}): Pr
   };
 }
 
-/** Находки CurseForge из готового отчёта — чтобы сайт перепроверял Modrinth, не теряя CurseForge */
-export function curseforgeFound(report: FreshReport): Map<string, Found> {
+/** Находки источника из готового отчёта — чтобы сайт перепроверял Modrinth, не теряя CurseForge (ключ не в браузере) */
+export function sourceFound(report: FreshReport, source: FreshSource): Map<string, Found> {
   const out = new Map<string, Found>();
   for (const m of report.mods)
-    if (m.source === 'curseforge')
+    if (m.source === source)
       out.set(m.id, {
         source: m.source,
         project: m.project,
@@ -562,6 +689,7 @@ export function curseforgeFound(report: FreshReport): Map<string, Found> {
         latest: m.latest,
         beta: m.beta,
         newDeps: m.newDeps,
+        note: m.note,
       });
   return out;
 }

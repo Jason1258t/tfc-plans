@@ -42,4 +42,6 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
 - **2026-10-22, `mods_freshness`**: report from `src/lib/freshness.ts` (shared with the site), changelogs of newer
   versions (Modrinth deduped by version, CurseForge HTML → text). Verified via stdio script: filters, paging, json,
   Modrinth mod (JEI), CurseForge mods (Sophisticated Backpacks, FTB Quests), hand-built mod (`tfcr_fixes`). First call
-  ~11 s while the manifest has no `cf` fingerprints (reads all jars), then cached.
+  ~11 s while the manifest has no `cf` fingerprints (reads all jars), then cached. Same day: git source (pack devs'
+  GitHub releases), changelog = release bodies; checked via stdio (`tfcr_fixes` 1.7.7 → 1.7.12 with 5 release notes,
+  `woodencog` current).
