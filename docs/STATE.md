@@ -27,7 +27,6 @@ When finishing work: update the topic file, and this index only if a line below 
 - In game: two-core cable shell model, datapacks `electroenergetics_missing` and `pellet_arc_furnace`, map scale,
   pumpjack, steel on EE heater, all addons (Miner Tools, Stress Fix, EE Extras 2.x, Small Diesel).
 - `tfc` app: Windows/Linux binaries, real launcher folder, real upload — not run.
-- EE Extras icons on the site are mirrored — redraw on the next addon release.
 
 ## Postponed by the user
 
