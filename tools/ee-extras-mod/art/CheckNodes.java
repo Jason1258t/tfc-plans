@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import ee.extras.Layout;
+import ee.extras.Tier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -105,12 +106,15 @@ public class CheckNodes {
         rot.put(Direction.EAST, new int[] {270, 270});
         rot.put(Direction.WEST, new int[] {270, 90});
         int bad = 0, total = 0;
-        for (Layout layout : new Layout[] {Layout.THREE_PHASE, Layout.SINGLE_PHASE, Layout.CONVERTER}) {
+        for (Layout layout : new Layout[] {Layout.THREE_PHASE, Layout.SINGLE_PHASE, Layout.THREE_PHASE_INVERTER,
+                Layout.SINGLE_PHASE_INVERTER, Layout.CONVERTER}) {
+          for (Tier tier : layout == Layout.CONVERTER ? new Tier[] {Tier.LIGHT} : Tier.values()) {
+            float y = tier.terminalY;
             for (boolean rolled : new boolean[] {false, true}) {
                 NodeConfigurator.Builder b = new NodeConfigurator.Builder();
                 for (float[] t : layout.terminals()) {
                     float[] p = rolled ? Layout.roll(t) : t;
-                    b.add(p[0], Layout.TERMINAL_Y, p[1]);
+                    b.add(p[0], y, p[1]);
                 }
                 NodeConfigurator nc = b.simple();
                 for (var e : rot.entrySet()) {
@@ -118,18 +122,19 @@ public class CheckNodes {
                     var m = BlockModelRotation.by(e.getValue()[0], e.getValue()[1]).getRotation().getMatrix();
                     for (int i = 0; i < layout.terminals().length; i++) {
                         float[] p = rolled ? Layout.roll(layout.terminals()[i]) : layout.terminals()[i];
-                        Vector4f v = new Vector4f(p[0] / 16f - .5f, Layout.TERMINAL_Y / 16f - .5f, p[1] / 16f - .5f, 1f);
+                        Vector4f v = new Vector4f(p[0] / 16f - .5f, y / 16f - .5f, p[1] / 16f - .5f, 1f);
                         m.transform(v);
                         Vec3 model = new Vec3(v.x + .5, v.y + .5, v.z + .5);
                         total++;
                         if (model.distanceTo(nodes.get(i)) > 1e-4) {
                             bad++;
-                            System.out.printf("НЕ СОВПАЛО %s %s крен=%s клемма %d: модель %s, провод %s%n",
-                                    layout.id(), e.getKey(), rolled, i, model, nodes.get(i));
+                            System.out.printf("НЕ СОВПАЛО %s%s %s крен=%s клемма %d: модель %s, провод %s%n",
+                                    tier.prefix, layout.id(), e.getKey(), rolled, i, model, nodes.get(i));
                         }
                     }
                 }
             }
+          }
         }
         // Четырёхжильный соединитель: клеммы и торец вывода кабеля в сгенерированных моделях (4 положения) против
         // точек проводов его NodeConfigurator (Layout.FOUR_CORE_TERMINATION, повороты — как в CableEndBlock)

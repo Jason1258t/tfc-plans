@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "pattern": [
+    "CKC",
+    "DPD",
+    "LDL"
+  ],
+  "key": {
+    "C": {
+      "item": "electroenergetics:connector"
+    },
+    "D": {
+      "item": "electroenergetics:diode"
+    },
+    "P": {
+      "tag": "c:plates/iron"
+    },
+    "K": {
+      "item": "electroenergetics:capacitor"
+    },
+    "L": {
+      "item": "electroenergetics:inductor"
+    }
+  },
+  "result": {
+    "id": "ee_extras:three_phase_inverter",
+    "count": 1
+  }
+}

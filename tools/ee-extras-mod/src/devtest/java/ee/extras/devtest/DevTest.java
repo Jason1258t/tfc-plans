@@ -37,6 +37,7 @@ public class DevTest {
 
     public DevTest() {
         NeoForge.EVENT_BUS.addListener(DevTest::commands);
+        Power.register();
     }
 
     static void commands(RegisterCommandsEvent e) {
@@ -122,7 +123,19 @@ public class DevTest {
                 .then(Commands.literal("tapreport").executes(c -> Extras.tapReport(c.getSource())))
                 .then(Commands.literal("lines").executes(c -> Lines.build(c.getSource())))
                 .then(Commands.literal("linespower").executes(c -> Lines.power(c.getSource())))
-                .then(Commands.literal("linesreport").executes(c -> Lines.report(c.getSource()))));
+                .then(Commands.literal("linesreport").executes(c -> Lines.report(c.getSource())))
+                .then(Commands.literal("heat").then(Commands.argument("n", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 16))
+                        .executes(c -> Power.heat(c.getSource(), com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "n")))))
+                .then(Commands.literal("heatv").then(Commands.argument("v", com.mojang.brigadier.arguments.DoubleArgumentType.doubleArg(0))
+                        .executes(c -> Power.heatVolts(c.getSource(), com.mojang.brigadier.arguments.DoubleArgumentType.getDouble(c, "v")))))
+                .then(Commands.literal("island").executes(c -> Power.island(c.getSource())))
+                .then(Commands.literal("grid").then(Commands.argument("rpm", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 256))
+                        .executes(c -> Power.grid(c.getSource(), com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "rpm")))))
+                .then(Commands.literal("dc").then(Commands.argument("v", com.mojang.brigadier.arguments.DoubleArgumentType.doubleArg(0))
+                        .executes(c -> Power.dc(c.getSource(), com.mojang.brigadier.arguments.DoubleArgumentType.getDouble(c, "v")))))
+                .then(Commands.literal("pwatch").then(Commands.argument("t", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 400))
+                        .executes(c -> Power.watch(c.getSource(), com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "t")))))
+                .then(Commands.literal("preport").executes(c -> Power.report(c.getSource()))));
     }
 
     static BlockPos battery(BlockPos base, int i) {

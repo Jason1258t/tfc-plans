@@ -24,6 +24,9 @@ import net.minecraft.world.level.Level;
  * Напряжение на выходе — среднее идеального моста: трёхфазный — (3/π) × амплитуда линейного напряжения, которая для
  * трёх фаз видна в любой момент: U_лин² = ⅔ (u_ab² + u_bc² + u_ca²) — от угла ротора не зависит, «снимки» раз в тик
  * не мешают. Однофазный — (2/π) × амплитуда, амплитуда — по среднему квадрату за последние WINDOW тиков.
+ *
+ * Предела мощности как такового нет — блок греется (Heat, как вариак EE): выше номинала ступени (Tier) дымит, при
+ * долгой перегрузке сгорает.
  */
 public class RectifierDevice extends SimpleElectricalDevice {
     /** Запас не меньше этого, Вт·тик, и не меньше BUFFER_TICKS тиков отдачи */
@@ -43,6 +46,8 @@ public class RectifierDevice extends SimpleElectricalDevice {
     static final double VOLTS_FOLLOW = 0.3;
 
     private final Layout layout;
+    private final Tier tier;
+    private float temp;
     private double stored;
     private double outAvg;
     private double inputR = OPEN_R;
@@ -53,9 +58,11 @@ public class RectifierDevice extends SimpleElectricalDevice {
     private double lastIn;
     private double lastOut;
 
-    public RectifierDevice(Level level, BlockPos pos, DevicesSavedData devices, SimulatedDeviceType<?> type, Layout layout) {
+    public RectifierDevice(Level level, BlockPos pos, DevicesSavedData devices, SimulatedDeviceType<?> type, Layout layout,
+            Tier tier) {
         super(level, pos, devices, type);
         this.layout = layout;
+        this.tier = tier;
     }
 
     private boolean three() {
@@ -109,6 +116,8 @@ public class RectifierDevice extends SimpleElectricalDevice {
         lastIn = in;
         lastOut = out;
         stored = Math.max(0, Math.min(bufferMax(), stored + in - out));
+        temp = Heat.update(temp, Math.max(in, out), tier);
+        if (Heat.handle(level, pos, deviceSD, temp)) return;
         outAvg = 0.8 * outAvg + 0.2 * out;
 
         // Напряжение на выходе — среднее идеального моста; сглажено, чтобы просадка сети не раскачивала нагрузку
@@ -138,6 +147,7 @@ public class RectifierDevice extends SimpleElectricalDevice {
         outAvg = tag.getDouble("OutAvg");
         inputR = tag.contains("InputR") ? tag.getDouble("InputR") : OPEN_R;
         outVolts = tag.getDouble("OutVolts");
+        temp = tag.getFloat("Temp");
     }
 
     @Override
@@ -148,5 +158,6 @@ public class RectifierDevice extends SimpleElectricalDevice {
         tag.putDouble("OutVolts", outVolts);
         tag.putDouble("InputPower", lastIn);
         tag.putDouble("OutputPower", lastOut);
+        tag.putFloat("Temp", temp);
     }
 }

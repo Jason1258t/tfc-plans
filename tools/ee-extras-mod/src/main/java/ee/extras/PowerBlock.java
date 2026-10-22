@@ -1,5 +1,6 @@
 package ee.extras;
 
+import com.george_vi.electroenergetics.devices.device.SimulatedDevice;
 import com.george_vi.electroenergetics.devices.device.SimulatedDeviceType;
 import com.george_vi.electroenergetics.foundation.CEELang;
 import com.george_vi.electroenergetics.foundation.base.DirectionalRolledDeviceBlock;
@@ -18,31 +19,38 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
- * Блок выпрямителя: плита как у преобразователя EE, сверху медные клеммы (раскладка — Layout).
- * Поворот по FACING делает NodeConfigurator EE (так же, как у его блоков), крен (ROLL) — отдельная раскладка,
- * повёрнутая на 90° вокруг оси блока.
+ * Блок выпрямителя или инвертора: лёгкий — плита как у преобразователя EE, тяжёлый — целый блок (Tier); клеммы
+ * сверху (раскладка — Layout). Поворот по FACING делает NodeConfigurator EE (так же, как у его блоков), крен (ROLL) —
+ * отдельная раскладка, повёрнутая на 90° вокруг оси блока.
  */
-public class RectifierBlock extends DirectionalRolledDeviceBlock<RectifierDevice> {
-    private static final VoxelShaper SHAPE = VoxelShaper.forDirectional(box(0, 0, 0, 16, 7, 16), Direction.UP);
+public class PowerBlock<D extends SimulatedDevice> extends DirectionalRolledDeviceBlock<D> {
+    private static final VoxelShaper LIGHT_SHAPE = VoxelShaper.forDirectional(box(0, 0, 0, 16, 7, 16), Direction.UP);
+    private static final VoxelShaper HEAVY_SHAPE = VoxelShaper.forDirectional(box(0, 0, 0, 16, 16, 16), Direction.UP);
 
     final Layout layout;
+    final Tier tier;
     private final NodeConfigurator nodes;
     private final NodeConfigurator nodesRolled;
-    private final Supplier<SimulatedDeviceType<RectifierDevice>> device;
+    private final Supplier<SimulatedDeviceType<D>> device;
 
-    public RectifierBlock(Properties properties, Layout layout, Supplier<SimulatedDeviceType<RectifierDevice>> device) {
+    public PowerBlock(Properties properties, Layout layout, Tier tier, Supplier<SimulatedDeviceType<D>> device) {
         super(properties);
         this.layout = layout;
+        this.tier = tier;
         this.device = device;
-        this.nodes = nodes(layout, false);
-        this.nodesRolled = nodes(layout, true);
+        this.nodes = nodes(layout, false, tier.terminalY);
+        this.nodesRolled = nodes(layout, true, tier.terminalY);
     }
 
     public static NodeConfigurator nodes(Layout layout, boolean rolled) {
+        return nodes(layout, rolled, Tier.LIGHT.terminalY);
+    }
+
+    public static NodeConfigurator nodes(Layout layout, boolean rolled, float y) {
         NodeConfigurator.Builder b = new NodeConfigurator.Builder();
         for (float[] t : layout.terminals()) {
             float[] p = rolled ? Layout.roll(t) : t;
-            b.add(p[0], Layout.TERMINAL_Y, p[1]);
+            b.add(p[0], y, p[1]);
         }
         return b.simple();
     }
@@ -52,7 +60,7 @@ public class RectifierBlock extends DirectionalRolledDeviceBlock<RectifierDevice
     }
 
     @Override
-    public SimulatedDeviceType<RectifierDevice> getDevice() {
+    public SimulatedDeviceType<D> getDevice() {
         return device.get();
     }
 
@@ -75,6 +83,6 @@ public class RectifierBlock extends DirectionalRolledDeviceBlock<RectifierDevice
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPE.get(state.getValue(FACING));
+        return (tier == Tier.HEAVY ? HEAVY_SHAPE : LIGHT_SHAPE).get(state.getValue(FACING));
     }
 }
