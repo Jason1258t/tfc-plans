@@ -164,7 +164,7 @@ export function openJobs(dataDir, { repoDir, managedRepo, repoUrl, repoBranch, h
 
   return {
     /** Поставить задание в очередь; повтор такого же, ещё не начатого, не дублируется */
-    async enqueue({ kind, snapshot, parts = [], pull = false, publish = 'none', by }) {
+    async enqueue({ kind, snapshot, parts = [], pull = false, publish = 'none', allowRemovals = false, by }) {
       if (!['build', 'publish'].includes(kind)) throw new HttpError(400, 'kind — build или publish');
       if (!Array.isArray(parts) || parts.some((p) => !PARTS.includes(p)))
         throw new HttpError(400, `parts — из ${PARTS.join(', ')}`);
@@ -175,6 +175,7 @@ export function openJobs(dataDir, { repoDir, managedRepo, repoUrl, repoBranch, h
           q.snapshot === snapshot &&
           q.publish === publish &&
           q.pull === !!pull &&
+          !!q.allowRemovals === !!allowRemovals &&
           q.parts.join() === [...parts].sort().join(),
       );
       if (same) return same;
@@ -185,6 +186,7 @@ export function openJobs(dataDir, { repoDir, managedRepo, repoUrl, repoBranch, h
         parts: [...parts].sort(),
         pull: !!pull,
         publish,
+        ...(allowRemovals ? { allowRemovals: true } : {}),
         by,
         state: 'queued',
         createdAt: new Date().toISOString(),

@@ -14,6 +14,8 @@
  *      generatedAt), не перевыкладываются.
  * Корни данных — то, что лежит в папке на верхнем уровне (без скрытых): чего в папке нет (аддоны, ресурспаки,
  * сам сайт), остаётся как было. Удаляется с хостинга только то, что лежит внутри этих корней и пропало из сборки.
+ * Защита: сборка без объёмных иконок (.build.json render = 0) не убирает icons/…/render/; больше MAX_REMOVALS
+ * удалений — только с allowRemovals (--allow-removals).
  *
  * Авторизация — scripts/firestore-rest.mjs: GOOGLE_APPLICATION_CREDENTIALS (сервисный ключ) или firebase login.
  * Из кода: publishData({ dataDir, dryRun, message, log }) → отчёт.
@@ -24,6 +26,11 @@ import { fileURLToPath } from 'node:url';
 import { DOCS, fromValue, SITE, token, writeConfigDocs } from './firestore-rest.mjs';
 import { currentRelease, deploy, gzipWithHash, hostingFile, versionFiles } from './hosting-rest.mjs';
 import { packRelease } from './pack-release.mjs';
+
+/** Больше стольких удалений с хостинга за раз — только с allowRemovals (обычно это сборка, которая чего-то не умеет) */
+export const MAX_REMOVALS = 300;
+/** Объёмные иконки (scripts/mods/icons3d.mjs): сборка без них не убирает их с сайта */
+const RENDER = /^\/icons\/[^/]+\/render\//;
 
 /** Файлы, где меняется только метка времени при каждой сборке */
 const STAMPS = { 'pack-manifest.json': 'builtAt', 'kubejs.json': 'generatedAt' };
@@ -75,7 +82,13 @@ async function readConfig() {
 
 const kb = (n) => (n < 1024 * 1024 ? `${Math.round(n / 1024)} КБ` : `${(n / 1024 / 1024).toFixed(1)} МБ`);
 
-export async function publishData({ dataDir, dryRun = false, message = null, log = console.log }) {
+export async function publishData({
+  dataDir,
+  dryRun = false,
+  allowRemovals = false,
+  message = null,
+  log = console.log,
+}) {
   const say = (...a) => log(`[publish] ${a.join(' ')}`);
   if (!fs.existsSync(dataDir)) throw new Error(`нет папки данных ${dataDir}`);
   const files = dataFiles(dataDir);
@@ -161,7 +174,25 @@ export async function publishData({ dataDir, dryRun = false, message = null, log
     if (pub !== h) uploadBytes += gz.length;
   }
   const inRoots = (p) => roots.some((r) => (r.dir ? p.startsWith(`/${r.name}/`) : p === `/${r.name}`));
-  const removed = [...published.keys()].filter((p) => inRoots(p) && !local.has(p));
+  let removed = [...published.keys()].filter((p) => inRoots(p) && !local.has(p));
+  // Сборка не рисовала объёмные иконки (старый код, нет jar для генератора) — те, что на сайте, остаются
+  let build = null;
+  try {
+    build = JSON.parse(fs.readFileSync(path.join(dataDir, '.build.json'), 'utf8'));
+  } catch {
+    /* папка не с сервера сборки */
+  }
+  const rendered = build?.render ? build.render.drawn + build.render.cached : files.some((f) => RENDER.test(`/${f}`));
+  let keptRender = 0;
+  if (!rendered) {
+    for (const p of removed.filter((x) => RENDER.test(x))) {
+      local.set(p, { hash: published.get(p) });
+      keptRender++;
+    }
+    removed = removed.filter((p) => !RENDER.test(p));
+    if (keptRender)
+      say(`hosting: сборка без объёмных иконок — оставляю на сайте прежние (${keptRender} в icons/*/render/)`);
+  }
   report.hosting = {
     release: release.name,
     version: release.version.name,
@@ -169,6 +200,7 @@ export async function publishData({ dataDir, dryRun = false, message = null, log
     added: added.length,
     changed: changed.length,
     removed: removed.length,
+    keptRender,
     stampOnly,
     uploadBytes,
     sample: { added: added.slice(0, 30), changed: changed.slice(0, 30), removed: removed.slice(0, 30) },
@@ -196,6 +228,14 @@ export async function publishData({ dataDir, dryRun = false, message = null, log
     report.hosting.deployed = false;
     return report;
   }
+  if (removed.length > MAX_REMOVALS && !allowRemovals) {
+    const why =
+      `с сайта убралось бы ${removed.length} файлов (больше ${MAX_REMOVALS}) — так бывает, когда сборка чего-то не умеет. ` +
+      'Посмотрите список выше; если удаление верное — публикуйте с разрешением удалять (tfc admin publish --live --allow-removals)';
+    report.hosting.blocked = why;
+    if (!dryRun) throw new Error(why);
+    say(`внимание: настоящая публикация остановится — ${why}`);
+  }
   if (dryRun) {
     say('пробный запуск: на хостинг ничего не выложено');
     return report;
@@ -216,10 +256,14 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   const argv = process.argv.slice(2);
   const dir = argv.find((a) => !a.startsWith('--'));
   if (!dir) {
-    console.error('node scripts/publish-data.mjs <папка данных> [--dry-run]');
+    console.error('node scripts/publish-data.mjs <папка данных> [--dry-run] [--allow-removals]');
     process.exit(1);
   }
-  publishData({ dataDir: path.resolve(dir), dryRun: argv.includes('--dry-run') }).catch((e) => {
+  publishData({
+    dataDir: path.resolve(dir),
+    dryRun: argv.includes('--dry-run'),
+    allowRemovals: argv.includes('--allow-removals'),
+  }).catch((e) => {
     console.error('[publish]', e.message ?? e);
     process.exit(1);
   });

@@ -32,6 +32,9 @@ import { isCuisineClass, isCuisineData } from './mods/cuisine.mjs';
 import { writePower } from './mods/power.mjs';
 import { writeMultiblocks } from './mods/multiblocks.mjs';
 import { makeRenderer } from './mods/icons3d.mjs';
+import { platformAssets } from './mods/platform-assets.mjs';
+import { MODS as MCP_MODS } from './mcp/data.mjs';
+import { platform, setPlatformAssets } from './mcp/jars.mjs';
 import { hiddenItems } from './mods/visibility/index.mjs';
 
 const MC_VERSION = '1.21.1';
@@ -515,12 +518,16 @@ function writeRecipes(recipes, OUT_RECIPES) {
   );
 }
 
-/** Собирает данные сайта из jar папки modsDir в outDir (items.json, recipes.json, icons/ …) */
+/**
+ * Собирает данные сайта из jar папки modsDir в outDir (items.json, recipes.json, icons/ …). neoforge — версия загрузчика
+ * (ресурсы NeoForge для иконок, если нет своего platform). Возвращает { items, icons, render } — render: счёт объёмных иконок.
+ */
 export async function buildMods({
   modsDir = DEFAULT_MODS,
   outDir = DEFAULT_OUT,
   cacheDir = DEFAULT_CACHE,
   fresh: freshRun = false,
+  neoforge = null,
 } = {}) {
   assertModsPresent({ modsDir, outDir, cacheDir });
   const MODS_DIR = modsDir;
@@ -580,6 +587,11 @@ export async function buildMods({
   }
 
   fs.rmSync(OUT_ICONS, { recursive: true, force: true });
+  // Генератор иконок читает jar через MCP (TFC_MODS_DIR, задаётся до запуска процесса): чужая папка — чужие иконки
+  if (path.resolve(MCP_MODS) !== path.resolve(MODS_DIR))
+    log(`  объёмные иконки: jar для генератора — из ${MCP_MODS}, а сборка — из ${MODS_DIR} (задайте TFC_MODS_DIR)`);
+  // Ресурсы Minecraft и NeoForge без сборки аддона (сервер сборки) — скачать
+  if (!platform()) setPlatformAssets(await platformAssets({ cacheDir, mc: MC_VERSION, neoforge, log }));
   const icons3d = makeRenderer({ findAsset, outIcons: OUT_ICONS, cacheDir: CACHE });
   const items = [];
   const seen = new Set();
@@ -742,6 +754,11 @@ export async function buildMods({
   fs.writeFileSync(signatureFile(cacheDir), JSON.stringify(modsSignature(modsDir)));
   const kb = Math.round(fs.statSync(OUT_JSON).size / 1024);
   log(`готово: ${items.length} предметов, ${copied.size} иконок, items.json ${kb}KB`);
+  return {
+    items: items.length,
+    icons: copied.size,
+    render: { drawn: st.drawn, cached: st.cached, failed: st.failed, code: st.code },
+  };
 }
 
 // Запуск как скрипт (а не импорт из ensure-items)

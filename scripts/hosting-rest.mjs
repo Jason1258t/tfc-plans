@@ -7,8 +7,9 @@
  * gzip у Node зависит от системы (macOS — 19, Linux — 3; сжатые данные одинаковые — проверено на Node 22 и 24),
  * поэтому сравниваем со всеми вариантами заголовка (hashes).
  *
- * Выкладка: versions:clone текущего релиза без папок данных → populateFiles (все файлы данных, по 1000) →
- * загрузка только тех, чьих хешей у Hosting нет → status FINALIZED → releases.create.
+ * Выкладка данных (deploy): versions:clone текущего релиза без папок данных → populateFiles (все файлы данных,
+ * по 1000) → загрузка только тех, чьих хешей у Hosting нет → status FINALIZED → releases.create.
+ * Выкладка сайта (scripts/deploy-site.mjs): новая версия с настройками из firebase.json (createVersion) → те же шаги.
  */
 import { createHash } from 'node:crypto';
 import zlib from 'node:zlib';
@@ -97,9 +98,33 @@ async function waitOperation(op, log) {
   return cur.response;
 }
 
+/** Настройки версии Hosting из блока hosting файла firebase.json (как их переводит firebase CLI) */
+export function hostingConfig(hosting) {
+  const config = {};
+  if (hosting.headers?.length)
+    config.headers = hosting.headers.map((h) => ({
+      glob: h.source,
+      headers: Object.fromEntries(h.headers.map((x) => [x.key, x.value])),
+    }));
+  if (hosting.rewrites?.length) {
+    config.rewrites = hosting.rewrites.map((r) => {
+      if (!r.destination) throw new Error(`rewrite ${r.source}: поддержан только destination`);
+      return { glob: r.source, path: r.destination };
+    });
+  }
+  for (const k of ['redirects', 'cleanUrls', 'trailingSlash', 'i18n'])
+    if (hosting[k] !== undefined) throw new Error(`firebase.json hosting.${k}: перенос в версию не написан`);
+  return config;
+}
+
+/** Новая пустая версия с настройками */
+export async function createVersion({ config, site = SITE_ID }) {
+  return (await call('POST', `sites/${site}/versions`, { config })).name;
+}
+
 /**
- * Выкладка. files — Map путь («/items.json») → { hash }; gzip тех, что придётся загрузить, отдаёт getGz(путь, хеш).
- * roots — что выкинуть из копии текущей версии.
+ * Выкладка данных. files — Map путь («/items.json») → { hash }; gzip тех, что придётся загрузить, отдаёт
+ * getGz(путь, хеш). roots — что выкинуть из копии текущей версии.
  * Возвращает { version, release, uploaded, populated }.
  */
 export async function deploy({ sourceVersion, roots, files, getGz, message, site = SITE_ID, log = () => {} }) {
@@ -111,7 +136,11 @@ export async function deploy({ sourceVersion, roots, files, getGz, message, site
   });
   const version = (await waitOperation(op, log)).name;
   log(`новая версия ${version.split('/').pop()}`);
+  return release({ version, files, getGz, message, site, log });
+}
 
+/** Файлы в версию (populateFiles), загрузка недостающих хешей, FINALIZED, релиз */
+export async function release({ version, files, getGz, message, site = SITE_ID, log = () => {} }) {
   const entries = [...files.entries()];
   const required = new Set();
   let uploadUrl = null;
@@ -138,9 +167,9 @@ export async function deploy({ sourceVersion, roots, files, getGz, message, site
   await Promise.all(Array.from({ length: 4 }, worker));
 
   await call('PATCH', `${version}?update_mask=status`, { status: 'FINALIZED' });
-  const release = await call('POST', `sites/${site}/releases?versionName=${encodeURIComponent(version)}`, {
+  const rel = await call('POST', `sites/${site}/releases?versionName=${encodeURIComponent(version)}`, {
     message: message ?? 'сервер сборки',
   });
-  log(`выпущено: ${release.name}`);
-  return { version, release: release.name, uploaded, populated: entries.length };
+  log(`выпущено: ${rel.name}`);
+  return { version, release: rel.name, uploaded, populated: entries.length };
 }

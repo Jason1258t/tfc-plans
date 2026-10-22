@@ -1,32 +1,20 @@
 // Перед dev/build: пересобирает библиотеку предметов, если её нет или поменялось содержимое mods/.
 // TFC_KEEP_MODS=1 — данные модов не пересобирать, взять готовые (в git worktree — из основной копии); jar не нужны.
 // jar в mods/ нет, а в .env.local есть TFC_PACK_URL и TFC_PACK_TOKEN — данные модов с сервера сборки (pack-fetch.mjs).
+// TFC_SITE_ONLY=1 (npm run deploy:site) — данные сборки не нужны вовсе: их на хостинге ставит сервер сборки.
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SIGNATURE_FILE, assertModsPresent, mainCheckoutRoot, modsSignature } from './mods.mjs';
 import { fetchData, packServer } from './pack-fetch.mjs';
+import { DATA_ROOTS, MODS_OUTPUTS as MODS_LIST } from './data-roots.mjs';
 
 const PUBLIC = fileURLToPath(new URL('../public', import.meta.url));
 let keepMods = !!process.env.TFC_KEEP_MODS;
+const siteOnly = !!process.env.TFC_SITE_ONLY;
 /** Что в public/ собирает npm run mods; остальное неотслеживаемое (kubejs, аддоны, ресурспаки) — из других мест */
-const MODS_OUTPUTS = new Set([
-  'items.json',
-  'icons',
-  'recipes.json',
-  'reference.json',
-  'pack-manifest.json',
-  'geo.json',
-  'geo',
-  'tags.json',
-  'botany.json',
-  'config-defaults.json',
-  'meals.json',
-  'power.json',
-  'multiblocks.json',
-  'multiblocks',
-]);
+const MODS_OUTPUTS = new Set(MODS_LIST);
 
 /**
  * В git worktree файлов public/, которых нет в git, нет вовсе: без них деплой убрал бы с сайта аддоны, ресурспаки
@@ -49,6 +37,7 @@ if (mainRoot) {
   const copied = [];
   for (const name of entries) {
     const dst = path.join(PUBLIC, name);
+    if (siteOnly && DATA_ROOTS.includes(name)) continue;
     const fromMods = MODS_OUTPUTS.has(name);
     if (fromMods ? !keepMods : fs.existsSync(dst)) continue;
     fs.rmSync(dst, { recursive: true, force: true });
@@ -62,6 +51,12 @@ if (mainRoot) {
     copied.push('../.env.local');
   }
   if (copied.length) console.log(`[items] из основной копии (${mainPublic}): ${copied.join(', ')}`);
+}
+if (siteOnly) {
+  console.log(
+    '[items] TFC_SITE_ONLY: данные сборки не собираю и не проверяю — на сайте остаются выложенные сервером сборки',
+  );
+  process.exit(0);
 }
 
 // Сервер сборки: jar нет — данные модов текущего снимка с сервера (одинаковые файлы не качаются), не пересобираем

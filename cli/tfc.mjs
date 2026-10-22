@@ -74,7 +74,8 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
   tfc admin keys | invite <ник> [--admin] | revoke <id> | history | use <id> | rollback
   tfc admin rebuild [mods,kubejs,config,world]   пересобрать данные сайта на сервере (--pull — свежий код,
                               --publish none|dry-run|live — что потом; по умолчанию dry-run — только показать)
-  tfc admin publish           показать, что изменится на сайте; --live — выложить (текущую сборку, с вопросом)
+  tfc admin publish           показать, что изменится на сайте; --live — выложить (текущую сборку, с вопросом);
+                              --allow-removals — разрешить убрать с сайта больше 300 файлов
   tfc admin jobs [id|last]    задания сервера; с id — лог и итог (--follow — следить до конца)
   tfc admin changes [pull [id…] | reject <id>]   правки конфигов от Claude: список; pull — внести в папку игры
                               и сервера (покажет и спросит; --dry-run, --yes; вернуть — tfc undo); reject — отклонить
@@ -161,6 +162,7 @@ const opts = {
   pull: { type: 'boolean' },
   publish: { type: 'string' },
   live: { type: 'boolean' },
+  'allow-removals': { type: 'boolean' },
   snapshot: { type: 'string' },
   follow: { type: 'boolean', short: 'f' },
   'no-follow': { type: 'boolean' },
@@ -905,14 +907,23 @@ async function cmdAdmin(v, [sub, ...args]) {
     const publish = v.publish ?? 'dry-run';
     if (!PUBLISH.includes(publish)) throw new Error(`--publish — ${PUBLISH.join(', ')}`);
     if (publish === 'live') await confirmLive(a, v);
-    const body = { parts, pull: !!v.pull, publish, ...(v.snapshot ? { snapshot: v.snapshot } : {}) };
+    const body = {
+      parts,
+      pull: !!v.pull,
+      publish,
+      ...(v['allow-removals'] ? { allowRemovals: true } : {}),
+      ...(v.snapshot ? { snapshot: v.snapshot } : {}),
+    };
     const j = await a.post('/admin/rebuild', body).catch((e) => {
       throw jobError(e, v.snapshot);
     });
     await startedJob(a, j, v);
   } else if (sub === 'publish') {
     if (v.live) await confirmLive(a, v);
-    const body = v.live ? { dryRun: false } : { dryRun: true, ...(v.snapshot ? { snapshot: v.snapshot } : {}) };
+    const body = {
+      ...(v.live ? { dryRun: false } : { dryRun: true, ...(v.snapshot ? { snapshot: v.snapshot } : {}) }),
+      ...(v['allow-removals'] ? { allowRemovals: true } : {}),
+    };
     const j = await a.post('/admin/publish', body).catch((e) => {
       throw jobError(e, v.snapshot);
     });

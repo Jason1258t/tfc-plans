@@ -169,6 +169,16 @@ export function platform() {
   if (platformCache === undefined) platformCache = findPlatform();
   return platformCache;
 }
+
+/**
+ * Запасные ресурсы платформы, когда NeoForge platform нет (сервер сборки): client.jar Minecraft (классы в нём
+ * обфусцированы, поэтому рядом — карта имён Mojang), universal jar NeoForge. Ставит scripts/mods/platform-assets.mjs.
+ */
+let assetJars = { minecraft: null, neoforge: null, mappings: null };
+export function setPlatformAssets(jars) {
+  assetJars = { ...assetJars, ...jars };
+}
+export const platformAssets = () => assetJars;
 /** id архива Minecraft + NeoForge в ответах */
 export const PLATFORM = 'minecraft';
 export const PLATFORM_SOURCES = 'minecraft-sources';

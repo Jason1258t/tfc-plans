@@ -60,6 +60,13 @@ export function printResult(j) {
       `${bold('Собрано:')} ${b.files} файлов данных, ${mb(b.bytes)}, части ${b.parts.join(', ')}, за ${b.seconds} с` +
         dim(`${b.commit ? ` · код ${b.commit}` : ''}`),
     );
+    if (b.render)
+      console.log(
+        `  Объёмные иконки: нарисовано ${b.render.drawn}, из кеша ${b.render.cached}` +
+          dim(`; не вышло ${b.render.failed}, рисует код ${b.render.code} (эти — текстурой)`),
+      );
+    else if (b.parts.includes('mods'))
+      console.log(yellow('  Объёмных иконок нет — код сборки старый? (tfc admin rebuild --pull)'));
   }
   const p = r.publish;
   if (p) {
@@ -102,6 +109,9 @@ export function printResult(j) {
         ['−', h.sample?.removed],
       ])
         for (const f of (list ?? []).slice(0, 8)) console.log(dim(`      ${sign} ${f}`));
+      if (h.keptRender)
+        console.log(dim(`      сборка без объёмных иконок — прежние на сайте оставлены: ${h.keptRender}`));
+      if (h.blocked) console.log(yellow(`  Стоп: ${h.blocked}`));
       if (!p.dryRun) console.log(h.deployed ? green('  Выложено на сайт.') : '  На сайт выкладывать было нечего.');
       else if (n || p.config?.write.length || p.packUpdate)
         console.log(dim(`Выложить это на сайт: tfc admin publish --live (только для текущей сборки ${j.snapshot})`));
