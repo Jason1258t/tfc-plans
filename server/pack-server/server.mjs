@@ -9,6 +9,7 @@
  *   GET    /pack/snapshots          — история (сводки) и текущий             player
  *   GET    /pack/snapshots/:id      — снимок целиком                         player
  *   GET    /blobs/:sha256           — файл (Range — докачка)                 player
+ *   POST   /blobs/pack              — { sha256: [...] } → мелкие файлы одним gzip-потоком  player
  *   POST   /blobs/missing           — { sha256: [...] } → { missing }        admin
  *   PUT    /blobs/:sha256           — залить файл, тело — содержимое         admin
  *   POST   /pack/snapshots          — создать снимок                         admin
@@ -31,6 +32,8 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
+import { pipeline } from 'node:stream/promises';
+import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { openJobs, PUBLISH } from './lib/jobs.mjs';
 import { openKeys } from './lib/keys.mjs';
@@ -153,6 +156,42 @@ function sendBlob(req, res, sha) {
     .pipe(res);
 }
 
+/** Пакет: сколько файлов и байт за раз и какой файл ещё считается мелким (крупные — /blobs/:sha256 с докачкой) */
+const PACK_FILES = 5000;
+const PACK_BYTES = 64 * 1024 ** 2;
+const PACK_BLOB = 4 * 1024 ** 2;
+
+/**
+ * Мелкие файлы одним ответом: тысячи конфигов и скриптов KubeJS по запросу на каждый шли минутами. Тело — gzip
+ * (сжимаем сами: Caddy не сжимает octet-stream) из записей «sha256 (64 символа) + размер (12 цифр) + содержимое».
+ */
+async function sendPack(res, list) {
+  if (!Array.isArray(list) || !list.length || list.length > PACK_FILES)
+    throw new HttpError(400, `sha256 — непустой массив до ${PACK_FILES}`);
+  const shas = [...new Set(list)];
+  let total = 0;
+  for (const sha of shas) {
+    if (!SHA256_RE.test(sha ?? '')) throw new HttpError(400, 'sha256 — 64 строчных шестнадцатеричных символа');
+    if (!store.hasBlob(sha)) throw new HttpError(404, `Нет файла ${sha}`);
+    const size = store.blobSize(sha);
+    if (size > PACK_BLOB) throw new HttpError(400, `Файл ${sha} больше ${PACK_BLOB} Б — его качают отдельно`);
+    total += size;
+  }
+  if (total > PACK_BYTES) throw new HttpError(413, `Пакет больше ${PACK_BYTES} Б — разбейте на части`);
+  res.writeHead(200, { 'Content-Type': 'application/gzip', 'Cache-Control': 'no-store' });
+  // Генератор в pipeline: клиент оборвал связь — чтение файлов прекращается, а не ждёт drain вечно
+  await pipeline(
+    async function* () {
+      for (const sha of shas) {
+        yield Buffer.from(`${sha}${String(store.blobSize(sha)).padStart(12, '0')}`);
+        yield* fs.createReadStream(store.blobPath(sha));
+      }
+    },
+    zlib.createGzip({ level: 6 }),
+    res,
+  );
+}
+
 async function handle(req, res) {
   const url = new URL(req.url ?? '/', 'http://x');
   const parts = url.pathname.split('/').filter(Boolean);
@@ -170,6 +209,10 @@ async function handle(req, res) {
       await authorize(req, 'admin');
       const body = await readJsonBody(req);
       return json(res, 200, { missing: store.missing(body?.sha256) });
+    }
+    if (sha === 'pack' && req.method === 'POST') {
+      await authorize(req, 'player');
+      return sendPack(res, (await readJsonBody(req))?.sha256);
     }
     if (!SHA256_RE.test(sha)) throw new HttpError(400, 'sha256 — 64 строчных шестнадцатеричных символа');
     if (req.method === 'GET' || req.method === 'HEAD') {

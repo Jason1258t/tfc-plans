@@ -1,8 +1,8 @@
 /**
  * Применение плана: скачать, заменить с копией старого, убрать лишнее, отменить последний `tfc pull`.
  *
- * Сначала всё качается в <версия>/.tfc/dl/ (по sha256), и только потом файлы быстро переставляются на место:
- * оборванная загрузка не оставляет полусобранную папку. Старое уходит в <версия>/.tfc/backup/<время>/
+ * Сначала всё качается в общий кеш (cacheDir, по sha256): мелкие файлы — пакетами, крупные — с докачкой, в несколько
+ * потоков. Только потом файлы быстро копируются на место: оборванная загрузка не оставляет полусобранную папку. Старое уходит в <версия>/.tfc/backup/<время>/
  * (одна копия на весь pull — и сборка, и сайт: beginBackup … finishBackup), `tfc undo` возвращает.
  * Хранятся последние BACKUPS копий.
  */
@@ -11,6 +11,7 @@ import path from 'node:path';
 import { modIdsOf } from './jarid.mjs';
 import { loadState, normsOf, saveState } from './plan.mjs';
 import { localPath, stateDir } from './scan.mjs';
+import { cacheDir } from './config.mjs';
 import { mb, progress } from './ui.mjs';
 
 const BACKUPS = 5;
@@ -40,21 +41,121 @@ export function assertNotLocked(files) {
   }
 }
 
-/** Скачать всё нужное в .tfc/dl; одинаковое содержимое — один раз */
+/** Мелкие файлы (конфиги, скрипты) идут пакетами, крупные — по одному с докачкой; одновременно — STREAMS запросов */
+const SMALL = 256 * 1024;
+const PACK_BYTES = 8 * 1024 ** 2;
+const PACK_FILES = 1000;
+const STREAMS = 6;
+/** Чего нет в текущем снимке и не трогали столько дней — убираем из кеша */
+const CACHE_DAYS = 14;
+
+const blobsDir = () => path.join(cacheDir(), 'blobs');
+
+/** Есть ли в кеше целый файл: размер сходится (кеш пишется только после сверки хеша) */
+function cached(file, size) {
+  try {
+    return fs.statSync(file).size === size;
+  } catch {
+    return false;
+  }
+}
+
+/** Пакеты мелких файлов: не больше PACK_BYTES и PACK_FILES в каждом */
+function packsOf(files) {
+  const out = [];
+  let cur = [];
+  let bytes = 0;
+  for (const f of files) {
+    if (cur.length && (bytes + f.size > PACK_BYTES || cur.length >= PACK_FILES)) {
+      out.push(cur);
+      cur = [];
+      bytes = 0;
+    }
+    cur.push(f);
+    bytes += f.size;
+  }
+  if (cur.length) out.push(cur);
+  return out;
+}
+
+/** Задачи в несколько потоков; первая ошибка останавливает раздачу новых */
+async function runPool(tasks, n) {
+  let i = 0;
+  let failed = null;
+  const worker = async () => {
+    while (!failed && i < tasks.length) {
+      const t = tasks[i++];
+      try {
+        await t();
+      } catch (e) {
+        failed ??= e;
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(n, tasks.length) }, worker));
+  if (failed) throw failed;
+}
+
+/** Скачать всё нужное в общий кеш (cacheDir); одинаковое содержимое — один раз, уже скачанное — не качаем */
 async function fetchAll(api, items) {
-  const dl = path.join(stateDir(items.profile), 'dl');
+  const dir = blobsDir();
   const bySha = new Map();
   for (const f of items.list) if (!bySha.has(f.sha256)) bySha.set(f.sha256, f);
-  const todo = [...bySha.values()].filter((f) => !fs.existsSync(path.join(dl, f.sha256)));
+  const todo = [...bySha.values()].filter((f) => !cached(path.join(dir, f.sha256), f.size));
   if (todo.length) {
     const total = todo.reduce((s, f) => s + f.size, 0);
     console.log(`Скачиваю ${todo.length} файлов, ${mb(total)}`);
     const bar = progress('загрузка', total);
-    for (const f of todo) await api.download(f.sha256, path.join(dl, f.sha256), (n) => bar.add(n));
+    const one = (f) => () => api.download(f.sha256, path.join(dir, f.sha256), (n) => bar.add(n));
+    const big = todo.filter((f) => f.size > SMALL).sort((a, b) => b.size - a.size);
+    const packs = packsOf(todo.filter((f) => f.size <= SMALL));
+    const tasks = big.map(one);
+    // Первый пакет — заодно проверка, умеет ли сервер пакеты; старый — мелкие файлы по одному, тоже в потоках
+    if (
+      packs.length &&
+      (await api.pack(
+        packs[0].map((f) => f.sha256),
+        dir,
+        (n) => bar.add(n),
+      )) === null
+    )
+      tasks.push(...packs.flat().map(one));
+    else
+      for (const pack of packs.slice(1))
+        tasks.push(() =>
+          api.pack(
+            pack.map((f) => f.sha256),
+            dir,
+            (n) => bar.add(n),
+          ),
+        );
+    await runPool(tasks, STREAMS);
     bar.end();
   }
-  return (sha) => path.join(dl, sha);
+  const now = new Date();
+  for (const f of bySha.values()) fs.utimesSync(path.join(dir, f.sha256), now, now); // свежее — не чистить
+  return (sha) => path.join(dir, sha);
 }
+
+/** Убрать из кеша то, чего нет в снимке и что давно не нужно было ни одному профилю */
+function pruneCache(snapshot) {
+  const dir = blobsDir();
+  if (!fs.existsSync(dir)) return;
+  const keep = new Set((snapshot.files ?? []).map((f) => f.sha256));
+  const old = Date.now() - CACHE_DAYS * 86_400_000;
+  for (const name of fs.readdirSync(dir)) {
+    if (keep.has(name)) continue;
+    const file = path.join(dir, name);
+    try {
+      if (fs.statSync(file).mtimeMs < old) fs.rmSync(file, { force: true });
+    } catch {
+      /* убрал другой pull */
+    }
+  }
+}
+
+/** Копия из кеша: на APFS, Btrfs, ReFS — мгновенный клон без лишнего места, иначе обычная */
+const fromCache = (src, dst) => fs.copyFileSync(src, dst, fs.constants.COPYFILE_FICLONE);
 
 /** Копия на один pull: сюда складывают старое и сборка (applyPlan), и сайт (applyPull в pull.mjs) */
 export function beginBackup(profile) {
@@ -126,14 +227,14 @@ export async function applyPlan({ api, profile, plan, snapshot, cache, backup, s
   for (const f of toWrite) {
     const target = dest(f);
     fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.copyFileSync(blob(f.sha256), target);
+    fromCache(blob(f.sha256), target);
     cache.remember(target, f.sha256);
     state.files[f.path] = f.sha256;
     if (plan.add.includes(f)) manifest.added.push(f.path);
   }
   for (const f of plan.conflict) {
     const target = `${dest(f)}.tfc-new`;
-    fs.copyFileSync(blob(f.sha256), target);
+    fromCache(blob(f.sha256), target);
     manifest.tfcNew.push(`${f.path}.tfc-new`);
   }
   for (const f of plan.same) state.files[f.path] = f.sha256;
@@ -166,7 +267,8 @@ export async function applyPlan({ api, profile, plan, snapshot, cache, backup, s
   state.snapshot = snapshot.id;
   saveState(profile, state);
   cache.save();
-  fs.rmSync(path.join(stateDir(profile), 'dl'), { recursive: true, force: true });
+  fs.rmSync(path.join(stateDir(profile), 'dl'), { recursive: true, force: true }); // загрузки прошлых версий tfc
+  pruneCache(snapshot);
   return { duplicates };
 }
 

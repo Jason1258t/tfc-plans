@@ -15,6 +15,18 @@ export function configDir() {
   return path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'tfc');
 }
 
+/**
+ * Общий кеш скачанного (по sha256) на все профили: второй профиль и переустановка не качают сборку заново.
+ * TFC_CACHE_DIR — другая папка (для проверок).
+ */
+export function cacheDir() {
+  if (process.env.TFC_CACHE_DIR) return process.env.TFC_CACHE_DIR;
+  if (process.platform === 'win32')
+    return path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'tfc', 'cache');
+  if (process.platform === 'darwin') return path.join(os.homedir(), 'Library', 'Caches', 'tfc');
+  return path.join(process.env.XDG_CACHE_HOME || path.join(os.homedir(), '.cache'), 'tfc');
+}
+
 const file = () => path.join(configDir(), 'config.json');
 
 export function loadConfig() {

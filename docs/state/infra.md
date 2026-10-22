@@ -92,6 +92,13 @@ Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md)
   `tfc pull mods`; a client with a world also gets world datapacks. Sync deletes only its own files, player edits go to
   `*.tfc-new`, backups and `--undo`, old mod version by mod id. Tested from sources on macOS with a local pack server
   and Firestore/site stubs. **Built file, Windows, real launcher folder and the game — not checked.**
+- **Fast pull** (2026-10-22): downloads go to a shared cache (`cacheDir()` in `cli/lib/config.mjs`: `~/Library/Caches/tfc`,
+  `%LOCALAPPDATA%\tfc\cache`, `~/.cache/tfc`; `TFC_CACHE_DIR`), 6 parallel requests; files ≤256 KB via
+  `POST /blobs/pack` (gzip stream, ≤8 MB / 1000 files per request from the client); hash computed while streaming; copy
+  to the instance with `COPYFILE_FICLONE`; cache pruned after apply (not in current snapshot and untouched 14 days).
+  Old server → small files one by one in parallel. Local test, 60 ms per request, 2259 files / 127 MB: old 156 s /
+  4529 requests, new client + old server 28 s, new + new 4 s / 41 requests; resume, corrupt `.part`, second profile
+  from cache, prune — checked. Not checked on the real VPS / Windows.
 - Site content (stage 5): datapacks → `<world>/datapacks/tfc-plans-<id>.zip`, kubejs → `kubejs/server_scripts/<fileName>`,
   schematics → `schematics/` (with replacements and shape). An unflagged item removes only our unchanged file; a foreign
   file with the same name → `*.tfc-new`; tracked in `pulled` in `.tfc/state.json`. Content via the pack server
