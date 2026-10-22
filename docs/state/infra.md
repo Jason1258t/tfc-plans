@@ -162,6 +162,17 @@ MCP `config_propose` (key, type, range and layer check via `config_get`) → Fir
 mismatch with the old value, reject, cancel from MCP, stale record → 409, undo); JSON5 configs are not edited. Not run on
 the host's real folder.
 
+## Proposed pack updates (2026-10-22)
+
+- Server `lib/updates.mjs` + `/admin/updates` (create, list, approve → snapshot = current + files − remove and made
+  current with the site build job, reject); author can't approve (403); paths changed in the pack since the proposal →
+  409 `conflicts` (`--force`). CLI: `tfc admin propose <dir>`, `tfc admin updates [pull|approve|reject]`; pull writes
+  into the game folder (backup for `tfc undo`) and `mods|config|defaultconfigs|kubejs` of the server dir; approve marks
+  the host's state in sync (next `publish` — nothing to upload). Verified end-to-end on a local server (scratch dirs):
+  propose, self-approve refused, pull into both folders, undo, approve, host status/publish clean, player pull, conflict
+  409, reject. Direct snapshot edits by the agent — intentionally not provided (user's call).
+- Agent key `claude-agent` (admin) lives in `~/.config/tfc/config.json` on the Mac; the old lost `claude` key revoked.
+
 ## Pack patches (`pack-patches/`)
 
 - `l10n/` (2026-10-22): translation of Chinese strings in pack KubeJS scripts. Base — pack snapshot
