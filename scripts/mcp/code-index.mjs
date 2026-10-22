@@ -4,7 +4,7 @@
  * классов) и пересобирается по одному jar, когда тот поменялся.
  */
 import { ACC, parseClassFull } from './bytecode.mjs';
-import { PLATFORM, allJars, jarToc, platform, readEntry } from './jars.mjs';
+import { PLATFORM, allJars, jarToc, platform, readEntry, zipEntries, zipRead } from './jars.mjs';
 
 // ---------------------------------------------------------------- классы
 
@@ -248,17 +248,69 @@ export function parseToml(text) {
 
 /** Атрибуты MANIFEST.MF */
 function manifest(jar) {
-  const r = readEntry(jar, 'META-INF/MANIFEST.MF');
-  if (!r) return {};
+  return parseManifest(readEntry(jar, 'META-INF/MANIFEST.MF')?.data);
+}
+
+function parseManifest(data) {
+  if (!data) return {};
   const out = {};
   let last = null;
-  for (const line of r.data.toString('utf8').replace(/\r/g, '').split('\n')) {
+  for (const line of data.toString('utf8').replace(/\r/g, '').split('\n')) {
     if (line.startsWith(' ') && last) out[last] += line.slice(1);
     else {
       const m = line.match(/^([\w-]+):\s*(.*)$/);
       if (m) out[(last = m[1])] = m[2];
     }
   }
+  return out;
+}
+
+/** Моды и зависимости из neoforge.mods.toml (data — байты файла, mf — MANIFEST.MF для версии ${file.jarVersion}) */
+function tomlMeta(data, mf) {
+  let raw = {};
+  try {
+    raw = parseToml(data.toString('utf8'));
+  } catch {
+    /* битый toml — без модов */
+  }
+  const ver = (v) => (!v || String(v).includes('${') ? (mf['Implementation-Version'] ?? '?') : String(v));
+  const mods = (raw.mods ?? []).map((m) => ({ id: m.modId, version: ver(m.version), name: m.displayName ?? m.modId }));
+  const deps = [];
+  for (const [owner, list] of Object.entries(raw.dependencies ?? {}))
+    for (const d of [list].flat())
+      deps.push({
+        owner,
+        id: d.modId,
+        type: String(d.type ?? (d.mandatory === false ? 'optional' : 'required')).toLowerCase(),
+        range: d.versionRange ?? '*',
+        side: String(d.side ?? 'BOTH').toUpperCase(),
+        ordering: d.ordering ?? 'NONE',
+        reason: d.reason ?? null,
+      });
+  return { raw, mods, deps };
+}
+
+/**
+ * Моды и зависимости jar вне сборки (путь или Buffer) — вместе с вложенными (jar-in-jar по metadata.json, до 3
+ * уровней): [{ path, mods, deps }], первым — сам jar. Для проверки скачанной новой версии мода.
+ */
+export function archiveMods(src, name = 'jar', depth = 0) {
+  const toc = zipEntries(src);
+  const by = new Map(toc.map((e) => [e.name, e]));
+  const read = (n) => (by.has(n) ? zipRead(src, by.get(n)) : null);
+  const t = read('META-INF/neoforge.mods.toml');
+  const { mods, deps } = t ? tomlMeta(t, parseManifest(read('META-INF/MANIFEST.MF'))) : { mods: [], deps: [] };
+  const out = [{ path: name, mods, deps }];
+  if (depth >= 3) return out;
+  let nested = [];
+  const md = read('META-INF/jarjar/metadata.json');
+  if (md)
+    try {
+      nested = (JSON.parse(md.toString('utf8')).jars ?? []).map((j) => j.path).filter((p) => by.has(p));
+    } catch {
+      /* битый metadata.json — вложенные не грузятся */
+    }
+  for (const n of nested) out.push(...archiveMods(read(n), `${name}!${n}`, depth + 1));
   return out;
 }
 
@@ -273,28 +325,12 @@ export function jarMeta(jar) {
   const meta = { jar, mods: [], deps: [], mixinConfigs: [], type: mf.FMLModType ?? null, accessTransformers: [] };
   const t = readEntry(jar, 'META-INF/neoforge.mods.toml');
   if (t) {
-    let toml = {};
-    try {
-      toml = parseToml(t.data.toString('utf8'));
-    } catch {
-      /* битый toml — без модов */
-    }
-    const ver = (v) => (!v || String(v).includes('${') ? (mf['Implementation-Version'] ?? '?') : String(v));
-    for (const m of toml.mods ?? [])
-      meta.mods.push({ id: m.modId, version: ver(m.version), name: m.displayName ?? m.modId });
-    for (const [owner, list] of Object.entries(toml.dependencies ?? {}))
-      for (const d of [list].flat())
-        meta.deps.push({
-          owner,
-          id: d.modId,
-          type: String(d.type ?? (d.mandatory === false ? 'optional' : 'required')).toLowerCase(),
-          range: d.versionRange ?? '*',
-          side: String(d.side ?? 'BOTH').toUpperCase(),
-          ordering: d.ordering ?? 'NONE',
-          reason: d.reason ?? null,
-        });
-    for (const m of toml.mixins ?? []) if (m.config) meta.mixinConfigs.push({ file: m.config, declared: 'mods.toml' });
-    for (const a of toml.accessTransformers ?? []) if (a.file) meta.accessTransformers.push(a.file);
+    const toml = tomlMeta(t.data, mf);
+    meta.mods.push(...toml.mods);
+    meta.deps.push(...toml.deps);
+    for (const m of toml.raw.mixins ?? [])
+      if (m.config) meta.mixinConfigs.push({ file: m.config, declared: 'mods.toml' });
+    for (const a of toml.raw.accessTransformers ?? []) if (a.file) meta.accessTransformers.push(a.file);
   }
   for (const f of String(mf.MixinConfigs ?? '')
     .split(',')

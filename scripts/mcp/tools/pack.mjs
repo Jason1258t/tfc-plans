@@ -4,10 +4,13 @@
  */
 import { DOCS, fromValue } from '../../firestore-rest.mjs';
 import { STATUS_LABEL, STATUS_ORDER } from '../../../src/lib/freshness.ts';
-import { freshnessReport, modChangelog, summary as freshSummary } from '../../freshness.mjs';
+import path from 'node:path';
+import { downloadVersionJar, freshnessReport, modChangelog, summary as freshSummary } from '../../freshness.mjs';
+import { archiveMods, jarMeta } from '../code-index.mjs';
 import { MODS, isActive, items, mods, readJson, recipes, tags } from '../data.mjs';
 import { FirestoreError, api, cached, configDocs, listAll } from '../firestore.mjs';
-import { dateOf, named, norm, page, paging, short, str, words } from '../fmt.mjs';
+import { MAX, dateOf, named, norm, page, paging, short, str, words } from '../fmt.mjs';
+import { depContext } from './code.mjs';
 
 // ---------------------------------------------------------------- моды
 
@@ -345,6 +348,100 @@ const freshLine = (m) => {
   return `[${STATUS_LABEL[m.status]}] ${m.id} — ${m.project?.title ?? m.name}: ${cur}${to}${beta}${date}${m.source ? ` · ${m.source}` : ''}${deps}${m.note ? ` · ${m.note}` : ''}`;
 };
 
+const CHANGELOG_ONE = 10000;
+
+/** Страница ченджлогов: старые версии сверху, с offset (номер версии), сколько влезет в budget символов */
+async function changelogPage(log, a, budget) {
+  const offset = Math.max(0, Number(a.offset ?? 0) | 0);
+  const limit = Math.max(1, Number(a.limit ?? 20) | 0);
+  const parts = [];
+  let size = 0;
+  let end = offset;
+  for (; end < Math.min(log.length, offset + limit); end++) {
+    const v = log[end];
+    let text = await v.text();
+    if (text.length > CHANGELOG_ONE) text = `${text.slice(0, CHANGELOG_ONE)}\n… (ченджлог версии обрезан)`;
+    const part = `### ${v.version} (${v.type}, ${v.date.slice(0, 10)})\n${text || '(пусто)'}`;
+    if (end > offset && size + part.length > budget) break;
+    parts.push(part);
+    size += part.length + 2;
+  }
+  const kinds = a.beta ? 'версий' : 'релизов';
+  const head = `Ченджлоги ${kinds} новее нашей (старые сверху): всего ${log.length}; показаны ${offset + 1}–${end}${end < log.length ? `; дальше: offset=${end}` : ''}${a.beta ? '' : '; с бетами — beta=true'}.`;
+  return [head, parts.join('\n\n')];
+}
+
+/**
+ * Зависимости новой версии мода: скачать её jar (кеш .cache/mcp/fresh рядом с mods/), прочитать neoforge.mods.toml
+ * с вложенными и проверить по сборке, где наш jar заменён новым, — как mods_check. Плюс кто в сборке зависит от мода и
+ * чьи диапазоны новая версия нарушит.
+ */
+async function newDeps(m, target, neoforge) {
+  const file = await downloadVersionJar(m, target, path.join(path.dirname(MODS), '.cache', 'mcp', 'fresh'));
+  const archive = archiveMods(file, target.file ?? path.basename(file));
+  const top = archive[0];
+  if (!top.mods.length) return [`Новая версия ${target.version}: в jar нет neoforge.mods.toml — не мод NeoForge?`];
+  const before = depContext({ neoforge });
+  const after = depContext({ neoforge, swap: { jar: m.jar, archive } });
+  const oldMeta = jarMeta(m.jar);
+  const oldIds = oldMeta.mods.map((x) => x.id);
+  const newIds = top.mods.map((x) => x.id);
+  const out = [
+    `Новая версия ${target.version} (${target.file ?? path.basename(file)}): ${top.mods.map((x) => `${x.id} ${x.version}`).join(', ')}. Зависимости из её neoforge.mods.toml — по сборке, где наш jar заменён новым:`,
+  ];
+  if (oldIds.join() !== newIds.join())
+    out.push(`  ! id модов в jar сменились: было ${oldIds.join(', ')}, стало ${newIds.join(', ')}`);
+  const BAD = ['missing', 'version', 'incompatible'];
+  let bad = 0;
+  for (const a of archive) {
+    const deps = a.deps.filter((d) => a.mods.some((x) => x.id === d.owner));
+    if (!deps.length) continue;
+    if (a !== top)
+      out.push(
+        `  вложенный ${a.path.slice(a.path.indexOf('!') + 1)} (${a.mods.map((x) => `${x.id} ${x.version}`).join(', ')}):`,
+      );
+    for (const d of deps) {
+      const r = after.check(d);
+      const was = oldMeta.deps.find((x) => x.owner === d.owner && x.id === d.id);
+      const diff = !was
+        ? ' (новая)'
+        : was.range !== d.range || was.type !== d.type
+          ? ` (было ${was.type} ${was.range})`
+          : '';
+      if (BAD.includes(r.status) && !(r.status === 'missing' && d.side === 'CLIENT')) bad++;
+      out.push(`  ${BAD.includes(r.status) ? '✗' : ' '} ${after.depLine({ id: d.owner }, d)}${diff}`);
+    }
+  }
+  const gone = oldMeta.deps.filter(
+    (x) => oldIds.includes(x.owner) && !top.deps.some((d) => d.owner === x.owner && d.id === x.id),
+  );
+  if (gone.length) out.push(`  убраны: ${gone.map((x) => `${x.type} ${x.id} ${x.range}`).join('; ')}`);
+  const bundled = archive.slice(1).flatMap((a) => a.mods.map((x) => `${x.id} ${x.version}`));
+  if (bundled.length) out.push(`  несёт внутри (jar-in-jar): ${bundled.join(', ')}`);
+  // Кто зависит от мода: те же диапазоны — до замены и после
+  const rev = [];
+  for (const o of after.active) {
+    if (o.jar === top.path || o.jar.startsWith(`${top.path}!`)) continue;
+    for (const d of after.depsOf(o)) {
+      if (!newIds.includes(d.id) && !oldIds.includes(d.id)) continue;
+      const now = before.check(d).status;
+      const then = after.check(d).status;
+      const broke = BAD.includes(then) && !BAD.includes(now);
+      if (broke) bad++;
+      rev.push(
+        `  ${broke ? '✗' : ' '} ${o.id} ${o.version}: ${after.depLine(o, d)}${broke ? ' — сейчас ок, сломается' : ''}`,
+      );
+    }
+  }
+  out.push(`От него зависят в сборке (${rev.length})${rev.length ? ', с новой версией:' : '.'}`, ...rev);
+  out.push(
+    bad
+      ? `Итог: ${bad} проблем(ы) ✗ — обновлять вместе с ними или подобрать версию.`
+      : 'Итог: по диапазонам версий новая версия встаёт в сборку без конфликтов (в игре не проверялось).',
+  );
+  return out;
+}
+
 async function modsFreshness(a) {
   const report = await freshReport(a.refresh);
   const when = `проверено ${new Date(report.generatedAt).toLocaleString('ru-RU')}`;
@@ -361,10 +458,17 @@ async function modsFreshness(a) {
       out.push(`новая версия: ${m.latest.url}${m.latest.file ? ` (${m.latest.file})` : ''}`);
     if (m.status === 'missing')
       out.push('Нет ни на Modrinth, ни на CurseForge по файлу jar — вероятно, собран вручную.');
+    const target = a.beta ? (m.beta ?? m.latest) : m.latest;
+    if (a.deps && target && m.status !== 'ok' && m.status !== 'missing')
+      try {
+        out.push('', ...(await newDeps(m, target, a.neoforge)));
+      } catch (e) {
+        out.push('', `Зависимости новой версии не проверены: ${e.message}`);
+      }
     try {
-      const log = await modChangelog(m);
-      if (log) out.push('', 'Ченджлоги версий новее нашей:', log);
-      else if (log === '') out.push('', 'Ченджлогов у версий нет.');
+      const log = await modChangelog(m, { beta: a.beta });
+      if (log?.length) out.push('', ...(await changelogPage(log, a, MAX - out.join('\n').length - 500)));
+      else if (log) out.push('', `Версий новее нашей${a.beta ? '' : ' (релизов)'} в ченджлогах нет.`);
     } catch (e) {
       out.push('', `Ченджлоги не получены: ${e.message}`);
     }
@@ -434,7 +538,7 @@ export const TOOLS = [
   {
     name: 'mods_freshness',
     description:
-      'How far behind each pack mod is: newest version for MC 1.21.1 NeoForge from Modrinth (by jar sha1) and CurseForge (by jar fingerprint), lag colour by the first differing number of x.y.z (red — x, orange — y, yellow — z/pre-release), newer betas, new required dependencies. Sorted red → orange → yellow → unknown → missing → ok. With mod — one mod plus changelogs of the versions newer than ours. Live, 10 min cache. Input for planning a full or partial pack update.',
+      'How far behind each pack mod is: newest version for MC 1.21.1 NeoForge from Modrinth (by jar sha1) and CurseForge (by jar fingerprint), lag colour by the first differing number of x.y.z (red — x, orange — y, yellow — z/pre-release), newer betas, new required dependencies. Sorted red → orange → yellow → unknown → missing → ok. With mod — one mod plus changelogs of the releases newer than ours, oldest first (offset/limit page by version; beta=true adds betas), deps=true — dependency check of the new jar. Live, 10 min cache. Input for planning a full or partial pack update.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -444,6 +548,16 @@ export const TOOLS = [
           description: 'filter: outdated (default: red+orange+yellow+unknown), one status, or all',
         },
         mod: str('one mod: id, jar name or words from the name — details and changelogs'),
+        deps: {
+          type: 'boolean',
+          description:
+            'with mod: download the newest release jar (cached), check its neoforge.mods.toml (+ jar-in-jar) against the pack like mods_check, and who in the pack depends on the mod with ranges it would break',
+        },
+        neoforge: str('with deps: server NeoForge version to check neoforge ranges against (e.g. 21.1.248)'),
+        beta: {
+          type: 'boolean',
+          description: 'with mod: include betas/alphas — changelogs up to the newest beta, deps of the beta jar',
+        },
         refresh: { type: 'boolean', description: 'recheck now, ignoring the 10 min cache' },
         format: { type: 'string', enum: ['text', 'json'], description: 'text (default) or the raw report JSON' },
         ...paging,

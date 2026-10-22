@@ -61,7 +61,7 @@ one place right. Not special-cased.
    Burning Block built for 2.x, Liquid Fuel mixins sharing `BlazeBurnerBlockEntity.tick` with woodencog, Deep Seas
    newest only beta.
 
-## Tool gaps (from the part 5 trial)
+## Tool gaps (from the part 5 trial) — closed 2026-10-22 (`deps=true`, `beta=true`, oldest-first paging)
 
 - The **new** version's dependency ranges aren't shown (only newly required mods): e.g. which Collective World Border
   5.0 needs. Wanted: `mods_freshness mod=… deps=true` — download the new jar (cached), read its `neoforge.mods.toml`,

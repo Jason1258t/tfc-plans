@@ -45,3 +45,11 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   ~11 s while the manifest has no `cf` fingerprints (reads all jars), then cached. Same day: git source (pack devs'
   GitHub releases), changelog = release bodies; checked via stdio (`tfcr_fixes` 1.7.7 → 1.7.12 with 5 release notes,
   `woodencog` current).
+- **2026-10-22, `mods_freshness deps/beta`**: `deps=true` downloads the newest jar (Modrinth file / CurseForge
+  downloadUrl or CDN path / GitHub asset) into `.cache/mcp/fresh/`, reads `neoforge.mods.toml` + jar-in-jar
+  (`archiveMods` in `code-index.mjs`) and checks it with `depContext` from `tools/code.mjs` (the `mods_check` logic,
+  pack jar swapped for the new one) + dependents whose ranges break. Changelogs: releases only unless `beta=true`,
+  oldest first, paged by version, 10 000 chars per version; Modrinth HTML (Serilum) → text; CurseForge files paged
+  back to ours. Verified via stdio: World Border 5.0 needs Collective [8.40,) (pack 8.39 ✗), Liquid Fuel 3.0.0 needs
+  Create [6.0.4,) (ok), Deep Seas 3.0.0→3.3.0 (4 releases; with betas 10, `offset=5` → 3.4.1), Moonlight on CurseForge
+  from 2.29.8 (67 releases), Collective HTML → text; `mods_check` unchanged.

@@ -1187,18 +1187,35 @@ function chosen(list) {
   return [...pool].sort((x, y) => compareVersions(y.version, x.version))[0];
 }
 
-function modsCheck(a) {
+/**
+ * Проверка зависимостей по сборке (как у FML). swap — { jar, archive }: jar сборки (с его вложенными) заменить
+ * архивом вне сборки (archiveMods — скачанная новая версия мода). → { present, active, version, depsOf, check, depLine }
+ */
+export function depContext({ minecraft, neoforge, swap } = {}) {
   const present = modUniverse();
-  const mc = String(a.minecraft ?? '1.21.1');
-  const nf = a.neoforge ? String(a.neoforge) : null;
+  if (swap) {
+    for (const [id, list] of present) {
+      const rest = list.filter((x) => x.jar !== swap.jar && !x.jar.startsWith(`${swap.jar}!`));
+      if (rest.length) present.set(id, rest);
+      else present.delete(id);
+    }
+    for (const a of swap.archive)
+      for (const m of a.mods)
+        present.set(m.id, [
+          ...(present.get(m.id) ?? []),
+          { ...m, jar: a.path, nested: a.path.includes('!'), deps: a.deps },
+        ]);
+  }
+  const mc = String(minecraft ?? '1.21.1');
+  const nf = neoforge ? String(neoforge) : null;
   const version = (id) =>
     id === 'minecraft' ? mc : id === 'neoforge' ? nf : (chosen(present.get(id) ?? [])?.version ?? null);
   const active = [];
   for (const [id, list] of present) {
     const c = chosen(list);
-    active.push({ id, ...c, jarMeta: jarMeta(c.jar) });
+    active.push({ id, ...c, deps: c.deps ?? jarMeta(c.jar).deps });
   }
-  const depsOf = (m) => m.jarMeta.deps.filter((d) => d.owner === m.id);
+  const depsOf = (m) => m.deps.filter((d) => d.owner === m.id);
   // FML (VersionSupportMatrix, loader 4.0.42): на Minecraft 1.21.1 зависимость от minecraft засчитывается, если
   // диапазон включает 1.21, от neoforge — если включает 21.0.166; версия «0.0NONE» подходит к любому диапазону
   const fits = (id, v, range) =>
@@ -1235,7 +1252,11 @@ function modsCheck(a) {
     const r = check(d);
     return `${d.type} ${d.id} ${d.range}${d.side !== 'BOTH' ? ` [${d.side === 'CLIENT' ? 'только клиент' : 'только сервер'}]` : ''} → ${r.v ?? '—'}: ${SAY[r.status]}${d.reason ? ` (${d.reason})` : ''}`;
   };
+  return { present, active, version, depsOf, check, depLine, mc, nf };
+}
 
+function modsCheck(a) {
+  const { present, active, depsOf, check, depLine, mc, nf } = depContext(a);
   if (a.mod) {
     const id = String(a.mod);
     let list = present.get(id);
