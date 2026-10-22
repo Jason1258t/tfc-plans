@@ -179,3 +179,16 @@ more than 300 files, stops unless `allowRemovals` is passed (`tfc admin publish 
   - Dye colours without the platform jar: read from the obfuscated `client.jar` via Mojang mappings (identical values).
   - `pack-freshness.json` (from `main`) is a site file; in site-only mode its report uses the live manifest.
   - `npm run deploy` = rules + auth + `deploy-site.mjs`.
+- 2026-10-22 rollout:
+  - Merged to `main` (`b225b71`), pushed. The new `npm run deploy:site` made a real release (identical content,
+    16 458 files, 0 uploads); the site and icons serve normally.
+  - VPS service code updated to `3bfbbb0` (restart OK). The build repo was pulled to `3bfbbb0`, and the dry-run build of
+    `d765` was run by hand as `tfcpack` (same worker, heap 640): **2 min 50 s cold**, max RSS 929 MB, swap unchanged.
+    Rendered 8607 + 97 cached, failed 22. Publish dry run: hosting +47 ~7 −0, config 3 changed, packUpdates would POST
+    `38539468…` → 409 (record exists). Log: `/var/lib/tfc-pack/jobs/j20261022-claude-dry.log`.
+  - Not done (the agent was not allowed to: creating an admin key, a second service restart):
+    - VPS service still on `3bfbbb0`, without the `.spec.json` loader fix (`b225b71`);
+    - live publish of `d765`: host runs `tfc admin publish --live`;
+    - `AUTO_PUBLISH=live`: host's decision;
+    - new `tfc` build with `--allow-removals` and the render line in the summary (the old binary works; the flag is only
+      needed when the guard stops a publish).

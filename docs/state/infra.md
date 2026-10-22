@@ -86,7 +86,9 @@ Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md)
   785 MB, 42 s warm (cold render ~1–2 min on the Mac); dry run vs prod — 0 removals, 1 changed file.
 - **Publish guard:** a build without renders keeps `icons/*/render/` on the site; > 300 removals need
   `allowRemovals` (`tfc admin publish --live --allow-removals`). `AUTO_PUBLISH=live` builds pull fresh code first.
-- VPS code updated 2026-10-20 (`7684766`).
+- VPS code updated 2026-10-22 (`3bfbbb0`; the `.spec.json` loader fix `b225b71` not yet installed). Build of
+  `d765` with renders done on the VPS (dry run: +47 ~7 −0); live publish — waits for the host
+  (`tfc admin publish --live`); `AUTO_PUBLISH` still dry-run. Rollout log — `docs/plans/vps-publish.md`.
 
 ## `tfc` app (`cli/`, stage 3+)
 
