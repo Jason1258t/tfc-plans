@@ -9,6 +9,7 @@ import { ItemIcon } from '../components/ItemIcon';
 import { TaskDialog, type TaskDialogMode } from '../components/TaskDialog';
 import { TaskRow } from '../components/TaskRow';
 import { useData } from '../data/DataContext';
+import { groupsStore } from '../data/store';
 import { SORTS, sortTasks, type SortMode } from '../lib/tasks';
 import { cx } from '../lib/util';
 import { PRIORITIES, type Group, type Priority } from '../types';
@@ -50,6 +51,9 @@ export function TasksPage() {
   const [creating, setCreating] = useState(false);
   const [comparing, setComparing] = useState(false);
   const [editingGroup, setEditingGroup] = useState<Group | 'new' | null>(null);
+  // Перетаскивание групп: какую тащим и куда вставим (над/под какой группой)
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dropAt, setDropAt] = useState<{ id: string; after: boolean } | null>(null);
 
   // Функциональная форма: несколько вызовов подряд не затирают друг друга
   const setParam = (patch: Record<string, string | null>) =>
@@ -101,6 +105,22 @@ export function TasksPage() {
       ? { kind: 'edit', taskId: editId }
       : null;
 
+  // Новый порядок — индекс в списке; пишем только группы, у которых он поменялся
+  const moveGroup = (id: string, target: string, after: boolean) => {
+    if (id === target) return;
+    const list = groups.filter((g) => g.id !== id);
+    const moved = groups.find((g) => g.id === id);
+    if (!moved) return;
+    list.splice(list.findIndex((g) => g.id === target) + (after ? 1 : 0), 0, moved);
+    list.forEach((g, i) => {
+      if (g.order !== i) groupsStore.update(g.id, { order: i }).catch((e) => console.error('Порядок групп:', e));
+    });
+  };
+  const endDrag = () => {
+    setDragId(null);
+    setDropAt(null);
+  };
+
   const groupItems = [
     { id: ALL, name: 'Все задачи', icon: null as string | null | undefined, group: null as Group | null },
     ...groups.map((g) => ({ id: g.id, name: g.name, icon: g.icon, group: g })),
@@ -138,12 +158,39 @@ export function TasksPage() {
         </div>
         <ul>
           {groupItems.map((g) => (
-            <li key={g.id}>
+            <li
+              key={g.id}
+              className={cx(
+                dragId === g.id && 'dragging',
+                dropAt?.id === g.id && (dropAt.after ? 'drop-after' : 'drop-before'),
+              )}
+              draggable={!!g.group}
+              onDragStart={(e) => {
+                if (!g.group) return;
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', g.id);
+                setDragId(g.id);
+              }}
+              onDragOver={(e) => {
+                if (!dragId || !g.group) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                const r = e.currentTarget.getBoundingClientRect();
+                const after = e.clientY > r.top + r.height / 2;
+                if (dropAt?.id !== g.id || dropAt.after !== after) setDropAt({ id: g.id, after });
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (dragId && dropAt) moveGroup(dragId, dropAt.id, dropAt.after);
+                endDrag();
+              }}
+              onDragEnd={endDrag}
+            >
               <button
                 className={cx('group-item', !docsView && groupFilter === g.id && 'active')}
                 onClick={() => setParam({ group: g.id === ALL ? null : g.id, view: null })}
                 onDoubleClick={() => g.group && setEditingGroup(g.group)}
-                title={g.group ? 'Двойной клик — настроить группу' : undefined}
+                title={g.group ? 'Перетащите, чтобы поменять порядок; двойной клик — настроить группу' : undefined}
               >
                 <span className="group-icon">{g.icon && <ItemIcon id={g.icon} size={16} tip={false} />}</span>
                 <span className="grow group-name">{g.name}</span>

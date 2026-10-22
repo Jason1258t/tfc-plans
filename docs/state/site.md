@@ -16,7 +16,7 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
 
 ## Tasks and plans
 
-- Tasks: list, priority, Elo comparison, groups, resource checklist, attachments and gallery, place on the map.
+- Tasks: list, priority, Elo comparison, groups (drag in the left list to reorder — writes `order`; desktop only, HTML5 DnD), resource checklist, attachments and gallery, place on the map.
 - Plans (Markdown docs) with items and a Gemini agent; `- [ ]` checkboxes toggle by click in view mode (plans and task
   descriptions).
 
