@@ -41,6 +41,7 @@
     "@codemirror/view": "^6.43.15",
     "@fontsource-variable/inter": "^5.3.0",
     "@lezer/common": "^1.5.4",
+    "cm-live-markdown": "github:Jason1258t/cm-live-markdown#v0.1.2",
     "fflate": "^0.8.3",
     "firebase": "^12.19.0",
     "firestore-files": "^0.1.0",

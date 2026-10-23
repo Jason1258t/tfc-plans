@@ -1,98 +1,24 @@
-/* «Живой» Markdown (CodeMirror 6) — оформление в духе просмотра .md */
+/* «Живой» Markdown (пакет cm-live-markdown) — цвета и шрифты сайта через переменные пакета */
 
 .lmd {
   height: 100%;
   min-height: 0;
   background: var(--surface);
+  --lmd-text: var(--text);
+  --lmd-muted: var(--text-2);
+  --lmd-faint: var(--text-3);
+  --lmd-font: var(--font);
+  --lmd-font-size: 14px;
+  --lmd-mono: var(--font-mono);
+  --lmd-code-bg: var(--surface-2);
+  --lmd-link: var(--diamond);
+  --lmd-accent: var(--accent);
+  --lmd-quote-border: var(--border-strong);
+  --lmd-rule: var(--border);
+  --lmd-selection: var(--accent-soft);
 }
 
-.lmd .cm-editor {
-  height: 100%;
-  background: transparent;
-  color: var(--text);
-}
-
-.lmd .cm-editor.cm-focused {
-  outline: none;
-}
-
-.lmd .cm-scroller {
-  font-family: var(--font);
-  font-size: 14px;
-  line-height: 1.6;
-  overflow: auto;
-}
-
-.lmd .cm-content {
-  padding: 14px 16px;
-  caret-color: var(--text);
-}
-
-.lmd .cm-line {
-  padding: 0;
-}
-
-.lmd .cm-cursor {
-  border-left-color: var(--text);
-}
-
-.lmd .cm-selectionBackground,
-.lmd .cm-focused .cm-selectionBackground,
-.lmd ::selection {
-  background: var(--accent-soft) !important;
-}
-
-.lmd .cm-placeholder {
-  color: var(--text-3);
-}
-
-/* заголовки */
-.lmd .lmd-h {
-  font-weight: 650;
-  line-height: 1.3;
-}
-.lmd .lmd-h1 {
-  font-size: 1.6em;
-  padding-top: 0.4em !important;
-}
-.lmd .lmd-h2 {
-  font-size: 1.35em;
-  padding-top: 0.35em !important;
-}
-.lmd .lmd-h3 {
-  font-size: 1.15em;
-  padding-top: 0.3em !important;
-}
-.lmd .lmd-h4,
-.lmd .lmd-h5,
-.lmd .lmd-h6 {
-  font-size: 1em;
-}
-
-/* строчное */
-.lmd .lmd-strong {
-  font-weight: 650;
-}
-.lmd .lmd-em {
-  font-style: italic;
-}
-.lmd .lmd-strike,
-.lmd .lmd-done {
-  text-decoration: line-through;
-  color: var(--text-3);
-}
-.lmd .lmd-code {
-  font-family: var(--font-mono);
-  font-size: 0.9em;
-  background: var(--surface-2);
-  border-radius: 4px;
-  padding: 1px 3px;
-}
-.lmd .lmd-link {
-  color: var(--diamond);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
+/* исходник предмета [[id|4]] под курсором */
 .lmd .lmd-item-src {
   font-family: var(--font-mono);
   font-size: 0.9em;
@@ -102,46 +28,7 @@
   cursor: text;
 }
 
-/* блоки */
-.lmd .lmd-codeblock {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  background: var(--surface-2);
-  padding: 0 10px !important;
-}
-.lmd .lmd-table {
-  font-family: var(--font-mono);
-  font-size: 13px;
-}
-.lmd .lmd-quote {
-  border-left: 3px solid var(--border-strong);
-  padding-left: 12px !important;
-  color: var(--text-2);
-}
-.lmd .lmd-hr {
-  height: 0.8em;
-  background: linear-gradient(var(--border), var(--border)) center / 100% 1px no-repeat;
-}
-
-/* списки */
-.lmd .lmd-bullet {
-  color: var(--text-2);
-  display: inline-block;
-  min-width: 0.7em;
-  font-variant-numeric: tabular-nums;
-}
-.lmd .lmd-check {
-  margin: 0 6px 0 0;
-  vertical-align: -2px;
-  cursor: pointer;
-  accent-color: var(--accent);
-}
-
-/* таблица, отрисованная вне курсора */
-.lmd .lmd-table-widget {
-  cursor: text;
-  padding: 2px 0;
-}
+/* таблица, отрисованная вне курсора нашим Markdown */
 .lmd .lmd-table-widget .md table {
   margin: 0;
 }
