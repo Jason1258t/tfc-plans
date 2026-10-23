@@ -12,7 +12,7 @@ import path from 'node:path';
 import { unzipSync } from 'fflate';
 import { configDir } from './config.mjs';
 import { dim, mb, progress, yellow } from './ui.mjs';
-import { getJson, isNewer, latest, SITE } from './update.mjs';
+import { getJson, isNewer, latest, session, SITE } from './update.mjs';
 import { BUILD, CHANNEL, IS_BINARY, targetName } from './version.mjs';
 
 const self = () => process.execPath;
@@ -146,7 +146,10 @@ export async function autoUpgrade(argv) {
 function rerun(argv) {
   const [cmd, args] = CHANNEL === 'npm' ? [process.execPath, [process.argv[1], ...argv]] : [self(), argv];
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { stdio: 'inherit', env: { ...process.env, TFC_UPGRADED: '1' } });
+    const child = spawn(cmd, args, {
+      stdio: 'inherit',
+      env: { ...process.env, TFC_UPGRADED: '1', TFC_SESSION: String(session()) },
+    });
     process.on('SIGINT', () => {});
     child.on('error', reject);
     child.on('exit', (code, signal) => resolve(code ?? (signal ? 1 : 0)));
