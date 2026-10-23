@@ -55,7 +55,8 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   volume group, Shift — toggle, click past the model — clear; hover shows a wire box and the same block tooltip as the
   layer view. Groups (layer and 3D) count face, edge and corner neighbours — curved shells step diagonally (airship
   envelope: 106 face-connected → 3904 with diagonals). Browser-tested on cargoairship: group 3904, Shift −1/+1, clear,
-  remove (7250→3346 blocks) and undo. Item 5 (3D «object» by frame) postponed by the user. Gotcha: after HMR the 3D
+  remove (7250→3346 blocks) and undo. Delete / Backspace removes the selection (one undoable
+  edit; ignored while typing in a field) — browser-tested in 3D: 3904 removed, Ctrl+Z restored. Item 5 (3D «object» by frame) postponed by the user. Gotcha: after HMR the 3D
   view kept the old instance without listeners — reload the page when testing 3D changes. Tested with synthetic pointer events
   (the browser tool can't hold Shift while dragging): +80, −11, +50 → replace 119 with stone, undo. Next: picking in 3D. Cell edits change the source itself:
   «В библиотеку» uploads a new file and deletes the old one (saving edits to the library not browser-tested — shared
