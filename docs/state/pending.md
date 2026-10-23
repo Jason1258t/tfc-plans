@@ -39,14 +39,20 @@ its one-liner in STATE.md.
 - **Crop growth** (2026-10-21): proposed change `MjQFPQkIf9SHOdEjopy4` — `cropGrowthModifier` 1 → 5,
   `cropExpiryModifier` 1 → 0.625 (fertilised bed ~60 days, bare ~120, 30 days before death; computed from `CropHelpers`
   TFC 4.2.9). Waits for `tfc admin changes pull`; not checked in game.
-- **Carry On: IE crates and barrels** (2026-10-23): proposed change `94as4MmQ0qA0Hj6zWX7x` — in
-  `carryon-common.toml` `blacklist.forbiddenTiles` the entry `immersiveengineering:*` replaced by 44 prefix masks that
-  cover every IE block except `crate`, `reinforced_crate`, `wooden_barrel`, `metal_barrel` (Carry On matches entries
-  by substring, `ListHandler`/`StringHelper.matchesWildcards`; no allow-exceptions in a blacklist). Dev server (Carry On
-  2.2.6.13 + IE 12.4.2, fake player through `PickupHandler.tryPickUpBlock` / `PlacementHandler.tryPlaceBlock`): the 4
-  storages pick up and put back with items / 4000 mB water; capacitor, toolbox, connector, crafting table, sorter, pipe
-  refused. Waits for `tfc admin changes pull`; not checked in game. TFC barrels (`tfc:wood/barrel/*`), Firmalife,
-  Farmer's Delight, Functional Storage stay blacklisted — ask the user before opening them.
+- **Carry On: carryable storages** (2026-10-23): proposed change `P3E9AOli90hZrXpIgFBR` (replaces cancelled
+  `94as4MmQ0qA0Hj6zWX7x`) in `carryon-common.toml`. `blacklist.forbiddenTiles`: `immersiveengineering:*`,
+  `firmalife:*`, `farmersdelight:*` replaced by prefix masks (Carry On matches entries by substring,
+  `ListHandler`/`StringHelper.matchesWildcards`; a blacklist has no allow-exceptions), `tfc:wood/barrel/*` removed.
+  Now carryable: IE `crate`, `reinforced_crate`, `wooden_barrel`, `metal_barrel`; TFC barrels; Farmer's Delight
+  `*_cabinet`; Firmalife `wood/wine_shelf/*`, `wood/jarbnet/*`. `settings.placementStateExceptions` +
+  `tfc:wood/barrel/oak[rack]` (the shared `TFCBlockStateProperties.RACK`, so all woods): Carry On keeps non-facing
+  properties, and `BarrelBlock.onRemove` drops the rack, so without it racks duplicate (reproduced). Kept blacklisted on
+  purpose: Firmalife food shelves/hangers (`climateValid` is saved in NBT; nothing resets it outside a cellar, even with
+  Firmalife Hardcore's `CellarTracker`), keg (2×2), Functional Storage (drawers already drop with contents; Carry On
+  removes the BE first, so `Drawer.onRemove` can't unlink the controller). Dev server (Carry On 2.2.6.13, TFC 4.2.9,
+  IE 12.4.2, Firmalife 3.0.14, FD 1.3.2, fake player through `PickupHandler`/`PlacementHandler`): all opened blocks
+  keep items / 4000 mB / sealed, rack drops once; refused blocks refused. Waits for `tfc admin changes pull`; not checked
+  in game.
 - **Server resource pack `arc-furnace-matadora`** (https://tfc-plans-fd2c.web.app/packs/arc-furnace-matadora.zip,
   source in `instance/resourcepacks/`, not in git — `public/packs/` is gitignored): IE arc furnace sound overridden via
   `sounds.json` (`replace: true`) with a track from own namespace `tfc_sounds`. Server needs `resource-pack` and
