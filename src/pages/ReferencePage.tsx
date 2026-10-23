@@ -33,6 +33,7 @@ import {
   type Vein,
 } from '../lib/reference';
 import { cx } from '../lib/util';
+import { useSearchTrack } from '../data/analytics';
 import './ReferencePage.css';
 
 type Tab = 'ores' | 'fuel' | 'metals' | 'food' | 'botany' | 'power' | 'multiblocks' | 'guides' | 'map';
@@ -284,6 +285,7 @@ function OresTab({ ref_, items }: { ref_: Reference; items: ItemIndex | null }) 
     .filter((g) => !query.trim() || matches(g.hay, query))
     .map((g) => ({ ...g, veins: rock ? g.veins.filter((v) => v.rocks.includes(rock)) : g.veins }))
     .filter((g) => g.veins.length);
+  useSearchTrack('ores', query, visible.length);
 
   return (
     <>
@@ -553,6 +555,7 @@ function FuelTab({ fuels, items }: { fuels: Fuel[]; items: ItemIndex | null }) {
       sort.key === 'name' ? name(f) : (((f as unknown as Record<string, number | null>)[sort.key] ?? 0) as number),
     sort.desc,
   );
+  useSearchTrack('fuel', query, list.length);
   return (
     <>
       <div className="ref-filters">
@@ -627,6 +630,7 @@ function FoodTab({ foods, items, meals }: { foods: Food[]; items: ItemIndex | nu
     value,
     sort.desc,
   );
+  useSearchTrack('food', query, list.length);
   return (
     <>
       <div className="ref-filters">
@@ -716,6 +720,7 @@ function MetalsTab({ ref_, items }: { ref_: Reference; items: ItemIndex | null }
     (m) => (sort.key === 'name' ? m.name : (m.melt ?? 0)),
     sort.desc,
   );
+  useSearchTrack('metals', query, list.length);
   return (
     <>
       <div className="ref-filters">

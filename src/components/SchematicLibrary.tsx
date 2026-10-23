@@ -11,6 +11,7 @@ import { cx, timeAgo } from '../lib/util';
 import type { SavedSchematic } from '../types';
 import { Markdown } from './Markdown';
 import { MarkdownField } from './MarkdownField';
+import { useSearchTrack } from '../data/analytics';
 
 interface Props {
   /** id записей, уже открытых в редакторе */
@@ -48,6 +49,7 @@ export function SchematicLibrary({ openIds, onOpen, onDownload }: Props) {
     if (!list || !q) return list ?? [];
     return list.filter((s) => `${s.name} ${s.fileName} ${s.author} ${s.description ?? ''}`.toLowerCase().includes(q));
   }, [list, filter]);
+  useSearchTrack('schematics', filter, list ? shown.length : undefined);
 
   const selected = list?.find((s) => s.id === selectedId) ?? null;
 

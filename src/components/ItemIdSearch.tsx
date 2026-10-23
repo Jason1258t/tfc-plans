@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { searchItems, useItems } from '../lib/items';
 import { cx } from '../lib/util';
 import { ItemIcon } from './ItemIcon';
+import { useSearchTrack } from '../data/analytics';
 import './ItemIdSearch.css';
 
 interface Props {
@@ -18,6 +19,7 @@ export function ItemIdSearch({ autoFocus, compact, limit = 40 }: Props) {
   const [q, setQ] = useState('');
   const [copied, setCopied] = useState<string | null>(null);
   const results = useMemo(() => (items && q.trim().length >= 2 ? searchItems(items, q, limit) : []), [items, q, limit]);
+  useSearchTrack('items', q, items ? results.length : undefined);
 
   const copy = async (id: string) => {
     try {

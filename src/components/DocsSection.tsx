@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useData } from '../data/DataContext';
 import { artifactsStore } from '../data/store';
 import { cx, timeAgo } from '../lib/util';
+import { useSearchTrack } from '../data/analytics';
 import './DocsSection.css';
 
 interface Props {
@@ -19,6 +20,7 @@ export function DocsSection({ openId, onOpen }: Props) {
   const list = artifacts
     .filter((a) => !q.trim() || `${a.title}\n${a.content}`.toLowerCase().includes(q.trim().toLowerCase()))
     .sort((a, b) => b.updatedAt - a.updatedAt);
+  useSearchTrack('docs', q, list.length);
 
   const create = async () => {
     const id = await artifactsStore.add({

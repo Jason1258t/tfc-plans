@@ -3,6 +3,7 @@ import { app } from '../firebase';
 import type { Task } from '../types';
 import type { ItemIndex } from './items';
 import { itemName } from './items';
+import { track } from '../data/analytics';
 
 export const geminiEnabled = Boolean(app);
 
@@ -131,6 +132,7 @@ export interface AskParams {
  * только к текущему сообщению, история диалога — краткая, чтобы не раздувать запрос.
  */
 export async function askGemini(p: AskParams, onChunk: (full: string) => void, signal?: AbortSignal): Promise<string> {
+  track('ai.ask');
   const parts: string[] = [];
   if (p.taskContext) parts.push(`## Контекст задачи\n${p.taskContext}`);
   if (p.document?.trim()) parts.push(`## Текущий документ\n${p.document}`);
@@ -160,6 +162,7 @@ export interface ExtractedResource {
 
 /** Достаёт список ресурсов из произвольного текста плана — для заполнения чеклиста */
 export async function extractResources(text: string): Promise<ExtractedResource[]> {
+  track('ai.resources');
   const config = {
     generationConfig: {
       responseMimeType: 'application/json',
@@ -238,6 +241,7 @@ export async function suggestReplacements(
   blocks: BlockRow[],
   instruction: string,
 ): Promise<ReplacementAnswer[]> {
+  track('ai.replacements');
   const config = {
     generationConfig: {
       responseMimeType: 'application/json',
@@ -294,6 +298,7 @@ export async function generateRecipeHint(
   examples: unknown[],
   existing?: string,
 ): Promise<GeneratedHint> {
+  track('ai.recipeHint');
   const config = {
     generationConfig: {
       responseMimeType: 'application/json',
@@ -341,6 +346,7 @@ export interface PatchNotesInput {
  * только на отчёт (ченджлоги, списки модов и предметов), разделы без данных пропускает.
  */
 export async function generatePatchNotes(input: PatchNotesInput): Promise<string> {
+  track('ai.patchNotes');
   const config = {
     generationConfig: {
       responseMimeType: 'application/json',
