@@ -80,13 +80,6 @@
   margin-top: 0;
 }
 
-.upd-notes-edit {
-  width: 100%;
-  font-family: var(--font-mono);
-  font-size: 13px;
-  resize: vertical;
-}
-
 .upd-notes-actions,
 .upd-notes-meta,
 .upd-notes-empty {

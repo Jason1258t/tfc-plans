@@ -5,6 +5,8 @@ import { readNick } from '../../lib/nick';
 import type { Guide, GuideChecked } from '../../types';
 import { ItemIcon } from '../ItemIcon';
 import { ItemPicker } from '../ItemPicker';
+import type { LiveMarkdownHandle } from '../LiveMarkdown';
+import { MarkdownField } from '../MarkdownField';
 import { GuideBody, type GuideKit } from './GuideBody';
 import { GuideHelp } from './GuideHelp';
 import { GuideEditingContext } from './guideLinks';
@@ -80,7 +82,8 @@ export function GuideEditor({
   const [help, setHelp] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const area = useRef<HTMLTextAreaElement>(null);
+  const area = useRef<LiveMarkdownHandle>(null);
+  const selection = useRef<[number, number]>([0, 0]);
   const preview = useDeferredValue(body);
   const previewSummary = useDeferredValue(summary);
 
@@ -98,11 +101,11 @@ export function GuideEditor({
   const insert = (text: string) => {
     const el = area.current;
     if (!el) return setBody((b) => b + text);
-    const { selectionStart: a, selectionEnd: b } = el;
+    const [a, b] = selection.current;
     setBody(body.slice(0, a) + text + body.slice(b));
     requestAnimationFrame(() => {
       el.focus();
-      el.selectionStart = el.selectionEnd = a + text.length;
+      el.select(a + text.length);
     });
   };
 
@@ -241,12 +244,13 @@ export function GuideEditor({
             <span className="faint small">Текст (Markdown)</span>
             <ItemPicker small dropUp={false} onPick={(it) => insert(`[[${it.i}]]`)} placeholder="Вставить предмет…" />
           </div>
-          <textarea
+          <MarkdownField
             ref={area}
-            className="input guide-textarea"
+            rows={30}
+            maxRows={60}
             value={body}
-            spellCheck
-            onChange={(e) => setBody(e.target.value)}
+            onChange={setBody}
+            onSelect={(range) => (selection.current = range)}
           />
         </div>
         <GuideEditingContext.Provider value>

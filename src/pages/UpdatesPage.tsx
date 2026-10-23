@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ItemIcon } from '../components/ItemIcon';
 import { Markdown } from '../components/Markdown';
+import { MarkdownField } from '../components/MarkdownField';
 import { TfcDownload } from '../components/TfcDownload';
 import { useData } from '../data/DataContext';
 import { datapacksStore } from '../data/store';
@@ -139,13 +140,7 @@ function UpdateCard({
         <section className="upd-notes">
           {editing ? (
             <>
-              <textarea
-                className="input upd-notes-edit"
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                rows={14}
-                autoFocus
-              />
+              <MarkdownField value={draft} onChange={setDraft} rows={14} autoFocus />
               <div className="row upd-notes-actions">
                 <button className="btn ghost sm" onClick={() => setEditing(false)}>
                   Отмена

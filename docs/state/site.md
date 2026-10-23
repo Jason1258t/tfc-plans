@@ -55,8 +55,13 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   - Save race fixed in `ArtifactPane` (also for the textarea): a finished autosave used to clear «dirty» even if newer
     edits were pending, so the old text was pulled back from Firestore for ~0.6 s and could merge with new typing
     (deleted list items «came back»). `LiveMarkdown` also ignores its own echoed value.
-  - Remaining before enabling for everyone: switch other Markdown fields (task description, guides, schematic
-    description, update notes, hints — task checklist) and a media callback for task attachments.
+  - Enabled for everyone (2026-10-23), flag removed. Rule: the editor only where editing is switched on explicitly —
+    read-only views stay `Markdown` (plans still open in «Просмотр», guides open read-only). `MarkdownField` (lazy
+    `LiveMarkdown` in a bordered field) is used in: plan «Текст», task description «Править» (autosave after 800 ms,
+    like plans), guide editor form, schematic description, pack update notes, recipe hints. `onMediaChange` reports
+    image srcs; `useTextImages` shares upload + cleanup for plans (meta `artifactId`) and task descriptions (meta
+    `descTaskId`, files also carry `taskId` → shown in the task gallery). Task deletion keeps images of plans that were
+    detached earlier. Packaging the editor — site task «Выделить живой Markdown-редактор в отдельный пакет».
 
 ## Create schematics (.nbt)
 
