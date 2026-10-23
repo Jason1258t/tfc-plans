@@ -6,6 +6,7 @@ import { getHint, hintsEnabled, saveHint, type RecipeHint } from '../lib/recipeH
 import { typeFieldStats, type RecipeCatalog } from '../lib/recipes';
 import { timeAgo } from '../lib/util';
 import { Markdown } from './Markdown';
+import { MarkdownField } from './MarkdownField';
 
 const SOURCE_LABEL: Record<RecipeHint['source'], string> = {
   claude: 'первичное наполнение',
@@ -107,7 +108,7 @@ export function HintPanel({ type, catalog }: { type: string | undefined; catalog
         <div className="faint small">Загружаю подсказку…</div>
       ) : editing ? (
         <>
-          <textarea className="input mono" rows={12} value={draft} onChange={(e) => setDraft(e.target.value)} />
+          <MarkdownField autoFocus rows={12} value={draft} onChange={setDraft} />
           <div className="row">
             <span className="grow" />
             <button className="btn ghost sm" onClick={() => setEditing(false)}>

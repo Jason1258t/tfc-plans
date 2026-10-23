@@ -19,6 +19,8 @@ import { Modal } from './Modal';
 import { PlaceField } from './PlaceField';
 import { SchematicImport } from './SchematicImport';
 import './TaskDialog.css';
+import { MarkdownField } from './MarkdownField';
+import { useTextImages } from './useTextImages';
 
 export type TaskDialogMode = { kind: 'create'; groupId: string | null } | { kind: 'edit'; taskId: string };
 
@@ -202,7 +204,9 @@ function EditTask({
     const extra = extras.length ? ` вместе с ${extras.join(' и ')}` : '';
     if (!confirm(`Удалить задачу «${task.title}»${extra}? Это нельзя отменить.`)) return;
     if (linked.length) await artifactsStore.remove(linked.map((a) => a.id));
-    await Promise.all(taskFiles.map((f) => removeFile(f)));
+    // Картинки планов, отвязанных от задачи раньше, остаются с планом
+    const goneFiles = taskFiles.filter((f) => !f.artifactId || linked.some((a) => a.id === f.artifactId));
+    await Promise.all(goneFiles.map((f) => removeFile(f)));
     await tasksStore.remove(task.id);
     onClose();
   };
@@ -244,6 +248,7 @@ function EditTask({
         <TaskFields
           key={task.id}
           value={task}
+          taskId={task.id}
           live
           onPatch={update}
           checklistExtra={
@@ -330,6 +335,8 @@ function useFileIntake(target: { taskId: string; author: string } | { addPending
   useEffect(() => {
     if (!filesEnabled) return;
     const onPaste = (e: ClipboardEvent) => {
+      // Картинку уже вставил в текст редактор описания
+      if (e.defaultPrevented) return;
       const images = [...(e.clipboardData?.files ?? [])].filter(isImage);
       if (!images.length) return;
       e.preventDefault();
@@ -359,6 +366,45 @@ interface FieldsProps {
   checklistError?: string | null;
   /** Галерея картинок под описанием */
   gallery?: React.ReactNode;
+  /** Существующая задача: картинки из описания загружаются в её вложения */
+  taskId?: string;
+}
+
+const DESC_SAVE_DELAY = 800;
+
+/**
+ * Описание: черновик с автосохранением через паузу, как у планов (флажки в редакторе меняют текст без потери
+ * фокуса — сохранение «по blur» их бы теряло). Текст из базы подтягиваем, только когда наш уже сохранён.
+ */
+function useAutosaveText(remote: string, live: boolean, commit: (v: string) => void) {
+  const [draft, setDraft] = useState(remote);
+  const [dirty, setDirty] = useState(false);
+  const timer = useRef<number | undefined>(undefined);
+  const latest = useRef({ draft, dirty, commit });
+  useEffect(() => {
+    latest.current = { draft, dirty, commit };
+  });
+  useEffect(() => {
+    if (!dirty) setDraft(remote);
+    else if (remote === draft) setDirty(false);
+  }, [remote, dirty, draft]);
+  const flush = useCallback(() => {
+    window.clearTimeout(timer.current);
+    const l = latest.current;
+    if (l.dirty) l.commit(l.draft);
+  }, []);
+  useEffect(() => flush, [flush]);
+  return {
+    value: live ? draft : remote,
+    set: (v: string) => {
+      if (!live) return commit(v);
+      setDraft(v);
+      setDirty(true);
+      window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(() => commit(v), DESC_SAVE_DELAY);
+    },
+    commit: flush,
+  };
 }
 
 /** Текстовое поле: в live-режиме держит локальный черновик и коммитит на blur */
@@ -382,14 +428,31 @@ function useTextField(remote: string, live: boolean, commit: (v: string) => void
   };
 }
 
-function TaskFields({ value, onPatch, live, autoFocusTitle, checklistExtra, checklistError, gallery }: FieldsProps) {
+function TaskFields({
+  value,
+  onPatch,
+  live,
+  autoFocusTitle,
+  checklistExtra,
+  checklistError,
+  gallery,
+  taskId,
+}: FieldsProps) {
   const { groups, nick } = useData();
   const title = useTextField(value.title, live, (v) => {
     // В черновике пишем как есть; у существующей задачи пустое название не сохраняем
     if (!live) onPatch({ title: v });
     else if (v.trim()) onPatch({ title: v.trim() });
   });
-  const desc = useTextField(value.description, live, (v) => onPatch({ description: v }));
+  const desc = useAutosaveText(value.description, live, (v) => onPatch({ description: v }));
+  const images = useTextImages({
+    owner: live && taskId ? { kind: 'task', id: taskId } : null,
+    taskId: taskId ?? null,
+    initial: value.description,
+    content: desc.value,
+    setContent: desc.set,
+    insert: (text, pos) => desc.set(desc.value.slice(0, pos) + text + desc.value.slice(pos)),
+  });
   const [descMode, setDescMode] = useState<'edit' | 'view'>(value.description ? 'view' : 'edit');
   const [pickingIcon, setPickingIcon] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -559,15 +622,18 @@ function TaskFields({ value, onPatch, live, autoFocusTitle, checklistExtra, chec
           )}
         </div>
         {descMode === 'edit' || !value.description ? (
-          <textarea
-            className="input mono"
+          <MarkdownField
             rows={5}
             value={desc.value}
             placeholder={
-              'Подробности в Markdown: списки, - [ ] чекбоксы, таблицы.\nПредмет: [[tfc:metal/ingot/bronze|4]]'
+              'Подробности в Markdown: списки, - [ ] чекбоксы, таблицы.\nПредмет: [[tfc:metal/ingot/bronze|4]]' +
+              (images.enabled ? '\nКартинка — Ctrl+V или перетащить сюда.' : '')
             }
-            onChange={(e) => desc.set(e.target.value)}
+            autoFocus={Boolean(value.description)}
+            onChange={desc.set}
             onBlur={desc.commit}
+            onImages={images.enabled && filesEnabled ? images.add : undefined}
+            onMediaChange={images.noteMedia}
           />
         ) : (
           <div className="tf-desc" onDoubleClick={() => setDescMode('edit')}>

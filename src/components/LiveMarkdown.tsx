@@ -50,6 +50,11 @@ interface Props {
   placeholder?: string;
   /** Вставили или бросили картинки — загрузить и вставить в позицию pos */
   onImages?: (files: File[], pos: number) => void;
+  /** Набор картинок в тексте изменился (и при открытии): адреса из ![…](адрес) — чтобы показать их как вложения или убрать */
+  onMediaChange?: (srcs: string[]) => void;
+  autoFocus?: boolean;
+  /** Предел длины текста: правки сверх него не принимаются */
+  maxLength?: number;
   className?: string;
 }
 
@@ -518,6 +523,9 @@ const livePreview = ViewPlugin.fromClass(
 
 // ------------------------------------------------------------------ компонент
 
+const IMAGE_SRC = /!\[[^\]\n]*\]\(([^)\s]+)/g;
+const mediaOf = (text: string) => [...text.matchAll(IMAGE_SRC)].map((m) => m[1]);
+
 /** Правка пришла снаружи (props.value) — не отдавать её обратно в onChange */
 const external = Annotation.define<boolean>();
 
@@ -536,6 +544,7 @@ export const LiveMarkdown = forwardRef<LiveMarkdownHandle, Props>(function LiveM
   const cb = useRef(props);
   /** Последний текст, отданный в onChange */
   const emitted = useRef(props.value);
+  const lastMedia = useRef('');
   useLayoutEffect(() => {
     cb.current = props;
   });
@@ -575,6 +584,13 @@ export const LiveMarkdown = forwardRef<LiveMarkdownHandle, Props>(function LiveM
       EditorView.focusChangeEffect.of((_, focusing) => setFocus.of(focusing)),
       EditorView.updateListener.of((u) => {
         const fromOutside = u.transactions.some((t) => t.annotation(external));
+        if (u.docChanged) {
+          const media = mediaOf(u.state.doc.toString());
+          if (media.join('\n') !== lastMedia.current) {
+            lastMedia.current = media.join('\n');
+            cb.current.onMediaChange?.(media);
+          }
+        }
         if (u.docChanged && !fromOutside) {
           emitted.current = u.state.doc.toString();
           cb.current.onChange(emitted.current);
@@ -587,11 +603,20 @@ export const LiveMarkdown = forwardRef<LiveMarkdownHandle, Props>(function LiveM
       }),
     ];
     if (cb.current.placeholder) extensions.push(placeholderExt(cb.current.placeholder));
+    const max = cb.current.maxLength;
+    if (max)
+      extensions.push(
+        EditorState.changeFilter.of((tr) => tr.newDoc.length <= max || tr.newDoc.length <= tr.startState.doc.length),
+      );
     const v = new EditorView({
       parent: host.current!,
       state: EditorState.create({ doc: cb.current.value, extensions }),
     });
     view.current = v;
+    const media = mediaOf(cb.current.value);
+    lastMedia.current = media.join('\n');
+    cb.current.onMediaChange?.(media);
+    if (cb.current.autoFocus) v.focus();
     if (!items)
       loadItems().then((idx) => {
         items = idx;

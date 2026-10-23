@@ -3,8 +3,7 @@ import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { useData } from '../data/DataContext';
 import { artifactsStore } from '../data/store';
 import { filesEnabled } from '../lib/files';
-import { fileRefs, removeOrphanImages, UPLOADING_SCHEME, uploadImages } from '../lib/planImages';
-import { isImage } from '../lib/uploads';
+import { removeOrphanImages } from '../lib/planImages';
 import { cx, timeAgo } from '../lib/util';
 import type { Artifact } from '../types';
 import { AgentPanel } from './AgentPanel';
@@ -12,20 +11,9 @@ import './ArtifactPane.css';
 import { ItemPicker } from './ItemPicker';
 import type { LiveMarkdownHandle } from './LiveMarkdown';
 import { Markdown, itemToken, toggleTaskLine } from './Markdown';
+import { useTextImages } from './useTextImages';
 
 const LiveMarkdown = lazy(() => import('./LiveMarkdown'));
-
-/** Пробник «живого» редактора: включается ?live=1, выключается ?live=0 (запоминается в браузере) */
-function liveEditorOn() {
-  try {
-    const q = new URLSearchParams(location.search).get('live');
-    if (q === '1') localStorage.setItem('tfc_live_md', '1');
-    if (q === '0') localStorage.removeItem('tfc_live_md');
-    return localStorage.getItem('tfc_live_md') === '1';
-  } catch {
-    return false;
-  }
-}
 
 type View = 'edit' | 'split' | 'preview';
 
@@ -60,8 +48,6 @@ export function ArtifactPane(props: Props) {
 }
 
 const SAVE_DELAY = 800;
-/** Картинку без ссылок моложе этого при открытии плана не трогаем — её могли только что вставить в другом окне */
-const ORPHAN_MIN_AGE = 10 * 60 * 1000;
 const PLACEHOLDER =
   '# План\n\nMarkdown: заголовки, списки, таблицы, - [ ] чекбоксы.\nПредметы: [[tfc:metal/ingot/bronze|4]] — или «Вставить предмет».\n\nИли попросите агента ниже составить план.';
 
@@ -69,17 +55,15 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
   const { tasks, nick, files, artifacts } = useData();
   const task = tasks.find((t) => t.id === artifact.taskId);
 
+  // Открытие — только чтение; редактор подключается, когда правку включили явно («Текст»)
   const [view, setView] = useState<View>(() => (artifact.content ? 'preview' : 'edit'));
   const [content, setContent] = useState(artifact.content);
   const [title, setTitle] = useState(artifact.title);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(0);
   const fileInput = useRef<HTMLInputElement>(null);
   const [selection, setSelection] = useState<[number, number]>([artifact.content.length, artifact.content.length]);
-  const textRef = useRef<HTMLTextAreaElement>(null);
   const liveRef = useRef<LiveMarkdownHandle>(null);
-  const [live] = useState(liveEditorOn);
   const saveTimer = useRef<number | undefined>(undefined);
 
   // Чужие правки подтягиваем, пока у нас нет несохранённых изменений
@@ -124,41 +108,6 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
     [artifact.id, nick],
   );
 
-  // Уборка картинок: удалённые из текста стираются из хранилища при закрытии плана (не на каждом автосохранении —
-  // иначе Ctrl+Z вернул бы ссылку на уже стёртый файл). Только те, что видел этот редактор: свежую картинку
-  // из чужого открытого редактора, ссылка на которую ещё не сохранена, не трогаем.
-  const seenImages = useRef(fileRefs(artifact.content));
-  useEffect(() => {
-    for (const id of fileRefs(content)) seenImages.current.add(id);
-  }, [content]);
-  const data = useRef({ files, artifacts, tasks, uploading });
-  useEffect(() => {
-    data.current = { files, artifacts, tasks, uploading };
-  }, [files, artifacts, tasks, uploading]);
-  useEffect(() => {
-    const cleanup = () => {
-      if (data.current.uploading) return;
-      removeOrphanImages(artifact.id, latest.current.content, data.current, { only: seenImages.current });
-    };
-    window.addEventListener('pagehide', cleanup);
-    return () => {
-      window.removeEventListener('pagehide', cleanup);
-      cleanup();
-    };
-  }, [artifact.id]);
-  // При открытии — то, что не убралось раньше (закрыли вкладку без pagehide, удалил другой игрок); свежие не трогаем
-  const swept = useRef(false);
-  useEffect(() => {
-    if (swept.current || !files.length) return;
-    swept.current = true;
-    removeOrphanImages(artifact.id, artifact.content, { files, artifacts, tasks }, { minAge: ORPHAN_MIN_AGE });
-  }, [files, artifacts, tasks, artifact.id, artifact.content]);
-
-  const trackSelection = () => {
-    const el = textRef.current;
-    if (el) setSelection([el.selectionStart, el.selectionEnd]);
-  };
-
   /** Вставка в позицию курсора или замена выделения */
   const insertAt = (text: string, range: [number, number] = selection) => {
     const [s, e] = range;
@@ -170,35 +119,17 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
       requestAnimationFrame(() => {
         liveRef.current?.focus();
         liveRef.current?.select(pos);
-        textRef.current?.focus();
-        textRef.current?.setSelectionRange(pos, pos);
       });
   };
 
-  /** Картинки: сразу метка «загрузка» в тексте, после загрузки — ссылка на файл (сжатие — как у вложений задач) */
-  const addImages = async (images: File[], pos = selection[1]) => {
-    if (!images.length) return;
-    const placeholder = `![Загрузка…](${UPLOADING_SCHEME}${Date.now()})`;
-    // Картинка — отдельной строкой: не склеиваться с соседним текстом (заголовок перед ней перестал бы быть заголовком)
-    const before = pos > 0 && content[pos - 1] !== '\n' ? '\n' : '';
-    const after = content[pos] !== undefined && content[pos] !== '\n' ? '\n' : '';
-    insertAt(`${before}${placeholder}\n${after}`, [pos, pos]);
-    setUploading((n) => n + 1);
-    let markdown = '';
-    try {
-      const res = await uploadImages(images, { taskId: artifact.taskId, author: nick, artifactId: artifact.id });
-      for (const id of res.ids) seenImages.current.add(id);
-      markdown = res.markdown;
-      if (res.error) alert(res.error);
-    } catch (e) {
-      alert(`Картинка не загрузилась: ${e instanceof Error ? e.message : e}`);
-    } finally {
-      setUploading((n) => n - 1);
-      // Пока грузилось, текст могли править — меняем именно метку
-      const cur = latest.current.content;
-      if (cur.includes(placeholder)) change(cur.replace(placeholder, markdown));
-    }
-  };
+  const images = useTextImages({
+    owner: { kind: 'plan', id: artifact.id },
+    taskId: artifact.taskId,
+    initial: artifact.content,
+    content,
+    setContent: change,
+    insert: (text, pos) => insertAt(text, [pos, pos]),
+  });
 
   const append = (text: string) => change(`${content.trimEnd()}${content.trim() ? '\n\n' : ''}${text.trim()}\n`);
 
@@ -206,7 +137,7 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
     if (!confirm(`Удалить план «${artifact.title}»?`)) return;
     await artifactsStore.remove(artifact.id);
     // Картинки плана уходят вместе с ним (кроме скопированных в другие планы и задачи)
-    removeOrphanImages(artifact.id, '', { files, artifacts, tasks });
+    removeOrphanImages({ kind: 'plan', id: artifact.id }, '', { files, artifacts, tasks });
     onDeleted?.();
   };
 
@@ -256,7 +187,7 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
         )}
         <span className="grow" />
         <span className="faint small save-state">
-          {uploading
+          {images.uploading
             ? 'Загружаю картинку…'
             : saving
               ? 'Сохраняю…'
@@ -305,7 +236,7 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
               multiple
               hidden
               onChange={(e) => {
-                addImages([...(e.target.files ?? [])]);
+                images.add([...(e.target.files ?? [])], selection[1]);
                 e.target.value = '';
               }}
             />
@@ -318,7 +249,7 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
       </div>
 
       <div className={cx('apane-doc', `view-${view}`)}>
-        {view !== 'preview' && live && (
+        {view !== 'preview' && (
           <Suspense fallback={<div className="apane-text faint">Загрузка редактора…</div>}>
             <LiveMarkdown
               ref={liveRef}
@@ -328,30 +259,10 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
               onChange={change}
               onSelect={setSelection}
               onBlur={() => latest.current.dirty && flush(latest.current.content)}
-              onImages={filesEnabled ? (files, pos) => addImages(files, pos) : undefined}
+              onImages={filesEnabled ? images.add : undefined}
+              onMediaChange={images.noteMedia}
             />
           </Suspense>
-        )}
-        {view !== 'preview' && !live && (
-          <textarea
-            ref={textRef}
-            className="apane-text"
-            value={content}
-            spellCheck
-            placeholder={PLACEHOLDER}
-            onChange={(e) => {
-              change(e.target.value);
-              trackSelection();
-            }}
-            onSelect={trackSelection}
-            onBlur={() => dirty && flush(content)}
-            onPaste={(e) => {
-              const files = [...e.clipboardData.files].filter(isImage);
-              if (!files.length || !filesEnabled) return;
-              e.preventDefault();
-              addImages(files, e.currentTarget.selectionStart);
-            }}
-          />
         )}
         {view !== 'edit' && (
           <div className="apane-preview" onDoubleClick={() => setView(variant === 'full' ? 'split' : 'edit')}>

@@ -400,14 +400,9 @@
   gap: 8px;
 }
 
-.guide-textarea {
-  width: 100%;
+/* Текст гайда — живой редактор; блоки calc/widget в нём остаются кодом, считает их предпросмотр рядом */
+.guide-source .md-field {
   min-height: 70vh;
-  font-family: var(--mono, ui-monospace, monospace);
-  font-size: 12.5px;
-  line-height: 1.5;
-  resize: vertical;
-  tab-size: 2;
 }
 
 .guide-preview .guide-article {

@@ -10,6 +10,7 @@ import { openFromLibrary, refreshPreview, removeFromLibrary } from '../lib/schem
 import { cx, timeAgo } from '../lib/util';
 import type { SavedSchematic } from '../types';
 import { Markdown } from './Markdown';
+import { MarkdownField } from './MarkdownField';
 
 interface Props {
   /** id записей, уже открытых в редакторе */
@@ -285,14 +286,13 @@ function SchematicPanel({ entry, busy, canRender, onPreview, onClose, onError }:
             {saving && <span className="faint small">Сохраняю…</span>}
           </div>
           {editing ? (
-            <textarea
-              className="input"
+            <MarkdownField
               autoFocus
               rows={8}
               maxLength={MAX_DESCRIPTION}
               value={description}
               placeholder="Что это, где стоит, что нужно для постройки… Markdown работает."
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={setDescription}
               onBlur={saveDescription}
             />
           ) : (
