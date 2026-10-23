@@ -34,7 +34,7 @@ import { SchematicLibrary } from '../components/SchematicLibrary';
 import { useData } from '../data/DataContext';
 import { filesEnabled, formatSize } from '../lib/files';
 import { geminiEnabled } from '../lib/gemini';
-import { itemName, useItems } from '../lib/items';
+import { blockEntry, inPack, isBlock, itemName, useItems } from '../lib/items';
 import {
   applyRules,
   changesIn,
@@ -223,7 +223,7 @@ export function SchematicsPage() {
     const rank = (id: string) => {
       const to = replace.get(id);
       if (to === REMOVE) return 2;
-      return !to && items && !items.byId.has(id) && !EMPTY_BLOCKS.has(id) ? 0 : 1;
+      return !to && items && !inPack(items, id) && !EMPTY_BLOCKS.has(id) ? 0 : 1;
     };
     const ordered = (list: typeof blocks) => [0, 1, 2].flatMap((r) => list.filter(({ id }) => rank(id) === r));
     if (!q) return ordered(blocks);
@@ -231,9 +231,9 @@ export function SchematicsPage() {
       const to = replace.get(id);
       const hay = [
         id,
-        itemName(items?.byId.get(id), ''),
+        itemName(blockEntry(items, id), ''),
         to === REMOVE ? 'удалён' : (to ?? ''),
-        to && to !== REMOVE ? itemName(items?.byId.get(to), '') : '',
+        to && to !== REMOVE ? itemName(blockEntry(items, to), '') : '',
       ];
       return hay.join(' ').toLowerCase().includes(q);
     });
@@ -241,7 +241,7 @@ export function SchematicsPage() {
 
   const setTarget = (id: string, to: string | null) => {
     // В схему пишем только id из библиотеки сборки (или удаление)
-    if (to && to !== REMOVE && !items?.byId.has(to)) return;
+    if (to && to !== REMOVE && !isBlock(items, to)) return;
     const drop = (m: Map<string, unknown>) => {
       if (!m.has(id)) return m;
       const next = new Map(m);
@@ -260,7 +260,7 @@ export function SchematicsPage() {
 
   /** Пакетно записать замены (из избранного); цели вне библиотеки сборки пропускаются */
   const applyPairs = (pairs: Pair[]) => {
-    const ok = pairs.filter((p) => p.to !== p.from && items?.byId.has(p.to));
+    const ok = pairs.filter((p) => p.to !== p.from && isBlock(items, p.to));
     if (!ok.length) return;
     const ids = new Set(ok.map((p) => p.from));
     const drop = (m: Map<string, unknown>) => new Map([...m].filter(([k]) => !ids.has(k)));
@@ -308,7 +308,7 @@ export function SchematicsPage() {
     if (!items || !favorites?.length) return [];
     const by = new Map<string, string[]>();
     for (const f of favorites) {
-      if (!items.byId.has(f.to)) continue;
+      if (!isBlock(items, f.to)) continue;
       const list = by.get(f.from) ?? [];
       if (!list.includes(f.to)) list.push(f.to);
       by.set(f.from, list);
@@ -326,11 +326,11 @@ export function SchematicsPage() {
     const bad = invalidTargets(rep, items).filter((b) => s.counts.has(b.from));
     if (bad.length) {
       setExportError(
-        `Не скачано: замены на предметы, которых нет в сборке — ${bad.map((b) => `${b.from} → ${b.to}`).join(', ')}`,
+        `Не скачано: замены на то, что не ставится блоком (нет в сборке или это только предмет) — ${bad.map((b) => `${b.from} → ${b.to}`).join(', ')}`,
       );
       return;
     }
-    if (s.shape.platform && !items.byId.has(s.shape.platformBlock)) {
+    if (s.shape.platform && !isBlock(items, s.shape.platformBlock)) {
       setExportError(`Не скачано: материала площадки ${s.shape.platformBlock} нет в сборке — выберите другой`);
       return;
     }
@@ -571,6 +571,7 @@ export function SchematicsPage() {
                             <span className="schem-platform-pick">
                               <ItemPicker
                                 small
+                                blocksOnly
                                 autoFocus
                                 placeholder="Материал площадки…"
                                 onPick={(it) => {
@@ -835,7 +836,7 @@ export function SchematicsPage() {
 
             <ul className="schem-blocks">
               {shown.map(({ id, count }) => {
-                const known = items?.byId.get(id);
+                const known = blockEntry(items, id);
                 const to = replace.get(id);
                 return (
                   <li key={id} className={cx('schem-row', to && 'replaced', to === REMOVE && 'removed')}>
@@ -855,6 +856,7 @@ export function SchematicsPage() {
                           <div className="grow">
                             <ItemPicker
                               small
+                              blocksOnly
                               autoFocus
                               placeholder="На что заменить…"
                               onPick={(it) => {
@@ -894,7 +896,7 @@ export function SchematicsPage() {
                           >
                             <ItemIcon id={to} size={28} />
                             <span className="grow schem-names">
-                              <span className="schem-name">{itemName(items?.byId.get(to), to)}</span>
+                              <span className="schem-name">{itemName(blockEntry(items, to), to)}</span>
                               <code className="schem-id">{to}</code>
                             </span>
                             <span className={cx('tag', 'mod-tag', modOf(to) !== modOf(id) && 'mod-changed')}>
@@ -938,7 +940,7 @@ export function SchematicsPage() {
                                   title={`Заменить на ${alt}`}
                                 >
                                   <ItemIcon id={alt} size={16} tip={false} />
-                                  <span>{itemName(items?.byId.get(alt), alt)}</span>
+                                  <span>{itemName(blockEntry(items, alt), alt)}</span>
                                 </button>
                               ))}
                             </div>
@@ -949,7 +951,7 @@ export function SchematicsPage() {
                           {(() => {
                             const opts = [
                               ...new Set((favorites ?? []).filter((f) => f.from === id).map((f) => f.to)),
-                            ].filter((t) => items?.byId.has(t));
+                            ].filter((t) => isBlock(items, t));
                             return opts.length > 0 ? (
                               <span className="schem-fav-chips">
                                 {opts.map((t) => (
@@ -961,7 +963,7 @@ export function SchematicsPage() {
                                   >
                                     <Star size={12} className="fav-star on" />
                                     <ItemIcon id={t} size={18} tip={false} />
-                                    <span>{itemName(items?.byId.get(t), t)}</span>
+                                    <span>{itemName(blockEntry(items, t), t)}</span>
                                   </button>
                                 ))}
                               </span>

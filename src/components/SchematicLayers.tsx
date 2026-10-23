@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { blockIcon, itemName, useItems } from '../lib/items';
+import { blockEntry, blockIcon, isBlock, itemName, useItems } from '../lib/items';
 import { EMPTY_BLOCKS, REMOVE, type Schematic, type Vec } from '../lib/schematic';
 import { isFullCube } from '../lib/schematicMesh';
 import {
@@ -384,7 +384,7 @@ export function SchematicLayers({
     const z1 = Math.min(sz, Math.ceil((box.h - oy) / zoom));
 
     const drawBlock = (id: string, st: number, px: number, py: number, alpha: number) => {
-      const icon = blockIcon(items?.byId.get(id), isFullCube(id, props[st] ?? new Map()));
+      const icon = blockIcon(blockEntry(items, id), isFullCube(id, props[st] ?? new Map()));
       const img = icon ? image(icon.url, again) : null;
       ctx.globalAlpha = alpha;
       if (img) {
@@ -691,7 +691,7 @@ export function SchematicLayers({
 
   const apply = (to: string) => {
     if (!info) return;
-    if (to !== REMOVE && !items?.byId.has(to)) return;
+    if (to !== REMOVE && !isBlock(items, to)) return;
     if (scope === 'all') setGlobal(info.name, to);
     else changeCells(editCells(s, scopeCells(info.name), to));
     setMenu(null);
@@ -769,7 +769,7 @@ export function SchematicLayers({
   /** Действие над выделением — одна правка, её можно отменить */
   const applySelection = (to: string) => {
     if (!selected.size) return;
-    if (to !== REMOVE && !items?.byId.has(to)) return;
+    if (to !== REMOVE && !isBlock(items, to)) return;
     changeCells(editCells(s, [...selected], to));
     clearSelection();
     setMenu(null);
@@ -777,7 +777,7 @@ export function SchematicLayers({
   /** Избранное: первая избранная цель по id в исходнике (или по общей замене), только из сборки */
   const favoriteFor = useMemo(() => {
     const m = new Map<string, string>();
-    for (const f of favorites) if (!m.has(f.from) && items?.byId.has(f.to)) m.set(f.from, f.to);
+    for (const f of favorites) if (!m.has(f.from) && isBlock(items, f.to)) m.set(f.from, f.to);
     return (name: string) => m.get(name) ?? m.get(effective(name));
   }, [favorites, items, effective]);
   const applyFavorites = () => {
@@ -801,7 +801,7 @@ export function SchematicLayers({
     setSelNote(null);
     try {
       const map = await smartTargets(ids);
-      const ok = new Map([...map].filter(([, to]) => items?.byId.has(to)));
+      const ok = new Map([...map].filter(([, to]) => isBlock(items, to)));
       const hit = cells.filter((i) => ok.has(names[stateOf(s, i)] ?? '')).length;
       if (!hit) {
         setSelNote('Умная замена ничего не подобрала');
@@ -841,7 +841,7 @@ export function SchematicLayers({
       ? 'Удалён из схемы'
       : EMPTY_BLOCKS.has(id)
         ? 'Воздух'
-        : itemName(items?.byId.get(id), id.split(':').pop() ?? id);
+        : itemName(blockEntry(items, id), id.split(':').pop() ?? id);
 
   const layerTotal = layer ? layer.reduce((a, i) => a + (i >= 0 ? 1 : 0), 0) : 0;
   const stepY = (d: number) => {
@@ -1060,7 +1060,12 @@ export function SchematicLayers({
               </div>
               <div className="row">
                 <span className="grow">
-                  <ItemPicker small placeholder="Заменить выбранные на…" onPick={(it) => applySelection(it.i)} />
+                  <ItemPicker
+                    small
+                    blocksOnly
+                    placeholder="Заменить выбранные на…"
+                    onPick={(it) => applySelection(it.i)}
+                  />
                 </span>
                 <button
                   className="btn sm danger"
@@ -1120,7 +1125,7 @@ export function SchematicLayers({
                   </label>
                 ))}
               </div>
-              <ItemPicker small autoFocus placeholder="Заменить на…" onPick={(it) => apply(it.i)} />
+              <ItemPicker small blocksOnly autoFocus placeholder="Заменить на…" onPick={(it) => apply(it.i)} />
               <div className="row layers-menu-select">
                 <button
                   className="btn ghost sm"

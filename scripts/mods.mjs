@@ -2,6 +2,7 @@
 /**
  * Собирает библиотеку внутриигровых предметов для подсказок:
  *   public/items.json   — [{ i: id, e: имя en, r: имя ru, t: путь к иконке, s: источник }]
+ *   public/blocks.json  — блоки без своего предмета (ремень Create, шлюз на ремне…) и чем их ставят, scripts/mods/blocks.mjs
  *   public/icons/...    — png-текстуры, на которые ссылаются предметы
  *
  * Источники:
@@ -26,6 +27,7 @@ import { writeManifest } from './mods/manifest.mjs';
 import { writeGeo } from './mods/geo.mjs';
 import { buildReference } from './mods/reference.mjs';
 import { writeTags } from './mods/tags.mjs';
+import { writeBlocks } from './mods/blocks.mjs';
 import { isBotanyClass, writeBotany } from './mods/botany.mjs';
 import { isMealClass, writeMeals } from './mods/meals.mjs';
 import { isCuisineClass, isCuisineData } from './mods/cuisine.mjs';
@@ -105,8 +107,9 @@ async function fetchBuffer(url) {
 /** Скачивает client.jar и вытаскивает models/textures/lang en_us; ru_ru берёт из asset index */
 async function prepareVanilla() {
   const dir = path.join(CACHE, `minecraft-${MC_VERSION}`);
-  // .done-v4 — кеш с рецептами и тегами предметов/жидкостей/блоков (v1 — только ассеты, v2 — без тегов, v3 — только item)
-  const done = path.join(dir, '.done-v4');
+  // .done-v5 — кеш с рецептами и тегами предметов/жидкостей/блоков (v1 — только ассеты, v2 — без тегов, v3 — только item),
+  // v5 — плюс blockstates и loot-таблицы блоков (блоки без предмета, scripts/mods/blocks.mjs)
+  const done = path.join(dir, '.done-v5');
   if (fs.existsSync(done) && !fresh) return dir;
   fs.rmSync(dir, { recursive: true, force: true });
   log(`vanilla ${MC_VERSION}: читаю манифест версий`);
@@ -118,7 +121,7 @@ async function prepareVanilla() {
   log('vanilla: качаю client.jar (~25MB)');
   const zip = new AdmZip(await fetchBuffer(meta.downloads.client.url));
   const wanted =
-    /^(assets\/minecraft\/(models\/(item|block)\/|textures\/(item|block)\/|lang\/en_us\.json)|data\/minecraft\/(recipe|tags\/(item|fluid|block|entity_type))\/.+\.json$)/;
+    /^(assets\/minecraft\/(models\/(item|block)\/|textures\/(item|block)\/|blockstates\/|lang\/en_us\.json)|data\/minecraft\/(recipe|tags\/(item|fluid|block|entity_type)|loot_table\/blocks)\/.+\.json$)/;
   for (const entry of zip.getEntries()) {
     if (entry.isDirectory || !wanted.test(entry.entryName)) continue;
     const target = path.join(dir, entry.entryName);
@@ -240,7 +243,8 @@ function prepareJar(file) {
   const key = `${path.basename(file, '.jar')}-${st.size}-${Math.round(st.mtimeMs)}`.replace(/[^\w.+-]/g, '_');
   const dir = path.join(CACHE, 'jars', key);
   // v20 — плюс данные и классы сковороды Cuisine Delight; v19 — плюс классы тегов модов; v18 — плюс помощники и конфиги блюд аддонов; v17 — плюс классы сборных блюд; v16 — плюс классы полива теплицы; v15 — плюс классы грядок теплицы; v14 — плюс перечисление черт еды; v13 — плюс уровни теплицы; v12 — плюс растения теплицы Firmalife и классы конфигов аддонов; v11 — плюс loot-таблицы растений и их размещение в мире; v10 — плюс классы календаря; v9 — плюс классы конфигов; v8 — плюс классы растений (classes/) для ботаники; v7 — плюс климатические диапазоны растений TFC; v6 — плюс теги, жилы, данные TFC для справочника, география TFC Real World и жидкое топливо; теги блоков и сущностей
-  const done = path.join(dir, '.done-v22'); // v21 — ещё .obj/.mtl моделей, v22 — и .obj.ie IE, и .png.mcmeta (объёмные иконки)
+  // v21 — ещё .obj/.mtl моделей, v22 — и .obj.ie IE, и .png.mcmeta (объёмные иконки), v23 — blockstates и все loot-таблицы блоков
+  const done = path.join(dir, '.done-v23');
   if (!fs.existsSync(done) || fresh) {
     fs.rmSync(dir, { recursive: true, force: true });
     let zip;
@@ -253,7 +257,7 @@ function prepareJar(file) {
     // Рецепты — только папка recipe/ (1.21); recipes/ в некоторых jar — остатки 1.20, игра их не читает.
     // Для справочника: теги предметов, конфиги жил, данные TFC (топливо, еда, нагрев).
     const wanted =
-      /^(assets\/[a-z0-9_.-]+\/(models\/.+\.(json|obj|obj\.ie|mtl)|textures\/.+\.png(\.mcmeta)?|lang\/(en_us|ru_ru)\.json)|data\/[a-z0-9_.-]+\/(recipe\/.+|tags\/(item|fluid|block|entity_type)\/.+|createdieselgenerators\/fuel_type\/.+|createliquidfuel\/compat\/.+|worldgen\/configured_feature\/(vein\/.+|[^/]*vein[^/]*)|tfc\/(fuel|food|fluid_heat|climate_range)\/.+|cuisinedelight_config\/ingredient\/.+|cuisinetfc\/cooked_food\/.+|firmalife\/(plantable|greenhouse)\/.+|loot_table\/blocks\/(crop|plant)\/.+|worldgen\/placed_feature\/plant\/.+|geography\/.+|profiles\/.+\/settings)\.json|data\/[a-z0-9_.-]+\/profiles\/.+\/maps\/(continent|altitude|koppen|temperature|rainfall)\.png)$/;
+      /^(assets\/[a-z0-9_.-]+\/(models\/.+\.(json|obj|obj\.ie|mtl)|blockstates\/.+\.json|textures\/.+\.png(\.mcmeta)?|lang\/(en_us|ru_ru)\.json)|data\/[a-z0-9_.-]+\/(recipe\/.+|tags\/(item|fluid|block|entity_type)\/.+|createdieselgenerators\/fuel_type\/.+|createliquidfuel\/compat\/.+|worldgen\/configured_feature\/(vein\/.+|[^/]*vein[^/]*)|tfc\/(fuel|food|fluid_heat|climate_range)\/.+|cuisinedelight_config\/ingredient\/.+|cuisinetfc\/cooked_food\/.+|firmalife\/(plantable|greenhouse)\/.+|loot_table\/blocks\/.+|worldgen\/placed_feature\/plant\/.+|geography\/.+|profiles\/.+\/settings)\.json|data\/[a-z0-9_.-]+\/profiles\/.+\/maps\/(continent|altitude|koppen|temperature|rainfall)\.png)$/;
     const entries = zip.getEntries();
     for (const entry of entries) {
       if (entry.isDirectory || !wanted.test(entry.entryName)) continue;
@@ -749,6 +753,17 @@ export async function buildMods({
       log(`  ${why}: ${ids.length} — ${ids.slice(0, 8).join(', ')}${ids.length > 8 ? '…' : ''}`);
   }
   for (const w of vis.warnings) log(`  видимость: ${w}`);
+  // До записи items.json: помечает предметы-блоки (b)
+  const blocks = writeBlocks(
+    dataDirs,
+    parseLooseJson,
+    items,
+    (key) => ({ en: dict.en[key], ru: dict.ru[key] }),
+    path.join(outDir, 'blocks.json'),
+  );
+  log(
+    `блоки без предмета: ${blocks.count}, из них с предметом из добычи ${blocks.withDrop} — blocks.json ${blocks.kb}KB`,
+  );
   fs.writeFileSync(OUT_JSON, JSON.stringify(items));
   writeRecipes(recipes, OUT_RECIPES);
   const ref = buildReference(dataDirs, recipes, parseLooseJson, fluidNames);

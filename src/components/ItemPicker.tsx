@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { searchItems, useItems, type McItem } from '../lib/items';
+import { isBlock, searchItems, useItems, type McItem } from '../lib/items';
 import { cx } from '../lib/util';
 import { ItemIcon } from './ItemIcon';
 import './ItemPicker.css';
@@ -15,6 +15,8 @@ interface Props {
   small?: boolean;
   /** Список открывается вверх (поле внизу экрана) */
   dropUp?: boolean;
+  /** Только то, что ставится блоком (замены в схемах) */
+  blocksOnly?: boolean;
 }
 
 /** Поле поиска предмета с выпадающим списком (по-русски, по-английски или по id) */
@@ -26,6 +28,7 @@ export function ItemPicker({
   onSubmitText,
   small,
   dropUp,
+  blocksOnly,
 }: Props) {
   const items = useItems();
   const [q, setQ] = useState('');
@@ -33,7 +36,15 @@ export function ItemPicker({
   const [active, setActive] = useState(0);
   const listRef = useRef<HTMLUListElement>(null);
 
-  const results = useMemo(() => (items && q.trim().length >= 2 ? searchItems(items, q, 40) : []), [items, q]);
+  const results = useMemo(
+    () =>
+      items && q.trim().length >= 2
+        ? searchItems(items, q, blocksOnly ? 120 : 40)
+            .filter((it) => !blocksOnly || isBlock(items, it.i))
+            .slice(0, 40)
+        : [],
+    [items, q, blocksOnly],
+  );
 
   useEffect(() => setActive(0), [q]);
   useEffect(() => {
