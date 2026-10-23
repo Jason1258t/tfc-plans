@@ -290,6 +290,19 @@ service cloud.firestore {
       allow delete: if signedIn();
     }
 
+    // Справочник участников сайта (src/data/users.ts): пишется при заходе, ключ — ник.
+    // lastSeen/uid обновляются, firstSeen — при первом заходе. Стирать нельзя.
+    match /users/{name} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && name == request.resource.data.nick
+        && nick(name)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.firstSeen is number
+        && request.resource.data.lastSeen is number;
+      allow delete: if false;
+    }
+
     // Статистика сайта (src/data/analytics.ts): заход пишет и дописывает только его браузер (uid анонимного входа).
     // Старые заходы (expireAt прошёл) удаляет страница /stats при открытии.
     function visitOk(d) {

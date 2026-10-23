@@ -68,6 +68,16 @@ export interface Group {
   createdAt: number;
 }
 
+/** Участник сайта (справочник ников users/{ник}): пишется при заходе, ключ — ник */
+export interface SiteUser {
+  id: string;
+  nick: string;
+  /** Последний анонимный вход (uid), который зашёл под этим ником */
+  uid?: string | null;
+  firstSeen: number;
+  lastSeen: number;
+}
+
 /** Markdown-документ: подробный план, привязанный к задаче (или свободный) */
 export interface Artifact {
   id: string;

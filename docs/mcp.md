@@ -414,6 +414,7 @@ document is a separate request. uids, cookies and tokens never appear in answers
 | --- | --- |
 | `tasks_list(query, status, assignee, group)` / `task_get(id*, doc_chars)` | tasks and groups; a task with checklist, attachments (no content), docs, site link and `revision` |
 | `groups_list(query)` | task groups: id, name, icon, order — find a group by name («фиксы») |
+| `users_list(query)` | site members (the nick directory written on every visit): nick, first and last seen — who a task can be assigned to |
 | `task_create(title*, description, group, priority, status, checklist, icon, assignee, place)` | **write**: a task as from «Новая задача» (rating 1000, `completedAt` when `done`); `group` — id or name; `checklist` — strings, `{ text, done }` or resources `{ itemId, qty, got }` (item checked against the library) |
 | `task_update(id*, baseRevision*, …task_create fields, checklist_add)` | **write**: only passed fields change; `checklist` replaces the checklist (existing item ids kept), `checklist_add` appends; a status change sets/clears `completedAt`; `"-"` clears group, icon, assignee |
 | `artifacts_list(query, task)` / `artifact_get(id*, offset, limit)` | plan docs (`artifacts`): list by title and task (`"-"` — unattached); doc by lines and its `revision` |
