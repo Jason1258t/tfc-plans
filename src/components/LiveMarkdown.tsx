@@ -1,4 +1,4 @@
-import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
+import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { markdownKeymap, markdownLanguage } from '@codemirror/lang-markdown';
 import { syntaxTree } from '@codemirror/language';
 import {
@@ -8,6 +8,7 @@ import {
   Prec,
   RangeSetBuilder,
   StateEffect,
+  StateField,
   type Extension,
 } from '@codemirror/state';
 import {
@@ -22,10 +23,13 @@ import {
 } from '@codemirror/view';
 import type { SyntaxNode } from '@lezer/common';
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { guiIcon, itemName, loadItems, type ItemIndex } from '../lib/items';
 import { imageSrc, UPLOADING_SCHEME } from '../lib/planImages';
 import { isImage } from '../lib/uploads';
 import './LiveMarkdown.css';
+import { liveMarkdownKeymap } from './liveMarkdownCommands';
+import { Markdown } from './Markdown';
 
 /**
  * «Живой» Markdown, как Live Preview в Obsidian: текст остаётся Markdown, оформление рисуется поверх,
@@ -332,6 +336,98 @@ function build(view: EditorView): DecorationSet {
   return builder.finish();
 }
 
+// ------------------------------------------------------------------ таблицы — отрисованная таблица вне курсора
+
+const tableRoots = new WeakMap<HTMLElement, Root>();
+
+class TableWidget extends WidgetType {
+  readonly text: string;
+  constructor(text: string) {
+    super();
+    this.text = text;
+  }
+  eq(other: TableWidget) {
+    return other.text === this.text;
+  }
+  toDOM(view: EditorView) {
+    const dom = document.createElement('div');
+    dom.className = 'lmd-table-widget';
+    dom.title = 'Нажмите, чтобы править таблицу';
+    const root = createRoot(dom);
+    root.render(<Markdown source={this.text} />);
+    tableRoots.set(dom, root);
+    // Клик — курсор в ту же строку исходника: таблица раскрывается в текст с |
+    dom.addEventListener('mousedown', (e) => {
+      if ((e.target as HTMLElement).closest('a')) return;
+      e.preventDefault();
+      const rows = [...dom.querySelectorAll('tr')];
+      const row = rows.indexOf((e.target as HTMLElement).closest('tr')!);
+      // Строка-разделитель | --- | есть в исходнике, но не в таблице
+      const lineOffset = row <= 0 ? 0 : row + 1;
+      const first = view.state.doc.lineAt(view.posAtDOM(dom));
+      const line = view.state.doc.line(Math.min(first.number + lineOffset, view.state.doc.lines));
+      view.dispatch({ selection: { anchor: Math.min(line.from + 2, line.to) } });
+      view.focus();
+    });
+    return dom;
+  }
+  destroy(dom: HTMLElement) {
+    const root = tableRoots.get(dom);
+    // Размонтировать не посреди отрисовки React
+    if (root) queueMicrotask(() => root.unmount());
+  }
+  get estimatedHeight() {
+    return 32 * this.text.split('\n').length;
+  }
+  ignoreEvent() {
+    return true;
+  }
+}
+
+/** Фокус редактора — в состоянии, чтобы без фокуса таблицы были отрисованы, даже если курсор в них */
+const setFocus = StateEffect.define<boolean>();
+
+function buildTables(state: EditorState, focused: boolean): DecorationSet {
+  const builder = new RangeSetBuilder<Decoration>();
+  syntaxTree(state).iterate({
+    enter: (node) => {
+      if (node.name !== 'Table')
+        return (
+          node.name === 'Document' ||
+          node.name.endsWith('List') ||
+          node.name === 'ListItem' ||
+          node.name === 'Blockquote'
+        );
+      const from = state.doc.lineAt(node.from).from;
+      const to = state.doc.lineAt(node.to).to;
+      const inside = state.selection.ranges.some((r) => r.from <= to && r.to >= from);
+      // Таблица внутри списка/цитаты — оставляем текстом: префиксы строк не часть таблицы
+      if (from !== node.from) return false;
+      if (!(focused && inside))
+        builder.add(from, to, Decoration.replace({ widget: new TableWidget(state.sliceDoc(from, to)), block: true }));
+      return false;
+    },
+  });
+  return builder.finish();
+}
+
+const tables = StateField.define<{ focused: boolean; decos: DecorationSet }>({
+  create: (state) => ({ focused: false, decos: buildTables(state, false) }),
+  update(value, tr) {
+    let focused = value.focused;
+    for (const e of tr.effects) if (e.is(setFocus)) focused = e.value;
+    if (
+      focused === value.focused &&
+      !tr.docChanged &&
+      !tr.selection &&
+      syntaxTree(tr.startState) === syntaxTree(tr.state)
+    )
+      return value;
+    return { focused, decos: buildTables(tr.state, focused) };
+  },
+  provide: (f) => EditorView.decorations.from(f, (v) => v.decos),
+});
+
 const livePreview = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet;
@@ -401,6 +497,8 @@ export const LiveMarkdown = forwardRef<LiveMarkdownHandle, Props>(function LiveM
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const cb = useRef(props);
+  /** Последний текст, отданный в onChange */
+  const emitted = useRef(props.value);
   useLayoutEffect(() => {
     cb.current = props;
   });
@@ -408,10 +506,13 @@ export const LiveMarkdown = forwardRef<LiveMarkdownHandle, Props>(function LiveM
   useEffect(() => {
     const extensions: Extension[] = [
       history(),
-      keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
+      keymap.of([...defaultKeymap, ...historyKeymap]),
       // Без markdown(): тот тянет подсветку HTML/CSS/JS (~100 КБ), а нам нужна только разметка
       markdownLanguage,
       // Enter продолжает список/чекбоксы — раньше обычного Enter
+      // Свои команды раньше стандартных Markdown: Tab/Shift+Tab — вложенность списков и ячейки таблиц,
+      // Backspace за маркером, Ctrl+B/I/E/K, Ctrl+Enter — чекбокс
+      Prec.high(keymap.of(liveMarkdownKeymap)),
       Prec.high(keymap.of(markdownKeymap)),
       EditorView.lineWrapping,
       EditorView.contentAttributes.of({ spellcheck: 'true', lang: 'ru' }),
@@ -433,9 +534,14 @@ export const LiveMarkdown = forwardRef<LiveMarkdownHandle, Props>(function LiveM
         },
       }),
       livePreview,
+      tables,
+      EditorView.focusChangeEffect.of((_, focusing) => setFocus.of(focusing)),
       EditorView.updateListener.of((u) => {
         const fromOutside = u.transactions.some((t) => t.annotation(external));
-        if (u.docChanged && !fromOutside) cb.current.onChange(u.state.doc.toString());
+        if (u.docChanged && !fromOutside) {
+          emitted.current = u.state.doc.toString();
+          cb.current.onChange(emitted.current);
+        }
         if (u.selectionSet || u.docChanged) {
           const r = u.state.selection.main;
           cb.current.onSelect?.([r.from, r.to]);
@@ -464,7 +570,10 @@ export const LiveMarkdown = forwardRef<LiveMarkdownHandle, Props>(function LiveM
   useEffect(() => {
     const v = view.current;
     if (!v) return;
+    // Наш же текст вернулся через родителя — не трогаем: редактор мог уже уйти вперёд (быстрый ввод)
+    if (props.value === emitted.current) return;
     const cur = v.state.doc.toString();
+    emitted.current = props.value;
     if (cur !== props.value) v.dispatch({ changes: diff(cur, props.value), annotations: external.of(true) });
   }, [props.value]);
 

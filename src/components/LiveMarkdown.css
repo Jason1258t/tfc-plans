@@ -135,3 +135,12 @@
   cursor: pointer;
   accent-color: var(--accent);
 }
+
+/* таблица, отрисованная вне курсора */
+.lmd .lmd-table-widget {
+  cursor: text;
+  padding: 2px 0;
+}
+.lmd .lmd-table-widget .md table {
+  margin: 0;
+}
