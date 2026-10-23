@@ -1,7 +1,8 @@
-import { Check, FileText, Image as ImageIcon, Paperclip, UserRound } from 'lucide-react';
+import { Check, Clock, FileText, Image as ImageIcon, Paperclip, UserRound } from 'lucide-react';
 import { isImage } from '../lib/uploads';
 import { useData } from '../data/DataContext';
 import { tasksStore } from '../data/store';
+import { usePendingIds } from '../data/sync';
 import { checklistProgress, entryDone } from '../lib/tasks';
 import { cx, timeAgo } from '../lib/util';
 import { PRIORITIES, type Task } from '../types';
@@ -17,6 +18,7 @@ interface Props {
 
 export function TaskRow({ task, selected, onOpen, onOpenDoc }: Props) {
   const { artifacts, groups, files, nick } = useData();
+  const pending = usePendingIds('tasks').has(task.id);
   const imp = PRIORITIES[task.priority];
   const done = task.status === 'done';
   const progress = checklistProgress(task.checklist);
@@ -56,6 +58,18 @@ export function TaskRow({ task, selected, onOpen, onOpenDoc }: Props) {
           {task.icon && <ItemIcon id={task.icon} size={20} />}
           <span className="task-title">{task.title}</span>
           {task.status === 'doing' && <span className="tag doing">в работе</span>}
+          {pending && (
+            <span
+              className="task-pending"
+              aria-label="Не отправлено"
+              {...tooltipHandlers(
+                'Ещё не отправлено',
+                'Изменение пока только в этом браузере — уйдёт, когда будет связь',
+              )}
+            >
+              <Clock size={13} />
+            </span>
+          )}
         </div>
         <div className="task-meta">
           {group && (

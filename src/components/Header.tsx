@@ -8,6 +8,7 @@ import { OnboardingMenu } from './Onboarding';
 import { ItemIcon } from './ItemIcon';
 import { ItemIdSearch } from './ItemIdSearch';
 import { Modal } from './Modal';
+import { SyncBadge } from './SyncBadge';
 import { tooltipHandlers } from './Tooltip';
 
 interface Props {
@@ -66,6 +67,7 @@ export function Header({ nick, onChangeNick }: Props) {
           локально
         </span>
       )}
+      <SyncBadge />
       <button
         className="btn ghost sm id-search-btn"
         onClick={() => setSearching(true)}
