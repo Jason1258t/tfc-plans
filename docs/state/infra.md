@@ -41,6 +41,8 @@ Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md)
 ## File storage
 
 - Package **firestore-files@0.1.0** (user's separate repo) — attachments and schematic sources.
+- Package **cm-live-markdown** (user's separate repo, from git tag until published to npm) — the live Markdown editor
+  (details in [site.md](site.md)).
 - Storage behind an interface (`src/lib/fileStorage`): Firestore (default) or own server `server/file-server` (Node
   without deps, systemd + Caddy, Firebase token and App Check verification, SSE). Migration —
   `scripts/files-migrate.mjs` (firestore / https / dir, ids preserved, sha256 check). Tested locally (site through the

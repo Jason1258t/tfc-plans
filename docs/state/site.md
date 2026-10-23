@@ -45,10 +45,20 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   continues lists. Checked in the browser: typing, items, checkboxes, undo, item picker, agent-free paths, phone width,
   light/dark. Not tried: real IME and mobile keyboards. Plan doc on the task.
   - Stage 3 (2026-10-23): tables render as a block widget (`StateField`, React `Markdown` inside) outside the cursor;
-    click → raw row. Commands in `liveMarkdownCommands.ts`: Tab/Shift+Tab nest/outdent list items with their children
+    click → raw row. Commands (now in the package): Tab/Shift+Tab nest/outdent list items with their children
     (ordered renumbering of the first item; Shift+Tab at top level removes the marker), Tab/Shift+Tab move between
     table cells, Backspace right after a marker removes it (CM's default turned it into spaces), Ctrl+B/I/E,
     Ctrl+Shift+X, Ctrl+K link, Ctrl+Enter checkbox.
+  - **Package `cm-live-markdown`** (2026-10-23, task W3i4MxesJZIwoBcyI50w): the editor lives in the user's repo
+    https://github.com/Jason1258t/cm-live-markdown (sibling folder `../cm-live-markdown`): core `liveMarkdown(options)`
+    without React, `cm-live-markdown/react` wrapper, `@codemirror/*` as peers, 29 node checks of the commands on CM
+    states, demo (`npm run demo`), Russian README. Site side — `src/components/LiveMarkdown.tsx` only passes options:
+    item token `[[id|4]]` (redrawn by `refreshLivePreview` after `loadItems`), images `file:`/`uploading:` via
+    `imageSrc`, tables via our `Markdown`, Russian phrases; colours/fonts — `--lmd-*` variables in `LiveMarkdown.css`.
+    Installed from git tag (`github:…#v0.1.2`, built by `prepare`) — **not in the npm registry yet**: the npm token in
+    `~/.npmrc` is expired (401); after `npm login` + `npm publish` in the package folder switch the dependency to
+    `^0.1.2`. Fixed on the way (0.1.2): the image widget replaced its own root on «not found», CM read it as typing and
+    wrote «Картинка не найдена: …» into the text instead of `![…](file:…)`.
   - Nested list markers (2026-10-23): ordered items show outline numbers «3.1.», «3.2.1.», bullets repeat the dot per
     level «• •» — in `Markdown` (CSS counters, `ol start` → `counter-reset` in the component; applies to every Markdown
     view on the site) and in `LiveMarkdown` (widget from the syntax tree). Source stays plain `1.` / `-`.

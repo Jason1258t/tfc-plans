@@ -127,6 +127,13 @@ npm run deploy
 
 Если jar TerraFirmaCraft в `mods/` нет, TFC берётся с GitHub (`MOD_SOURCES` в скрипте).
 
+## Редактор Markdown
+
+Планы, описания задач, гайды и заметки правятся «живым» редактором в духе Obsidian — пакет
+[`cm-live-markdown`](https://github.com/Jason1258t/cm-live-markdown) (CodeMirror 6). Наше поверх пакета — значки
+предметов `[[id|4]]`, картинки `file:<id>`, таблицы через общий `Markdown` и цвета сайта — в
+[`src/components/LiveMarkdown.tsx`](src/components/LiveMarkdown.tsx).
+
 ## Вложения
 
 Файлы задач (картинки, датапаки, скрипты) лежат в Firestore кусками — через пакет

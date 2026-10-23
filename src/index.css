@@ -540,7 +540,8 @@ select.input {
   border: 1px solid var(--border);
 }
 
-.md-img-note {
+.md-img-note,
+.lmd-img-note {
   color: var(--text-3);
   font-style: italic;
 }
