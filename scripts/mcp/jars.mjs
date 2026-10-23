@@ -132,17 +132,23 @@ function findPlatform() {
     return { classes, sources: fs.existsSync(sources) ? sources : null, version };
   }
   const found = [];
-  const tools = path.join(PLATFORM_ROOT, 'tools');
   // tools/<мод>/build/… и на уровень глубже (tools/<мод>/devserver/build/… — тестовый сервер аддона)
   const dirs = [];
-  for (const mod of fs.existsSync(tools) ? fs.readdirSync(tools) : []) {
-    const base = path.join(tools, mod);
-    if (!fs.statSync(base).isDirectory()) continue;
-    dirs.push(path.join(base, 'build/moddev/artifacts'));
-    for (const sub of fs.readdirSync(base))
-      if (!['build', 'src', 'node_modules', '.gradle'].includes(sub))
-        dirs.push(path.join(base, sub, 'build/moddev/artifacts'));
-  }
+  const scanTools = (tools) => {
+    if (!fs.existsSync(tools)) return;
+    for (const mod of fs.readdirSync(tools)) {
+      const base = path.join(tools, mod);
+      if (!fs.statSync(base).isDirectory()) continue;
+      dirs.push(path.join(base, 'build/moddev/artifacts'));
+      for (const sub of fs.readdirSync(base))
+        if (!['build', 'src', 'node_modules', '.gradle'].includes(sub))
+          dirs.push(path.join(base, sub, 'build/moddev/artifacts'));
+    }
+  };
+  scanTools(path.join(PLATFORM_ROOT, 'tools'));
+  // Ворктри (обычный режим агента): аддон собирается в .claude/worktrees/<имя>/tools/<мод>
+  const wtRoot = path.join(PLATFORM_ROOT, '.claude', 'worktrees');
+  if (fs.existsSync(wtRoot)) for (const wt of fs.readdirSync(wtRoot)) scanTools(path.join(wtRoot, wt, 'tools'));
   for (const dir of dirs) {
     if (!fs.existsSync(dir)) continue;
     for (const f of fs.readdirSync(dir)) {
