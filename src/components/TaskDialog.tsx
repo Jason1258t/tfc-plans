@@ -438,7 +438,7 @@ function TaskFields({
   gallery,
   taskId,
 }: FieldsProps) {
-  const { groups, nick, users } = useData();
+  const { groups, nick, people } = useData();
   const title = useTextField(value.title, live, (v) => {
     // В черновике пишем как есть; у существующей задачи пустое название не сохраняем
     if (!live) onPatch({ title: v });
@@ -584,7 +584,7 @@ function TaskFields({
               onChange={(e) => onPatch({ assignee: e.target.value.trim() || null })}
             />
             <datalist id="tf-users">
-              {users.map((u) => (
+              {people.map((u) => (
                 <option key={u.id} value={u.id} />
               ))}
             </datalist>

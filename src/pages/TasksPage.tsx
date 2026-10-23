@@ -35,7 +35,7 @@ function writePref(key: string, v: string) {
 }
 
 export function TasksPage() {
-  const { tasks, groups, artifacts, loading, error, nick, users } = useData();
+  const { tasks, groups, artifacts, loading, error, nick, people: allPeople } = useData();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const groupFilter = params.get('group') ?? ALL;
@@ -113,14 +113,14 @@ export function TasksPage() {
 
   const people = useMemo(
     () =>
-      [...users]
-        .sort((a, b) => b.lastSeen - a.lastSeen)
+      [...allPeople]
+        .sort((a, b) => b.lastSeen - a.lastSeen || a.id.localeCompare(b.id))
         .map((u) => ({
           ...u,
           doing: tasks.filter((t) => t.assignee === u.id && t.status !== 'done').length,
           authored: tasks.filter((t) => t.author === u.id && t.status !== 'done').length,
         })),
-    [users, tasks],
+    [allPeople, tasks],
   );
 
   const dialog: TaskDialogMode | null = creating
@@ -182,7 +182,7 @@ export function TasksPage() {
                 <Users size={16} />
               </span>
               <span className="grow group-name">Люди</span>
-              <span className="group-count">{users.length || ''}</span>
+              <span className="group-count">{allPeople.length || ''}</span>
             </button>
           </li>
         </ul>
@@ -271,7 +271,8 @@ export function TasksPage() {
                           {u.id === nick && <span className="faint"> — вы</span>}
                         </span>
                         <span className="person-sub faint small">
-                          в работе {u.doing} · автор {u.authored} · был(а) {timeAgo(u.lastSeen)}
+                          в работе {u.doing} · автор {u.authored} ·{' '}
+                          {u.lastSeen > 0 ? 'был(а) ' + timeAgo(u.lastSeen) : 'только в задачах'}
                         </span>
                       </span>
                     </button>
