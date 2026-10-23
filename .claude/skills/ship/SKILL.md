@@ -13,7 +13,9 @@ Main folder: `MAIN=/Users/ivan/vscodeProjects/tfc-taskmanager` (always on `main`
 ## 1. Before merging (in the worktree)
 
 - Everything committed: `git status --short` is empty. Commit message `Раздел: что сделано` (Russian, one line).
-- Checks relevant to the change passed: `npx tsc -b`, `npx oxlint src scripts`, browser check on `dev-alt` for UI.
+- Checks relevant to the change passed: `npx tsc -b` (TS), `npm run lint` (oxlint, zero errors), `prettier --check`
+  on changed files (`npm run format` to fix). The `ship` tool runs `oxlint` + `prettier --check` on the branch changed
+  files and refuses on failure.
 - `docs/state/<topic>.md` updated if the state changed (and the `docs/STATE.md` index line, if any).
 
 ## 2. Merge into main
@@ -31,12 +33,12 @@ then merge again.
 
 Pick by what changed:
 
-| Changed | Command (run in `$MAIN`) |
-| --- | --- |
-| `firestore.rules` | `npx firebase deploy --only firestore:rules` — **first**, before hosting |
-| Site code (`src/`, `public/` static, `firebase.json` headers) | `npm run deploy:site` |
+| Changed                                                                                                           | Command (run in `$MAIN`)                                                                                                                                                                                      |
+| ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `firestore.rules`                                                                                                 | `npx firebase deploy --only firestore:rules` — **first**, before hosting                                                                                                                                      |
+| Site code (`src/`, `public/` static, `firebase.json` headers)                                                     | `npm run deploy:site`                                                                                                                                                                                         |
 | Pack data builders (`scripts/mods/…`, `mods.mjs`, `kubejs.mjs`, `scripts/mcp/render.mjs`, `scripts/mcp/models/…`) | no site deploy from the Mac: push, then the pack server rebuilds — `tfc admin rebuild --pull` (dry run, check the summary: icons drawn, removals), then `tfc admin publish --live`. Ask before the live step. |
-| Docs, agent files, `tools/` addon sources, `cli/`, `server/` only | no site deploy (addon jars/`tfc` builds have their own release steps — docs/addons.md, docs/tfc-app.md) |
+| Docs, agent files, `tools/` addon sources, `cli/`, `server/` only                                                 | no site deploy (addon jars/`tfc` builds have their own release steps — docs/addons.md, docs/tfc-app.md)                                                                                                       |
 
 - **Pack data on Hosting is set only by the pack server** (`scripts/publish-data.mjs`). `npm run deploy:site`
   (`scripts/deploy-site.mjs`) builds the site with `TFC_SITE_ONLY=1` and keeps the data roots
