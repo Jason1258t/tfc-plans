@@ -6,7 +6,7 @@ Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md)
 ## Data builders
 
 - `npm run mods`, `serverconfig`, `kubejs`, `world`, `pack-release` on deploy, and `npm run pack -- <version
-  folder|zip>` — all at once with folder discovery, whitelist and `instance/sources.json` (2026-10-20, stage 1).
+folder|zip>` — all at once with folder discovery, whitelist and `instance/sources.json` (2026-10-20, stage 1).
 - Parsers are a library: input, output and cache dirs are parameters; Firestore token from a service key
   (`GOOGLE_APPLICATION_CREDENTIALS`) or `firebase login`. `pack` was not run on the host's real instance folder (tested
   on an assembled copy in scratchpad: mods, KubeJS, test configs, calendar).
@@ -79,7 +79,7 @@ Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md)
   `POST /admin/rebuild` the server builds site data with its own repo copy (`/var/lib/tfc-pack/repo`, `git pull` on
   request), peak memory ~0.8 GB at `BUILD_HEAP_MB=640` (no swap, not needed yet). Publish — Hosting only changed files,
   `config`, `packUpdates`; **dry-run by default** (`AUTO_PUBLISH=dry-run`), real — `POST /admin/publish
-  {"dryRun": false}` / `tfc admin publish`.
+{"dryRun": false}` / `tfc admin publish`.
 - **First real publish 2026-10-20**, host snapshot `20261020-161550-09d2` (current): +2 mods (addons ee_rectifier,
   ee_overheat) in `packUpdates`, 103 new `config` docs (all server TOMLs without client ones; no secret-looking keys),
   2 icons and 5 data files on Hosting. First attempt failed: Firestore can't store nested arrays
@@ -115,7 +115,7 @@ Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md)
   and `status` on prod. Files `2026.10.20-540e283` published to the site.
 - **One `tfc pull`** (2026-10-21, replaces `tfc sync` + `tfc pull <kind>`): pack from the server + addons + flagged site
   datapacks/scripts + schematics; parts `mods` (with addons) `config kubejs resourcepacks datapacks world schematics
-  addons`; with names — one named site item; `tfc undo` — undo the whole pull (one backup for pack and site);
+addons`; with names — one named site item; `tfc undo` — undo the whole pull (one backup for pack and site);
   `tfc sync` / `sync --undo` — hidden aliases with a hint. Pack and site don't fight over paths: for addons the site
   wins (another addon version from the snapshot by jar name, `replaces` and jars with the same mod id are not installed;
   remembered in `addonOverrides` in state.json); a server folder gets addons of its side, pack mods only via
@@ -166,6 +166,11 @@ Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md)
   Windows, not with a real upload.**
 - `tfc --upgrade` — self-update (version.json → zip for own OS → sha256 → trial run → replace; on Windows the old exe is
   renamed `.old`). Checked on macOS arm64 with a local site copy; **not on Windows**.
+- **Auto-update** (2026-10-24, `autoUpgrade` in `cli/lib/upgrade.mjs`): before any command, once per terminal session
+  (parent pid; min 10 min between checks) or daily — if the site has a newer build, upgrade first, then re-run the same
+  command with the new file (`TFC_UPGRADED=1`, `TFC_SESSION`). Failure/offline → warning, old version runs.
+  `TFC_NO_AUTO_UPDATE=1` opts out. Checked on macOS arm64 binary with a local version.json (upgrade + re-run, exit
+  code, offline, opt-out, session/10-min logic); **not on Windows, not the npm channel**.
 - **Install** (2026-10-22): `tfc install` / `uninstall` — own folder (`%LOCALAPPDATA%\Programs\tfc`, `~/.local/bin`) and
   PATH (HKCU registry on Windows, a marked line in the shell rc); running without a command outside the install folder
   (double click) offers to install itself; one-line installers `/tfc/install.ps1` (`irm … | iex`) and `/tfc/install.sh`
