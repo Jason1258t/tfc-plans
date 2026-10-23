@@ -24,6 +24,8 @@ import { addonCards } from './addons-index.mjs';
 import { deployer, DOCS, fromValue, ROOT, SITE, toValue, token } from './firestore-rest.mjs';
 const LIST_CAP = 3000;
 const CHANGELOG_CAP = 3000;
+/** Наши аддоны: промежуток версий бывает длинным, а пункты «Важно:» старых версий терять нельзя */
+const ADDON_CHANGELOG_CAP = 8000;
 const CHANGELOGS_TOTAL_CAP = 300_000;
 const log = (...a) => console.log('[pack-release]', ...a);
 
@@ -168,7 +170,7 @@ async function addonChangelogs(mods, root) {
   const cards = addonCards(root);
   const ids = new Set(cards.map((c) => c.id));
   if (![...mods.added, ...mods.updated].some((m) => ids.has(m.id))) return {};
-  return addonChangelogsFrom(mods, cards, await addonVersionDocs(), CHANGELOG_CAP);
+  return addonChangelogsFrom(mods, cards, await addonVersionDocs(), ADDON_CHANGELOG_CAP);
 }
 
 // ---------------------------------------------------------------- проверка на сборку без модов

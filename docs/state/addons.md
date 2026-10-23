@@ -7,6 +7,28 @@ page `/addons/<mod>`: card `tools/<mod>/addon.json` (+ jar, `icons/`) in git, de
 `addons_list` / `addon_check`. Texts moved from the former `src/lib/addons.ts` as is (signed Claude). What still waits for the host or a
 game check — [pending.md](pending.md).
 
+## Versions (since 2026-10-23)
+
+Task «Написание чендж логов для наших аддонов, и их поддержка в генераторе патчноута» (group «Разработка»), plan doc
+`cL333UUFwvGiTEcLq8RK`. Each addon version is a Firestore doc `addonVersions/{mod}@{ver}` (`src/lib/addonVersions.ts`):
+changelog for players, status draft/released/withdrawn, checked + note, jar {file, sha256, size}; players edit on the
+page tab «Версии» (revisions kept; rules: site may change only text fields). Jars of all versions are pack-server blobs
+(not in git anymore; the card keeps `sha256` of the current one, `scripts/addons-index.mjs` fetches it). `tfc pull addons
+<mod>@<ver>` installs and pins a version (`state.addonPins`), `@latest` unpins, withdrawn versions are skipped; `tfc
+addons`; `tfc admin addon upload`. `pack-release.mjs` adds addon changelogs for «from < v ≤ to» (`changelogSources:
+addon`, `formerIds` for ee_rectifier → ee_extras, rollback marked); `/updates` fills old records client-side and marks
+«наш аддон»; the patch-note prompt has a «## Наши аддоны» section. MCP `addon_versions`, `addon_version_get/put`;
+`addon_check` checks the record.
+
+- Migrated 2026-10-23: 21 versions with changelogs written from git history and this file (EE Extras 1.0.0–2.3.3 incl.
+  EE Rectifiers 1.0/1.1 without jar, Small Diesel 1.0.0–1.0.1, Miner Tools 1.0.0–1.1.0, Stress Fix, Host Fix, EE Overheat,
+  IE Extras 1.0.0); 19 jars extracted from git history and uploaded to the pack server (all present, one download
+  checked by hash). **EE Extras 2.2.0 jar says 2.1.2 inside** (`neoforge.mods.toml` not bumped back then) — noted on
+  the version.
+- Checked: local pack server (`/site/addons`, upload refusals), `tfc` against it in a scratch folder (latest, pin 2.3.1,
+  plain pull keeps the pin, `@latest`, no key → static index, explicit version without key refused), `pack-release
+  --dry-run` on fake previous manifests (2.3.1 → 2.3.3; ee_rectifier 1.1.0 → ee_extras), site on the dev server.
+
 ## EE Extras (`tools/ee-extras-mod`)
 
 Before 2.0 — EE Rectifiers, `ee_rectifier`; old blocks migrate to new ids via aliases.

@@ -389,7 +389,10 @@ a region is named by the nearest city. Climate and rocks not compared with the g
 | Tool | Does |
 | --- | --- |
 | `addons_list(root)` | addon cards `tools/*/addon.json`: version, folder, side, blocks; flags source/jar/site version mismatch, missing page |
-| `addon_check(id*, root)` | release check: card vs `gradle.properties`/`build.sh` and jar (modId, version, items), stray jars, block ids, recipes, `icons/`, site page `addon-<mod>` (section, `::addon-block` widgets, version mentioned, jar items not described), deployed version |
+| `addon_check(id*, root)` | release check: card vs `gradle.properties`/`build.sh` and jar (modId, version, items, sha256), version record in `addonVersions` (changelog, status, jar uploaded and matching), block ids, recipes, `icons/`, site page `addon-<mod>` (section, `::addon-block` widgets, version mentioned, jar items not described), deployed version |
+| `addon_versions(id*, full, root)` | versions of an addon (Firestore `addonVersions`): date, status, checked, jar on the pack server, changelog missing; `full` — with changelogs. One read per version |
+| `addon_version_get(id*, version*)` | one version: changelog, checkedNote, revision |
+| `addon_version_put(id*, version*, baseRevision*, changelog, status, checked, checkedNote, date, jar)` | create (`"new"`) or edit a version (signed Claude, revision kept); `jar` — local path, records file/sha256/size (the file itself goes up with `npm run tfc -- admin addon upload`) |
 
 `root` — repo root to read cards from (a git worktree with the new release); default — main checkout. The page itself
 is a guide: `guide_get addon-<mod>` → `guide_put`. Reads: one Firestore document per addon plus `/addons/index.json`
@@ -451,7 +454,7 @@ scripts/mcp/
                       config_propose, config_changes), pack, kubejs, books (+books-index), blocks (+blocks-data), site
                       (tasks, groups, plan docs with writes; datapacks, schematics, site scripts), map (+map-climate,
                       map-png — PNG read/write), resources (model_render, texture_get, resources_check), addons
-                      (addons_list, addon_check), candidates (candidate_get)
+                      (addons_list, addon_check, addon_versions, addon_version_get/put), candidates (candidate_get)
 ```
 
 Data merging repeats the site (`src/lib/items.ts`, `recipes.ts`, `tags.ts`, `reference.ts`, `meals.ts`) — those modules

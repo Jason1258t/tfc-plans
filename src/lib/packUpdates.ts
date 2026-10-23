@@ -173,7 +173,7 @@ export async function withAddonChangelogs(u: PackUpdate): Promise<PackUpdate> {
     all.catch(() => missing.forEach((id) => versionsCache.delete(id)));
   }
   const versions = (await Promise.all(need.map((id) => versionsCache.get(id)!))).flat();
-  const logs = addonChangelogsFrom(u.mods, ADDONS, versions);
+  const logs = addonChangelogsFrom(u.mods, ADDONS, versions, 8000);
   if (!Object.keys(logs).length) return u;
   const sources = { ...(u.changelogSources ?? {}) };
   for (const id of Object.keys(logs)) sources[id] = 'addon';
