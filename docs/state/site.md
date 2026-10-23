@@ -49,6 +49,9 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
     (ordered renumbering of the first item; Shift+Tab at top level removes the marker), Tab/Shift+Tab move between
     table cells, Backspace right after a marker removes it (CM's default turned it into spaces), Ctrl+B/I/E,
     Ctrl+Shift+X, Ctrl+K link, Ctrl+Enter checkbox.
+  - Nested list markers (2026-10-23): ordered items show outline numbers «3.1.», «3.2.1.», bullets repeat the dot per
+    level «• •» — in `Markdown` (CSS counters, `ol start` → `counter-reset` in the component; applies to every Markdown
+    view on the site) and in `LiveMarkdown` (widget from the syntax tree). Source stays plain `1.` / `-`.
   - Save race fixed in `ArtifactPane` (also for the textarea): a finished autosave used to clear «dirty» even if newer
     edits were pending, so the old text was pulled back from Firestore for ~0.6 s and could merge with new typing
     (deleted list items «came back»). `LiveMarkdown` also ignores its own echoed value.

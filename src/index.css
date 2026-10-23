@@ -572,6 +572,59 @@ select.input {
   margin-left: -1.3em;
 }
 
+/* Маркеры: вложенные нумерованные — 3.1, 3.1.1; маркированные повторяют точку по уровню вложенности (• •).
+   Номер первого пункта (start) задаёт counter-reset в компоненте Markdown */
+.md ol {
+  list-style: none;
+  counter-reset: md-item;
+}
+.md ol > li {
+  counter-increment: md-item;
+}
+.md ol > li,
+.md ul > li:not(.task-list-item) {
+  list-style: none;
+  position: relative;
+}
+.md ol > li:not(.task-list-item)::before,
+.md ul > li:not(.task-list-item)::before {
+  position: absolute;
+  right: 100%;
+  margin-right: 0.45em;
+  color: var(--text-2);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.md ol > li:not(.task-list-item)::before {
+  content: counters(md-item, '.') '.';
+}
+.md ul > li:not(.task-list-item)::before {
+  content: '•';
+}
+.md :is(ul, ol) ul > li:not(.task-list-item)::before {
+  content: '• •';
+}
+.md :is(ul, ol) :is(ul, ol) ul > li:not(.task-list-item)::before {
+  content: '• • •';
+}
+.md :is(ul, ol) :is(ul, ol) :is(ul, ol) ul > li:not(.task-list-item)::before {
+  content: '• • • •';
+}
+/* Вложенный список — без отступа снизу, иначе после него «дырка» перед следующим пунктом */
+.md li > :is(ul, ol) {
+  margin-bottom: 0;
+}
+/* Длинным маркерам вложенных уровней — место слева */
+.md :is(ul, ol) :is(ul, ol) {
+  padding-left: 2.2em;
+}
+.md :is(ul, ol) :is(ul, ol) :is(ul, ol) {
+  padding-left: 2.8em;
+}
+.md ol {
+  padding-left: 1.8em;
+}
+
 .md li.task-list-item input:not(:disabled) {
   cursor: pointer;
 }
