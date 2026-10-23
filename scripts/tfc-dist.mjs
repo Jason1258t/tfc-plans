@@ -53,6 +53,7 @@ function buildVersion() {
     'src/lib/datapackFiles.ts',
     'src/lib/schematicFile.ts',
     'src/lib/nbt.ts',
+    'src/lib/addonVersions.ts',
   ];
   const [ct, hash] = git('log', '-1', '--format=%ct %h', '--', ...srcs).split(' ');
   const time = Number(ct) * 1000;
@@ -125,7 +126,7 @@ async function bundle(work, version, { npm = false } = {}) {
   // Из сайта — только общие модули без импортов (tfc pull) и fflate
   const foreign = Object.keys(res.metafile.inputs).filter(
     (f) =>
-      !/^(cli|server\/pack-server\/lib)\/|^src\/lib\/(datapackFiles|schematicFile|nbt)\.ts$|(^|\/)node_modules\/fflate\/|^<define:/.test(
+      !/^(cli|server\/pack-server\/lib)\/|^src\/lib\/(datapackFiles|schematicFile|nbt|addonVersions)\.ts$|(^|\/)node_modules\/fflate\/|^<define:/.test(
         f,
       ),
   );

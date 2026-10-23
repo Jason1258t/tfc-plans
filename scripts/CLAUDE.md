@@ -5,7 +5,7 @@ Pipeline overview — [docs/architecture.md](../docs/architecture.md). MCP serve
 - Parsers are a library: input, output (instead of `public/`) and cache dirs are parameters (`buildMods`,
   `buildKubejs`, `configDocs`, `worldDocs`, `packRelease`, `runPack`); repo-root paths are only `npm run …` defaults.
   New paths — as parameters too, not `ROOT`.
-- `src/lib/recipeFilter.ts`, `recipeRefs.ts`, `nbt.ts`, `datapackFiles.ts`, `schematicFile.ts` (imports only
+- `src/lib/recipeFilter.ts`, `recipeRefs.ts`, `nbt.ts`, `datapackFiles.ts`, `addonVersions.ts`, `schematicFile.ts` (imports only
   `./nbt.ts`, with the extension) — **no imports, erasable TS syntax only**: both the site and Node run them
   (`import '../src/lib/x.ts'` from `.mjs`, Node 24). `tsconfig` has `erasableSyntaxOnly` — no enums, no parameter
   properties.
