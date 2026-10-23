@@ -20,7 +20,7 @@ import {
   latestReleased,
   sortVersions,
 } from '../../../src/lib/addonVersions.ts';
-import { dateOf, str } from '../fmt.mjs';
+import { dateOf, NICK, str } from '../fmt.mjs';
 import { zipEntries, zipRead } from '../jars.mjs';
 import { TOOLS_DIR } from '../resources.mjs';
 
@@ -382,7 +382,7 @@ async function addonVersionPut(a) {
     jar: jar ?? cur?.jar ?? null,
     createdAt: cur?.createdAt ?? now,
     updatedAt: now,
-    updatedBy: 'Claude',
+    updatedBy: NICK,
   };
   const pre = isNew
     ? 'currentDocument.exists=false'
@@ -401,7 +401,7 @@ async function addonVersionPut(a) {
   }
   await api(`${url}/revisions`, {
     method: 'POST',
-    body: JSON.stringify({ fields: toFields({ ...edit, updatedBy: 'Claude', at: now }) }),
+    body: JSON.stringify({ fields: toFields({ ...edit, updatedBy: NICK, at: now }) }),
   });
   return [
     `${isNew ? 'Создана' : 'Сохранена'} версия ${id}: ${versionLine(data)}`,
@@ -468,7 +468,7 @@ export const TOOLS = [
   {
     name: 'addon_version_put',
     description:
-      'Create (baseRevision "new") or edit an addon version (**write to the shared database**, signed Claude): changelog for players in Russian Markdown («что изменилось с прошлой версии»; prefix «Важно:» for what breaks or needs action), status draft|released|withdrawn, checked game|server|code|none, checkedNote, date YYYY-MM-DD, jar — local jar path (records file/sha256/size; upload the file itself with `npm run tfc -- admin addon upload <jar>`). Passed fields replace, others kept.',
+      'Create (baseRevision "new") or edit an addon version (**write to the shared database**, signed with the agent nick): changelog for players in Russian Markdown («что изменилось с прошлой версии»; prefix «Важно:» for what breaks or needs action), status draft|released|withdrawn, checked game|server|code|none, checkedNote, date YYYY-MM-DD, jar — local jar path (records file/sha256/size; upload the file itself with `npm run tfc -- admin addon upload <jar>`). Passed fields replace, others kept.',
     inputSchema: {
       type: 'object',
       properties: {

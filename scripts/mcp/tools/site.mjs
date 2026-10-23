@@ -1,6 +1,6 @@
 /**
  * Инструменты MCP: контент сайта из Firestore — задачи и группы, документы-планы, датапаки, скрипты KubeJS с сайта,
- * схемы Create. Пишут только task_create / task_update / artifact_put (подпись Claude, правка — с проверкой ревизии,
+ * схемы Create. Пишут только task_create / task_update / artifact_put (подпись — имя агента, правка — с проверкой ревизии,
  * как guide_put). Экономим чтения (50 тыс. в сутки на всех): списки — с mask (только нужные поля) и кешем на
  * несколько минут, документ целиком — отдельным GET по запросу, вложения задачи — запросом по taskId.
  * В конце каждого ответа — сколько чтений Firestore он стоил (0 — всё из кеша).
@@ -9,7 +9,7 @@ import { DOCS, fromValue } from '../../firestore-rest.mjs';
 import { datapackFiles, zipName } from '../../../src/lib/datapackFiles.ts';
 import { itemName } from '../data.mjs';
 import { FirestoreError, api, cached, createDoc, listAll, patchDoc } from '../firestore.mjs';
-import { dateOf, nameOf, named, norm, num, page, paging, short, str, words } from '../fmt.mjs';
+import { dateOf, nameOf, named, NICK, norm, num, page, paging, short, str, words } from '../fmt.mjs';
 
 const TTL = 3 * 60_000;
 
@@ -167,7 +167,6 @@ function pick(list, key, label, what) {
 
 const FIRESTORE_ID = /^[A-Za-z0-9]{20}$/;
 const SITE = 'https://tfc-plans-fd2c.web.app';
-const NICK = 'Claude';
 
 /** Документ целиком: id сайта — сразу GET (1 чтение), иначе поиск по кешированному списку и GET найденного */
 async function resolve(coll, index, key, label, what, mask) {
@@ -783,7 +782,7 @@ export const TOOLS = [
   },
   {
     name: 'task_create',
-    description: `Create a site task (**write to the shared database**, author Claude) — like the «Новая задача» button: rating 1000, createdAt/updatedAt, completedAt when status=done. Returns id, link and revision. A detailed plan goes in a separate doc: artifact_put task=<id>.`,
+    description: `Create a site task (**write to the shared database**, author = agent nick) — like the «Новая задача» button: rating 1000, createdAt/updatedAt, completedAt when status=done. Returns id, link and revision. A detailed plan goes in a separate doc: artifact_put task=<id>.`,
     inputSchema: {
       type: 'object',
       properties: TASK_PROPS,
@@ -838,7 +837,7 @@ export const TOOLS = [
   {
     name: 'artifact_put',
     description:
-      'Create or change a plan doc (**write to the shared database**, signed Claude). Without id — new doc (default title «План: <задача>»). With id — only the passed title/content/task change; needs baseRevision from artifact_get, refused if the doc changed after reading. content replaces the whole text.',
+      'Create or change a plan doc (**write to the shared database**, signed with the agent nick). Without id — new doc (default title «План: <задача>»). With id — only the passed title/content/task change; needs baseRevision from artifact_get, refused if the doc changed after reading. content replaces the whole text.',
     inputSchema: {
       type: 'object',
       properties: {

@@ -6,7 +6,7 @@ description: Develop a pack addon (NeoForge mod in tools/<mod>) — decide addon
 # Addon development: task → route → API by bytecode → scaffold → resources → dev server → release
 
 Details live in [docs/addons.md](../../../docs/addons.md) (environment, versions, devtest, EE device blocks, graphics);
-`tools/CLAUDE.md` has the short rules. This skill is the order of work. Releasing (card, icons, site page) — skill
+`tools/AGENTS.md` has the short rules. This skill is the order of work. Releasing (card, icons, site page) — skill
 `addon-release`; merge/deploy/push — skill `ship`. Everything players see (lang, page, commits, report) — Russian.
 
 ## 1. Task and worktree
