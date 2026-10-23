@@ -11,7 +11,7 @@ Main folder: `MAIN=/Users/ivan/vscodeProjects/tfc-taskmanager` (always on `main`
 ## 1. Before merging (in the worktree)
 
 - Everything committed: `git status --short` is empty. Commit message `Раздел: что сделано` (Russian, one line).
-- Checks relevant to the change passed: `npx tsc -b`, `npx oxlint src scripts`, browser check on `dev-wt` for UI.
+- Checks relevant to the change passed: `npx tsc -b`, `npx oxlint src scripts`, browser check on `dev-alt` for UI.
 - `docs/state/<topic>.md` updated if the state changed (and the `docs/STATE.md` index line, if any).
 
 ## 2. Merge into main

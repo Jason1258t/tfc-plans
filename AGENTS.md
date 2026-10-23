@@ -61,8 +61,9 @@ only in `.claude/skills/`.
 ## Commands
 
 ```bash
-npm run dev            # Vite; builds the mod library first if needed (scripts/ensure-mods.mjs)
-npm run dev -- --port 5176 --strictPort   # preview port for agents (5177 if busy); worktree without jars — TFC_KEEP_MODS=1, port 5179
+npm run dev            # Vite; mod data from the pack server first (scripts/ensure-mods.mjs, no jars needed)
+npm run dev -- --port 5176 --strictPort   # preview port for agents (5177 if busy); offline — TFC_KEEP_MODS=1
+npm run pack:fetch     # pack jars → ~/.cache/tfc-plans/pack (outside the repo) for MCP, npm run mods, addons
 npx tsc -b             # types (part of build)
 npx oxlint src scripts # lint; old set-state-in-effect / only-export-components warnings — don't fix in passing
 npx prettier --write <files>   # singleQuote, printWidth 120; don't run on all of src
@@ -77,7 +78,8 @@ No tests. Verification — in the browser (below) and one-off node scripts in a 
 ## MCP `tfc-pack`
 
 Local stdio server (`scripts/mcp/server.mjs`; registered in `.mcp.json`, other agents — [docs/agents.md](docs/agents.md);
-in a worktree it reads `public/` and `mods/` of the main checkout).
+in a worktree it reads `public/` of the main checkout; pack jars — from the snapshot cache `~/.cache/tfc-plans/pack/mods`,
+filled by `npm run pack:fetch`; there is no `mods/` in the repo).
 **For game facts, recipes, tags, configs, mod code, logs, guides and site content use it first**, not grep over
 `public/*.json` (recipes.json is 7.7 MB) or unzipping jars. Mod code: `decompile method=` to read, `bytecode` instead of
 `javap` in a shell — method outline, any jar or classes folder on disk (addon `libs/`, `build/classes`, `.mixin.out`),
@@ -98,7 +100,7 @@ things — [docs/plans/mcp-next.md](docs/plans/mcp-next.md).
 
 ## Browser checks
 
-- Dev server on port 5176 (5177 if busy; in a worktree without jars — 5179 with `TFC_KEEP_MODS=1`), see Commands.
+- Dev server on port 5176 (5177 if busy), see Commands; it needs no jars.
 - The dev server talks to **production Firestore**. Don't leave test records in shared collections. Preview nick is
   `ClaudeTest` (cookie `tfc_nick`) for every agent; deliberate writes on the user's request are signed with your agent
   name.

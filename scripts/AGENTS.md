@@ -16,5 +16,6 @@ Pipeline overview — [docs/architecture.md](../docs/architecture.md). MCP serve
 - `kubejs/data` is a datapack: it overrides data too (`tfc/food` etc.). Anything the site shows from mod data needs a
   merge with `kubejs-data.json` or at least a warning in `kubejs.mjs` (`MOD_ONLY_DATA`).
 - When the jar cache format changes, bump the `.done-vN` marker in `mods.mjs`, or the old cache won't rebuild.
-- Mod-data changes deploy from a worktree only with jars: `ln -s /Users/ivan/vscodeProjects/tfc-taskmanager/mods/*.jar
-  mods/` first (see the `ship` skill).
+- Pack jars live outside the repo — the snapshot cache (`scripts/pack-cache.mjs`: `~/.cache/tfc-plans/pack`,
+  `TFC_PACK_CACHE`; jars `TFC_MODS_DIR`), filled by `npm run pack:fetch`. There is no `<repo>/mods/`; don't add one.
+  Mod data reaches the site only via the pack server (see the `ship` skill).

@@ -1,24 +1,28 @@
-// Перед dev/build: пересобирает библиотеку предметов, если её нет или поменялось содержимое mods/.
-// TFC_KEEP_MODS=1 — данные модов не пересобирать, взять готовые (в git worktree — из основной копии); jar не нужны.
-// jar в mods/ нет, а в .env.local есть TFC_PACK_URL и TFC_PACK_TOKEN — данные модов с сервера сборки (pack-fetch.mjs).
+// Перед dev/build: данные модов в public/ (items.json, recipes.json, icons/…). Jar не нужны: данные собирает сервер
+// сборки, отсюда они только берутся.
+//   1. В git worktree недостающие файлы public/ копируются из основной копии (быстро, без сети).
+//   2. Есть TFC_PACK_URL и TFC_PACK_TOKEN (окружение, .env.local или вход в программу tfc) — данные модов текущего снимка с сервера сборки
+//      (одинаковые файлы не качаются). Сервер недоступен — остаются прежние, с предупреждением.
+// TFC_KEEP_MODS=1 — без сервера сборки: взять готовые данные (в worktree — свежие из основной копии).
 // TFC_SITE_ONLY=1 (npm run deploy:site) — данные сборки не нужны вовсе: их на хостинге ставит сервер сборки.
+// Собрать данные модов руками из jar — npm run mods (jar — npm run pack:fetch).
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SIGNATURE_FILE, assertModsPresent, mainCheckoutRoot, modsSignature } from './mods.mjs';
+import { mainCheckoutRoot } from './pack-cache.mjs';
 import { fetchData, packServer } from './pack-fetch.mjs';
 import { DATA_ROOTS, MODS_OUTPUTS as MODS_LIST } from './data-roots.mjs';
 
 const PUBLIC = fileURLToPath(new URL('../public', import.meta.url));
-let keepMods = !!process.env.TFC_KEEP_MODS;
+const keepMods = !!process.env.TFC_KEEP_MODS;
 const siteOnly = !!process.env.TFC_SITE_ONLY;
 /** Что в public/ собирает npm run mods; остальное неотслеживаемое (kubejs, аддоны, ресурспаки) — из других мест */
 const MODS_OUTPUTS = new Set(MODS_LIST);
 
 /**
  * В git worktree файлов public/, которых нет в git, нет вовсе: без них деплой убрал бы с сайта аддоны, ресурспаки
- * и разбор KubeJS. Недостающее берём из основной копии; данные модов — только с TFC_KEEP_MODS (тогда всегда свежие).
+ * и разбор KubeJS. Недостающее берём из основной копии; данные модов с TFC_KEEP_MODS — всегда (тогда свежие).
  */
 const mainRoot = mainCheckoutRoot();
 if (mainRoot) {
@@ -38,8 +42,7 @@ if (mainRoot) {
   for (const name of entries) {
     const dst = path.join(PUBLIC, name);
     if (siteOnly && DATA_ROOTS.includes(name)) continue;
-    const fromMods = MODS_OUTPUTS.has(name);
-    if (fromMods ? !keepMods : fs.existsSync(dst)) continue;
+    if (fs.existsSync(dst) && !(keepMods && MODS_OUTPUTS.has(name))) continue;
     fs.rmSync(dst, { recursive: true, force: true });
     fs.cpSync(path.join(mainPublic, name), dst, { recursive: true });
     copied.push(name);
@@ -59,74 +62,38 @@ if (siteOnly) {
   process.exit(0);
 }
 
-// Сервер сборки: jar нет — данные модов текущего снимка с сервера (одинаковые файлы не качаются), не пересобираем
-const packSrv = !keepMods && !modsSignature().length ? packServer() : null;
+// Сервер сборки: данные модов текущего снимка
+const packSrv = keepMods ? null : packServer();
 if (packSrv) {
-  console.log(`[items] в mods/ нет jar — беру данные модов с сервера сборки ${packSrv.url}`);
   try {
     await fetchData({ outDir: PUBLIC, srv: packSrv });
   } catch (e) {
-    console.error(`[items] сервер сборки: ${e.message}`);
-    process.exit(1);
+    console.warn(`[items] сервер сборки ${packSrv.url}: ${e.message} — беру прежние данные модов`);
   }
-  keepMods = true;
-}
+} else if (!keepMods)
+  console.log(
+    '[items] нет адреса сервера сборки (TFC_PACK_URL / TFC_PACK_TOKEN или вход в tfc) — данные модов не обновляю',
+  );
 
-const itemsJson = fileURLToPath(new URL('../public/items.json', import.meta.url));
-const recipesJson = fileURLToPath(new URL('../public/recipes.json', import.meta.url));
-const referenceJson = fileURLToPath(new URL('../public/reference.json', import.meta.url));
-const manifestJson = fileURLToPath(new URL('../public/pack-manifest.json', import.meta.url));
-const geoJson = fileURLToPath(new URL('../public/geo.json', import.meta.url));
-const botanyJson = fileURLToPath(new URL('../public/botany.json', import.meta.url));
-const mealsJson = fileURLToPath(new URL('../public/meals.json', import.meta.url));
-const powerJson = fileURLToPath(new URL('../public/power.json', import.meta.url));
-const multiblocksJson = fileURLToPath(new URL('../public/multiblocks.json', import.meta.url));
-const tagsJson = fileURLToPath(new URL('../public/tags.json', import.meta.url));
-const current = JSON.stringify(modsSignature());
-let previous = null;
-try {
-  previous = fs.readFileSync(SIGNATURE_FILE, 'utf8');
-} catch {
-  /* ещё не собирали */
-}
-
-let reason = null;
-if (!fs.existsSync(itemsJson)) reason = 'библиотека предметов не найдена';
-else if (!fs.existsSync(recipesJson)) reason = 'каталог рецептов не найден';
-else if (!fs.existsSync(referenceJson)) reason = 'справочник не найден';
-else if (!fs.existsSync(manifestJson)) reason = 'снимок сборки не найден';
-else if (!fs.existsSync(geoJson)) reason = 'география не найдена';
-else if (!fs.existsSync(tagsJson)) reason = 'теги не найдены';
-else if (!fs.existsSync(botanyJson)) reason = 'ботаника не найдена';
-else if (!fs.existsSync(mealsJson)) reason = 'сборные блюда не найдены';
-else if (!fs.existsSync(powerJson)) reason = 'данные по электричеству не найдены';
-else if (!fs.existsSync(multiblocksJson)) reason = 'мультиблоки не найдены';
-else if (keepMods)
-  reason = null; // с флагом набор jar не сравниваем
-else if (previous !== null && previous !== current) reason = 'набор модов в mods/ изменился';
-else if (previous === null && current !== '[]') reason = 'в mods/ появились моды';
-
-if (reason && keepMods) {
+const missing = [
+  ['items.json', 'библиотека предметов'],
+  ['recipes.json', 'каталог рецептов'],
+  ['reference.json', 'справочник'],
+  ['pack-manifest.json', 'снимок сборки'],
+  ['geo.json', 'география'],
+  ['tags.json', 'теги'],
+  ['botany.json', 'ботаника'],
+  ['meals.json', 'сборные блюда'],
+  ['power.json', 'данные по электричеству'],
+  ['multiblocks.json', 'мультиблоки'],
+].filter(([f]) => !fs.existsSync(path.join(PUBLIC, f)));
+if (missing.length) {
   console.error(
-    `[items] ${packSrv ? 'данные с сервера сборки' : 'TFC_KEEP_MODS'}: ${reason}, а пересобирать данные модов флаг не даёт. ` +
-      (mainRoot ? `В основной копии ${mainRoot} их тоже нет — ` : '') +
-      'соберите их там, где лежат jar: npm run mods.',
+    `[items] нет данных модов (${missing.map((m) => m[1]).join(', ')}). Возьмите их с сервера сборки: ` +
+      'вход в программу tfc или TFC_PACK_URL и TFC_PACK_TOKEN (ключ игрока подходит) в .env.local, затем снова npm run dev. ' +
+      'Или соберите из jar: npm run pack:fetch && npm run mods.',
   );
   process.exit(1);
-} else if (keepMods) {
-  if (!packSrv) console.log('[items] TFC_KEEP_MODS: данные модов не пересобираю, mods/ не смотрю');
-} else if (reason) {
-  // mods/ пуст, а сборка была с модами (чаще всего — git worktree без jar): стоп, а не каталог из одной ванили
-  try {
-    assertModsPresent();
-  } catch (e) {
-    console.error(`[items] ${reason}, но пересобирать нельзя:\n${e.message}`);
-    process.exit(1);
-  }
-  console.log(`[items] ${reason} — пересобираю…`);
-  execFileSync(process.execPath, [fileURLToPath(new URL('./mods.mjs', import.meta.url))], {
-    stdio: 'inherit',
-  });
 }
 
 // Скрипты KubeJS импортированы (instance/kubejs), а разбора нет — пересобрать public/kubejs.json

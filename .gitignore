@@ -49,9 +49,8 @@ public/block-models/
 public/addons/
 public/config-defaults.json
 
-# Jar модов сборки — источник библиотеки предметов, в git не храним
-mods/*
-!mods/README.md
+# Старая папка jar сборки (теперь — кеш снимка вне репозитория, npm run pack:fetch); на случай, если осталась
+/mods/
 
 # Локальные настройки Claude Code
 .claude/*

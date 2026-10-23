@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Проверка мода на настоящем сервере (среда разработки NeoForge + Curios, GeckoLib и Immersive Engineering из mods/
+# Проверка мода на настоящем сервере (среда разработки NeoForge + Curios, GeckoLib и Immersive Engineering из jar
 # сборки): плоский мир, через RCON команды проверочного мода (src/devtest): /belttest — подбор с поясом, слот Curios,
 # окно фильтра; /helmettest — каска (заряд, фонарь, свет, урон), с зарядной станцией IE и наковальнями. Потом сервер
 # останавливается. С аргументами — выполняет их вместо этого. PORT — порт RCON (по умолчанию 25598), игры — PORT + 100.
@@ -11,9 +11,8 @@ rm -rf run
 mkdir -p run/mods
 cp libs/*.jar run/mods/
 # IE — для проверки зарядной станции (каске для работы не нужен)
-ROOT=../..
-[ -n "$(ls $ROOT/mods/ImmersiveEngineering-*.jar 2>/dev/null)" ] || ROOT=$(git rev-parse --path-format=absolute --git-common-dir)/..
-cp "$ROOT"/mods/ImmersiveEngineering-*.jar run/mods/
+MODS="${MODS:-${TFC_MODS_DIR:-${TFC_PACK_CACHE:-$HOME/.cache/tfc-plans/pack}/mods}}"
+cp "$MODS"/ImmersiveEngineering-*.jar run/mods/
 PORT=${PORT:-25598}
 echo 'eula=true' > run/eula.txt
 cat > run/server.properties <<P

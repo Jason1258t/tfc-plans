@@ -7,11 +7,12 @@
  *
  * Источники:
  *   - ванильный Minecraft (client.jar с серверов Mojang + ru_ru из asset index)
- *   - все jar из папки mods/ — просто скопируйте туда моды сборки
- *   - MOD_SOURCES (sparse git clone) — запасной вариант для TFC, если его jar нет в mods/
+ *   - все jar сборки — копия снимка вне репозитория (npm run pack:fetch, scripts/pack-cache.mjs) или TFC_MODS_DIR
+ *   - MOD_SOURCES (sparse git clone) — запасной вариант для TFC, если его jar нет среди них
  *
  * Сгенерированные файлы не коммитятся (это ассеты Mojang/авторов модов).
  *
+ * Обычно данные модов собирает сервер сборки, а npm run dev берёт их оттуда; руками — для проверки разборщиков.
  * Использование:  npm run mods          (пересобрать, используя кеш)
  *                 npm run mods -- --fresh  (скачать всё заново)
  *
@@ -37,6 +38,7 @@ import { makeRenderer } from './mods/icons3d.mjs';
 import { writeBlockModels } from './mods/block-models.mjs';
 import { platformAssets } from './mods/platform-assets.mjs';
 import { MODS as MCP_MODS } from './mcp/data.mjs';
+import { PACK_MODS } from './pack-cache.mjs';
 import { platform, setPlatformAssets } from './mcp/jars.mjs';
 import { hiddenItems } from './mods/visibility/index.mjs';
 
@@ -78,12 +80,11 @@ const UI_TEXTURES = [
 ];
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-export const DEFAULT_MODS = path.join(ROOT, 'mods');
+export const DEFAULT_MODS = PACK_MODS;
 export const DEFAULT_OUT = path.join(ROOT, 'public');
 export const DEFAULT_CACHE = path.join(ROOT, '.cache');
 /** Список jar прошлой сборки — в папке кеша */
 const signatureFile = (cacheDir) => path.join(cacheDir, 'items-signature.json');
-export const SIGNATURE_FILE = signatureFile(DEFAULT_CACHE);
 /** Путь для сообщений: от корня репозитория, если внутри него */
 const shown = (file) => (file.startsWith(ROOT + path.sep) ? path.relative(ROOT, file) : file);
 
@@ -158,7 +159,7 @@ function prepareMod(src) {
   return dir;
 }
 
-/** Список jar в mods/ с размером и датой — по нему понимаем, что сборка изменилась */
+/** Список jar папки модов с размером и датой — по нему понимаем, что сборка изменилась */
 export function modsSignature(modsDir = DEFAULT_MODS) {
   if (!fs.existsSync(modsDir)) return [];
   return fs
@@ -171,33 +172,10 @@ export function modsSignature(modsDir = DEFAULT_MODS) {
     });
 }
 
-/** Корень основной копии репозитория, если мы в git worktree (иначе null) */
-export function mainCheckoutRoot() {
-  try {
-    const common = execFileSync('git', ['-C', ROOT, 'rev-parse', '--path-format=absolute', '--git-common-dir'], {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim();
-    const mainRoot = path.resolve(path.dirname(common));
-    return mainRoot === ROOT ? null : mainRoot;
-  } catch {
-    return null;
-  }
-}
-
-/** Сколько jar в папке модов основной копии репозитория, если мы в git worktree (иначе null) */
-function mainCheckoutJars() {
-  const mainRoot = mainCheckoutRoot();
-  if (!mainRoot) return null;
-  const dir = path.join(mainRoot, 'mods');
-  const n = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('.jar')).length : 0;
-  return { dir, n };
-}
-
 /**
  * Не даёт молча собрать библиотеку без модов, если прежняя сборка была с модами: так на сайт уходит каталог
  * из одной ванили и TFC, а pack-release записывает «убраны все моды». Типичный случай — деплой из git worktree,
- * где в mods/ только README. Нарочно собрать без модов: TFC_ALLOW_NO_MODS=1.
+ * где нет jar. Нарочно собрать без модов: TFC_ALLOW_NO_MODS=1.
  */
 export function assertModsPresent({ modsDir = DEFAULT_MODS, outDir = DEFAULT_OUT, cacheDir = DEFAULT_CACHE } = {}) {
   if (modsSignature(modsDir).length || process.env.TFC_ALLOW_NO_MODS) return;
@@ -216,18 +194,14 @@ export function assertModsPresent({ modsDir = DEFAULT_MODS, outDir = DEFAULT_OUT
   } catch {
     /* снимка нет */
   }
-  // Основная копия репозитория — подсказка только для папки mods/ по умолчанию
-  const main = modsDir === DEFAULT_MODS ? mainCheckoutJars() : null;
-  if (main?.n) why.push(`это git worktree, а в основной копии ${main.dir} лежит ${main.n} jar`);
   if (!why.length) return;
   const err = new Error(
     [
       `в ${MODS_DIR} нет ни одного jar, а сборка была с модами: ${why.join('; ')}.`,
       'Библиотека без модов — это каталог из одной ванили и TFC; при деплое он ушёл бы на сайт, а в историю обновлений — «убраны все моды».',
-      main
-        ? `Положите моды: ln -s "${main.dir}"/*.jar "${MODS_DIR}"/ (или скопируйте их) и запустите снова.`
-        : 'Положите jar сборки в mods/ и запустите снова.',
-      'Данные модов не менялись (правка сайта)? TFC_KEEP_MODS=1 — взять готовые, без jar (npm run deploy:site).',
+      modsDir === DEFAULT_MODS
+        ? 'Скачайте снимок сборки: npm run pack:fetch (или укажите папку с jar: TFC_MODS_DIR=…) и запустите снова.'
+        : `Положите jar сборки в ${MODS_DIR} и запустите снова.`,
       'Если библиотека без модов нужна нарочно — TFC_ALLOW_NO_MODS=1.',
     ].join('\n'),
   );
@@ -608,7 +582,7 @@ export async function buildMods({
         .filter((f) => f.endsWith('.jar'))
         .sort()
     : [];
-  if (jars.length) log(`${modsDir === DEFAULT_MODS ? 'mods/' : modsDir}: ${jars.length} jar`);
+  if (jars.length) log(`${modsDir}: ${jars.length} jar`);
   /** Рецепты: «data/<ns>/recipe/<path>.json» → { источник, json }; поздние перекрывают ранние, как датапаки */
   const recipes = new Map();
   collectRecipes(recipes, path.join(vanillaDir, 'data'), 'minecraft');

@@ -8,14 +8,14 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { MODS } from '../data.mjs';
+import { WORK } from '../data.mjs';
 import { ACC, javaName, lineAt, methodSig, parseClassFull } from '../bytecode.mjs';
 import { classRecord, findClasses, jarOwner, oneClass } from '../code-index.mjs';
 import { clip, page, paging, str, userRegex } from '../fmt.mjs';
 import { PLATFORM, jarToc, readEntry, resolveJar, zipEntries, zipRead } from '../jars.mjs';
 
 const dotted = (n) => n.replaceAll('/', '.');
-const ROOT = path.dirname(MODS);
+const ROOT = WORK;
 
 // ---------------------------------------------------------------- источники классов
 

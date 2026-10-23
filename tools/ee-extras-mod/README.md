@@ -88,12 +88,12 @@
   `recreateInstances` — в игре веер остался, применился ли он, неизвестно (лога не было).
 - `art/gen_assets.py` + `art/cables.py` — текстуры, модели (тяжёлые — `heavy_model`: корпус, рёбра-радиаторы по сторонам
   без клемм, проходные изоляторы с шапками; текстура — верх лёгкой + `heavy_parts`), блокстейты (изоляторы и катушка — перекраска текстур EE
-  из jar в `../../mods`). Иконки для сайта рисует общий генератор `scripts/mcp/render.mjs` (его вызывает `release.sh`).
+  из jar сборки — кеш снимка, `npm run pack:fetch`). Иконки для сайта рисует общий генератор `scripts/mcp/render.mjs` (его вызывает `release.sh`).
 
 ## Сборка и проверка
 
 ```bash
-./libs.sh          # Create и EE из ../../mods для компиляции (один раз и при обновлении сборки)
+./libs.sh          # Create и EE из jar сборки (кеш снимка, npm run pack:fetch) для компиляции (один раз и при обновлении сборки)
 ./release.sh       # ресурсы → сборка → проверка клемм → jar и иконки (icons/) сюда; на сайт — сборкой сайта
 ./test-server.sh   # сервер разработки: выпрямители (минута-две)
 ./test-server.sh 'forceload add 112 0 150 60' 'rectest heat 3' 'sleep 1' 'rectest heatv 300' 'sleep 30' 'rectest preport'

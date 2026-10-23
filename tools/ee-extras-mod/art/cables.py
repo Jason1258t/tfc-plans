@@ -1,6 +1,6 @@
 """
 Кабели: четырёхжильный соединитель, кабельные изоляторы, модель четырёхжильного кабеля, пустая модель жил, катушка.
-Вызывается из gen_assets.py. Изоляторы и катушка — перекраска текстур EE (берутся из jar в ../../mods), остальное —
+Вызывается из gen_assets.py. Изоляторы и катушка — перекраска текстур EE (берутся из jar сборки), остальное —
 рисуется здесь в палитре EE. Координаты клемм соединителя — те же, что Layout.FOUR_CORE_TERMINATION.
 """
 import glob
@@ -12,7 +12,10 @@ import zipfile
 from png import read, write
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-EE_JAR = sorted(glob.glob(os.path.join(HERE, '..', '..', '..', 'mods', 'electroenergetics-*.jar')))
+# Jar сборки — кеш снимка (npm run pack:fetch); MODS / TFC_MODS_DIR — другая папка
+MODS = os.environ.get('MODS') or os.environ.get('TFC_MODS_DIR') or os.path.join(
+    os.environ.get('TFC_PACK_CACHE') or os.path.expanduser('~/.cache/tfc-plans/pack'), 'mods')
+EE_JAR = sorted(glob.glob(os.path.join(MODS, 'electroenergetics-*.jar')))
 
 
 def hexc(h, a=255):
@@ -37,7 +40,7 @@ X = [2, 6, 10, 14]  # центры клемм L1, L2, L3, N
 def ee_png(path):
     """Текстура из jar EE (png.read умеет только файлы)"""
     if not EE_JAR:
-        raise SystemExit('нет jar Electro Energetics в ../../mods — нужен для текстур изоляторов и катушки')
+        raise SystemExit(f'нет jar Electro Energetics в {MODS} (npm run pack:fetch) — нужен для текстур изоляторов и катушки')
     with zipfile.ZipFile(EE_JAR[-1]) as z, tempfile.NamedTemporaryFile(suffix='.png') as f:
         f.write(z.read('assets/electroenergetics/textures/' + path))
         f.flush()

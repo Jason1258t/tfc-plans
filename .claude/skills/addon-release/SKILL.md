@@ -61,7 +61,7 @@ Work in a worktree (AGENTS.md). Game facts — from jars via MCP; nothing is che
 - MCP `addon_check id=<mod> root=<worktree>` — must show no **Ошибки** (it also checks the card sha256 against the jar
   and the version record: changelog written, jar uploaded, status). Warnings: fix or explain in the report.
   «Сведения» list jar items not named on the page — make sure each is described (often under a group entry).
-- `npx tsc -b` if site code changed; browser on `dev-wt`: `/addons` and `/addons/<mod>` render, icons load, widgets
+- `npx tsc -b` if site code changed; browser on `dev-alt`: `/addons` and `/addons/<mod>` render, icons load, widgets
   have no errors.
 
 ## 6. Ship

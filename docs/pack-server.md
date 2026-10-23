@@ -70,8 +70,9 @@
 
 ### Что ещё раздаёт сервер
 
-- **Собранные данные снимка** (`/data`). Отсюда их берёт сборка сайта на машине без jar (`TFC_PACK_URL` и
-  `TFC_PACK_TOKEN` в `.env.local`) и `npm run pack:fetch`.
+- **Собранные данные снимка** (`/data`). Отсюда их берёт `npm run dev` (адрес и ключ — `TFC_PACK_URL` и
+  `TFC_PACK_TOKEN` в `.env.local` или вход в программу `tfc`) и `npm run pack:fetch -- --data`. Jar снимка
+  `npm run pack:fetch` кладёт в кеш вне репозитория (`~/.cache/tfc-plans/pack`) — для MCP, `npm run mods` и аддонов.
 - **Версии аддонов** (`/site/addons`, ключ игрока): карточки `tools/*/addon.json` из копии репозитория + версии из
   Firestore `addonVersions`; jar каждой версии — обычный файл хранилища по sha256 (`/blobs/<sha256>`). Заливает
   `tfc admin addon upload <jar>` (ключ администратора): файл, затем `POST /admin/addons` — сервер заводит версию

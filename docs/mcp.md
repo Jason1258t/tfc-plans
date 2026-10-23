@@ -33,8 +33,8 @@ The server builds nothing itself: it reads what the site scripts built. Stale si
 | Items, recipes, tags, reference, mod manifest | `public/*.json` | `npm run mods` |
 | KubeJS rules and recipes, `kubejs/data` | `public/kubejs.json`, `kubejs-data.json` | `npm run kubejs` |
 | KubeJS sources | `instance/kubejs/<layer>/` | `npm run pack:fetch -- --kubejs` |
-| Mod code, books, translations, loot tables | `mods/*.jar` (and nested jar-in-jar) | `npm run pack:fetch` |
-| Candidate mods (not in the pack) | `.cache/mcp/candidates/*.jar` next to `mods/` | `candidate_get` (path / Modrinth / link) |
+| Mod code, books, translations, loot tables | `~/.cache/tfc-plans/pack/mods/*.jar` (and nested jar-in-jar) | `npm run pack:fetch` |
+| Candidate mods (not in the pack) | `<root>/.cache/mcp/candidates/*.jar` | `candidate_get` (path / Modrinth / link) |
 | Minecraft + NeoForge code and sources (Mojang names) | `tools/<addon>/build/moddev/artifacts/neoforge-*.jar`, `-sources.jar` | addon build (`./gradlew build`, docs/addons.md) |
 | Vanilla translations | `.cache/assets/minecraft-1.21.1/` | `npm run mods` (fills the cache) |
 | Resource packs | `instance/resourcepacks/` | `npm run pack:fetch` |
@@ -44,8 +44,11 @@ The server builds nothing itself: it reads what the site scripts built. Stale si
 | Guides, tasks, datapacks (also as a recipe layer), schematics, site scripts | Firestore | site edits |
 | Pack updates | Firestore `packUpdates` | written on deploy (`pack-release.mjs`) |
 
-A git worktree has no `public/`, `mods/` or `instance/`: the server finds the main checkout
-(`git rev-parse --git-common-dir`) and reads from there.
+A git worktree has no `public/` or `instance/`: the server finds the main checkout
+(`git rev-parse --git-common-dir`) and reads from there. Pack jars are not in the repo at all: they live in the snapshot
+cache outside it (one copy per machine, `scripts/pack-cache.mjs`), filled by `npm run pack:fetch` (address and key —
+`TFC_PACK_URL`/`TFC_PACK_TOKEN` or the `tfc` app login). Without it the jar tools answer «нет папки модов … npm run
+pack:fetch»; data tools (items, recipes, tags) work from `public/`.
 
 Paths can be set via env vars (for running on the pack server):
 
@@ -53,7 +56,8 @@ Paths can be set via env vars (for running on the pack server):
 | --- | --- |
 | `TFC_PACK_ROOT` | main checkout root |
 | `TFC_PUBLIC_DIR` | `<root>/public` |
-| `TFC_MODS_DIR` | `<root>/mods` |
+| `TFC_PACK_CACHE` | `~/.cache/tfc-plans/pack` (snapshot copy from `npm run pack:fetch`) |
+| `TFC_MODS_DIR` | `$TFC_PACK_CACHE/mods`; when set, `.cache/mcp`, `instance/`, `tools/` are looked up next to it (pack server) |
 | `TFC_INSTANCE_DIR` | `<root>/instance` |
 | `TFC_KUBEJS_DIR` | `<root>/instance/kubejs` |
 | `TFC_VANILLA_DIR` | `<root>/.cache/assets/minecraft-1.21.1` |
@@ -148,7 +152,7 @@ After `candidate_get`, `jar="candidate:<file or part>"` (nested: `candidate:<fil
 
 ### Pack debugging: mod code, mixins, dependencies, logs
 
-The class index covers all `mods/` jars, their nested libraries (jar-in-jar via `META-INF/jarjar/metadata.json`, like
+The class index covers all pack jars, their nested libraries (jar-in-jar via `META-INF/jarjar/metadata.json`, like
 the loader, and nested-in-nested) and Minecraft + NeoForge with Mojang names from the addon build cache. Built in memory
 in ~3.5 s on first request (~75k classes), then rebuilt only for changed jars. `.class` parsing is own
 (`bytecode.mjs`), no JDK.
@@ -236,7 +240,7 @@ folders `tools/<mod>/src/main/resources` (fresher than their jars) → mod jars 
 | --- | --- |
 | `model_render(id*, kind, state, view, size, addon, texture, bones, silhouette)` | **PNG image**: blockstate → variant → model with `parent` → 3D under `display.gui` rotation (or top/side view); `item/generated` items — by layers; GeckoLib model (`kind=geo` or id `ns:geo/….geo.json`) with `texture=`. Text: model chain (GeckoLib — bone tree with cube counts), where each texture comes from, warnings |
 | `texture_get(path*, size, colors, addon)` | texture **image** (nearest-neighbour upscale) and palette: frequent colours with shares, size, animation frames, source |
-| `resources_check(addon \| mod, props, filter, limit, verbose)` | check a mod from `mods/` or an addon from `tools/`: errors, warnings, info |
+| `resources_check(addon \| mod, props, filter, limit, verbose)` | check a pack mod or an addon from `tools/`: errors, warnings, info |
 
 Renderer (`scripts/mcp/render.mjs`) — port of `tools/ee-extras-mod/art/iso.py` plus: `parent`, element rotation
 (`rotation`, `rescale`), variant `x`/`y` rotation, default `uv`, face `rotation`, normal shading, translucency,
@@ -319,7 +323,7 @@ node scripts/mcp/render.mjs tools/ee-extras-mod ee_extras:four_core_termination 
 
 First argument — addon folder (or a folder with `assets/`), then ids; file — `<id path, "/" → "_">.png`. Default
 `--kind icon` (as in inventory: item model, else block), also `--state`, `--view`, `--aa` (1 — no AA). Foreign `parent`
-and textures come from `mods/` jars and Minecraft. Exit code 1 if something didn't render; warnings under the file line.
+and textures come from pack jars and Minecraft. Exit code 1 if something didn't render; warnings under the file line.
 
 `resources_check` verifies:
 
@@ -335,7 +339,7 @@ and textures come from `mods/` jars and Minecraft. Exit code 1 if something didn
   — info (templates for children);
 - an item has a model; names `block.<ns>.<id>` / `item.<ns>.<id>` ("/" → ".") and translation keys from code strings
   exist in `en_us` (missing — error) and `ru_ru` (missing — error for an addon: players see ru_ru; warning for a mod
-  from `mods/`). A key from code is:
+  from pack jars). A key from code is:
   - a string passed as the first argument to `Component.translatable*`, `I18n.get/exists`, `new TranslatableContents`
     — with any prefix (`miner_belt.on`): a direct `ldc` before the call or several `ldc`s in a row (ternary branches
     `on ? "a.on" : "a.off"` converge on one call); for `translatable(key, Object...)` the key is before `anewarray`,
@@ -350,7 +354,7 @@ and textures come from `mods/` jars and Minecraft. Exit code 1 if something didn
 - `PartialModel.of(…)` points to an existing model; blocks have a loot table (except fluids).
 
 For an addon it uses `src/main/resources` and `build/classes/java/main` (without compiled classes — resources only); an
-older build of the same addon in `mods/` doesn't substitute files. Verified on EE Extras (no errors; on a copy with a
+older build of the same addon among pack jars doesn't substitute files. Verified on EE Extras (no errors; on a copy with a
 removed blockstate variant, translation key and texture — all found), EE 1.1.2 and TFC 4.2.9 (~15 s). Miner Tools
 1.0.0: 16 keys (15 from code, all via `translatable`, half via ternaries), no errors; without `miner_belt.gui.any.off`
 in `ru_ru` — an error with the code location (`BeltScreen.updateLabels`).

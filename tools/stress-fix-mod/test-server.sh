@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Проверка аддона на сервере разработки (NeoForge + Create из ../../mods, плоский мир, RCON 25597).
+# Проверка аддона на сервере разработки (NeoForge + Create из jar сборки, плоский мир, RCON 25597).
 # Без аргументов — три запуска:
 #  1) аддон выключен: линия «творческий мотор → валы → вентилятор», в учёт незагруженной части сети подкладывается
 #     нагрузка 3 000 000 SU (как остаток после перезахода), мир сохраняется;
@@ -10,7 +10,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 export JAVA_HOME="${JAVA_HOME:-$HOME/.gradle/local-tools/jdk21/Contents/Home}"
-MODS="${MODS:-../../mods}"
+MODS="${MODS:-${TFC_MODS_DIR:-${TFC_PACK_CACHE:-$HOME/.cache/tfc-plans/pack}/mods}}"
 
 run() { # run <выключен 0|1> <команды…>
   local off=$1; shift

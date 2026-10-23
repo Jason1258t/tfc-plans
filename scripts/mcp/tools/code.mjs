@@ -2,14 +2,14 @@
  * Инструменты MCP: код модов для отладки сборки — поиск классов, сведения о классе, иерархия, кто что вызывает
  * (по байткоду), миксины и их конфликты, декомпиляция, поиск по файлам jar, проверка зависимостей модов.
  *
- * Код — из всех jar mods/, их вложенных библиотек (jar-in-jar) и Minecraft + NeoForge с именами Mojang
+ * Код — из всех jar сборки (кеш снимка), их вложенных библиотек (jar-in-jar) и Minecraft + NeoForge с именами Mojang
  * (кеш сборки аддонов, см. jars.mjs). Индекс классов — code-index.mjs, разбор .class — bytecode.mjs.
  */
 import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { MODS } from '../data.mjs';
+import { WORK } from '../data.mjs';
 import {
   ACC,
   annotationText,
@@ -61,7 +61,7 @@ import {
 
 const dotted = (n) => n.replaceAll('/', '.');
 const bool = (description) => ({ type: 'boolean', description });
-const CACHE = path.join(path.dirname(MODS), '.cache', 'mcp');
+const CACHE = path.join(WORK, '.cache', 'mcp');
 
 /** «TerraFirmaCraft-…jar (tfc)» */
 const where = (jar) => {

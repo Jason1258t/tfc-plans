@@ -12,10 +12,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { matchFilter } from '../../src/lib/recipeFilter.ts';
 import { collectRefs } from '../../src/lib/recipeRefs.ts';
+import { PACK_MODS } from '../pack-cache.mjs';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
-/** Корень основной копии репозитория, если мы в git worktree (там нет public/ и mods/), иначе ROOT */
+/** Корень основной копии репозитория, если мы в git worktree (там нет собранного public/), иначе ROOT */
 function packRoot() {
   try {
     const common = execFileSync('git', ['-C', ROOT, 'rev-parse', '--path-format=absolute', '--git-common-dir'], {
@@ -29,9 +30,15 @@ function packRoot() {
 }
 
 const BASE = process.env.TFC_PACK_ROOT ?? packRoot();
-/** Данные сайта (npm run mods / kubejs) и jar сборки; на сервере сборки — свои папки через переменные */
+/** Данные сайта (npm run mods / kubejs); на сервере сборки — свои папки через переменные */
 export const PUBLIC = process.env.TFC_PUBLIC_DIR ?? path.join(BASE, 'public');
-export const MODS = process.env.TFC_MODS_DIR ?? path.join(BASE, 'mods');
+/** Jar сборки — копия снимка вне репозитория (npm run pack:fetch, scripts/pack-cache.mjs) или TFC_MODS_DIR */
+export const MODS = PACK_MODS;
+/**
+ * Рабочая папка MCP: .cache/mcp (декомпиляция, кандидаты, вложенные jar), instance/, tools/. Обычно — основная копия
+ * репозитория; с TFC_MODS_DIR (сервер сборки: папка снимка) — папка над jar, как раньше.
+ */
+export const WORK = process.env.TFC_MODS_DIR ? path.dirname(MODS) : BASE;
 
 // ---------------------------------------------------------------- чтение с кешем по времени изменения
 

@@ -11,7 +11,7 @@
  * Ключ CurseForge — CURSE_FORGE_API_KEY в окружении или .env.local (в worktree — и основной копии). Без ключа
  * CurseForge пропускается. GITHUB_TOKEN там же или вход gh CLI — необязателен (без него у GitHub 60 запросов в час
  * с адреса, гиту нужно ~10).
- * Отпечатков нет в старом снимке — считаются по jar из mods/, если они есть.
+ * Отпечатков нет в старом снимке — считаются по jar сборки (npm run pack:fetch), если они есть.
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -19,13 +19,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildReport, cfFingerprint, STATUS_LABEL, STATUS_ORDER } from '../src/lib/freshness.ts';
 import { addonCards } from './addons-index.mjs';
-import { mainCheckoutRoot } from './mods.mjs';
+import { PACK_MODS, mainCheckoutRoot } from './pack-cache.mjs';
 import { SITE } from './firestore-rest.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const log = (...a) => console.log('[freshness]', ...a);
 
-/** Корни, где искать .env.local, public/ и mods/: эта копия, потом основная (в worktree) */
+/** Корни, где искать .env.local и public/: эта копия, потом основная (в worktree) */
 const roots = (root = ROOT) => [root, mainCheckoutRoot()].filter(Boolean);
 
 /** Переменная name: окружение, потом .env.local */
@@ -85,12 +85,7 @@ function fillFingerprints(mods, modsDirs) {
  * Отчёт по снимку сборки. manifest — объект pack-manifest.json; modsDirs — где взять jar для недостающих отпечатков;
  * ownIds — id наших аддонов. Возвращает FreshReport (src/lib/freshness.ts).
  */
-export async function freshnessReport({
-  manifest,
-  modsDirs = roots().map((r) => path.join(r, 'mods')),
-  key = curseforgeKey(),
-  ownIds,
-} = {}) {
+export async function freshnessReport({ manifest, modsDirs = [PACK_MODS], key = curseforgeKey(), ownIds } = {}) {
   const mods = manifest.mods.map((m) => ({ ...m }));
   fillFingerprints(mods, modsDirs);
   let own = ownIds;
