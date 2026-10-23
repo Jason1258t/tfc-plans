@@ -63,6 +63,22 @@ const dotted = (n) => n.replaceAll('/', '.');
 const bool = (description) => ({ type: 'boolean', description });
 const CACHE = path.join(WORK, '.cache', 'mcp');
 
+/** Временная папка для Vineflower: os.tmpdir() обычно; при пустом окружении (stdio-скрипты) — под .cache/mcp */
+function tmpBase() {
+  const t = os.tmpdir();
+  if (t && path.isAbsolute(t)) {
+    try {
+      fs.mkdirSync(t, { recursive: true });
+      return t;
+    } catch {
+      /* недоступен — ниже */
+    }
+  }
+  const fallback = path.join(CACHE, 'tmp');
+  fs.mkdirSync(fallback, { recursive: true });
+  return fallback;
+}
+
 /** «TerraFirmaCraft-…jar (tfc)» */
 const where = (jar) => {
   const owner = jarOwner(jar);
@@ -973,8 +989,14 @@ function decompiler() {
 }
 
 function javaBin() {
-  const jdk = path.join(os.homedir(), '.gradle/local-tools/jdk21/Contents/Home/bin/java');
-  return fs.existsSync(jdk) ? jdk : 'java';
+  const base = path.join(os.homedir(), '.gradle', 'local-tools', 'jdk21');
+  for (const p of [
+    path.join(base, 'Contents', 'Home', 'bin', 'java'), // macOS
+    path.join(base, 'bin', 'java.exe'), // Windows
+    path.join(base, 'bin', 'java'), // Linux
+  ])
+    if (fs.existsSync(p)) return p;
+  return 'java';
 }
 
 const run = (cmd, args, timeout) =>
@@ -1016,7 +1038,7 @@ async function sourceOf(rec) {
   const out = path.join(base, `${outer}.java`);
   if (fs.existsSync(out) && fs.readFileSync(`${out}.sig`, 'utf8') === sig)
     return { text: fs.readFileSync(out, 'utf8'), via: `Vineflower (кеш)` };
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'tfc-vf-'));
+  const tmp = fs.mkdtempSync(path.join(tmpBase(), 'tfc-vf-'));
   try {
     const inDir = path.join(tmp, 'in');
     for (const e of jarToc(rec.jar))
@@ -1036,7 +1058,11 @@ async function sourceOf(rec) {
     fs.writeFileSync(`${out}.sig`, sig);
     return { text, via: 'Vineflower' };
   } finally {
-    fs.rmSync(tmp, { recursive: true, force: true });
+    try {
+      fs.rmSync(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    } catch {
+      /* временная папка осталась — не критично */
+    }
   }
 }
 

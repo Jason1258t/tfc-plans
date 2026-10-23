@@ -29,6 +29,7 @@ import { clip, dateOf, nameOf, named, NICK, norm, num, page, paging, short, str,
 import { oneClass, classRecord } from './code-index.mjs';
 import { javap, jarList, jarToc, nestedJars, pathMatcher, readEntry, resolveJar } from './jars.mjs';
 import { TOOLS as addonsTools } from './tools/addons.mjs';
+import { TOOLS as devserverTools } from './tools/devserver.mjs';
 import { TOOLS as blocksTools } from './tools/blocks.mjs';
 import { TOOLS as booksTools } from './tools/books.mjs';
 import { TOOLS as candidatesTools } from './tools/candidates.mjs';
@@ -744,6 +745,7 @@ export const TOOLS = [
   ...siteTools,
   ...recipesTools,
   ...addonsTools,
+  ...devserverTools,
   ...mapTools,
 ];
 

@@ -89,3 +89,10 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   Sources: mods, kubejs/data, KubeJS scripts, site datapacks (KubeJS removals applied). Verified via stdio: exact
   duplicate → 1 conflict, unrelated inputs → none, `#c:ingots/copper` → matches recipes using that tag, id-only lookup
   works. Skill `recipe-dev` and [recipe-canon.md](../recipe-canon.md) added in the same pass.
+- **2026-10-24, Windows + инструменты тестирования аддонов** (73 tools): `decompile` чинится на Windows
+  (tmpdir при пустом окружении — fallback в .cache/mcp; javaBin знает Windows/Linux пути JDK 21; rmSync с retry и
+  нефатально); новый `addon_devserver` — прогон сервера разработки аддона (gradlew runServer + RCON + ошибки из
+  лога) без python и test-server.sh, кросс-платформенно; `findPlatform` ищет кеш сборки аддонов ещё и в
+  .claude/worktrees/_/tools/_ — ванильные модели/исходники Minecraft теперь находятся при работе в ворктри
+  (resources_check/model_render/decompile). Проверено прямым вызовом: decompile даёт исходник, resources_check
+  аддона — без ошибок (36 состояний блока), addon_devserver ловит падение сервера и отдаёт ошибки из лога.

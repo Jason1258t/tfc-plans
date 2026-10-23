@@ -108,6 +108,8 @@ namespace), у предметов есть модель, ключи перево
 
 ## ③ Прогон сервера разработки аддона
 
+**Статус: сделано** (2026-10-24) — `addon_devserver` (scripts/mcp/tools/devserver.mjs).
+
 **Что:** `addon_devserver(addon, commands[], env?)` — запустить `tools/<мод>/test-server.sh` с командами и вернуть
 ответы RCON по командам, ошибки и исключения из лога (через `log_analyze`).
 
