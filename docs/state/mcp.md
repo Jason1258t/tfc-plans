@@ -69,3 +69,7 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   revoked token for its 45-min cache (`ACCESS_TOKEN_TYPE_UNSUPPORTED` on every site tool). All MCP Firestore calls go
   through `api()`. Env `TFC_MCP_TEST_BAD_TOKEN=1` starts with a dead token — verified via stdio: `tasks_list` +
   `task_get` succeed with it.
+- **2026-10-23, MCP service key**: `.mcp.json` passes `TFC_FIRESTORE_KEY` (default `~/.config/tfc/mcp-firestore.json`);
+  `scripts/mcp/firestore.mjs` sets it as the process's `GOOGLE_APPLICATION_CREDENTIALS` if the file exists, else falls
+  back to `firebase login` with a stderr note. Setup/explanation for humans — `scripts/mcp/firestore-key.example.md`.
+  Host's key is in place.

@@ -1,9 +1,19 @@
 /**
- * Firestore для MCP — REST от имени `firebase login` (scripts/firestore-rest.mjs). Конфиги — только чтение;
+ * Firestore для MCP — REST от имени ключа сервисного аккаунта или `firebase login` (scripts/firestore-rest.mjs). Конфиги — только чтение;
  * гайды — чтение и запись guide_put с проверкой ревизии. Читаем редко и с кешем: лимит бесплатного тарифа —
  * 50 тыс. чтений в сутки на всех.
  */
+import fs from 'node:fs';
+import os from 'node:os';
 import { DOCS, fromValue, toValue, token } from '../firestore-rest.mjs';
+
+// Ключ сервисного аккаунта только для MCP (TFC_FIRESTORE_KEY в .mcp.json, пример — scripts/mcp/firestore-key.example.md):
+// его токен не отзывает firebase CLI. Нет файла — как раньше, от имени firebase login.
+const KEY = process.env.TFC_FIRESTORE_KEY?.replace(/^~(?=\/|$)/, os.homedir());
+if (KEY && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+  if (fs.existsSync(KEY)) process.env.GOOGLE_APPLICATION_CREDENTIALS = KEY;
+  else console.error(`[tfc-pack] ключа ${KEY} нет — Firestore от имени firebase login`);
+}
 
 // Токен держим 45 мин, но firebase CLI может отозвать его раньше (обновление из другой сессии) — тогда api() на 401
 // берёт новый. TFC_MCP_TEST_BAD_TOKEN — заведомо мёртвый стартовый токен, для проверки этого пути.

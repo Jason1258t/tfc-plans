@@ -14,8 +14,10 @@ and parameter descriptions are in English (the agent reads them); tool output st
   the project is open.
 - No dependencies: the MCP protocol (line-delimited JSON-RPC 2.0: `initialize`, `tools/list`, `tools/call`, `ping`) is
   implemented in the server itself, without `@modelcontextprotocol/sdk`, so it's easy to move to the pack server.
-- Firestore is read as `firebase login` or a service key (`GOOGLE_APPLICATION_CREDENTIALS`) via
-  `scripts/firestore-rest.mjs`. Without login everything works except configs, guides, pack updates and site content.
+- Firestore is read with the MCP service key (`TFC_FIRESTORE_KEY` in `.mcp.json`, default
+  `~/.config/tfc/mcp-firestore.json`, role Cloud Datastore User; moved into `GOOGLE_APPLICATION_CREDENTIALS` of the
+  server process only — setup in `scripts/mcp/firestore-key.example.md`), else as `firebase login`, via
+  `scripts/firestore-rest.mjs`. On 401 `api()` refetches the token and retries once. Without login everything works except configs, guides, pack updates and site content.
 - `javap` for `jar_javap` — system JDK; decompiler for `decompile` — Vineflower from the Gradle cache
   (`~/.gradle/caches/…/org.vineflower`, put there by the addon build) or `TFC_DECOMPILER`; Java — JDK 21 from
   `~/.gradle/local-tools/jdk21` or system.

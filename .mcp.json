@@ -2,7 +2,10 @@
   "mcpServers": {
     "tfc-pack": {
       "command": "node",
-      "args": ["scripts/mcp/server.mjs"]
+      "args": ["scripts/mcp/server.mjs"],
+      "env": {
+        "TFC_FIRESTORE_KEY": "${TFC_FIRESTORE_KEY:-~/.config/tfc/mcp-firestore.json}"
+      }
     }
   }
 }
