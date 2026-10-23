@@ -28,9 +28,10 @@ export function Header({ nick, onChangeNick }: Props) {
     return () => window.removeEventListener('tfc-updates-seen', on);
   }, []);
   const fresh = Boolean(updates?.length && updates[0].createdAt > seen);
-  // Ctrl/Cmd+K — поиск id предмета из любого места
+  // Ctrl/Cmd+K — поиск id предмета из любого места, кроме редактора: там это вставка ссылки
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || (e.target instanceof Element && e.target.closest('.cm-editor'))) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setSearching(true);
