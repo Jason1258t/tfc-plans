@@ -126,18 +126,49 @@ class CheckboxWidget extends WidgetType {
   }
 }
 
-class BulletWidget extends WidgetType {
-  eq() {
-    return true;
+/** Маркер пункта вне курсора: «• •» по уровню вложенности или номер «3.1.» — как в просмотре */
+class ListMarkWidget extends WidgetType {
+  readonly text: string;
+  constructor(text: string) {
+    super();
+    this.text = text;
+  }
+  eq(other: ListMarkWidget) {
+    return other.text === this.text;
   }
   toDOM() {
-    const dot = document.createElement('span');
-    dot.className = 'lmd-bullet';
-    dot.textContent = '•';
-    return dot;
+    const mark = document.createElement('span');
+    mark.className = 'lmd-bullet';
+    mark.textContent = this.text;
+    return mark;
   }
 }
-const bullet = new BulletWidget();
+
+const isList = (n: SyntaxNode | null) => n?.name === 'BulletList' || n?.name === 'OrderedList';
+
+/** Уровень пункта: сколько списков над ним (1 — верхний) */
+function listDepth(item: SyntaxNode) {
+  let depth = 0;
+  for (let n: SyntaxNode | null = item.parent; n; n = n.parent) if (isList(n)) depth++;
+  return depth;
+}
+
+/** Номер пункта: номер первого пункта списка + место среди соседей */
+function itemNumber(state: EditorState, item: SyntaxNode) {
+  const mark = item.parent?.firstChild?.getChild('ListMark');
+  const start = mark ? parseInt(state.sliceDoc(mark.from, mark.to), 10) || 1 : 1;
+  let index = 0;
+  for (let n = item.prevSibling; n; n = n.prevSibling) if (n.name === 'ListItem') index++;
+  return start + index;
+}
+
+/** «3.1.2.» — номера всех нумерованных пунктов-предков, как CSS-счётчик в просмотре */
+function outlineNumber(state: EditorState, item: SyntaxNode) {
+  const parts: number[] = [];
+  for (let n: SyntaxNode | null = item; n; n = n.parent)
+    if (n.name === 'ListItem' && n.parent?.name === 'OrderedList') parts.unshift(itemNumber(state, n));
+  return `${parts.join('.')}.`;
+}
 
 // ------------------------------------------------------------------ картинки ![подпись](file:id | https://…)
 
@@ -297,12 +328,18 @@ function build(view: EditorView): DecorationSet {
           }
           return;
         }
-        if (name === 'ListMark' && parent?.parent?.name === 'BulletList') {
-          // Пункт с чекбоксом: маркер списка прячем совсем, остаётся флажок
-          const isTask = parent.getChild('Task');
+        if (name === 'ListMark' && parent && isList(parent.parent)) {
           if (activeLine(node.from)) return;
-          if (isTask) add(node.from, Math.min(node.to + 1, state.doc.lineAt(node.from).to), hide);
-          else add(node.from, node.to, Decoration.replace({ widget: bullet }));
+          // Пункт с чекбоксом: маркер списка прячем совсем, остаётся флажок
+          if (parent.getChild('Task')) {
+            add(node.from, Math.min(node.to + 1, state.doc.lineAt(node.from).to), hide);
+            return;
+          }
+          const text =
+            parent.parent!.name === 'BulletList'
+              ? Array(listDepth(parent)).fill('•').join(' ')
+              : outlineNumber(state, parent);
+          add(node.from, node.to, Decoration.replace({ widget: new ListMarkWidget(text) }));
           return;
         }
         if (name === 'TaskMarker') {

@@ -127,7 +127,8 @@
 .lmd .lmd-bullet {
   color: var(--text-2);
   display: inline-block;
-  width: 0.7em;
+  min-width: 0.7em;
+  font-variant-numeric: tabular-nums;
 }
 .lmd .lmd-check {
   margin: 0 6px 0 0;

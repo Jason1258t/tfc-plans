@@ -148,6 +148,12 @@ export function Markdown({ source, className, onToggleTask, link, block, schemes
               )
             );
           },
+          // Нумерация рисуется CSS-счётчиком (3.1, 3.1.1) — номер первого пункта передаём ему
+          ol: ({ node: _node, start, children, ...rest }) => (
+            <ol {...rest} start={start} style={{ counterReset: `md-item ${(start ?? 1) - 1}` }}>
+              {children}
+            </ol>
+          ),
           li: ({ node, children, ...rest }) => (
             <li {...rest}>
               <TaskLine.Provider value={node?.position?.start.line ?? null}>{children}</TaskLine.Provider>
