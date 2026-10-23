@@ -67,7 +67,7 @@ Paths can be set via env vars (for running on the pack server):
 
 ## Tools
 
-66 in total. Asterisk — required parameter. Lists have `limit` and `offset`; the answer says «дальше: offset=…».
+71 in total. Asterisk — required parameter. Lists have `limit` and `offset`; the answer says «дальше: offset=…».
 
 Regex queries (`query` of `log_analyze`, `regex=true` in searches, `grep`, `members`) are case-insensitive; leading
 Java/PCRE flags (`(?i)…`, `(?s)…`) are accepted. Non-regex search understands «`a|b`» — any of.
@@ -91,6 +91,7 @@ collection is read whole (~10 reads) every 10 minutes. Without Firestore login �
 | `recipes_for(output*, status, type)` | how to obtain: recipes with the item, fluid or tag as output, with in-game status |
 | `recipes_using(input*, via_tags, status, type)` | where used: directly, via tags and after KubeJS replacements |
 | `recipe_get(id*)` | full recipe: source, which KubeJS rule removes or changes it (file:line), JSON |
+| `recipe_conflicts(type, recipe, id, inputs, outputs)` | would a new recipe be intercepted: same type + same inputs (tags considered) or same shaped grid (mirror); same id → replaced. Sources: mods, kubejs/data, KubeJS scripts, site datapacks (KubeJS removals applied) |
 | `tag_members(tag*, kind, expand)` | tag members after mods and KubeJS, nested tags expanded |
 | `tags_of(id*, kind)` | tags containing an item, fluid or block |
 

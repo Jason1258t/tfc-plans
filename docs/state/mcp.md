@@ -83,3 +83,9 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   classes, ~5 s; method line diff of `LivingEntityMixin.dropAllDeathLoot`). Size: one method ≈ `decompile method=`
   (−10…+25%); class outline 35–55% smaller than whole-class `decompile`. `decompile` of a truncated whole class now hints
   `method=` / `bytecode`.
+- **2026-10-24, `recipe_conflicts`** (71 tools, `tools/recipes.mjs`; order ③ from mcp-next): would a new recipe be
+  intercepted by an existing one of the same type — shapeless: same input set (exact bipartite matching, tags expanded
+  via `tag_members`; a tag absent from the index matches nothing), shaped: same grid with mirror; same id → «заменит».
+  Sources: mods, kubejs/data, KubeJS scripts, site datapacks (KubeJS removals applied). Verified via stdio: exact
+  duplicate → 1 conflict, unrelated inputs → none, `#c:ingots/copper` → matches recipes using that tag, id-only lookup
+  works. Skill `recipe-dev` and [recipe-canon.md](../recipe-canon.md) added in the same pass.
