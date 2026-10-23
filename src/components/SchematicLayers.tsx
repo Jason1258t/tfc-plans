@@ -17,8 +17,9 @@ import {
 } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { iconUrl, itemName, useItems } from '../lib/items';
+import { blockIcon, itemName, useItems } from '../lib/items';
 import { EMPTY_BLOCKS, REMOVE, type Schematic, type Vec } from '../lib/schematic';
+import { isFullCube } from '../lib/schematicMesh';
 import {
   buildGrid,
   canRedo,
@@ -382,12 +383,16 @@ export function SchematicLayers({
     const x1 = Math.min(sx, Math.ceil((box.w - ox) / zoom));
     const z1 = Math.min(sz, Math.ceil((box.h - oy) / zoom));
 
-    const drawBlock = (id: string, px: number, py: number, alpha: number) => {
-      const url = iconUrl(items?.byId.get(id));
-      const img = url ? image(url, again) : null;
+    const drawBlock = (id: string, st: number, px: number, py: number, alpha: number) => {
+      const icon = blockIcon(items?.byId.get(id), isFullCube(id, props[st] ?? new Map()));
+      const img = icon ? image(icon.url, again) : null;
       ctx.globalAlpha = alpha;
-      if (img) ctx.drawImage(img, px, py, zoom, zoom);
-      else {
+      if (img) {
+        // Нарисованная модель уже сглажена — уменьшать плавно; текстуру 16×16 — по пикселям
+        ctx.imageSmoothingEnabled = !!icon?.smooth;
+        ctx.drawImage(img, px, py, zoom, zoom);
+        ctx.imageSmoothingEnabled = false;
+      } else {
         ctx.fillStyle = hashColor(id);
         ctx.fillRect(px + zoom * 0.08, py + zoom * 0.08, zoom * 0.84, zoom * 0.84);
       }
@@ -405,9 +410,10 @@ export function SchematicLayers({
           // Пустая клетка: блок слоя ниже — бледно, чтобы видеть, на что опирается слой
           const b = ghost ? (below?.[x + z * sx] ?? -1) : -1;
           if (b >= 0) {
-            const name = names[stateOf(s, b)];
+            const bst = stateOf(s, b);
+            const name = names[bst];
             const eff = name && effective(name);
-            if (eff && eff !== REMOVE && !EMPTY_BLOCKS.has(eff)) drawBlock(eff, px, py, 0.18);
+            if (eff && eff !== REMOVE && !EMPTY_BLOCKS.has(eff)) drawBlock(eff, bst, px, py, 0.18);
           }
           continue;
         }
@@ -438,7 +444,7 @@ export function SchematicLayers({
           }
           continue;
         }
-        drawBlock(eff, px, py, 1);
+        drawBlock(eff, st, px, py, 1);
         if (eff !== name && zoom >= 10) {
           // Блок с общей заменой — уголок
           ctx.fillStyle = accent;

@@ -19,6 +19,8 @@ const SEE_THROUGH = /glass|leaves|ice\b|_ice|slime|honey_block|spawner|water|lav
 const FLUID = /(^|:)(water|lava)$|fluid/;
 /** Текстуры в оттенках серого, которые игра красит по биому */
 const TINTED = /leaves|grass|vine|lily_pad|fern|sugar_cane/;
+/** Невидимые в игре блоки (свет прожектора IE, барьер) — в 3D не рисуются */
+const INVISIBLE = /(^|:)(fake_light|barrier|light|structure_void)$/;
 
 function shapeOf(id: string, p: Map<string, string>): Box[] {
   const name = id.split(':')[1] ?? id;
@@ -84,16 +86,62 @@ function shapeOf(id: string, p: Map<string, string>): Box[] {
     const top = p.get('half') === 'top';
     const base: Box = top ? [0, 0.5, 0, 1, 1, 1] : [0, 0, 0, 1, 0.5, 1];
     const [y0, y1] = top ? [0, 0.5] : [0.5, 1];
-    const step: Box =
-      facing === 'north'
-        ? [0, y0, 0, 1, y1, 0.5]
-        : facing === 'south'
-          ? [0, y0, 0.5, 1, y1, 1]
-          : facing === 'west'
-            ? [0, y0, 0, 0.5, y1, 1]
-            : [0.5, y0, 0, 1, y1, 1];
-    return [base, step];
+    // Ступень — половина или четверть клетки: стороны, к которым она прижата
+    const part = (sides: string[]): Box => {
+      const x = sides.includes('west') ? [0, 0.5] : sides.includes('east') ? [0.5, 1] : [0, 1];
+      const z = sides.includes('north') ? [0, 0.5] : sides.includes('south') ? [0.5, 1] : [0, 1];
+      return [x[0], y0, z[0], x[1], y1, z[1]];
+    };
+    // Левая сторона — против часовой от facing (как StairBlock): у north — west
+    const left: Record<string, string> = { north: 'west', west: 'south', south: 'east', east: 'north' };
+    const back = opposite[facing] ?? 'south';
+    const l = left[facing] ?? 'west';
+    const r = opposite[l] ?? 'east';
+    switch (p.get('shape')) {
+      case 'outer_left':
+        return [base, part([facing, l])];
+      case 'outer_right':
+        return [base, part([facing, r])];
+      case 'inner_left':
+        return [base, part([facing]), part([back, l])];
+      case 'inner_right':
+        return [base, part([facing]), part([back, r])];
+      default:
+        return [base, part([facing])];
+    }
   }
+  // Лестница-ладдер висит на стене позади себя (facing — куда смотрит); IE «покрытые лесами» — целый блок
+  if (name.includes('ladder') && !name.includes('scaffold') && !/metal_ladder_(alu|steel)$/.test(name))
+    return [plate(opposite[facing] ?? 'south', px(1))];
+  // Create: шлюз на ремне — у края ремня, шлюз на блоке — на грани того блока, к которому прикреплён
+  if (name.endsWith('_belt_funnel') && p.has('facing')) return [plate(facing, px(8))];
+  if (name.endsWith('_funnel') && p.has('facing'))
+    return [plate(opposite[facing] ?? 'south', facing === 'up' || facing === 'down' ? px(10) : px(5))];
+  if (name === 'depot' || name.endsWith('_depot')) return [[0, 0, 0, 1, px(13), 1]];
+  if (name === 'belt' || name === 'belt_connector') return [[0, 0, 0, 1, px(12), 1]];
+  if (name.endsWith('chute')) return [[px(2), 0, px(2), px(14), 1, px(14)]];
+  // Крепление верёвки (Simulated): узел у грани, к которой прикреплено; анкер TFC — столбик
+  if (name === 'rope_connector') {
+    const [a, b] = [px(3), px(13)];
+    const s = opposite[facing] ?? 'down';
+    const d = px(6);
+    return [
+      s === 'north'
+        ? [a, a, 0, b, b, d]
+        : s === 'south'
+          ? [a, a, 1 - d, b, b, 1]
+          : s === 'west'
+            ? [0, a, a, d, b, b]
+            : s === 'east'
+              ? [1 - d, a, a, 1, b, b]
+              : s === 'down'
+                ? [a, 0, a, b, d, b]
+                : [a, 1 - d, a, b, 1, b],
+    ];
+  }
+  if (name.endsWith('rope_anchor')) return [[px(6), 0, px(6), px(10), 1, px(10)]];
+  if (name === 'chest' || name === 'trapped_chest' || name.endsWith('_chest') || name.includes('/chest/'))
+    return [[px(1), 0, px(1), px(15), px(14), px(15)]];
   if (name.includes('trapdoor')) {
     if (p.get('open') === 'true') return [plate(opposite[facing] ?? 'south', px(3))];
     return [plate(p.get('half') === 'top' ? 'up' : 'down', px(3))];
@@ -131,6 +179,12 @@ function shapeOf(id: string, p: Map<string, string>): Box[] {
     return [[px(4), 0, px(4), px(12), px(12), px(12)]];
   return [FULL];
 }
+
+/** Целый куб по упрощённой форме — в редакторе слоёв рисуется текстурой, остальное — моделью */
+export const isFullCube = (id: string, props: Map<string, string>) => {
+  const boxes = shapeOf(id, props);
+  return boxes.length === 1 && boxes[0] === FULL;
+};
 
 // ---------------------------------------------------------------- текстуры
 
@@ -379,7 +433,7 @@ export async function buildMesh(
   const metas: (Meta | null)[] = names.map((name, st) => {
     if (!name) return null;
     const id = replace.get(name) ?? name;
-    if (id === REMOVE || EMPTY_BLOCKS.has(id)) return null;
+    if (id === REMOVE || EMPTY_BLOCKS.has(id) || INVISIBLE.test(id)) return null;
     const boxes = shapeOf(id, props[st] ?? new Map());
     const full = boxes.length === 1 && boxes[0] === FULL;
     const see = SEE_THROUGH.test(id);
