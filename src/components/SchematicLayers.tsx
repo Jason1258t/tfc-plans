@@ -280,7 +280,17 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
   const undo = useCallback(() => step('undo'), [step]);
   const redo = useCallback(() => step('redo'), [step]);
 
-  // Клавиши: Esc, отмена, слои. В поле ввода — только Esc
+  /** Delete: убрать выделенное — одной правкой, её можно отменить (через ref — свежие схема и выделение) */
+  const removeSelected = useRef(() => {});
+  useEffect(() => {
+    removeSelected.current = () => {
+      changeCells(editCells(s, [...selected], REMOVE));
+      clearSelection();
+      setMenu(null);
+    };
+  });
+
+  // Клавиши: Esc, отмена, Delete, слои. В поле ввода — только Esc
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const typing = e.target instanceof HTMLElement && e.target.closest('input, textarea');
@@ -302,6 +312,9 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
       } else if (mod && e.code === 'KeyY') {
         e.preventDefault();
         redo();
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && selected.size) {
+        e.preventDefault();
+        removeSelected.current();
       } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
         e.preventDefault();
         setY((v) => Math.min(sy - 1, v + 1));
@@ -936,7 +949,7 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
           <div className={cx('layers-hint faint small', mode === '3d' && 'hidden')}>
             ЛКМ — заменить · двойной клик — выделить группу · Shift+клик или рамка — выделить, повторно — снять · ПКМ
             (можно провести) — убрать · колесо — масштаб · перетаскивание — сдвиг · ↑↓ — слои · Ctrl+Z / Ctrl+Shift+Z —
-            отмена и повтор · Esc — снять выделение
+            отмена и повтор · Delete — убрать выделенное · Esc — снять выделение
           </div>
           {selected.size > 0 && (
             <div className="layers-selection small" role="region" aria-label="Выделение">
@@ -954,7 +967,11 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
                 <span className="grow">
                   <ItemPicker small placeholder="Заменить выбранные на…" onPick={(it) => applySelection(it.i)} />
                 </span>
-                <button className="btn sm danger" onClick={() => applySelection(REMOVE)}>
+                <button
+                  className="btn sm danger"
+                  onClick={() => applySelection(REMOVE)}
+                  title="Убрать выбранные (Delete)"
+                >
                   <Trash2 size={14} />
                   Убрать
                 </button>
