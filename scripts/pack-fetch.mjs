@@ -10,7 +10,8 @@
  *   npm run pack:fetch -- --data-only  — только данные
  *
  * Адрес и ключ — TFC_PACK_URL и TFC_PACK_TOKEN (ключ игрока подходит) в окружении или в .env.local, иначе — из
- * настроек программы tfc (~/.config/tfc/config.json, после входа в tfc).
+ * настроек программы tfc: macOS и Linux ~/.config/tfc/config.json, Windows %APPDATA%\tfc\config.json
+ * (configDir() в cli/lib/config.mjs); появляются после входа в tfc.
  * Кеш — точная копия снимка: файлы, которых в снимке нет, удаляются. Jar, уже лежащие в старой папке mods/
  * репозитория (основной копии), не качаются, а копируются оттуда (жёсткой ссылкой, если можно).
  *
