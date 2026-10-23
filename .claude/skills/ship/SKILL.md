@@ -14,7 +14,7 @@ Main folder: `MAIN=/Users/ivan/vscodeProjects/tfc-taskmanager` (always on `main`
 
 - Everything committed: `git status --short` is empty. Commit message `Раздел: что сделано` (Russian, one line).
 - Checks relevant to the change passed: `npx tsc -b` (TS), `npm run lint` (oxlint, zero errors), `prettier --check`
-  on changed files (`npm run format` to fix). The `ship` tool runs `oxlint` + `prettier --check` on the branch changed
+  on changed files (`npx prettier --write <files>` to fix). The `ship` tool runs `oxlint` + `prettier --check` on the branch changed
   files and refuses on failure.
 - `docs/state/<topic>.md` updated if the state changed (and the `docs/STATE.md` index line, if any).
 
