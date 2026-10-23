@@ -46,7 +46,7 @@ import {
 } from './lib/vanilla.mjs';
 import { markApproved, printUpdate, propose, pullUpdates } from './lib/updates.mjs';
 import { checkUpdate } from './lib/update.mjs';
-import { cleanupOld, upgrade } from './lib/upgrade.mjs';
+import { autoUpgrade, cleanupOld, upgrade } from './lib/upgrade.mjs';
 import { BUILD, CHANNEL, IS_BINARY } from './lib/version.mjs';
 
 const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
@@ -1070,6 +1070,9 @@ async function main(argv) {
   }
   const fn = COMMANDS[cmd];
   if (!fn) throw new Error(`нет команды «${cmd}» — tfc help`);
+  // Сначала — новая версия программы, если вышла (раз за сеанс терминала); команду выполнит уже она
+  const code = await autoUpgrade(argv);
+  if (code !== null) process.exit(code);
   // Проверка новой версии идёт параллельно с командой, подсказка — в конце (и после ошибки)
   const update = checkUpdate();
   try {
