@@ -398,7 +398,7 @@ function codeStrings(src, load) {
 
 // ---------------------------------------------------------------- resources_check
 
-/** Цель: папка аддона (имя в tools/ или путь) или мод из mods/ */
+/** Цель: папка аддона (имя в tools/ или путь) или мод сборки */
 function checkTarget(a) {
   const q = String(a.addon ?? a.path ?? '').trim();
   if (q) {
@@ -424,7 +424,7 @@ function checkTarget(a) {
     };
   }
   const mod = String(a.mod ?? '').trim();
-  if (!mod) throw new Error('укажите mod (id или jar из mods/) или addon (папка tools/<аддон>)');
+  if (!mod) throw new Error('укажите mod (id или jar сборки) или addon (папка tools/<аддон>)');
   const jar = resolveJar(mod);
   const ids = [...mods().values()].filter((m) => m.jar === jar).map((m) => m.id);
   return { label: `jar ${jar}`, only: { jar }, jar, ids: ids.length ? ids : [mod] };
@@ -443,7 +443,7 @@ function resourcesCheck(a) {
   let spaces = target.ids.filter((x) => assetNs.has(x));
   if (!spaces.length) spaces = [...assetNs].filter((x) => x !== 'minecraft');
   const main = spaces[0] ?? target.ids[0];
-  // Аддон: его же jar в mods/ (старая сборка) не должен подставлять файлы, пропавшие в папке
+  // Аддон: его же jar в сборке (старая версия) не должен подставлять файлы, пропавшие в папке
   const skip = target.only.addon
     ? new Set([...mods().values()].filter((m) => target.ids.includes(m.id)).map((m) => m.jar))
     : null;
@@ -916,7 +916,7 @@ export const TOOLS = [
         addon: str(
           'addon: folder in tools/ (ee-extras-mod) or path to the mod folder; classes — build/classes/java/main',
         ),
-        mod: str('or a mod from mods/: id or jar'),
+        mod: str('or a pack mod: id or jar'),
         props: { type: 'boolean', description: 'show block properties from bytecode' },
         filter: str('only messages with these words (e.g. a block id)'),
         limit: num('lines per section (60)'),

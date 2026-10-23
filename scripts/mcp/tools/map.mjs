@@ -184,7 +184,7 @@ function profileMap(p, name) {
       }
     }
   } catch {
-    // нет папки mods/ — берём public/geo
+    // нет jar сборки — берём public/geo
   }
   if (!buf) {
     const rel = p.maps?.[name] ?? `geo/${pack}_${prof}/${name}.png`;

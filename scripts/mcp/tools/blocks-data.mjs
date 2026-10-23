@@ -1,16 +1,16 @@
 /**
  * Источники для раздела «blocks»: переводы, blockstate/модели, таблицы добычи и глобальные модификаторы добычи.
- * Порядок — как у игры: ванилла (кеш npm run mods) < jar из mods/ по имени < слои KubeJS < ресурспаки; поздний
+ * Порядок — как у игры: ванилла (кеш npm run mods) < jar сборки по имени < слои KubeJS < ресурспаки; поздний
  * источник с тем же путём побеждает (как kubejs/data заменяет файл мода в data.mjs).
  *
  * Индексы строятся лениво и держатся в памяти, пока не поменялся ни один источник (mtime jar, файлов слоёв).
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { MODS, readJson } from '../data.mjs';
+import { MODS, WORK, readJson } from '../data.mjs';
 import { jarList, jarToc, readEntry, zipEntries, zipRead } from '../jars.mjs';
 
-const BASE = path.dirname(MODS);
+const BASE = WORK;
 const INSTANCE = process.env.TFC_INSTANCE_DIR ?? path.join(BASE, 'instance');
 const VANILLA = process.env.TFC_VANILLA_DIR ?? path.join(BASE, '.cache', 'assets', 'minecraft-1.21.1');
 

@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# Библиотеки для компиляции и сервера разработки: TFC, Patchouli (нужен TFC) и Immersive Engineering из папки mods/
+# Библиотеки для компиляции и сервера разработки: TFC, Patchouli (нужен TFC) и Immersive Engineering из jar
 # сборки + вложенные в них. В мод не попадают — на сервере они уже стоят.
-# MODS=<папка> — другая папка модов (например из git worktree).
+# Jar сборки — из кеша снимка (npm run pack:fetch, ~/.cache/tfc-plans/pack/mods); MODS=<папка> — другая папка модов.
 set -euo pipefail
 cd "$(dirname "$0")"
-MODS="${MODS:-../../../../../mods}"
-[ -d "$MODS" ] || MODS=../../mods
+MODS="${MODS:-${TFC_MODS_DIR:-${TFC_PACK_CACHE:-$HOME/.cache/tfc-plans/pack}/mods}}"
 rm -rf libs && mkdir libs
 for j in "$MODS"/TerraFirmaCraft-NeoForge-*.jar "$MODS"/Patchouli-*.jar "$MODS"/ImmersiveEngineering-*.jar; do
   cp "$j" libs/

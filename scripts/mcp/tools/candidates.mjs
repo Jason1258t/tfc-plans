@@ -1,6 +1,6 @@
 /**
  * Моды-кандидаты — jar не из сборки (для анализа интеграции, скилл integration-plan): candidate_get кладёт jar в
- * .cache/mcp/candidates рядом с mods/ (локальный файл, Modrinth или прямая ссылка площадки — скачивание только с
+ * .cache/mcp/candidates основной копии (локальный файл, Modrinth или прямая ссылка площадки — скачивание только с
  * download=true) и даёт сводку по нему: моды и зависимости по сборке (как mods_check), лицензия, сторона, контент
  * по lang/blockstates, рецепты по типам, теги, worldgen, конфиги, миксины с пересечениями. Дальше файлы и код —
  * jar_find/jar_read/jar_javap/class_find/class_info/decompile/jar_grep с jar="candidate:<файл>".

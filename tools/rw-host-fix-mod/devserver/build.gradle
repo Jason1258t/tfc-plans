@@ -22,7 +22,9 @@ neoForge {
 
 dependencies {
     // TFC Real World и аддон — только для компиляции проверочного мода; на сервер их кладёт test-server.sh
-    compileOnly fileTree(dir: '../../../mods', include: 'TFC-Real-World-NeoForge-*.jar')
+    // Jar сборки — кеш снимка (npm run pack:fetch) или TFC_MODS_DIR
+    def packMods = System.getenv('TFC_MODS_DIR') ?: "${System.getenv('TFC_PACK_CACHE') ?: System.getProperty('user.home') + '/.cache/tfc-plans/pack'}/mods"
+    compileOnly fileTree(dir: packMods, include: 'TFC-Real-World-NeoForge-*.jar')
 }
 
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }

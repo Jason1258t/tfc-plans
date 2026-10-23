@@ -27,8 +27,8 @@ The server is one command: `node <repo>/scripts/mcp/server.mjs`. Environment:
   `scripts/mcp/firestore-key.example.md`). Use an absolute path: `${VAR:-default}` expansion is Claude Code syntax.
 - `TFC_AGENT_NICK` — name written as author / `updatedBy` on tasks, plan docs, guides, config proposals and addon
   versions (default `Claude`). Set it per agent: `Codex`, `Gemini`, `Cursor`…, and use the same name as task assignee.
-- The server finds `public/` and `mods/` of the main checkout itself (also from a worktree); override with
-  `TFC_PACK_ROOT`.
+- The server finds `public/` of the main checkout itself (also from a worktree; override with `TFC_PACK_ROOT`); pack
+  jars — from the snapshot cache `~/.cache/tfc-plans/pack/mods` (`npm run pack:fetch`; `TFC_MODS_DIR` overrides).
 
 Point the agent at the main checkout's `server.mjs` (absolute path) — then it works from any worktree. Config shapes
 below are from the tools' docs as remembered on 2026-10-23, not run here — check the current docs if one fails.

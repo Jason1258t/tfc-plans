@@ -3,45 +3,32 @@
  * Сборка с сервера сборки (server/pack-server) в проект — чтобы собирать и проверять на любой машине и в worktree,
  * без ПК с Minecraft. Одинаковые файлы не качаются (сверка sha256).
  *
- *   npm run pack:fetch                 — текущий снимок → instance/pack/ (папка версии как есть), jar → mods/
+ *   npm run pack:fetch                 — текущий снимок → кеш вне репозитория (~/.cache/tfc-plans/pack или
+ *                                        TFC_PACK_CACHE, папка версии как есть: jar в mods/) — для MCP, npm run mods, аддонов
  *   npm run pack:fetch -- --kubejs     — ещё и kubejs/ снимка → слой KubeJS pack (instance/kubejs/pack/)
  *   npm run pack:fetch -- --data       — ещё и собранные сервером данные модов → public/ (без npm run mods)
  *   npm run pack:fetch -- --data-only  — только данные
  *
- * Адрес и ключ — TFC_PACK_URL и TFC_PACK_TOKEN (ключ игрока подходит) в окружении или в .env.local.
- * В mods/ удаляются только jar, которые сама команда клала раньше и которых нет в снимке; чужие — только список.
+ * Адрес и ключ — TFC_PACK_URL и TFC_PACK_TOKEN (ключ игрока подходит) в окружении или в .env.local, иначе — из
+ * настроек программы tfc (~/.config/tfc/config.json, после входа в tfc).
+ * Кеш — точная копия снимка: файлы, которых в снимке нет, удаляются. Jar, уже лежащие в старой папке mods/
+ * репозитория (основной копии), не качаются, а копируются оттуда (жёсткой ссылкой, если можно).
  *
- * Из кода: fetchData({ outDir }) — данные модов (это зовёт ensure-mods.mjs при сборке сайта без jar),
- * fetchPack({ into, modsDir, kubejs }).
+ * Из кода: fetchData({ outDir }) — данные модов (это зовёт ensure-mods.mjs перед npm run dev),
+ * fetchPack({ into, kubejs }).
  */
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadConfig } from '../cli/lib/config.mjs';
 import { ROOT } from './firestore-rest.mjs';
+import { MODS_OUTPUTS } from './data-roots.mjs';
+import { PACK_CACHE, mainCheckoutRoot } from './pack-cache.mjs';
 
 const log = (...a) => console.log('[pack:fetch]', ...a);
 
-/** Что в public/ собирает npm run mods — только это берём из данных сервера (как MODS_OUTPUTS в ensure-mods) */
-export const MODS_OUTPUTS = [
-  'items.json',
-  'blocks.json',
-  'icons',
-  'recipes.json',
-  'reference.json',
-  'pack-manifest.json',
-  'geo.json',
-  'geo',
-  'tags.json',
-  'botany.json',
-  'config-defaults.json',
-  'meals.json',
-  'power.json',
-  'multiblocks.json',
-  'multiblocks',
-];
-
-/** TFC_PACK_URL / TFC_PACK_TOKEN: окружение, потом .env.local проекта (в worktree — и основной копии) */
+/** TFC_PACK_URL / TFC_PACK_TOKEN: окружение, потом .env.local проекта, потом настройки программы tfc */
 export function packServer() {
   const read = (file) => {
     try {
@@ -58,7 +45,11 @@ export function packServer() {
     }
   };
   const env = { ...read(path.join(ROOT, '.env.local')), ...pickEnv() };
-  if (!env.TFC_PACK_URL || !env.TFC_PACK_TOKEN) return null;
+  if (!env.TFC_PACK_URL || !env.TFC_PACK_TOKEN) {
+    const cfg = loadConfig();
+    if (!cfg.token) return null;
+    return { url: cfg.server.replace(/\/+$/, ''), token: cfg.token };
+  }
   return { url: env.TFC_PACK_URL.replace(/\/+$/, ''), token: env.TFC_PACK_TOKEN };
 }
 const pickEnv = () =>
@@ -81,8 +72,24 @@ async function api(srv, p, { raw = false } = {}) {
 
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
 
-/** Кладёт файлы [{ path, sha256, size }] в dir; качает только те, что отличаются. url(f) — откуда качать */
-async function sync(srv, dir, files, url) {
+/** Тот же файл (размер и sha256) в одной из папок seeds — по имени файла */
+function seedFile(seeds, f) {
+  for (const d of seeds) {
+    const p = path.join(d, path.basename(f.path));
+    try {
+      if (fs.statSync(p).size === f.size && sha256(fs.readFileSync(p)) === f.sha256) return p;
+    } catch {
+      /* нет */
+    }
+  }
+  return null;
+}
+
+/**
+ * Кладёт файлы [{ path, sha256, size }] в dir; качает только те, что отличаются. url(f) — откуда качать;
+ * seeds — папки, где такой файл уже может лежать (берётся оттуда без скачивания)
+ */
+async function sync(srv, dir, files, url, seeds = []) {
   const want = [];
   for (const f of files) {
     const local = path.join(dir, ...f.path.split('/'));
@@ -96,14 +103,26 @@ async function sync(srv, dir, files, url) {
     if (!same) want.push(f);
   }
   let bytes = 0;
+  let seeded = 0;
   const queue = [...want];
   const worker = async () => {
     for (let f = queue.shift(); f; f = queue.shift()) {
-      const buf = await api(srv, url(f), { raw: true });
-      if (sha256(buf) !== f.sha256) throw new Error(`${f.path}: контрольная сумма не сошлась`);
       const local = path.join(dir, ...f.path.split('/'));
       fs.mkdirSync(path.dirname(local), { recursive: true });
-      // Через временный файл: файл мог быть жёсткой ссылкой (mods/ ↔ instance/pack/mods/) — не пишем в чужой
+      const seed = seeds.length ? seedFile(seeds, f) : null;
+      if (seed) {
+        fs.rmSync(local, { force: true });
+        try {
+          fs.linkSync(seed, local);
+        } catch {
+          fs.copyFileSync(seed, local);
+        }
+        seeded++;
+        continue;
+      }
+      const buf = await api(srv, url(f), { raw: true });
+      if (sha256(buf) !== f.sha256) throw new Error(`${f.path}: контрольная сумма не сошлась`);
+      // Через временный файл: файл мог быть жёсткой ссылкой (на старую mods/ репозитория) — не пишем в чужой
       const tmp = `${local}.tfc-tmp`;
       fs.writeFileSync(tmp, buf);
       fs.renameSync(tmp, local);
@@ -111,7 +130,7 @@ async function sync(srv, dir, files, url) {
     }
   };
   await Promise.all(Array.from({ length: 4 }, worker));
-  return { total: files.length, fetched: want.length, bytes };
+  return { total: files.length, fetched: want.length - seeded, seeded, bytes };
 }
 
 /** Файлы под корнями, которых нет в списке, — убрать (данные модов на сервере их уже не содержат) */
@@ -135,8 +154,9 @@ const mb = (n) => `${(n / 1024 / 1024).toFixed(1)} МБ`;
 
 /** Данные модов, собранные сервером для текущего снимка → outDir (public/) */
 export async function fetchData({ outDir = path.join(ROOT, 'public'), srv = packServer() } = {}) {
-  if (!srv) throw new Error('нет TFC_PACK_URL / TFC_PACK_TOKEN (окружение или .env.local)');
+  if (!srv) throw new Error('нет TFC_PACK_URL / TFC_PACK_TOKEN (окружение или .env.local) и входа в программу tfc');
   const idx = await api(srv, '/data');
+  // Только то, что собирает npm run mods (scripts/data-roots.mjs)
   const files = idx.files.filter((f) => MODS_OUTPUTS.includes(f.path.split('/')[0]));
   if (!files.some((f) => f.path === 'items.json')) throw new Error(`в данных снимка ${idx.snapshot} нет данных модов`);
   const r = await sync(
@@ -154,74 +174,33 @@ export async function fetchData({ outDir = path.join(ROOT, 'public'), srv = pack
   return { snapshot: idx.snapshot, ...r, removed };
 }
 
-/** Текущий снимок → into/ (папка версии), jar — ещё и в modsDir; kubejs — слой pack */
-export async function fetchPack({
-  into = path.join(ROOT, 'instance', 'pack'),
-  modsDir = path.join(ROOT, 'mods'),
-  kubejs = false,
-  srv = packServer(),
-} = {}) {
-  if (!srv) throw new Error('нет TFC_PACK_URL / TFC_PACK_TOKEN (окружение или .env.local)');
+/** Текущий снимок → into/ (папка версии: jar в into/mods); kubejs — ещё и слой KubeJS pack */
+export async function fetchPack({ into = PACK_CACHE, kubejs = false, srv = packServer() } = {}) {
+  if (!srv) throw new Error('нет TFC_PACK_URL / TFC_PACK_TOKEN (окружение или .env.local) и входа в программу tfc');
   const snap = await api(srv, '/pack/current');
   log(
     `снимок ${snap.id} от ${snap.createdAt} (${snap.author}${snap.note ? `: ${snap.note}` : ''}), файлов ${snap.files.length}`,
   );
-  const r = await sync(srv, into, snap.files, (f) => `/blobs/${f.sha256}`);
+  // Старая папка mods/ репозитория (до переезда jar в кеш): одинаковые jar не качаем заново
+  const seeds = [ROOT, mainCheckoutRoot()]
+    .filter(Boolean)
+    .map((r) => path.join(r, 'mods'))
+    .filter((d) => fs.existsSync(d));
+  const r = await sync(srv, into, snap.files, (f) => `/blobs/${f.sha256}`, seeds);
   const removed = prune(
     into,
     [...new Set(snap.files.map((f) => f.path.split('/')[0]))],
     new Set(snap.files.map((f) => f.path)),
   );
+  const jars = snap.files.filter((f) => f.kind === 'mod').length;
   log(
-    `→ ${into.startsWith(ROOT + path.sep) ? path.relative(ROOT, into) : into}: скачано ${r.fetched} (${mb(r.bytes)}), убрано лишних ${removed}`,
+    `→ ${into}: jar ${jars}, скачано ${r.fetched} (${mb(r.bytes)})${r.seeded ? `, взято из старой mods/ ${r.seeded}` : ''}, ` +
+      `убрано лишних ${removed}`,
   );
-
-  // mods/: жёсткие ссылки на скачанное (место не удваивается); убираем только свои прошлые
-  const stateFile = path.join(into, '.tfc-fetch.json');
-  let state = { mods: [] };
-  try {
-    state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
-  } catch {
-    /* первый раз */
-  }
-  const jars = snap.files.filter((f) => f.kind === 'mod').map((f) => path.basename(f.path));
-  fs.mkdirSync(modsDir, { recursive: true });
-  let placed = 0;
-  for (const j of jars) {
-    const src = path.join(into, 'mods', j);
-    const dst = path.join(modsDir, j);
-    try {
-      const a = fs.statSync(src);
-      const b = fs.statSync(dst);
-      if (a.ino === b.ino || (a.size === b.size && sha256(fs.readFileSync(src)) === sha256(fs.readFileSync(dst))))
-        continue;
-    } catch {
-      /* нет в mods/ */
-    }
-    fs.rmSync(dst, { force: true });
-    try {
-      fs.linkSync(src, dst);
-    } catch {
-      fs.copyFileSync(src, dst);
-    }
-    placed++;
-  }
-  const now = new Set(jars);
-  let dropped = 0;
-  for (const j of state.mods ?? [])
-    if (!now.has(j) && fs.existsSync(path.join(modsDir, j))) {
-      fs.rmSync(path.join(modsDir, j));
-      dropped++;
-    }
-  const foreign = fs
-    .readdirSync(modsDir)
-    .filter((f) => f.endsWith('.jar') && !now.has(f) && !(state.mods ?? []).includes(f));
-  fs.writeFileSync(stateFile, JSON.stringify({ snapshot: snap.id, mods: jars }, null, 1));
-  log(`mods/: jar ${jars.length}, обновлено ${placed}, убрано своих прошлых ${dropped}`);
-  if (foreign.length)
-    log(
-      `в mods/ есть jar не из снимка (не трогаю): ${foreign.slice(0, 10).join(', ')}${foreign.length > 10 ? '…' : ''}`,
-    );
+  fs.writeFileSync(
+    path.join(into, '.tfc-fetch.json'),
+    JSON.stringify({ snapshot: snap.id, at: new Date().toISOString() }),
+  );
 
   if (kubejs) {
     const dir = path.join(into, 'kubejs');
@@ -231,7 +210,7 @@ export async function fetchPack({
       importKubejsLayer(dir, 'pack');
     }
   }
-  return { snapshot: snap.id, ...r, removed, jars: jars.length };
+  return { snapshot: snap.id, ...r, removed, jars };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
@@ -241,9 +220,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     if (!flag('--data-only')) await fetchPack({ kubejs: flag('--kubejs') });
     if (flag('--data') || flag('--data-only')) await fetchData();
     if (!flag('--data-only'))
-      log(
-        'дальше — как с локальными jar: npm run mods / npm run kubejs / npm run dev (или npm run pack -- instance/pack)',
-      );
+      log(`jar сборки — в ${path.join(PACK_CACHE, 'mods')}: их читают MCP, npm run mods и аддоны (tools/*/libs.sh)`);
   })().catch((e) => {
     console.error('[pack:fetch]', e.message ?? e);
     process.exit(1);

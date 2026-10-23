@@ -28,7 +28,7 @@
 
 ## Устройство папки
 
-`./libs.sh` — TFC, Patchouli, IE из `mods/` сборки (только для компиляции и сервера разработки). `./release.sh` —
+`./libs.sh` — TFC, Patchouli, IE из jar сборки (кеш снимка, `npm run pack:fetch`) (только для компиляции и сервера разработки). `./release.sh` —
 ресурсы, сборка, jar и иконка. `./test-server.sh` — сервер разработки (TFC + IE, RCON 25597) и проверочный мод
 `src/devtest` (`/ietest`).
 

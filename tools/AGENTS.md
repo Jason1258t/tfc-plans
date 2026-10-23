@@ -3,7 +3,7 @@
 How to build, test without the game and release — [docs/addons.md](../docs/addons.md); addon status —
 [docs/state/addons.md](../docs/state/addons.md).
 
-- Versions come from the pack (`mods/`), not "latest". Game facts about target mods — from their jars via MCP
+- Versions come from the pack (jars in the snapshot cache, `npm run pack:fetch`), not "latest". Game facts about target mods — from their jars via MCP
   (`class_info`, `decompile`, `code_refs`, `mixins`), not from memory.
 - Edited resources → MCP `resources_check addon=<path to the mod folder>` and look at `model_render` (pass
   `addon=<path>` when working in a git worktree). Translation keys from code need `./gradlew compileJava` first.

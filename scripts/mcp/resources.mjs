@@ -11,11 +11,11 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { MODS } from './data.mjs';
+import { WORK } from './data.mjs';
 import { jarList, jarToc, platform, platformAssets, readEntry, zipEntries, zipRead } from './jars.mjs';
 import { KUBEJS } from './tools/kubejs.mjs';
 
-const BASE = path.dirname(MODS);
+const BASE = WORK;
 export const TOOLS_DIR = path.join(process.env.TFC_PACK_ROOT ?? BASE, 'tools');
 
 // ---------------------------------------------------------------- виды слоёв

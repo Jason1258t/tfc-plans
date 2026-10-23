@@ -43,7 +43,7 @@
 ## Сборка и проверка
 
 - `./build.sh` — jar без Gradle: компиляция против Minecraft+NeoForge из среды `../ee-rectifier-mod`
-  и TFC Real World из `mods/`.
+  и TFC Real World из jar сборки (кеш снимка, `npm run pack:fetch`).
 - `./test-server.sh` — сервер разработки (`devserver/`, NeoForge 21.1.251, как у хоста) с TFC, Patchouli,
   TFC Real World и аддоном; проверочный мод — команда `/rwtest`:
   `mixin` (применился ли миксин, какой размер карты видит сервер), `clear` (стирание настроек при работающем сервере), `portal <x> <z>` и `command <x> <z>`

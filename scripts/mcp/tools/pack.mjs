@@ -7,7 +7,7 @@ import { STATUS_LABEL, STATUS_ORDER } from '../../../src/lib/freshness.ts';
 import path from 'node:path';
 import { downloadVersionJar, freshnessReport, modChangelog, summary as freshSummary } from '../../freshness.mjs';
 import { archiveMods, jarMeta } from '../code-index.mjs';
-import { MODS, isActive, items, mods, readJson, recipes, tags } from '../data.mjs';
+import { MODS, WORK, isActive, items, mods, readJson, recipes, tags } from '../data.mjs';
 import { FirestoreError, api, cached, configDocs, listAll } from '../firestore.mjs';
 import { MAX, dateOf, named, norm, page, paging, short, str, words } from '../fmt.mjs';
 import { depContext } from './code.mjs';
@@ -377,7 +377,7 @@ async function changelogPage(log, a, budget) {
  * чьи диапазоны новая версия нарушит.
  */
 async function newDeps(m, target, neoforge) {
-  const file = await downloadVersionJar(m, target, path.join(path.dirname(MODS), '.cache', 'mcp', 'fresh'));
+  const file = await downloadVersionJar(m, target, path.join(WORK, '.cache', 'mcp', 'fresh'));
   const archive = archiveMods(file, target.file ?? path.basename(file));
   const top = archive[0];
   if (!top.mods.length) return [`Новая версия ${target.version}: в jar нет neoforge.mods.toml — не мод NeoForge?`];

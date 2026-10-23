@@ -1,12 +1,12 @@
 /**
- * Jar сборки (mods/): оглавление, чтение файла, javap. Оглавление читается из центрального каталога zip
+ * Jar сборки (mods/ кеша снимка, data.mjs MODS): оглавление, чтение файла, javap. Оглавление читается из центрального каталога zip
  * (без распаковки и без зависимостей) и держится в памяти, пока jar не поменялся.
  *
  * Кроме jar из mods/ есть ещё два вида архивов (для кода: классы, миксины, декомпиляция):
  *   - вложенные библиотеки jar-in-jar: id «<jar>!META-INF/jarjar/<lib>.jar» (по metadata.json, как у загрузчика);
  *   - Minecraft + NeoForge с именами Mojang (platform): классы и исходники из кеша сборки аддонов
  *     (tools/<мод>/build/moddev/artifacts) или TFC_PLATFORM_JAR / TFC_PLATFORM_SOURCES.
- *   - кандидаты — jar модов не из сборки (.cache/mcp/candidates рядом с mods/, кладёт candidate_get): id
+ *   - кандидаты — jar модов не из сборки (.cache/mcp/candidates основной копии, кладёт candidate_get): id
  *     «candidate:<файл>», в индекс классов и данные сборки не входят.
  * jarList() — только jar из mods/, как раньше; jarToc/readEntry/resolveJar понимают все виды.
  */
@@ -14,7 +14,7 @@ import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
-import { MODS, mods } from './data.mjs';
+import { MODS, WORK, mods } from './data.mjs';
 
 /** Источник байтов zip: файл на диске или буфер (вложенный jar) */
 function source(src) {
@@ -112,12 +112,12 @@ export function zipRead(file, e) {
 
 const tocCache = new Map();
 export function jarList() {
-  if (!fs.existsSync(MODS)) throw new Error(`нет папки модов ${MODS}`);
+  if (!fs.existsSync(MODS)) throw new Error(`нет папки модов ${MODS} — скачайте снимок сборки: npm run pack:fetch`);
   const files = fs
     .readdirSync(MODS)
     .filter((f) => f.endsWith('.jar'))
     .sort();
-  if (!files.length) throw new Error(`в ${MODS} нет jar`);
+  if (!files.length) throw new Error(`в ${MODS} нет jar — скачайте снимок сборки: npm run pack:fetch`);
   return files;
 }
 
@@ -164,8 +164,8 @@ function findPlatform() {
   return { classes: path.join(dir, f), sources: fs.existsSync(sources) ? sources : null, version: v.join('.') };
 }
 
-/** Корень основной копии (рядом с mods/): там лежит tools/ с кешем NeoForge */
-const PLATFORM_ROOT = process.env.TFC_PACK_ROOT ?? path.dirname(MODS);
+/** Корень основной копии: там лежит tools/ с кешем NeoForge */
+const PLATFORM_ROOT = process.env.TFC_PACK_ROOT ?? WORK;
 let platformCache;
 export function platform() {
   if (platformCache === undefined) platformCache = findPlatform();
@@ -188,7 +188,7 @@ export const PLATFORM_SOURCES = 'minecraft-sources';
 // ---------------------------------------------------------------- кандидаты: jar не из сборки
 
 export const CANDIDATE = 'candidate:';
-export const CANDIDATES = path.join(path.dirname(MODS), '.cache', 'mcp', 'candidates');
+export const CANDIDATES = path.join(WORK, '.cache', 'mcp', 'candidates');
 export const isCandidate = (id) => typeof id === 'string' && id.startsWith(CANDIDATE);
 export function candidateList() {
   return fs.existsSync(CANDIDATES)
@@ -314,7 +314,7 @@ export function jarFile(jar) {
   if (jar === PLATFORM) return platform().classes;
   if (!jar.includes('!')) return outerFile(jar);
   const { src, sig } = archive(jar);
-  const dir = path.join(path.dirname(MODS), '.cache', 'mcp', 'nested');
+  const dir = path.join(WORK, '.cache', 'mcp', 'nested');
   const file = path.join(dir, `${jar.replace(/[^\w.-]+/g, '_')}`);
   const stamp = `${file}.sig`;
   if (!fs.existsSync(file) || (fs.existsSync(stamp) ? fs.readFileSync(stamp, 'utf8') : '') !== String(sig)) {

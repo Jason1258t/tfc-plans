@@ -38,7 +38,7 @@ neoForge {
 }
 
 dependencies {
-    // Curios из mods/ сборки — только для компиляции (libs.sh)
+    // Curios из jar сборки — только для компиляции (libs.sh)
     compileOnly fileTree(dir: 'libs', include: '*.jar')
 }
 

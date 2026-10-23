@@ -10,8 +10,17 @@ Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md)
 - Parsers are a library: input, output and cache dirs are parameters; Firestore token from a service key
   (`GOOGLE_APPLICATION_CREDENTIALS`) or `firebase login`. `pack` was not run on the host's real instance folder (tested
   on an assembled copy in scratchpad: mods, KubeJS, test configs, calendar).
-- Guard against building without mods (worktree without jars): the library build stops if `mods/` is empty but the
-  previous build had mods (`TFC_ALLOW_NO_MODS=1` bypass); `pack-release` writes nothing at 0 mods or a loss of more
+- **No `<repo>/mods/` since 2026-10-23.** Pack jars live in the snapshot cache outside the repo
+  (`scripts/pack-cache.mjs`: `~/.cache/tfc-plans/pack`, `TFC_PACK_CACHE`; jar dir `TFC_MODS_DIR`), one copy per machine
+  for all worktrees. `npm run pack:fetch` mirrors the current snapshot there (deletes files not in it; jars already in
+  an old `mods/` of the repo are hard-linked instead of downloaded — on the host 234 of 241, 13.5 MB fetched). Readers:
+  MCP (`MODS` = cache, its `.cache/mcp`/`tools/`/`instance/` stay in the main checkout — `WORK` in `mcp/data.mjs`;
+  with `TFC_MODS_DIR` set, as on the pack server, they sit next to the jars as before), `npm run mods`, freshness
+  fingerprints, `tools/*/libs.sh|test-server.sh|build.sh`, `ee-extras` art. `npm run dev` never reads jars:
+  `ensure-mods.mjs` copies missing `public/` from the main checkout, then syncs mod data from the pack server
+  (`/data`), soft-failing to the old data; `TFC_KEEP_MODS=1` = offline. Pack server address/key: env, `.env.local`,
+  else the `tfc` app login (`~/.config/tfc/config.json`). The host may delete the old `mods/` (cache holds hard links).
+- Guard against building without mods: the library build stops if the jar dir is empty but the previous build had mods (`TFC_ALLOW_NO_MODS=1` bypass); `pack-release` writes nothing at 0 mods or a loss of more
   than half (`ALLOW_MODS_DROP=1`). `predeploy-check` blocks a site built without Firebase settings.
 - **Pack data is published only by the pack server** (2026-10-22, `docs/plans/vps-publish.md`): `npm run deploy:site`
   = `scripts/deploy-site.mjs` — site built with `TFC_SITE_ONLY=1`, new Hosting version from `firebase.json` config,
@@ -76,8 +85,8 @@ Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md)
   2 icons and 5 data files on Hosting. First attempt failed: Firestore can't store nested arrays
   (`createentitycontrol-common.toml`, `blocks_limit`) — `toValue` now writes inner arrays as `{ __array }`. Old test
   snapshot `20261020-120830-b1bc` remains in history.
-- **Mod data on the site comes from the server.** A jar-less dev build with `TFC_PACK_URL`/`TFC_PACK_TOKEN` in
-  `.env.local` takes mod data from the server; `npm run pack:fetch` — pack from the server into the project.
+- **Mod data on the site comes from the server.** `npm run dev` takes mod data from the server (see «No `<repo>/mods/`»
+  above); `npm run pack:fetch` — pack jars from the server into the snapshot cache.
 - **3D icons on the VPS** (2026-10-22): the build repo was 111 commits behind (pre-icons), so the 22.10 dry run wanted to
   remove 8559 renders. The renderer is pure Node; the worker sets `TFC_MODS_DIR` to the snapshot's `mods/` before
   importing builders; without a NeoForge platform jar the build downloads `client.jar` + Mojang mappings and the

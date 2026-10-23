@@ -11,7 +11,7 @@
  *   node scripts/pack-release.mjs --dry-run — показать разницу, ничего не записывая
  *   … --prev <файл>                         — сравнить с локальным снимком вместо опубликованного
  *   ALLOW_MODS_DROP=1 firebase deploy      — записать, даже если в сборке 0 модов или убрано больше половины
- *                                            (без неё такой деплой останавливается: обычно это сборка без mods/)
+ *                                            (без неё такой деплой останавливается: обычно это сборка без jar)
  * Из кода: packRelease({ manifestFile, prevFile, dryRun, root }) — manifestFile вместо public/pack-manifest.json,
  * root — корень репозитория с карточками аддонов (tools/<мод>/addon.json).
  */
@@ -177,7 +177,7 @@ async function addonChangelogs(mods, root) {
 
 /**
  * Снимок без модов или с потерей больше половины модов почти всегда значит, что библиотеку собрали без jar
- * (деплой из git worktree, где mods/ пуст). Такая запись соврала бы игрокам «убраны все моды» — стоп.
+ * (папка модов пуста или не та). Такая запись соврала бы игрокам «убраны все моды» — стоп.
  */
 function assertPlausible(prev, next) {
   if (process.env.ALLOW_MODS_DROP) return;
@@ -192,8 +192,8 @@ function assertPlausible(prev, next) {
   }
   if (!problem) return;
   const err = new Error(
-    `${problem}. Похоже, библиотеку собрали без jar в mods/ (например, в git worktree) — такую сборку на сайт не выкладываю.\n` +
-      'Положите моды в mods/ и запустите деплой снова. Если моды и правда убраны — ALLOW_MODS_DROP=1.',
+    `${problem}. Похоже, библиотеку собрали без jar сборки — такую сборку на сайт не выкладываю.\n` +
+      'Проверьте папку модов (снимок сборки — npm run pack:fetch) и запустите снова. Если моды и правда убраны — ALLOW_MODS_DROP=1.',
   );
   err.hint = 'ALLOW_MODS_DROP=1';
   throw err;

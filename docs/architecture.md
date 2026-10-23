@@ -5,13 +5,13 @@ Agent reference, read on demand (linked from AGENTS.md). Data-builder rules — 
 ## Commands
 
 ```bash
-npm run mods          # rebuild the library from mods/ (slow, cache in .cache/)
+npm run mods          # rebuild mod data from the pack jars (snapshot cache; slow, cache in .cache/) — normally the pack server does it
 npm run serverconfig -- <zip|folder>             # server configs (TOML and <mod>.json5) → Firestore config
 npm run kubejs -- <zip|folder> [--layer world]   # KubeJS scripts → public/kubejs.json, own items → kubejs-items.json
 npm run world -- <world|world/data|tfc_calendar.dat|zip>  # world save → Firestore config (scope world)
 npm run pack -- <version folder|zip> [--world …] [--only …] [--out …] [--dry-run]  # all of the above + instance/sources.json
 npm run guides -- pull <folder> | push <file.md|folder>   # guides ↔ Markdown files (author — TFC_NICK)
-npm run pack:fetch [-- --kubejs] [--data|--data-only]     # current pack from the pack server → instance/pack/ + mods/ (and data)
+npm run pack:fetch [-- --kubejs] [--data|--data-only]     # current pack from the pack server → ~/.cache/tfc-plans/pack (and data)
 npm run pack:publish -- <data folder> --dry-run           # what would be published (Hosting diff, config, packUpdates)
 npm run freshness [-- --if-older 6h --soft]              # mod freshness (Modrinth + CurseForge) → public/pack-freshness.json
 ```
@@ -36,7 +36,7 @@ The site is a static SPA. All "pack knowledge" is built locally by scripts and d
 
 | Source (not in git) | Script | Output |
 | --- | --- | --- |
-| `mods/*.jar` (+ mods nested in `META-INF/jarjar/`) | `mods.mjs` (+ `reference`, `manifest`, `geo`, `tags`, `botany`, `meals`, `cuisine`, `power`, `multiblocks`, `icons3d`) | `public/items.json` (`b` — also a block), `blocks.json` (blocks without an item + item from their loot, `mods/blocks.mjs`), `icons/` (+ `icons/<ns>/render/` — 3D block icons), `recipes.json`, `reference.json`, `pack-manifest.json`, `geo.json`, `geo/`, `tags.json`, `botany.json`, `meals.json`, `power.json`, `multiblocks.json`, `multiblocks/` |
+| pack jars — snapshot cache `~/.cache/tfc-plans/pack/mods/*.jar` (+ mods nested in `META-INF/jarjar/`) | `mods.mjs` (+ `reference`, `manifest`, `geo`, `tags`, `botany`, `meals`, `cuisine`, `power`, `multiblocks`, `icons3d`) | `public/items.json` (`b` — also a block), `blocks.json` (blocks without an item + item from their loot, `mods/blocks.mjs`), `icons/` (+ `icons/<ns>/render/` — 3D block icons), `recipes.json`, `reference.json`, `pack-manifest.json`, `geo.json`, `geo/`, `tags.json`, `botany.json`, `meals.json`, `power.json`, `multiblocks.json`, `multiblocks/` |
 | `instance/kubejs/<layer>/` | `kubejs.mjs` | `public/kubejs.json`, `kubejs-items.json`, `icons-kubejs/` (pack items from startup_scripts + assets), `kubejs-data.json` (food and skillet from `kubejs/data` — the site replaces mod data with them) |
 | world save (`<world>/data/`) | `world.mjs` | Firestore `config/world__{file}` — TFC calendar (month length set by command) |
 | server config zip/folder | `serverconfig.mjs` | Firestore `config/{scope}__{path}` |
@@ -96,5 +96,7 @@ scripts/mcp/      agent MCP (stdio) — docs/mcp.md
 scripts/mods/visibility/  hidden items (not visible in game): per-mod rule from mod code (field h in items.json)
 scripts/          mods.mjs + mods/{reference,tags,botany,meals,cuisine,power,multiblocks,geo,manifest,classfile,
                   config-defaults}.mjs, serverconfig.mjs, kubejs.mjs, pack-release.mjs, pack.mjs; firestore-rest.mjs
+                  pack-cache.mjs — where pack jars live (snapshot cache outside the repo, ~/.cache/tfc-plans/pack);
+                  pack-fetch.mjs fills it; ensure-mods.mjs — mod data for npm run dev from the pack server
 docs/plans/       feature plans with statuses; docs/STATE.md — current state
 ```

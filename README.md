@@ -55,7 +55,7 @@ npm run dev
 ```bash
 npm run deploy          # правила + auth + сайт
 npm run deploy:rules    # только правила Firestore
-npm run deploy:site     # только сайт (jar в mods/ не нужны)
+npm run deploy:site     # только сайт (jar не нужны)
 ```
 
 **Данные сборки** (предметы, рецепты, иконки, разбор KubeJS — список в `scripts/data-roots.mjs`) на сайт выкладывает
@@ -115,17 +115,18 @@ AI Logic и в код не попадает.
 
 ### Моды сборки (Create, Immersive Engineering и др.)
 
-Скопируйте jar-файлы модов в папку [`mods/`](mods/) (можно всю папку `mods` из лаунчера) и выполните:
+Данные модов (названия `en_us`/`ru_ru`, модели, иконки, рецепты) собирает сервер сборки из опубликованного снимка
+(`tfc publish`) и сам выкладывает на сайт. `npm run dev` берёт их оттуда же — нужен вход в программу `tfc` или
+`TFC_PACK_URL` и `TFC_PACK_TOKEN` в `.env.local`; jar на машине разработчика не нужны.
+
+Jar сборки нужны только MCP (код модов, книги, лут), сборке аддонов и ручной проверке разборщиков:
 
 ```bash
-npm run deploy
+npm run pack:fetch   # снимок сборки → ~/.cache/tfc-plans/pack (вне репозитория; TFC_PACK_CACHE — другая папка)
+npm run mods         # собрать данные модов из этих jar в public/ (TFC_MODS_DIR — другая папка с jar)
 ```
 
-Перед сборкой скрипт сверяет список jar с прошлым запуском. Если он изменился, библиотека пересобирается
-сама: вытаскиваются названия (`en_us`, `ru_ru`), модели и иконки всех модов. jar-файлы в git не попадают.
-Для локальной проверки: `npm run mods`, потом `npm run dev`.
-
-Если jar TerraFirmaCraft в `mods/` нет, TFC берётся с GitHub (`MOD_SOURCES` в скрипте).
+Если jar TerraFirmaCraft среди них нет, TFC берётся с GitHub (`MOD_SOURCES` в скрипте).
 
 ## Редактор Markdown
 

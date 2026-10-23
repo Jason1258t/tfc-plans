@@ -38,7 +38,7 @@ neoForge {
 }
 
 dependencies {
-    // TFC и Immersive Engineering из mods/ сборки — только для компиляции (libs.sh)
+    // TFC и Immersive Engineering из jar сборки — только для компиляции (libs.sh)
     compileOnly fileTree(dir: 'libs', include: '*.jar')
 }
 

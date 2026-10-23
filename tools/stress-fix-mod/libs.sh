@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Библиотеки для компиляции: Create из папки mods/ сборки + вложенные в него (catnip/ponder, flywheel, Registrate).
-# В мод не попадают — на сервере они уже стоят. MODS=<папка> — другая папка модов (например из git worktree).
+# Библиотеки для компиляции: Create из jar сборки + вложенные в него (catnip/ponder, flywheel, Registrate).
+# В мод не попадают — на сервере они уже стоят.
+# Jar сборки — из кеша снимка (npm run pack:fetch, ~/.cache/tfc-plans/pack/mods); MODS=<папка> — другая папка модов.
 set -euo pipefail
 cd "$(dirname "$0")"
-MODS="${MODS:-../../mods}"
+MODS="${MODS:-${TFC_MODS_DIR:-${TFC_PACK_CACHE:-$HOME/.cache/tfc-plans/pack}/mods}}"
 rm -rf libs && mkdir libs
 for j in "$MODS"/create-1.21.1-*.jar; do
   cp "$j" libs/

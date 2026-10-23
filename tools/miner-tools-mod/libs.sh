@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# Библиотеки для компиляции: Curios (слоты пояса и головы) и GeckoLib (модель каски) из папки mods/ сборки. В мод
+# Библиотеки для компиляции: Curios (слоты пояса и головы) и GeckoLib (модель каски) из jar сборки. В мод
 # не попадают — в сборке они уже стоят.
+# Jar сборки — из кеша снимка (npm run pack:fetch, ~/.cache/tfc-plans/pack/mods); MODS=<папка> — другая папка модов.
 set -euo pipefail
 cd "$(dirname "$0")"
-ROOT=../..
-# В git worktree jar сборки нет — берём из основной копии
-[ -n "$(ls $ROOT/mods/curios-neoforge-*.jar 2>/dev/null)" ] || ROOT=$(git rev-parse --path-format=absolute --git-common-dir)/..
+MODS="${MODS:-${TFC_MODS_DIR:-${TFC_PACK_CACHE:-$HOME/.cache/tfc-plans/pack}/mods}}"
 rm -rf libs && mkdir libs
-cp "$ROOT"/mods/curios-neoforge-*.jar "$ROOT"/mods/geckolib-neoforge-*.jar libs/
+cp "$MODS"/curios-neoforge-*.jar "$MODS"/geckolib-neoforge-*.jar libs/
 ls libs

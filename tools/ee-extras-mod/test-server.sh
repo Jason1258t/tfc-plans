@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Проверка мода на настоящем сервере (среда разработки NeoForge + Create + Electro Energetics из ../../mods):
+# Проверка мода на настоящем сервере (среда разработки NeoForge + Create + Electro Energetics из jar сборки):
 # плоский мир, через RCON ставим трёхфазный выпрямитель в двух положениях, однофазный и диод EE, смотрим данные устройств
 # (/cee device_data); затем /rectest (тестовый мод src/devtest) собирает цепи «батареи переменного тока → выпрямитель →
 # нагреватель и вольтметр», протягивая провода через API EE, и снимает показания. Потом сервер останавливается.
@@ -8,12 +8,13 @@ set -euo pipefail
 cd "$(dirname "$0")"
 export JAVA_HOME="${JAVA_HOME:-$HOME/.gradle/local-tools/jdk21/Contents/Home}"
 # KEEP=1 — не стирать мир (проверка сохранения); OLD_JAR=<jar> — положить ещё и этот jar (старая версия аддона рядом
-# с новой — проверка перехода со старых id); IE=1 — добавить Immersive Engineering из ../../mods (конденсаторы)
+# с новой — проверка перехода со старых id); IE=1 — добавить Immersive Engineering из jar сборки (конденсаторы)
 if [ -z "${KEEP:-}" ]; then rm -rf run; fi
 mkdir -p run/mods
 rm -f run/mods/*.jar
 cp libs/create-1.21.1-*.jar libs/electroenergetics-*.jar run/mods/
-if [ -n "${IE:-}" ]; then cp ../../mods/ImmersiveEngineering-*.jar run/mods/; fi
+MODS="${MODS:-${TFC_MODS_DIR:-${TFC_PACK_CACHE:-$HOME/.cache/tfc-plans/pack}/mods}}"
+if [ -n "${IE:-}" ]; then cp "$MODS"/ImmersiveEngineering-*.jar run/mods/; fi
 if [ -n "${OLD_JAR:-}" ]; then cp "$OLD_JAR" run/mods/; fi
 echo 'eula=true' > run/eula.txt
 cat > run/server.properties <<'P'

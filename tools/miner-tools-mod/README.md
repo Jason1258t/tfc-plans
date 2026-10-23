@@ -62,7 +62,7 @@
 ## Сборка и проверка
 
 ```bash
-./libs.sh          # Curios и GeckoLib из mods/ сборки (в worktree — из основной копии)
+./libs.sh          # Curios и GeckoLib из jar сборки (кеш снимка, npm run pack:fetch)
 ./test-server.sh   # сервер разработки (+ IE) + /belttest и /helmettest (src/devtest), печатает OK/FAIL; PORT=… — свой порт
 ./release.sh       # jar и иконки (icons/) сюда; на сайт — сборкой сайта
 ```

@@ -51,13 +51,13 @@ Curios, IE; `stress-fix-mod` — mixin-only with Gradle) without `build/ run/ li
 art/gen_assets.py art/png.py src/main src/devtest README.md`. Rename `modId`, package, `archivesName`, devtest mod id
 and command, jar names in `release.sh`.
 
-- **Versions from the pack's `mods/`, not "latest".** NeoForge = the max of what the dependency mods require
+- **Versions from the pack's jars, not "latest".** NeoForge = the max of what the dependency mods require
   (`jar_grep query='modId = "neoforge"' path=META-INF/neoforge.mods.toml jar=<mod> context=3`; e.g. TFC 4.2.9 needs
   21.1.234, Create 6.0.10 — 21.1.219) → `neo_version` in `gradle.properties` and `[x,)` in `neoforge.mods.toml`;
   dependency ranges from the jars' versions. Optional dependencies — separate package + `ModList.isLoaded` +
   `neoforge:mod_loaded` conditions (docs/addons.md).
-- `libs.sh` lists the dependency jars (`compileOnly`, plus their `META-INF/jarjar/*.jar`). In a worktree `mods/` is
-  absent: `MODS=/Users/ivan/vscodeProjects/tfc-taskmanager/mods ./libs.sh`.
+- `libs.sh` lists the dependency jars (`compileOnly`, plus their `META-INF/jarjar/*.jar`). Jars come from the snapshot
+  cache `~/.cache/tfc-plans/pack/mods` (`npm run pack:fetch`), the same from any worktree; `MODS=<dir>` overrides.
 - JDK 21: scripts set `JAVA_HOME=$HOME/.gradle/local-tools/jdk21/Contents/Home`; `./gradlew build` (first run
   downloads NeoForge ~400 MB; maven handshake errors — retry).
 - `test-server.sh`: own `rcon.port`/`server-port` — taken: 25596–25599, 25571–25572 (grep `tools/*/test-server.sh`).

@@ -277,14 +277,14 @@ function sectionDetails(lines) {
   return out;
 }
 
-/** Моды сборки сайта: id → версия (jar из mods/ и вложенные jar-in-jar — FML показывает их в списке) */
+/** Моды сборки сайта: id → версия (jar сборки и вложенные jar-in-jar — FML показывает их в списке) */
 function packMods() {
   const out = new Map();
   try {
     for (const jar of [...jarList(), ...nestedJars()])
       for (const m of jarMeta(jar).mods) if (!out.has(m.id)) out.set(m.id, m.version);
   } catch {
-    /* нет mods/ — без сравнения */
+    /* нет jar сборки — без сравнения */
   }
   return out;
 }
@@ -315,7 +315,7 @@ function compareWithPack(list) {
     return v && v !== '?' && !skip.has(m.id) && !String(v).startsWith(m.version) && !m.version.startsWith(v);
   });
   const lst = (arr, f) => `${arr.slice(0, 12).map(f).join(', ')}${arr.length > 12 ? ` … ещё ${arr.length - 12}` : ''}`;
-  const out = [`Сверка со сборкой сайта (mods/, ${pack.size} модов):`];
+  const out = [`Сверка со сборкой сайта (jar снимка, ${pack.size} модов):`];
   if (extra.length + missing.length > (pack.size + list.length) / 3)
     out.push('  ⚠ различий очень много — похоже, у игрока другая сборка или другая её версия');
   if (extra.length)
