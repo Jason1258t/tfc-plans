@@ -5,10 +5,6 @@ its one-liner in STATE.md.
 
 ## Host actions
 
-- **Блоки без предмета в схемах** (2026-10-23, builder change): `tfc admin rebuild --pull` + `tfc admin publish --live`
-  so the site gets `blocks.json` and the `b` («is a block») marks in `items.json`. Until then the site behaves as
-  before (no block list, no «is a block» check). Builder cache markers bumped (jars `.done-v23`, vanilla `.done-v5`):
-  the first rebuild re-extracts all jars and re-downloads client.jar.
 - **Pack translation `pack-patches/l10n/`** (2026-10-22): Chinese player-facing text in pack KubeJS scripts → lang keys
   (`Text.translatableWithFallback`, English fallback) + `kubejs/assets/kubejs/lang/{en_us,ru_ru}.json`: item cleaner
   broadcasts, 27 Create Ore Excavation vein names (ids unchanged), engine refuel, lectern/controller, obsidian, welcome,
