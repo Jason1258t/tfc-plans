@@ -232,7 +232,7 @@
   pointer-events: none;
 }
 
-/* Рамка объекта (Alt+перетаскивание) */
+/* Рамка объекта (перетаскивание ЛКМ) */
 .view3d-frame {
   position: absolute;
   z-index: 1;

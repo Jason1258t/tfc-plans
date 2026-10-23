@@ -129,7 +129,12 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
 - **3D** («Слой / 3D», 2026-10-19, three.js as a separate chunk): simplified block shapes (`lib/schematicMesh.ts` —
   slabs, stairs, trapdoors, doors, fences, walls, panes, Create shafts and cogs, small stuff as cubes), hidden faces
   skipped, textures from an `/icons` atlas (block texture by id path, else item icon) or average colour; slice at the
-  current layer.
+  current layer. **Camera** (2026-10-23): middle-drag (or Alt+LMB for trackpads) orbits around the point under the
+  cursor (raycast hit; on a miss — the cursor ray at the old target depth, clamped to the mesh bbox; green dot while
+  orbiting), own orbit code with pitch clamp, then OrbitControls target moved onto the view axis at the pivot depth;
+  plain LMB — click picks, drag frames (Alt no longer needed); RMB pan and wheel zoom stay in OrbitControls
+  (`zoomToCursor`, `zoomSpeed` 2.5). Tested with synthetic pointer/wheel events and a real click; not tried with a
+  real middle button or trackpad.
 - **Library preview** (`lib/schematicRender.ts`): on save the browser draws a 480×320 webp (~15–20 KB) with
   replacements into the `preview` field (rule: ≤300k chars); old records have a «нарисовать превью» button. Tested in
   the browser on two library schematics (8.6k blocks → 27k faces, 80 ms); saving with preview via the button not
