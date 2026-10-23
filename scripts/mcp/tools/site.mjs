@@ -171,7 +171,10 @@ const NICK = 'Claude';
 
 /** Документ целиком: id сайта — сразу GET (1 чтение), иначе поиск по кешированному списку и GET найденного */
 async function resolve(coll, index, key, label, what, mask) {
-  const k = String(key ?? '').trim();
+  let k = String(key ?? '').trim();
+  // Вставили ссылку или строку «Для агента» с сайта — берём id из ?task= / ?doc= или «id …»
+  const ref = k.match(/(?:[?&](?:task|doc)=|\bid:?\s+)([A-Za-z0-9]{20})\b/);
+  if (ref) k = ref[1];
   if (FIRESTORE_ID.test(k)) {
     const d = await getDoc(coll, k, mask);
     if (d) return { doc: d };

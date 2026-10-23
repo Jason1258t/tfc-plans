@@ -23,6 +23,9 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   now listen with metadata: header badge «нет связи» (fromCache > 6 s or `navigator.onLine` false, with unsent count),
   «отправка» (pending > 1.5 s), «ошибка сохранения» (rejected write, dismissable); a clock on a task card while its
   write is pending. Checked on the dev server via `disableNetwork`/`enableNetwork`; the PC root cause isn't diagnosed.
+- Copy-for-agent button on each task row (2026-10-23, `TaskRow`, small, faint until row hover): copies
+  `Задача «title» — id <id> — <origin>/?task=<id>`. MCP `resolve` (task_get/artifact_get etc.) extracts the id from
+  such a string or a `?task=`/`?doc=` link.
 - Plans (Markdown docs) with items and a Gemini agent; `- [ ]` checkboxes toggle by click in view mode (plans and task
   descriptions).
 
