@@ -296,6 +296,13 @@ export function SchematicsPage() {
     }
   };
 
+  /** Умная замена для редактора слоёв (выделенные блоки): те же правила или агент, без записи в общие замены */
+  const smartTargets = async (ids: string[]) => {
+    if (!items) return new Map<string, string>();
+    if (!useAgent) return applyRules(ids, rules, items).applied;
+    return (await agentReplace(ids, rules, agentPrefs.hint, items, () => {})).applied;
+  };
+
   /** Что можно подставить из избранного: блоки без замены, у которых есть избранные цели из сборки */
   const favPlan = useMemo<PlanRow[]>(() => {
     if (!items || !favorites?.length) return [];
@@ -990,6 +997,8 @@ export function SchematicsPage() {
             replace={replace}
             onChange={(next) => setSchematics((list) => list.map((x) => (x.key === next.key ? next : x)))}
             onSetTarget={setTarget}
+            favorites={favorites ?? []}
+            smartTargets={smartTargets}
             onClose={() => setLayersFor(null)}
           />
         ) : null;

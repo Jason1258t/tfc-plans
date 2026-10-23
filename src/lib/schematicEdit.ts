@@ -137,6 +137,128 @@ export function connectedGroup(
   return out;
 }
 
+/** Плоскость: ось (0 — x, 1 — y, 2 — z) и координата по ней */
+const PLANE_AXES = [1, 0, 2] as const;
+
+/** Соседи по граням в плоскости, по оси, поперёк которой она лежит */
+const FLAT_FACES: Vec[][] = [0, 1, 2].map((axis) =>
+  NEIGHBOURS.filter((d) => d[axis] === 0 && Math.abs(d[0]) + Math.abs(d[1]) + Math.abs(d[2]) === 1),
+);
+
+/** Плоскость — пол или стена, если её материалы (виды от MATERIAL_SHARE выходящих блоков) дают PLANE_SHARE из них */
+const MATERIAL_SHARE = 0.2;
+const PLANE_SHARE = 0.7;
+
+/**
+ * «Объект» в рамке (3D): блоки, которые inFrame считает попавшими в рамку (по всей глубине, не только видимый
+ * слой), за вычетом фона. Фон — воздух, края схемы (и срез maxY) и цельные конструкции, которые выходят за рамку.
+ * Выходящий блок — в рамке, а рядом (с рёбрами и углами) есть блок за ней.
+ * Конструкция — плоскость (пол, стена): выходящие блоки в одной плоскости, растянутые в обе стороны (не линия) и
+ * почти все из одного-двух материалов, а сама плоскость уходит за рамку хотя бы в две стороны; фоном становятся
+ * блоки этих материалов, соединённые с ними в этой плоскости.
+ * Из чего сам объект, не важно. Что выходит за рамку, но не плоскость (труба, вал, ремень), остаётся в объекте,
+ * обрезанным рамкой. solid — блок считается блоком (не воздух, не убран); kind — вид блока (материал плоскости).
+ * Возвращает индексы в списке blocks.
+ */
+export function frameObject(
+  grid: Grid,
+  inFrame: (p: Vec) => boolean,
+  solid: (index: number) => boolean,
+  kind: (index: number) => string,
+  maxY = Infinity,
+): number[] {
+  const [sx, sy, sz] = grid.size;
+  const top = Math.min(sy - 1, maxY);
+  const key = (x: number, y: number, z: number) => x + z * sx + y * sx * sz;
+  const at = (x: number, y: number, z: number) => {
+    if (x < 0 || z < 0 || y < 0 || x >= sx || z >= sz || y > top) return -1;
+    const idx = grid.layers.get(y)?.[x + z * sx] ?? -1;
+    return idx >= 0 && solid(idx) ? idx : -1;
+  };
+
+  // Блоки в рамке: клетка → индекс
+  const inside = new Map<number, number>();
+  const pos = new Map<number, Vec>();
+  for (const [y, layer] of grid.layers) {
+    if (y > top) continue;
+    for (let z = 0; z < sz; z++)
+      for (let x = 0; x < sx; x++) {
+        const idx = layer[x + z * sx];
+        if (idx < 0 || !solid(idx) || !inFrame([x, y, z])) continue;
+        const k = key(x, y, z);
+        inside.set(k, idx);
+        pos.set(k, [x, y, z]);
+      }
+  }
+  const kindOf = (k: number) => kind(inside.get(k)!);
+
+  const crossing: number[] = [];
+  for (const [k, [x, y, z]] of pos)
+    if (NEIGHBOURS.some(([dx, dy, dz]) => at(x + dx, y + dy, z + dz) >= 0 && !inside.has(key(x + dx, y + dy, z + dz))))
+      crossing.push(k);
+
+  // Плоскости: каждый выходящий блок — в ту из своих трёх, где таких больше (при равенстве — пол раньше стен)
+  const planeKey = (axis: number, p: Vec) => axis * 1e6 + p[axis];
+  const count = new Map<number, number>();
+  for (const k of crossing)
+    for (const a of PLANE_AXES) count.set(planeKey(a, pos.get(k)!), (count.get(planeKey(a, pos.get(k)!)) ?? 0) + 1);
+  const planes = new Map<number, number[]>();
+  for (const k of crossing) {
+    const p = pos.get(k)!;
+    let best: number = PLANE_AXES[0];
+    for (const a of PLANE_AXES) if (count.get(planeKey(a, p))! > count.get(planeKey(best, p))!) best = a;
+    const pk = planeKey(best, p);
+    const list = planes.get(pk) ?? [];
+    list.push(k);
+    planes.set(pk, list);
+  }
+
+  const background = new Set<number>();
+  for (const [pk, list] of planes) {
+    const axis = Math.floor(pk / 1e6);
+    const [u, v] = [0, 1, 2].filter((a) => a !== axis);
+    const spread = (a: number) => new Set(list.map((k) => pos.get(k)![a])).size;
+    if (list.length < 3 || spread(u) < 2 || spread(v) < 2) continue;
+    const kinds = new Map<string, number>();
+    for (const k of list) kinds.set(kindOf(k), (kinds.get(kindOf(k)) ?? 0) + 1);
+    const materials = new Set([...kinds].filter(([, n]) => n >= list.length * MATERIAL_SHARE).map(([t]) => t));
+    const covered = [...materials].reduce((a, t) => a + kinds.get(t)!, 0);
+    if (covered < list.length * PLANE_SHARE) continue;
+    // Пол и стена продолжаются за рамку хотя бы в две стороны; стенка трубы или башни — только в одну (вниз)
+    const escapes = new Set<string>();
+    for (const k of list) {
+      if (!materials.has(kindOf(k))) continue;
+      const [x, y, z] = pos.get(k)!;
+      for (const d of FLAT_FACES[axis]) {
+        const n: Vec = [x + d[0], y + d[1], z + d[2]];
+        const idx = at(...n);
+        if (idx >= 0 && !inside.has(key(...n)) && materials.has(kind(idx))) escapes.add(d.join());
+      }
+    }
+    if (escapes.size < 2) continue;
+    // Заливка в плоскости — только по её материалам
+    const coord = pk % 1e6;
+    const dirs = NEIGHBOURS.filter((d) => d[axis] === 0);
+    const queue = list.filter((k) => materials.has(kindOf(k)));
+    for (const k of queue) background.add(k);
+    while (queue.length) {
+      const p = pos.get(queue.pop()!)!;
+      for (const d of dirs) {
+        const n: Vec = [p[0] + d[0], p[1] + d[1], p[2] + d[2]];
+        if (n[0] < 0 || n[2] < 0 || n[0] >= sx || n[2] >= sz || n[axis] !== coord) continue;
+        const nk = key(...n);
+        if (!inside.has(nk) || background.has(nk) || !materials.has(kindOf(nk))) continue;
+        background.add(nk);
+        queue.push(nk);
+      }
+    }
+  }
+
+  const result: number[] = [];
+  for (const [k, idx] of inside) if (!background.has(k)) result.push(idx);
+  return result;
+}
+
 /** Свойства записи палитры — для стрелок направления на рисунке */
 export function propsByState(s: Schematic): Map<string, string>[] {
   return (paletteLists(s.parsed.root.value)[0] ?? []).map((e) => new Map(propsOf(e)));
@@ -202,13 +324,18 @@ const propsKey = (entry: Tag) => JSON.stringify(propsOf(entry).sort(([a], [b]) =
 /**
  * Поставить в клетки (индексы в списке blocks) другой блок или убрать их. Свойства (facing, axis…) и NBT
  * блока сохраняются, как при общей замене. Записи палитры добавляются во все палитры с тем же индексом.
+ * to — один блок для всех или функция: id в исходнике → новый id (undefined — оставить как есть).
  */
-export function editCells(s: Schematic, indices: number[], to: string): Schematic {
+export function editCells(
+  s: Schematic,
+  indices: number[],
+  to: string | ((name: string) => string | undefined),
+): Schematic {
   if (!indices.length) return s;
-  remember(s);
 
   const list = blocksOf(s);
   if (to === REMOVE) {
+    remember(s);
     const drop = new Set(indices);
     setBlocks(
       s,
@@ -219,19 +346,25 @@ export function editCells(s: Schematic, indices: number[], to: string): Schemati
 
   const palettes = paletteLists(s.parsed.root.value);
   const palette = palettes[0];
+  const targetName = (state: number) => {
+    const name = nameOf(palette[state]);
+    if (!name) return undefined;
+    const t = typeof to === 'string' ? to : to(name);
+    return t && t !== name ? t : undefined;
+  };
   /** Старый индекс палитры → новый (тот же набор свойств, другое имя) */
   const mapped = new Map<number, number>();
-  const target = (state: number) => {
+  const target = (state: number, name: string) => {
     let n = mapped.get(state);
     if (n !== undefined) return n;
     const src = palette[state];
     const key = propsKey(src);
-    n = palette.findIndex((e) => nameOf(e) === to && propsKey(e) === key);
+    n = palette.findIndex((e) => nameOf(e) === name && propsKey(e) === key);
     if (n < 0) {
       for (const p of palettes) {
         const base = p[state] ?? src;
         const value: Compound = base.type === T.Compound ? new Map(base.value) : new Map();
-        value.set('Name', { type: T.String, value: to });
+        value.set('Name', { type: T.String, value: name });
         p.push({ type: T.Compound, value });
       }
       n = palette.length - 1;
@@ -239,13 +372,21 @@ export function editCells(s: Schematic, indices: number[], to: string): Schemati
     mapped.set(state, n);
     return n;
   };
-  const next = [...list];
+  const changes: [number, number, string][] = [];
   for (const i of indices) {
-    const b = next[i];
+    const b = list[i];
     if (b?.type !== T.Compound) continue;
     const st = b.value.get('state');
-    if (st?.type !== T.Int || nameOf(palette[st.value]) === to) continue;
-    next[i] = { type: T.Compound, value: new Map(b.value).set('state', { type: T.Int, value: target(st.value) }) };
+    if (st?.type !== T.Int) continue;
+    const name = targetName(st.value);
+    if (name) changes.push([i, st.value, name]);
+  }
+  if (!changes.length) return s;
+  remember(s);
+  const next = [...list];
+  for (const [i, state, name] of changes) {
+    const b = next[i] as { type: typeof T.Compound; value: Compound };
+    next[i] = { type: T.Compound, value: new Map(b.value).set('state', { type: T.Int, value: target(state, name) }) };
   }
   setBlocks(s, next);
   return bumped(s, s.rev + 1);

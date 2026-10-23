@@ -18,6 +18,16 @@ interface Props {
   onPick?: (pos: Vec | null, e: { shiftKey: boolean; timeStamp: number }) => void;
   /** Блок под курсором (null — нет) */
   onHover?: (pos: Vec | null) => void;
+  /** Alt+перетаскивание — рамка: inFrame проверяет, попадает ли центр блока в неё (по всей глубине) */
+  onFrame?: (inFrame: (pos: Vec) => boolean, e: { shiftKey: boolean }) => void;
+}
+
+/** Рамка на экране, в пикселях от угла области */
+interface Rect {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
 }
 
 /** Сдвиг мыши, после которого нажатие — поворот камеры, а не клик */
@@ -33,7 +43,16 @@ function disposeMarks(m: THREE.InstancedMesh) {
  * 3D-просмотр схемы: упрощённые формы блоков, вращение ЛКМ, сдвиг ПКМ, масштаб колесом.
  * Рисует только при движении камеры или смене схемы — в покое видеокарту не грузит.
  */
-export default function SchematicView3D({ schematic, replace, maxY, textured, selected, onPick, onHover }: Props) {
+export default function SchematicView3D({
+  schematic,
+  replace,
+  maxY,
+  textured,
+  selected,
+  onPick,
+  onHover,
+  onFrame,
+}: Props) {
   const items = useItems();
   const wrapRef = useRef<HTMLDivElement>(null);
   const three = useRef<{
@@ -49,13 +68,16 @@ export default function SchematicView3D({ schematic, replace, maxY, textured, se
   } | null>(null);
   const [stats, setStats] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rect, setRect] = useState<Rect | null>(null);
   const framed = useRef(false);
   // Обработчики — через ref: сцена создаётся один раз, а они меняются с каждой отрисовкой
   const pickRef = useRef(onPick);
   const hoverRef = useRef(onHover);
+  const frameRef = useRef(onFrame);
   useEffect(() => {
     pickRef.current = onPick;
     hoverRef.current = onHover;
+    frameRef.current = onFrame;
   });
 
   // Сцена — один раз
@@ -136,6 +158,62 @@ export default function SchematicView3D({ schematic, replace, maxY, textured, se
       });
     };
     const onLeave = () => showCursor(null);
+
+    // Alt+ЛКМ — рамка объекта: перехватываем нажатие до OrbitControls (захват на обёртке), камера стоит
+    let frameStart: { x: number; y: number; id: number } | null = null;
+    const local = (e: PointerEvent) => {
+      const r = wrap.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    };
+    const onFrameDown = (e: PointerEvent) => {
+      if (e.button !== 0 || !e.altKey || !frameRef.current) return;
+      e.stopPropagation();
+      e.preventDefault();
+      const p = local(e);
+      frameStart = { ...p, id: e.pointerId };
+      setRect({ x0: p.x, y0: p.y, x1: p.x, y1: p.y });
+      showCursor(null);
+      window.addEventListener('pointermove', onFrameMove);
+      window.addEventListener('pointerup', onFrameUp);
+      window.addEventListener('pointercancel', onFrameCancel);
+    };
+    const onFrameMove = (e: PointerEvent) => {
+      if (!frameStart || e.pointerId !== frameStart.id) return;
+      const p = local(e);
+      setRect({ x0: frameStart.x, y0: frameStart.y, x1: p.x, y1: p.y });
+    };
+    const endFrame = () => {
+      frameStart = null;
+      setRect(null);
+      window.removeEventListener('pointermove', onFrameMove);
+      window.removeEventListener('pointerup', onFrameUp);
+      window.removeEventListener('pointercancel', onFrameCancel);
+    };
+    const onFrameCancel = () => endFrame();
+    const onFrameUp = (e: PointerEvent) => {
+      const st = frameStart;
+      if (!st || e.pointerId !== st.id) return;
+      endFrame();
+      const p = local(e);
+      if (Math.hypot(p.x - st.x, p.y - st.y) < CLICK_PX) return;
+      // Рамка в координатах экрана −1…1; блок — в рамке, если туда проецируется его центр и он перед камерой
+      const w = wrap.clientWidth;
+      const h = wrap.clientHeight;
+      const nx0 = (Math.min(st.x, p.x) / w) * 2 - 1;
+      const nx1 = (Math.max(st.x, p.x) / w) * 2 - 1;
+      const ny0 = 1 - (Math.max(st.y, p.y) / h) * 2;
+      const ny1 = 1 - (Math.min(st.y, p.y) / h) * 2;
+      camera.updateMatrixWorld();
+      const m = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+      const v = new THREE.Vector3();
+      const inFrame = ([x, y, z]: Vec) => {
+        v.set(x + 0.5, y + 0.5, z + 0.5).applyMatrix4(m);
+        return v.z > -1 && v.z < 1 && v.x >= nx0 && v.x <= nx1 && v.y >= ny0 && v.y <= ny1;
+      };
+      frameRef.current?.(inFrame, { shiftKey: e.shiftKey });
+    };
+    wrap.addEventListener('pointerdown', onFrameDown, { capture: true });
+
     const el = renderer.domElement;
     el.addEventListener('pointerdown', onDown);
     el.addEventListener('pointerup', onUp);
@@ -144,6 +222,8 @@ export default function SchematicView3D({ schematic, replace, maxY, textured, se
 
     return () => {
       cancelAnimationFrame(frame);
+      endFrame();
+      wrap.removeEventListener('pointerdown', onFrameDown, { capture: true });
       el.removeEventListener('pointerdown', onDown);
       el.removeEventListener('pointerup', onUp);
       el.removeEventListener('pointermove', onMove);
@@ -226,6 +306,17 @@ export default function SchematicView3D({ schematic, replace, maxY, textured, se
     <div className="view3d" ref={wrapRef}>
       {error && <div className="error-box view3d-error">{error}</div>}
       {stats && <div className="view3d-stats faint small">{stats}</div>}
+      {rect && (
+        <div
+          className="view3d-frame"
+          style={{
+            left: Math.min(rect.x0, rect.x1),
+            top: Math.min(rect.y0, rect.y1),
+            width: Math.abs(rect.x1 - rect.x0),
+            height: Math.abs(rect.y1 - rect.y0),
+          }}
+        />
+      )}
     </div>
   );
 }
