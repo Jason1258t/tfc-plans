@@ -135,6 +135,16 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   plain LMB — click picks, drag frames (Alt no longer needed); RMB pan and wheel zoom stay in OrbitControls
   (`zoomToCursor`, `zoomSpeed` 2.5). Tested with synthetic pointer/wheel events and a real click; not tried with a
   real middle button or trackpad.
+- **Block shapes and icons** (2026-10-23, task «в отрисовке схем и по слоям и в 3д проблемы с текстурами»): 3D —
+  stairs with inner/outer corners (`shape`), ladders as a 1 px plate on the wall behind (`facing` — where it looks;
+  IE scaffolding ladders stay cubes), Create funnels (wall/vertical — on the face they're attached to, belt funnel —
+  at its belt edge), depot, belt, chutes, Simulated rope connector (knot at the attached face), TFC rope anchor
+  (post), chests; invisible blocks (IE `fake_light`, barrier, light, structure_void) are not drawn. Sizes taken from
+  models in jars (Create 6.0.10, Simulated 1.3.1, TFC 4.2.9). Layer view: flat texture only for a full cube with
+  its own texture; other shapes or a borrowed `t` (Create gearbox → shaft texture, stairs → planks) — the rendered
+  model `g`. Browser-checked on ore2dust_compact (431 → 390 blocks: fake_light gone, gearboxes/slabs/chests
+  recognisable) and BeloDacha roofs. Still approximate: real block models are not exported to the site, so 3D faces
+  of full cubes with a borrowed texture keep it (gearbox shows shafts).
 - **Library preview** (`lib/schematicRender.ts`): on save the browser draws a 480×320 webp (~15–20 KB) with
   replacements into the `preview` field (rule: ≤300k chars); old records have a «нарисовать превью» button. Tested in
   the browser on two library schematics (8.6k blocks → 27k faces, 80 ms); saving with preview via the button not

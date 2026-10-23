@@ -64,6 +64,19 @@ export const iconUrl = (it: McItem | undefined) => (it?.t ? textureUrl(it.t) : n
 export const guiIcon = (it: McItem | undefined) =>
   it?.g ? { url: textureUrl(it.g), smooth: true } : it?.t ? { url: textureUrl(it.t), smooth: false } : null;
 
+/**
+ * Блок в схеме сверху (редактор слоёв). Плоская текстура — только у целого куба со своей текстурой (камень,
+ * кирпичи). Блок другой формы (ступеньки, плита, шлюз, сундук) или с чужой текстурой (у угловой передачи Create
+ * текстура вала, у вала в корпусе — корпуса) — нарисованная модель, иначе не понять, что это за блок.
+ */
+export function blockIcon(it: McItem | undefined, fullCube: boolean) {
+  if (!it?.t) return guiIcon(it);
+  const [ns, path = ''] = it.i.split(':');
+  const own = `${ns}/block/${path}`;
+  const ownTexture = it.t === own || it.t.startsWith(`${own}_`);
+  return it.g && (!fullCube || !ownTexture) ? guiIcon(it) : { url: textureUrl(it.t), smooth: false };
+}
+
 const norm = (s: string) => s.toLowerCase().replaceAll('ё', 'е');
 
 /**
