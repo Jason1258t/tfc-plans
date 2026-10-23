@@ -24,8 +24,18 @@ Input — one of:
   against the pack and jars and say which hold.
 
 First `tasks_list query=<words>` (and group «Разработка» if the user points to «задачи ниже»): the task and its docs
-(`task_get`, `artifacts_list task=<id>`) are the brief. Also `docs/plans/*.md` on the topic (`nuclear.md`,
-`electricity.md`, …) and `docs/state/pending.md` — earlier decisions are not reopened without a reason.
+are the brief. Also `docs/plans/*.md` on the topic (`nuclear.md`, `electricity.md`, …) and `docs/state/pending.md` —
+earlier decisions are not reopened without a reason.
+
+**Read every doc attached to the task in full before any research.** `task_get` shows only the first `doc_chars`
+(4000) of each doc — that is a preview, not the doc. For each doc: `artifact_get id=<doc>` from line 0 and keep paging
+(`offset` = next line, `limit=300`) until the last line; same for docs of the «задачи ниже» the user points to.
+Attachments (`task_get` lists name/size/id without content) — ask the user for their content if they matter. Then
+write down the doc's own outline — **every section and every proposal** (priorities P0/P1/P2, integrations with other
+mods, constraints, acceptance criteria, tasks for the agent). This list is a checklist for step 5: the plan answers
+each item — holds / already in the pack / take / don't take / out of scope (why) — not only the claims that happened to
+come up during research. A user's report usually names the questions the user cares about; skipping its sections looks
+like it wasn't read.
 
 Big topics (a whole chemistry branch, several candidates): agree with the user on the depth — which candidates, which
 questions matter (rarity of ores, energy, danger, server load) — before reading jars.
@@ -144,10 +154,14 @@ Show it to the user **before** writing to the site. Structure:
 | Часть | Как (конфиг / KubeJS / датапак / аддон) | Кто делает (агент → propose / хост / отдельная сессия) |
 ## Этапы
 ### Этап 0. … — что сделать, чем проверить («в игре не проверялось»), что решить с игроками
-## Проверка отчёта (если был)
-| Утверждение | Верно? | Чем проверено |
+## Ответ на отчёт (если был) — по его разделам, в его порядке
+### <раздел отчёта, как у автора>
+| Предложение / утверждение | Ответ: верно · уже есть · берём (этап N) · не берём · вне темы | Почему, чем проверено |
 ## Открытые вопросы и что не проверено агентом
 ```
+
+Before showing the plan, compare «Ответ на отчёт» with the outline from step 0: every section and proposal of the
+report has a row. A section left out on purpose gets a row too («вне темы этой задачи — см. задачу …»).
 
 ## 6. Write to the site (after the user's yes)
 
