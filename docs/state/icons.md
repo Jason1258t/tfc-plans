@@ -20,6 +20,11 @@ Part of [STATE.md](../STATE.md). Renderer details — [docs/mcp.md](../mcp.md#cl
   game (`scripts/mods/visibility/`, field `h`): 48 Create Connected catalysts (FeatureToggle conditions: required mods —
   Dragons Plus, Garnished, Dye Depot etc. — not in the pack; 5 visible: empty, melting, washing, smoking, haunting) and
   30 TFC technical items (ore pan, poured glass, stone anvils…).
+- 2026-10-23 (fix/addon-recipes): vanilla textures overridden by mods (`assets/minecraft/textures` in TFC, Firmalife,
+  Cold Sweat — leather, dyes, mutton, compass, smithing templates, corals) now win over client.jar, as in game; vanilla
+  models are still not overridden. 80 `minecraft/*` icons change, `items.json` unchanged (local build). Reaches the
+  site only after a pack-server rebuild. Same fix: addon item images in recipe cells no longer stretched to 32×96 by
+  the guide's `img[src^='/addons/']` rule.
 - Not ported: IE feedthrough. Not checked in game. Functional Storage drawers by code lie «on their side» (front
   vertical): rechecked in DrawerISTER/FunctionalStorageISTER and DrawerBlock (default state facing=down,
   subfacing=north — model unrotated), no reference found online — compare in game. IE coke oven and blast furnace front

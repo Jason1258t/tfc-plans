@@ -239,7 +239,8 @@
   max-width: 100%;
 }
 
-.guide-body img[src^='/addons/'] {
+/* Картинки аддонов, вставленные в текст; у виджета ::addon-block (.power-pixel) размеры свои — и в клетках рецепта */
+.guide-body img[src^='/addons/']:not(.power-pixel) {
   width: 96px;
   height: 96px;
   image-rendering: pixelated;
