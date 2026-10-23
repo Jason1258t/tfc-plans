@@ -55,9 +55,9 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
     states, demo (`npm run demo`), Russian README. Site side — `src/components/LiveMarkdown.tsx` only passes options:
     item token `[[id|4]]` (redrawn by `refreshLivePreview` after `loadItems`), images `file:`/`uploading:` via
     `imageSrc`, tables via our `Markdown`, Russian phrases; colours/fonts — `--lmd-*` variables in `LiveMarkdown.css`.
-    Installed from git tag (`github:…#v0.1.2`, built by `prepare`) — **not in the npm registry yet**: the npm token in
-    `~/.npmrc` is expired (401); after `npm login` + `npm publish` in the package folder switch the dependency to
-    `^0.1.2`. Fixed on the way (0.1.2): the image widget replaced its own root on «not found», CM read it as typing and
+    From the npm registry `^0.1.2` (published 2026-10-23; the account has 2FA — `npm publish --otp=…` is the user's
+    step, and npm stages the release until it is approved on npmjs.com, leaving a `0.0.0-stage` placeholder version).
+    New release: bump in the package, tag, push, user publishes, then `npm i cm-live-markdown@^x` here. Fixed on the way (0.1.2): the image widget replaced its own root on «not found», CM read it as typing and
     wrote «Картинка не найдена: …» into the text instead of `![…](file:…)`.
   - Nested list markers (2026-10-23): ordered items show outline numbers «3.1.», «3.2.1.», bullets repeat the dot per
     level «• •» — in `Markdown` (CSS counters, `ol start` → `counter-reset` in the component; applies to every Markdown
