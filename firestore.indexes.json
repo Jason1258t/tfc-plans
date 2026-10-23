@@ -3,12 +3,6 @@
   "fieldOverrides": [
     {
       "collectionGroup": "visits",
-      "fieldPath": "expireAt",
-      "ttl": true,
-      "indexes": []
-    },
-    {
-      "collectionGroup": "visits",
       "fieldPath": "events",
       "indexes": []
     }

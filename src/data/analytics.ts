@@ -1,4 +1,15 @@
-import { arrayUnion, collection, doc, increment, Timestamp, writeBatch } from 'firebase/firestore';
+import {
+  arrayUnion,
+  collection,
+  doc,
+  getDocs,
+  increment,
+  limit,
+  query,
+  Timestamp,
+  where,
+  writeBatch,
+} from 'firebase/firestore';
 import { useEffect } from 'react';
 import { auth, authReady, db } from '../firebase';
 import { readNick } from '../lib/nick';
@@ -8,7 +19,8 @@ import { readNick } from '../lib/nick';
  *
  * visits/{id} — один заход (вкладка): ник, uid анонимного входа и лента событий. События копятся в памяти и уходят
  * одной записью раз в 30 с и при уходе со вкладки — так на заход выходит несколько записей, а не сотни.
- * Через 90 дней заход удаляется сам (TTL-политика Firestore по полю expireAt).
+ * Через 90 дней заход просрочен (expireAt): его удаляет страница /stats при открытии — TTL-политика Firestore
+ * требует платного тарифа.
  * visitDays/{ГГГГ-ММ-ДД} — дневные счётчики (разделы, действия, ники): графики за месяц стоят 30 чтений.
  *
  * Не считаем: dev-сервер, ник ClaudeTest и браузер с флажком «не считать меня» (страница /stats).
@@ -274,6 +286,18 @@ if (typeof document !== 'undefined') {
     },
     true,
   );
+}
+
+/** Удалить просроченные заходы (до 200 за раз). Зовёт страница /stats; возвращает, сколько удалено */
+export async function purgeExpired(): Promise<number> {
+  if (!db) return 0;
+  await authReady;
+  const old = await getDocs(query(collection(db, 'visits'), where('expireAt', '<', Timestamp.now()), limit(200)));
+  if (old.empty) return 0;
+  const batch = writeBatch(db);
+  old.docs.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
+  return old.size;
 }
 
 /** Для отладки и проверки: что сейчас в буфере и id захода */

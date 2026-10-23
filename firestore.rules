@@ -258,7 +258,7 @@ service cloud.firestore {
     }
 
     // Статистика сайта (src/data/analytics.ts): заход пишет и дописывает только его браузер (uid анонимного входа).
-    // Старые заходы удаляет TTL-политика по expireAt.
+    // Старые заходы (expireAt прошёл) удаляет страница /stats при открытии.
     function visitOk(d) {
       return d.keys().hasOnly(['uid', 'nick', 'startedAt', 'lastAt', 'device', 'events', 'expireAt', 'dev'])
         && nick(d.nick)
@@ -276,7 +276,8 @@ service cloud.firestore {
         && request.resource.data.startedAt == resource.data.startedAt
         && request.resource.data.expireAt == resource.data.expireAt
         && visitOk(request.resource.data);
-      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+      // Свой заход — всегда; чужой — только просроченный (чистит страница /stats: TTL-политика требует платного тарифа)
+      allow delete: if signedIn() && (resource.data.uid == request.auth.uid || resource.data.expireAt < request.time);
     }
 
     // Дневные счётчики: id — дата ГГГГ-ММ-ДД (dev-ГГГГ-ММ-ДД — проверки с dev-сервера, их можно удалить)
