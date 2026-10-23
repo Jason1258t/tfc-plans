@@ -1,5 +1,6 @@
 import { collection, deleteDoc, doc, onSnapshot, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { authReady, db } from '../firebase';
+import { forgetSubscription, reportError, reportSnapshot, syncKey } from './sync';
 import type {
   Artifact,
   Datapack,
@@ -27,21 +28,49 @@ export interface CollectionStore<T extends { id: string }, N> {
 
 function firestoreStore<T extends { id: string }, N extends object>(name: string): CollectionStore<T, N> {
   const ref = collection(db!, name);
+  /** Отказ сервера в записи: локальное изменение откатится, человек должен об этом узнать */
+  const report = (e: Error) => {
+    console.error(`Не удалось сохранить в ${name}:`, e);
+    reportError(`Не сохранилось: ${e.message}`);
+  };
+  const failed = (e: Error): never => {
+    report(e);
+    throw e;
+  };
   return {
     subscribe(cb, onError) {
       let unsub = () => {};
       let cancelled = false;
+      const key = syncKey();
       authReady.then(() => {
         if (cancelled) return;
+        let first = true;
+        // С метаданными: узнаём, читаем ли из кэша и какие документы ещё не дошли до сервера
         unsub = onSnapshot(
           ref,
-          (snap) => cb(snap.docs.map((d) => ({ ...(d.data() as Omit<T, 'id'>), id: d.id }) as T)),
-          (e) => onError?.(e),
+          { includeMetadataChanges: true },
+          (snap) => {
+            reportSnapshot(
+              key,
+              name,
+              snap.metadata.fromCache,
+              new Set(snap.docs.filter((d) => d.metadata.hasPendingWrites).map((d) => d.id)),
+            );
+            // Изменились только метаданные — список тот же
+            if (!first && snap.docChanges().length === 0) return;
+            first = false;
+            cb(snap.docs.map((d) => ({ ...(d.data() as Omit<T, 'id'>), id: d.id }) as T));
+          },
+          (e) => {
+            reportError(`Подписка на ${name}: ${e.message}`);
+            onError?.(e);
+          },
         );
       });
       return () => {
         cancelled = true;
         unsub();
+        forgetSubscription(key);
       };
     },
     async add(data) {
@@ -49,22 +78,20 @@ function firestoreStore<T extends { id: string }, N extends object>(name: string
       const now = Date.now();
       // id известен сразу, запись применяется локально мгновенно — не ждём подтверждения сервера
       const created = doc(ref);
-      setDoc(created, { ...data, createdAt: now, updatedAt: now }).catch((e) =>
-        console.error(`Не удалось сохранить в ${name}:`, e),
-      );
+      setDoc(created, { ...data, createdAt: now, updatedAt: now }).catch(report);
       return created.id;
     },
     async update(id, patch) {
       await authReady;
-      await updateDoc(doc(ref, id), { ...patch, updatedAt: Date.now() });
+      await updateDoc(doc(ref, id), { ...patch, updatedAt: Date.now() }).catch(failed);
     },
     async remove(ids) {
       await authReady;
       const list = Array.isArray(ids) ? ids : [ids];
-      if (list.length === 1) return deleteDoc(doc(ref, list[0]));
+      if (list.length === 1) return deleteDoc(doc(ref, list[0])).catch(failed);
       const batch = writeBatch(db!);
       list.forEach((id) => batch.delete(doc(ref, id)));
-      await batch.commit();
+      await batch.commit().catch(failed);
     },
   };
 }

@@ -317,6 +317,12 @@
   overflow-wrap: anywhere;
 }
 
+.task-pending {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--text-2);
+}
+
 .task-row.done .task-title {
   color: var(--text-3);
   text-decoration: line-through;

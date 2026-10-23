@@ -18,6 +18,11 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
 
 - Tasks: list, priority, Elo comparison («Что важнее?»: full ranking list, ⇅ between neighbour rows swaps their
   ratings, equal ratings → the raised one gets +1; 2026-10-23), groups (drag in the left list to reorder — writes `order`; desktop only, HTML5 DnD), resource checklist, attachments and gallery, place on the map.
+- Sync status (2026-10-23, `src/data/sync.ts` + `SyncBadge`): Firestore uses a persistent local cache, so a browser
+  that can't reach the server (seen: reCAPTCHA/App Check failing on a PC) silently shows its own copy. Subscriptions
+  now listen with metadata: header badge «нет связи» (fromCache > 6 s or `navigator.onLine` false, with unsent count),
+  «отправка» (pending > 1.5 s), «ошибка сохранения» (rejected write, dismissable); a clock on a task card while its
+  write is pending. Checked on the dev server via `disableNetwork`/`enableNetwork`; the PC root cause isn't diagnosed.
 - Plans (Markdown docs) with items and a Gemini agent; `- [ ]` checkboxes toggle by click in view mode (plans and task
   descriptions).
 
