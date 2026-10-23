@@ -256,5 +256,37 @@ service cloud.firestore {
         && nick(request.resource.data.updatedBy);
       allow delete: if signedIn();
     }
+
+    // Статистика сайта (src/data/analytics.ts): заход пишет и дописывает только его браузер (uid анонимного входа).
+    // Старые заходы удаляет TTL-политика по expireAt.
+    function visitOk(d) {
+      return d.keys().hasOnly(['uid', 'nick', 'startedAt', 'lastAt', 'device', 'events', 'expireAt', 'dev'])
+        && nick(d.nick)
+        && d.startedAt is number
+        && d.lastAt is number
+        && d.events is list
+        && d.events.size() <= 400
+        && d.expireAt is timestamp;
+    }
+    match /visits/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid && visitOk(request.resource.data);
+      allow update: if signedIn() && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.startedAt == resource.data.startedAt
+        && request.resource.data.expireAt == resource.data.expireAt
+        && visitOk(request.resource.data);
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // Дневные счётчики: id — дата ГГГГ-ММ-ДД (dev-ГГГГ-ММ-ДД — проверки с dev-сервера, их можно удалить)
+    match /visitDays/{day} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && day.matches('^(dev-)?[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.keys().hasOnly(['visits', 'views', 'actions', 'searches', 'nicks', 'updatedAt'])
+        && request.resource.data.updatedAt is number;
+      allow delete: if signedIn() && day.matches('^dev-.*');
+    }
   }
 }

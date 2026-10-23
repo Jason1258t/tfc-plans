@@ -7,7 +7,7 @@ task touches it. History — `git log`.
 
 | File | What's in it |
 | --- | --- |
-| [site.md](state/site.md) | Site sections: structure, documents, tasks/plans, schematics, datapacks/KubeJS/recipes/tags, reference (botany, multiblocks, electricity), guides, onboarding, map, updates |
+| [site.md](state/site.md) | Site sections: structure, documents, tasks/plans, analytics (`/stats`), schematics, datapacks/KubeJS/recipes/tags, reference (botany, multiblocks, electricity), guides, onboarding, map, updates |
 | [addons.md](state/addons.md) | Pack addons in `tools/`: versions, what each does, how it was verified |
 | [infra.md](state/infra.md) | Data builders, imported configs, file storage, pack server (VPS), `tfc` app, agent config edits |
 | [mcp.md](state/mcp.md) | MCP `tfc-pack` history: what was added when and how it was verified |

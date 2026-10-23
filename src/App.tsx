@@ -7,6 +7,7 @@ import { TooltipLayer } from './components/Tooltip';
 import { DataProvider } from './data/DataContext';
 import { readNick, writeNick } from './lib/nick';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { VisitTracker } from './components/VisitTracker';
 import { AddonPage } from './pages/AddonPage';
 import { AddonsPage } from './pages/AddonsPage';
 import { DocPage } from './pages/DocPage';
@@ -18,6 +19,7 @@ import { ReferencePage } from './pages/ReferencePage';
 import { FreshnessPage } from './pages/FreshnessPage';
 import { UpdatesPage } from './pages/UpdatesPage';
 import { SchematicsPage } from './pages/SchematicsPage';
+import { StatsPage } from './pages/StatsPage';
 import { TasksPage } from './pages/TasksPage';
 
 /** Старые ссылки на карту (в том числе с точками в адресе) ведут во вкладку справочника */
@@ -50,6 +52,7 @@ export default function App() {
     <BrowserRouter>
       <DataProvider nick={nick}>
         <Header nick={nick} onChangeNick={() => setChangingNick(true)} />
+        <VisitTracker />
         <ErrorBoundary>
           <Routes>
             <Route path="/" element={<TasksPage />} />
@@ -66,6 +69,8 @@ export default function App() {
             <Route path="/addons/:id" element={<AddonPage />} />
             <Route path="/updates" element={<UpdatesPage />} />
             <Route path="/freshness" element={<FreshnessPage />} />
+            {/* Статистика — только по прямой ссылке, в меню её нет */}
+            <Route path="/stats" element={<StatsPage />} />
             <Route path="/map" element={<MapRedirect />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

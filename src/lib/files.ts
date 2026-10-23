@@ -4,6 +4,7 @@ import filesConfig from './files.config';
 import { firestoreAdapter } from './fileStorage/firestore';
 import { serverAdapter } from './fileStorage/server';
 import type { FileAdapter, StoredFile } from './fileStorage/types';
+import { track } from '../data/analytics';
 
 /**
  * Вложения задач и исходники схем. Хранилище — за интерфейсом FileAdapter (lib/fileStorage):
@@ -71,6 +72,7 @@ export async function uploadFile(
   onProgress?: (fraction: number) => void,
 ): Promise<string> {
   if (file.size > MAX_FILE_SIZE) throw new Error(`Файл больше ${formatSize(MAX_FILE_SIZE)}`);
+  track('file.upload', { ext: file.name.split('.').pop()?.toLowerCase().slice(0, 10) ?? '' });
   const f = await requireStore().upload(file, { meta: opts, onProgress });
   return f.id;
 }

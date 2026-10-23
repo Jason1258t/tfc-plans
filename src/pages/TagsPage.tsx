@@ -23,6 +23,7 @@ import {
 import { cx, uid } from '../lib/util';
 import type { Datapack, DatapackEntry } from '../types';
 import { PackPicker, type Pending } from './RecipesPage';
+import { useSearchTrack } from '../data/analytics';
 import './TagsPage.css';
 
 const SHOWN = 120;
@@ -47,6 +48,7 @@ export function TagsPage() {
   const pack = packs.find((p) => p.id === packId) ?? null;
 
   const found = useMemo(() => (cat ? searchTags(cat, items, q, kind) : []), [cat, items, q, kind]);
+  useSearchTrack('tags', q, cat ? found.length : undefined);
   const tag = selectedKey && cat ? cat.byKey.get(selectedKey) : undefined;
 
   const set = (patch: Record<string, string | null>) => {

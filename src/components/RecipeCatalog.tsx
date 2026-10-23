@@ -1,5 +1,5 @@
 import { Ban, ChevronDown, ChevronRight, Copy, FilePen, Search, ShieldAlert, Trash2 } from 'lucide-react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { itemName, useItems } from '../lib/items';
 import { filterToJs } from '../lib/recipeFilter';
 import {
@@ -14,6 +14,7 @@ import { cx } from '../lib/util';
 import { ItemIcon } from './ItemIcon';
 import { ItemPicker } from './ItemPicker';
 import { Modal } from './Modal';
+import { track, useSearchTrack } from '../data/analytics';
 import './KubejsConstructor.css';
 import './RecipeCatalog.css';
 
@@ -78,6 +79,10 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
         : [],
     [catalog, query, type, itemId, usage, items, status],
   );
+  useSearchTrack('recipes', query, catalog ? results.length : undefined);
+  useEffect(() => {
+    if (itemId) track(usage ? 'recipes.usage' : 'recipes.item', { id: itemId });
+  }, [itemId, usage]);
   const hasFilter = Boolean(query.trim() || type || itemId || status);
   const rules = catalog?.kubejs?.rules ?? [];
   const resetPage = () => setLimit(PAGE);
