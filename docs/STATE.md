@@ -57,6 +57,9 @@ When finishing work: update the topic file, and this index only if a line below 
 
 ## Direction (discussed, not started)
 
+- Agent token budget: review + schemes for context indexing, query optimization and new MCP tools —
+  `docs/plans/token-optimization.md` (task «Новый шаг оптимизации по токенам»).
+
 The user plans to release the project to the community so others can deploy it without changes:
 
 - **Workspaces**: one workspace = own pack snapshot, world-gen config, map, tasks, schematics, datapacks
