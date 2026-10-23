@@ -361,9 +361,15 @@ function addRoot(ns, root) {
   if (!list.includes(root)) list.push(root);
   assetRoots.set(ns, list);
 }
+/**
+ * Корни модов с перерисованными текстурами ванили (кожа, красители, компас TFC). В игре ресурсы модов лежат поверх
+ * ванили, поэтому текстуры minecraft ищем сначала здесь; модели ванили моды не перебивают.
+ */
+const vanillaTextureRoots = [];
 /** Первый существующий файл <root>/<ns>/<rel> среди корней namespace */
 function findAsset(ns, rel) {
-  for (const root of assetRoots.get(ns) ?? []) {
+  const roots = assetRoots.get(ns) ?? [];
+  for (const root of ns === 'minecraft' && rel.startsWith('textures/') ? [...vanillaTextureRoots, ...roots] : roots) {
     const file = path.join(root, ns, rel);
     if (fs.existsSync(file)) return file;
   }
@@ -581,6 +587,7 @@ export async function buildMods({
   const OUT_MANIFEST = path.join(outDir, 'pack-manifest.json');
   // Состояние прошлого запуска в этом же процессе (другая папка модов) не должно просочиться
   for (const m of [assetRoots, modelCache, textureIndex, copied]) m.clear();
+  vanillaTextureRoots.length = 0;
   fs.mkdirSync(CACHE, { recursive: true });
   fs.mkdirSync(outDir, { recursive: true });
   const vanillaDir = await prepareVanilla();
@@ -618,8 +625,11 @@ export async function buildMods({
     collectRecipes(recipes, res.data, source);
     dataDirs.push({ dir: res.data, source });
     for (const ns of res.namespaces) {
-      // Переопределения ванили внутри модов не должны перебивать оригинал
-      if (ns === 'minecraft') continue;
+      // Модели и переводы ванили моды не перебивают, а текстуры — да (см. vanillaTextureRoots)
+      if (ns === 'minecraft') {
+        if (!vanillaTextureRoots.includes(res.root)) vanillaTextureRoots.push(res.root);
+        continue;
+      }
       addRoot(ns, res.root);
       if (fs.existsSync(path.join(res.root, ns, 'lang', 'en_us.json'))) sources.push({ ns, root: res.root });
     }
