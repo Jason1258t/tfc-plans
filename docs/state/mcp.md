@@ -73,3 +73,13 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   `scripts/mcp/firestore.mjs` sets it as the process's `GOOGLE_APPLICATION_CREDENTIALS` if the file exists, else falls
   back to `firebase login` with a stderr note. Setup/explanation for humans — `scripts/mcp/firestore-key.example.md`.
   Host's key is in place.
+- **2026-10-23, `bytecode`** (`tools/disasm.mjs`): compact bytecode reader instead of `javap` in a shell — after 85 past
+  sessions showed ~25 shell `javap` calls a day (external jars, addon build output, classes after mixins, version
+  comparison) and `decompile` of whole classes for navigation. Own instruction decoder (signed branch offsets, switch
+  tables, wide); `parseClassFull` now keeps `locals` (LocalVariableTable) and `handlers`. Verified via scratchpad
+  script: instruction offsets and call counts equal to `javap -c` on 377 random classes / 2814 methods (TFC, EE, IE,
+  Create, KubeJS, Firmalife, Minecraft); outline/method on TFC `HeatCapability`, Minecraft `FarmBlock`/`Direction`
+  (switch, loops), `tools/ee-extras-mod/build/classes` and `libs/create-*.jar`; `diff` Collective 8.39 → 8.64 (262
+  classes, ~5 s; method line diff of `LivingEntityMixin.dropAllDeathLoot`). Size: one method ≈ `decompile method=`
+  (−10…+25%); class outline 35–55% smaller than whole-class `decompile`. `decompile` of a truncated whole class now hints
+  `method=` / `bytecode`.
