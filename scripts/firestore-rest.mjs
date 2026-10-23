@@ -83,10 +83,11 @@ async function serviceAccountToken(file) {
 }
 
 let cached = null;
-export async function token() {
+/** fresh — не брать токен сервисного ключа из кеша (прежний отвергнут Firestore) */
+export async function token({ fresh = false } = {}) {
   const keyFile = process.env.GOOGLE_APPLICATION_CREDENTIALS;
   if (keyFile) {
-    if (!cached || cached.until < Date.now()) cached = await serviceAccountToken(keyFile);
+    if (fresh || !cached || cached.until < Date.now()) cached = await serviceAccountToken(keyFile);
     return cached.value;
   }
   const require = createRequire(import.meta.url);

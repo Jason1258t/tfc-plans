@@ -64,3 +64,8 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   `unzip -l`/lang (113 recipes, 37 tags, 77 blocks, 1057 classes, 3 mixin configs / 18+5+6 mixins), deps ok against
   the pack, `decompile CThermal`, pack `class_find` doesn't see candidate classes. Going Nuclear isn't on Modrinth
   under NeoForge 1.21.1 and Destroy has no 1.21.1 NeoForge build there — for them `path=` or `url=`.
+- **2026-10-23, token refresh**: `api()` in `scripts/mcp/firestore.mjs` retries once on 401 with a fresh token
+  (`token({ fresh: true })` also skips the service-key cache in `firestore-rest.mjs`); before, the MCP process kept a
+  revoked token for its 45-min cache (`ACCESS_TOKEN_TYPE_UNSUPPORTED` on every site tool). All MCP Firestore calls go
+  through `api()`. Env `TFC_MCP_TEST_BAD_TOKEN=1` starts with a dead token — verified via stdio: `tasks_list` +
+  `task_get` succeed with it.
