@@ -1,7 +1,10 @@
-import { BookOpen, Columns2, Eye, Maximize2, Minimize2, Pencil, Trash2, X } from 'lucide-react';
+import { BookOpen, Columns2, Eye, ImagePlus, Maximize2, Minimize2, Pencil, Trash2, X } from 'lucide-react';
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { useData } from '../data/DataContext';
 import { artifactsStore } from '../data/store';
+import { filesEnabled } from '../lib/files';
+import { UPLOADING_SCHEME, uploadImages } from '../lib/planImages';
+import { isImage } from '../lib/uploads';
 import { cx, timeAgo } from '../lib/util';
 import type { Artifact } from '../types';
 import { AgentPanel } from './AgentPanel';
@@ -69,6 +72,8 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
   const [title, setTitle] = useState(artifact.title);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(0);
+  const fileInput = useRef<HTMLInputElement>(null);
   const [selection, setSelection] = useState<[number, number]>([artifact.content.length, artifact.content.length]);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const liveRef = useRef<LiveMarkdownHandle>(null);
@@ -136,6 +141,30 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
       });
   };
 
+  /** Картинки: сразу метка «загрузка» в тексте, после загрузки — ссылка на файл (сжатие — как у вложений задач) */
+  const addImages = async (files: File[], pos = selection[1]) => {
+    if (!files.length) return;
+    const placeholder = `![Загрузка…](${UPLOADING_SCHEME}${Date.now()})`;
+    // Картинка — отдельной строкой: не склеиваться с соседним текстом (заголовок перед ней перестал бы быть заголовком)
+    const before = pos > 0 && content[pos - 1] !== '\n' ? '\n' : '';
+    const after = content[pos] !== undefined && content[pos] !== '\n' ? '\n' : '';
+    insertAt(`${before}${placeholder}\n${after}`, [pos, pos]);
+    setUploading((n) => n + 1);
+    let markdown = '';
+    try {
+      const res = await uploadImages(files, { taskId: artifact.taskId, author: nick });
+      markdown = res.markdown;
+      if (res.error) alert(res.error);
+    } catch (e) {
+      alert(`Картинка не загрузилась: ${e instanceof Error ? e.message : e}`);
+    } finally {
+      setUploading((n) => n - 1);
+      // Пока грузилось, текст могли править — меняем именно метку
+      const cur = latest.current.content;
+      if (cur.includes(placeholder)) change(cur.replace(placeholder, markdown));
+    }
+  };
+
   const append = (text: string) => change(`${content.trimEnd()}${content.trim() ? '\n\n' : ''}${text.trim()}\n`);
 
   const remove = async () => {
@@ -190,7 +219,13 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
         )}
         <span className="grow" />
         <span className="faint small save-state">
-          {saving ? 'Сохраняю…' : dirty ? 'Изменено' : `${artifact.updatedBy}, ${timeAgo(artifact.updatedAt)}`}
+          {uploading
+            ? 'Загружаю картинку…'
+            : saving
+              ? 'Сохраняю…'
+              : dirty
+                ? 'Изменено'
+                : `${artifact.updatedBy}, ${timeAgo(artifact.updatedAt)}`}
         </span>
       </div>
 
@@ -216,6 +251,29 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
             <ItemPicker small placeholder="Вставить предмет…" onPick={(it) => insertAt(itemToken(it.i))} />
           </div>
         )}
+        {view !== 'preview' && filesEnabled && (
+          <>
+            <button
+              className="btn ghost sm icon"
+              onClick={() => fileInput.current?.click()}
+              aria-label="Вставить картинку"
+              title="Картинка (можно вставить из буфера или перетащить в текст)"
+            >
+              <ImagePlus size={15} />
+            </button>
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={(e) => {
+                addImages([...(e.target.files ?? [])]);
+                e.target.value = '';
+              }}
+            />
+          </>
+        )}
         <span className="grow" />
         <button className="btn ghost sm icon danger" onClick={remove} aria-label="Удалить план" title="Удалить">
           <Trash2 size={15} />
@@ -233,6 +291,7 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
               onChange={change}
               onSelect={setSelection}
               onBlur={() => latest.current.dirty && flush(latest.current.content)}
+              onImages={filesEnabled ? (files, pos) => addImages(files, pos) : undefined}
             />
           </Suspense>
         )}
@@ -249,6 +308,12 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
             }}
             onSelect={trackSelection}
             onBlur={() => dirty && flush(content)}
+            onPaste={(e) => {
+              const files = [...e.clipboardData.files].filter(isImage);
+              if (!files.length || !filesEnabled) return;
+              e.preventDefault();
+              addImages(files, e.currentTarget.selectionStart);
+            }}
           />
         )}
         {view !== 'edit' && (

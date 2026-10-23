@@ -1,7 +1,8 @@
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { itemName, useItems } from '../lib/items';
+import { FILE_SCHEME, imageSrc, UPLOADING_SCHEME } from '../lib/planImages';
 import { ItemIcon } from './ItemIcon';
 
 /**
@@ -43,6 +44,30 @@ function ItemChip({ href }: { href: string }) {
   );
 }
 
+/** Картинка; `file:<id>` — из хранилища файлов (вставленная в план) */
+function MdImage({ src, alt }: { src?: string; alt?: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (!src || src.startsWith(UPLOADING_SCHEME)) return;
+    let alive = true;
+    imageSrc(src).then(
+      (u) => alive && setUrl(u),
+      () => alive && setFailed(true),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [src]);
+  if (src?.startsWith(UPLOADING_SCHEME)) return <span className="md-img-note">Загрузка картинки…</span>;
+  if (failed) return <span className="md-img-note">Картинка не найдена{alt ? `: ${alt}` : ''}</span>;
+  return url ? (
+    <img className="md-img" src={url} alt={alt ?? ''} loading="lazy" />
+  ) : (
+    <span className="md-img-note">…</span>
+  );
+}
+
 const TASK_BOX = /^((?:\s*>)*\s*(?:[-*+]|\d+[.)])\s+)\[([ xX])\]/;
 
 /** Переключает чекбокс `- [ ]` в строке исходника (нумерация с 1); null — в строке чекбокса нет */
@@ -80,7 +105,7 @@ interface Props {
   link?: (href: string, children: ReactNode) => ReactNode | null;
   /** Свой показ блока кода по языку (гайды: calc, widget); null — обычный блок */
   block?: (lang: string, text: string) => ReactNode | null;
-  /** Ссылки с этими схемами не вырезать (item: — всегда) */
+  /** Ссылки с этими схемами не вырезать (item:, file: — всегда) */
   schemes?: string[];
   /** Строчный вид: без обёртки-абзаца (ячейки таблиц, подписи) */
   inline?: boolean;
@@ -96,7 +121,7 @@ interface HastNode {
 const hastText = (n: HastNode): string => n.value ?? (n.children ?? []).map(hastText).join('');
 
 export function Markdown({ source, className, onToggleTask, link, block, schemes, inline }: Props) {
-  const keep = ['item:', ...(schemes ?? [])];
+  const keep = ['item:', FILE_SCHEME, UPLOADING_SCHEME, ...(schemes ?? [])];
   const Wrap = inline ? 'span' : 'div';
   return (
     <Wrap className={`md ${className ?? ''}`}>
@@ -128,6 +153,7 @@ export function Markdown({ source, className, onToggleTask, link, block, schemes
               <TaskLine.Provider value={node?.position?.start.line ?? null}>{children}</TaskLine.Provider>
             </li>
           ),
+          img: ({ src, alt }) => <MdImage src={typeof src === 'string' ? src : undefined} alt={alt} />,
           input: ({ type, checked }) =>
             type === 'checkbox' ? <TaskBox checked={Boolean(checked)} onToggle={onToggleTask} /> : null,
         }}

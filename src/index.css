@@ -530,6 +530,21 @@ select.input {
   font-size: 1.08em;
 }
 
+.md-img,
+.lmd-img {
+  display: block;
+  max-width: 100%;
+  max-height: 480px;
+  margin: 6px 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.md-img-note {
+  color: var(--text-3);
+  font-style: italic;
+}
+
 .md > :first-child {
   margin-top: 0;
 }

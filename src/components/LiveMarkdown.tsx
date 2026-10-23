@@ -23,6 +23,8 @@ import {
 import type { SyntaxNode } from '@lezer/common';
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef } from 'react';
 import { guiIcon, itemName, loadItems, type ItemIndex } from '../lib/items';
+import { imageSrc, UPLOADING_SCHEME } from '../lib/planImages';
+import { isImage } from '../lib/uploads';
 import './LiveMarkdown.css';
 
 /**
@@ -42,6 +44,8 @@ interface Props {
   onSelect?: (range: [number, number]) => void;
   onBlur?: () => void;
   placeholder?: string;
+  /** Вставили или бросили картинки — загрузить и вставить в позицию pos */
+  onImages?: (files: File[], pos: number) => void;
   className?: string;
 }
 
@@ -131,6 +135,44 @@ class BulletWidget extends WidgetType {
 }
 const bullet = new BulletWidget();
 
+// ------------------------------------------------------------------ картинки ![подпись](file:id | https://…)
+
+class ImageWidget extends WidgetType {
+  readonly src: string;
+  readonly alt: string;
+  constructor(src: string, alt: string) {
+    super();
+    this.src = src;
+    this.alt = alt;
+  }
+  eq(other: ImageWidget) {
+    return other.src === this.src && other.alt === this.alt;
+  }
+  toDOM() {
+    const note = (text: string) => {
+      const span = document.createElement('span');
+      span.className = 'md-img-note';
+      span.textContent = text;
+      return span;
+    };
+    if (this.src.startsWith(UPLOADING_SCHEME)) return note('Загрузка картинки…');
+    const img = document.createElement('img');
+    img.className = 'lmd-img';
+    img.alt = this.alt;
+    imageSrc(this.src).then(
+      (url) => (img.src = url),
+      () => img.replaceWith(note(`Картинка не найдена${this.alt ? `: ${this.alt}` : ''}`)),
+    );
+    return img;
+  }
+  get estimatedHeight() {
+    return 240;
+  }
+  ignoreEvent() {
+    return false;
+  }
+}
+
 // ------------------------------------------------------------------ оформление по дереву
 
 const hide = Decoration.replace({});
@@ -150,7 +192,9 @@ function build(view: EditorView): DecorationSet {
   const { state } = view;
   const sel = state.selection.ranges;
   /** Участок [from, to] задевает курсор/выделение — показываем исходник */
-  const touched = (from: number, to: number) => sel.some((r) => r.from <= to && r.to >= from);
+  // Без фокуса показываем всё оформлённым, как в просмотре
+  const focused = view.hasFocus;
+  const touched = (from: number, to: number) => focused && sel.some((r) => r.from <= to && r.to >= from);
   const activeLine = (pos: number) => {
     const l = state.doc.lineAt(pos);
     return touched(l.from, l.to);
@@ -189,6 +233,18 @@ function build(view: EditorView): DecorationSet {
             // Вместе с пробелом после #
             const end = Math.min(node.to + 1, state.doc.lineAt(node.from).to);
             add(node.from, end, hide);
+          }
+          return;
+        }
+        if (name === 'Image') {
+          const url = node.node.getChild('URL');
+          if (url && !touched(node.from, node.to)) {
+            const alt = state.sliceDoc(node.from + 2, Math.max(node.from + 2, url.from - 2));
+            add(
+              node.from,
+              node.to,
+              Decoration.replace({ widget: new ImageWidget(state.sliceDoc(url.from, url.to), alt) }),
+            );
           }
           return;
         }
@@ -287,6 +343,7 @@ const livePreview = ViewPlugin.fromClass(
       if (
         u.docChanged ||
         u.selectionSet ||
+        u.focusChanged ||
         u.viewportChanged ||
         redraw ||
         syntaxTree(u.startState) !== syntaxTree(u.state)
@@ -358,6 +415,23 @@ export const LiveMarkdown = forwardRef<LiveMarkdownHandle, Props>(function LiveM
       Prec.high(keymap.of(markdownKeymap)),
       EditorView.lineWrapping,
       EditorView.contentAttributes.of({ spellcheck: 'true', lang: 'ru' }),
+      EditorView.domEventHandlers({
+        paste(e, v) {
+          const files = [...(e.clipboardData?.files ?? [])].filter(isImage);
+          if (!files.length || !cb.current.onImages) return false;
+          e.preventDefault();
+          cb.current.onImages(files, v.state.selection.main.head);
+          return true;
+        },
+        drop(e, v) {
+          const files = [...(e.dataTransfer?.files ?? [])].filter(isImage);
+          if (!files.length || !cb.current.onImages) return false;
+          e.preventDefault();
+          const pos = v.posAtCoords({ x: e.clientX, y: e.clientY }) ?? v.state.selection.main.head;
+          cb.current.onImages(files, pos);
+          return true;
+        },
+      }),
       livePreview,
       EditorView.updateListener.of((u) => {
         const fromOutside = u.transactions.some((t) => t.annotation(external));
