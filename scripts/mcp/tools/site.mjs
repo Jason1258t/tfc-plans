@@ -97,6 +97,7 @@ const datapacksIndex = cached(TTL, () =>
 const scriptsIndex = cached(TTL, () =>
   listCounted('kubejsScripts', ['fileName', 'install', 'author', 'updatedBy', 'updatedAt']),
 );
+const usersIndex = cached(TTL, () => listCounted('users', ['nick', 'firstSeen', 'lastSeen']));
 // превью (data URL до ~200 КБ) не берём ни в список, ни в schematic_get
 const SCHEM_MASK = [
   'name',
@@ -289,6 +290,18 @@ async function taskGet(a) {
     }
   }
   return out.join('\n');
+}
+
+// ---------------------------------------------------------------- участники
+
+async function usersList(a) {
+  let list = [...(await usersIndex())].sort((x, y) => (y.lastSeen ?? 0) - (x.lastSeen ?? 0));
+  const ws = words(a.query);
+  if (ws.length) list = list.filter((u) => has(u.id, ws));
+  return page(list, a, (u) => {
+    const first = u.firstSeen ? ', впервые ' + dateOf(u.firstSeen) : '';
+    return [u.id + ' — заходил(а) ' + dateOf(u.lastSeen) + first];
+  });
 }
 
 // ---------------------------------------------------------------- группы и запись задач
@@ -779,6 +792,13 @@ export const TOOLS = [
       'Site task groups (Firestore groups): id, name, icon, order; search by words to find a group by name («фиксы»). Task counts if the task list is already cached.',
     inputSchema: { type: 'object', properties: { query: str('name words'), ...paging } },
     handler: counted(groupsList),
+  },
+  {
+    name: 'users_list',
+    description:
+      'Site members (Firestore users, the nick directory written on every visit): nick, first and last seen. Use to know who a task can be assigned to (task_update assignee=…).',
+    inputSchema: { type: 'object', properties: { query: str('nick words'), ...paging } },
+    handler: counted(usersList),
   },
   {
     name: 'task_create',

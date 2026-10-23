@@ -197,3 +197,18 @@
 .tf-place-err {
   margin-top: 4px;
 }
+
+.tf-assignee {
+  display: flex;
+  gap: 6px;
+}
+
+.tf-assignee .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.tf-assignee .btn {
+  flex: none;
+  white-space: nowrap;
+}
