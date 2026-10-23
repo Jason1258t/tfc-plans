@@ -34,6 +34,7 @@ import { isCuisineClass, isCuisineData } from './mods/cuisine.mjs';
 import { writePower } from './mods/power.mjs';
 import { writeMultiblocks } from './mods/multiblocks.mjs';
 import { makeRenderer } from './mods/icons3d.mjs';
+import { writeBlockModels } from './mods/block-models.mjs';
 import { platformAssets } from './mods/platform-assets.mjs';
 import { MODS as MCP_MODS } from './mcp/data.mjs';
 import { platform, setPlatformAssets } from './mcp/jars.mjs';
@@ -738,6 +739,35 @@ export async function buildMods({
     if (tex) copyIcon(tex);
     else log(`UI-текстура не найдена: ${ref}`);
   }
+
+  // Модели блоков для схем (block-models/<ns>.json), текстуры граней — в icons/
+  const blockstates = [];
+  for (const [ns, roots] of assetRoots) {
+    const seenBs = new Set();
+    for (const root of roots) {
+      const dir = path.join(root, ns, 'blockstates');
+      if (!fs.existsSync(dir)) continue;
+      for (const f of fs.readdirSync(dir, { recursive: true })) {
+        const rel = String(f).split(path.sep).join('/');
+        if (!rel.endsWith('.json') || seenBs.has(rel)) continue;
+        seenBs.add(rel);
+        blockstates.push({ ns, path: rel.slice(0, -5) });
+      }
+    }
+  }
+  const blockModels = writeBlockModels({
+    layers: icons3d.layers,
+    blockstates,
+    outDir: path.join(outDir, 'block-models'),
+    iconsDir: OUT_ICONS,
+    copyTexture: (id) => {
+      const { ns, p } = splitId(id);
+      const file = findAsset(ns, `textures/${p}.png`);
+      return file ? copyIcon({ ns, p, file }) : null;
+    },
+    log,
+  });
+  for (const w of blockModels.warnings) log(`  модели блоков: ${w}`);
 
   // Предметы, которых игрок не видит (мод их выключает или прячет из JEI): в библиотеке с пометкой h — причина
   const vis = hiddenItems(

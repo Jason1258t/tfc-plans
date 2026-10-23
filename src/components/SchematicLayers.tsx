@@ -19,7 +19,8 @@ import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRe
 import { createPortal } from 'react-dom';
 import { blockEntry, blockIcon, isBlock, itemName, useItems } from '../lib/items';
 import { EMPTY_BLOCKS, REMOVE, type Schematic, type Vec } from '../lib/schematic';
-import { isFullCube } from '../lib/schematicMesh';
+import { blockTopView } from '../lib/blockModels';
+import { drawnByCode, isFullCube } from '../lib/schematicMesh';
 import {
   buildGrid,
   canRedo,
@@ -384,7 +385,17 @@ export function SchematicLayers({
     const z1 = Math.min(sz, Math.ceil((box.h - oy) / zoom));
 
     const drawBlock = (id: string, st: number, px: number, py: number, alpha: number) => {
-      const icon = blockIcon(blockEntry(items, id), isFullCube(id, props[st] ?? new Map()));
+      const p = props[st] ?? new Map();
+      // Вид сверху по модели из jar; нет модели (рисует код) — иконка предмета
+      const top = drawnByCode(id) ? null : blockTopView(id, p, again);
+      if (top) {
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(top, px, py, zoom, zoom);
+        ctx.globalAlpha = 1;
+        return;
+      }
+      if (top === undefined) return;
+      const icon = blockIcon(blockEntry(items, id), isFullCube(id, p));
       const img = icon ? image(icon.url, again) : null;
       ctx.globalAlpha = alpha;
       if (img) {
@@ -1014,7 +1025,8 @@ export function SchematicLayers({
               <div className="layers-hint faint small">
                 Клик — выделить блок · двойной клик — группу · рамка ЛКМ — выделить объект (без пола и стен) · Shift —
                 добавить, повторно — снять · Delete — убрать · зажатое колесо (или Alt+ЛКМ) — вращать вокруг точки под
-                курсором · ПКМ — сдвигать · колесо — масштаб · ↑↓ — слой среза · формы блоков упрощены
+                курсором · ПКМ — сдвигать · колесо — масштаб · ↑↓ — слой среза · блоки по моделям из сборки, у части
+                (сундуки, ремни) — упрощённая форма
               </div>
             </Suspense>
           )}

@@ -21,6 +21,7 @@ export const MODS_OUTPUTS = [
   'power.json',
   'multiblocks.json',
   'multiblocks',
+  'block-models',
 ];
 
 /** Что собирает npm run kubejs (scripts/kubejs.mjs) */

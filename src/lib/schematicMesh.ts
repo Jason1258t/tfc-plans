@@ -1,10 +1,12 @@
+import { blockModel, loadBlockModels, type Dir as ModelDir, type Quad } from './blockModels';
 import { placedBy, textureUrl, type ItemIndex } from './items';
 import { EMPTY_BLOCKS, REMOVE, type Schematic } from './schematic';
 import { buildGrid, namesByState, propsByState, stateOf } from './schematicEdit';
 
 /**
- * Геометрия схемы для 3D: каждый блок — один или несколько параллелепипедов по грубой форме
- * (плита, ступенька, люк, забор, вал Create…), невидимые грани между сплошными блоками не строятся.
+ * Геометрия схемы для 3D: блок — грани его модели из jar (src/lib/blockModels.ts), а нет модели (рисует код:
+ * сундук, ремень Create; OBJ) — один или несколько параллелепипедов по грубой форме (shapeOf: плита, ступенька,
+ * люк, забор, вал Create…). Невидимые грани между сплошными блоками не строятся (cullface модели).
  * Без three.js — только массивы; рисуют их SchematicView3D и превью библиотеки.
  */
 
@@ -16,9 +18,16 @@ const px = (n: number) => n / 16;
 
 /** Прозрачные целые блоки: не закрывают соседей (стекло, листва, жидкости) */
 const SEE_THROUGH = /glass|leaves|ice\b|_ice|slime|honey_block|spawner|water|lava|cobweb|scaffolding/;
-const FLUID = /(^|:)(water|lava)$|fluid/;
+/** Жидкость как блок: вода, лава, fluid/… модов (не «жидкостная труба» и т. п.) */
+const FLUID = /(^|:)(water|lava)$|[:/]fluid\//;
 /** Текстуры в оттенках серого, которые игра красит по биому */
 const TINTED = /leaves|grass|vine|lily_pad|fern|sugar_cane/;
+/**
+ * Модель в jar — только часть блока, остальное рисует код игры: берём запасную форму (жидкостная труба Create —
+ * в модели одни стенки, кольца и отводы дорисовывает PipeAttachmentModel)
+ */
+const CODE_DRAWN = /(^|:)fluid_pipe$/;
+export const drawnByCode = (id: string) => CODE_DRAWN.test(id);
 /** Невидимые в игре блоки (свет прожектора IE, барьер) — в 3D не рисуются */
 const INVISIBLE = /(^|:)(fake_light|barrier|light|structure_void)$/;
 
@@ -170,6 +179,18 @@ function shapeOf(id: string, p: Map<string, string>): Box[] {
   if (/(^|\/|_)(shaft|axis)$/.test(name) || name.endsWith('_shaft') || name === 'shaft') return [rod(4)];
   if (name.includes('large_cogwheel')) return [disc(24, 4), rod(4)];
   if (name.includes('cogwheel')) return [disc(14, 4), rod(4)];
+  // Труба с соединениями по сторонам (жидкостная труба Create): сердцевина и отводы к соединённым сторонам
+  if (name.includes('pipe') && ['north', 'south', 'east', 'west', 'up', 'down'].some((d) => p.has(d))) {
+    const [a, b] = [px(4), px(12)];
+    const out: Box[] = [[a, a, a, b, b, b]];
+    if (conn('north')) out.push([a, a, 0, b, b, a]);
+    if (conn('south')) out.push([a, a, b, b, b, 1]);
+    if (conn('west')) out.push([0, a, a, a, b, b]);
+    if (conn('east')) out.push([b, a, a, 1, b, b]);
+    if (conn('down')) out.push([a, 0, a, b, a, b]);
+    if (conn('up')) out.push([a, b, a, b, 1, b]);
+    return out;
+  }
   if (name.includes('pipe') && !name.includes('pump')) return [rod(8)];
   if (
     /(flower|sapling|tulip|dandelion|poppy|orchid|allium|bluet|daisy|mushroom|candle|lever|fern|grass$|bush|crop|seed|sign|banner|head|skull|pot$)/.test(
@@ -307,6 +328,14 @@ export interface MeshData {
 /** Освещение граней «как в игре»: верх светлый, низ тёмный, бока по-разному */
 const SHADE = { up: 1, down: 0.5, north: 0.8, south: 0.8, east: 0.65, west: 0.65 };
 
+/** Затенение грани модели по нормали (повёрнутые элементы — смесь по осям, как в scripts/mcp/render.mjs) */
+const shadeOf = ([x, y, z]: [number, number, number]) =>
+  x * x * SHADE.east + y * y * (y > 0 ? SHADE.up : SHADE.down) + z * z * SHADE.north;
+
+/** Окраска граней с tintindex (её задаёт код игры): листва и трава — зелёным, вода — синим */
+const tintOf = (id: string): [number, number, number] =>
+  /water/.test(id) ? [0.25, 0.42, 0.9] : /redstone/.test(id) ? [0.9, 0.2, 0.15] : [0.55, 0.8, 0.4];
+
 /** Грани: направление, сосед, вершины (CCW снаружи) через функцию от бокса */
 type Dir = keyof typeof SHADE;
 const DIRS: { dir: Dir; n: [number, number, number] }[] = [
@@ -429,16 +458,26 @@ export async function buildMesh(
     side: string | null;
     top: string | null;
     tint: boolean;
+    /** Грани модели из jar; null — запасная форма boxes */
+    quads: Quad[] | null;
   }
+  const namespaces = new Set<string>();
+  for (const name of names) {
+    const id = name && (replace.get(name) ?? name);
+    if (id && id !== REMOVE) namespaces.add(id.includes(':') ? id.split(':')[0] : 'minecraft');
+  }
+  await loadBlockModels(namespaces);
   const metas: (Meta | null)[] = names.map((name, st) => {
     if (!name) return null;
     const id = replace.get(name) ?? name;
     if (id === REMOVE || EMPTY_BLOCKS.has(id) || INVISIBLE.test(id)) return null;
-    const boxes = shapeOf(id, props[st] ?? new Map());
-    const full = boxes.length === 1 && boxes[0] === FULL;
+    const p = props[st] ?? new Map();
+    const model = CODE_DRAWN.test(id) ? null : blockModel(id, p);
+    const boxes = model ? [] : shapeOf(id, p);
+    const full = model ? model.full : boxes.length === 1 && boxes[0] === FULL;
     const see = SEE_THROUGH.test(id);
-    const tex = texturesOf(id, items);
-    return { id, boxes, opaque: full && !see, clear: see, ...tex, tint: TINTED.test(id) };
+    const tex = model ? { side: null, top: null } : texturesOf(id, items);
+    return { id, boxes, opaque: full && !see, clear: see, ...tex, tint: TINTED.test(id), quads: model?.quads ?? null };
   });
 
   // Занятость: индекс записи палитры по клетке (-1 — пусто)
@@ -461,6 +500,7 @@ export async function buildMesh(
   for (const m of metas) {
     if (m?.side) paths.add(m.side);
     if (m?.top) paths.add(m.top);
+    for (const q of m?.quads ?? []) if (q.tex) paths.add(q.tex);
   }
   const atlas = await buildAtlas([...paths]);
 
@@ -470,12 +510,47 @@ export async function buildMesh(
   const uvs: number[] = [];
   const idx: number[] = [];
   const white: [number, number, number, number] = [0, 0, 0, 0];
+  const NB: Record<ModelDir, [number, number, number]> = {
+    up: [0, 1, 0],
+    down: [0, -1, 0],
+    east: [1, 0, 0],
+    west: [-1, 0, 0],
+    south: [0, 0, 1],
+    north: [0, 0, -1],
+  };
+  const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
   for (let y = 0; y <= maxY; y++)
     for (let z = 0; z < sz; z++)
       for (let x = 0; x < sx; x++) {
         const st = cell[(y * sz + z) * sx + x];
         if (st < 0) continue;
         const m = metas[st]!;
+        if (m.quads) {
+          for (const q of m.quads) {
+            if (q.cull) {
+              const n = NB[q.cull];
+              const nb = at(x + n[0], y + n[1], z + n[2]);
+              const nm = nb >= 0 ? metas[nb] : null;
+              if (nm && (nm.opaque || (m.clear && nm.clear && nm.id === m.id))) continue;
+            }
+            const base = (q.tex && atlas.color.get(q.tex)) || hashColor(m.id);
+            const r = (q.tex && atlas.uv.get(q.tex)) || white;
+            const shade = q.shade ? shadeOf(q.n) : 1;
+            const tint = q.tint ? tintOf(m.id) : [1, 1, 1];
+            const v0 = pos.length / 3;
+            for (let k = 0; k < 4; k++) {
+              const c = q.p[k];
+              pos.push(x + c[0], y + c[1], z + c[2]);
+              const [u, v] = q.uv[k];
+              uvs.push(r[0] + (r[2] - r[0]) * clamp01(u / 16), r[3] - (r[3] - r[1]) * clamp01(v / 16));
+              light.push(shade * tint[0], shade * tint[1], shade * tint[2]);
+              flat.push(shade * tint[0] * base[0], shade * tint[1] * base[1], shade * tint[2] * base[2]);
+            }
+            if (q.both) idx.push(v0, v0 + 1, v0 + 2, v0, v0 + 2, v0 + 1);
+            else idx.push(v0, v0 + 1, v0 + 2, v0, v0 + 2, v0 + 3);
+          }
+          continue;
+        }
         for (const { dir, n } of DIRS) {
           const nb = at(x + n[0], y + n[1], z + n[2]);
           const nm = nb >= 0 ? metas[nb] : null;

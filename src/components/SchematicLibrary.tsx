@@ -272,7 +272,7 @@ function SchematicPanel({ entry, busy, canRender, onPreview, onClose, onError }:
         )}
         <div className="row">
           <span className="faint small grow">
-            {entry.preview ? 'Формы блоков упрощены. ' : ''}Рисуется в браузере при сохранении в библиотеку.
+            {entry.preview ? 'Блоки — по моделям из сборки. ' : ''}Рисуется в браузере при сохранении в библиотеку.
           </span>
           <button className="btn sm" disabled={busy || !canRender} onClick={onPreview}>
             <ImagePlus size={14} />
