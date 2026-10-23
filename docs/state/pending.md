@@ -39,6 +39,14 @@ its one-liner in STATE.md.
 - **Crop growth** (2026-10-21): proposed change `MjQFPQkIf9SHOdEjopy4` — `cropGrowthModifier` 1 → 5,
   `cropExpiryModifier` 1 → 0.625 (fertilised bed ~60 days, bare ~120, 30 days before death; computed from `CropHelpers`
   TFC 4.2.9). Waits for `tfc admin changes pull`; not checked in game.
+- **Carry On: IE crates and barrels** (2026-10-23): proposed change `94as4MmQ0qA0Hj6zWX7x` — in
+  `carryon-common.toml` `blacklist.forbiddenTiles` the entry `immersiveengineering:*` replaced by 44 prefix masks that
+  cover every IE block except `crate`, `reinforced_crate`, `wooden_barrel`, `metal_barrel` (Carry On matches entries
+  by substring, `ListHandler`/`StringHelper.matchesWildcards`; no allow-exceptions in a blacklist). Dev server (Carry On
+  2.2.6.13 + IE 12.4.2, fake player through `PickupHandler.tryPickUpBlock` / `PlacementHandler.tryPlaceBlock`): the 4
+  storages pick up and put back with items / 4000 mB water; capacitor, toolbox, connector, crafting table, sorter, pipe
+  refused. Waits for `tfc admin changes pull`; not checked in game. TFC barrels (`tfc:wood/barrel/*`), Firmalife,
+  Farmer's Delight, Functional Storage stay blacklisted — ask the user before opening them.
 - **Server resource pack `arc-furnace-matadora`** (https://tfc-plans-fd2c.web.app/packs/arc-furnace-matadora.zip,
   source in `instance/resourcepacks/`, not in git — `public/packs/` is gitignored): IE arc furnace sound overridden via
   `sounds.json` (`replace: true`) with a track from own namespace `tfc_sounds`. Server needs `resource-pack` and
