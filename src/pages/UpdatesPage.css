@@ -245,3 +245,11 @@
   overflow-x: auto;
   font-size: 13px;
 }
+
+.upd-mods .tag.addon {
+  font-size: 11px;
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  text-decoration: none;
+}

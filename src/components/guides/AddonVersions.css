@@ -1,0 +1,103 @@
+.addon-versions .power-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.addon-versions-list {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.addon-version {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 6px 8px;
+}
+
+.addon-version-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.addon-version-num {
+  font-family: var(--font-mono);
+}
+
+.addon-version.withdrawn .addon-version-num {
+  text-decoration: line-through;
+  color: var(--text-3);
+}
+
+.addon-version-body {
+  padding: 4px 4px 2px 30px;
+}
+
+.addon-version-body > :first-child {
+  margin-top: 4px;
+}
+
+.addon-version-cmd {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.addon-status-draft {
+  color: var(--text-2);
+}
+
+.addon-status-released {
+  color: var(--accent);
+}
+
+.addon-status-withdrawn {
+  color: var(--danger);
+}
+
+.addon-status-latest {
+  color: var(--diamond);
+}
+
+.addon-version-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0 4px;
+}
+
+.addon-version-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.addon-version-fields label,
+.addon-version-note {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.addon-version-note input {
+  width: 100%;
+}
+
+.addon-version-actions {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 600px) {
+  .addon-version-body {
+    padding-left: 4px;
+  }
+}

@@ -3,7 +3,8 @@
  * Запись об обновлении сборки. Запускается при деплое хостинга (predeploy в firebase.json) после сборки:
  * сравнивает локальный public/pack-manifest.json с опубликованным на сайте и, если сборка изменилась,
  * пишет в Firestore packUpdates/{id}: моды (добавлены/убраны/обновлены), предметы, рецепты,
- * новые типы рецептов и ченджлоги модов с Modrinth. Патчноут от модели сайт составит сам при открытии.
+ * новые типы рецептов и ченджлоги модов с Modrinth, а у наших аддонов — ченджлоги их версий из Firestore
+ * addonVersions за промежуток «было → стало» (src/lib/addonVersions.ts). Патчноут от модели сайт составит сам.
  *
  * Авторизация — от имени залогиненного firebase CLI. Повторный деплой той же сборки ничего не пишет.
  *   SKIP_PACK_RELEASE=1 firebase deploy   — пропустить (например, если Firestore недоступен)
@@ -11,13 +12,16 @@
  *   … --prev <файл>                         — сравнить с локальным снимком вместо опубликованного
  *   ALLOW_MODS_DROP=1 firebase deploy      — записать, даже если в сборке 0 модов или убрано больше половины
  *                                            (без неё такой деплой останавливается: обычно это сборка без mods/)
- * Из кода: packRelease({ manifestFile, prevFile, dryRun }) — manifestFile вместо public/pack-manifest.json.
+ * Из кода: packRelease({ manifestFile, prevFile, dryRun, root }) — manifestFile вместо public/pack-manifest.json,
+ * root — корень репозитория с карточками аддонов (tools/<мод>/addon.json).
  */
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { deployer, DOCS, ROOT, SITE, toValue, token } from './firestore-rest.mjs';
+import { addonChangelogsFrom } from '../src/lib/addonVersions.ts';
+import { addonCards } from './addons-index.mjs';
+import { deployer, DOCS, fromValue, ROOT, SITE, toValue, token } from './firestore-rest.mjs';
 const LIST_CAP = 3000;
 const CHANGELOG_CAP = 3000;
 const CHANGELOGS_TOTAL_CAP = 300_000;
@@ -140,6 +144,33 @@ async function changelogs(mods) {
   return out;
 }
 
+// ---------------------------------------------------------------- наши аддоны
+
+/** Все версии аддонов (Firestore addonVersions) — их немного, одним списком */
+async function addonVersionDocs() {
+  const headers = { Authorization: `Bearer ${await token()}` };
+  const out = [];
+  let page = '';
+  do {
+    const r = await fetch(`${DOCS}/addonVersions?pageSize=300${page ? `&pageToken=${encodeURIComponent(page)}` : ''}`, {
+      headers,
+    });
+    if (!r.ok) throw new Error(`Firestore addonVersions: ${r.status} ${(await r.text()).slice(0, 200)}`);
+    const j = await r.json();
+    for (const d of j.documents ?? []) out.push(fromValue({ mapValue: { fields: d.fields ?? {} } }));
+    page = j.nextPageToken ?? '';
+  } while (page);
+  return out;
+}
+
+/** Ченджлоги наших аддонов (карточки tools/<мод>/addon.json, версии — addonVersions) → { мод: текст } */
+async function addonChangelogs(mods, root) {
+  const cards = addonCards(root);
+  const ids = new Set(cards.map((c) => c.id));
+  if (![...mods.added, ...mods.updated].some((m) => ids.has(m.id))) return {};
+  return addonChangelogsFrom(mods, cards, await addonVersionDocs(), CHANGELOG_CAP);
+}
+
 // ---------------------------------------------------------------- проверка на сборку без модов
 
 /**
@@ -175,6 +206,7 @@ export async function packRelease({
   manifestFile = path.join(ROOT, 'public', 'pack-manifest.json'),
   prevFile = null,
   dryRun = false,
+  root = ROOT,
 } = {}) {
   if (!fs.existsSync(manifestFile)) throw new Error(`нет ${manifestFile} — сначала npm run mods`);
   const next = JSON.parse(fs.readFileSync(manifestFile, 'utf8'));
@@ -228,11 +260,24 @@ export async function packRelease({
     } catch (e) {
       log(`ченджлоги недоступны: ${e.message}`);
     }
+    // Наши аддоны: Modrinth их не знает — ченджлоги версий с сайта (главнее Modrinth, если вдруг нашлись оба)
+    const sources = Object.fromEntries(Object.keys(logs).map((id) => [id, 'modrinth']));
+    try {
+      const ours = await addonChangelogs(d.mods, root);
+      for (const [id, text] of Object.entries(ours)) {
+        logs[id] = text;
+        sources[id] = 'addon';
+      }
+      log(`ченджлоги наших аддонов: ${Object.keys(ours).length}`);
+    } catch (e) {
+      log(`ченджлоги аддонов недоступны: ${e.message}`);
+    }
     record = {
       baseline: false,
       ...d,
       mods: { added: d.mods.added.map(strip), removed: d.mods.removed.map(strip), updated: d.mods.updated.map(strip) },
       changelogs: logs,
+      changelogSources: sources,
     };
   }
   record = { ...record, createdAt: Date.now(), deployedBy: deployer() };

@@ -237,6 +237,39 @@ service cloud.firestore {
       }
     }
 
+    // Версии аддонов (src/lib/addonVersions.ts): создаёт выпуск — MCP addon_version_put и сервер сборки
+    // (tfc admin addon upload), мимо правил. С сайта игроки правят ченджлог, статус, дату и «что проверено»;
+    // мод, номер версии и jar не меняются. Стирать нельзя; каждая правка пишет версию в revisions.
+    function addonVersionText(d) {
+      return d.changelog is string && d.changelog.size() <= 20000
+        && d.status in ['draft', 'released', 'withdrawn']
+        && d.checked in ['game', 'server', 'code', 'none']
+        && d.checkedNote is string && d.checkedNote.size() <= 2000
+        && d.date is string && d.date.size() <= 10;
+    }
+    match /addonVersions/{id} {
+      allow read: if signedIn();
+      allow create: if false;
+      allow update: if signedIn()
+        && addonVersionText(request.resource.data)
+        && request.resource.data.addon == resource.data.addon
+        && request.resource.data.version == resource.data.version
+        && request.resource.data.jar == resource.data.jar
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt is number
+        && nick(request.resource.data.updatedBy);
+      allow delete: if false;
+
+      match /revisions/{rid} {
+        allow read: if signedIn();
+        allow create: if signedIn()
+          && addonVersionText(request.resource.data)
+          && request.resource.data.at is number
+          && nick(request.resource.data.updatedBy);
+        allow update, delete: if false;
+      }
+    }
+
     // Какие подсказки знакомства уже показаны — у каждого анонимного входа (браузера) свой документ, чужие не видны
     match /onboarding/{uid} {
       allow read, delete: if signedIn() && request.auth.uid == uid;

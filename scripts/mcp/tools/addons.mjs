@@ -3,12 +3,23 @@
  * (scripts/addons-index.mjs кладёт её jar и иконки на сайт при сборке), подробная страница — гайд Firestore
  * addon-<мод> (раздел addon), правится guide_get / guide_put. Здесь только чтение: файлы, jar аддона, один документ
  * гайда на аддон и /addons/index.json с сайта (что сейчас задеплоено).
+ * Версии аддона (Firestore addonVersions/{мод}@{версия}, src/lib/addonVersions.ts) — addon_versions,
+ * addon_version_get, addon_version_put (ченджлог, статус, «что проверено»; jar заливает tfc admin addon upload).
  */
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { addonCards } from '../../addons-index.mjs';
 import { items } from '../data.mjs';
-import { guideDoc } from '../firestore.mjs';
+import { api, FirestoreError, guideDoc } from '../firestore.mjs';
+import { DOCS, fromValue, toValue } from '../../firestore-rest.mjs';
+import {
+  STATUS_LABEL,
+  addonVersionId,
+  compareVersions,
+  latestReleased,
+  sortVersions,
+} from '../../../src/lib/addonVersions.ts';
 import { dateOf, str } from '../fmt.mjs';
 import { zipEntries, zipRead } from '../jars.mjs';
 import { TOOLS_DIR } from '../resources.mjs';
@@ -99,12 +110,11 @@ async function addonsList(a) {
   const out = [`Аддоны (${cards.length}) — карточки ${rootOf(a)}/tools/*/addon.json:`];
   for (const c of cards) {
     const src = sourceVersion(c.dir);
-    const jar = fs.existsSync(path.join(c.dir, c.jar));
     const deployed = site?.get(c.id)?.version;
     const g = await guideDoc(guideId(c.id));
     const marks = [
       src && src !== c.version ? `в исходниках ${src}` : null,
-      jar ? null : `нет ${c.jar}`,
+      c.sha256 ? null : 'нет sha256 в карточке',
       site ? (deployed === c.version ? null : `на сайте ${deployed ?? 'нет'}`) : null,
       g ? null : 'нет страницы',
       c.unlisted ? 'скрыт из списка' : null,
@@ -142,10 +152,16 @@ async function addonCheck(a) {
   if (src && src !== c.version) errors.push(`версия в исходниках ${src}, в addon.json ${c.version}`);
   const jars = jarsIn(c.dir);
   const others = jars.filter((f) => f !== c.jar);
-  if (others.length) warns.push(`лишние jar в ${c.source}: ${others.join(', ')} (в git должен лежать один — текущий)`);
+  if (others.length) info.push(`другие jar в ${c.source}: ${others.join(', ')} (в git jar не хранятся — не мешают)`);
   let jar = null;
-  if (!jars.includes(c.jar)) errors.push(`нет ${c.source}/${c.jar} — соберите release.sh / build.sh`);
+  let jarSha = null;
+  if (!jars.includes(c.jar))
+    info.push(`нет ${c.source}/${c.jar} — jar и предметы не проверены (соберите release.sh / build.sh перед выпуском)`);
   else {
+    jarSha = createHash('sha256')
+      .update(fs.readFileSync(path.join(c.dir, c.jar)))
+      .digest('hex');
+    if (c.sha256 !== jarSha) errors.push(`addon.json: sha256 ${c.sha256 ?? 'нет'}, у ${c.jar} — ${jarSha}`);
     jar = jarInfo(path.join(c.dir, c.jar), ns);
     if (jar.modId !== c.id) errors.push(`в jar modId ${jar.modId ?? '—'}, в addon.json id ${c.id}`);
     if (jar.version && jar.version !== c.version && !jar.version.includes('${'))
@@ -212,6 +228,21 @@ async function addonCheck(a) {
     }
   }
 
+  // версия в addonVersions
+  const rec = await versionDoc(c.id, c.version);
+  if (!rec) errors.push(`нет записи версии ${c.version} — addon_version_put (baseRevision "new") с ченджлогом`);
+  else {
+    if (!rec.changelog?.trim()) errors.push(`у версии ${c.version} пустой ченджлог — addon_version_put changelog`);
+    if (rec.status !== 'released')
+      warns.push(
+        `версия ${c.version} — ${STATUS_LABEL[rec.status] ?? rec.status}; выпустить — addon_version_put status=released`,
+      );
+    if (!rec.jar)
+      errors.push(`у версии ${c.version} jar не залит — npm run tfc -- admin addon upload ${c.source}/${c.jar}`);
+    else if (c.sha256 && rec.jar.sha256 !== c.sha256)
+      errors.push(`у версии ${c.version} jar ${rec.jar.sha256.slice(0, 12)}…, в карточке ${c.sha256.slice(0, 12)}…`);
+  }
+
   // сайт
   const site = await siteIndex();
   const dep = site?.get(c.id);
@@ -229,7 +260,154 @@ async function addonCheck(a) {
     ...list('Ошибки', errors),
     ...list('Предупреждения', warns),
     ...list('Сведения', info),
+    '— Firestore: 2 чтен.',
+  ].join('\n');
+}
+
+// ---------------------------------------------------------------- версии
+
+const STATUSES = ['draft', 'released', 'withdrawn'];
+const CHECKS = ['game', 'server', 'code', 'none'];
+const fieldsOf = (d) => Object.fromEntries(Object.entries(d.fields ?? {}).map(([k, v]) => [k, fromValue(v)]));
+const toFields = (data) => Object.fromEntries(Object.entries(data).map(([k, v]) => [k, toValue(v)]));
+
+/** Версии аддона: один запрос (runQuery addon == id) — по чтению на версию */
+async function versionDocs(addon) {
+  const r = await api(`${DOCS}:runQuery`, {
+    method: 'POST',
+    body: JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId: 'addonVersions' }],
+        where: { fieldFilter: { field: { fieldPath: 'addon' }, op: 'EQUAL', value: { stringValue: addon } } },
+      },
+    }),
+  });
+  return sortVersions(
+    r.filter((x) => x.document).map((x) => ({ updateTime: x.document.updateTime, ...fieldsOf(x.document) })),
+  );
+}
+
+async function versionDoc(addon, version) {
+  try {
+    const d = await api(`${DOCS}/addonVersions/${encodeURIComponent(addonVersionId(addon, version))}`);
+    return { updateTime: d.updateTime, ...fieldsOf(d) };
+  } catch (e) {
+    if (e instanceof FirestoreError && e.status === 404) return null;
+    throw e;
+  }
+}
+
+const kb = (n) => `${Math.round(n / 1024)} КБ`;
+const versionLine = (v) =>
+  `${v.version} — ${v.date || 'без даты'}, ${STATUS_LABEL[v.status] ?? v.status}, проверено: ${v.checked}` +
+  (v.jar ? `, jar ${v.jar.file} ${kb(v.jar.size)} (${v.jar.sha256.slice(0, 12)}…)` : ', jar не залит') +
+  (v.changelog?.trim() ? '' : ', ⚠ без ченджлога');
+
+async function addonVersions(a) {
+  const c = findCard(a);
+  const list = await versionDocs(c.id);
+  if (!list.length)
+    return `${c.id}: версий в addonVersions нет — заведите addon_version_put (baseRevision "new") или tfc admin addon upload\n— Firestore: 1 чтен.`;
+  const latest = latestReleased(list);
+  return [
+    `${c.id} — версий ${list.length}; последняя выпущенная ${latest?.version ?? 'нет'}; в карточке ${c.version}`,
+    ...list.map((v) => `- ${versionLine(v)}${a.full ? `\n  ${(v.changelog || '').replace(/\n/g, '\n  ')}` : ''}`),
+    `— Firestore: ${list.length} чтен.`,
+  ].join('\n');
+}
+
+async function addonVersionGet(a) {
+  const c = findCard(a);
+  const v = await versionDoc(c.id, String(a.version ?? ''));
+  if (!v) return `${addonVersionId(c.id, a.version)}: нет такой версии\n— Firestore: 1 чтен.`;
+  return [
+    `${addonVersionId(c.id, v.version)} — ${versionLine(v)}`,
+    `revision: ${v.updateTime}   ← для addon_version_put как baseRevision`,
+    `правил ${v.updatedBy} ${dateOf(v.updatedAt)}`,
+    v.checkedNote ? `проверка: ${v.checkedNote}` : null,
+    '',
+    v.changelog || '(ченджлога нет)',
     '— Firestore: 1 чтен.',
+  ]
+    .filter((x) => x !== null)
+    .join('\n');
+}
+
+/**
+ * Создать (baseRevision "new") или поправить версию. jar — путь к локальному jar: в запись идут имя, sha256 и размер
+ * (сам файл на сервер сборки заливает tfc admin addon upload). Каждая правка — ещё и запись в revisions.
+ */
+async function addonVersionPut(a) {
+  const c = findCard(a);
+  const version = String(a.version ?? '').trim();
+  if (!/^[0-9][\w.+-]{0,39}$/.test(version)) throw new Error('version — номер версии (2.3.3)');
+  if (!a.baseRevision) throw new Error('baseRevision — revision из addon_version_get или "new" для новой версии');
+  if (a.status && !STATUSES.includes(a.status)) throw new Error(`status — ${STATUSES.join(' | ')}`);
+  if (a.checked && !CHECKS.includes(a.checked)) throw new Error(`checked — ${CHECKS.join(' | ')}`);
+  if (a.date && !/^\d{4}-\d{2}-\d{2}$/.test(a.date)) throw new Error('date — ГГГГ-ММ-ДД');
+  if (a.changelog && a.changelog.length > 20000) throw new Error('changelog — до 20 000 знаков');
+  let jar;
+  if (a.jar) {
+    const file = path.resolve(String(a.jar));
+    if (!fs.existsSync(file)) throw new Error(`нет файла ${file}`);
+    const bytes = fs.readFileSync(file);
+    const info = jarInfo(file, c.id);
+    if (info.modId !== c.id) throw new Error(`в jar modId ${info.modId}, а аддон ${c.id}`);
+    if (info.version && !info.version.includes('${') && compareVersions(info.version, version) !== 0)
+      throw new Error(`в jar версия ${info.version}, а не ${version}`);
+    jar = { file: path.basename(file), sha256: createHash('sha256').update(bytes).digest('hex'), size: bytes.length };
+  }
+  const id = addonVersionId(c.id, version);
+  const url = `${DOCS}/addonVersions/${encodeURIComponent(id)}`;
+  const now = Date.now();
+  const isNew = a.baseRevision === 'new';
+  let cur = null;
+  if (!isNew) {
+    cur = await versionDoc(c.id, version);
+    if (!cur) throw new Error(`${id}: нет такой версии — для новой baseRevision "new"`);
+    if (cur.jar?.sha256 && jar && cur.jar.sha256 !== jar.sha256)
+      throw new Error(`у ${id} уже другой jar (${cur.jar.sha256.slice(0, 12)}…) — поднимите номер версии`);
+  }
+  const edit = {
+    changelog: a.changelog ?? cur?.changelog ?? '',
+    status: a.status ?? cur?.status ?? 'draft',
+    checked: a.checked ?? cur?.checked ?? 'none',
+    checkedNote: a.checkedNote ?? cur?.checkedNote ?? '',
+    date: a.date ?? cur?.date ?? new Date().toISOString().slice(0, 10),
+  };
+  const data = {
+    addon: c.id,
+    version,
+    ...edit,
+    jar: jar ?? cur?.jar ?? null,
+    createdAt: cur?.createdAt ?? now,
+    updatedAt: now,
+    updatedBy: 'Claude',
+  };
+  const pre = isNew
+    ? 'currentDocument.exists=false'
+    : `currentDocument.updateTime=${encodeURIComponent(a.baseRevision)}`;
+  let d;
+  try {
+    d = await api(`${url}?${pre}`, { method: 'PATCH', body: JSON.stringify({ fields: toFields(data) }) });
+  } catch (e) {
+    if (e instanceof FirestoreError && (e.status === 400 || e.status === 409))
+      throw new Error(
+        isNew
+          ? `${id} уже есть — addon_version_get и правка с revision`
+          : `${id} изменили после чтения — addon_version_get заново`,
+      );
+    throw e;
+  }
+  await api(`${url}/revisions`, {
+    method: 'POST',
+    body: JSON.stringify({ fields: toFields({ ...edit, updatedBy: 'Claude', at: now }) }),
+  });
+  return [
+    `${isNew ? 'Создана' : 'Сохранена'} версия ${id}: ${versionLine(data)}`,
+    `revision: ${d.updateTime}`,
+    `на сайте: ${SITE}/addons/${c.id}`,
+    `— Firestore: ${isNew ? 0 : 1} чтен.`,
   ].join('\n');
 }
 
@@ -247,7 +425,7 @@ export const TOOLS = [
   {
     name: 'addon_check',
     description:
-      'Release check of one addon: addon.json fields vs gradle.properties / build.sh and the jar (modId, version, items), stray jars, block ids, recipes (own items vs jar, others vs item library), icons in icons/, the site page (guide addon-<mod>: section, ::addon-block widgets, version mentioned, jar items not described), deployed version on the site. Edit the page with guide_get / guide_put.',
+      'Release check of one addon: addon.json fields vs gradle.properties / build.sh and the jar (modId, version, items, sha256), the version record (addonVersions: changelog, status, jar uploaded), block ids, recipes (own items vs jar, others vs item library), icons in icons/, the site page (guide addon-<mod>: section, ::addon-block widgets, version mentioned, jar items not described), deployed version on the site. Edit the page with guide_get / guide_put.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -257,5 +435,56 @@ export const TOOLS = [
       required: ['id'],
     },
     handler: addonCheck,
+  },
+  {
+    name: 'addon_versions',
+    description:
+      'Versions of one addon (Firestore addonVersions): number, date, status (draft/released/withdrawn), checked, jar on the pack server, whether a changelog is written; full=true adds changelogs. One read per version.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: str('addon mod id (ee_extras) or folder'),
+        full: { type: 'boolean', description: 'include changelog texts' },
+        root: str('repo root (a git worktree); default — main checkout'),
+      },
+      required: ['id'],
+    },
+    handler: addonVersions,
+  },
+  {
+    name: 'addon_version_get',
+    description: 'One addon version with its changelog and revision (for addon_version_put).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: str('addon mod id'),
+        version: str('version, e.g. 2.3.3'),
+        root: str('repo root (a git worktree); default — main checkout'),
+      },
+      required: ['id', 'version'],
+    },
+    handler: addonVersionGet,
+  },
+  {
+    name: 'addon_version_put',
+    description:
+      'Create (baseRevision "new") or edit an addon version (**write to the shared database**, signed Claude): changelog for players in Russian Markdown («что изменилось с прошлой версии»; prefix «Важно:» for what breaks or needs action), status draft|released|withdrawn, checked game|server|code|none, checkedNote, date YYYY-MM-DD, jar — local jar path (records file/sha256/size; upload the file itself with `npm run tfc -- admin addon upload <jar>`). Passed fields replace, others kept.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: str('addon mod id'),
+        version: str('version, e.g. 2.3.3'),
+        baseRevision: str('revision from addon_version_get, or "new"'),
+        changelog: str('Markdown, Russian, for players'),
+        status: { type: 'string', enum: STATUSES, description: 'draft / released / withdrawn' },
+        checked: { type: 'string', enum: CHECKS, description: 'how it was checked' },
+        checkedNote: str('how it was checked, what was not'),
+        date: str('release date YYYY-MM-DD'),
+        jar: str('local jar path of this version'),
+        root: str('repo root (a git worktree); default — main checkout'),
+      },
+      required: ['id', 'version', 'baseRevision'],
+    },
+    handler: addonVersionPut,
   },
 ];

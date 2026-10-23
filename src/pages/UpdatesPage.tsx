@@ -8,6 +8,7 @@ import { TfcDownload } from '../components/TfcDownload';
 import { useData } from '../data/DataContext';
 import { datapacksStore } from '../data/store';
 import { generatePatchNotes, geminiEnabled, geminiErrorText } from '../lib/gemini';
+import { addonById } from '../lib/addons';
 import { useItems, type ItemIndex } from '../lib/items';
 import { UpdatesNav } from './FreshnessPage';
 import {
@@ -15,7 +16,9 @@ import {
   markUpdatesSeen,
   nsOf,
   saveNotes,
+  useAddonChangelogs,
   usePackUpdates,
+  withAddonChangelogs,
   type DatapackRisk,
   type ModRef,
   type PackUpdate,
@@ -42,7 +45,7 @@ export function UpdatesPage() {
         <h1>Обновления сборки</h1>
         <p className="faint small">
           Запись появляется при деплое, если поменялись jar в mods/. Патчноут пишет модель по ченджлогам модов с
-          Modrinth и разнице сборок; его можно поправить руками.
+          Modrinth, ченджлогам версий наших аддонов и разнице сборок; его можно поправить руками.
         </p>
       </div>
       <TfcDownload />
@@ -79,6 +82,7 @@ function UpdateCard({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const autoTried = useRef(false);
+  const full = useAddonChangelogs(u, open);
 
   const generate = async () => {
     setBusy(true);
@@ -91,7 +95,8 @@ function UpdateCard({
           .slice(0, 40)
           .map((t) => t.title)
           .join('; ')}`;
-      const body = await generatePatchNotes({ report: describeUpdate(u, items, risks), context });
+      const full = await withAddonChangelogs(u);
+      const body = await generatePatchNotes({ report: describeUpdate(full, items, risks), context });
       await saveNotes(u.id, body, 'agent', nick);
     } catch (e) {
       setError(geminiErrorText(e));
@@ -209,7 +214,7 @@ function UpdateCard({
         {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         {u.baseline ? 'Состав сборки' : 'Что изменилось'}
       </button>
-      {open && <Details u={u} />}
+      {open && <Details u={full} />}
     </article>
   );
 }
@@ -231,7 +236,17 @@ function Risks({ risks }: { risks: DatapackRisk[] }) {
   );
 }
 
-function ModList({ title, mods, changelogs }: { title: string; mods: ModRef[]; changelogs?: Record<string, string> }) {
+function ModList({
+  title,
+  mods,
+  changelogs,
+  sources,
+}: {
+  title: string;
+  mods: ModRef[];
+  changelogs?: Record<string, string>;
+  sources?: PackUpdate['changelogSources'];
+}) {
   if (!mods.length) return null;
   return (
     <div className="upd-block">
@@ -244,7 +259,10 @@ function ModList({ title, mods, changelogs }: { title: string; mods: ModRef[]; c
             {changelogs?.[m.id] ? (
               <details>
                 <summary>
-                  <ModLine m={m} /> <span className="faint small">ченджлог</span>
+                  <ModLine m={m} />{' '}
+                  <span className="faint small">
+                    {sources?.[m.id] === 'addon' ? 'что нового в версиях' : 'ченджлог'}
+                  </span>
                 </summary>
                 <div className="upd-changelog">
                   <Markdown source={changelogs[m.id]} />
@@ -263,6 +281,11 @@ function ModList({ title, mods, changelogs }: { title: string; mods: ModRef[]; c
 const ModLine = ({ m }: { m: ModRef }) => (
   <span>
     <b>{m.name}</b>{' '}
+    {addonById(m.id) && (
+      <Link className="tag addon" to={`/addons/${m.id}`} title="Аддон группы — версии и описание на его странице">
+        наш аддон
+      </Link>
+    )}{' '}
     <span className="faint small">
       {m.from ? `${m.from} → ${m.version}` : m.version} · <code>{m.id}</code>
     </span>
@@ -338,8 +361,8 @@ function Details({ u }: { u: PackUpdate }) {
   const t = u.totals;
   return (
     <div className="upd-details">
-      <ModList title="Новые моды" mods={u.mods.added} changelogs={u.changelogs} />
-      <ModList title="Обновлённые" mods={u.mods.updated} changelogs={u.changelogs} />
+      <ModList title="Новые моды" mods={u.mods.added} changelogs={u.changelogs} sources={u.changelogSources} />
+      <ModList title="Обновлённые" mods={u.mods.updated} changelogs={u.changelogs} sources={u.changelogSources} />
       <ModList title="Убранные" mods={u.mods.removed} />
       {!!t?.itemsAdded && (
         <div className="upd-block">
@@ -420,10 +443,16 @@ function describeUpdate(u: PackUpdate, items: ItemIndex | null, risks: DatapackR
     lines.push(
       `## Наши датапаки под угрозой\n${risks.map((r) => `- «${r.pack.name}» ${r.path}: ${r.reason}`).join('\n')}`,
     );
-  const logs = Object.entries(u.changelogs ?? {});
+  const all = Object.entries(u.changelogs ?? {});
+  const ours = all.filter(([id]) => u.changelogSources?.[id] === 'addon');
+  const logs = all.filter(([id]) => u.changelogSources?.[id] !== 'addon');
+  if (ours.length) {
+    lines.push('## Наши аддоны (свои моды группы) — что изменилось в версиях');
+    for (const [id, text] of ours) lines.push(`### ${addonById(id)?.name ?? id} [${id}]\n${text}`);
+  }
   if (logs.length) {
     lines.push('## Ченджлоги модов (Modrinth)');
     for (const [id, text] of logs) lines.push(`### ${id}\n${text}`);
-  } else lines.push('## Ченджлоги\nнет (моды не найдены на Modrinth)');
+  } else lines.push('## Ченджлоги Modrinth\nнет (моды не найдены на Modrinth)');
   return lines.join('\n');
 }
