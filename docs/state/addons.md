@@ -81,6 +81,30 @@ SU·tick, by CDG 1.3.8 bytecode).
   frame (diesel + alternator + terminal box): `Terminals` moved to {12.25, 6}, {12.25, 10} at height 14. User rejected
   a coarse brass radiator grille — now dark core with fine fins. Terminals 24/24; not checked in game.
 
+## IE Extras (`tools/ie-extras-mod`, 2026-10-23)
+
+Blocks and features for Immersive Engineering (task «Аддон для блоков и функций IE», group «Разработка»; the user's first
+candidate — a heater regulated by an analog lever). Depends on TFC 4.2.9 + IE 12.4.2 (both required), NeoForge 21.1.234+
+(TFC's own minimum; built on 21.1.251 from the Gradle cache).
+
+- **1.0.0**: analog heater `ie_extras:analog_heater` — FE in from any face but the grille (1024 FE/t, 32 000 buffer, no
+  output), target = redstone signal / 15 × `maxTemperature` (1600), draw = `fePerTickAtMax` (32) × signal / 15 per tick;
+  own temperature follows `HeatCapability.adjustTempTowards` (1 °C/t) and is pushed each tick to the block in front by
+  `HeatCapability.provideHeatTo` — the charcoal forge path, so any `BlockCapabilities.HEAT` consumer works (TFC crucible;
+  by bytecode also Firmalife vat, stovetop pot/grill, oven top, Cast Iron Grill — not tried). Piston-like placement,
+  comparator = temperature 0–15, right click = status. Looks: IE external heater textures (grille, socket) by reference
+  + own side panel; up/down use own models (no x-rotation) so the side dial stays upright. Server config
+  `ie_extras-server.toml` `analogHeater`.
+  Dev server (`./test-server.sh`, `/ietest`, crucible with a copper ingot, signal via comparator from a chest): signal 10
+  → 1067 °C, ingot intact; 11 → 1173 °C, 100 mB copper; draw 22/24/9 FE/t; cools without energy; FE caps on 5 faces.
+  Not checked in game.
+- Findings: the TFC crucible accepts only temperatures above its own (`CrucibleInventory.setTemperature`) and cools via
+  the TFC calendar — with no players the calendar stands (`arePlayersLoggedOn`), `checkForCalendarUpdate` calls
+  `onCalendarUpdate(-1)` every tick and cancels the 1 °C/t decay, so on the dev server the crucible never cools. A
+  vanilla comparator placed before its input container keeps `OutputSignal` 0 until a neighbour changes (devtest places
+  the comparator first). Pack metals above 1600 °C: only tfc_alloy_ext inferior aluminum (1653); IE aluminum is
+  1550 via `kubejs/data`.
+
 ## Miner Tools (`tools/miner-tools-mod`, 2026-10-21)
 
 One mod for all miner gear.
