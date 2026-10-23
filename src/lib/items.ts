@@ -14,28 +14,56 @@ export interface McItem {
   g?: string;
   /** Скрыт: в игре его не видно (мод выключает или прячет из JEI) — причина; в поиске и списках не показывается */
   h?: string;
+  /** Это ещё и блок (есть blockstate) — его можно ставить в схему; у механического ремня-предмета нет */
+  b?: 1;
+}
+
+/** Блок без своего предмета (scripts/mods/blocks.mjs): ремень Create, шлюз на ремне, факел на стене… */
+export interface McBlock {
+  i: string;
+  e: string;
+  r?: string;
+  /** Предметы из таблицы добычи блока — ими его и ставят (create:belt ← create:belt_connector) */
+  d?: string[];
 }
 
 export interface ItemIndex {
   list: McItem[];
   byId: Map<string, McItem>;
+  /** Блоки сборки, у которых нет одноимённого предмета */
+  blocks: Map<string, McBlock>;
+  /** В данных есть пометки «блок» (b) — старые данные сборки без них: проверку «это блок» не делаем */
+  blockInfo: boolean;
 }
 
 let indexPromise: Promise<ItemIndex> | null = null;
 let loaded: ItemIndex | null = null;
 
-const fetchList = (name: string): Promise<McItem[]> =>
+const fetchList = <T = McItem>(name: string): Promise<T[]> =>
   fetch(`${import.meta.env.BASE_URL}${name}`)
     .then((r) => (r.ok ? r.json() : []))
     .catch(() => []);
 
 export function loadItems(): Promise<ItemIndex> {
   // kubejs-items.json — предметы, которые сборка регистрирует скриптами KubeJS (scripts/kubejs.mjs); в jar их нет
-  indexPromise ??= Promise.all([fetchList('items.json'), fetchList('kubejs-items.json')]).then(([mods, kjs]) => {
+  // blocks.json — блоки без предмета (scripts/mods/blocks.mjs): без них схемы Create наполовину «нет в сборке»
+  indexPromise ??= Promise.all([
+    fetchList('items.json'),
+    fetchList('kubejs-items.json'),
+    fetchList<McBlock>('blocks.json'),
+  ]).then(([mods, kjs, blocks]) => {
     const have = new Set(mods.map((it) => it.i));
     // Подавляем «технические» предметы
     const list = [...mods, ...kjs.filter((it) => !have.has(it.i))].filter((it) => it.i !== 'minecraft:air');
-    loaded = { list, byId: new Map(list.map((it) => [it.i, it])) };
+    const byId = new Map(list.map((it) => [it.i, it]));
+    loaded = {
+      list,
+      byId,
+      blocks: new Map(blocks.filter((b) => !byId.has(b.i)).map((b) => [b.i, b])),
+      blockInfo: mods.some((it) => it.b),
+    };
+    // Свои предметы KubeJS: блок это или нет, разборщик не знает — не запрещаем
+    if (loaded.blockInfo) for (const it of kjs) if (byId.get(it.i) === it) it.b = 1;
     return loaded;
   });
   return indexPromise;
@@ -47,6 +75,38 @@ export function useItems(): ItemIndex | null {
     if (!idx) loadItems().then(setIdx);
   }, [idx]);
   return idx;
+}
+
+/** id есть в сборке — предмет или блок без предмета (в схему такой id писать можно) */
+export const inPack = (idx: ItemIndex | null | undefined, id: string) =>
+  !!idx && (idx.byId.has(id) || idx.blocks.has(id));
+
+/**
+ * Можно поставить в схему: блок без предмета или предмет, который ещё и блок. Механический ремень (предмет
+ * create:belt_connector) — не блок: в схеме он превращается в пустоту, ставить надо create:belt.
+ */
+export const isBlock = (idx: ItemIndex | null | undefined, id: string) =>
+  !!idx && (idx.blocks.has(id) || (idx.byId.has(id) && (!idx.blockInfo || !!idx.byId.get(id)!.b)));
+
+/** Предмет, которым ставят блок: сам блок-предмет или предмет из добычи блока без предмета */
+export function placedBy(idx: ItemIndex | null | undefined, id: string): McItem | undefined {
+  const it = idx?.byId.get(id);
+  if (it || !idx) return it;
+  const d = idx.blocks.get(id)?.d?.[0];
+  return d ? idx.byId.get(d) : undefined;
+}
+
+/**
+ * Запись для показа блока схемы: предмет с тем же id, а у блока без предмета — его имя с иконкой предмета,
+ * которым его ставят (ремень → иконка механического ремня).
+ */
+export function blockEntry(idx: ItemIndex | null | undefined, id: string): McItem | undefined {
+  const it = idx?.byId.get(id);
+  if (it || !idx) return it;
+  const b = idx.blocks.get(id);
+  if (!b) return undefined;
+  const by = placedBy(idx, id);
+  return { ...(by ? { t: by.t, g: by.g } : {}), i: b.i, e: b.e, ...(b.r ? { r: b.r } : {}) };
 }
 
 export const itemName = (it: McItem | undefined, fallbackId?: string) => (it ? (it.r ?? it.e) : (fallbackId ?? '?'));

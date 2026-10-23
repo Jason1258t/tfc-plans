@@ -98,7 +98,7 @@ function multiplier(id: string, p: Record<string, string>): number {
   return 1;
 }
 
-/** Блок → предмет: прямое совпадение, таблица, затем правила по имени */
+/** Блок → предмет: прямое совпадение, таблица, правила по имени, затем добыча блока (blocks.json) */
 function itemFor(block: string, items: ItemIndex | null): { id: string; known: boolean } {
   const has = (id: string) => !items || items.byId.has(id);
   if (has(block)) return { id: block, known: true };
@@ -116,6 +116,9 @@ function itemFor(block: string, items: ItemIndex | null): { id: string; known: b
   for (const v of variants) {
     if (v && v !== path && has(`${ns}:${v}`)) return { id: `${ns}:${v}`, known: true };
   }
+  // Блок без предмета из данных сборки: что с него падает, тем и ставят (шлюз на ремне ← шлюз, силовой вал ← вал)
+  const drop = items?.blocks.get(block)?.d?.[0];
+  if (drop && has(drop)) return { id: drop, known: true };
   return { id: block, known: false };
 }
 

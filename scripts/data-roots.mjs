@@ -7,6 +7,7 @@
 /** Что собирает npm run mods (scripts/mods.mjs) */
 export const MODS_OUTPUTS = [
   'items.json',
+  'blocks.json',
   'icons',
   'recipes.json',
   'reference.json',

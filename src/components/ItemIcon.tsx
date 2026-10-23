@@ -1,9 +1,9 @@
-import { guiIcon, itemName, textureUrl, useItems } from '../lib/items';
+import { blockEntry, guiIcon, itemName, textureUrl, useItems } from '../lib/items';
 import { cx } from '../lib/util';
 import { tooltipHandlers } from './Tooltip';
 
 interface Props {
-  /** id предмета (tfc:metal/ingot/copper) */
+  /** id предмета (tfc:metal/ingot/copper) или блока без предмета (create:belt — иконкой предмета, которым ставят) */
   id?: string;
   /** Либо прямой путь к текстуре внутри /icons (minecraft/item/book) */
   texture?: string;
@@ -15,7 +15,7 @@ interface Props {
 
 export function ItemIcon({ id, texture, size = 32, tip = true, className }: Props) {
   const items = useItems();
-  const item = id ? items?.byId.get(id) : undefined;
+  const item = id ? blockEntry(items, id) : undefined;
   const icon = texture ? { url: textureUrl(texture), smooth: false } : guiIcon(item);
   const url = icon?.url;
   const handlers = tip && id ? tooltipHandlers(itemName(item, id), id) : {};

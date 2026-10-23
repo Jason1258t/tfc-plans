@@ -25,6 +25,7 @@ const log = (...a) => console.log('[pack:fetch]', ...a);
 /** Что в public/ собирает npm run mods — только это берём из данных сервера (как MODS_OUTPUTS в ensure-mods) */
 export const MODS_OUTPUTS = [
   'items.json',
+  'blocks.json',
   'icons',
   'recipes.json',
   'reference.json',

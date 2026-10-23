@@ -1,4 +1,4 @@
-import { textureUrl, type ItemIndex } from './items';
+import { placedBy, textureUrl, type ItemIndex } from './items';
 import { EMPTY_BLOCKS, REMOVE, type Schematic } from './schematic';
 import { buildGrid, namesByState, propsByState, stateOf } from './schematicEdit';
 
@@ -197,7 +197,7 @@ const known = (items: ItemIndex) =>
 function texturesOf(id: string, items: ItemIndex): { side: string | null; top: string | null } {
   const [ns, path = ''] = id.split(':');
   const has = known(items);
-  const t = items.byId.get(id)?.t;
+  const t = placedBy(items, id)?.t;
   const pick = (...c: (string | undefined)[]) => c.find((x): x is string => !!x && has.has(x)) ?? null;
   const block = `${ns}/block/${path}`;
   const side = pick(t?.includes('/block/') ? t : undefined, block, `${block}_side`, t);

@@ -2,7 +2,7 @@ import { ArrowRight, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { replaceFavoritesStore } from '../data/store';
 import { deriveVariants } from '../lib/replaceFavorites';
-import { itemName, type ItemIndex } from '../lib/items';
+import { blockEntry, isBlock, itemName, type ItemIndex } from '../lib/items';
 import type { ReplaceFavorite } from '../types';
 import { ItemIcon } from './ItemIcon';
 import { Modal } from './Modal';
@@ -23,7 +23,7 @@ const Block = ({ id, items }: { id: string; items: ItemIndex | null }) => (
   <span className="fav-block">
     <ItemIcon id={id} size={22} tip={false} />
     <span className="grow schem-names">
-      <span className="schem-name">{itemName(items?.byId.get(id), id)}</span>
+      <span className="schem-name">{itemName(blockEntry(items, id), id)}</span>
       <code className="schem-id">{id}</code>
     </span>
   </span>
@@ -45,6 +45,14 @@ export function FavoritesPanel({ favorites, items }: { favorites: ReplaceFavorit
               <Block id={f.from} items={items} />
               <ArrowRight size={15} className="schem-arrow" />
               <Block id={f.to} items={items} />
+              {items && !isBlock(items, f.to) && (
+                <span
+                  className="tag"
+                  title="Это предмет, а не блок: в схеме он стал бы пустотой. Замена не подставляется"
+                >
+                  не блок
+                </span>
+              )}
               <button
                 className="btn ghost sm icon"
                 aria-label="Убрать из избранного"

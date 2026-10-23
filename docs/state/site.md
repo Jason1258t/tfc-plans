@@ -84,6 +84,14 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
 - Shape on download: crop to outermost blocks, margins (sides/bottom/top), «очистить пространство» = explicit air in
   all free cells (not for multi-palette schematics, up to 2M cells). Platform: N layers of a chosen block under the
   schematic (below the bottom margin); «пустая» — solid top layer, below only the perimeter without a floor.
+- **Blocks without an item** (2026-10-23, task GiAd4ombssZTQL3l26WL): `public/blocks.json` (`scripts/mods/blocks.mjs`:
+  blockstate files of all jars + vanilla, item from `loot_table/blocks/…`, fallback without `wall_`) — create:belt,
+  belt funnels, powered shaft, glass/encased pipes, piston head, wall torches/signs, potted plants are recognised (name +
+  icon of the placing item, `blockEntry`/`placedBy` in `lib/items.ts`) and counted as that item in task materials.
+  Replacement targets must be blocks (`isBlock`: block-only or item with `b`): pickers in the editor and layers show
+  only blocks, the agent gets only blocks, download refuses non-block targets, favourites mark them «не блок» (the
+  shared favourite `create:belt → create:belt_connector` turned belts into nothing). Old data without `b` — no check.
+  Browser-checked on library schematic ore2dust_compact with a local build; in game not checked.
 - **Favourite replacements** (`replaceFavorites`, shared): ★ on a replacement, smart completion — stairs/slabs/fences
   by name `<base>_<kind>` (`lib/replaceFavorites.ts`), batch apply with a choice when a block has several variants.
   Not checked in game.
