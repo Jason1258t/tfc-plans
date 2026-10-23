@@ -254,7 +254,9 @@ the step is centred.
 - `/stats` — hidden route (not in the menu): period today/7/30, tiles, visits per day, sections (views, people, time
   from view→next view/hide, idle capped at 30 min), actions, «искали и не нашли», frequent searches, people → visit
   timeline. Reads: one doc per day + visits of the period.
-- Retention: TTL policy on `visits.expireAt` (90 days) in `firestore.indexes.json`; `events` excluded from indexing.
+- Retention: `visits.expireAt` = start + 90 days. TTL policy needs Blaze (deploy got 403 «billing disabled»), so
+  `/stats` deletes expired visits on open (`purgeExpired`, ≤ 200 per open; rules allow deleting any expired visit).
+  `events` excluded from indexing (`firestore.indexes.json`).
   Rules: visit written only by its uid; day docs — only known keys (increments themselves are not enforced).
 
 ## World map and pack updates

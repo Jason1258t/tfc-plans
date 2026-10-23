@@ -2,7 +2,15 @@ import { collection, documentId, getDocs, orderBy, query, where } from 'firebase
 import { RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { authReady, db } from '../firebase';
-import { analyticsOff, flush, setAnalyticsOff, type Visit, type VisitDay, type VisitEvent } from '../data/analytics';
+import {
+  analyticsOff,
+  flush,
+  purgeExpired,
+  setAnalyticsOff,
+  type Visit,
+  type VisitDay,
+  type VisitEvent,
+} from '../data/analytics';
 import { cx } from '../lib/util';
 import './StatsPage.css';
 
@@ -217,6 +225,14 @@ export function StatsPage() {
     void load();
   }, [load]);
 
+  // Уборка просроченных заходов (старше 90 дней) — раз при открытии страницы
+  useEffect(() => {
+    purgeExpired().then(
+      (n) => n && console.info(`Статистика: удалено старых заходов — ${n}`),
+      (e) => console.warn('Статистика: старые заходы не удалились:', e),
+    );
+  }, []);
+
   const toggleOff = (v: boolean) => {
     setAnalyticsOff(v);
     setOff(v);
@@ -313,8 +329,9 @@ export function StatsPage() {
       <div className="stats-head">
         <h1>Статистика сайта</h1>
         <p className="faint small">
-          Кто заходит, какие разделы открывает и что делает. Подробные заходы хранятся 90 дней, дневные счётчики —
-          всегда. Не считаются: dev-сервер, ник ClaudeTest и браузеры с флажком ниже.
+          Кто заходит, какие разделы открывает и что делает. Подробные заходы хранятся 90 дней (старые удаляются при
+          открытии этой страницы), дневные счётчики — всегда. Не считаются: dev-сервер, ник ClaudeTest и браузеры с
+          флажком ниже.
         </p>
       </div>
 
