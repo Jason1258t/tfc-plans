@@ -724,7 +724,7 @@ export function SchematicLayers({
     if (!selectClick(idx, pos!.join(','), e.shiftKey, e.timeStamp, true)) setSel({ of: s, cells: new Set([idx]) });
   };
   /**
-   * 3D, Alt+рамка: объект в ней (см. frameObject) — новое выделение; с Shift — добавить, а если всё уже выделено — снять
+   * 3D, рамка ЛКМ: объект в ней (см. frameObject) — новое выделение; с Shift — добавить, а если всё уже выделено — снять
    */
   const frame3d = (inFrame: (p: Vec) => boolean, e: { shiftKey: boolean }) => {
     lastClick.current = null;
@@ -1006,9 +1006,9 @@ export function SchematicLayers({
                 onFrame={frame3d}
               />
               <div className="layers-hint faint small">
-                Клик — выделить блок · двойной клик — группу · Alt+рамка — выделить объект (без пола и стен) · Shift —
-                добавить, повторно — снять · Delete — убрать · ЛКМ — вращать · ПКМ — сдвигать · колесо — масштаб · ↑↓ —
-                слой среза · формы блоков упрощены
+                Клик — выделить блок · двойной клик — группу · рамка ЛКМ — выделить объект (без пола и стен) · Shift —
+                добавить, повторно — снять · Delete — убрать · зажатое колесо (или Alt+ЛКМ) — вращать вокруг точки под
+                курсором · ПКМ — сдвигать · колесо — масштаб · ↑↓ — слой среза · формы блоков упрощены
               </div>
             </Suspense>
           )}

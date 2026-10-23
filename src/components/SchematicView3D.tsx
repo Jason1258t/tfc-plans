@@ -18,7 +18,7 @@ interface Props {
   onPick?: (pos: Vec | null, e: { shiftKey: boolean; timeStamp: number }) => void;
   /** Блок под курсором (null — нет) */
   onHover?: (pos: Vec | null) => void;
-  /** Alt+перетаскивание — рамка: inFrame проверяет, попадает ли центр блока в неё (по всей глубине) */
+  /** Перетаскивание ЛКМ — рамка: inFrame проверяет, попадает ли центр блока в неё (по всей глубине) */
   onFrame?: (inFrame: (pos: Vec) => boolean, e: { shiftKey: boolean }) => void;
 }
 
@@ -30,7 +30,7 @@ interface Rect {
   y1: number;
 }
 
-/** Сдвиг мыши, после которого нажатие — поворот камеры, а не клик */
+/** Сдвиг мыши, после которого нажатие ЛКМ — рамка, а не клик */
 const CLICK_PX = 4;
 
 function disposeMarks(m: THREE.InstancedMesh) {
@@ -40,7 +40,8 @@ function disposeMarks(m: THREE.InstancedMesh) {
 }
 
 /**
- * 3D-просмотр схемы: упрощённые формы блоков, вращение ЛКМ, сдвиг ПКМ, масштаб колесом.
+ * 3D-просмотр схемы: упрощённые формы блоков, вращение зажатым колесом вокруг точки под курсором, сдвиг ПКМ,
+ * масштаб колесом к курсору, ЛКМ — клик и рамка.
  * Рисует только при движении камеры или смене схемы — в покое видеокарту не грузит.
  */
 export default function SchematicView3D({
@@ -90,6 +91,10 @@ export default function SchematicView3D({
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 5000);
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = false;
+    // Вращение и ЛКМ — свои (ниже); OrbitControls — сдвиг ПКМ и зум колесом к курсору
+    controls.mouseButtons = { LEFT: null, MIDDLE: null, RIGHT: THREE.MOUSE.PAN };
+    controls.zoomToCursor = true;
+    controls.zoomSpeed = 2.5;
     const render = () => renderer.render(scene, camera);
     controls.addEventListener('change', render);
     const resize = () => {
@@ -113,15 +118,18 @@ export default function SchematicView3D({
 
     // Блок под курсором: луч до геометрии схемы, чуть дальше точки попадания — внутрь грани
     const ray = new THREE.Raycaster();
-    const blockAt = (e: PointerEvent): Vec | null => {
+    const hitAt = (e: PointerEvent) => {
       const mesh = three.current?.mesh;
-      if (!mesh) return null;
+      if (!mesh) return undefined;
       const r = renderer.domElement.getBoundingClientRect();
       ray.setFromCamera(
         new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1),
         camera,
       );
-      const hit = ray.intersectObject(mesh, false)[0];
+      return ray.intersectObject(mesh, false)[0];
+    };
+    const blockAt = (e: PointerEvent): Vec | null => {
+      const hit = hitAt(e);
       if (!hit) return null;
       const p = hit.point.addScaledVector(ray.ray.direction, 0.01);
       return [Math.floor(p.x), Math.floor(p.y), Math.floor(p.z)];
@@ -136,18 +144,64 @@ export default function SchematicView3D({
       hoverRef.current?.(pos);
     };
 
-    let down: { x: number; y: number } | null = null;
+    /**
+     * Точка вращения — как «Auto Depth» в Blender и вращение вокруг курсора в CAD: блок под курсором в момент нажатия.
+     * Мимо схемы — точка на луче под курсором на глубине прежнего центра (учитывает зум и положение камеры),
+     * прижатая к габаритам схемы, чтобы не крутиться вокруг пустоты.
+     */
+    const fwd = new THREE.Vector3();
+    const pivotFor = (e: PointerEvent) => {
+      const hit = hitAt(e);
+      if (hit) return hit.point.clone();
+      const mesh = three.current?.mesh;
+      if (!mesh) return controls.target.clone();
+      camera.getWorldDirection(fwd);
+      const depth = controls.target.clone().sub(camera.position).dot(fwd);
+      const cos = ray.ray.direction.dot(fwd);
+      const p = ray.ray.at(Math.max(0.5, depth) / Math.max(0.1, cos), new THREE.Vector3());
+      if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+      return mesh.geometry.boundingBox ? mesh.geometry.boundingBox.clampPoint(p, p) : p;
+    };
+    // Метка точки вращения — видна, пока крутим
+    const pivotMark = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 12, 8),
+      new THREE.MeshBasicMaterial({
+        color: getComputedStyle(wrap).getPropertyValue('--accent').trim() || '#4c8a2b',
+        depthTest: false,
+        transparent: true,
+        opacity: 0.85,
+      }),
+    );
+    pivotMark.renderOrder = 2;
+    pivotMark.visible = false;
+    scene.add(pivotMark);
+    const up = new THREE.Vector3(0, 1, 0);
+    const right = new THREE.Vector3();
+    const q = new THREE.Quaternion();
+    const turn = (pivot: THREE.Vector3, axis: THREE.Vector3, angle: number) => {
+      q.setFromAxisAngle(axis, angle);
+      camera.position.sub(pivot).applyQuaternion(q).add(pivot);
+      camera.quaternion.premultiply(q);
+    };
+    /** Поворот камеры вокруг pivot: по горизонтали — вокруг вертикали, по вертикали — без переворота через полюс */
+    const orbit = (pivot: THREE.Vector3, dx: number, dy: number) => {
+      const h = wrap.clientHeight || 1;
+      camera.getWorldDirection(fwd);
+      const pitch = Math.asin(THREE.MathUtils.clamp(fwd.y, -1, 1));
+      const lim = Math.PI / 2 - 0.02;
+      const next = THREE.MathUtils.clamp(pitch - (2 * Math.PI * dy) / h, -lim, lim);
+      turn(pivot, right.set(1, 0, 0).applyQuaternion(camera.quaternion), next - pitch);
+      turn(pivot, up, (-2 * Math.PI * dx) / h);
+      // Центр OrbitControls — на оси взгляда на глубине точки вращения: зум и сдвиг дальше идут от неё
+      camera.getWorldDirection(fwd);
+      const depth = Math.max(0.5, pivot.clone().sub(camera.position).dot(fwd));
+      controls.target.copy(camera.position).addScaledVector(fwd, depth);
+      camera.updateMatrixWorld();
+      render();
+    };
+
     let frame = 0;
     let last: PointerEvent | null = null;
-    const onDown = (e: PointerEvent) => {
-      down = e.button === 0 ? { x: e.clientX, y: e.clientY } : null;
-    };
-    const onUp = (e: PointerEvent) => {
-      const d = down;
-      down = null;
-      if (!d || e.button !== 0 || Math.hypot(e.clientX - d.x, e.clientY - d.y) >= CLICK_PX) return;
-      pickRef.current?.(blockAt(e), { shiftKey: e.shiftKey, timeStamp: e.timeStamp });
-    };
     // Наведение — не чаще кадра, и не во время поворота камеры
     const onMove = (e: PointerEvent) => {
       last = e;
@@ -159,43 +213,83 @@ export default function SchematicView3D({
     };
     const onLeave = () => showCursor(null);
 
-    // Alt+ЛКМ — рамка объекта: перехватываем нажатие до OrbitControls (захват на обёртке), камера стоит
-    let frameStart: { x: number; y: number; id: number } | null = null;
+    /**
+     * Мышь: колесо (или Alt+ЛКМ — для тачпада) — вращение вокруг точки под курсором; ЛКМ — клик выбирает блок,
+     * перетаскивание — рамка. Перехватываем до OrbitControls (захват на обёртке); ему остаются ПКМ и колесо-зум.
+     */
+    let gesture: {
+      id: number;
+      x: number;
+      y: number;
+      lx: number;
+      ly: number;
+      pivot: THREE.Vector3 | null;
+      framing: boolean;
+    } | null = null;
     const local = (e: PointerEvent) => {
       const r = wrap.getBoundingClientRect();
       return { x: e.clientX - r.left, y: e.clientY - r.top };
     };
-    const onFrameDown = (e: PointerEvent) => {
-      if (e.button !== 0 || !e.altKey || !frameRef.current) return;
+    const onGestureDown = (e: PointerEvent) => {
+      if (gesture || e.pointerType !== 'mouse' || e.target !== renderer.domElement) return;
+      const rotate = e.button === 1 || (e.button === 0 && e.altKey);
+      if (!rotate && e.button !== 0) return;
       e.stopPropagation();
       e.preventDefault();
       const p = local(e);
-      frameStart = { ...p, id: e.pointerId };
-      setRect({ x0: p.x, y0: p.y, x1: p.x, y1: p.y });
-      showCursor(null);
-      window.addEventListener('pointermove', onFrameMove);
-      window.addEventListener('pointerup', onFrameUp);
-      window.addEventListener('pointercancel', onFrameCancel);
+      gesture = { id: e.pointerId, ...p, lx: e.clientX, ly: e.clientY, pivot: null, framing: false };
+      if (rotate) {
+        const pivot = pivotFor(e);
+        gesture.pivot = pivot;
+        pivotMark.position.copy(pivot);
+        pivotMark.scale.setScalar(Math.max(0.06, camera.position.distanceTo(pivot) * 0.008));
+        pivotMark.visible = true;
+        showCursor(null);
+        render();
+      }
+      window.addEventListener('pointermove', onGestureMove);
+      window.addEventListener('pointerup', onGestureUp);
+      window.addEventListener('pointercancel', onGestureCancel);
     };
-    const onFrameMove = (e: PointerEvent) => {
-      if (!frameStart || e.pointerId !== frameStart.id) return;
+    const onGestureMove = (e: PointerEvent) => {
+      const g = gesture;
+      if (!g || e.pointerId !== g.id) return;
+      if (g.pivot) {
+        orbit(g.pivot, e.clientX - g.lx, e.clientY - g.ly);
+        g.lx = e.clientX;
+        g.ly = e.clientY;
+        return;
+      }
       const p = local(e);
-      setRect({ x0: frameStart.x, y0: frameStart.y, x1: p.x, y1: p.y });
+      if (!g.framing && frameRef.current && Math.hypot(p.x - g.x, p.y - g.y) >= CLICK_PX) {
+        g.framing = true;
+        showCursor(null);
+      }
+      if (g.framing) setRect({ x0: g.x, y0: g.y, x1: p.x, y1: p.y });
     };
-    const endFrame = () => {
-      frameStart = null;
+    const endGesture = () => {
+      gesture = null;
       setRect(null);
-      window.removeEventListener('pointermove', onFrameMove);
-      window.removeEventListener('pointerup', onFrameUp);
-      window.removeEventListener('pointercancel', onFrameCancel);
+      if (pivotMark.visible) {
+        pivotMark.visible = false;
+        render();
+      }
+      window.removeEventListener('pointermove', onGestureMove);
+      window.removeEventListener('pointerup', onGestureUp);
+      window.removeEventListener('pointercancel', onGestureCancel);
     };
-    const onFrameCancel = () => endFrame();
-    const onFrameUp = (e: PointerEvent) => {
-      const st = frameStart;
+    const onGestureCancel = () => endGesture();
+    const onGestureUp = (e: PointerEvent) => {
+      const st = gesture;
       if (!st || e.pointerId !== st.id) return;
-      endFrame();
+      endGesture();
+      if (st.pivot) return;
       const p = local(e);
-      if (Math.hypot(p.x - st.x, p.y - st.y) < CLICK_PX) return;
+      if (!st.framing) {
+        if (Math.hypot(p.x - st.x, p.y - st.y) < CLICK_PX)
+          pickRef.current?.(blockAt(e), { shiftKey: e.shiftKey, timeStamp: e.timeStamp });
+        return;
+      }
       // Рамка в координатах экрана −1…1; блок — в рамке, если туда проецируется его центр и он перед камерой
       const w = wrap.clientWidth;
       const h = wrap.clientHeight;
@@ -212,24 +306,26 @@ export default function SchematicView3D({
       };
       frameRef.current?.(inFrame, { shiftKey: e.shiftKey });
     };
-    wrap.addEventListener('pointerdown', onFrameDown, { capture: true });
+    // Средняя кнопка в Windows включает автопрокрутку — гасим
+    const noAutoscroll = (e: MouseEvent) => e.button === 1 && e.preventDefault();
+    wrap.addEventListener('pointerdown', onGestureDown, { capture: true });
+    wrap.addEventListener('mousedown', noAutoscroll);
 
     const el = renderer.domElement;
-    el.addEventListener('pointerdown', onDown);
-    el.addEventListener('pointerup', onUp);
     el.addEventListener('pointermove', onMove);
     el.addEventListener('pointerleave', onLeave);
 
     return () => {
       cancelAnimationFrame(frame);
-      endFrame();
-      wrap.removeEventListener('pointerdown', onFrameDown, { capture: true });
-      el.removeEventListener('pointerdown', onDown);
-      el.removeEventListener('pointerup', onUp);
+      endGesture();
+      wrap.removeEventListener('pointerdown', onGestureDown, { capture: true });
+      wrap.removeEventListener('mousedown', noAutoscroll);
       el.removeEventListener('pointermove', onMove);
       el.removeEventListener('pointerleave', onLeave);
       cursor.geometry.dispose();
       (cursor.material as THREE.Material).dispose();
+      pivotMark.geometry.dispose();
+      (pivotMark.material as THREE.Material).dispose();
       ro.disconnect();
       controls.dispose();
       if (three.current?.mesh) disposeMesh(three.current.mesh);
