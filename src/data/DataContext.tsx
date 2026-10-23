@@ -9,7 +9,10 @@ interface Data {
   groups: Group[];
   artifacts: Artifact[];
   files: FileMeta[];
+  /** Справочник заходивших на сайт (users/{ник}) */
   users: SiteUser[];
+  /** Все известные ники: заходившие + авторы/исполнители задач, авторы документов и групп */
+  people: SiteUser[];
   loading: boolean;
   error: string | null;
   nick: string;
@@ -45,6 +48,27 @@ export function DataProvider({ nick, children }: { nick: string; children: React
     return () => unsubs.forEach((u) => u());
   }, []);
 
+  // «Люди» — не только заходившие браузером: агенты и игроки, назначенные на задачи, тоже видны
+  // (у них lastSeen = 0 — «только в задачах»)
+  const people = useMemo<SiteUser[]>(() => {
+    const map = new Map<string, SiteUser>();
+    for (const u of users) map.set(u.id, u);
+    const add = (name?: string | null) => {
+      if (!name || map.has(name)) return;
+      map.set(name, { id: name, nick: name, uid: null, firstSeen: 0, lastSeen: 0 });
+    };
+    for (const t of tasks ?? []) {
+      add(t.author);
+      add(t.assignee);
+    }
+    for (const g of groups ?? []) add(g.author);
+    for (const a of artifacts ?? []) {
+      add(a.author);
+      add(a.updatedBy);
+    }
+    return [...map.values()];
+  }, [users, tasks, groups, artifacts]);
+
   const value = useMemo<Data>(
     () => ({
       tasks: tasks ?? [],
@@ -52,11 +76,12 @@ export function DataProvider({ nick, children }: { nick: string; children: React
       artifacts: artifacts ?? [],
       files,
       users,
+      people,
       loading: !tasks || !groups || !artifacts,
       error,
       nick,
     }),
-    [tasks, groups, artifacts, files, users, error, nick],
+    [tasks, groups, artifacts, files, users, people, error, nick],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
