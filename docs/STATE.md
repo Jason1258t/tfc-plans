@@ -18,8 +18,6 @@ When finishing work: update the topic file, and this index only if a line below 
 
 ## In progress / waiting (details — [pending.md](state/pending.md))
 
-- Pack server (VPS): update code for addon versions (`/site/addons`, `POST /admin/addons`) — until then `tfc` gets
-  only current addon versions from the site.
 - Host: pack update `u20261022-150945-83a0` (Chinese KubeJS messages → ru/en): `tfc admin updates pull`, check in game,
   `tfc admin updates approve`.
 - Host: install **EE Extras 2.3** (2.2 + compact generator), **Small Diesel 1.0.0** and **IE Extras 1.0.0** + `tfc publish`; warn players
