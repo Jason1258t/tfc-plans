@@ -32,6 +32,7 @@ import { isCuisineClass, isCuisineData } from './mods/cuisine.mjs';
 import { writePower } from './mods/power.mjs';
 import { writeMultiblocks } from './mods/multiblocks.mjs';
 import { makeRenderer } from './mods/icons3d.mjs';
+import { writeBlockModels } from './mods/block-models.mjs';
 import { platformAssets } from './mods/platform-assets.mjs';
 import { MODS as MCP_MODS } from './mcp/data.mjs';
 import { platform, setPlatformAssets } from './mcp/jars.mjs';
@@ -105,8 +106,9 @@ async function fetchBuffer(url) {
 /** Скачивает client.jar и вытаскивает models/textures/lang en_us; ru_ru берёт из asset index */
 async function prepareVanilla() {
   const dir = path.join(CACHE, `minecraft-${MC_VERSION}`);
-  // .done-v4 — кеш с рецептами и тегами предметов/жидкостей/блоков (v1 — только ассеты, v2 — без тегов, v3 — только item)
-  const done = path.join(dir, '.done-v4');
+  // .done-v5 — плюс blockstates (v4 — с рецептами и тегами предметов/жидкостей/блоков, v1 — только ассеты, v2 — без
+  // тегов, v3 — только item)
+  const done = path.join(dir, '.done-v5');
   if (fs.existsSync(done) && !fresh) return dir;
   fs.rmSync(dir, { recursive: true, force: true });
   log(`vanilla ${MC_VERSION}: читаю манифест версий`);
@@ -118,7 +120,7 @@ async function prepareVanilla() {
   log('vanilla: качаю client.jar (~25MB)');
   const zip = new AdmZip(await fetchBuffer(meta.downloads.client.url));
   const wanted =
-    /^(assets\/minecraft\/(models\/(item|block)\/|textures\/(item|block)\/|lang\/en_us\.json)|data\/minecraft\/(recipe|tags\/(item|fluid|block|entity_type))\/.+\.json$)/;
+    /^(assets\/minecraft\/(models\/(item|block)\/|blockstates\/|textures\/(item|block)\/|lang\/en_us\.json)|data\/minecraft\/(recipe|tags\/(item|fluid|block|entity_type))\/.+\.json$)/;
   for (const entry of zip.getEntries()) {
     if (entry.isDirectory || !wanted.test(entry.entryName)) continue;
     const target = path.join(dir, entry.entryName);
@@ -240,7 +242,7 @@ function prepareJar(file) {
   const key = `${path.basename(file, '.jar')}-${st.size}-${Math.round(st.mtimeMs)}`.replace(/[^\w.+-]/g, '_');
   const dir = path.join(CACHE, 'jars', key);
   // v20 — плюс данные и классы сковороды Cuisine Delight; v19 — плюс классы тегов модов; v18 — плюс помощники и конфиги блюд аддонов; v17 — плюс классы сборных блюд; v16 — плюс классы полива теплицы; v15 — плюс классы грядок теплицы; v14 — плюс перечисление черт еды; v13 — плюс уровни теплицы; v12 — плюс растения теплицы Firmalife и классы конфигов аддонов; v11 — плюс loot-таблицы растений и их размещение в мире; v10 — плюс классы календаря; v9 — плюс классы конфигов; v8 — плюс классы растений (classes/) для ботаники; v7 — плюс климатические диапазоны растений TFC; v6 — плюс теги, жилы, данные TFC для справочника, география TFC Real World и жидкое топливо; теги блоков и сущностей
-  const done = path.join(dir, '.done-v22'); // v21 — ещё .obj/.mtl моделей, v22 — и .obj.ie IE, и .png.mcmeta (объёмные иконки)
+  const done = path.join(dir, '.done-v23'); // v21 — ещё .obj/.mtl моделей, v22 — и .obj.ie IE, и .png.mcmeta (объёмные иконки), v23 — blockstates (модели блоков схем)
   if (!fs.existsSync(done) || fresh) {
     fs.rmSync(dir, { recursive: true, force: true });
     let zip;
@@ -253,7 +255,7 @@ function prepareJar(file) {
     // Рецепты — только папка recipe/ (1.21); recipes/ в некоторых jar — остатки 1.20, игра их не читает.
     // Для справочника: теги предметов, конфиги жил, данные TFC (топливо, еда, нагрев).
     const wanted =
-      /^(assets\/[a-z0-9_.-]+\/(models\/.+\.(json|obj|obj\.ie|mtl)|textures\/.+\.png(\.mcmeta)?|lang\/(en_us|ru_ru)\.json)|data\/[a-z0-9_.-]+\/(recipe\/.+|tags\/(item|fluid|block|entity_type)\/.+|createdieselgenerators\/fuel_type\/.+|createliquidfuel\/compat\/.+|worldgen\/configured_feature\/(vein\/.+|[^/]*vein[^/]*)|tfc\/(fuel|food|fluid_heat|climate_range)\/.+|cuisinedelight_config\/ingredient\/.+|cuisinetfc\/cooked_food\/.+|firmalife\/(plantable|greenhouse)\/.+|loot_table\/blocks\/(crop|plant)\/.+|worldgen\/placed_feature\/plant\/.+|geography\/.+|profiles\/.+\/settings)\.json|data\/[a-z0-9_.-]+\/profiles\/.+\/maps\/(continent|altitude|koppen|temperature|rainfall)\.png)$/;
+      /^(assets\/[a-z0-9_.-]+\/(models\/.+\.(json|obj|obj\.ie|mtl)|blockstates\/.+\.json|textures\/.+\.png(\.mcmeta)?|lang\/(en_us|ru_ru)\.json)|data\/[a-z0-9_.-]+\/(recipe\/.+|tags\/(item|fluid|block|entity_type)\/.+|createdieselgenerators\/fuel_type\/.+|createliquidfuel\/compat\/.+|worldgen\/configured_feature\/(vein\/.+|[^/]*vein[^/]*)|tfc\/(fuel|food|fluid_heat|climate_range)\/.+|cuisinedelight_config\/ingredient\/.+|cuisinetfc\/cooked_food\/.+|firmalife\/(plantable|greenhouse)\/.+|loot_table\/blocks\/(crop|plant)\/.+|worldgen\/placed_feature\/plant\/.+|geography\/.+|profiles\/.+\/settings)\.json|data\/[a-z0-9_.-]+\/profiles\/.+\/maps\/(continent|altitude|koppen|temperature|rainfall)\.png)$/;
     const entries = zip.getEntries();
     for (const entry of entries) {
       if (entry.isDirectory || !wanted.test(entry.entryName)) continue;
@@ -724,6 +726,35 @@ export async function buildMods({
     if (tex) copyIcon(tex);
     else log(`UI-текстура не найдена: ${ref}`);
   }
+
+  // Модели блоков для схем (blocks/<ns>.json), текстуры граней — в icons/
+  const blockstates = [];
+  for (const [ns, roots] of assetRoots) {
+    const seenBs = new Set();
+    for (const root of roots) {
+      const dir = path.join(root, ns, 'blockstates');
+      if (!fs.existsSync(dir)) continue;
+      for (const f of fs.readdirSync(dir, { recursive: true })) {
+        const rel = String(f).split(path.sep).join('/');
+        if (!rel.endsWith('.json') || seenBs.has(rel)) continue;
+        seenBs.add(rel);
+        blockstates.push({ ns, path: rel.slice(0, -5) });
+      }
+    }
+  }
+  const blockModels = writeBlockModels({
+    layers: icons3d.layers,
+    blockstates,
+    outDir: path.join(outDir, 'blocks'),
+    iconsDir: OUT_ICONS,
+    copyTexture: (id) => {
+      const { ns, p } = splitId(id);
+      const file = findAsset(ns, `textures/${p}.png`);
+      return file ? copyIcon({ ns, p, file }) : null;
+    },
+    log,
+  });
+  for (const w of blockModels.warnings) log(`  модели блоков: ${w}`);
 
   // Предметы, которых игрок не видит (мод их выключает или прячет из JEI): в библиотеке с пометкой h — причина
   const vis = hiddenItems(

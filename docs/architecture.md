@@ -36,7 +36,7 @@ The site is a static SPA. All "pack knowledge" is built locally by scripts and d
 
 | Source (not in git) | Script | Output |
 | --- | --- | --- |
-| `mods/*.jar` (+ mods nested in `META-INF/jarjar/`) | `mods.mjs` (+ `reference`, `manifest`, `geo`, `tags`, `botany`, `meals`, `cuisine`, `power`, `multiblocks`, `icons3d`) | `public/items.json`, `icons/` (+ `icons/<ns>/render/` — 3D block icons), `recipes.json`, `reference.json`, `pack-manifest.json`, `geo.json`, `geo/`, `tags.json`, `botany.json`, `meals.json`, `power.json`, `multiblocks.json`, `multiblocks/` |
+| `mods/*.jar` (+ mods nested in `META-INF/jarjar/`) | `mods.mjs` (+ `reference`, `manifest`, `geo`, `tags`, `botany`, `meals`, `cuisine`, `power`, `multiblocks`, `icons3d`, `block-models`) | `public/items.json`, `icons/` (+ `icons/<ns>/render/` — 3D block icons; face textures of block models), `blocks/<ns>.json` (block models for schematics), `recipes.json`, `reference.json`, `pack-manifest.json`, `geo.json`, `geo/`, `tags.json`, `botany.json`, `meals.json`, `power.json`, `multiblocks.json`, `multiblocks/` |
 | `instance/kubejs/<layer>/` | `kubejs.mjs` | `public/kubejs.json`, `kubejs-items.json`, `icons-kubejs/` (pack items from startup_scripts + assets), `kubejs-data.json` (food and skillet from `kubejs/data` — the site replaces mod data with them) |
 | world save (`<world>/data/`) | `world.mjs` | Firestore `config/world__{file}` — TFC calendar (month length set by command) |
 | server config zip/folder | `serverconfig.mjs` | Firestore `config/{scope}__{path}` |

@@ -220,5 +220,5 @@ export function makeRenderer({ findAsset, outIcons, cacheDir, size = 96 }) {
     return rel;
   }
 
-  return { render, stats };
+  return { render, stats, layers };
 }
