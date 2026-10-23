@@ -11,7 +11,8 @@ import type { FileAdapter, StoredFile } from './fileStorage/types';
  * - если задан VITE_FILES_SERVER — свой сервер файлов (server/file-server).
  * Здесь — тонкая обёртка с API, к которому привыкли компоненты.
  */
-type Meta = { taskId: string | null; author: string };
+/** artifactId — картинка вставлена в план: план ей владелец, удаляется вместе с последней ссылкой (planImages) */
+type Meta = { taskId: string | null; author: string; artifactId?: string };
 export type FileMeta = StoredFile<Meta>;
 
 const serverUrl = import.meta.env.VITE_FILES_SERVER?.trim();
@@ -63,7 +64,7 @@ export function subscribeFiles(cb: (files: FileMeta[]) => void, onError?: (e: Er
 
 export async function uploadFile(
   file: File,
-  opts: { taskId: string | null; author: string },
+  opts: { taskId: string | null; author: string; artifactId?: string },
   onProgress?: (fraction: number) => void,
 ): Promise<string> {
   if (file.size > MAX_FILE_SIZE) throw new Error(`Файл больше ${formatSize(MAX_FILE_SIZE)}`);
