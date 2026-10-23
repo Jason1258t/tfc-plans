@@ -5,6 +5,7 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **Сервер сборки (VPS): обновить код** после feat/addon-versions (2026-10-23) — `/site/addons` и `POST /admin/addons`: без них `tfc` берёт аддоны со статики сайта (только текущие версии, без отката и закрепления), `tfc admin addon upload` отвечает 404. Обновление — `git pull` в /opt/tfc-pack и `sudo bash deploy/install.sh` (docs/pack-server.md).
 - **Pack translation `pack-patches/l10n/`** (2026-10-22): Chinese player-facing text in pack KubeJS scripts → lang keys
   (`Text.translatableWithFallback`, English fallback) + `kubejs/assets/kubejs/lang/{en_us,ru_ru}.json`: item cleaner
   broadcasts, 27 Create Ore Excavation vein names (ids unchanged), engine refuel, lectern/controller, obsidian, welcome,
