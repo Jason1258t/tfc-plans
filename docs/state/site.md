@@ -109,7 +109,19 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   layer view. Groups (layer and 3D) count face, edge and corner neighbours — curved shells step diagonally (airship
   envelope: 106 face-connected → 3904 with diagonals). Browser-tested on cargoairship: group 3904, Shift −1/+1, clear,
   remove (7250→3346 blocks) and undo. Delete / Backspace removes the selection (one undoable
-  edit; ignored while typing in a field) — browser-tested in 3D: 3904 removed, Ctrl+Z restored. Item 5 (3D «object» by frame) postponed by the user. Gotcha: after HMR the 3D
+  edit; ignored while typing in a field) — browser-tested in 3D: 3904 removed, Ctrl+Z restored. **3D object by frame** (2026-10-23, task «Вторая волна доработок редактора», rules from Jason's plan doc):
+  Alt+drag in 3D draws a frame (captured before OrbitControls; Shift+Alt toggles); `frameObject` in
+  `lib/schematicEdit.ts` takes every block whose centre projects into the frame at any depth (respects the slice) minus
+  background: air, schematic edges and planes. A plane = the frame-crossing blocks (in frame with a neighbour outside)
+  assigned to their most-populated axis plane, spread 2D, ≥70 % made of 1–2 materials, and continuing outside the frame
+  in ≥2 in-plane directions (a chimney wall continues only down); background = those materials flood-filled in that
+  plane. The object's own material doesn't matter; crossing non-planar things (shafts, belts, a clipped chimney) stay in
+  the object, cut by the frame. Known limit: a part flush with a background wall (right chimney of kinematic_factory)
+  is eaten as wall. Selection panel got «Умная замена» (page rules or agent, as configured) and «Из избранного» (first
+  favourite per id); `editCells` accepts a per-id mapping. Browser-tested: synthetic scenes (machine on mixed floor,
+  same-stone machine, brick barrel at brick wall, clipped frame), ore2dust_compact (137 machine blocks, floor and walls
+  left; Delete → 265 blocks, Ctrl+Z back; favourites 49, smart 94, undone), kinematic_factory left chimney. Frame
+  drawn with synthetic pointer events; not tried with a real mouse. Gotcha: after HMR the 3D
   view kept the old instance without listeners — reload the page when testing 3D changes. Tested with synthetic pointer events
   (the browser tool can't hold Shift while dragging): +80, −11, +50 → replace 119 with stone, undo. Next: picking in 3D. Cell edits change the source itself:
   «В библиотеку» uploads a new file and deletes the old one (saving edits to the library not browser-tested — shared

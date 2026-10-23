@@ -232,6 +232,15 @@
   pointer-events: none;
 }
 
+/* Рамка объекта (Alt+перетаскивание) */
+.view3d-frame {
+  position: absolute;
+  z-index: 1;
+  border: 2px dashed var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  pointer-events: none;
+}
+
 .view3d-error {
   position: absolute;
   top: 40px;

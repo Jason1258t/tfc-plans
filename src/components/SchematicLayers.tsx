@@ -8,7 +8,9 @@ import {
   Plus,
   Redo2,
   RotateCcw,
+  Sparkles,
   SquareDashedMousePointer,
+  Star,
   Trash2,
   Undo2,
   X,
@@ -24,6 +26,7 @@ import {
   cellInfo,
   connectedGroup,
   editCells,
+  frameObject,
   namesByState,
   posOfIndex,
   propsByState,
@@ -32,6 +35,7 @@ import {
   stateOf,
   undoEdit,
 } from '../lib/schematicEdit';
+import type { ReplaceFavorite } from '../types';
 import { cx } from '../lib/util';
 import { ItemIcon } from './ItemIcon';
 import { ItemPicker } from './ItemPicker';
@@ -47,6 +51,10 @@ interface Props {
   onChange: (s: Schematic) => void;
   /** Общая замена id во всех схемах (как в списке блоков); null — отменить */
   onSetTarget: (id: string, to: string | null) => void;
+  /** Избранные замены — подставить в выделенные блоки */
+  favorites: ReplaceFavorite[];
+  /** Умная замена (правила или агент, как настроено на странице): id → новый id */
+  smartTargets: (ids: string[]) => Promise<Map<string, string>>;
   onClose: () => void;
 }
 
@@ -143,7 +151,15 @@ interface Menu {
  * Shift+перетаскивание — рамка: блоки в ней (без воздуха) добавляются, а если все уже выделены — снимаются.
  * Выделение — набор блоков (индексы в списке blocks), общий для слоя и 3D; правка схемы его сбрасывает.
  */
-export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, onClose }: Props) {
+export function SchematicLayers({
+  schematic: s,
+  replace,
+  onChange,
+  onSetTarget,
+  favorites,
+  smartTargets,
+  onClose,
+}: Props) {
   const items = useItems();
   const grid = useMemo(() => buildGrid(s), [s]);
   const names = useMemo(() => namesByState(s), [s]);
@@ -175,7 +191,10 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
     for (const c of cells) next.delete(c);
     setSel({ of: s, cells: next });
   };
-  const clearSelection = () => setSel(null);
+  const clearSelection = () => (setSel(null), setSelNote(null));
+  /** Итог действия над выделением (умная замена, избранное) — строка в панели */
+  const [selNote, setSelNote] = useState<string | null>(null);
+  const [smartBusy, setSmartBusy] = useState(false);
   /** Клетки под ПКМ, пока кнопку не отпустили: рисуются убранными, применяются одной правкой */
   const [stroke, setStrokeState] = useState<Set<number> | null>(null);
   // Ref — события мыши приходят быстрее перерисовки, а набор нужен сразу
@@ -704,6 +723,22 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
     }
     if (!selectClick(idx, pos!.join(','), e.shiftKey, e.timeStamp, true)) setSel({ of: s, cells: new Set([idx]) });
   };
+  /**
+   * 3D, Alt+рамка: объект в ней (см. frameObject) — новое выделение; с Shift — добавить, а если всё уже выделено — снять
+   */
+  const frame3d = (inFrame: (p: Vec) => boolean, e: { shiftKey: boolean }) => {
+    lastClick.current = null;
+    const solid = (i: number) => {
+      const n = names[stateOf(s, i)];
+      const eff = n && effective(n);
+      return !!eff && eff !== REMOVE && !EMPTY_BLOCKS.has(eff);
+    };
+    const kind = (i: number) => effective(names[stateOf(s, i)] ?? '');
+    const cells = frameObject(grid, inFrame, solid, kind, cut ? layerY : undefined);
+    setSelNote(cells.length ? null : 'В рамке нет отдельного объекта');
+    if (!e.shiftKey) setSel(cells.length ? { of: s, cells: new Set(cells) } : null);
+    else toggle(cells, cells.length > 0 && cells.every((i) => selected.has(i)));
+  };
   const indexAtPos = ([x, y, z]: Vec) =>
     x >= 0 && z >= 0 && x < sx && z < sz ? (grid.layers.get(y)?.[x + z * sx] ?? -1) : -1;
 
@@ -732,6 +767,48 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
     changeCells(editCells(s, [...selected], to));
     clearSelection();
     setMenu(null);
+  };
+  /** Избранное: первая избранная цель по id в исходнике (или по общей замене), только из сборки */
+  const favoriteFor = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const f of favorites) if (!m.has(f.from) && items?.byId.has(f.to)) m.set(f.from, f.to);
+    return (name: string) => m.get(name) ?? m.get(effective(name));
+  }, [favorites, items, effective]);
+  const applyFavorites = () => {
+    const cells = [...selected];
+    const hit = cells.filter((i) => {
+      const n = names[stateOf(s, i)];
+      return !!n && !!favoriteFor(n);
+    }).length;
+    if (!hit) {
+      setSelNote('Для этих блоков нет избранных замен');
+      return;
+    }
+    changeCells(editCells(s, cells, favoriteFor));
+    clearSelection();
+    setSelNote(`Из избранного заменено ${hit} ${plural(hit)}`);
+  };
+  const applySmart = async () => {
+    const cells = [...selected];
+    const ids = [...new Set(cells.map((i) => names[stateOf(s, i)]).filter((n): n is string => !!n))];
+    setSmartBusy(true);
+    setSelNote(null);
+    try {
+      const map = await smartTargets(ids);
+      const ok = new Map([...map].filter(([, to]) => items?.byId.has(to)));
+      const hit = cells.filter((i) => ok.has(names[stateOf(s, i)] ?? '')).length;
+      if (!hit) {
+        setSelNote('Умная замена ничего не подобрала');
+        return;
+      }
+      changeCells(editCells(s, cells, (n) => ok.get(n)));
+      clearSelection();
+      setSelNote(`Умная замена: ${hit} ${plural(hit)}`);
+    } catch (err) {
+      setSelNote(`Умная замена не удалась: ${err instanceof Error ? err.message : err}`);
+    } finally {
+      setSmartBusy(false);
+    }
   };
   const selectedOnLayer = layer ? layer.reduce((a, i) => a + (i >= 0 && selected.has(i) ? 1 : 0), 0) : 0;
   const selectedPos = useMemo(
@@ -926,10 +1003,12 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
                 selected={selectedPos}
                 onPick={pick3d}
                 onHover={(p) => setHover3d(p ? indexAtPos(p) : -1)}
+                onFrame={frame3d}
               />
               <div className="layers-hint faint small">
-                Клик — выделить блок · двойной клик — группу · Shift — добавить, повторно — снять · ЛКМ — вращать · ПКМ
-                — сдвигать · колесо — масштаб · ↑↓ — слой среза · формы блоков упрощены
+                Клик — выделить блок · двойной клик — группу · Alt+рамка — выделить объект (без пола и стен) · Shift —
+                добавить, повторно — снять · Delete — убрать · ЛКМ — вращать · ПКМ — сдвигать · колесо — масштаб · ↑↓ —
+                слой среза · формы блоков упрощены
               </div>
             </Suspense>
           )}
@@ -951,6 +1030,16 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
             (можно провести) — убрать · колесо — масштаб · перетаскивание — сдвиг · ↑↓ — слои · Ctrl+Z / Ctrl+Shift+Z —
             отмена и повтор · Delete — убрать выделенное · Esc — снять выделение
           </div>
+          {selected.size === 0 && selNote && (
+            <div className="layers-selection small" role="status">
+              <div className="row">
+                <span className="grow faint">{selNote}</span>
+                <button className="btn ghost sm icon" onClick={() => setSelNote(null)} aria-label="Скрыть">
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          )}
           {selected.size > 0 && (
             <div className="layers-selection small" role="region" aria-label="Выделение">
               <div className="row">
@@ -976,6 +1065,27 @@ export function SchematicLayers({ schematic: s, replace, onChange, onSetTarget, 
                   Убрать
                 </button>
               </div>
+              <div className="row">
+                <button
+                  className="btn ghost sm"
+                  onClick={applySmart}
+                  disabled={smartBusy}
+                  title="Подобрать замены для выбранных блоков — правилами или агентом, как настроена умная замена на странице"
+                >
+                  <Sparkles size={14} />
+                  {smartBusy ? 'Подбираю…' : 'Умная замена'}
+                </button>
+                <button
+                  className="btn ghost sm"
+                  onClick={applyFavorites}
+                  disabled={!favorites.length}
+                  title="Поставить избранные замены в выбранные блоки (если вариантов несколько — первый)"
+                >
+                  <Star size={14} />
+                  Из избранного
+                </button>
+              </div>
+              {selNote && <div className="faint">{selNote}</div>}
             </div>
           )}
           {mode === '2d' && menu && info && (
