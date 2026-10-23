@@ -30,6 +30,10 @@ The server is one command: `node <repo>/scripts/mcp/server.mjs`. Environment:
 - The server finds `public/` of the main checkout itself (also from a worktree; override with `TFC_PACK_ROOT`); pack
   jars — from the snapshot cache `~/.cache/tfc-plans/pack/mods` (`npm run pack:fetch`; `TFC_MODS_DIR` overrides).
 
+Paths differ per system: on Windows `~` is `%USERPROFILE%`, and the `tfc` app keeps **its own** settings (pack server
+address and player/admin key) at `%APPDATA%\tfc\config.json` — not in `~/.config/tfc`, where only the MCP Firestore key
+lives (`configDir()` in `cli/lib/config.mjs`); `npm run pack:fetch` reads the same file.
+
 Point the agent at the main checkout's `server.mjs` (absolute path) — then it works from any worktree. Config shapes
 below are from the tools' docs as remembered on 2026-10-23, not run here — check the current docs if one fails.
 

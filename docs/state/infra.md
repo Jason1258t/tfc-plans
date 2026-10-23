@@ -19,7 +19,8 @@ Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md)
   fingerprints, `tools/*/libs.sh|test-server.sh|build.sh`, `ee-extras` art. `npm run dev` never reads jars:
   `ensure-mods.mjs` copies missing `public/` from the main checkout, then syncs mod data from the pack server
   (`/data`), soft-failing to the old data; `TFC_KEEP_MODS=1` = offline. Pack server address/key: env, `.env.local`,
-  else the `tfc` app login (`~/.config/tfc/config.json`). The host may delete the old `mods/` (cache holds hard links).
+  else the `tfc` app login (`%APPDATA%\tfc\config.json` on Windows, `~/.config/tfc/config.json` on macOS/Linux —
+  `configDir()` in `cli/lib/config.mjs`). The host may delete the old `mods/` (cache holds hard links).
 - Guard against building without mods: the library build stops if the jar dir is empty but the previous build had mods (`TFC_ALLOW_NO_MODS=1` bypass); `pack-release` writes nothing at 0 mods or a loss of more
   than half (`ALLOW_MODS_DROP=1`). `predeploy-check` blocks a site built without Firebase settings.
 - **Pack data is published only by the pack server** (2026-10-22, `docs/plans/vps-publish.md`): `npm run deploy:site`
