@@ -5,9 +5,11 @@
  */
 import { DOCS, fromValue, toValue, token } from '../firestore-rest.mjs';
 
-let tok = null;
-async function auth() {
-  if (!tok || tok.until < Date.now()) tok = { value: await token(), until: Date.now() + 45 * 60_000 };
+// Токен держим 45 мин, но firebase CLI может отозвать его раньше (обновление из другой сессии) — тогда api() на 401
+// берёт новый. TFC_MCP_TEST_BAD_TOKEN — заведомо мёртвый стартовый токен, для проверки этого пути.
+let tok = process.env.TFC_MCP_TEST_BAD_TOKEN ? { value: 'bad', until: Date.now() + 45 * 60_000 } : null;
+async function auth(fresh = false) {
+  if (fresh || !tok || tok.until < Date.now()) tok = { value: await token({ fresh }), until: Date.now() + 45 * 60_000 };
   return tok.value;
 }
 
@@ -20,10 +22,13 @@ export class FirestoreError extends Error {
 }
 
 export async function api(url, init = {}) {
-  const res = await fetch(url, {
-    ...init,
-    headers: { Authorization: `Bearer ${await auth()}`, 'Content-Type': 'application/json', ...init.headers },
-  });
+  const send = async (fresh) =>
+    fetch(url, {
+      ...init,
+      headers: { Authorization: `Bearer ${await auth(fresh)}`, 'Content-Type': 'application/json', ...init.headers },
+    });
+  let res = await send(false);
+  if (res.status === 401) res = await send(true);
   if (!res.ok) {
     const body = await res.text();
     throw new FirestoreError(
