@@ -84,6 +84,10 @@ env = { TFC_FIRESTORE_KEY = "/abs/home/.config/tfc/mcp-firestore.json", TFC_AGEN
 or `.agents/skills` (claimed for DeepSeek TUI, not checked), they load; otherwise AGENTS.md tells it to open
 `SKILL.md` by hand.
 
+**`tfc-plans-dev`** (git/workflow) — a second stdio server `node <repo>/scripts/mcp-dev/server.mjs`, no env needed (it
+finds the main checkout via `git rev-parse --git-common-dir`; `TFC_PLANS_REPO` overrides). Add it as a second `mcpServers`
+entry next to `tfc-pack`. Tools: `git_state`, `worktree_add`, `commit`, `ship`, `worktree_remove` — see [mcp-dev.md](mcp-dev.md).
+
 Personal configs (absolute paths, keys) stay out of git; commit a shared one only when it has no machine paths.
 
 ## Several agents at once

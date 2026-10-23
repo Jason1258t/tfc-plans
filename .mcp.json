@@ -6,6 +6,10 @@
       "env": {
         "TFC_FIRESTORE_KEY": "${TFC_FIRESTORE_KEY:-~/.config/tfc/mcp-firestore.json}"
       }
+    },
+    "tfc-plans-dev": {
+      "command": "node",
+      "args": ["scripts/mcp-dev/server.mjs"]
     }
   }
 }

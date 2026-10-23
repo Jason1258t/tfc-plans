@@ -5,6 +5,8 @@ description: Finish a task in this repo — merge the worktree branch into main,
 
 # Ship: merge → deploy → push → cleanup
 
+Git steps are automated by the **tfc-plans-dev** MCP server (git_state, commit, ship, worktree_remove). No deploy needed (docs, agent files, MCP tools, addon sources) → run tfc-plans-dev ship worktree=<short> confirm=true (merge → push → cleanup) and skip to §5. The raw commands below are for the deploy-ordering case.
+
 Main folder: `MAIN=/Users/ivan/vscodeProjects/tfc-taskmanager` (always on `main`). Your work is in
 `.claude/worktrees/<short>` on branch `feat|refactor|fix/<short>`.
 
