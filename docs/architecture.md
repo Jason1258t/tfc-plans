@@ -17,7 +17,9 @@ npm run freshness [-- --if-older 6h --soft]              # mod freshness (Modrin
 ```
 
 Pack data on Hosting (`scripts/data-roots.mjs`) is published only by the pack server (`publish-data.mjs`, which also runs
-`pack-release.mjs`); `npm run deploy:site` (`deploy-site.mjs`) keeps it from the live release; plain
+`pack-release.mjs`); both build a fresh Hosting version (`hosting-rest.mjs`: `createVersion` + `populateFiles` of
+all paths, the other side's files carried over by hash, list check before FINALIZED — never `versions:clone`, which
+lost 47 site files on 2026-10-23); `npm run deploy:site` (`deploy-site.mjs`) keeps it from the live release; plain
 `firebase deploy --only hosting` is blocked by predeploy (`ALLOW_FULL_HOSTING_DEPLOY=1`). `prebuild`/`predev` run `freshness.mjs
 --if-older 6h --soft` (network or key problems only warn). `CURSE_FORGE_API_KEY` in `.env.local` (no `VITE_` — never
 in the bundle).

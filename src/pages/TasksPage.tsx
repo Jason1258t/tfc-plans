@@ -13,6 +13,7 @@ import { groupsStore } from '../data/store';
 import { SORTS, sortTasks, type SortMode } from '../lib/tasks';
 import { cx } from '../lib/util';
 import { PRIORITIES, type Group, type Priority } from '../types';
+import { useSearchTrack } from '../data/analytics';
 import './TasksPage.css';
 
 const ALL = '__all';
@@ -81,6 +82,7 @@ export function TasksPage() {
       return true;
     });
   }, [tasks, groupFilter, mine, nick, search]);
+  useSearchTrack('tasks', search, inScope.length);
 
   const active = useMemo(
     () =>

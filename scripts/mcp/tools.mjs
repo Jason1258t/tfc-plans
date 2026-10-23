@@ -34,6 +34,7 @@ import { TOOLS as booksTools } from './tools/books.mjs';
 import { TOOLS as candidatesTools } from './tools/candidates.mjs';
 import { TOOLS as codeTools } from './tools/code.mjs';
 import { TOOLS as configTools } from './tools/config.mjs';
+import { TOOLS as disasmTools } from './tools/disasm.mjs';
 import { TOOLS as kubejsTools } from './tools/kubejs.mjs';
 import { TOOLS as logsTools } from './tools/logs.mjs';
 import { TOOLS as mapTools } from './tools/map.mjs';
@@ -732,6 +733,7 @@ const CORE = [
 export const TOOLS = [
   ...CORE,
   ...codeTools,
+  ...disasmTools,
   ...logsTools,
   ...packTools,
   ...candidatesTools,
@@ -754,4 +756,4 @@ for (const t of TOOLS) {
   };
 }
 
-export const INSTRUCTIONS = `TFC RealWorld pack data for the «TFC Планы» site (data: ${PUBLIC}). Use instead of grep over public/*.json and unzipping mods/*.jar: answers already include KubeJS (removals, replacements, kubejs/data), tags with nested and KubeJS members, config layers. Jar facts — jar_find/jar_read/jar_javap. Pack debugging: class_find/class_info/class_hierarchy, code_refs (callers, field writers, code side), event_listeners (event handlers incl. KubeJS), mixins (mixins and conflicts), decompile, jar_grep, mods_check (dependencies), candidate_get (a candidate mod jar not in the pack: summary, then the jar tools with jar="candidate:<file>"), log_analyze (log/crash; level=timeline — game chronology). World regions — map_regions. Resources without a client: model_render (model as an image), texture_get, resources_check (blockstates ↔ block properties, models, textures, translation keys from Component.translatable of a mod or a tools/ addon; addon from a git worktree — addon=<path>, same for model_render/texture_get). Recipes include site datapacks. Settings: config_get; config edits — config_propose (host applies), result — config_changes. Guides: guide_get → edit → guide_put with revision. Pack addons: addons_list, addon_check (release check: card tools/<mod>/addon.json, jar, icons, site page = guide addon-<mod>). Site tasks and plans: groups_list, task_create, task_get → task_update with revision; plan doc for a task — artifact_put (edits with revision from artifact_get). Tool output is in Russian.`;
+export const INSTRUCTIONS = `TFC RealWorld pack data for the «TFC Планы» site (data: ${PUBLIC}). Use instead of grep over public/*.json and unzipping mods/*.jar: answers already include KubeJS (removals, replacements, kubejs/data), tags with nested and KubeJS members, config layers. Jar facts — jar_find/jar_read; bytecode instead of javap in a shell (method outline, one method's op stream, a jar/classes folder on disk, diff of two versions). Pack debugging: class_find/class_info/class_hierarchy, code_refs (callers, field writers, code side), event_listeners (event handlers incl. KubeJS), mixins (mixins and conflicts), decompile, jar_grep, mods_check (dependencies), candidate_get (a candidate mod jar not in the pack: summary, then the jar tools with jar="candidate:<file>"), log_analyze (log/crash; level=timeline — game chronology). World regions — map_regions. Resources without a client: model_render (model as an image), texture_get, resources_check (blockstates ↔ block properties, models, textures, translation keys from Component.translatable of a mod or a tools/ addon; addon from a git worktree — addon=<path>, same for model_render/texture_get). Recipes include site datapacks. Settings: config_get; config edits — config_propose (host applies), result — config_changes. Guides: guide_get → edit → guide_put with revision. Pack addons: addons_list, addon_check (release check: card tools/<mod>/addon.json, jar, icons, site page = guide addon-<mod>). Site tasks and plans: groups_list, task_create, task_get → task_update with revision; plan doc for a task — artifact_put (edits with revision from artifact_get). Tool output is in Russian.`;

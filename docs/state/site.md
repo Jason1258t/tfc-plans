@@ -237,6 +237,28 @@ elements (`lib/onboarding.ts` — texts and selectors, `components/Onboarding.ts
 `onboarding/{uid}` (anonymous uid, i.e. per browser) + localStorage copy. If a step's target isn't found in 2.5 s —
 the step is centred.
 
+## Site analytics (2026-10-23, task «Аналитика действий на сайте», group «Разработка»)
+
+- Own log in Firestore, no Google Analytics. `src/data/analytics.ts`: events buffered in memory, one batch every 30 s
+  and on tab hide → `visits/{id}` (one doc per tab visit: uid, nick, device, `events[]` ≤ 400, `expireAt`) +
+  `visitDays/{YYYY-MM-DD}` counters via `increment` (visits, views by section, actions, searches incl. `<where>:пусто`,
+  events per nick).
+- What is recorded: section views (`VisitTracker`, path + `?tab=`), `?task=` / `?g=` opens, all store writes
+  (`tasks.status` with target status, `tasks.assignee/checklist/rating`, `<collection>.create/edit/delete`), file
+  upload, any `a[download]` click, guide save, Gemini calls (no text), search text + result count in tasks, plans,
+  schematics, recipes (+ recipe by item), tags, item search, ores/fuel/food/metals (`useSearchTrack`, 1.5 s debounce).
+  Not yet: botany, meals, map, guide search.
+- Not recorded: dev server, nick `ClaudeTest`, browsers with «не считать меня» (localStorage `tfc-analytics-off`).
+  Dev check: localStorage `tfc-analytics-dev=1` → visits marked `dev`, day counters in `dev-YYYY-MM-DD`; console
+  `__analytics.analyticsDebug()` / `.flush()`.
+- `/stats` — hidden route (not in the menu): period today/7/30, tiles, visits per day, sections (views, people, time
+  from view→next view/hide, idle capped at 30 min), actions, «искали и не нашли», frequent searches, people → visit
+  timeline. Reads: one doc per day + visits of the period.
+- Retention: `visits.expireAt` = start + 90 days. TTL policy needs Blaze (deploy got 403 «billing disabled»), so
+  `/stats` deletes expired visits on open (`purgeExpired`, ≤ 200 per open; rules allow deleting any expired visit).
+  `events` excluded from indexing (`firestore.indexes.json`).
+  Rules: visit written only by its uid; day docs — only known keys (increments themselves are not enforced).
+
 ## World map and pack updates
 
 - TFC Real World map: projection from the mod, normal view and layers, click → coordinates, cities, distances, spawn;

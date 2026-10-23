@@ -160,6 +160,7 @@ in ~3.5 s on first request (~75k classes), then rebuilt only for changed jars. `
 | `code_refs(target*, kind, jar, subtypes, self, platform, access, side)` | who uses it — with method and line: class (`extends`, `new`, calls, signatures, annotations and mixin targets), method/field (`Owner#name`, `*#name`; `subtypes` — calls via subclasses; the owner class itself included; for a class — `self` to include it), string (`"tfc:…"`, config key). For fields — «ЗАПИСЬ»/«чтение» (`access=write` — only writers); each site shows the code side. ~2–6 s over the pack |
 | `event_listeners(event*, subtypes, platform, kubejs)` | who listens to a NeoForge event: `@SubscribeEvent` with the event, its ancestors and subclasses (priority, `@EventBusSubscriber`), `addListener(…)` with lambdas and method refs; KubeJS scripts — `NativeEvents.onEvent`/`Java.loadClass` with the class and KubeJS events (`PlayerEvents.loggedIn` …) dispatched from KubeJS's own handler |
 | `mixins(target, method, class, mod, platform)` | `target` — mixins on a class by method (`@Inject`/`@Redirect`/`@Overwrite`/MixinExtras, `at`, priority, config), possible conflicts and ⚠ «mixin on this class may crash a dedicated server»; `class` — one mixin; `mod` — a mod's mixins and configs; no params — overview: targets without class, undeclared configs, classes mixed by many mods |
+| `bytecode(class, jar, method, query, diff)` | compact bytecode, own parser, no JDK — instead of `javap` in a shell. Without `method`: one line per method — calls, fields read/WRITTEN, strings, numbers, created classes (`query` — only methods mentioning it). `method` (regex): op stream per source line without stack noise — locals by name, constants, fields, calls, branches with target lines (`[a]` — target in the same line, `↑` — backwards = loop), `switch`, lambdas, string concat; boxing calls dropped. `jar` also takes a **path**: a `.jar`, a classes folder (`tools/<addon>/build/classes/java/main`, `run/.mixin.out/class` — class after mixins, libs from Gradle) or a `.class`. `diff=<jar or path>` — the other version: with `class` — fields/methods added/removed/changed with call/field/constant differences; with `method` — line diff; without `class` — which classes of two jars changed (byte-equal skipped, line-number-only counted separately) |
 | `decompile(class*, jar, method, grep)` | source: mods — Vineflower (cache `.cache/mcp/decompile`, ~1–4 s first time), Minecraft — `-sources.jar`; `method` — one method only |
 | `jar_grep(query*, regex, path, jar, nested, context)` | text in jar files (json, toml, lang, mixins.json, data/, assets/), no classes; «`a|b`» |
 | `mods_check(mod, neoforge, minecraft, side)` | dependencies from `neoforge.mods.toml` of all jars and nested: missing mod, wrong version, incompatible, mod in two jars, same classes in different jars, minimum NeoForge; `mod` — one mod and who depends on it |
@@ -439,7 +440,7 @@ scripts/mcp/
   fmt.mjs           shared: page (paging), clip, named/nameOf (id with name), words/norm, schemas str/num/paging
   data.mjs          public/ data: merging mods and KubeJS as on the site; cache by file mtime
   jars.mjs          jar listing and reading without unzipping (nested, Minecraft + NeoForge), javap
-  bytecode.mjs      .class parsing: annotations, line numbers, instruction refs, signatures as text
+  bytecode.mjs      .class parsing: annotations, line numbers, locals, exception handlers, instruction refs, signatures
   code-index.mjs    class index, mixin targets, neoforge.mods.toml (own mini-TOML), Maven/FML versions
   (candidates)      jars.mjs `candidate:` ids, code-index.mjs `candidateIndex`, tools/candidates.mjs `candidate_get`
   firestore.mjs     Firestore REST: api, listAll, cached; configs, config edits, guides
@@ -450,7 +451,7 @@ scripts/mcp/
   models/           drawn-by-code registry, one module per mod (index.mjs — GROUPS; minecraft, neoforge, tfc,
                       immersiveengineering + ieConveyor, functionalstorage, computercraft, sophisticatedbackpacks,
                       cuisinedelight, create_submarine)
-  tools/<section>.mjs  section tools: code (classes, mixins, decompile, deps), logs, config (config_get,
+  tools/<section>.mjs  section tools: code (classes, mixins, decompile, deps), disasm (bytecode), logs, config (config_get,
                       config_propose, config_changes), pack, kubejs, books (+books-index), blocks (+blocks-data), site
                       (tasks, groups, plan docs with writes; datapacks, schematics, site scripts), map (+map-climate,
                       map-png — PNG read/write), resources (model_render, texture_get, resources_check), addons

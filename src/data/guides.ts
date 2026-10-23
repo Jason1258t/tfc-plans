@@ -1,6 +1,7 @@
 import { collection, doc, getDocs, limit, onSnapshot, orderBy, query, where, writeBatch } from 'firebase/firestore';
 import { authReady, db } from '../firebase';
 import type { Guide, GuideRevision } from '../types';
+import { track } from './analytics';
 
 /**
  * Гайды справочника — коллекция guides, у каждого история правок guides/{id}/revisions (последняя запись — текущая
@@ -57,6 +58,7 @@ export type GuideDraft = Omit<Guide, 'id' | 'createdAt' | 'updatedAt'>;
 
 /** Сохранить гайд и его версию одной записью; id === null — новый. Возвращает id */
 export async function saveGuide(id: string | null, draft: GuideDraft, createdAt?: number): Promise<string> {
+  track(id ? 'guides.edit' : 'guides.create');
   await authReady;
   const ref = id ? doc(db!, 'guides', id) : doc(collection(db!, 'guides'));
   const now = Date.now();

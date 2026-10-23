@@ -1,6 +1,7 @@
 import { collection, deleteDoc, doc, onSnapshot, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { authReady, db } from '../firebase';
 import { forgetSubscription, reportError, reportSnapshot, syncKey } from './sync';
+import { track } from './analytics';
 import type {
   Artifact,
   Datapack,
@@ -24,6 +25,17 @@ export interface CollectionStore<T extends { id: string }, N> {
   add(data: N): Promise<string>;
   update(id: string, patch: Partial<Omit<T, 'id'>>): Promise<void>;
   remove(ids: string | string[]): Promise<void>;
+}
+
+/** Для статистики: у задач важно, что именно поменяли — статус, исполнителя, чеклист */
+const TASK_FIELDS = ['status', 'assignee', 'checklist', 'rating'] as const;
+function trackUpdate(name: string, patch: object) {
+  if (name === 'tasks') {
+    const field = TASK_FIELDS.find((f) => f in patch);
+    if (field === 'status') return track('tasks.status', { to: String((patch as { status: unknown }).status) });
+    if (field) return track(`tasks.${field}`);
+  }
+  track(`${name}.edit`);
 }
 
 function firestoreStore<T extends { id: string }, N extends object>(name: string): CollectionStore<T, N> {
@@ -78,16 +90,19 @@ function firestoreStore<T extends { id: string }, N extends object>(name: string
       const now = Date.now();
       // id известен сразу, запись применяется локально мгновенно — не ждём подтверждения сервера
       const created = doc(ref);
+      track(`${name}.create`);
       setDoc(created, { ...data, createdAt: now, updatedAt: now }).catch(report);
       return created.id;
     },
     async update(id, patch) {
       await authReady;
+      trackUpdate(name, patch);
       await updateDoc(doc(ref, id), { ...patch, updatedAt: Date.now() }).catch(failed);
     },
     async remove(ids) {
       await authReady;
       const list = Array.isArray(ids) ? ids : [ids];
+      track(`${name}.delete`, { n: list.length });
       if (list.length === 1) return deleteDoc(doc(ref, list[0])).catch(failed);
       const batch = writeBatch(db!);
       list.forEach((id) => batch.delete(doc(ref, id)));

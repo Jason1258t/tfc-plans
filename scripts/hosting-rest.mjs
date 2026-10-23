@@ -7,9 +7,12 @@
  * gzip у Node зависит от системы (macOS — 19, Linux — 3; сжатые данные одинаковые — проверено на Node 22 и 24),
  * поэтому сравниваем со всеми вариантами заголовка (hashes).
  *
- * Выкладка данных (deploy): versions:clone текущего релиза без папок данных → populateFiles (все файлы данных,
- * по 1000) → загрузка только тех, чьих хешей у Hosting нет → status FINALIZED → releases.create.
+ * Выкладка данных (deploy): новая версия с настройками текущей (createVersion) → populateFiles (по 1000): файлы
+ * текущей версии вне корней данных с их хешами + файлы данных → загрузка только тех, чьих хешей у Hosting нет →
+ * сверка списка файлов новой версии → status FINALIZED → releases.create.
  * Выкладка сайта (scripts/deploy-site.mjs): новая версия с настройками из firebase.json (createVersion) → те же шаги.
+ * versions:clone не используем: 2026-10-23 копия с exclude корней данных вышла без 47 файлов сайта (index-*.js,
+ * favicon.svg, tfc/, addons/…), и сайт не открывался до следующего деплоя.
  */
 import { createHash } from 'node:crypto';
 import zlib from 'node:zlib';
@@ -86,18 +89,6 @@ export function rootsRegex(roots) {
   return `^/(${alts.join('|')})`;
 }
 
-async function waitOperation(op, log) {
-  let cur = op;
-  for (let i = 0; !cur.done; i++) {
-    if (i > 300) throw new Error(`Hosting: операция ${op.name} не завершилась за 10 минут`);
-    await new Promise((ok) => setTimeout(ok, 2000));
-    cur = await call('GET', op.name);
-    if (i % 10 === 9) log?.(`жду копию версии… (${(i + 1) * 2} с)`);
-  }
-  if (cur.error) throw new Error(`Hosting: копия версии не удалась: ${JSON.stringify(cur.error).slice(0, 400)}`);
-  return cur.response;
-}
-
 /** Настройки версии Hosting из блока hosting файла firebase.json (как их переводит firebase CLI) */
 export function hostingConfig(hosting) {
   const config = {};
@@ -124,19 +115,52 @@ export async function createVersion({ config, site = SITE_ID }) {
 
 /**
  * Выкладка данных. files — Map путь («/items.json») → { hash }; gzip тех, что придётся загрузить, отдаёт
- * getGz(путь, хеш). roots — что выкинуть из копии текущей версии.
- * Возвращает { version, release, uploaded, populated }.
+ * getGz(путь, хеш). roots — корни данных: файлы sourceVersion вне них переносятся в новую версию с теми же хешами
+ * (уже на Hosting, ничего не загружается), внутри них — только то, что в files.
+ * Возвращает { version, release, uploaded, populated, kept }.
  */
 export async function deploy({ sourceVersion, roots, files, getGz, message, site = SITE_ID, log = () => {} }) {
-  log(`копирую версию ${sourceVersion.split('/').pop()} без данных сборки`);
-  const op = await call('POST', `sites/${site}/versions:clone`, {
-    sourceVersion,
-    finalize: false,
-    exclude: { regexes: [rootsRegex(roots)] },
-  });
-  const version = (await waitOperation(op, log)).name;
+  const source = await call('GET', sourceVersion);
+  const published = await versionFiles(sourceVersion);
+  const re = new RegExp(rootsRegex(roots));
+  const all = new Map();
+  for (const [p, hash] of published) if (!re.test(p)) all.set(p, { hash });
+  const kept = all.size;
+  for (const [p, f] of files) {
+    if (!re.test(p)) throw new Error(`файл данных ${p} вне корней данных`);
+    all.set(p, f);
+  }
+  if (!kept) throw new Error(`в версии ${sourceVersion.split('/').pop()} нет файлов сайта — выкладывать не буду`);
+  log(`из версии ${sourceVersion.split('/').pop()} переношу файлы сайта: ${kept}; данных сборки: ${files.size}`);
+  const version = await createVersion({ config: source.config ?? {}, site });
   log(`новая версия ${version.split('/').pop()}`);
-  return release({ version, files, getGz, message, site, log });
+  const res = await release({
+    version,
+    files: all,
+    getGz: (p, h) => {
+      // тот же хеш может быть и у файла сайта, и у файла данных — загружаем файл данных
+      const q = files.has(p) ? p : [...files].find(([, f]) => f.hash === h)?.[0];
+      if (!q) throw new Error(`Hosting просит загрузить ${p} — это файл сайта, у сервера сборки его нет`);
+      return getGz(q, h);
+    },
+    message,
+    site,
+    log,
+  });
+  return { ...res, kept };
+}
+
+/** Сверка: в версии есть все файлы с нужными хешами — иначе стоп до FINALIZED (версия остаётся неопубликованной) */
+async function checkVersion(version, files) {
+  const got = await versionFiles(version);
+  const missing = [];
+  for (const [p, f] of files) if (got.get(p) !== f.hash) missing.push(p);
+  if (missing.length)
+    throw new Error(
+      `в новой версии ${version.split('/').pop()} нет ${missing.length} файлов из ${files.size} ` +
+        `(или хеш другой): ${missing.slice(0, 10).join(', ')}${missing.length > 10 ? ' …' : ''} — релиз не выпущен`,
+    );
+  return got.size;
 }
 
 /** Файлы в версию (populateFiles), загрузка недостающих хешей, FINALIZED, релиз */
@@ -166,6 +190,8 @@ export async function release({ version, files, getGz, message, site = SITE_ID, 
   };
   await Promise.all(Array.from({ length: 4 }, worker));
 
+  const listed = await checkVersion(version, files);
+  log(`сверка: все ${files.size} файлов на месте (в версии ${listed})`);
   await call('PATCH', `${version}?update_mask=status`, { status: 'FINALIZED' });
   const rel = await call('POST', `sites/${site}/releases?versionName=${encodeURIComponent(version)}`, {
     message: message ?? 'сервер сборки',
