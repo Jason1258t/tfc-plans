@@ -91,7 +91,8 @@ export async function token({ fresh = false } = {}) {
     return cached.value;
   }
   const require = createRequire(import.meta.url);
-  const fbRoot = execFileSync('npm', ['root', '-g'], { encoding: 'utf8' }).trim();
+  // На Windows npm — это npm.cmd: без shell execFile его не находит
+  const fbRoot = execFileSync('npm', ['root', '-g'], { encoding: 'utf8', shell: process.platform === 'win32' }).trim();
   const auth = require(path.join(fbRoot, 'firebase-tools/lib/auth'));
   const acc = auth.getGlobalDefaultAccount();
   if (!acc) throw new Error('Нужно выполнить firebase login');
