@@ -55,7 +55,7 @@ comments, commit messages, guides, MCP tool output. Keep Russian UI labels verba
 
 Step-by-step procedures in `.claude/skills/<name>/SKILL.md` (standard `SKILL.md` format; `.agents/skills` is a symlink
 to the same folder for Codex and other agents that look there): `ship`, `addon-dev`, `addon-release`,
-`integration-plan`, `update-plan`. If your harness doesn't load skills, open the `SKILL.md` and follow it. Edit skills
+`integration-plan`, `update-plan`, `recipe-dev`. If your harness doesn't load skills, open the `SKILL.md` and follow it. Edit skills
 only in `.claude/skills/`.
 
 ## Commands
