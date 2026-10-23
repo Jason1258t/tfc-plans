@@ -28,6 +28,17 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   such a string or a `?task=`/`?doc=` link.
 - Plans (Markdown docs) with items and a Gemini agent; `- [ ]` checkboxes toggle by click in view mode (plans and task
   descriptions).
+- **Images in plans** (2026-10-23): paste / drop / «Картинка» button → `prepareFile` (WebP ≤ 2560 px, as task
+  attachments) → firestore-files with the plan's `taskId` (so they also show in the task gallery; deleting there breaks
+  the plan image). Markdown `![подпись](file:<id>)`, placeholder `uploading:<key>` while loading (`src/lib/planImages.ts`);
+  `Markdown` renders `file:` images everywhere. Works in both the textarea and the live editor.
+- **Live editor probe** (Obsidian-style, task «В редактор планов попытаться сделать "обсидиан"», 2026-10-23): CodeMirror 6
+  `LiveMarkdown` (lazy chunk ~100 KB gzip — `markdown()` is avoided, it pulls HTML/CSS/JS highlighting, +70 KB) replaces
+  the plan textarea only with flag `?live=1` (localStorage `tfc_live_md`, `?live=0` off). Hides marks outside the
+  cursor: headings, emphasis, links, items `[[id]]` (chips), checkboxes (clickable), bullets, quotes, hr, images; Enter
+  continues lists. Checked in the browser: typing, items, checkboxes, undo, item picker, agent-free paths, phone width,
+  light/dark. Not done: tables are raw (monospace), no Ctrl+B/I, task descriptions/guides still textarea, real IME and
+  mobile keyboards not tried. Plan doc on the task.
 
 ## Create schematics (.nbt)
 

@@ -73,7 +73,7 @@ export async function uploadFile(
 
 /** Содержимое файла (кешируется хранилищем) */
 export const fileBlob = (f: FileMeta | string) => requireStore().read(f);
-/** object URL для показа картинки в <img> */
-export const fileUrl = (f: FileMeta) => requireStore().objectUrl(f);
+/** object URL для показа картинки в <img> (кешируется хранилищем) */
+export const fileUrl = (f: FileMeta | string) => requireStore().objectUrl(f);
 export const downloadFile = (f: FileMeta) => requireStore().download(f);
 export const removeFile = (f: FileMeta | string) => requireStore().remove(f);

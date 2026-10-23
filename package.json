@@ -34,7 +34,13 @@
     "tfc:dist": "node scripts/tfc-dist.mjs"
   },
   "dependencies": {
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/language": "^6.13.1",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.15",
     "@fontsource-variable/inter": "^5.3.0",
+    "@lezer/common": "^1.5.4",
     "fflate": "^0.8.3",
     "firebase": "^12.19.0",
     "firestore-files": "^0.1.0",

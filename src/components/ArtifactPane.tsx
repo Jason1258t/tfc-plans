@@ -1,13 +1,31 @@
-import { BookOpen, Columns2, Eye, Maximize2, Minimize2, Pencil, Trash2, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { BookOpen, Columns2, Eye, ImagePlus, Maximize2, Minimize2, Pencil, Trash2, X } from 'lucide-react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { useData } from '../data/DataContext';
 import { artifactsStore } from '../data/store';
+import { filesEnabled } from '../lib/files';
+import { UPLOADING_SCHEME, uploadImages } from '../lib/planImages';
+import { isImage } from '../lib/uploads';
 import { cx, timeAgo } from '../lib/util';
 import type { Artifact } from '../types';
 import { AgentPanel } from './AgentPanel';
 import './ArtifactPane.css';
 import { ItemPicker } from './ItemPicker';
+import type { LiveMarkdownHandle } from './LiveMarkdown';
 import { Markdown, itemToken, toggleTaskLine } from './Markdown';
+
+const LiveMarkdown = lazy(() => import('./LiveMarkdown'));
+
+/** Пробник «живого» редактора: включается ?live=1, выключается ?live=0 (запоминается в браузере) */
+function liveEditorOn() {
+  try {
+    const q = new URLSearchParams(location.search).get('live');
+    if (q === '1') localStorage.setItem('tfc_live_md', '1');
+    if (q === '0') localStorage.removeItem('tfc_live_md');
+    return localStorage.getItem('tfc_live_md') === '1';
+  } catch {
+    return false;
+  }
+}
 
 type View = 'edit' | 'split' | 'preview';
 
@@ -42,6 +60,8 @@ export function ArtifactPane(props: Props) {
 }
 
 const SAVE_DELAY = 800;
+const PLACEHOLDER =
+  '# План\n\nMarkdown: заголовки, списки, таблицы, - [ ] чекбоксы.\nПредметы: [[tfc:metal/ingot/bronze|4]] — или «Вставить предмет».\n\nИли попросите агента ниже составить план.';
 
 function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDeleted }: Props & { artifact: Artifact }) {
   const { tasks, nick } = useData();
@@ -52,8 +72,12 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
   const [title, setTitle] = useState(artifact.title);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(0);
+  const fileInput = useRef<HTMLInputElement>(null);
   const [selection, setSelection] = useState<[number, number]>([artifact.content.length, artifact.content.length]);
   const textRef = useRef<HTMLTextAreaElement>(null);
+  const liveRef = useRef<LiveMarkdownHandle>(null);
+  const [live] = useState(liveEditorOn);
   const saveTimer = useRef<number | undefined>(undefined);
 
   // Чужие правки подтягиваем, пока у нас нет несохранённых изменений
@@ -110,9 +134,35 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
     setSelection([pos, pos]);
     if (view !== 'preview')
       requestAnimationFrame(() => {
+        liveRef.current?.focus();
+        liveRef.current?.select(pos);
         textRef.current?.focus();
         textRef.current?.setSelectionRange(pos, pos);
       });
+  };
+
+  /** Картинки: сразу метка «загрузка» в тексте, после загрузки — ссылка на файл (сжатие — как у вложений задач) */
+  const addImages = async (files: File[], pos = selection[1]) => {
+    if (!files.length) return;
+    const placeholder = `![Загрузка…](${UPLOADING_SCHEME}${Date.now()})`;
+    // Картинка — отдельной строкой: не склеиваться с соседним текстом (заголовок перед ней перестал бы быть заголовком)
+    const before = pos > 0 && content[pos - 1] !== '\n' ? '\n' : '';
+    const after = content[pos] !== undefined && content[pos] !== '\n' ? '\n' : '';
+    insertAt(`${before}${placeholder}\n${after}`, [pos, pos]);
+    setUploading((n) => n + 1);
+    let markdown = '';
+    try {
+      const res = await uploadImages(files, { taskId: artifact.taskId, author: nick });
+      markdown = res.markdown;
+      if (res.error) alert(res.error);
+    } catch (e) {
+      alert(`Картинка не загрузилась: ${e instanceof Error ? e.message : e}`);
+    } finally {
+      setUploading((n) => n - 1);
+      // Пока грузилось, текст могли править — меняем именно метку
+      const cur = latest.current.content;
+      if (cur.includes(placeholder)) change(cur.replace(placeholder, markdown));
+    }
   };
 
   const append = (text: string) => change(`${content.trimEnd()}${content.trim() ? '\n\n' : ''}${text.trim()}\n`);
@@ -169,7 +219,13 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
         )}
         <span className="grow" />
         <span className="faint small save-state">
-          {saving ? 'Сохраняю…' : dirty ? 'Изменено' : `${artifact.updatedBy}, ${timeAgo(artifact.updatedAt)}`}
+          {uploading
+            ? 'Загружаю картинку…'
+            : saving
+              ? 'Сохраняю…'
+              : dirty
+                ? 'Изменено'
+                : `${artifact.updatedBy}, ${timeAgo(artifact.updatedAt)}`}
         </span>
       </div>
 
@@ -195,6 +251,29 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
             <ItemPicker small placeholder="Вставить предмет…" onPick={(it) => insertAt(itemToken(it.i))} />
           </div>
         )}
+        {view !== 'preview' && filesEnabled && (
+          <>
+            <button
+              className="btn ghost sm icon"
+              onClick={() => fileInput.current?.click()}
+              aria-label="Вставить картинку"
+              title="Картинка (можно вставить из буфера или перетащить в текст)"
+            >
+              <ImagePlus size={15} />
+            </button>
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={(e) => {
+                addImages([...(e.target.files ?? [])]);
+                e.target.value = '';
+              }}
+            />
+          </>
+        )}
         <span className="grow" />
         <button className="btn ghost sm icon danger" onClick={remove} aria-label="Удалить план" title="Удалить">
           <Trash2 size={15} />
@@ -202,21 +281,39 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
       </div>
 
       <div className={cx('apane-doc', `view-${view}`)}>
-        {view !== 'preview' && (
+        {view !== 'preview' && live && (
+          <Suspense fallback={<div className="apane-text faint">Загрузка редактора…</div>}>
+            <LiveMarkdown
+              ref={liveRef}
+              className="apane-text"
+              value={content}
+              placeholder={PLACEHOLDER}
+              onChange={change}
+              onSelect={setSelection}
+              onBlur={() => latest.current.dirty && flush(latest.current.content)}
+              onImages={filesEnabled ? (files, pos) => addImages(files, pos) : undefined}
+            />
+          </Suspense>
+        )}
+        {view !== 'preview' && !live && (
           <textarea
             ref={textRef}
             className="apane-text"
             value={content}
             spellCheck
-            placeholder={
-              '# План\n\nMarkdown: заголовки, списки, таблицы, - [ ] чекбоксы.\nПредметы: [[tfc:metal/ingot/bronze|4]] — или «Вставить предмет».\n\nИли попросите агента ниже составить план.'
-            }
+            placeholder={PLACEHOLDER}
             onChange={(e) => {
               change(e.target.value);
               trackSelection();
             }}
             onSelect={trackSelection}
             onBlur={() => dirty && flush(content)}
+            onPaste={(e) => {
+              const files = [...e.clipboardData.files].filter(isImage);
+              if (!files.length || !filesEnabled) return;
+              e.preventDefault();
+              addImages(files, e.currentTarget.selectionStart);
+            }}
           />
         )}
         {view !== 'edit' && (
