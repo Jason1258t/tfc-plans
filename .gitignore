@@ -32,6 +32,7 @@ firestore-debug.log*
 .cache/
 public/icons/
 public/items.json
+public/blocks.json
 public/recipes.json
 public/reference.json
 public/pack-manifest.json
@@ -44,7 +45,7 @@ public/meals.json
 public/power.json
 public/multiblocks.json
 public/multiblocks/
-public/blocks/
+public/block-models/
 public/addons/
 public/config-defaults.json
 

@@ -18,7 +18,7 @@ import {
   type CandidateRow,
   type ReplacementAnswer,
 } from './gemini';
-import type { ItemIndex } from './items';
+import { blockEntry, isBlock, type ItemIndex } from './items';
 
 // Файл схемы с заменами и формой — общий с Node модуль schematicFile.ts; здесь — то, что нужно только сайту
 export {
@@ -81,11 +81,11 @@ export async function loadSchematic(file: File): Promise<Schematic> {
 }
 
 /**
- * Замены, которые нельзя записать в схему: цель не из библиотеки предметов сборки.
+ * Замены, которые нельзя записать в схему: цели нет в сборке или это предмет, а не блок (механический ремень).
  * Перед скачиванием — чтобы в схему попадал ровно тот id, что есть в сборке (minecraft:… не станет tfc:…).
  */
 export function invalidTargets(replace: Map<string, string>, items: ItemIndex) {
-  return [...replace].filter(([, to]) => to !== REMOVE && !items.byId.has(to)).map(([from, to]) => ({ from, to }));
+  return [...replace].filter(([, to]) => to !== REMOVE && !isBlock(items, to)).map(([from, to]) => ({ from, to }));
 }
 
 /** Исходник с правками слоёв (без замен и формы) — его хранит библиотека */
@@ -143,7 +143,7 @@ export function applyRules(ids: string[], rules: Rule[], items: ItemIndex): Rule
     let target = id;
     for (const r of active) target = target.split(r.from.trim()).join(r.to.trim());
     if (target === id) continue;
-    if (items.byId.has(target)) applied.set(id, target);
+    if (isBlock(items, target)) applied.set(id, target);
     else failed.push({ source: id, target });
   }
   return { applied, failed };
@@ -242,7 +242,7 @@ export async function agentReplace(
   };
 
   ids.forEach((id) => {
-    const known = items.byId.get(id);
+    const known = blockEntry(items, id);
     const ns = id.split(':')[0];
     const words = (id.split(':')[1] ?? id).replace(/[/_]/g, ' ');
     const queries = [applyText(words, rules), words];
@@ -261,7 +261,8 @@ export async function agentReplace(
         : [];
     const seen = new Set<string>([id]);
     const candidates = [...direct, ...byHint]
-      .filter((c) => !seen.has(c.item.i) && !!seen.add(c.item.i))
+      // Кандидаты — только то, что ставится блоком (не предмет-ремень вместо ремня)
+      .filter((c) => isBlock(items, c.item.i) && !seen.has(c.item.i) && !!seen.add(c.item.i))
       .slice(0, MAX_CANDIDATES);
     if (!candidates.length) {
       result.kept.push({ source: id, reason: 'поиск не нашёл других похожих предметов' });

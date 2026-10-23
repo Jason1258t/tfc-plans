@@ -207,3 +207,11 @@ the host's real folder.
   copy reproduces the stored files, `buildKubejs` on the patched layer — same counts, 0 errors. Not checked in game.
   Scan of all jars + configs for CJK: the rest is zh_cn lang/manuals, logs, config comments, two mods with hardcoded
   chat text (see pending.md).
+
+## Multi-agent setup (2026-10-23)
+
+`AGENTS.md` (root + `scripts/`, `scripts/mcp/`, `server/`, `tools/`) is the source of truth; every `CLAUDE.md` is
+`@AGENTS.md` + Claude-only notes (root). Skills stay in `.claude/skills/`, `.agents/skills` is a symlink for Codex and
+others. MCP signs writes with `TFC_AGENT_NICK` (default `Claude`). Per-agent setup — `docs/agents.md`. Checked: Claude
+Code loads nested `@AGENTS.md` imports; MCP server starts and reads the nick from env. Not run: Codex, Gemini CLI,
+Cursor, OpenCode, DeepSeek TUI configs (shapes from their docs, not tried).

@@ -1,6 +1,6 @@
 /**
  * Модели блоков для схем (3D и редактор слоёв): blockstate → модели с элементами, как их печёт игра, — в
- * public/blocks/<ns>.json, по файлу на namespace (сайт грузит только моды блоков текущей схемы).
+ * public/block-models/<ns>.json, по файлу на namespace (сайт грузит только моды блоков текущей схемы).
  *
  *   { v: 1,
  *     tex: ["create/block/andesite_casing", …]           — текстуры граней (пути внутри icons/, файлы копируются туда),
@@ -248,7 +248,7 @@ export function writeBlockModels({ layers, blockstates, outDir, iconsDir, copyTe
     geometry += geo.length;
   }
   log(
-    `модели блоков: ${blocks} блоков, ${models} моделей, ${geometry} геометрий, ${textures.size} текстур, без элементов ${noModel} — blocks/ ${Math.round(bytes / 1024)}KB`,
+    `модели блоков: ${blocks} блоков, ${models} моделей, ${geometry} геометрий, ${textures.size} текстур, без элементов ${noModel} — block-models/ ${Math.round(bytes / 1024)}KB`,
   );
   return { blocks, models, geometry, textures: textures.size, noModel, kb: Math.round(bytes / 1024), warnings };
 }

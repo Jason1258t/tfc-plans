@@ -47,7 +47,9 @@ When finishing work: update the topic file, and this index only if a line below 
 - KubeJS: tag members unknown to the item filter (recipes with the item via a tag aren't found); recipes from mod
   helpers (`event.recipes.create.mixing(...)`) have no full JSON. Pack KubeJS items (`kubejs:*`, `tfcr:*`, 25) are in
   the library but only 8 have Russian names (others missing from `kubejs/assets/*/lang/ru_ru.json`).
-- Library is items, not blocks: schematic replacement targets aren't checked for «is a block».
+- Schematic blocks without an item (Create belt, belt funnels, powered shaft, wall torches…) — `blocks.json` with the
+  item from the block's loot table; replacement targets must be blocks (`b` in items.json). Needs a host rebuild
+  (pending.md); blocks with code-only placement (no loot table, no `wall_` name) still have no item.
 - A repaired fuse from the datapack gets the default trip current.
 - Collaborative doc editing: last write wins.
 - `kubejs/data` overrides metal melting (`tfc_ie_addon/tfc/fluid_heat`) — the metals reference doesn't account for it

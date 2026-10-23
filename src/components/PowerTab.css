@@ -333,6 +333,14 @@
   border-radius: 3px;
 }
 
+/* Предмет аддона в клетке рецепта: без размера и рамки большой картинки (иначе 32×96 и вылезает из клетки) */
+.power-recipe-cell .power-pixel {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 0;
+}
+
 .power-addon-block > .grow {
   flex: 1 1 260px;
   min-width: 0;

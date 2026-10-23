@@ -9,7 +9,7 @@ The plan is advice for the host, not an update: the agent never swaps jars. Pack
 (`tfc admin propose`, `config_propose`), the jars themselves — the host's own update (docs/pack-server.md). Nothing is
 checked in game — every step the plan asks to verify is marked «в игре не проверялось».
 
-All facts from MCP `tfc-pack` (CLAUDE.md), not from memory. Everything the user sees — in Russian.
+All facts from MCP `tfc-pack` (AGENTS.md), not from memory. Everything the user sees — in Russian.
 
 ## 0. Scope
 
@@ -127,5 +127,5 @@ Show the plan to the user **before** writing anything to the site (writes go to 
 ## 7. Missing or wrong tool answers
 
 If you had to fall back to grep/unzip/a script (e.g. a jar the tool couldn't download, a changelog the platform doesn't give),
-finish the plan with the workaround and propose a separate session per CLAUDE.md «If a needed tool is missing»
+finish the plan with the workaround and propose a separate session per AGENTS.md «If a needed tool is missing»
 (branch `feat/mcp-<short>`, docs/mcp.md «Adding a tool»).

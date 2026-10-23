@@ -15,7 +15,7 @@ An addon on the site:
 | icons | `tools/<mod>/icons/*.png` (192 px, drawn by `release.sh` via `scripts/mcp/render.mjs`) | `/addons/icons/<mod>/` |
 | page | Firestore guide `addon-<mod>` (mod id with `_` → `-`), `section: addon` | `/addons/<mod>`, edited by players on the site |
 
-Work in a worktree (CLAUDE.md). Game facts — from jars via MCP; nothing is checked in game.
+Work in a worktree (AGENTS.md). Game facts — from jars via MCP; nothing is checked in game.
 
 ## 1. Build
 

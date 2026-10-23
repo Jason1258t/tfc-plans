@@ -1,7 +1,7 @@
 import { textureUrl } from './items';
 
 /**
- * Модели блоков из jar (scripts/mods/block-models.mjs → /blocks/<ns>.json): blockstate → модели с элементами.
+ * Модели блоков из jar (scripts/mods/block-models.mjs → /block-models/<ns>.json): blockstate → модели с элементами.
  * Для 3D схем и вида сверху в редакторе слоёв. Грани печём как игра (FaceBakery): uv, rotation грани, поворот
  * элемента (с rescale), поворот варианта x/y, uvlock (упрощённо — uv по положению грани в мире), cullface.
  * Файл грузится по namespace, только для модов блоков схемы.
@@ -67,7 +67,7 @@ export function loadBlockModels(namespaces: Iterable<string>): Promise<void> {
   for (const ns of namespaces) {
     let p = files.get(ns);
     if (!p) {
-      p = fetch(`${import.meta.env.BASE_URL}blocks/${ns}.json`)
+      p = fetch(`${import.meta.env.BASE_URL}block-models/${ns}.json`)
         .then((r) => (r.ok && r.headers.get('content-type')?.includes('json') ? r.json() : null))
         .catch(() => null)
         .then((f: BlockFile | null) => {
