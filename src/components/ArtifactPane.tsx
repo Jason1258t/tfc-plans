@@ -1,5 +1,5 @@
 import { BookOpen, Columns2, Eye, Maximize2, Minimize2, Pencil, Trash2, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { useData } from '../data/DataContext';
 import { artifactsStore } from '../data/store';
 import { cx, timeAgo } from '../lib/util';
@@ -7,7 +7,22 @@ import type { Artifact } from '../types';
 import { AgentPanel } from './AgentPanel';
 import './ArtifactPane.css';
 import { ItemPicker } from './ItemPicker';
+import type { LiveMarkdownHandle } from './LiveMarkdown';
 import { Markdown, itemToken, toggleTaskLine } from './Markdown';
+
+const LiveMarkdown = lazy(() => import('./LiveMarkdown'));
+
+/** Пробник «живого» редактора: включается ?live=1, выключается ?live=0 (запоминается в браузере) */
+function liveEditorOn() {
+  try {
+    const q = new URLSearchParams(location.search).get('live');
+    if (q === '1') localStorage.setItem('tfc_live_md', '1');
+    if (q === '0') localStorage.removeItem('tfc_live_md');
+    return localStorage.getItem('tfc_live_md') === '1';
+  } catch {
+    return false;
+  }
+}
 
 type View = 'edit' | 'split' | 'preview';
 
@@ -42,6 +57,8 @@ export function ArtifactPane(props: Props) {
 }
 
 const SAVE_DELAY = 800;
+const PLACEHOLDER =
+  '# План\n\nMarkdown: заголовки, списки, таблицы, - [ ] чекбоксы.\nПредметы: [[tfc:metal/ingot/bronze|4]] — или «Вставить предмет».\n\nИли попросите агента ниже составить план.';
 
 function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDeleted }: Props & { artifact: Artifact }) {
   const { tasks, nick } = useData();
@@ -54,6 +71,8 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
   const [saving, setSaving] = useState(false);
   const [selection, setSelection] = useState<[number, number]>([artifact.content.length, artifact.content.length]);
   const textRef = useRef<HTMLTextAreaElement>(null);
+  const liveRef = useRef<LiveMarkdownHandle>(null);
+  const [live] = useState(liveEditorOn);
   const saveTimer = useRef<number | undefined>(undefined);
 
   // Чужие правки подтягиваем, пока у нас нет несохранённых изменений
@@ -110,6 +129,8 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
     setSelection([pos, pos]);
     if (view !== 'preview')
       requestAnimationFrame(() => {
+        liveRef.current?.focus();
+        liveRef.current?.select(pos);
         textRef.current?.focus();
         textRef.current?.setSelectionRange(pos, pos);
       });
@@ -202,15 +223,26 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
       </div>
 
       <div className={cx('apane-doc', `view-${view}`)}>
-        {view !== 'preview' && (
+        {view !== 'preview' && live && (
+          <Suspense fallback={<div className="apane-text faint">Загрузка редактора…</div>}>
+            <LiveMarkdown
+              ref={liveRef}
+              className="apane-text"
+              value={content}
+              placeholder={PLACEHOLDER}
+              onChange={change}
+              onSelect={setSelection}
+              onBlur={() => latest.current.dirty && flush(latest.current.content)}
+            />
+          </Suspense>
+        )}
+        {view !== 'preview' && !live && (
           <textarea
             ref={textRef}
             className="apane-text"
             value={content}
             spellCheck
-            placeholder={
-              '# План\n\nMarkdown: заголовки, списки, таблицы, - [ ] чекбоксы.\nПредметы: [[tfc:metal/ingot/bronze|4]] — или «Вставить предмет».\n\nИли попросите агента ниже составить план.'
-            }
+            placeholder={PLACEHOLDER}
             onChange={(e) => {
               change(e.target.value);
               trackSelection();
