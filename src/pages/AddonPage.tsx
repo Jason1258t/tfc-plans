@@ -8,8 +8,9 @@ import '../components/PowerTab.css';
 import './ReferencePage.css';
 
 const AddonArticle = lazy(() => import('../components/guides/AddonArticle'));
+const AddonVersions = lazy(() => import('../components/guides/AddonVersions'));
 
-/** Страница аддона /addons/<мод>: карточка (версия, скачать, как поставить) и подробное описание-статья */
+/** Страница аддона /addons/<мод>: карточка (версия, скачать, как поставить), версии с ченджлогами и подробное описание-статья */
 export function AddonPage() {
   const { id } = useParams();
   const a = addonById(id);
@@ -28,6 +29,7 @@ export function AddonPage() {
             <AddonInstall a={a} />
           </section>
           <Suspense fallback={<div className="empty">Загружаю описание…</div>}>
+            <AddonVersions key={a.id} addon={a} />
             <AddonArticle addon={a} />
           </Suspense>
         </div>

@@ -1,10 +1,15 @@
 #!/usr/bin/env node
 /**
- * Аддоны на сайт: карточки tools/<мод>/addon.json → jar (tools/<мод>/<jar>) и иконки (tools/<мод>/icons/) в
- * public/addons/ + список для программы tfc (`tfc pull addons`, sha256 и размер jar) → public/addons/index.json.
- * Запускается перед dev/build. Старые версии jar в public/addons не трогает (ссылки на них остаются рабочими).
- * Jar нет — аддон в список не попадает (предупреждение), сборка сайта не останавливается. Так же не попадают
- * повтор id, имя jar, которое tfc не примет, и unlisted (jar на сайте есть, но всем его не ставить).
+ * Аддоны на сайт: карточки tools/<мод>/addon.json → текущий jar и иконки (tools/<мод>/icons/) в public/addons/ +
+ * список для программы tfc без ключа (`tfc pull addons`, sha256 и размер jar) → public/addons/index.json.
+ * Запускается перед dev/build. На сайте без ключа — только текущие версии: прочие jar из public/addons убираются.
+ * Все версии — на сервере сборки (Firestore addonVersions + блобы, src/lib/addonVersions.ts).
+ *
+ * jar в git не хранятся. Откуда берётся текущий (sha256 — из карточки): tools/<мод>/<jar> (только что собран),
+ * кеш .cache/addons/<sha256>.jar, сервер сборки (/blobs/<sha256>, TFC_PACK_URL и TFC_PACK_TOKEN — как у
+ * pack:fetch), иначе — сайт (/addons/<jar>, он там уже лежит); хеш сверяется. Нет jar — аддон в список не попадает
+ * (предупреждение), сборка сайта не останавливается. Так же не попадают повтор id, имя jar, которое tfc не примет,
+ * и unlisted (jar на сайте есть, но всем его не ставить).
  */
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
@@ -13,6 +18,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const DIR = path.join(ROOT, 'public/addons');
+const SITE = 'https://tfc-plans-fd2c.web.app';
+const sha256 = (b) => createHash('sha256').update(b).digest('hex');
 
 /** Карточки аддонов из tools/<мод>/addon.json; source — папка от корня репозитория, dir — полный путь */
 export function addonCards(root = ROOT) {
@@ -28,11 +35,54 @@ export function addonCards(root = ROOT) {
     .sort((a, b) => a.order - b.order);
 }
 
-export function addonsIndex(root = ROOT, dir = DIR) {
+/**
+ * Текущий jar аддона (см. шапку): Buffer или null; note — откуда взят или почему нет.
+ * cacheDir — кеш скачанных, srv — сервер сборки ({ url, token }) или null.
+ */
+export async function addonJar(a, { cacheDir, srv }) {
+  const local = path.join(a.dir, a.jar);
+  if (fs.existsSync(local)) {
+    const b = fs.readFileSync(local);
+    const note = a.sha256 && sha256(b) !== a.sha256 ? `${a.source}/${a.jar} не совпадает с sha256 карточки` : null;
+    return { bytes: b, note };
+  }
+  if (!a.sha256) return { bytes: null, note: `нет ${a.source}/${a.jar} и sha256 в карточке` };
+  const cached = path.join(cacheDir, `${a.sha256}.jar`);
+  if (fs.existsSync(cached)) {
+    const b = fs.readFileSync(cached);
+    if (sha256(b) === a.sha256) return { bytes: b, note: null };
+  }
+  const tries = [
+    ...(srv ? [{ url: `${srv.url}/blobs/${a.sha256}`, headers: { Authorization: `Bearer ${srv.token}` } }] : []),
+    { url: `${SITE}/addons/${a.jar}`, headers: {} },
+  ];
+  const fails = [];
+  for (const t of tries) {
+    try {
+      const r = await fetch(t.url, { headers: t.headers, signal: AbortSignal.timeout(60_000) });
+      if (!r.ok) throw new Error(String(r.status));
+      const b = Buffer.from(await r.arrayBuffer());
+      if (sha256(b) !== a.sha256) throw new Error('хеш не сошёлся');
+      fs.mkdirSync(cacheDir, { recursive: true });
+      fs.writeFileSync(cached, b);
+      return { bytes: b, note: null };
+    } catch (e) {
+      fails.push(`${new URL(t.url).host}: ${e.message}`);
+    }
+  }
+  return { bytes: null, note: `${a.jar}: не скачался (${fails.join('; ')})` };
+}
+
+export async function addonsIndex(
+  root = ROOT,
+  dir = DIR,
+  { cacheDir = path.join(root, '.cache', 'addons'), srv = null } = {},
+) {
   const addons = [];
   const missing = [];
   const warnings = [];
   const ids = new Set();
+  const current = new Set();
   for (const a of addonCards(root)) {
     // Те же требования, что у tfc (cli/lib/pull.mjs wantedAddons): иначе программа аддон молча пропустит
     if (!/^[\w.+-]+\.jar$/.test(a.jar ?? '')) {
@@ -45,20 +95,18 @@ export function addonsIndex(root = ROOT, dir = DIR) {
     }
     ids.add(a.id);
     if (!a.jar.includes(a.version)) warnings.push(`${a.source}: в имени ${a.jar} нет версии ${a.version}`);
-    const src = path.join(a.dir, a.jar);
-    const jar = path.join(dir, a.jar);
-    if (fs.existsSync(src)) {
-      fs.mkdirSync(dir, { recursive: true });
-      fs.copyFileSync(src, jar);
-    }
     const icons = path.join(a.dir, 'icons');
     if (fs.existsSync(icons)) fs.cpSync(icons, path.join(dir, 'icons', a.id), { recursive: true });
-    if (!fs.existsSync(jar)) {
+    const { bytes, note } = await addonJar(a, { cacheDir, srv });
+    if (note) warnings.push(note);
+    if (!bytes) {
       missing.push(`${a.source}/${a.jar}`);
       continue;
     }
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, a.jar), bytes);
+    current.add(a.jar);
     if (a.unlisted) continue;
-    const bytes = fs.readFileSync(jar);
     addons.push({
       id: a.id,
       name: a.name,
@@ -66,17 +114,21 @@ export function addonsIndex(root = ROOT, dir = DIR) {
       file: a.jar,
       url: `/addons/${a.jar}`,
       size: bytes.length,
-      sha256: createHash('sha256').update(bytes).digest('hex'),
+      sha256: sha256(bytes),
       side: a.side,
       needs: a.needs,
       replaces: a.replaces ?? [],
     });
   }
+  // Без ключа с сайта — только текущие версии; прежние — на сервере сборки (tfc pull addons <мод>@<версия>)
+  if (fs.existsSync(dir))
+    for (const f of fs.readdirSync(dir)) if (f.endsWith('.jar') && !current.has(f)) fs.rmSync(path.join(dir, f));
   return { addons, missing, warnings };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const { addons, missing, warnings } = addonsIndex();
+  const { packServer } = await import('./pack-fetch.mjs');
+  const { addons, missing, warnings } = await addonsIndex(ROOT, DIR, { srv: packServer() });
   for (const w of warnings) console.warn(`[addons] ${w}`);
   if (missing.length) console.warn(`[addons] нет jar: ${missing.join(', ')} — в index.json их не будет`);
   if (fs.existsSync(DIR) || addons.length) {

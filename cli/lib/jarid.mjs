@@ -77,3 +77,36 @@ export function modIdsOf(file) {
     return [];
   }
 }
+
+/**
+ * id и версия первого мода jar: { id, version } или null. Версия `${file.jarVersion}` — из MANIFEST.MF
+ * (Implementation-Version), как её подставляет NeoForge.
+ */
+export function modInfoOf(file) {
+  try {
+    const toml = readZipEntry(file, NAMES)?.toString('utf8');
+    if (!toml) return null;
+    let inMods = false;
+    let id = null;
+    let version = null;
+    for (const line of toml.split(/\r?\n/)) {
+      const head = /^\s*\[\[?\s*([^\]]+?)\s*\]\]?/.exec(line);
+      if (head) {
+        // Первый [[mods]] прочитан — дальше другие разделы (или второй мод)
+        if (id) break;
+        inMods = head[1] === 'mods';
+        continue;
+      }
+      if (!inMods) continue;
+      id ??= /^\s*modId\s*=\s*["']([a-z0-9_.-]+)["']/i.exec(line)?.[1] ?? null;
+      version ??= /^\s*version\s*=\s*["']([^"']+)["']/i.exec(line)?.[1] ?? null;
+    }
+    if (version?.includes('${')) {
+      const mf = readZipEntry(file, ['META-INF/MANIFEST.MF'])?.toString('utf8') ?? '';
+      version = /^Implementation-Version:\s*(\S+)/m.exec(mf)?.[1] ?? null;
+    }
+    return id ? { id, version } : null;
+  } catch {
+    return null;
+  }
+}

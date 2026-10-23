@@ -2,6 +2,9 @@ import { collection, doc, onSnapshot, orderBy, query, updateDoc } from 'firebase
 import { useEffect, useState } from 'react';
 import { authReady, db } from '../firebase';
 import type { Datapack } from '../types';
+import { loadAddonVersions } from '../data/addonVersions';
+import { ADDONS } from './addons';
+import { addonChangelogsFrom, type AddonVersion } from './addonVersions';
 import { itemRefsOf } from './recipes';
 
 /** Запись об обновлении сборки — пишет scripts/pack-release.mjs при деплое */
@@ -39,8 +42,10 @@ export interface PackUpdate {
   };
   counts: { mods: [number, number]; items: [number, number]; recipes: [number, number] };
   newRecipeTypes?: string[];
-  /** modId → markdown с Modrinth */
+  /** modId → markdown с Modrinth или ченджлог версий нашего аддона */
   changelogs?: Record<string, string>;
+  /** Откуда ченджлог: Modrinth или версии нашего аддона (addonVersions); в старых записях поля нет */
+  changelogSources?: Record<string, 'modrinth' | 'addon'>;
   notes?: PatchNotes;
 }
 
@@ -138,3 +143,55 @@ export function datapackRisks(u: PackUpdate, packs: Datapack[]): DatapackRisk[] 
 
 /** id мода по id предмета/рецепта — для группировки по модам */
 export const nsOf = (id: string) => id.split(':')[0];
+
+// ---------------------------------------------------------------- ченджлоги наших аддонов
+
+const versionsCache = new Map<string, Promise<AddonVersion[]>>();
+
+/** Наши аддоны среди добавленных и обновлённых модов записи */
+export const addonModsOf = (u: PackUpdate) => {
+  const ids = new Set(ADDONS.map((a) => a.id));
+  return [...u.mods.added, ...u.mods.updated].filter((m) => ids.has(m.id)).map((m) => m.id);
+};
+
+/**
+ * Запись с ченджлогами наших аддонов: у старых записей (до 2026-10-23) их не было — подставляем из addonVersions
+ * за «было → стало», ничего не записывая. Версии аддона читаются один раз на страницу.
+ */
+export async function withAddonChangelogs(u: PackUpdate): Promise<PackUpdate> {
+  if (u.baseline) return u;
+  const need = addonModsOf(u).filter((id) => u.changelogSources?.[id] !== 'addon');
+  if (!need.length) return u;
+  const missing = need.filter((id) => !versionsCache.has(id));
+  if (missing.length) {
+    const all = loadAddonVersions(missing);
+    for (const id of missing)
+      versionsCache.set(
+        id,
+        all.then((m) => m.get(id) ?? []),
+      );
+    all.catch(() => missing.forEach((id) => versionsCache.delete(id)));
+  }
+  const versions = (await Promise.all(need.map((id) => versionsCache.get(id)!))).flat();
+  const logs = addonChangelogsFrom(u.mods, ADDONS, versions, 8000);
+  if (!Object.keys(logs).length) return u;
+  const sources = { ...(u.changelogSources ?? {}) };
+  for (const id of Object.keys(logs)) sources[id] = 'addon';
+  return { ...u, changelogs: { ...(u.changelogs ?? {}), ...logs }, changelogSources: sources };
+}
+
+/** То же хуком: enabled — когда список изменений открыт (не тратим чтения на свёрнутые карточки) */
+export function useAddonChangelogs(u: PackUpdate, enabled: boolean): PackUpdate {
+  const [full, setFull] = useState<PackUpdate | null>(null);
+  useEffect(() => {
+    if (!enabled) return;
+    let alive = true;
+    withAddonChangelogs(u)
+      .then((x) => alive && setFull(x))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [u, enabled]);
+  return full && full.id === u.id ? { ...u, changelogs: full.changelogs, changelogSources: full.changelogSources } : u;
+}

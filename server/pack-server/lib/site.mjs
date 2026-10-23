@@ -7,6 +7,9 @@
  * в /opt/tfc-pack без scripts/. Бюджет бесплатного тарифа — 50 тыс. чтений в сутки на всех, поэтому списки
  * кешируются на SITE_CACHE_SEC (по умолчанию 5 минут), а файлы схем — на диске навсегда (файл с данным id
  * не меняется: правка схемы на сайте — новый файл).
+ *
+ * Аддоны: карточки tools/<мод>/addon.json из той же копии репозитория + версии из Firestore addonVersions
+ * (src/lib/addonVersions.ts); jar версий — блобы этого сервера по sha256 (/blobs/<sha256>).
  */
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
@@ -31,6 +34,9 @@ const SCHEMATIC_FIELDS = [
   'updatedAt',
 ];
 const FILE_ID_RE = /^[A-Za-z0-9]{1,64}$/;
+const ADDON_ID_RE = /^[a-z][a-z0-9_]{1,63}$/;
+const VERSION_RE = /^[0-9][\w.+-]{0,39}$/;
+const JAR_RE = /^[\w.+-]+\.jar$/;
 
 export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
   const filesDir = path.join(dataDir, 'site-files');
@@ -225,7 +231,109 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
     return { id, updateTime: d.updateTime, ...data };
   }
 
+  /** Карточки аддонов из копии репозитория (tools/<мод>/addon.json) */
+  function addonCards() {
+    const tools = path.join(repoDir, 'tools');
+    if (!fs.existsSync(tools)) return [];
+    const out = [];
+    for (const d of fs.readdirSync(tools, { withFileTypes: true })) {
+      const f = path.join(tools, d.name, 'addon.json');
+      if (!d.isDirectory() || !fs.existsSync(f)) continue;
+      try {
+        out.push(JSON.parse(fs.readFileSync(f, 'utf8')));
+      } catch (e) {
+        console.error(`карточка ${f}: ${e.message}`);
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Аддоны для tfc pull: карточка (кому ставить, что заменяет) + версии с jar на этом сервере. Черновики тоже —
+   * программа ставит их, только если версию назвали явно. Аддон без карточки (unlisted, tp_trace) не отдаётся.
+   */
+  async function addons() {
+    const versions = await cached('addonVersions');
+    const out = [];
+    for (const c of addonCards()) {
+      if (c.unlisted || !ADDON_ID_RE.test(c.id ?? '')) continue;
+      const list = versions
+        .filter((v) => v.addon === c.id && v.jar?.sha256)
+        .map((v) => ({
+          version: v.version,
+          date: v.date ?? '',
+          status: v.status ?? 'draft',
+          file: v.jar.file,
+          sha256: v.jar.sha256,
+          size: v.jar.size,
+        }));
+      out.push({
+        id: c.id,
+        name: c.name,
+        side: c.side,
+        needs: c.needs,
+        replaces: c.replaces ?? [],
+        formerIds: c.formerIds ?? [],
+        versions: list,
+      });
+    }
+    return { addons: out };
+  }
+
+  /**
+   * Залитый jar версии аддона → addonVersions/{мод}@{версия}: новой версии — запись-черновик (ченджлог пишут потом,
+   * на сайте или MCP addon_version_put), у существующей без jar — jar. Другой jar под той же версией — отказ.
+   */
+  async function registerAddonVersion({ addon, version, file, sha256, size }, by) {
+    if (!ADDON_ID_RE.test(addon ?? '')) throw new HttpError(400, 'addon — id мода (латиница, цифры, _)');
+    if (!VERSION_RE.test(version ?? '')) throw new HttpError(400, 'version — номер версии (2.3.3)');
+    if (!JAR_RE.test(file ?? '')) throw new HttpError(400, 'file — имя jar без папок');
+    if (!Number.isInteger(size) || size <= 0) throw new HttpError(400, 'size — размер jar');
+    const fsr = await firestore();
+    const id = `${addon}@${version}`;
+    const url = `/addonVersions/${encodeURIComponent(id)}`;
+    const jar = { file, sha256, size };
+    const toFields = (data) => Object.fromEntries(Object.entries(data).map(([k, v]) => [k, fsr.toValue(v)]));
+    const cur = await api(url);
+    let created = false;
+    if (!cur) {
+      const now = Date.now();
+      await api(`${url}?currentDocument.exists=false`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          fields: toFields({
+            addon,
+            version,
+            date: new Date().toISOString().slice(0, 10),
+            status: 'draft',
+            jar,
+            changelog: '',
+            checked: 'none',
+            checkedNote: '',
+            createdAt: now,
+            updatedAt: now,
+            updatedBy: String(by).slice(0, 24),
+          }),
+        }),
+      });
+      created = true;
+    } else {
+      const old = fields(fsr, cur).jar;
+      if (old?.sha256 && old.sha256 !== sha256)
+        throw new HttpError(409, `У ${id} уже другой jar (${old.sha256.slice(0, 12)}…) — поднимите номер версии`);
+      if (!old?.sha256)
+        await api(`${url}?updateMask.fieldPaths=jar&currentDocument.updateTime=${encodeURIComponent(cur.updateTime)}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ fields: toFields({ jar }) }),
+        });
+    }
+    cache.delete('addonVersions');
+    return { id, created, jar };
+  }
+
   return {
+    addons,
+    registerAddonVersion,
     datapacks,
     kubejs,
     schematics,

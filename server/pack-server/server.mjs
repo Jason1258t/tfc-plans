@@ -26,6 +26,9 @@
  *   GET    /site/kubejs?name=…      — скрипты KubeJS «Ставить на сервер» (+ названные) player
  *   GET    /site/schematics         — схемы библиотеки (без превью)              player
  *   GET    /site/files/:id          — исходник схемы (.nbt из хранилища сайта)   player
+ *   GET    /site/addons             — аддоны: карточка + версии с jar (Firestore addonVersions) player
+ *   POST   /admin/addons            — { addon, version, file, sha256, size }: jar версии (блоб уже залит)
+ *                                     → запись в addonVersions (новая — черновик)          admin
  *   GET    /admin/changes           — правки конфигов от агента (Firestore configChanges) admin
  *   POST   /admin/changes/:id       — { status: applied|rejected, results, updateTime } admin
  */
@@ -301,6 +304,17 @@ async function handle(req, res) {
     }
   }
 
+  // --- версии аддонов: jar заливают блобом (PUT /blobs/:sha256), здесь — запись версии на сайте
+  if (route === 'POST /admin/addons' && parts.length === 2) {
+    const who = await authorize(req, 'admin');
+    const body = (await readJsonBody(req)) ?? {};
+    if (!SHA256_RE.test(body.sha256 ?? '')) throw new HttpError(400, 'sha256 — 64 строчных шестнадцатеричных символа');
+    if (!store.hasBlob(body.sha256)) throw new HttpError(409, 'Сначала залейте jar (PUT /blobs/<sha256>)');
+    const r = await site.registerAddonVersion(body, who.name);
+    console.log(`${r.created ? '+' : '='} аддон ${r.id} ${body.sha256.slice(0, 12)}… — ${who.name}`);
+    return json(res, r.created ? 201 : 200, r);
+  }
+
   // --- правки конфигов от агента: хост применяет их у себя (tfc admin changes) и отмечает итог
   if (parts[0] === 'admin' && parts[1] === 'changes') {
     const who = await authorize(req, 'admin');
@@ -408,6 +422,7 @@ async function handle(req, res) {
     if (url.pathname === '/site/datapacks') return json(res, 200, await site.datapacks(names));
     if (url.pathname === '/site/kubejs') return json(res, 200, await site.kubejs(names));
     if (url.pathname === '/site/schematics') return json(res, 200, await site.schematics());
+    if (url.pathname === '/site/addons') return json(res, 200, await site.addons());
     if (parts[1] === 'files' && parts.length === 3) {
       const file = await site.filePath(parts[2]);
       const st = await fs.promises.stat(file);

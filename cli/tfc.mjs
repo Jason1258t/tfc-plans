@@ -14,6 +14,7 @@ import { parseParts, printJobs, PUBLISH, showJob } from './lib/jobs.mjs';
 import { diffFiles, printDiff, publish } from './lib/publish.mjs';
 import { applyPull, planPull, pullChanges, recheckAddons, siteDatapackPaths, siteOwned } from './lib/pull.mjs';
 import { scanLocal } from './lib/scan.mjs';
+import { listAddons, uploadAddons } from './lib/addons.mjs';
 import { applyChange, planChange, resultsOf } from './lib/changes.mjs';
 import { applyPlan, beginBackup, editBackup, finishBackup, undoLast } from './lib/sync.mjs';
 import {
@@ -67,6 +68,8 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
       --dry-run               только показать          --force   перезаписать и ваши правки (с копией)
       --yes                   не спрашивать
   tfc pull datapacks|kubejs|schematics|addons <имя…>   одно названное с сайта (датапак — любой, и тестовый)
+  tfc pull addons <мод>@<версия>   поставить и закрепить версию аддона (откат); <мод>@latest — снять закрепление
+  tfc addons [мод…]           версии аддонов: что есть, что стоит здесь, что закреплено
   tfc undo                    вернуть как было до прошлого pull
 
 Хосту (ключ администратора):
@@ -81,6 +84,7 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
   tfc admin publish           показать, что изменится на сайте; --live — выложить (текущую сборку, с вопросом);
                               --allow-removals — разрешить убрать с сайта больше 300 файлов
   tfc admin jobs [id|last]    задания сервера; с id — лог и итог (--follow — следить до конца)
+  tfc admin addon upload <jar…>   залить jar новой версии аддона (id и версия — из jar; --id, --ver)
   tfc admin changes [pull [id…] | reject <id>]   правки конфигов от Claude: список; pull — внести в папку игры
                               и сервера (покажет и спросит; --dry-run, --yes; вернуть — tfc undo); reject — отклонить
 
@@ -154,6 +158,8 @@ const opts = {
   memory: { type: 'string' },
   'server-dir': { type: 'string' },
   note: { type: 'string' },
+  id: { type: 'string' },
+  ver: { type: 'string' },
   mc: { type: 'string' },
   loader: { type: 'string' },
   out: { type: 'string' },
@@ -489,6 +495,7 @@ function printSite(p, names) {
       if (x.note) console.log(dim(`        ставить: ${x.note}`));
     }
   };
+  for (const n of p.notes ?? []) console.log(dim(`  · ${n}`));
   line(green('+'), 'поставить', p.add);
   line(yellow('~'), 'обновить (старое — в копию)', p.update);
   line(
@@ -929,6 +936,12 @@ async function adminUpdates(a, v, [action, ...ids]) {
   throw new Error('tfc admin updates [pull [id…] | approve <id> | reject <id>]');
 }
 
+async function cmdAddons(v, names) {
+  const cfg = loadConfig();
+  const profile = Object.keys(cfg.profiles ?? {}).length ? currentProfile(cfg, v.profile) : null;
+  await listAddons(api(cfg), profile, names);
+}
+
 async function cmdAdmin(v, [sub, ...args]) {
   const arg = args[0];
   const a = api(loadConfig());
@@ -993,6 +1006,9 @@ async function cmdAdmin(v, [sub, ...args]) {
     await startedJob(a, j, v);
   } else if (sub === 'changes') {
     await adminChanges(a, v, args);
+  } else if (sub === 'addon') {
+    if (arg !== 'upload') throw new Error('tfc admin addon upload <jar…> [--id <мод>] [--ver <версия>]');
+    await uploadAddons(a, args.slice(1), { id: v.id, version: v.ver });
   } else if (sub === 'jobs') {
     if (!arg) return printJobs(a);
     let id = arg;
@@ -1006,7 +1022,7 @@ async function cmdAdmin(v, [sub, ...args]) {
     if (j.state === 'failed') process.exitCode = 1;
   } else
     throw new Error(
-      'tfc admin keys | invite <ник> | revoke <id> | history | use <id> | rollback | updates | propose | rebuild | publish | jobs | changes',
+      'tfc admin keys | invite <ник> | revoke <id> | history | use <id> | rollback | updates | propose | rebuild | publish | jobs | changes | addon',
     );
 }
 
@@ -1026,6 +1042,7 @@ const COMMANDS = {
   publish: cmdPublish,
   build: cmdBuild,
   admin: cmdAdmin,
+  addons: cmdAddons,
 };
 
 async function main(argv) {

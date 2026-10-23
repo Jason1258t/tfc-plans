@@ -38,6 +38,10 @@ export interface AddonCard {
   needs: string;
   /** Файлы сборки (путь от папки версии), которые аддон заменяет: `tfc pull addons` убирает их с копией */
   replaces?: string[];
+  /** Прежние id мода (переименование: ee_rectifier → ee_extras) — для ченджлогов в записях об обновлении */
+  formerIds?: string[];
+  /** sha256 текущего jar: без jar в tools/ сборка сайта берёт его с сервера сборки или с сайта */
+  sha256?: string;
   /** Не показывать в списке (диагностика): jar на сайте есть, карточки — нет */
   unlisted?: boolean;
   blocks: AddonBlock[];

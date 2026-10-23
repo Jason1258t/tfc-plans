@@ -2,9 +2,10 @@
  * `tfc pull`, часть «сайт» — контент сайта в папку игры (снимок сборки — plan.mjs и sync.mjs, вместе — cli/tfc.mjs): датапаки «Ставить в мир» → `<мир>/datapacks/tfc-plans-<id>.zip`,
  * скрипты KubeJS «Ставить на сервер» → `kubejs/server_scripts/<fileName>`, схемы библиотеки → `schematics/`
  * (и на сервере — копии игроков в `schematics/uploaded/<ник>/`, uploadedCopies).
- * Берёт с сервера сборки (раздел /site), сайт закрыт App Check. Аддоны сборки → `mods/` — со статики сайта
- * (/addons/index.json и jar, ключ не нужен): старый jar того же мода и файлы, которые аддон заменяет (`replaces`),
- * убираются с копией. Файлы собираются теми же модулями, что и
+ * Берёт с сервера сборки (раздел /site), сайт закрыт App Check. Аддоны сборки → `mods/` — с сервера сборки
+ * (/site/addons: версии из Firestore addonVersions, jar — блобы; `<мод>@<версия>` ставит и закрепляет версию в
+ * state.addonPins, `@latest` снимает), без ключа — со статики сайта (/addons/index.json, только последние): старый
+ * jar того же мода и файлы, которые аддон заменяет (`replaces`), убираются с копией. Файлы собираются теми же модулями, что и
  * на сайте (src/lib/datapackFiles.ts, schematicFile.ts) — esbuild кладёт их в один файл программы.
  *
  * Что поставлено — `.tfc/state.json`, поле `pulled`: { вид: { id: { path, sha256, name } } }, path — как в
@@ -24,6 +25,7 @@ import path from 'node:path';
 import { strToU8, zipSync } from 'fflate';
 import { datapackFiles, zipName } from '../../src/lib/datapackFiles.ts';
 import { schematicFromLibrary } from '../../src/lib/schematicFile.ts';
+import { compareVersions, sortVersions } from '../../src/lib/addonVersions.ts';
 import { modIdsOf } from './jarid.mjs';
 import { loadState, saveState } from './plan.mjs';
 import { localPath, stateDir } from './scan.mjs';
@@ -102,7 +104,7 @@ export async function siteDatapackPaths(api, profile) {
  * unknown — названные, которых на сайте нет; all — для подсказки.
  */
 async function wanted(api, kind, names, profile) {
-  if (kind === 'addons') return wantedAddons(names, profile);
+  if (kind === 'addons') return wantedAddons(api, names, profile);
   if (kind === 'datapacks') {
     const r = await api.get(`/site/datapacks${query(names)}`);
     return {
@@ -182,45 +184,144 @@ const addonKey = (s) =>
     .replace(/[-_\s]+/g, '');
 /** Имя jar без версии: ee-extras-2.0.1.jar → ee-extras */
 const jarBase = (file) => String(file ?? '').replace(/-\d[\w.+-]*\.jar$/i, '');
-const addonMatch = (a, n) => [a.id, a.file, jarBase(a.file)].some((x) => addonKey(x) === addonKey(n));
 
-/** Аддоны: без имён — все, что ставятся на эту сторону (клиент/сервер), с именами — названные */
-async function wantedAddons(names, profile) {
+/** Имя из командной строки → { name, version }: ee_extras@2.3.1, rw-host-fix@latest */
+export function splitAddonName(n) {
+  const i = String(n).lastIndexOf('@');
+  return i > 0 ? { name: n.slice(0, i), version: n.slice(i + 1) || null } : { name: n, version: null };
+}
+
+/**
+ * Версия аддона для этой папки: названная (`@2.3.1`; `@latest` — снять закрепление), закреплённая раньше
+ * (state.addonPins) или последняя выпущенная. Черновики и отозванные — только названные явно. → { v, pin, note }
+ */
+export function pickAddonVersion(a, asked, pinned) {
+  const vs = a.versions ?? [];
+  const latest = sortVersions(vs.filter((v) => v.status === 'released'))[0] ?? null;
+  if (asked && asked !== 'latest') {
+    const v = vs.find((x) => compareVersions(x.version, asked) === 0);
+    if (!v)
+      throw new Error(
+        `у ${a.id} нет версии ${asked} на сервере сборки; есть: ${
+          sortVersions(vs)
+            .map((x) => x.version)
+            .join(', ') || 'ни одной'
+        }`,
+      );
+    const warn =
+      v.status === 'withdrawn' ? ' — отозвана, ставлю по вашему слову' : v.status === 'draft' ? ' — черновик' : '';
+    return { v, pin: v.version, note: `закрепляю ${v.version}${warn} (вернуть последнюю — ${a.id}@latest)` };
+  }
+  if (asked === 'latest') return { v: latest, pin: null, note: pinned ? `снимаю закрепление ${pinned}` : null };
+  if (pinned) {
+    const v = vs.find((x) => compareVersions(x.version, pinned) === 0);
+    if (v)
+      return {
+        v,
+        pin: pinned,
+        note: `закреплена ${pinned}${v.status === 'withdrawn' ? ' (отозвана!)' : ''}${latest && latest.version !== pinned ? `, последняя — ${latest.version}` : ''}`,
+      };
+    return { v: latest, pin: null, note: `закреплённой ${pinned} на сервере нет — ставлю последнюю` };
+  }
+  return { v: latest, pin: undefined, note: null };
+}
+
+/**
+ * Аддоны: без имён — все, что ставятся на эту сторону (клиент/сервер), с именами — названные (можно с @версией).
+ * С ключом список и jar — с сервера сборки (/site/addons: все версии, откат, закрепление), без ключа — со статики
+ * сайта (/addons/index.json: только последние версии).
+ */
+async function wantedAddons(api, names, profile) {
+  const side = profile.side ?? 'client';
+  const asked = names.map(splitAddonName);
+  const state = loadState(profile);
+  const pins = state.addonPins ?? {};
+  let list = null;
+  if (api) {
+    try {
+      list = (await api.get('/site/addons')).addons;
+    } catch (e) {
+      // старый сервер сборки без /site/addons — как раньше, со статики сайта
+      if (e.status !== 404) throw e;
+    }
+  }
   const index = await (await siteFetch('/addons/index.json')).json();
-  const list = (index.addons ?? []).filter(
+  const latestOnSite = (index.addons ?? []).filter(
     (a) => /^[\w.+-]+\.jar$/.test(a.file ?? '') && /^[0-9a-f]{64}$/.test(a.sha256),
   );
-  const side = profile.side ?? 'client';
-  const chosen = names.length
-    ? list.filter((a) => names.some((n) => addonMatch(a, n)))
-    : list.filter((a) => a.side === 'both' || a.side === side);
+  // Аддон без версий на сервере сборки (ещё не перенесли) — последняя версия со статики сайта
+  const all = list
+    ? list.map((a) => {
+        if (a.versions?.length) return a;
+        const s = latestOnSite.find((x) => x.id === a.id);
+        return s
+          ? {
+              ...a,
+              versions: [
+                { version: s.version, status: 'released', file: s.file, sha256: s.sha256, size: s.size, site: true },
+              ],
+            }
+          : a;
+      })
+    : latestOnSite.map((s) => ({
+        ...s,
+        versions: [
+          { version: s.version, status: 'released', file: s.file, sha256: s.sha256, size: s.size, site: true },
+        ],
+      }));
+  if (!api && asked.some((x) => x.version && x.version !== 'latest'))
+    throw new Error('другие версии аддонов раздаёт сервер сборки — нужен ключ игрока (tfc login <ключ>)');
+  const match = (a, n) =>
+    [a.id, ...(a.versions ?? []).map((v) => v.file), ...(a.versions ?? []).map((v) => jarBase(v.file))].some(
+      (x) => addonKey(x) === addonKey(n),
+    );
+  const chosen = asked.length
+    ? all.filter((a) => asked.some((x) => match(a, x.name)))
+    : all.filter((a) => a.side === 'both' || a.side === side);
   const cacheDir = path.join(stateDir(profile), 'site-files');
-  const items = chosen.map((a) => {
-    const jar = path.join(cacheDir, `${a.sha256}.jar`);
-    return {
+  const newPins = {};
+  const items = [];
+  const notes = [];
+  for (const a of chosen) {
+    const ask = asked.find((x) => match(a, x.name))?.version ?? null;
+    const { v, pin, note } = pickAddonVersion(a, ask, pins[a.id]);
+    if (pin !== undefined) newPins[a.id] = pin;
+    if (note) notes.push(`${a.id}: ${note}`);
+    if (!v) {
+      notes.push(`${a.id}: выпущенных версий нет — пропускаю`);
+      continue;
+    }
+    const jar = path.join(cacheDir, `${v.sha256}.jar`);
+    items.push({
       id: a.id,
-      name: `${a.name} ${a.version}`,
-      path: `mods/${a.file}`,
+      name: `${a.name} ${v.version}`,
+      version: v.version,
+      path: `mods/${v.file}`,
       note: a.needs,
       replaces: Array.isArray(a.replaces) ? a.replaces : [],
       jar,
       bytes: async () => {
-        if (fileSha(jar) !== a.sha256) {
-          const bytes = new Uint8Array(await (await siteFetch(a.url ?? `/addons/${a.file}`)).arrayBuffer());
-          if (sha(bytes) !== a.sha256)
-            throw new Error(`${a.file} пришёл повреждённым (хеш не сошёлся) — запустите ещё раз`);
+        if (fileSha(jar) !== v.sha256) {
           fs.mkdirSync(cacheDir, { recursive: true });
-          fs.writeFileSync(`${jar}.part`, bytes);
-          fs.renameSync(`${jar}.part`, jar);
+          if (api && !v.site) await api.download(v.sha256, jar);
+          else {
+            const bytes = new Uint8Array(await (await siteFetch(`/addons/${v.file}`)).arrayBuffer());
+            if (sha(bytes) !== v.sha256)
+              throw new Error(`${v.file} пришёл повреждённым (хеш не сошёлся) — запустите ещё раз`);
+            fs.writeFileSync(`${jar}.part`, bytes);
+            fs.renameSync(`${jar}.part`, jar);
+          }
         }
         return fs.readFileSync(jar);
       },
-    };
-  });
+    });
+  }
   return {
     items,
-    unknown: names.filter((n) => !list.some((a) => addonMatch(a, n))),
-    all: list.map((a) => ({ id: a.id, name: `${a.id} ${a.version}` })),
+    notes,
+    pins: newPins,
+    unknown: asked.filter((x) => !all.some((a) => match(a, x.name))).map((x) => x.name),
+    all: all.map((a) => ({ id: a.id, name: `${a.id} ${sortVersions(a.versions ?? [])[0]?.version ?? ''}`.trim() })),
   };
 }
 
@@ -324,7 +425,7 @@ export async function planPull(api, profile, kind, names = [], { force = false }
     plan.obsolete = addonObsolete(profile, [...plan.add, ...plan.update, ...plan.same], skip);
     plan.skip = skip;
   }
-  return { ...plan, unknown: w.unknown ?? [], all: w.all ?? [] };
+  return { ...plan, unknown: w.unknown ?? [], all: w.all ?? [], notes: w.notes ?? [], pins: w.pins };
 }
 
 /**
@@ -438,6 +539,13 @@ export function applyPull(profile, plans, backup, overrides) {
   const state = loadState(profile);
   state.pulled ??= {};
   if (overrides) state.addonOverrides = overrides;
+  // Закреплённые версии аддонов (tfc pull addons <мод>@<версия>); null — снять
+  for (const p of plans)
+    for (const [id, v] of Object.entries(p.pins ?? {})) {
+      state.addonPins ??= {};
+      if (v) state.addonPins[id] = v;
+      else delete state.addonPins[id];
+    }
   const manifest = backup.manifest;
   const keep = (x, list) => toBackup(backup, x.file, x.path, list);
   for (const p of plans) {
