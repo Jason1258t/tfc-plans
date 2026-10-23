@@ -37,8 +37,17 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   the plan textarea only with flag `?live=1` (localStorage `tfc_live_md`, `?live=0` off). Hides marks outside the
   cursor: headings, emphasis, links, items `[[id]]` (chips), checkboxes (clickable), bullets, quotes, hr, images; Enter
   continues lists. Checked in the browser: typing, items, checkboxes, undo, item picker, agent-free paths, phone width,
-  light/dark. Not done: tables are raw (monospace), no Ctrl+B/I, task descriptions/guides still textarea, real IME and
-  mobile keyboards not tried. Plan doc on the task.
+  light/dark. Not tried: real IME and mobile keyboards. Plan doc on the task.
+  - Stage 3 (2026-10-23): tables render as a block widget (`StateField`, React `Markdown` inside) outside the cursor;
+    click → raw row. Commands in `liveMarkdownCommands.ts`: Tab/Shift+Tab nest/outdent list items with their children
+    (ordered renumbering of the first item; Shift+Tab at top level removes the marker), Tab/Shift+Tab move between
+    table cells, Backspace right after a marker removes it (CM's default turned it into spaces), Ctrl+B/I/E,
+    Ctrl+Shift+X, Ctrl+K link, Ctrl+Enter checkbox.
+  - Save race fixed in `ArtifactPane` (also for the textarea): a finished autosave used to clear «dirty» even if newer
+    edits were pending, so the old text was pulled back from Firestore for ~0.6 s and could merge with new typing
+    (deleted list items «came back»). `LiveMarkdown` also ignores its own echoed value.
+  - Remaining before enabling for everyone: switch other Markdown fields (task description, guides, schematic
+    description, update notes, hints — task checklist) and a media callback for task attachments.
 
 ## Create schematics (.nbt)
 

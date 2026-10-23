@@ -95,7 +95,9 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
       await artifactsStore.update(artifact.id, { content: value, updatedBy: nick });
     } finally {
       setSaving(false);
-      setDirty(false);
+      // Пока сохранялось, могли напечатать ещё: тогда правки не сохранены, и подтягивать из базы
+      // старый текст нельзя — иначе удалённое на мгновение «возвращается» и смешивается с новым вводом
+      if (latest.current.content === value) setDirty(false);
     }
   };
 
