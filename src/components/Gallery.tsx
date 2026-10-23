@@ -14,23 +14,61 @@ interface Props {
   onAdd: (files: File[]) => void;
 }
 
+/** Картинка сетки: загруженная (в базе) или из черновика новой задачи */
+type Shot =
+  | { key: string; kind: 'file'; file: FileMeta; name: string }
+  | { key: string; kind: 'pending'; file: File; name: string; url: string };
+
 /** Картинки задачи: превью-сетка под описанием + просмотр на весь экран */
 export function Gallery({ taskId, pending, onRemovePending, onAdd }: Props) {
   const { files } = useData();
   const uploads = useUploads(taskId).filter((u) => u.image);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [open, setOpen] = useState<number | null>(null);
+  const [openKey, setOpenKey] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
 
-  const images = taskId
-    ? files.filter((f) => f.taskId === taskId && isImage(f)).sort((a, b) => a.createdAt - b.createdAt)
-    : [];
+  const saved = useMemo(
+    () =>
+      taskId ? files.filter((f) => f.taskId === taskId && isImage(f)).sort((a, b) => a.createdAt - b.createdAt) : [],
+    [files, taskId],
+  );
   const pendingImages = useMemo(() => (pending ?? []).filter(isImage), [pending]);
   const pendingUrls = useMemo(() => pendingImages.map((f) => URL.createObjectURL(f)), [pendingImages]);
   useEffect(() => () => pendingUrls.forEach((u) => URL.revokeObjectURL(u)), [pendingUrls]);
 
+  // Сетка и просмотр ходят по одному списку: картинка черновика открывается так же, как сохранённая
+  const shots = useMemo<Shot[]>(
+    () => [
+      ...saved.map((f) => ({ key: f.id, kind: 'file' as const, file: f, name: f.name })),
+      ...pendingImages.map((f, i) => ({
+        key: 'pending-' + i,
+        kind: 'pending' as const,
+        file: f,
+        name: f.name,
+        url: pendingUrls[i],
+      })),
+    ],
+    [saved, pendingImages, pendingUrls],
+  );
+
   if (!filesEnabled) return null;
-  const hasAny = images.length + pendingImages.length + uploads.length > 0;
+  const hasAny = shots.length + uploads.length > 0;
+
+  /** Убрать картинку из сетки — с подтверждением; из просмотра переходим к соседней */
+  const remove = async (shot: Shot) => {
+    if (!confirm('Удалить изображение «' + shot.name + '»?')) return;
+    const i = shots.findIndex((s) => s.key === shot.key);
+    const next = shots[i + 1] ?? shots[i - 1];
+    if (shot.key === openKey) setOpenKey(next && next.key !== shot.key ? next.key : null);
+    try {
+      if (shot.kind === 'file') await removeFile(shot.file);
+      else onRemovePending?.(shot.file);
+    } catch (e) {
+      alert('Не удалось удалить «' + shot.name + '»: ' + (e instanceof Error ? e.message : e));
+    }
+  };
+
+  const open = openKey === null ? -1 : shots.findIndex((s) => s.key === openKey);
 
   return (
     <div
@@ -50,21 +88,8 @@ export function Gallery({ taskId, pending, onRemovePending, onAdd }: Props) {
     >
       {hasAny && (
         <div className="gallery-grid">
-          {images.map((f, i) => (
-            <Thumb key={f.id} file={f} onOpen={() => setOpen(i)} />
-          ))}
-          {pendingImages.map((f, i) => (
-            <div key={`p-${i}`} className="g-thumb">
-              <img src={pendingUrls[i]} alt={f.name} />
-              <button
-                className="g-remove"
-                onClick={() => onRemovePending?.(f)}
-                aria-label={`Убрать ${f.name}`}
-                title="Убрать"
-              >
-                <X size={13} />
-              </button>
-            </div>
+          {shots.map((shot) => (
+            <Thumb key={shot.key} shot={shot} onOpen={() => setOpenKey(shot.key)} onRemove={() => remove(shot)} />
           ))}
           {uploads.map((u) => (
             <div key={u.key} className={cx('g-thumb uploading', u.error && 'failed')} title={u.error ?? u.name}>
@@ -96,52 +121,70 @@ export function Gallery({ taskId, pending, onRemovePending, onAdd }: Props) {
           e.target.value = '';
         }}
       />
-      {open !== null && images[open] && (
-        <Lightbox images={images} index={open} onIndex={setOpen} onClose={() => setOpen(null)} />
+      {open >= 0 && (
+        <Lightbox
+          shots={shots}
+          index={open}
+          onIndex={(i) => setOpenKey(shots[i]?.key ?? null)}
+          onRemove={(shot) => remove(shot)}
+          onClose={() => setOpenKey(null)}
+        />
       )}
     </div>
   );
 }
 
-function useImageUrl(f: FileMeta) {
-  const [url, setUrl] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
+/** object URL сохранённой картинки; у картинки черновика свой URL, поэтому для неё f нет и url = null */
+function useImageUrl(f?: FileMeta) {
+  // Состояние помнит, для какого файла получен URL: при переходе к соседней картинке старый не показываем
+  const [got, setGot] = useState<{ id: string; url?: string; failed?: boolean } | null>(null);
   useEffect(() => {
+    if (!f) return;
     let alive = true;
     fileUrl(f).then(
-      (u) => alive && setUrl(u),
-      () => alive && setFailed(true),
+      (u) => alive && setGot({ id: f.id, url: u }),
+      () => alive && setGot({ id: f.id, failed: true }),
     );
     return () => {
       alive = false;
     };
   }, [f]);
-  return { url, failed };
+  const own = f && got?.id === f.id ? got : null;
+  return { url: own?.url ?? null, failed: Boolean(own?.failed) };
 }
 
-function Thumb({ file, onOpen }: { file: FileMeta; onOpen: () => void }) {
-  const { url, failed } = useImageUrl(file);
+function Thumb({ shot, onOpen, onRemove }: { shot: Shot; onOpen: () => void; onRemove: () => void }) {
+  const { url: savedUrl, failed } = useImageUrl(shot.kind === 'file' ? shot.file : undefined);
+  const url = shot.kind === 'pending' ? shot.url : savedUrl;
   return (
-    <button className="g-thumb" onClick={onOpen} title={file.name} aria-label={`Открыть ${file.name}`}>
-      {url ? <img src={url} alt={file.name} /> : <span className={cx('g-skeleton', failed && 'failed')} />}
-    </button>
+    <div className="g-thumb" title={shot.name}>
+      <button type="button" className="g-open" onClick={onOpen} aria-label={'Открыть ' + shot.name}>
+        {url ? <img src={url} alt={shot.name} /> : <span className={cx('g-skeleton', failed && 'failed')} />}
+      </button>
+      <button type="button" className="g-remove" onClick={onRemove} aria-label={'Удалить ' + shot.name} title="Удалить">
+        <X size={13} />
+      </button>
+    </div>
   );
 }
 
 function Lightbox({
-  images,
+  shots,
   index,
   onIndex,
+  onRemove,
   onClose,
 }: {
-  images: FileMeta[];
+  shots: Shot[];
   index: number;
   onIndex: (i: number) => void;
+  onRemove: (shot: Shot) => void;
   onClose: () => void;
 }) {
-  const f = images[index];
-  const { url } = useImageUrl(f);
-  const go = (d: number) => onIndex((index + d + images.length) % images.length);
+  const shot = shots[index];
+  const { url: savedUrl } = useImageUrl(shot?.kind === 'file' ? shot.file : undefined);
+  const url = shot?.kind === 'pending' ? shot.url : savedUrl;
+  const go = (d: number) => onIndex((index + d + shots.length) % shots.length);
 
   useEffect(() => {
     // capture на window срабатывает раньше обработчика модалки — Esc закрывает только просмотр
@@ -157,32 +200,38 @@ function Lightbox({
     return () => window.removeEventListener('keydown', onKey, true);
   });
 
-  const remove = async () => {
-    if (!confirm(`Удалить изображение «${f.name}»?`)) return;
-    if (images.length === 1) onClose();
-    else if (index === images.length - 1) onIndex(index - 1);
-    await removeFile(f);
-  };
+  if (!shot) return null;
+
+  const meta =
+    shot.kind === 'file'
+      ? formatSize(shot.file.size) + ' · ' + shot.file.author + ' · ' + timeAgo(shot.file.createdAt)
+      : 'не загружено — появится после создания задачи';
 
   return createPortal(
     <div
       className="lightbox"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
       role="dialog"
-      aria-label={f.name}
+      aria-label={shot.name}
     >
       <div className="lb-top">
         <span className="lb-title">
-          {f.name}
+          {shot.name}
           <span className="lb-meta">
-            {formatSize(f.size)} · {f.author} · {timeAgo(f.createdAt)}
-            {images.length > 1 && ` · ${index + 1} из ${images.length}`}
+            {meta}
+            {shots.length > 1 && ' · ' + (index + 1) + ' из ' + shots.length}
           </span>
         </span>
-        <button className="lb-btn" onClick={() => downloadFile(f)} aria-label="Скачать" title="Скачать">
-          <Download size={18} />
-        </button>
-        <button className="lb-btn" onClick={remove} aria-label="Удалить" title="Удалить">
+        {shot.kind === 'file' ? (
+          <button className="lb-btn" onClick={() => downloadFile(shot.file)} aria-label="Скачать" title="Скачать">
+            <Download size={18} />
+          </button>
+        ) : (
+          <a className="lb-btn" href={shot.url} download={shot.name} aria-label="Скачать" title="Скачать">
+            <Download size={18} />
+          </a>
+        )}
+        <button className="lb-btn" onClick={() => onRemove(shot)} aria-label="Удалить" title="Удалить">
           <Trash2 size={18} />
         </button>
         <button className="lb-btn" onClick={onClose} aria-label="Закрыть" title="Закрыть (Esc)">
@@ -190,11 +239,11 @@ function Lightbox({
         </button>
       </div>
       {url ? (
-        <img className="lb-img" src={url} alt={f.name} onMouseDown={(e) => e.stopPropagation()} />
+        <img className="lb-img" src={url} alt={shot.name} onMouseDown={(e) => e.stopPropagation()} />
       ) : (
         <div className="lb-loading">Загрузка…</div>
       )}
-      {images.length > 1 && (
+      {shots.length > 1 && (
         <>
           <button className="lb-nav prev" onClick={() => go(-1)} aria-label="Предыдущее">
             <ChevronLeft size={28} />
