@@ -24,6 +24,10 @@ its one-liner in STATE.md.
   generator, rectifiers, inverters, small engine and genset (terminals of both generators moved into terminal boxes —
   placed wires should follow), rotating half-shaft, bucket by hand and Create pipes into the tank, JEI/EMI recipes, a real CDG engine driving
   compact generators, fuels other than diesel. Details — [addons.md](addons.md).
+- **IE Extras 1.0.0** (2026-10-23, `ie-extras-1.0.0.jar`, analog heater): host installs (`tfc pull addons`, server and
+  players) and `tfc publish`. In game: block looks and placement, Create analog lever, IE wires/connector feeding it,
+  crucible cooling after lowering the signal (can't be seen on the dev server — TFC calendar stands without players),
+  Firmalife vat/pot/oven top, JEI/EMI recipe. Details — [addons.md](addons.md).
 - **`rw-host-fix`** (`rw-host-fix-1.0.0.jar`): host uploads via `tfc publish` together with deleting
   `kubejs/server_scripts/event/eratosthenes_portal_clamp.js`; check host death and portal — the map no longer «drifts».
   Corrupted chunks (Z ≈ −22 000…−18 400, created 2026-10-20/21) — delete, the world regenerates them.

@@ -1,0 +1,46 @@
+{
+  "variants": {
+    "facing=north,lit=false": {
+      "model": "ie_extras:block/analog_heater"
+    },
+    "facing=east,lit=false": {
+      "model": "ie_extras:block/analog_heater",
+      "y": 90
+    },
+    "facing=south,lit=false": {
+      "model": "ie_extras:block/analog_heater",
+      "y": 180
+    },
+    "facing=west,lit=false": {
+      "model": "ie_extras:block/analog_heater",
+      "y": 270
+    },
+    "facing=up,lit=false": {
+      "model": "ie_extras:block/analog_heater_up"
+    },
+    "facing=down,lit=false": {
+      "model": "ie_extras:block/analog_heater_down"
+    },
+    "facing=north,lit=true": {
+      "model": "ie_extras:block/analog_heater_on"
+    },
+    "facing=east,lit=true": {
+      "model": "ie_extras:block/analog_heater_on",
+      "y": 90
+    },
+    "facing=south,lit=true": {
+      "model": "ie_extras:block/analog_heater_on",
+      "y": 180
+    },
+    "facing=west,lit=true": {
+      "model": "ie_extras:block/analog_heater_on",
+      "y": 270
+    },
+    "facing=up,lit=true": {
+      "model": "ie_extras:block/analog_heater_up_on"
+    },
+    "facing=down,lit=true": {
+      "model": "ie_extras:block/analog_heater_down_on"
+    }
+  }
+}

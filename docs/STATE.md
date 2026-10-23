@@ -1,6 +1,6 @@
 # Current state
 
-Updated: 2026-10-22. "Where we are now": an index — read this file at session start, open a topic file only when the
+Updated: 2026-10-23. "Where we are now": an index — read this file at session start, open a topic file only when the
 task touches it. History — `git log`.
 
 ## Topic files (`docs/state/`)
@@ -20,14 +20,14 @@ When finishing work: update the topic file, and this index only if a line below 
 
 - Host: pack update `u20261022-150945-83a0` (Chinese KubeJS messages → ru/en): `tfc admin updates pull`, check in game,
   `tfc admin updates approve`.
-- Host: install **EE Extras 2.3** (2.2 + compact generator) and **Small Diesel 1.0.0** + `tfc publish`; warn players
+- Host: install **EE Extras 2.3** (2.2 + compact generator), **Small Diesel 1.0.0** and **IE Extras 1.0.0** + `tfc publish`; warn players
   that rectifiers over 6 kW will burn.
 - Host: **`rw-host-fix`** + delete `eratosthenes_portal_clamp.js`; delete corrupted chunks Z ≈ −22 000…−18 400.
 - Host: **World Border** nether limit (`worldborder.json5`) → disable or widen; remove `tp-trace`.
 - Host: apply crop growth config change `MjQFPQkIf9SHOdEjopy4` (`tfc admin changes pull`).
 - Host: `arc-furnace-matadora` resource pack in `server.properties`; `ee-overheat` into `mods/`.
 - In game: two-core cable shell model, datapacks `electroenergetics_missing` and `pellet_arc_furnace`, map scale,
-  pumpjack, steel on EE heater, all addons (Miner Tools, Stress Fix, EE Extras 2.x, Small Diesel).
+  pumpjack, steel on EE heater, all addons (Miner Tools, Stress Fix, EE Extras 2.x, Small Diesel, IE Extras).
 - `tfc` app: Windows/Linux binaries, real launcher folder, real upload — not run.
 - Pack freshness: done incl. the `update-plan` skill; first plan — the 5 red mods (`docs/plans/mod-freshness.md`).
 

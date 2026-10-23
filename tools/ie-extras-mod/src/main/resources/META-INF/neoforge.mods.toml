@@ -1,0 +1,45 @@
+modLoader = "javafml"
+loaderVersion = "[2,)"
+license = "MIT"
+
+[[mods]]
+modId = "ie_extras"
+version = "1.0.0"
+displayName = "IE Extras"
+authors = "TFC Планы"
+description = '''
+Блоки и функции к Immersive Engineering для сборки TFC Планы. Аналоговый нагреватель — электрический (FE) нагреватель
+для тигля и других тепловых устройств TFC; температура задаётся силой сигнала красного камня (аналоговый рычаг Create,
+компаратор): 0–15 → 0–1600 °C.
+'''
+
+# TFC 4.2.9 сам требует NeoForge 21.1.234+
+[[dependencies.ie_extras]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1.234,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.ie_extras]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1]"
+ordering = "NONE"
+side = "BOTH"
+
+# HeatCapability.provideHeatTo / adjustTempTowards — по байткоду TFC 4.2.9; новая версия — сверить
+[[dependencies.ie_extras]]
+modId = "tfc"
+type = "required"
+versionRange = "[4.2.9,)"
+ordering = "AFTER"
+side = "BOTH"
+
+# Текстуры внешнего нагревателя, вкладка и рецепт — IE 12.4.2
+[[dependencies.ie_extras]]
+modId = "immersiveengineering"
+type = "required"
+versionRange = "[12.4.2-194,)"
+ordering = "AFTER"
+side = "BOTH"

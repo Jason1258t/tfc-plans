@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "ie_extras:block/analog_heater_side",
+    "north": "ie_extras:block/analog_heater_side",
+    "south": "ie_extras:block/analog_heater_side",
+    "east": "ie_extras:block/analog_heater_side",
+    "west": "ie_extras:block/analog_heater_side",
+    "up": "immersiveengineering:block/metal_device/furnace_heater",
+    "down": "immersiveengineering:block/metal_device/furnace_heater_socket"
+  }
+}

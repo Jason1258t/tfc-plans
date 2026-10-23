@@ -1,0 +1,25 @@
+{
+  "id": "ie_extras",
+  "name": "IE Extras — блоки к Immersive Engineering",
+  "version": "1.0.0",
+  "jar": "ie-extras-1.0.0.jar",
+  "order": 70,
+  "side": "both",
+  "summary": "Блоки и функции к Immersive Engineering для TFC. Первый — аналоговый нагреватель: электрический (FE) нагреватель для тигля и других тепловых устройств TFC, температура которого задаётся силой сигнала красного камня — аналоговым рычагом Create или компаратором: 0–15 → 0–1600 °C, шаг около 107 °C.",
+  "needs": "Сервер и все игроки (новый блок). NeoForge 21.1.234+, TerraFirmaCraft 4.2.9, Immersive Engineering 12.4.2.",
+  "blocks": [
+    {
+      "id": "ie_extras:analog_heater",
+      "name": "Аналоговый нагреватель",
+      "image": "analog_heater.png",
+      "recipe": {
+        "pattern": ["CTC", " H "],
+        "key": {
+          "C": { "item": "minecraft:comparator" },
+          "T": { "item": "immersiveengineering:electron_tube" },
+          "H": { "item": "immersiveengineering:furnace_heater" }
+        }
+      }
+    }
+  ]
+}

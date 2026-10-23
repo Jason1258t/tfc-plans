@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "pattern": ["CTC", " H "],
+  "key": {
+    "C": { "item": "minecraft:comparator" },
+    "T": { "item": "immersiveengineering:electron_tube" },
+    "H": { "item": "immersiveengineering:furnace_heater" }
+  },
+  "result": { "id": "ie_extras:analog_heater", "count": 1 }
+}

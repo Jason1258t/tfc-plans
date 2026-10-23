@@ -1,0 +1,45 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+version = mod_version
+group = 'ie.extras'
+base { archivesName = 'ie-extras' }
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+// Проверочный мод (только для runServer): команда /ietest — нагреватель под тиглем, сигнал от компаратора, показания. В jar не попадает.
+sourceSets {
+    devtest {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+configurations {
+    devtestCompileOnly.extendsFrom compileOnly
+}
+
+neoForge {
+    version = project.neo_version
+    mods {
+        ie_extras { sourceSet sourceSets.main }
+        ie_extras_devtest { sourceSet sourceSets.devtest }
+    }
+    addModdingDependenciesTo(sourceSets.devtest)
+    // Проверочный сервер: ./gradlew runServer. TFC, Patchouli и IE кладёт в run/mods скрипт test-server.sh
+    runs {
+        server {
+            server()
+            programArgument '--nogui'
+            sourceSet = sourceSets.devtest
+        }
+    }
+}
+
+dependencies {
+    // TFC и Immersive Engineering из mods/ сборки — только для компиляции (libs.sh)
+    compileOnly fileTree(dir: 'libs', include: '*.jar')
+}
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
