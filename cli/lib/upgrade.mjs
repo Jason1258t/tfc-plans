@@ -5,14 +5,14 @@
  * при следующем запуске (cleanupOld).
  * Пакет npm обновляется самим npm: npm install -g <пакет с сайта>.
  */
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { unzipSync } from 'fflate';
 import { configDir } from './config.mjs';
-import { mb, progress } from './ui.mjs';
-import { getJson, SITE } from './update.mjs';
+import { dim, mb, progress, yellow } from './ui.mjs';
+import { getJson, isNewer, latest, SITE } from './update.mjs';
 import { BUILD, CHANNEL, IS_BINARY, targetName } from './version.mjs';
 
 const self = () => process.execPath;
@@ -119,4 +119,36 @@ function upgradeNpm(remote, base, force) {
     );
   fs.rmSync(path.join(configDir(), 'update-check.json'), { force: true });
   return { from: BUILD.version, to: remote.version, path: 'npm (глобальный пакет)' };
+}
+
+/**
+ * Автообновление перед командой (как у brew): раз за сеанс терминала смотрит версию на сайте и, если есть новее,
+ * сначала обновляет tfc, а потом запускает ту же команду уже новой версией — протокол сервера сборки и сайта
+ * меняется вместе с программой. Возвращает код выхода перезапуска или null — работать дальше этой версией
+ * (новой нет, нет сети, обновиться не вышло). Отключить — TFC_NO_AUTO_UPDATE=1.
+ */
+export async function autoUpgrade(argv) {
+  if (CHANNEL === 'source' || process.env.TFC_NO_AUTO_UPDATE || process.env.TFC_UPGRADED) return null;
+  if (!isNewer(await latest({ perSession: true }))) return null;
+  let r;
+  try {
+    r = await upgrade();
+  } catch (e) {
+    console.error(yellow(`Не удалось обновить tfc (${e.message}) — работаю прежней версией ${BUILD.version}.`));
+    return null;
+  }
+  if (!r) return null;
+  console.error(dim(`tfc обновлён: ${r.from} → ${r.to}. Запускаю команду новой версией.\n`));
+  return rerun(argv);
+}
+
+/** Та же команда новой версией; Ctrl+C достаётся ей, эта только ждёт код выхода */
+function rerun(argv) {
+  const [cmd, args] = CHANNEL === 'npm' ? [process.execPath, [process.argv[1], ...argv]] : [self(), argv];
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, args, { stdio: 'inherit', env: { ...process.env, TFC_UPGRADED: '1' } });
+    process.on('SIGINT', () => {});
+    child.on('error', reject);
+    child.on('exit', (code, signal) => resolve(code ?? (signal ? 1 : 0)));
+  });
 }
