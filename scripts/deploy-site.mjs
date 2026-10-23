@@ -7,7 +7,9 @@
  *   1. npm run build с TFC_SITE_ONLY=1 (данные сборки не нужны и не собираются), проверка predeploy-check;
  *   2. новая версия Hosting с настройками из firebase.json;
  *   3. в неё — файлы сайта из dist/ (без корней данных) и файлы данных текущего релиза по их хешам: они уже на
- *      Hosting, ничего не скачивается и не загружается заново;
+ *      Hosting, ничего не скачивается и не загружается заново. Так же как есть переносятся файлы, которых в сборке
+ *      сайта нет вовсе, — tfc (собран на Mac), датапаки из packs/ и старые иконки аддонов /addons/*.png: иначе
+ *      выкладка со свежего checkout'а убрала бы их с сайта;
  *   4. загрузка недостающих файлов сайта, FINALIZED, релиз.
  * packUpdates не пишет — это делает публикация сервера сборки.
  *
@@ -63,7 +65,13 @@ async function main() {
 
   if (!argv.includes('--no-build')) {
     log('собираю сайт (без данных сборки)…');
-    execFileSync('npm', ['run', 'build'], { cwd: ROOT, stdio: 'inherit', env: { ...process.env, TFC_SITE_ONLY: '1' } });
+    // На Windows npm — это npm.cmd: без shell execFile его не находит
+    execFileSync('npm', ['run', 'build'], {
+      cwd: ROOT,
+      stdio: 'inherit',
+      env: { ...process.env, TFC_SITE_ONLY: '1' },
+      shell: process.platform === 'win32',
+    });
   }
   execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'predeploy-check.mjs')], { stdio: 'inherit' });
   if (!fs.existsSync(path.join(DIST, 'index.html'))) throw new Error('в dist/ нет index.html — сайт не собран');
@@ -71,18 +79,26 @@ async function main() {
   const cur = await currentRelease();
   if (!cur) throw new Error('у сайта нет ни одного релиза — первую выкладку делайте firebase deploy');
   const published = await versionFiles(cur.version.name);
+  // Файлы не из сборки сайта: их кладут tfc-dist и сервер сборки — не убираем, если в dist/ их нет
+  const serverFile = /^\/(tfc|packs)\//;
+  const legacyAddonIcon = /^\/addons\/[^/]+\.png$/;
   log(`текущий релиз ${cur.version.name.split('/').pop()} от ${cur.releaseTime}, файлов ${published.size}`);
 
   const files = new Map(); // «/путь» → { hash }
   const local = new Map(); // «/путь» → файл в dist/ (то, что, может быть, придётся загрузить)
   let dataKept = 0;
+  let serverKept = 0;
   // /__/ — служебные файлы Firebase (init.js): их кладёт сам Hosting, переносим как есть
   for (const [p, hash] of published) if (p.startsWith('/__/')) files.set(p, { hash });
-  for (const [p, hash] of published)
+  for (const [p, hash] of published) {
     if (isDataPath(p)) {
       files.set(p, { hash });
       dataKept++;
+    } else if (serverFile.test(p) || legacyAddonIcon.test(p)) {
+      files.set(p, { hash });
+      serverKept++;
     }
+  }
   if (!dataKept) throw new Error('в текущем релизе нет данных сборки — выложите их сначала (сервер сборки)');
 
   const site = { added: [], changed: [], removed: [], skippedData: 0, uploadBytes: 0 };
@@ -106,7 +122,8 @@ async function main() {
   const sameConfig = JSON.stringify(canon(cur.version.config ?? {})) === JSON.stringify(canon(config));
   log(
     `данные сборки: ${dataKept} файлов — из текущего релиза как есть` +
-      (site.skippedData ? ` (в dist/ их ${site.skippedData} — не выкладываю)` : ''),
+      (site.skippedData ? ` (в dist/ их ${site.skippedData} — не выкладываю)` : '') +
+      (serverKept ? `; файлы tfc, датапаков и старых иконок аддонов: ${serverKept} — как есть` : ''),
   );
   log(
     `сайт: новых ${site.added.length}, изменённых ${site.changed.length}, убрать ${site.removed.length}; ` +
