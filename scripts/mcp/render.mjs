@@ -335,7 +335,7 @@ export const codeModel = (layers, id, own, warnings) => codeItemModel(modelConte
  * Геометрия OBJ (neoforge:obj, ie_obj): треугольники в пикселях модели (0–16 = блок) с uv 0–1 (v сверху, как у
  * картинки; flip_v — как в ObjLoader NeoForge) и текстурой материала (map_Kd: id текстуры или #переменная модели).
  */
-function objTriangles(layers, m, warnings) {
+export function objTriangles(layers, m, warnings) {
   const j = m.loaderJson ?? {};
   const ref = typeof j.model === 'string' ? j.model : null;
   if (!ref) {

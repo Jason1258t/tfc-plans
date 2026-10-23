@@ -151,8 +151,26 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   models in jars (Create 6.0.10, Simulated 1.3.1, TFC 4.2.9). Layer view: flat texture only for a full cube with
   its own texture; other shapes or a borrowed `t` (Create gearbox → shaft texture, stairs → planks) — the rendered
   model `g`. Browser-checked on ore2dust_compact (431 → 390 blocks: fake_light gone, gearboxes/slabs/chests
-  recognisable) and BeloDacha roofs. Still approximate: real block models are not exported to the site, so 3D faces
-  of full cubes with a borrowed texture keep it (gearbox shows shafts).
+  recognisable) and BeloDacha roofs. Since the next entry these name rules are only the fallback.
+- **Real block models** (2026-10-23, task «Схемы: 3D и слои по настоящим моделям блоков из jar»): builder
+  `scripts/mods/block-models.mjs` (run by `mods.mjs`, jar cache `.done-v23` now unpacks `blockstates/`, vanilla
+  `.done-v5`) writes `public/block-models/<ns>.json` — blockstate variants/multipart → models (geometry deduplicated
+  separately from texture slots), elements with from/to, rotation, faces (uv, rotation, cullface, tintindex); OBJ
+  models (Create blaze burner, valve handles, crushing wheel; IE `ie_obj`) as triangles; wrapper loaders (TFC leaves
+  and plants, Firmalife shelves) → their base model; `composite` children. Face textures are copied into `icons/`
+  (paletted TFC textures drawn by the engine). Size: 11.3k blocks, ~11 MB raw / ~1.06 MB gzip in all, TFC file
+  190 KB gz, Create 80 KB; +4.3k textures (~4 MB) in `icons/`; build ~36 s with a warm cache. Site
+  `lib/blockModels.ts` loads only the namespaces of the schematic's blocks and bakes faces like `FaceBakery`
+  (variant x/y, element rotation + rescale, face uv rotation, uvlock approximated as world-aligned default uv,
+  cullface after rotation); `schematicMesh.ts` uses them and falls back to `shapeOf` when a block has no model
+  (BE-rendered: chests, Create belt; IE machine parts, Firmalife greenhouse panels) or the model is known to be
+  incomplete (`CODE_DRAWN`: Create fluid pipe — the jar model is only walls, rims are code). Layer editor: top view
+  baked from the model's up-facing faces (`blockTopView`, lower faces darker), else the old icon. Fixed in passing:
+  `FLUID` matched «fluid_pipe» (pipes were flat 14 px boxes). Browser-checked: ore2dust_compact (390 blocks, 3052
+  faces, 24 ms first / 9 ms rebuilt), cargoairshipforsamb1y (7250 blocks, 41.5k faces, 162 / 42 ms), a synthetic
+  test schematic (gearbox, funnels, belt funnel, tunnels, rope connectors, shaft, cogwheels, blaze burner, valve
+  handle, crushing wheel, stairs, fence, depot, press, pipe, chest, TFC leaves). Not done: tint colours are guessed
+  by block name (code decides in game), no AO/emissive/animation, weighted random variants take the first.
 - **Library preview** (`lib/schematicRender.ts`): on save the browser draws a 480×320 webp (~15–20 KB) with
   replacements into the `preview` field (rule: ≤300k chars); old records have a «нарисовать превью» button. Tested in
   the browser on two library schematics (8.6k blocks → 27k faces, 80 ms); saving with preview via the button not
