@@ -32,6 +32,12 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   attachments) → firestore-files with the plan's `taskId` (so they also show in the task gallery; deleting there breaks
   the plan image). Markdown `![подпись](file:<id>)`, placeholder `uploading:<key>` while loading (`src/lib/planImages.ts`);
   `Markdown` renders `file:` images everywhere. Works in both the textarea and the live editor.
+  Cleanup (2026-10-23): uploads carry meta `artifactId` (owner plan). On closing the plan (unmount / `pagehide`) files
+  this editor saw and whose links are gone are deleted — not on every autosave, so Ctrl+Z can't resurrect a link to a
+  deleted file. On opening, owned files without links older than 10 min are swept (crash, removal by another player).
+  Deleting a plan deletes its images. Links in other plans and task descriptions keep a file (copied text); schematic
+  descriptions and guides are not checked. If a plan with an image copied elsewhere is deleted, that image loses its
+  owner and is never cleaned.
 - **Live editor probe** (Obsidian-style, task «В редактор планов попытаться сделать "обсидиан"», 2026-10-23): CodeMirror 6
   `LiveMarkdown` (lazy chunk ~100 KB gzip — `markdown()` is avoided, it pulls HTML/CSS/JS highlighting, +70 KB) replaces
   the plan textarea only with flag `?live=1` (localStorage `tfc_live_md`, `?live=0` off). Hides marks outside the

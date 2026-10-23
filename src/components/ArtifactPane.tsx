@@ -3,7 +3,7 @@ import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { useData } from '../data/DataContext';
 import { artifactsStore } from '../data/store';
 import { filesEnabled } from '../lib/files';
-import { UPLOADING_SCHEME, uploadImages } from '../lib/planImages';
+import { fileRefs, removeOrphanImages, UPLOADING_SCHEME, uploadImages } from '../lib/planImages';
 import { isImage } from '../lib/uploads';
 import { cx, timeAgo } from '../lib/util';
 import type { Artifact } from '../types';
@@ -60,11 +60,13 @@ export function ArtifactPane(props: Props) {
 }
 
 const SAVE_DELAY = 800;
+/** Картинку без ссылок моложе этого при открытии плана не трогаем — её могли только что вставить в другом окне */
+const ORPHAN_MIN_AGE = 10 * 60 * 1000;
 const PLACEHOLDER =
   '# План\n\nMarkdown: заголовки, списки, таблицы, - [ ] чекбоксы.\nПредметы: [[tfc:metal/ingot/bronze|4]] — или «Вставить предмет».\n\nИли попросите агента ниже составить план.';
 
 function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDeleted }: Props & { artifact: Artifact }) {
-  const { tasks, nick } = useData();
+  const { tasks, nick, files, artifacts } = useData();
   const task = tasks.find((t) => t.id === artifact.taskId);
 
   const [view, setView] = useState<View>(() => (artifact.content ? 'preview' : 'edit'));
@@ -122,6 +124,36 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
     [artifact.id, nick],
   );
 
+  // Уборка картинок: удалённые из текста стираются из хранилища при закрытии плана (не на каждом автосохранении —
+  // иначе Ctrl+Z вернул бы ссылку на уже стёртый файл). Только те, что видел этот редактор: свежую картинку
+  // из чужого открытого редактора, ссылка на которую ещё не сохранена, не трогаем.
+  const seenImages = useRef(fileRefs(artifact.content));
+  useEffect(() => {
+    for (const id of fileRefs(content)) seenImages.current.add(id);
+  }, [content]);
+  const data = useRef({ files, artifacts, tasks, uploading });
+  useEffect(() => {
+    data.current = { files, artifacts, tasks, uploading };
+  }, [files, artifacts, tasks, uploading]);
+  useEffect(() => {
+    const cleanup = () => {
+      if (data.current.uploading) return;
+      removeOrphanImages(artifact.id, latest.current.content, data.current, { only: seenImages.current });
+    };
+    window.addEventListener('pagehide', cleanup);
+    return () => {
+      window.removeEventListener('pagehide', cleanup);
+      cleanup();
+    };
+  }, [artifact.id]);
+  // При открытии — то, что не убралось раньше (закрыли вкладку без pagehide, удалил другой игрок); свежие не трогаем
+  const swept = useRef(false);
+  useEffect(() => {
+    if (swept.current || !files.length) return;
+    swept.current = true;
+    removeOrphanImages(artifact.id, artifact.content, { files, artifacts, tasks }, { minAge: ORPHAN_MIN_AGE });
+  }, [files, artifacts, tasks, artifact.id, artifact.content]);
+
   const trackSelection = () => {
     const el = textRef.current;
     if (el) setSelection([el.selectionStart, el.selectionEnd]);
@@ -144,8 +176,8 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
   };
 
   /** Картинки: сразу метка «загрузка» в тексте, после загрузки — ссылка на файл (сжатие — как у вложений задач) */
-  const addImages = async (files: File[], pos = selection[1]) => {
-    if (!files.length) return;
+  const addImages = async (images: File[], pos = selection[1]) => {
+    if (!images.length) return;
     const placeholder = `![Загрузка…](${UPLOADING_SCHEME}${Date.now()})`;
     // Картинка — отдельной строкой: не склеиваться с соседним текстом (заголовок перед ней перестал бы быть заголовком)
     const before = pos > 0 && content[pos - 1] !== '\n' ? '\n' : '';
@@ -154,7 +186,8 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
     setUploading((n) => n + 1);
     let markdown = '';
     try {
-      const res = await uploadImages(files, { taskId: artifact.taskId, author: nick });
+      const res = await uploadImages(images, { taskId: artifact.taskId, author: nick, artifactId: artifact.id });
+      for (const id of res.ids) seenImages.current.add(id);
       markdown = res.markdown;
       if (res.error) alert(res.error);
     } catch (e) {
@@ -172,6 +205,8 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
   const remove = async () => {
     if (!confirm(`Удалить план «${artifact.title}»?`)) return;
     await artifactsStore.remove(artifact.id);
+    // Картинки плана уходят вместе с ним (кроме скопированных в другие планы и задачи)
+    removeOrphanImages(artifact.id, '', { files, artifacts, tasks });
     onDeleted?.();
   };
 
