@@ -33,8 +33,8 @@ comments, commit messages, guides, MCP tool output. Keep Russian UI labels verba
   — read and answer only. Before editing shared agent files (`AGENTS.md`, skills, `docs/mcp.md`) check
   `git worktree list` / `git log main..<branch>` of other worktrees for the same files.
 - **Lint and format are mandatory** before commit: `npm run lint` (zero errors) and format your changed files
-  with `npm run format` / `npx prettier --write <files>`. The `ship` tool (tfc-plans-dev) refuses to merge if the
-  branch changed files fail `oxlint` or `prettier --check`.
+  with `npx prettier --write <files>` (or `npm run format -- <files>`). The `ship` tool (tfc-plans-dev) refuses to merge if the
+  branch changed files fail `oxlint` or `prettier --check`; CI (`.github/workflows/ci.yml`) repeats `oxlint`, `tsc` and a changed-file `prettier --check` on every push to `main`.
 - **Work log on the site** for dev and fix work (groups «Разработка» and «Фиксы»): at the start find the task
   (`tasks_list group=…`) or create one there (`task_create`), set `doing` + assignee = **your own agent name** (= `TFC_AGENT_NICK`; never `Claude` unless you are Claude —
   `Codex`, `Gemini`, `Cursor`, `DeepSeek`…; see [docs/agents.md](docs/agents.md)); at the end — `done`

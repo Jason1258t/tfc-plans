@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Lint (oxlint)
+        run: npx oxlint src scripts
+      - name: Types (tsc)
+        run: npx tsc -b
+      - name: Format check (changed files)
+        run: |
+          if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="$(git rev-parse HEAD~1)"
+          fi
+          FILES=$(git diff --name-only --diff-filter=d "$BASE" HEAD | grep -E "\.(ts|tsx|js|jsx|mjs|cjs|css|json|md|yaml|yml)$" | grep -v "^package-lock.json$" || true)
+          if [ -n "$FILES" ]; then
+            echo "Changed (format-relevant):"
+            echo "$FILES"
+            npx prettier --check $FILES
+          else
+            echo "No format-relevant files changed."
+          fi
