@@ -1,6 +1,7 @@
-import { Check, Clock, FileText, Image as ImageIcon, Paperclip, UserRound } from 'lucide-react';
+import { Check, Clock, Copy, FileText, Image as ImageIcon, Paperclip, UserRound } from 'lucide-react';
 import { isImage } from '../lib/uploads';
 import { useData } from '../data/DataContext';
+import { useState } from 'react';
 import { tasksStore } from '../data/store';
 import { usePendingIds } from '../data/sync';
 import { checklistProgress, entryDone } from '../lib/tasks';
@@ -28,6 +29,19 @@ export function TaskRow({ task, selected, onOpen, onOpenDoc }: Props) {
   const taskFiles = files.filter((f) => f.taskId === task.id);
   const imageCount = taskFiles.filter(isImage).length;
   const fileCount = taskFiles.length - imageCount;
+  const [copied, setCopied] = useState(false);
+
+  // Передать задачу агенту: по id её находит MCP task_get, название и ссылка — для человека
+  const copyRef = async () => {
+    const text = `Задача «${task.title}» — id ${task.id} — ${location.origin}/?task=${task.id}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      prompt('Скопируйте вручную:', text);
+    }
+  };
 
   const toggleDone = () =>
     tasksStore.update(
@@ -132,6 +146,14 @@ export function TaskRow({ task, selected, onOpen, onOpenDoc }: Props) {
             {docs.length > 1 && <span>{docs.length}</span>}
           </button>
         )}
+        <button
+          className={cx('copy-btn', copied && 'on')}
+          onClick={copyRef}
+          aria-label="Скопировать id задачи для агента"
+          {...tooltipHandlers(copied ? 'Скопировано' : 'Скопировать для агента', 'Название, id и ссылка на задачу')}
+        >
+          {copied ? <Check size={13} /> : <Copy size={13} />}
+        </button>
         {!done && (
           <span className="imp-pill" style={{ color: imp.color }} title={`Важность: ${imp.label}`}>
             {imp.label}

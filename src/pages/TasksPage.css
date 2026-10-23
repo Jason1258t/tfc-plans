@@ -416,6 +416,35 @@
   border-color: var(--amethyst);
 }
 
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  border: none;
+  background: none;
+  color: var(--text-3);
+  cursor: pointer;
+  opacity: 0.45;
+}
+
+.task-row:hover .copy-btn,
+.copy-btn:focus-visible,
+.copy-btn.on {
+  opacity: 1;
+}
+
+.copy-btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.copy-btn.on {
+  color: var(--accent);
+}
+
 /* ------------------------------------------------------------------ адаптив */
 
 @media (max-width: 1280px) {
