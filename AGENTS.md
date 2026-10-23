@@ -33,8 +33,8 @@ comments, commit messages, guides, MCP tool output. Keep Russian UI labels verba
   — read and answer only. Before editing shared agent files (`AGENTS.md`, skills, `docs/mcp.md`) check
   `git worktree list` / `git log main..<branch>` of other worktrees for the same files.
 - **Work log on the site** for dev and fix work (groups «Разработка» and «Фиксы»): at the start find the task
-  (`tasks_list group=…`) or create one there (`task_create`), set `doing` + assignee = your agent name (`Claude`,
-  `Codex`, `Gemini`…; the same name as `TFC_AGENT_NICK`, see [docs/agents.md](docs/agents.md)); at the end — `done`
+  (`tasks_list group=…`) or create one there (`task_create`), set `doing` + assignee = **your own agent name** (= `TFC_AGENT_NICK`; never `Claude` unless you are Claude —
+  `Codex`, `Gemini`, `Cursor`, `DeepSeek`…; see [docs/agents.md](docs/agents.md)); at the end — `done`
   and a short Russian note in the description: what changed for players, what was checked, what wasn't. A task already
   `doing` under another agent — don't take it, ask the user. Found a separate problem along the way — a new task in
   the right group. A few Firestore reads per task — fine, don't loop.
