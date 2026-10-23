@@ -28,6 +28,9 @@ addon`, `formerIds` for ee_rectifier → ee_extras, rollback marked); `/updates`
 - Checked: local pack server (`/site/addons`, upload refusals), `tfc` against it in a scratch folder (latest, pin 2.3.1,
   plain pull keeps the pin, `@latest`, no key → static index, explicit version without key refused), `pack-release
   --dry-run` on fake previous manifests (2.3.1 → 2.3.3; ee_rectifier 1.1.0 → ee_extras), site on the dev server.
+- VPS updated 2026-10-23 (`/opt/tfc-plans` git pull + `deploy/install.sh`, service restarted): live `/site/addons` lists
+  all versions (401 without a key), `tfc admin addon upload` — same jar «уже записана», mismatched 2.2.0 jar refused
+  (409), `tfc pull addons ee_extras@2.3.1` from the live server installed the jar with the recorded hash.
 
 ## EE Extras (`tools/ee-extras-mod`)
 
