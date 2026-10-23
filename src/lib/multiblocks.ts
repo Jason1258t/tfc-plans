@@ -44,6 +44,7 @@ export interface MbFormed {
   r: number;
   /** Сдвиг клетки модели в координаты постройки */
   t: [number, number, number];
+  /** flip_v модели из jar; сайту не нужен — V у всех моделей в игре читается одинаково */
   flipV?: boolean;
   /** Материал OBJ → текстура (путь внутри /multiblocks/), кадров у анимированной, цвет и прозрачность */
   mats: Record<string, { tex?: string; frames?: number; color?: [number, number, number]; alpha?: number }>;

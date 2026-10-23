@@ -193,6 +193,9 @@ fertiliser blocks, calendar with month labels. `.class` parsing — `scripts/mod
 - «Постройка | Итог» toggle: finished-machine model from jar (OBJ + textures, three.js,
   `scripts/mods/multiblock-models.mjs`), aligned with the build cells (exact for all 27). Missing for the excavator
   bucket (drawn by code); moving parts not shown; animated textures — first frame.
+  Texture V (2026-10-23 fix): every model reads V the standard OBJ way (both `neoforge:obj` with `flip_v` and
+  `ie_obj` take `1 − v`, checked in ObjModel / PolygonUtils), so the viewer always keeps `flipY = true`; the
+  `flipV` field in data is ignored. Before the fix 24 of 27 models had textures upside down.
 - Guides section «Мультиблоки» (`?tab=guides&sub=multiblocks`, `section: multiblocks`): widget `::multiblock id=…
   [full] [materials]`; articles mb-assembly, mb-tfc (what changed: arc furnace from fire bricks, IE blast bricks not
   craftable in the pack, smelter via KubeJS), mb-coke-oven, mb-excavator.

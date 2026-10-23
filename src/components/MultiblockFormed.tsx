@@ -16,8 +16,8 @@ const texCache = new Map<string, THREE.Texture>();
 /** Кто ждёт загрузки текстур: сцена рисует только по событию, поэтому перерисовываем, когда картинка пришла */
 const onTexture = new Set<() => void>();
 
-function texture(rel: string, frames = 1, flipV = false) {
-  const key = `${rel}|${frames}|${flipV}`;
+function texture(rel: string, frames = 1) {
+  const key = `${rel}|${frames}`;
   let t = texCache.get(key);
   if (!t) {
     t = new THREE.TextureLoader().load(BASE + rel, () => onTexture.forEach((f) => f()));
@@ -25,8 +25,9 @@ function texture(rel: string, frames = 1, flipV = false) {
     t.minFilter = THREE.NearestFilter;
     t.generateMipmaps = false;
     t.colorSpace = THREE.NoColorSpace;
-    // flip_v у модели: V в файле перевёрнут относительно текстуры
-    t.flipY = !flipV;
+    // V как в обычном OBJ (0 — низ картинки): и neoforge:obj с flip_v, и ie_obj берут строку 1 − v
+    // (ObjModel, PolygonUtils.toBakedQuad) — это и есть flipY по умолчанию
+    t.flipY = true;
     if (frames > 1) {
       // Анимированная текстура — кадры столбиком, берём первый (верхний)
       t.repeat.set(1, 1 / frames);
@@ -131,7 +132,7 @@ export default function MultiblockFormed({
           if (!mat) {
             const def = formed.mats[name] ?? {};
             mat = new THREE.MeshLambertMaterial({
-              map: def.tex ? texture(def.tex, def.frames, formed.flipV) : null,
+              map: def.tex ? texture(def.tex, def.frames) : null,
               color: def.tex || !def.color ? 0xffffff : new THREE.Color(...def.color),
               transparent: def.alpha !== undefined,
               opacity: def.alpha ?? 1,
