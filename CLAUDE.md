@@ -59,7 +59,9 @@ No tests. Verification — in the browser (below) and one-off node scripts in th
 
 Local stdio server (`scripts/mcp/`, `.mcp.json`; in a worktree it reads `public/` and `mods/` of the main checkout).
 **For game facts, recipes, tags, configs, mod code, logs, guides and site content use it first**, not grep over
-`public/*.json` (recipes.json is 7.7 MB) or unzipping jars. Crash / "what broke" → start with `log_analyze`. A mod
+`public/*.json` (recipes.json is 7.7 MB) or unzipping jars. Mod code: `decompile method=` to read, `bytecode` instead of
+`javap` in a shell — method outline, any jar or classes folder on disk (addon `libs/`, `build/classes`, `.mixin.out`),
+`diff` of two mod versions. Crash / "what broke" → start with `log_analyze`. A mod
 not in the pack (integration analysis) → `candidate_get`, then jar tools with `jar=candidate:<file>`. Editing addon
 resources → `resources_check` + `model_render`; developing an addon (new addon, block, mixin) → skill `addon-dev`;
 releasing an addon to the site → skill `addon-release`

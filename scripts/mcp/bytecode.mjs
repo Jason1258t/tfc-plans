@@ -300,9 +300,19 @@ export function parseClassFull(buf) {
       if (a.name !== 'Code') continue;
       const len = buf.readUInt32BE(a.start + 4);
       m.code = buf.subarray(a.start + 8, a.start + 8 + len);
-      // Атрибуты Code: LineNumberTable — номер строки исходника по pc
+      // Атрибуты Code: LineNumberTable — номер строки исходника по pc, LocalVariableTable — имена локальных
       p = a.start + 8 + len;
       const exceptions = u2(); // таблица исключений; не «p += 8 * u2()»: p прочитается до сдвига в u2
+      m.handlers = [];
+      for (let q = p, cnt = exceptions; cnt > 0; cnt--, q += 8) {
+        const t = buf.readUInt16BE(q + 6);
+        m.handlers.push({
+          start: buf.readUInt16BE(q),
+          end: buf.readUInt16BE(q + 2),
+          pc: buf.readUInt16BE(q + 4),
+          type: t ? className(t) : null,
+        });
+      }
       p += 8 * exceptions;
       for (const ca of attributes())
         if (ca.name === 'LineNumberTable') {
@@ -310,6 +320,15 @@ export function parseClassFull(buf) {
           for (let q = ca.start + 2, cnt = buf.readUInt16BE(ca.start); cnt > 0; cnt--, q += 4)
             lines.push([buf.readUInt16BE(q), buf.readUInt16BE(q + 2)]);
           m.lines = (m.lines ?? []).concat(lines).sort((x, y) => x[0] - y[0]);
+        } else if (ca.name === 'LocalVariableTable') {
+          m.locals ??= [];
+          for (let q = ca.start + 2, cnt = buf.readUInt16BE(ca.start); cnt > 0; cnt--, q += 10)
+            m.locals.push({
+              start: buf.readUInt16BE(q),
+              len: buf.readUInt16BE(q + 2),
+              name: utf(buf.readUInt16BE(q + 4)),
+              slot: buf.readUInt16BE(q + 8),
+            });
         }
     }
     p = end;

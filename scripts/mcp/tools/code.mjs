@@ -1120,7 +1120,8 @@ async function decompileTool(a) {
   const limit = Math.min(2000, Math.max(1, Number(a.limit ?? 400) | 0));
   const part = numbered.slice(offset, offset + limit);
   const end = offset + part.length;
-  const head = `${dotted(name)} — ${where(rec.jar)}; ${via}; ${numbered.length} строк${a.method ? ` (метод ${a.method})` : ''}${a.grep ? ` по «${a.grep}»` : ''}; показаны ${offset + 1}–${end}${end < numbered.length ? `; дальше: offset=${end}` : ''}`;
+  const whole = !a.method && !a.grep && end < numbered.length;
+  const head = `${dotted(name)} — ${where(rec.jar)}; ${via}; ${numbered.length} строк${a.method ? ` (метод ${a.method})` : ''}${a.grep ? ` по «${a.grep}»` : ''}; показаны ${offset + 1}–${end}${end < numbered.length ? `; дальше: offset=${end}` : ''}${whole ? '; дешевле: method=<имя> или обзор методов — bytecode' : ''}`;
   return clip([head, ...notes, ...part.map(([n, l]) => (n ? `${n}: ${l}` : '…'))].join('\n'));
 }
 
