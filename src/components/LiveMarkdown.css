@@ -32,3 +32,8 @@
 .lmd .lmd-table-widget .md table {
   margin: 0;
 }
+
+/* Подсказка пустого поля — строчным текстом, а не блоком: многострочный блок растягивает курсор на всю свою высоту */
+.lmd .cm-placeholder {
+  display: inline;
+}
