@@ -10,7 +10,7 @@ go through the host (`config_propose`, `npm run tfc -- admin propose`), new jars
 (docs/pack-server.md), own code — an addon in `tools/` (docs/addons.md) in a separate session. Nothing is checked in
 game — every in-game step is marked «в игре не проверялось».
 
-All pack facts from MCP `tfc-pack` (CLAUDE.md), candidate facts from its jar. Everything the user sees — in Russian.
+All pack facts from MCP `tfc-pack` (AGENTS.md), candidate facts from its jar. Everything the user sees — in Russian.
 
 ## 0. Scope and inputs
 
@@ -69,7 +69,7 @@ Pages, changelogs and reports say what the author or a chatbot claims; the plan 
 1. **Register the jar with MCP `candidate_get`** (never into `mods/`). Official source only: Modrinth / CurseForge /
    the author's GitHub release, the build for NeoForge 1.21.1:
    - Modrinth — `candidate_get modrinth=<slug> [version=…]`: without `download=true` it only reports file, source,
-     size, license and sides. **Ask the user** (CLAUDE.md safety: name the file, source, size), then repeat with
+     size, license and sides. **Ask the user** (safety rules: name the file, source, size), then repeat with
      `download=true` (sha1 checked against Modrinth). Unknown slug → it suggests similar projects;
    - CurseForge / GitHub — a direct file link: `candidate_get url=<cdn link>` (same two steps), or download it yourself
      after the user's yes into its own empty folder in the scratchpad and `candidate_get path=<jar>`;
@@ -177,5 +177,5 @@ report has a row. A section left out on purpose gets a row too («вне тем�
 
 Candidate jars are covered by `candidate_get` + `jar=candidate:<file>`. If a question about a candidate still needs
 `unzip`/`javap` by hand (a section that's missing, a wrong count), finish the analysis by the workaround, then propose
-a separate session per CLAUDE.md «If a needed tool is missing» (branch `feat/mcp-<short>`, docs/mcp.md «Adding a
+a separate session per AGENTS.md «If a needed tool is missing» (branch `feat/mcp-<short>`, docs/mcp.md «Adding a
 tool») — unless one is already proposed or done (check docs/state/mcp.md).

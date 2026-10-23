@@ -1,6 +1,6 @@
 # Architecture: code map, data pipeline, Firestore
 
-Agent reference, read on demand (linked from CLAUDE.md). Data-builder rules — also in `scripts/CLAUDE.md`.
+Agent reference, read on demand (linked from AGENTS.md). Data-builder rules — also in `scripts/AGENTS.md`.
 
 ## Commands
 

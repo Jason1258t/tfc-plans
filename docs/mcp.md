@@ -1,6 +1,6 @@
 # Pack MCP (`tfc-pack`)
 
-The pack MCP server is a local program the agent (Claude Code) uses to ask about the pack: items, recipes, tags,
+The pack MCP server is a local program the coding agent (Claude Code, Codex, …) uses to ask about the pack: items, recipes, tags,
 reference, settings, mod books, map, guides and site content. Without it the agent greps large JSON
 (`public/recipes.json` — 7.7 MB) and unzips jars; with it answers are short, paged and already include the pack's
 KubeJS changes.
@@ -11,7 +11,7 @@ and parameter descriptions are in English (the agent reads them); tool output st
 ## Connection
 
 - Server — `scripts/mcp/server.mjs`, stdio, registered in `.mcp.json` at the project root. Claude Code starts it when
-  the project is open.
+  the project is open; other agents — their own config, see [agents.md](agents.md).
 - No dependencies: the MCP protocol (line-delimited JSON-RPC 2.0: `initialize`, `tools/list`, `tools/call`, `ping`) is
   implemented in the server itself, without `@modelcontextprotocol/sdk`, so it's easy to move to the pack server.
 - Firestore is read with the MCP service key (`TFC_FIRESTORE_KEY` in `.mcp.json`, default
@@ -59,6 +59,7 @@ Paths can be set via env vars (for running on the pack server):
 | `TFC_VANILLA_DIR` | `<root>/.cache/assets/minecraft-1.21.1` |
 | `TFC_PLATFORM_JAR` / `TFC_PLATFORM_SOURCES` | newest `neoforge-X.jar` / `-sources.jar` in `tools/*/build/moddev/artifacts` |
 | `TFC_DECOMPILER` | newest Vineflower in the Gradle cache |
+| `TFC_AGENT_NICK` | `Claude` — author / `updatedBy` of every write (tasks, docs, guides, config proposals, addon versions); set per agent, see [agents.md](agents.md) |
 
 ## Tools
 
@@ -479,7 +480,7 @@ Changed merging on the site — change `data.mjs` too.
    `config_propose` / `config_changes cancel=…` (own collection `configChanges`, host applies files). A new write needs
    the same protection against overwriting others.
 6. List the new tool in this file (with parameters); if it changes the agent's usual path (like `log_analyze` for
-   crashes) — also in `INSTRUCTIONS` in `tools.mjs` and the MCP paragraph of `CLAUDE.md`.
+   crashes) — also in `INSTRUCTIONS` in `tools.mjs` and the MCP paragraph of `AGENTS.md`.
 
 ## What's next
 

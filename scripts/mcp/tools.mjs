@@ -25,7 +25,7 @@ import {
 } from './data.mjs';
 import { siteRecipes } from './site-datapacks.mjs';
 import { FirestoreError, guideDoc, guideDocs, writeGuide } from './firestore.mjs';
-import { clip, dateOf, nameOf, named, norm, num, page, paging, short, str, userRegex, words } from './fmt.mjs';
+import { clip, dateOf, nameOf, named, NICK, norm, num, page, paging, short, str, userRegex, words } from './fmt.mjs';
 import { oneClass, classRecord } from './code-index.mjs';
 import { javap, jarList, jarToc, nestedJars, pathMatcher, readEntry, resolveJar } from './jars.mjs';
 import { TOOLS as addonsTools } from './tools/addons.mjs';
@@ -41,8 +41,6 @@ import { TOOLS as mapTools } from './tools/map.mjs';
 import { TOOLS as packTools } from './tools/pack.mjs';
 import { TOOLS as resourcesTools } from './tools/resources.mjs';
 import { TOOLS as siteTools } from './tools/site.mjs';
-
-const NICK = 'Claude';
 
 // ---------------------------------------------------------------- предметы
 
@@ -663,7 +661,7 @@ const CORE = [
   {
     name: 'guide_put',
     description:
-      'Save a guide (write to the shared site database, signed Claude, version goes to history). markdown — as from guide_get (YAML header + text) or text only (other fields unchanged). Refused if the article changed after reading: baseRevision — revision from guide_get, "new" for a new article.',
+      'Save a guide (write to the shared site database, signed with the agent nick, version goes to history). markdown — as from guide_get (YAML header + text) or text only (other fields unchanged). Refused if the article changed after reading: baseRevision — revision from guide_get, "new" for a new article.',
     inputSchema: {
       type: 'object',
       properties: {

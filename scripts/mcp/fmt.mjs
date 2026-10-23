@@ -6,6 +6,9 @@ import { itemName, tags } from './data.mjs';
 
 export const MAX = 20000;
 
+/** Подпись записей в базу сайта: имя агента (Claude, Codex…) из TFC_AGENT_NICK */
+export const NICK = process.env.TFC_AGENT_NICK?.trim() || 'Claude';
+
 export const norm = (s) => String(s).toLowerCase().replaceAll('ё', 'е');
 export const words = (q) =>
   norm(q ?? '')

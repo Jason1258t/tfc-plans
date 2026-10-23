@@ -7,9 +7,7 @@
  */
 import { mods, readJson } from '../data.mjs';
 import { FirestoreError, configChangeDocs, configDocs, createDoc, patchDoc } from '../firestore.mjs';
-import { clip, dateOf, norm, page, paging, short, str, words } from '../fmt.mjs';
-
-const NICK = 'Claude';
+import { clip, dateOf, NICK, norm, page, paging, short, str, words } from '../fmt.mjs';
 
 const ORIGIN = {
   world: 'сохранение мира',
