@@ -4,7 +4,7 @@
   gap: 12px;
 }
 
-.si-drop {
+.siDrop {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -18,13 +18,13 @@
   text-align: center;
 }
 
-.si-drop:hover {
+.siDrop:hover {
   border-color: var(--accent);
   color: var(--text);
 }
 
-.si-files,
-.si-list {
+.siFiles,
+.siList {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -32,11 +32,11 @@
   flex-direction: column;
 }
 
-.si-files {
+.siFiles {
   gap: 4px;
 }
 
-.si-files li {
+.siFiles li {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -44,31 +44,31 @@
   word-break: break-word;
 }
 
-.si-tools {
+.siTools {
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.si-copies {
+.siCopies {
   gap: 6px;
 }
 
-.si-copies .input {
+.siCopies :global(.input) {
   width: 72px;
 }
 
-.si-list {
+.siList {
   max-height: 50vh;
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
 
-.si-list li + li {
+.siList li + li {
   border-top: 1px solid var(--border);
 }
 
-.si-list label {
+.siList label {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -76,25 +76,25 @@
   cursor: pointer;
 }
 
-.si-list li.off {
+.siList li.off {
   opacity: 0.5;
 }
 
-.si-list li.unknown .si-name > span {
+.siList li.unknown .siName > span {
   color: var(--imp-2);
 }
 
-.si-name {
+.siName {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-.si-name code {
+.siName code {
   overflow-wrap: anywhere;
 }
 
-.si-qty {
+.siQty {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
 }

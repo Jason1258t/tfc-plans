@@ -12,6 +12,7 @@ import {
 } from '@/lib/geo';
 import { cx } from '@/shared/lib';
 import type { TaskPlace } from '@/types';
+import styles from './TaskDialog.module.css';
 
 interface Props {
   value: TaskPlace | null | undefined;
@@ -49,10 +50,10 @@ export function PlaceField({ value, onChange, compact }: Props) {
   };
 
   return (
-    <div className={cx('tf-place', compact && 'compact')}>
+    <div className={cx(styles.tfPlace, compact && styles.compact)}>
       {!compact && <span className="label">Где</span>}
       {value ? (
-        <div className="row tf-place-set">
+        <div className={cx('row', styles.tfPlaceSet)}>
           <MapPin size={14} className="faint" />
           <code>
             {value.x} {value.z}
@@ -80,10 +81,10 @@ export function PlaceField({ value, onChange, compact }: Props) {
           </button>
         </div>
       ) : (
-        <div className="tf-place-input">
-          {compact && <MapPin size={14} className="faint tf-field-icon" />}
+        <div className={styles.tfPlaceInput}>
+          {compact && <MapPin size={14} className={cx('faint', styles.tfFieldIcon)} />}
           <input
-            className={cx('input', compact && 'with-icon')}
+            className={cx('input', compact && styles.withIcon)}
             aria-label="Где"
             placeholder={compact ? 'Где: x z или город' : 'x z, «51.5 -0.12» или город — Enter'}
             value={text}
@@ -99,7 +100,7 @@ export function PlaceField({ value, onChange, compact }: Props) {
             }}
           />
           {suggestions.length > 0 && (
-            <ul className="tf-place-suggest" role="listbox">
+            <ul className={styles.tfPlaceSuggest} role="listbox">
               {suggestions.map((w) => (
                 <li key={w.id}>
                   <button
@@ -118,7 +119,7 @@ export function PlaceField({ value, onChange, compact }: Props) {
               ))}
             </ul>
           )}
-          {error && <div className="faint small tf-place-err">{error}</div>}
+          {error && <div className={cx('faint', 'small', styles.tfPlaceErr)}>{error}</div>}
         </div>
       )}
     </div>

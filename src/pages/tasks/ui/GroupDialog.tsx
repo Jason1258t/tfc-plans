@@ -5,6 +5,7 @@ import { tasksStore } from '@/entities/task';
 import type { Group } from '@/types';
 import { ItemIcon, ItemPicker } from '@/shared/pack-data';
 import { Modal } from '@/shared/ui';
+import styles from './GroupDialog.module.css';
 
 interface Props {
   /** null — новая группа */
@@ -80,7 +81,7 @@ export function GroupDialog({ group, onClose, onDeleted }: Props) {
       <div>
         <span className="label">Иконка</span>
         <div className="row">
-          <span className="tf-icon" style={{ cursor: 'default' }}>
+          <span className={styles.tfIcon} style={{ cursor: 'default' }}>
             {icon ? <ItemIcon id={icon} size={24} /> : null}
           </span>
           <div className="grow">

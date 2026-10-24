@@ -4,7 +4,7 @@ import { useData } from '@/data/DataContext';
 import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, type FileMeta } from '@/lib/files';
 import { dismissUpload, isImage, useUploads } from '@/lib/uploads';
 import { cx, timeAgo } from '@/shared/lib';
-import './Attachments.css';
+import styles from './Attachments.module.css';
 import { FileBadge } from '@/components/FileBadge';
 
 interface Props {
@@ -53,7 +53,7 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
 
   return (
     <div
-      className={cx('attach', dragging && 'dragging')}
+      className={cx(styles.attach, dragging && styles.dragging)}
       onDragOver={(e) => {
         if (!e.dataTransfer.types.includes('Files')) return;
         e.preventDefault();
@@ -67,9 +67,9 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
       }}
     >
       {!empty && (
-        <ul className="attach-list">
+        <ul className={styles.attachList}>
           {attached.map((f) => (
-            <li key={f.id} className="attach-row">
+            <li key={f.id} className={styles.attachRow}>
               <FileBadge
                 compact
                 name={f.name}
@@ -77,7 +77,7 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
                 onOpen={() => run(f.id, () => downloadFile(f))}
                 disabled={busyId === f.id}
               />
-              <span className="faint small attach-meta">
+              <span className={cx('faint', 'small', styles.attachMeta)}>
                 {formatSize(f.size)} · {f.author} · {timeAgo(f.createdAt)}
               </span>
               <button
@@ -101,9 +101,11 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
             </li>
           ))}
           {pendingFiles.map((f, i) => (
-            <li key={`${f.name}-${i}`} className="attach-row">
+            <li key={`${f.name}-${i}`} className={styles.attachRow}>
               <FileBadge compact name={f.name} type={f.type} />
-              <span className="faint small attach-meta">{formatSize(f.size)} · загрузится при создании</span>
+              <span className={cx('faint', 'small', styles.attachMeta)}>
+                {formatSize(f.size)} · загрузится при создании
+              </span>
               <button
                 className="btn ghost sm icon"
                 onClick={() => onRemovePending?.(f)}
@@ -114,11 +116,11 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
             </li>
           ))}
           {uploads.map((u) => (
-            <li key={u.key} className="attach-row uploading">
+            <li key={u.key} className={styles.attachRow}>
               <FileBadge compact name={u.name} />
               {u.error ? (
                 <>
-                  <span className="small attach-meta" style={{ color: 'var(--danger)' }}>
+                  <span className={cx('small', styles.attachMeta)} style={{ color: 'var(--danger)' }}>
                     {u.error}
                   </span>
                   <button className="btn ghost sm icon" onClick={() => dismissUpload(u.key)} aria-label="Скрыть">
@@ -126,7 +128,7 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
                   </button>
                 </>
               ) : (
-                <span className="attach-meta attach-progress">
+                <span className={cx(styles.attachMeta, styles.attachProgress)}>
                   <span className="progress">
                     <span style={{ width: `${Math.max(4, u.progress * 100)}%` }} />
                   </span>
@@ -137,7 +139,7 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
           ))}
         </ul>
       )}
-      <button type="button" className="attach-drop" onClick={() => inputRef.current?.click()}>
+      <button type="button" className={styles.attachDrop} onClick={() => inputRef.current?.click()}>
         <Paperclip size={15} />
         {dragging ? 'Отпустите, чтобы прикрепить' : 'Прикрепить файл или перетащить сюда'}
         <span className="faint small">до {formatSize(MAX_FILE_SIZE)}</span>
