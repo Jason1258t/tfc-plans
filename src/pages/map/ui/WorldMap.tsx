@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { buildAtlas } from '@/lib/atlas';
 import { geoName, type GeoProfile, type MapLayer, type Waypoint } from '@/lib/geo';
 import { blockToGeo } from '@/lib/projection';
+import styles from './WorldMap.module.css';
 
 export interface MapMarker {
   id: string;
@@ -267,7 +268,7 @@ export function WorldMap({ profile, layer, waypoints, cityPos, markers, renderPo
   const hoverGeo = hover ? blockToGeo(profile, hover.x, hover.z) : null;
 
   return (
-    <div className="wmap" ref={wrapRef}>
+    <div className={styles.worldMap} ref={wrapRef}>
       <canvas
         ref={canvasRef}
         style={{ width: size.w, height: size.h }}
@@ -319,7 +320,7 @@ export function WorldMap({ profile, layer, waypoints, cityPos, markers, renderPo
           drag.current = null;
         }}
       />
-      <div className="wmap-zoom">
+      <div className={styles.zoom}>
         <button className="btn sm icon" aria-label="Приблизить" onClick={() => zoomAt(size.w / 2, size.h / 2, 1.6)}>
           <Plus size={15} />
         </button>
@@ -336,7 +337,7 @@ export function WorldMap({ profile, layer, waypoints, cityPos, markers, renderPo
         </PopupBox>
       )}
       {hover && hoverGeo && (
-        <div className="wmap-readout">
+        <div className={styles.readout}>
           x {Math.round(hover.x)} · z {Math.round(hover.z)} · {hoverGeo.lat.toFixed(2)}°, {hoverGeo.lon.toFixed(2)}°
         </div>
       )}
@@ -351,9 +352,9 @@ function PopupBox({ at, size, children }: { at: number[]; size: { w: number; h: 
   const below = at[1] < size.h / 2;
   return (
     <>
-      <span className="wmap-pin" style={{ left: at[0], top: at[1] }} />
+      <span className={styles.pin} style={{ left: at[0], top: at[1] }} />
       <div
-        className="wmap-popup"
+        className={styles.popup}
         style={{
           left,
           width: W,

@@ -24,7 +24,7 @@ import {
   type WorldSettings,
 } from '@/lib/geo';
 import { cx, timeAgo } from '@/shared/lib';
-import './MapPage.css';
+import styles from './MapPage.module.css';
 
 const LAYER_KEY = 'tfc-tm:map-layer';
 
@@ -44,7 +44,7 @@ export function MapPage() {
   const profile = useMemo(() => (geo ? worldProjection(geo, world) : null), [geo, world]);
 
   return (
-    <div className="map-page">
+    <div className={styles.page}>
       {geo === undefined ? (
         <div className="empty">Загружаю географию…</div>
       ) : !geo || !profile ? (
@@ -129,9 +129,9 @@ function MapView({ geo, profile, world }: { geo: GeoData; profile: GeoProfile; w
   const placedTasks = tasks.filter((t) => t.place && t.status !== 'done');
 
   return (
-    <div className="map-layout">
-      <aside className="map-side">
-        <div className="map-title">
+    <div className={styles.layout}>
+      <aside className={styles.side}>
+        <div className={styles.title}>
           <h2>Карта мира</h2>
           <button className="btn ghost sm" onClick={() => setSettingsOpen(true)} title="Профиль и масштаб мира">
             <Settings size={14} /> {geoName(profile.name)}
@@ -144,7 +144,7 @@ function MapView({ geo, profile, world }: { geo: GeoData; profile: GeoProfile; w
           </p>
         ) : (
           !world.verified && (
-            <p className="map-warn small">
+            <p className={cx(styles.warn, 'small')}>
               Параметры мира — по умолчанию из мода, со скриншотами сервера не сверены. Если координаты не сходятся с
               игрой, проверьте профиль и масштаб в настройках.
             </p>
@@ -172,13 +172,13 @@ function MapView({ geo, profile, world }: { geo: GeoData; profile: GeoProfile; w
         />
         {a && b && <Distance a={a} b={b} />}
 
-        <div className="map-hint faint small">
+        <div className={cx(styles.hint, 'faint', 'small')}>
           Клик по карте — координаты точки; оттуда же её можно сделать точкой A или B. Ссылку на страницу можно
           переслать: точки в адресе.
         </div>
 
         {placedTasks.length > 0 && (
-          <div className="map-tasks">
+          <div className={styles.tasks}>
             <label className="row small">
               <input type="checkbox" checked={showTasks} onChange={(e) => setShowTasks(e.target.checked)} /> Места задач
               ({placedTasks.length})
@@ -199,8 +199,8 @@ function MapView({ geo, profile, world }: { geo: GeoData; profile: GeoProfile; w
         )}
       </aside>
 
-      <section className="map-main">
-        <div className="seg map-layers">
+      <section className={styles.main}>
+        <div className={cx('seg', styles.layers)}>
           {LAYERS.filter((l) =>
             l.id === 'atlas' ? profile.maps.altitude && profile.maps.continent : profile.maps[l.id],
           ).map((l) => (
@@ -274,9 +274,9 @@ function PointPanel({
 
   const near = point ? nearestWaypoints(waypoints, point, compact ? 1 : 4) : [];
   return (
-    <div className={cx('map-point', `map-point-${color}`)}>
-      <div className="row map-point-head">
-        <span className={cx('map-dot', color)} />
+    <div className={styles.point}>
+      <div className={cx('row', styles.pointHead)}>
+        <span className={styles.dot} data-color={color} />
         <b className="grow">{title}</b>
         {point && (
           <button className="btn ghost sm icon" aria-label="Сбросить точку" onClick={() => onSet(null)}>
@@ -284,7 +284,7 @@ function PointPanel({
           </button>
         )}
       </div>
-      <div className="map-input">
+      <div className={styles.inputWrap}>
         <input
           className="input"
           placeholder="Город, x z, F3 или широта долгота"
@@ -296,7 +296,7 @@ function PointPanel({
           onKeyDown={(e) => e.key === 'Enter' && submit()}
         />
         {suggestions.length > 0 && (
-          <ul className="map-suggest" role="listbox">
+          <ul className={styles.suggest} role="listbox">
             {suggestions.map((w) => (
               <li key={w.id}>
                 <button
@@ -317,8 +317,8 @@ function PointPanel({
       </div>
       {error && <div className="faint small">{error}</div>}
       {point && (
-        <div className="map-point-info">
-          <div className="map-coords">
+        <div className={styles.pointInfo}>
+          <div className={styles.coords}>
             <code>
               x {Math.round(point.x)} · z {Math.round(point.z)}
             </code>
@@ -330,7 +330,7 @@ function PointPanel({
             {point.outside && ' · вне основной карты (зеркальный повтор или за краем профиля)'}
           </div>
           {!compact && near.length > 0 && (
-            <ul className="map-near">
+            <ul className={styles.near}>
               {near.map(({ w, km }) => {
                 const pos = pointFromGeo(profile, w.lat, w.lon);
                 const br = bearing(point, pos);
@@ -371,8 +371,8 @@ function PointPopup({
   const near = nearestWaypoints(waypoints, point, 1)[0];
   const br = near ? bearing(point, pointFromGeo(profile, near.w.lat, near.w.lon)) : null;
   return (
-    <div className="map-popup">
-      <div className="row map-popup-head">
+    <div className={styles.popup}>
+      <div className={cx('row', styles.popupHead)}>
         <code className="grow">
           {point.x} {point.z}
         </code>
@@ -389,14 +389,14 @@ function PointPopup({
           Ближайший город — {geoName(near.w.name)}: {Math.round(br.blocks).toLocaleString('ru-RU')} бл. на {br.dir}
         </div>
       )}
-      <div className="map-popup-actions">
+      <div className={styles.popupActions}>
         <CopyButton text={`${point.x} ${point.z}`} label="x z" />
         <CopyButton text={`/tp @s ${point.x} ~ ${point.z}`} label="/tp" />
         <button className="btn sm" onClick={() => onSet('a')}>
-          <span className="map-dot a" /> A
+          <span className={styles.dot} data-color="a" /> A
         </button>
         <button className="btn sm" onClick={() => onSet('b')}>
-          <span className="map-dot b" /> B
+          <span className={styles.dot} data-color="b" /> B
         </button>
       </div>
     </div>
@@ -408,7 +408,7 @@ function Distance({ a, b }: { a: Point; b: Point }) {
   const dx = Math.round(a.x - b.x);
   const dz = Math.round(a.z - b.z);
   return (
-    <div className="map-distance">
+    <div className={styles.distance}>
       От B до A: <b>{Math.round(br.blocks).toLocaleString('ru-RU')} блоков</b> на {br.dir}
       <div className="faint small">
         Δx {dx > 0 ? '+' : ''}
@@ -482,7 +482,7 @@ function WorldSettingsDialog({ geo, world, onClose }: { geo: GeoData; world: Wor
       }
     >
       {world.fromConfig ? (
-        <p className="map-config-note small">
+        <p className={cx(styles.configNote, 'small')}>
           Профиль и масштабы взяты из импортированного конфига сервера <code>tfc_real_world/server.toml</code> (
           {world.fromConfig.source}, {world.fromConfig.importedBy}, {timeAgo(world.fromConfig.importedAt)}) и здесь не
           меняются. Обновить: <code>npm run serverconfig -- serverconfig.zip</code> (см. README, «Конфиги сервера»).
@@ -493,8 +493,8 @@ function WorldSettingsDialog({ geo, world, onClose }: { geo: GeoData; world: Wor
           Надёжнее импортировать сам конфиг: <code>npm run serverconfig -- serverconfig.zip</code>.
         </p>
       )}
-      <fieldset className="map-fieldset" disabled={!!world.fromConfig}>
-        <label className="map-form-row">
+      <fieldset className={styles.fieldset} disabled={!!world.fromConfig}>
+        <label className={styles.formRow}>
           <span className="label">Профиль</span>
           <select
             className="input"
@@ -508,8 +508,8 @@ function WorldSettingsDialog({ geo, world, onClose }: { geo: GeoData; world: Wor
             ))}
           </select>
         </label>
-        <div className="map-form-grid">
-          <label className="map-form-row">
+        <div className={styles.formGrid}>
+          <label className={styles.formRow}>
             <span className="label">horizontal_scale</span>
             <input
               className="input"
@@ -519,7 +519,7 @@ function WorldSettingsDialog({ geo, world, onClose }: { geo: GeoData; world: Wor
               onChange={(e) => setDraft({ ...draft, horizontalScale: intOrNull(e.target.value) })}
             />
           </label>
-          <label className="map-form-row">
+          <label className={styles.formRow}>
             <span className="label">vertical_scale</span>
             <input
               className="input"
