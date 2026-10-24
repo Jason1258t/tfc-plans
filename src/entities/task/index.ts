@@ -2,3 +2,4 @@
 export type { ChecklistEntry, NewTask, Priority, Task, TaskPlace, TaskStatus } from './types';
 export { PRIORITIES, STATUSES } from './types';
 export { tasksStore } from './store';
+export { describeTask } from './describe';

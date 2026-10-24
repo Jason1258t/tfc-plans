@@ -5,7 +5,7 @@ import { Onboarding } from './components/Onboarding';
 import { NickDialog } from './components/NickDialog';
 import { TooltipLayer } from '@/shared/ui';
 import { DataProvider } from './data/DataContext';
-import { readNick, writeNick } from './lib/nick';
+import { readNick, writeNick } from '@/shared/lib/nick';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { VisitTracker } from './components/VisitTracker';
 import { AddonPage, AddonsPage } from './pages/addons';

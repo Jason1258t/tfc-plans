@@ -15,6 +15,7 @@
     "items": "node scripts/mods.mjs",
     "freshness": "node scripts/freshness.mjs",
     "lint": "oxlint src scripts",
+    "ui:boundaries": "node scripts/ui/boundaries.mjs",
     "preview": "vite preview",
     "deploy": "firebase deploy --only firestore,auth && node scripts/deploy-site.mjs",
     "deploy:site": "node scripts/deploy-site.mjs",

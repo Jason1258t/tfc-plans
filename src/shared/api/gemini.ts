@@ -1,10 +1,6 @@
 import { getAI, getGenerativeModel, GoogleAIBackend, Schema, type GenerativeModel } from 'firebase/ai';
 import { app } from './firebase';
 import { track } from './analytics';
-import type { Task } from '@/entities/task';
-// Глубокий импорт мимо index.ts намеренно: pack-data/index реэкспортирует ItemIdSearch, а он берёт useSearchTrack
-// из этого же общего API — через index получился бы цикл shared/api → gemini → pack-data → ItemIdSearch → shared/api.
-import { itemName, type ItemIndex } from '@/shared/pack-data/items';
 
 export const geminiEnabled = Boolean(app);
 
@@ -95,23 +91,6 @@ async function withFallback<R>(
     }
   }
   throw last;
-}
-
-export function describeTask(task: Task, items: ItemIndex | null): string {
-  const lines = [`Задача: ${task.title}`];
-  if (task.description.trim()) lines.push(`Описание:\n${task.description}`);
-  if (task.checklist.length) {
-    lines.push('Чеклист:');
-    for (const c of task.checklist) {
-      if (c.itemId) {
-        const name = itemName(items?.byId.get(c.itemId), c.itemId);
-        lines.push(`- ${name} (${c.itemId}): собрано ${c.got ?? 0} из ${c.qty ?? 1}`);
-      } else {
-        lines.push(`- [${c.done ? 'x' : ' '}] ${c.text}`);
-      }
-    }
-  }
-  return lines.join('\n');
 }
 
 export interface ChatTurn {

@@ -13,7 +13,6 @@ export type {
 } from './gemini';
 export {
   askGemini,
-  describeTask,
   extractResources,
   geminiEnabled,
   geminiErrorText,
