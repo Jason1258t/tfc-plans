@@ -1,4 +1,4 @@
-.tags-page {
+.tagsPage {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
@@ -9,32 +9,32 @@
   box-sizing: border-box;
 }
 
-.tags-head {
+.tagsHead {
   display: flex;
   align-items: flex-start;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.tags-head h1 {
+.tagsHead h1 {
   margin: 0 0 4px;
   font-size: 22px;
   font-weight: 650;
 }
 
-.tags-head p,
-.tags-pack {
+.tagsHead p,
+.tagsPack {
   margin: 0;
 }
 
-.tags-bar {
+.tagsBar {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
   align-items: center;
 }
 
-.tags-search {
+.tagsSearch {
   flex: 1;
   min-width: 260px;
   display: flex;
@@ -42,7 +42,7 @@
   gap: 8px;
 }
 
-.tags-body {
+.tagsBody {
   display: grid;
   grid-template-columns: minmax(240px, 340px) 1fr;
   gap: 16px;
@@ -50,12 +50,12 @@
 }
 
 @media (max-width: 800px) {
-  .tags-body {
+  .tagsBody {
     grid-template-columns: 1fr;
   }
 }
 
-.tags-list {
+.tagsList {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
@@ -64,17 +64,17 @@
   overflow: auto;
 }
 
-.tags-count {
+.tagsCount {
   padding: 2px 6px 6px;
 }
 
-.tags-list ul {
+.tagsList ul {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.tags-list li button {
+.tagsList li button {
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -89,21 +89,21 @@
   cursor: pointer;
 }
 
-.tags-list li button code {
+.tagsList li button code {
   font-family: var(--font-mono);
   font-size: 12.5px;
   overflow-wrap: anywhere;
 }
 
-.tags-list li button:hover {
+.tagsList li button:hover {
   background: var(--surface-2);
 }
 
-.tags-list li button.active {
+.tagsList li button.active {
   background: var(--accent-soft);
 }
 
-.tags-detail {
+.tagsDetail {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
@@ -111,34 +111,34 @@
   min-height: 200px;
 }
 
-.tags-hint {
+.tagsHint {
   padding: 24px 8px;
   text-align: center;
 }
 
-.tag-detail-head {
+.tagDetailHead {
   display: flex;
   gap: 12px;
   align-items: flex-start;
   flex-wrap: wrap;
 }
 
-.tag-detail-head h2 {
+.tagDetailHead h2 {
   margin: 0;
   font-size: 18px;
 }
 
-.tag-detail-head p {
+.tagDetailHead p {
   margin: 2px 0 0;
 }
 
-.tag-detail h3 {
+.tagDetail h3 {
   margin: 16px 0 6px;
   font-size: 14px;
   font-weight: 650;
 }
 
-.tag-sources {
+.tagSources {
   margin: 0;
   padding-left: 20px;
   display: flex;
@@ -146,14 +146,14 @@
   gap: 6px;
 }
 
-.tag-source-ids {
+.tagSourceIds {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
   margin-top: 2px;
 }
 
-.tag-source-ids code {
+.tagSourceIds code {
   padding: 1px 5px;
   border-radius: 4px;
   background: var(--surface-2);
@@ -161,11 +161,11 @@
   font-size: 11px;
 }
 
-.tag-source-ids code.neg {
+.tagSourceIds code.neg {
   background: var(--danger-soft);
 }
 
-.tag-members {
+.tagMembers {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -174,17 +174,17 @@
   gap: 2px 12px;
 }
 
-.tag-members li {
+.tagMembers li {
   padding: 3px 0;
   min-width: 0;
 }
 
-.tag-members .link {
+.tagMembers .link {
   padding: 0;
   text-align: left;
 }
 
-.tags-page .link {
+.tagsPage .link {
   padding: 0;
   border: 0;
   background: none;
@@ -195,7 +195,7 @@
 }
 
 /* Ярлык вида тега */
-.tag-kind {
+.tagKind {
   --kind: var(--text-3);
   display: inline-block;
   padding: 0 6px;
@@ -208,23 +208,23 @@
   white-space: nowrap;
 }
 
-.tag-kind-item {
+.tagKind[data-kind='item'] {
   --kind: var(--accent);
 }
 
-.tag-kind-block {
+.tagKind[data-kind='block'] {
   --kind: var(--imp-2);
 }
 
-.tag-kind-fluid {
+.tagKind[data-kind='fluid'] {
   --kind: var(--imp-1);
 }
 
-.tag-kind-entity_type {
+.tagKind[data-kind='entity_type'] {
   --kind: var(--amethyst);
 }
 
-.tag-kind-note {
+.tagKindNote {
   margin: 10px 0 0;
   padding: 6px 10px;
   border-radius: var(--radius-sm);
@@ -232,7 +232,7 @@
   color: var(--text-2);
 }
 
-.tag-kind-note .link {
+.tagKindNote .link {
   margin-right: 4px;
   text-decoration: none;
 }

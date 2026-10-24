@@ -1,8 +1,8 @@
 import { Minus, Plus, Maximize } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { buildAtlas } from '../lib/atlas';
-import { geoName, type GeoProfile, type MapLayer, type Waypoint } from '../lib/geo';
-import { blockToGeo } from '../lib/projection';
+import { buildAtlas } from '@/lib/atlas';
+import { geoName, type GeoProfile, type MapLayer, type Waypoint } from '@/lib/geo';
+import { blockToGeo } from '@/lib/projection';
 
 export interface MapMarker {
   id: string;

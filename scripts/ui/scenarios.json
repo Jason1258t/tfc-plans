@@ -1,65 +1,161 @@
 {
   "setup": {
-    "cookies": { "tfc_nick": "ClaudeTest" },
+    "cookies": {
+      "tfc_nick": "ClaudeTest"
+    },
     "localStorage": {
-      "tfc-onboarding": { "seen": {}, "off": true },
+      "tfc-onboarding": {
+        "seen": {},
+        "off": true
+      },
       "tfc-tm:updates-seen": "9999999999999"
     },
     "mask": ["header [role=status]"]
   },
   "scenarios": [
-    { "name": "tasks", "path": "/", "waitFor": "main" },
+    {
+      "name": "tasks",
+      "path": "/",
+      "waitFor": "main"
+    },
     {
       "name": "tasks.new-dialog",
       "path": "/",
       "waitFor": "main",
-      "actions": [{ "clickText": "Задача" }, { "wait": "[role=dialog]" }],
+      "actions": [
+        {
+          "clickText": "Задача"
+        },
+        {
+          "wait": "[role=dialog]"
+        }
+      ],
       "fullPage": false,
       "note": "окно новой задачи"
     },
-    { "name": "tasks.dark", "path": "/", "waitFor": "main", "theme": "dark" },
+    {
+      "name": "tasks.dark",
+      "path": "/",
+      "waitFor": "main",
+      "theme": "dark"
+    },
     {
       "name": "tasks.new-dialog.dark",
       "path": "/",
       "waitFor": "main",
-      "actions": [{ "clickText": "Задача" }, { "wait": "[role=dialog]" }],
+      "actions": [
+        {
+          "clickText": "Задача"
+        },
+        {
+          "wait": "[role=dialog]"
+        }
+      ],
       "fullPage": false,
       "theme": "dark"
     },
-    { "name": "docs", "path": "/docs" },
-    { "name": "docs.dark", "path": "/docs", "theme": "dark" },
+    {
+      "name": "docs",
+      "path": "/docs"
+    },
+    {
+      "name": "docs.dark",
+      "path": "/docs",
+      "theme": "dark"
+    },
     {
       "name": "docs.filter",
       "path": "/docs",
-      "actions": [{ "clickText": "Схемы" }],
+      "actions": [
+        {
+          "clickText": "Схемы"
+        }
+      ],
       "note": "выбран вид «Схемы»"
     },
     {
       "name": "docs.search",
       "path": "/docs",
-      "actions": [{ "type": ["input[aria-label='Поиск по файлам']", "nbt"] }],
+      "actions": [
+        {
+          "type": ["input[aria-label='Поиск по файлам']", "nbt"]
+        }
+      ],
       "note": "поиск «nbt»"
     },
-    { "name": "schematics.dark", "path": "/schematics", "theme": "dark" },
-    { "name": "reference.food.dark", "path": "/reference?tab=food", "waitFor": "main [role=tablist]", "theme": "dark" },
+    {
+      "name": "schematics.dark",
+      "path": "/schematics",
+      "theme": "dark"
+    },
+    {
+      "name": "reference.food.dark",
+      "path": "/reference?tab=food",
+      "waitFor": "main [role=tablist]",
+      "theme": "dark"
+    },
     {
       "name": "reference.guides.dark",
       "path": "/reference?tab=guides",
       "waitFor": "main [role=tablist]",
       "theme": "dark"
     },
-    { "name": "schematics", "path": "/schematics" },
-    { "name": "datapacks", "path": "/datapacks" },
-    { "name": "recipes", "path": "/recipes" },
-    { "name": "tags", "path": "/tags" },
-    { "name": "reference", "path": "/reference", "waitFor": "main [role=tablist]" },
-    { "name": "reference.fuel", "path": "/reference?tab=fuel", "waitFor": "main [role=tablist]" },
-    { "name": "reference.metals", "path": "/reference?tab=metals", "waitFor": "main [role=tablist]" },
-    { "name": "reference.food", "path": "/reference?tab=food", "waitFor": "main [role=tablist]" },
-    { "name": "reference.botany", "path": "/reference?tab=botany", "waitFor": "main [role=tablist]" },
-    { "name": "reference.power", "path": "/reference?tab=power", "waitFor": "main [role=tablist]" },
-    { "name": "reference.multiblocks", "path": "/reference?tab=multiblocks", "waitFor": "main [role=tablist]" },
-    { "name": "reference.guides", "path": "/reference?tab=guides", "waitFor": "main [role=tablist]" },
+    {
+      "name": "schematics",
+      "path": "/schematics"
+    },
+    {
+      "name": "datapacks",
+      "path": "/datapacks"
+    },
+    {
+      "name": "recipes",
+      "path": "/recipes"
+    },
+    {
+      "name": "tags",
+      "path": "/tags"
+    },
+    {
+      "name": "reference",
+      "path": "/reference",
+      "waitFor": "main [role=tablist]"
+    },
+    {
+      "name": "reference.fuel",
+      "path": "/reference?tab=fuel",
+      "waitFor": "main [role=tablist]"
+    },
+    {
+      "name": "reference.metals",
+      "path": "/reference?tab=metals",
+      "waitFor": "main [role=tablist]"
+    },
+    {
+      "name": "reference.food",
+      "path": "/reference?tab=food",
+      "waitFor": "main [role=tablist]"
+    },
+    {
+      "name": "reference.botany",
+      "path": "/reference?tab=botany",
+      "waitFor": "main [role=tablist]"
+    },
+    {
+      "name": "reference.power",
+      "path": "/reference?tab=power",
+      "waitFor": "main [role=tablist]"
+    },
+    {
+      "name": "reference.multiblocks",
+      "path": "/reference?tab=multiblocks",
+      "waitFor": "main [role=tablist]"
+    },
+    {
+      "name": "reference.guides",
+      "path": "/reference?tab=guides",
+      "waitFor": "main [role=tablist]"
+    },
     {
       "name": "reference.map",
       "path": "/reference?tab=map",
@@ -67,9 +163,39 @@
       "fullPage": false,
       "note": "тайлы карты догружаются — сравнивать по рамке, не по карте"
     },
-    { "name": "addons", "path": "/addons" },
-    { "name": "updates", "path": "/updates" },
-    { "name": "freshness", "path": "/freshness" },
-    { "name": "stats", "path": "/stats" }
+    {
+      "name": "addons",
+      "path": "/addons"
+    },
+    {
+      "name": "updates",
+      "path": "/updates"
+    },
+    {
+      "name": "freshness",
+      "path": "/freshness"
+    },
+    {
+      "name": "stats",
+      "path": "/stats"
+    },
+    {
+      "name": "datapacks.editor",
+      "path": "/datapacks",
+      "actions": [
+        {
+          "click": "aside ul li button"
+        },
+        {
+          "wait": 700
+        },
+        {
+          "click": "main ul li button"
+        },
+        {
+          "wait": 900
+        }
+      ]
+    }
   ]
 }

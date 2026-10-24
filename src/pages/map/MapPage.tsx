@@ -2,8 +2,8 @@ import { Copy, Check, Settings, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Modal } from '@/shared/ui';
-import { WorldMap, type MapMarker } from '../components/WorldMap';
-import { useData } from '../data/DataContext';
+import { WorldMap, type MapMarker } from './ui/WorldMap';
+import { useData } from '@/data/DataContext';
 import {
   bearing,
   geoName,
@@ -22,7 +22,7 @@ import {
   type MapLayer,
   type Point,
   type WorldSettings,
-} from '../lib/geo';
+} from '@/lib/geo';
 import { cx, timeAgo } from '@/shared/lib';
 import './MapPage.css';
 

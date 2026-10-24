@@ -1,40 +1,40 @@
-.tag-editor {
+.tagEditor {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.tag-modes {
+.tagModes {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.tag-modes p {
+.tagModes p {
   margin: 0;
   min-width: 240px;
 }
 
-.tag-cols {
+.tagCols {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
 @media (max-width: 760px) {
-  .tag-cols {
+  .tagCols {
     grid-template-columns: 1fr;
   }
 }
 
-.tag-cols h3 {
+.tagCols h3 {
   margin: 0 0 6px;
   font-size: 14px;
   font-weight: 650;
 }
 
-.tag-list {
+.tagList {
   list-style: none;
   margin: 8px 0 0;
   padding: 0;
@@ -44,11 +44,11 @@
   border-radius: var(--radius);
 }
 
-.tag-list:empty {
+.tagList:empty {
   display: none;
 }
 
-.tag-list li {
+.tagList li {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -56,16 +56,16 @@
   border-bottom: 1px solid var(--border);
 }
 
-.tag-list li:last-child {
+.tagList li:last-child {
   border-bottom: 0;
 }
 
-.tag-list li.removed .tag-member {
+.tagList li.removed .tagMember {
   opacity: 0.45;
   text-decoration: line-through;
 }
 
-.tag-member {
+.tagMember {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -73,29 +73,29 @@
   flex: 1;
 }
 
-.tag-member-text {
+.tagMemberText {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-.tag-member-name {
+.tagMemberName {
   font-size: 13px;
   line-height: 1.25;
 }
 
-.tag-member-id {
+.tagMemberId {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-3);
   overflow-wrap: anywhere;
 }
 
-.tag-add {
+.tagAdd {
   position: relative;
 }
 
-.tag-add-list {
+.tagAddList {
   position: absolute;
   z-index: 20;
   left: 0;
@@ -112,7 +112,7 @@
   box-shadow: var(--shadow-md);
 }
 
-.tag-add-list button {
+.tagAddList button {
   width: 100%;
   display: flex;
   align-items: center;
@@ -126,24 +126,24 @@
   cursor: pointer;
 }
 
-.tag-add-list button:hover {
+.tagAddList button:hover {
   background: var(--surface-2);
 }
 
-.tag-warn {
+.tagWarn {
   margin: 0;
   padding: 8px 10px;
   border-radius: var(--radius);
   background: var(--danger-soft);
 }
 
-.tag-preview summary {
+.tagPreview summary {
   cursor: pointer;
   font-size: 13px;
   color: var(--text-2);
 }
 
-.tag-preview pre {
+.tagPreview pre {
   margin: 8px 0 0;
   padding: 10px;
   max-height: 220px;

@@ -1,0 +1,37 @@
+.hint-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--imp-2) 35%, var(--border));
+  background: color-mix(in srgb, var(--imp-2) 7%, var(--surface));
+}
+
+.hint-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--imp-2);
+}
+
+.hint-title {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.hint-type {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.hint-body {
+  font-size: 13px;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+
+.hint-body ul {
+  padding-left: 1.1em;
+}
