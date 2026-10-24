@@ -197,15 +197,31 @@ async function runAction(page, a) {
     return evaluate(page, `document.querySelector(${JSON.stringify(a.click)}).click()`);
   }
   if (a.clickText) {
-    // Кнопка/ссылка по видимому тексту: { clickText: "Справочник", within?: "nav" }
-    const expr = `(() => {
-      const root = document.querySelector(${JSON.stringify(a.within ?? 'body')});
-      const el = [...root.querySelectorAll('button,a,[role=tab],[role=button],summary,label')]
-        .find((e) => e.textContent.trim() === ${JSON.stringify(a.clickText)});
-      if (!el) throw new Error('Нет элемента с текстом ' + ${JSON.stringify(a.clickText)});
-      el.click();
-    })()`;
-    return evaluate(page, expr);
+    // Кнопка/ссылка по видимому тексту: { clickText: "Схемы", within?: "header" }; счётчик в конце («Схемы 6»)
+    // не мешает. Без within ждём до 10 с совпадения в окне или <main> (страница ещё грузится),
+    // и только потом ищем по всей странице — иначе попадём в ссылку шапки с тем же словом.
+    // within — тег/роль, не класс: классы модулей станут хэшами
+    const tryClick = (roots) =>
+      evaluate(
+        page,
+        `(() => {
+          const match = (e) => [e.textContent.trim(), e.textContent.replace(/\\s*\\d+\\s*$/, '').trim()].includes(${JSON.stringify(a.clickText)});
+          for (const sel of ${JSON.stringify(roots)}) {
+            const root = document.querySelector(sel);
+            const el = root && [...root.querySelectorAll('button,a,[role=tab],[role=button],summary,label')].find(match);
+            if (el) { el.click(); return true; }
+          }
+          return false;
+        })()`,
+      );
+    const roots = a.within ? [a.within] : ['[role=dialog]', 'main'];
+    const end = Date.now() + 10000;
+    while (Date.now() < end) {
+      if (await tryClick(roots)) return;
+      await sleep(200);
+    }
+    if (!a.within && (await tryClick(['body']))) return;
+    throw new Error(`Нет элемента с текстом «${a.clickText}»`);
   }
   if (a.type) {
     const [sel, text] = a.type;
