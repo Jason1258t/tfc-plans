@@ -1,4 +1,4 @@
-.files-page {
+.filesPage {
   width: 100%;
   max-width: 960px;
   margin: 0 auto;
@@ -9,36 +9,37 @@
   box-sizing: border-box;
 }
 
-.files-head {
+.filesHead {
   display: flex;
   align-items: flex-start;
   gap: 12px;
 }
 
-.files-page h1 {
+.filesPage h1 {
   margin: 0 0 4px;
   font-size: 22px;
   font-weight: 650;
 }
 
-.files-head p,
-.files-uploading,
-.files-note {
+.filesHead p,
+.filesUploading,
+.filesNote {
   margin: 0;
 }
 
-.files-bar {
+.filesBar {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.files-bar .search {
+/* Чужие компоненты (.search, .seg, .fbadge) — глобальные, пока не переехали в shared/ui */
+.filesBar :global(.search) {
   flex: 1 1 260px;
 }
 
-.files-list {
+.filesList {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -48,35 +49,35 @@
   overflow: hidden;
 }
 
-.files-row {
+.filesRow {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 8px 8px 8px 14px;
 }
 
-.files-row + .files-row {
+.filesRow + .filesRow {
   border-top: 1px solid var(--border);
 }
 
-.files-row:hover {
+.filesRow:hover {
   background: var(--surface-2);
 }
 
-.files-bar .seg {
+.filesBar :global(.seg) {
   flex-wrap: wrap;
 }
 
-.files-bar .seg button {
+.filesBar :global(.seg) button {
   gap: 6px;
 }
 
-.files-row .fbadge {
+.filesRow :global(.fbadge) {
   flex: 1;
 }
 
 @media (max-width: 560px) {
-  .files-head {
+  .filesHead {
     flex-wrap: wrap;
   }
 }

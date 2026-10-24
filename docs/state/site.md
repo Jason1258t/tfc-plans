@@ -16,8 +16,11 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
   usages, dead/library classes, duplicates, module key check), `scripts/ui/shots.mjs` + `scenarios.json` (desktop and
   mobile screenshots, before/after diff via installed Chrome).
 - Done: foundation — `src/index.css` split into `src/app/theme/` (tokens, base, legacy-ui, markdown, utilities) under
-  `@layer theme`; screenshots of all pages (desktop/mobile, light/dark) unchanged. Pages and components: still 41
-  global CSS files, none on modules yet.
+  `@layer theme`; screenshots of all pages (desktop/mobile, light/dark) unchanged. Then the pilot page «Документы»
+  (`src/pages/files/FilesPage.module.css`, 2026-10-24, задача PfzufKyhwWCUYYhBs9K5) — first page on a module: own
+  classes local, the three others' overrides (`.search`, `.seg`, `.fbadge`) through `:global` until shared/ui exists.
+  Onboarding tour targets for that page moved to tags and roles (`main button` + text, `main [role=search]`), not
+  classes. Pages and components: 40 global CSS files left, shared/ui not created yet.
 
 ## Documents (file storage)
 
