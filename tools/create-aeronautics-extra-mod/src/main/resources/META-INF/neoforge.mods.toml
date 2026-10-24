@@ -1,0 +1,43 @@
+modLoader = "javafml"
+loaderVersion = "[2,)"
+license = "MIT"
+
+[[mods]]
+modId = "create_aeronautics_extra"
+version = "1.0.0"
+displayName = "Create Aeronautics Extra"
+authors = "TFC Планы"
+description = '''
+Бортовая электрика для машин и кораблей Create Aeronautics (сборка TFC Планы): бортовой компьютер — один блок с валом
+Create и клеммами Electro Energetics, в который ставятся модули: генераторный (вал → ток) и аккумуляторный (ячейка
+24 В, как аккумулятор EE). Как в настоящей машине: генератор заряжает аккумулятор, аккумулятор держит бортовую сеть.
+'''
+
+[[dependencies.create_aeronautics_extra]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1.219,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.create_aeronautics_extra]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1]"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.create_aeronautics_extra]]
+modId = "create"
+type = "required"
+versionRange = "[6.0.10,6.1)"
+ordering = "AFTER"
+side = "BOTH"
+
+# Аккумулятор — AccumulatorProperties, генератор — energyLimitedSource, по байткоду EE 1.1.2; новая версия — сверить
+[[dependencies.create_aeronautics_extra]]
+modId = "electroenergetics"
+type = "required"
+versionRange = "[1.1.2,)"
+ordering = "AFTER"
+side = "BOTH"

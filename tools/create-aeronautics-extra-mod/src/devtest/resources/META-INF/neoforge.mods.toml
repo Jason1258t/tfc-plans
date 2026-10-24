@@ -1,0 +1,16 @@
+modLoader = "javafml"
+loaderVersion = "[2,)"
+license = "MIT"
+
+[[mods]]
+modId = "create_aeronautics_extra_devtest"
+version = "1.0.0"
+displayName = "Create Aeronautics Extra devtest"
+description = "Только для сервера разработки: /aetest"
+
+[[dependencies.create_aeronautics_extra_devtest]]
+modId = "create_aeronautics_extra"
+type = "required"
+versionRange = "[1,)"
+ordering = "AFTER"
+side = "BOTH"

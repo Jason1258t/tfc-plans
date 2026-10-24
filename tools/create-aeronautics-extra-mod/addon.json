@@ -1,0 +1,89 @@
+{
+  "id": "create_aeronautics_extra",
+  "name": "Create Aeronautics Extra — бортовой компьютер",
+  "version": "1.0.0",
+  "jar": "create-aeronautics-extra-1.0.0.jar",
+  "sha256": "1534ed13444213a41498dbe161b4e1481f6be4d110435a2423cabc85298973ce",
+  "order": 80,
+  "side": "both",
+  "summary": "Бортовая электрика для машин и кораблей Create Aeronautics: бортовой компьютер — один блок с валом Create и клеммами Electro Energetics, в который ставится до 4 модулей. Генераторный модуль превращает вращение в ток, аккумуляторный (ячейка 24 В, как аккумулятор EE) держит бортовую сеть. Как в настоящей машине: генератор заряжает аккумулятор, аккумулятор питает потребителей. Работает и на земле, и на собранном корабле.",
+  "needs": "Сервер и все игроки (новые блок и предметы). NeoForge 21.1.219+, Create 6.0.10, Electro Energetics 1.1.2+. Create Aeronautics не обязателен.",
+  "blocks": [
+    {
+      "id": "create_aeronautics_extra:onboard_computer",
+      "name": "Бортовой компьютер",
+      "image": "onboard_computer.png",
+      "recipe": {
+        "pattern": [
+          "CEC",
+          "PBP",
+          " S "
+        ],
+        "key": {
+          "C": {
+            "item": "electroenergetics:connector"
+          },
+          "E": {
+            "item": "create:electron_tube"
+          },
+          "P": {
+            "item": "create:brass_sheet",
+            "tag": "c:plates/brass"
+          },
+          "B": {
+            "item": "create:brass_casing"
+          },
+          "S": {
+            "item": "create:shaft"
+          }
+        }
+      }
+    },
+    {
+      "id": "create_aeronautics_extra:generator_module",
+      "name": "Генераторный модуль",
+      "image": "generator_module.png",
+      "recipe": {
+        "pattern": [
+          "MWM",
+          "PAP"
+        ],
+        "key": {
+          "M": {
+            "item": "electroenergetics:magnet"
+          },
+          "W": {
+            "item": "electroenergetics:copper_wire_spool"
+          },
+          "P": {
+            "item": "create:iron_sheet",
+            "tag": "c:plates/iron"
+          },
+          "A": {
+            "item": "create:andesite_alloy"
+          }
+        }
+      }
+    },
+    {
+      "id": "create_aeronautics_extra:battery_module",
+      "name": "Аккумуляторный модуль",
+      "image": "battery_module.png",
+      "recipe": {
+        "pattern": [
+          "A",
+          "P"
+        ],
+        "key": {
+          "A": {
+            "item": "electroenergetics:accumulator"
+          },
+          "P": {
+            "item": "create:brass_sheet",
+            "tag": "c:plates/brass"
+          }
+        }
+      }
+    }
+  ]
+}
