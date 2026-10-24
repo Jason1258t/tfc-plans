@@ -1,4 +1,7 @@
-.stats-page {
+/* Стили страницы «Статистика» (ветка refactor/css-stats). Общие утилиты (faint, small, num, mono, empty),
+   чужие классы (.link-btn из TasksPage.css) и динамические k-* остаются глобальными — до переноса в shared/ui. */
+
+.statsPage {
   width: 100%;
   max-width: 1100px;
   margin: 0 auto;
@@ -8,23 +11,23 @@
   gap: 14px;
 }
 
-.stats-head h1 {
+.head h1 {
   margin: 0 0 4px;
   font-size: 22px;
 }
 
-.stats-head p {
+.head p {
   margin: 0;
 }
 
-.stats-bar {
+.bar {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.stats-check {
+.check {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -32,21 +35,21 @@
   cursor: pointer;
 }
 
-.stats-error {
+.error {
   color: var(--danger);
   background: var(--danger-soft);
   border-radius: var(--radius-sm);
   padding: 8px 12px;
 }
 
-.stats-tiles {
+.tiles {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
 }
 
-.stats-tile,
-.stats-card {
+.tile,
+.card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -54,34 +57,34 @@
   min-width: 0;
 }
 
-.stats-tile-v {
+.tileValue {
   font-size: 28px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
 
-.stats-card h2 {
+.card h2 {
   margin: 0 0 10px;
   font-size: 15px;
   font-weight: 600;
 }
 
-.stats-grid {
+.grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
   gap: 14px;
 }
 
 /* Столбики по дням: одна серия, цвет — акцент сайта */
-.stats-chart {
+.chart {
   display: flex;
   align-items: stretch;
   gap: 2px;
   height: 160px;
 }
 
-.stats-col {
+.col {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -93,28 +96,28 @@
   cursor: default;
 }
 
-.stats-col:hover {
+.col:hover {
   background: var(--surface-2);
 }
 
-.stats-col.out {
+.col.out {
   opacity: 0.35;
 }
 
-.stats-col-bar {
+.colBar {
   width: min(70%, 28px);
   min-height: 1px;
   background: var(--accent);
   border-radius: 4px 4px 0 0;
 }
 
-.stats-col-n {
+.colN {
   font-size: 11px;
   color: var(--text-2);
   font-variant-numeric: tabular-nums;
 }
 
-.stats-col-d {
+.colD {
   font-size: 11px;
   color: var(--text-3);
   border-top: 1px solid var(--border);
@@ -123,19 +126,19 @@
   padding-top: 2px;
 }
 
-.stats-table-wrap {
+.tableWrap {
   overflow-x: auto;
   max-height: 420px;
   overflow-y: auto;
 }
 
-.stats-table {
+.table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
 }
 
-.stats-table th {
+.table th {
   text-align: left;
   font-weight: 500;
   font-size: 12px;
@@ -148,27 +151,29 @@
   background: var(--surface);
 }
 
-.stats-table td {
+.table td {
   padding: 5px 8px;
   border-bottom: 1px solid var(--border);
   vertical-align: top;
 }
 
-.stats-table tr:last-child td {
+.table tr:last-child td {
   border-bottom: 0;
 }
 
-.stats-table .num {
+/* .num — общая утилита (ещё в ReferencePage.css), пока глобальная */
+.table :global(.num) {
   text-align: right;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.stats-table tr.sel td {
+.table tr.sel td {
   background: var(--accent-soft);
 }
 
-.stats-table .link-btn {
+/* .link-btn — чужой класс из TasksPage.css, пока глобальный (до переноса в shared/ui) */
+.table :global(.link-btn) {
   border: 0;
   background: none;
   padding: 0;
@@ -178,22 +183,22 @@
   cursor: pointer;
 }
 
-.stats-table .link-btn:hover {
+.table :global(.link-btn):hover {
   text-decoration: underline;
 }
 
-.stats-visits {
+.visits {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.stats-visit {
+.visit {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
 }
 
-.stats-visit-head {
+.visitHead {
   width: 100%;
   display: flex;
   gap: 10px;
@@ -208,11 +213,11 @@
   cursor: pointer;
 }
 
-.stats-visit-head:hover {
+.visitHead:hover {
   background: var(--surface-2);
 }
 
-.stats-timeline {
+.timeline {
   list-style: none;
   margin: 0;
   padding: 4px 10px 8px;
@@ -223,20 +228,22 @@
   border-top: 1px solid var(--border);
 }
 
-.stats-timeline li {
+.timeline li {
   overflow-wrap: anywhere;
 }
 
-.stats-timeline .k-view {
+/* k-view/k-hide/k-show собираются в коде из строки (k-${e.k}) — поэтому глобальные */
+.timeline :global(.k-view) {
   font-weight: 500;
 }
 
-.stats-timeline .k-hide,
-.stats-timeline .k-show {
+.timeline :global(.k-hide),
+.timeline :global(.k-show) {
   color: var(--text-3);
 }
 
-.stats-timeline .mono {
+/* .mono — общая утилита (app/theme/legacy-ui.css), пока глобальная */
+.timeline :global(.mono) {
   font-family: var(--font-mono);
   font-size: 12px;
 }
