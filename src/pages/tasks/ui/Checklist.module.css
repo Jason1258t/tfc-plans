@@ -1,4 +1,4 @@
-.cl-list {
+.clList {
   list-style: none;
   margin: 0 0 8px;
   padding: 0;
@@ -7,7 +7,7 @@
   overflow: hidden;
 }
 
-.cl-row {
+.clRow {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -16,16 +16,16 @@
   background: var(--surface);
 }
 
-.cl-row + .cl-row {
+.clRow + .clRow {
   border-top: 1px solid var(--border);
 }
 
-.cl-row.done .cl-text {
+.clRow.done .clText {
   color: var(--text-3);
   text-decoration: line-through;
 }
 
-.cl-check {
+.clCheck {
   width: 18px;
   height: 18px;
   flex: none;
@@ -40,22 +40,22 @@
   padding: 0;
 }
 
-.cl-check.on {
+.clCheck.on {
   background: var(--accent);
   border-color: var(--accent);
 }
 
-.cl-text {
+.clText {
   overflow-wrap: anywhere;
 }
 
-.cl-counter {
+.clCounter {
   display: inline-flex;
   align-items: center;
   gap: 2px;
 }
 
-.cl-num {
+.clNum {
   width: 44px;
   height: 26px;
   padding: 0 4px;
@@ -67,39 +67,39 @@
   -moz-appearance: textfield;
 }
 
-.cl-num::-webkit-inner-spin-button,
-.cl-qty::-webkit-inner-spin-button {
+.clNum::-webkit-inner-spin-button,
+.clQty::-webkit-inner-spin-button {
   -webkit-appearance: none;
 }
 
-.cl-qty {
+.clQty {
   width: 56px;
   flex: none;
   text-align: center;
 }
 
-.cl-actions {
+.clActions {
   display: inline-flex;
   opacity: 0;
   transition: opacity 0.1s;
 }
 
-.cl-row:hover .cl-actions,
-.cl-row:focus-within .cl-actions {
+.clRow:hover .clActions,
+.clRow:focus-within .clActions {
   opacity: 1;
 }
 
 @media (hover: none) {
-  .cl-actions {
+  .clActions {
     opacity: 1;
   }
 }
 
 @media (max-width: 560px) {
-  .cl-row {
+  .clRow {
     flex-wrap: wrap;
   }
-  .cl-counter {
+  .clCounter {
     margin-left: 28px;
   }
 }

@@ -4,13 +4,13 @@
   gap: 8px;
 }
 
-.gallery-grid {
+.galleryGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
   gap: 8px;
 }
 
-.g-thumb {
+.gThumb {
   position: relative;
   aspect-ratio: 4 / 3;
   padding: 0;
@@ -21,7 +21,7 @@
 }
 
 /* Вся картинка — кнопка просмотра; крестик удаления лежит поверх неё */
-.g-open {
+.gOpen {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -32,24 +32,24 @@
   cursor: zoom-in;
 }
 
-.g-thumb img {
+.gThumb img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.g-thumb:hover,
-.g-thumb:focus-within {
+.gThumb:hover,
+.gThumb:focus-within {
   border-color: var(--accent);
 }
 
-.g-open:focus-visible {
+.gOpen:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
-.g-skeleton {
+.gSkeleton {
   position: absolute;
   inset: 0;
   background: linear-gradient(90deg, var(--surface-2), var(--surface-3), var(--surface-2));
@@ -57,7 +57,7 @@
   animation: shimmer 1.2s infinite linear;
 }
 
-.g-skeleton.failed {
+.gSkeleton.failed {
   animation: none;
   background: var(--danger-soft);
 }
@@ -68,15 +68,15 @@
   }
 }
 
-.g-thumb.uploading {
+.gThumb.uploading {
   cursor: default;
 }
 
-.g-thumb.uploading img {
+.gThumb.uploading img {
   opacity: 0.45;
 }
 
-.g-overlay {
+.gOverlay {
   position: absolute;
   inset: 0;
   display: flex;
@@ -90,12 +90,12 @@
   background: none;
 }
 
-.g-overlay.err {
+.gOverlay.err {
   background: rgb(160 30 20 / 0.6);
   cursor: pointer;
 }
 
-.g-remove {
+.gRemove {
   position: absolute;
   z-index: 1;
   top: 4px;
@@ -115,23 +115,23 @@
   transition: opacity 0.12s ease-out;
 }
 
-.g-thumb:hover .g-remove,
-.g-thumb:focus-within .g-remove {
+.gThumb:hover .gRemove,
+.gThumb:focus-within .gRemove {
   opacity: 1;
 }
 
-.g-remove:hover {
+.gRemove:hover {
   background: var(--danger);
 }
 
 /* На тач-экране наведения нет — крестик виден всегда */
 @media (hover: none) {
-  .g-remove {
+  .gRemove {
     opacity: 1;
   }
 }
 
-.gallery-add {
+.galleryAdd {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -145,13 +145,13 @@
   cursor: pointer;
 }
 
-.gallery-add:hover,
-.gallery.dragging .gallery-add {
+.galleryAdd:hover,
+.gallery.dragging .galleryAdd {
   border-color: var(--accent);
   color: var(--text);
 }
 
-.gallery.dragging .gallery-add {
+.gallery.dragging .galleryAdd {
   background: var(--accent-soft);
 }
 
@@ -169,7 +169,7 @@
   animation: fade-in 0.12s ease-out;
 }
 
-.lb-top {
+.lbTop {
   position: absolute;
   top: 0;
   left: 0;
@@ -181,7 +181,7 @@
   color: #eee;
 }
 
-.lb-title {
+.lbTitle {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -190,15 +190,15 @@
   font-weight: 500;
 }
 
-.lb-meta {
+.lbMeta {
   margin-left: 10px;
   font-weight: 400;
   font-size: 12px;
   color: #999;
 }
 
-.lb-btn,
-.lb-nav {
+.lbBtn,
+.lbNav {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -209,18 +209,18 @@
   border-radius: var(--radius-sm);
 }
 
-.lb-btn {
+.lbBtn {
   width: 38px;
   height: 38px;
 }
 
-.lb-btn:hover,
-.lb-nav:hover {
+.lbBtn:hover,
+.lbNav:hover {
   background: rgb(255 255 255 / 0.12);
   color: #fff;
 }
 
-.lb-img {
+.lbImg {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
@@ -228,11 +228,11 @@
   box-shadow: 0 8px 40px rgb(0 0 0 / 0.5);
 }
 
-.lb-loading {
+.lbLoading {
   color: #aaa;
 }
 
-.lb-nav {
+.lbNav {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
@@ -240,10 +240,10 @@
   height: 64px;
 }
 
-.lb-nav.prev {
+.lbNav.prev {
   left: 12px;
 }
-.lb-nav.next {
+.lbNav.next {
   right: 12px;
 }
 
@@ -251,12 +251,12 @@
   .lightbox {
     padding: 56px 8px 56px;
   }
-  .lb-nav {
+  .lbNav {
     top: auto;
     bottom: 4px;
     transform: none;
   }
-  .lb-meta {
+  .lbMeta {
     display: none;
   }
 }

@@ -1,10 +1,10 @@
-.cmp-pair {
+.cmpPair {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 
-.cmp-option {
+.cmpOption {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -22,22 +22,22 @@
     transform 0.12s;
 }
 
-.cmp-option:hover {
+.cmpOption:hover {
   border-color: var(--accent);
   background: var(--accent-soft);
 }
 
-.cmp-option:active {
+.cmpOption:active {
   transform: scale(0.99);
 }
 
-.cmp-title {
+.cmpTitle {
   font-size: 16px;
   font-weight: 600;
   overflow-wrap: anywhere;
 }
 
-.cmp-rank {
+.cmpRank {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -47,7 +47,7 @@
   overflow-y: auto;
 }
 
-.cmp-rank li {
+.cmpRank li {
   position: relative;
   counter-increment: r;
   display: flex;
@@ -58,14 +58,14 @@
   font-variant-numeric: tabular-nums;
 }
 
-.cmp-rank li::before {
+.cmpRank li::before {
   content: counter(r);
   width: 18px;
   color: var(--text-3);
   font-size: 12px;
 }
 
-.cmp-swap {
+.cmpSwap {
   position: absolute;
   left: 0;
   right: 0;
@@ -79,7 +79,7 @@
 }
 
 /* Кружок со стрелкой на стыке строк: виден, когда курсор между ними */
-.cmp-swap > span {
+.cmpSwap > span {
   position: absolute;
   left: 50%;
   top: 50%;
@@ -96,22 +96,22 @@
   transition: opacity 0.12s;
 }
 
-.cmp-swap:hover > span,
-.cmp-swap:focus-visible > span {
+.cmpSwap:hover > span,
+.cmpSwap:focus-visible > span {
   opacity: 1;
 }
 
 @media (hover: none) {
-  .cmp-swap > span {
+  .cmpSwap > span {
     opacity: 0.6;
   }
 }
 
 @media (max-width: 520px) {
-  .cmp-pair {
+  .cmpPair {
     grid-template-columns: 1fr;
   }
-  .cmp-option {
+  .cmpOption {
     min-height: 0;
   }
 }

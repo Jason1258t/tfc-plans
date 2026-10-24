@@ -9,6 +9,7 @@ import { cx, timeAgo } from '@/shared/lib';
 import { PRIORITIES, type Task } from '@/types';
 import { ItemIcon } from '@/shared/pack-data';
 import { tooltipHandlers } from '@/shared/ui';
+import styles from './TaskRow.module.css';
 
 interface Props {
   task: Task;
@@ -50,9 +51,9 @@ export function TaskRow({ task, selected, onOpen, onOpenDoc }: Props) {
     );
 
   return (
-    <li className={cx('task-row', done && 'done', selected && 'selected')}>
+    <li className={cx(styles.taskRow, done && styles.done, selected && styles.selected)}>
       <button
-        className={cx('task-check', done && 'on')}
+        className={cx(styles.taskCheck, done && styles.on)}
         style={{ '--imp': imp.color } as React.CSSProperties}
         onClick={toggleDone}
         aria-label={done ? 'Вернуть в работу' : 'Отметить выполненной'}
@@ -62,19 +63,19 @@ export function TaskRow({ task, selected, onOpen, onOpenDoc }: Props) {
       </button>
 
       <div
-        className="task-main"
+        className={styles.taskMain}
         role="button"
         tabIndex={0}
         onClick={onOpen}
         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen())}
       >
-        <div className="task-line">
+        <div className={styles.taskLine}>
           {task.icon && <ItemIcon id={task.icon} size={20} />}
-          <span className="task-title">{task.title}</span>
-          {task.status === 'doing' && <span className="tag doing">в работе</span>}
+          <span className={styles.taskTitle}>{task.title}</span>
+          {task.status === 'doing' && <span className={cx('tag', styles.doing)}>в работе</span>}
           {pending && (
             <span
-              className="task-pending"
+              className={styles.taskPending}
               aria-label="Не отправлено"
               {...tooltipHandlers(
                 'Ещё не отправлено',
@@ -85,15 +86,15 @@ export function TaskRow({ task, selected, onOpen, onOpenDoc }: Props) {
             </span>
           )}
         </div>
-        <div className="task-meta">
+        <div className={styles.taskMeta}>
           {group && (
-            <span className="meta-group">
+            <span className={styles.metaGroup}>
               {group.icon && <ItemIcon id={group.icon} size={14} tip={false} />}
               {group.name}
             </span>
           )}
           {task.assignee ? (
-            <span className={cx('meta-user', task.assignee === nick && 'me')}>
+            <span className={cx(styles.metaUser, task.assignee === nick && styles.me)}>
               <UserRound size={12} />
               {task.assignee}
             </span>
@@ -102,9 +103,13 @@ export function TaskRow({ task, selected, onOpen, onOpenDoc }: Props) {
           )}
           {done && task.completedAt ? <span className="faint">выполнено {timeAgo(task.completedAt)}</span> : null}
           {!done && resources.length > 0 && (
-            <span className="meta-res">
+            <span className={styles.metaRes}>
               {resources.slice(0, 6).map((c) => (
-                <span key={c.id} className="res" {...tooltipHandlers(`${c.text}: ещё ${(c.qty ?? 1) - (c.got ?? 0)}`)}>
+                <span
+                  key={c.id}
+                  className={styles.res}
+                  {...tooltipHandlers(`${c.text}: ещё ${(c.qty ?? 1) - (c.got ?? 0)}`)}
+                >
                   <ItemIcon id={c.itemId} size={16} tip={false} />
                   <span>{(c.qty ?? 1) - (c.got ?? 0)}</span>
                 </span>
@@ -113,7 +118,7 @@ export function TaskRow({ task, selected, onOpen, onOpenDoc }: Props) {
             </span>
           )}
           {!done && progress !== null && (
-            <span className="meta-progress" {...tooltipHandlers(`Чеклист: ${Math.round(progress * 100)}%`)}>
+            <span className={styles.metaProgress} {...tooltipHandlers(`Чеклист: ${Math.round(progress * 100)}%`)}>
               <span className="progress">
                 <span style={{ width: `${progress * 100}%` }} />
               </span>
@@ -122,22 +127,22 @@ export function TaskRow({ task, selected, onOpen, onOpenDoc }: Props) {
         </div>
       </div>
 
-      <div className="task-side">
+      <div className={styles.taskSide}>
         {imageCount > 0 && (
-          <span className="file-count" {...tooltipHandlers(`Изображений: ${imageCount}`)}>
+          <span className={styles.fileCount} {...tooltipHandlers(`Изображений: ${imageCount}`)}>
             <ImageIcon size={13} />
             {imageCount}
           </span>
         )}
         {fileCount > 0 && (
-          <span className="file-count" {...tooltipHandlers(`Файлов: ${fileCount}`)}>
+          <span className={styles.fileCount} {...tooltipHandlers(`Файлов: ${fileCount}`)}>
             <Paperclip size={13} />
             {fileCount}
           </span>
         )}
         {docs.length > 0 && (
           <button
-            className="doc-btn"
+            className={styles.docBtn}
             onClick={() => onOpenDoc(docs[0].id)}
             {...tooltipHandlers(docs.length > 1 ? `Планов: ${docs.length}` : docs[0].title)}
             aria-label={`Открыть план ${docs[0].title}`}
@@ -147,7 +152,7 @@ export function TaskRow({ task, selected, onOpen, onOpenDoc }: Props) {
           </button>
         )}
         <button
-          className={cx('copy-btn', copied && 'on')}
+          className={cx(styles.copyBtn, copied && styles.on)}
           onClick={copyRef}
           aria-label="Скопировать id задачи для агента"
           {...tooltipHandlers(copied ? 'Скопировано' : 'Скопировать для агента', 'Название, id и ссылка на задачу')}

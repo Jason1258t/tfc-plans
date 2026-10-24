@@ -1,0 +1,107 @@
+/* Строка «поиск + кнопка» и поле поиска: правила были в TasksPage.css, но раздел «Планы» — часть той же
+   страницы, поэтому они продублированы здесь с теми же брейкпоинтами (страница их больше не отдаёт) */
+.top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search {
+  flex: 1 1 200px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.search:focus-within {
+  border-color: var(--accent);
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+}
+
+@media (max-width: 560px) {
+  .top {
+    flex-wrap: wrap;
+  }
+  .top :global(.btn.primary) {
+    flex: 1;
+  }
+}
+
+.docsLead {
+  margin: 0;
+}
+
+.docsList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.docsList li + li {
+  border-top: 1px solid var(--border);
+}
+
+.docItem {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.docItem:hover {
+  background: var(--surface-2);
+}
+
+.docItem.active {
+  background: var(--amethyst-soft);
+  box-shadow: inset 3px 0 0 var(--amethyst);
+}
+
+.docItemIcon {
+  color: var(--amethyst);
+  margin-top: 2px;
+  flex: none;
+}
+
+.docItemTitle {
+  display: block;
+  font-weight: 500;
+}
+
+.docItemPreview {
+  display: block;
+  color: var(--text-2);
+  font-size: 13px;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.docItemMeta {
+  display: block;
+  color: var(--text-3);
+  font-size: 12px;
+  margin-top: 4px;
+}

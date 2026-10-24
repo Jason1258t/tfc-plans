@@ -14,7 +14,7 @@ import { useSearchTrack } from '@/shared/api';
 import { SORTS, sortTasks, type SortMode } from './model/tasks';
 import { cx, timeAgo } from '@/shared/lib';
 import { PRIORITIES, type Group, type Priority } from '@/types';
-import './TasksPage.css';
+import styles from './TasksPage.module.css';
 
 const ALL = '__all';
 const NONE = '__none';
@@ -152,41 +152,47 @@ export function TasksPage() {
   ];
 
   return (
-    <div className={cx('tasks-layout', docId && 'with-doc')}>
-      <aside className="groups">
-        <ul className="groups-sections">
+    <div className={cx(styles.tasksLayout, docId && styles.withDoc)}>
+      <aside className={styles.groups} data-tour="tasks-groups">
+        <ul className={styles.groupsSections}>
           <li>
             <button
-              className={cx('group-item', !docsView && !peopleView && 'active')}
+              className={cx(styles.groupItem, !docsView && !peopleView && styles.active)}
               onClick={() => setParam({ view: null })}
             >
-              <span className="group-icon">
+              <span className={styles.groupIcon}>
                 <ListChecks size={16} />
               </span>
-              <span className="grow group-name">Задачи</span>
-              <span className="group-count">{countFor(ALL) || ''}</span>
+              <span className={cx('grow', styles.groupName)}>Задачи</span>
+              <span className={styles.groupCount}>{countFor(ALL) || ''}</span>
             </button>
           </li>
           <li>
-            <button className={cx('group-item', docsView && 'active')} onClick={() => setParam({ view: 'docs' })}>
-              <span className="group-icon">
+            <button
+              className={cx(styles.groupItem, docsView && styles.active)}
+              onClick={() => setParam({ view: 'docs' })}
+            >
+              <span className={styles.groupIcon}>
                 <BookOpen size={16} />
               </span>
-              <span className="grow group-name">Планы</span>
-              <span className="group-count">{artifacts.length || ''}</span>
+              <span className={cx('grow', styles.groupName)}>Планы</span>
+              <span className={styles.groupCount}>{artifacts.length || ''}</span>
             </button>
           </li>
           <li>
-            <button className={cx('group-item', peopleView && 'active')} onClick={() => setParam({ view: 'people' })}>
-              <span className="group-icon">
+            <button
+              className={cx(styles.groupItem, peopleView && styles.active)}
+              onClick={() => setParam({ view: 'people' })}
+            >
+              <span className={styles.groupIcon}>
                 <Users size={16} />
               </span>
-              <span className="grow group-name">Люди</span>
-              <span className="group-count">{allPeople.length || ''}</span>
+              <span className={cx('grow', styles.groupName)}>Люди</span>
+              <span className={styles.groupCount}>{allPeople.length || ''}</span>
             </button>
           </li>
         </ul>
-        <div className="groups-head">
+        <div className={styles.groupsHead}>
           <span>Группы</span>
           <button className="btn ghost sm icon" onClick={() => setEditingGroup('new')} aria-label="Новая группа">
             <Plus size={15} />
@@ -197,8 +203,8 @@ export function TasksPage() {
             <li
               key={g.id}
               className={cx(
-                dragId === g.id && 'dragging',
-                dropAt?.id === g.id && (dropAt.after ? 'drop-after' : 'drop-before'),
+                dragId === g.id && styles.dragging,
+                dropAt?.id === g.id && (dropAt.after ? styles.dropAfter : styles.dropBefore),
               )}
               draggable={!!g.group}
               onDragStart={(e) => {
@@ -223,18 +229,18 @@ export function TasksPage() {
               onDragEnd={endDrag}
             >
               <button
-                className={cx('group-item', !docsView && groupFilter === g.id && 'active')}
+                className={cx(styles.groupItem, !docsView && groupFilter === g.id && styles.active)}
                 onClick={() => setParam({ group: g.id === ALL ? null : g.id, view: null })}
                 onDoubleClick={() => g.group && setEditingGroup(g.group)}
                 title={g.group ? 'Перетащите, чтобы поменять порядок; двойной клик — настроить группу' : undefined}
               >
-                <span className="group-icon">{g.icon && <ItemIcon id={g.icon} size={16} tip={false} />}</span>
-                <span className="grow group-name">{g.name}</span>
-                <span className="group-count">{countFor(g.id) || ''}</span>
+                <span className={styles.groupIcon}>{g.icon && <ItemIcon id={g.icon} size={16} tip={false} />}</span>
+                <span className={cx('grow', styles.groupName)}>{g.name}</span>
+                <span className={styles.groupCount}>{countFor(g.id) || ''}</span>
               </button>
               {g.group && (
                 <button
-                  className="group-edit"
+                  className={styles.groupEdit}
                   onClick={() => setEditingGroup(g.group)}
                   aria-label={`Настроить группу ${g.name}`}
                 >
@@ -246,12 +252,12 @@ export function TasksPage() {
         </ul>
       </aside>
 
-      <main className="tasks-main">
+      <main className={styles.tasksMain}>
         {docsView ? (
           <DocsSection openId={docId} onOpen={(id) => setParam({ doc: id })} />
         ) : peopleView ? (
-          <section className="people">
-            <header className="people-head">
+          <section>
+            <header className={styles.peopleHead}>
               <h2>Люди</h2>
               <span className="faint small">
                 Кто заходил на сайт. Нажмите на человека — увидите его задачи; назначить можно в карточке задачи.
@@ -260,17 +266,17 @@ export function TasksPage() {
             {people.length === 0 ? (
               <div className="empty">Список пуст — наполнится, когда участники откроют сайт.</div>
             ) : (
-              <ul className="people-list">
+              <ul className={styles.peopleList}>
                 {people.map((u) => (
                   <li key={u.id}>
-                    <button className="person" onClick={() => setParam({ view: null, group: null, who: u.id })}>
-                      <span className="person-avatar">{u.id.slice(0, 1).toUpperCase()}</span>
-                      <span className="person-main">
-                        <span className="person-name">
+                    <button className={styles.person} onClick={() => setParam({ view: null, group: null, who: u.id })}>
+                      <span className={styles.personAvatar}>{u.id.slice(0, 1).toUpperCase()}</span>
+                      <span className={styles.personMain}>
+                        <span className={styles.personName}>
                           {u.id}
                           {u.id === nick && <span className="faint"> — вы</span>}
                         </span>
-                        <span className="person-sub faint small">
+                        <span className={cx(styles.personSub, 'faint', 'small')}>
                           в работе {u.doing} · автор {u.authored} ·{' '}
                           {u.lastSeen > 0 ? 'был(а) ' + timeAgo(u.lastSeen) : 'только в задачах'}
                         </span>
@@ -283,7 +289,7 @@ export function TasksPage() {
           </section>
         ) : (
           <>
-            <div className="tasks-top">
+            <div className={styles.tasksTop}>
               <div className="seg" role="tablist">
                 <button aria-pressed={tab === 'active'} onClick={() => setParam({ tab: null })}>
                   Активные <span className="count">{inScope.filter((t) => t.status !== 'done').length}</span>
@@ -293,18 +299,23 @@ export function TasksPage() {
                 </button>
               </div>
               <span className="grow" />
-              <button className="btn" onClick={() => setComparing(true)} title="Попарно сравнить задачи по важности">
+              <button
+                className="btn"
+                data-tour="tasks-compare"
+                onClick={() => setComparing(true)}
+                title="Попарно сравнить задачи по важности"
+              >
                 <Scale size={15} />
                 <span className="hide-sm">Что важнее?</span>
               </button>
-              <button className="btn primary" onClick={() => setCreating(true)}>
+              <button className="btn primary" data-tour="tasks-new" onClick={() => setCreating(true)}>
                 <Plus size={16} />
                 Задача
               </button>
             </div>
 
-            <div className="tasks-filters">
-              <label className="search">
+            <div className={styles.tasksFilters} role="search" aria-label="Поиск и фильтры задач">
+              <label className={styles.search}>
                 <Search size={15} className="faint" />
                 <input
                   placeholder="Поиск по задачам"
@@ -350,7 +361,7 @@ export function TasksPage() {
                 Мои
               </label>
               {who && (
-                <button className="who-chip" onClick={() => setParam({ who: null })}>
+                <button className={styles.whoChip} onClick={() => setParam({ who: null })}>
                   {who} <X size={13} />
                 </button>
               )}
@@ -367,14 +378,14 @@ export function TasksPage() {
                 ) : (
                   <>
                     Задач нет.{' '}
-                    <button className="link-btn" onClick={() => setCreating(true)}>
+                    <button className={styles.linkBtn} onClick={() => setCreating(true)}>
                       Создать первую
                     </button>
                   </>
                 )}
               </div>
             ) : (
-              <ul className="task-list">
+              <ul className={styles.taskList}>
                 {list.map((t) => (
                   <TaskRow
                     key={t.id}

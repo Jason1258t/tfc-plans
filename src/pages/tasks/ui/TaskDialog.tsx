@@ -17,7 +17,7 @@ import { Markdown, itemToken, toggleTaskLine } from '@/components/Markdown';
 import { Modal } from '@/shared/ui';
 import { PlaceField } from './PlaceField';
 import { SchematicImport } from './SchematicImport';
-import './TaskDialog.css';
+import styles from './TaskDialog.module.css';
 import { MarkdownField } from '@/components/MarkdownField';
 import { useTextImages } from '@/components/useTextImages';
 
@@ -126,7 +126,7 @@ function CreateTask({
       }
     >
       <div
-        className="task-form"
+        className={styles.taskForm}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
             e.preventDefault();
@@ -142,8 +142,8 @@ function CreateTask({
           gallery={<Gallery pending={pendingFiles} onRemovePending={removePending} onAdd={intake.add} />}
           belowDescription={
             <>
-              <section className="tf-section">
-                <div className="tf-section-head">
+              <section>
+                <div className={styles.tfSectionHead}>
                   <h3>Планы</h3>
                   {!withPlan && (
                     <button className="btn sm" onClick={() => setWithPlan(true)} title="Создать задачу вместе с планом">
@@ -153,9 +153,9 @@ function CreateTask({
                   )}
                 </div>
                 {withPlan ? (
-                  <ul className="doc-links">
+                  <ul className={styles.docLinks}>
                     <li>
-                      <div className="doc-link planned">
+                      <div className={cx(styles.docLink, styles.planned)}>
                         <BookOpen size={16} className="faint" />
                         <span className="grow">План: {draft.title.trim() || 'без названия'}</span>
                         <span className="faint small">создастся вместе с задачей</span>
@@ -177,8 +177,8 @@ function CreateTask({
                   </div>
                 )}
               </section>
-              <section className="tf-section">
-                <div className="tf-section-head">
+              <section>
+                <div className={styles.tfSectionHead}>
                   <h3>Файлы</h3>
                 </div>
                 <Attachments
@@ -286,7 +286,7 @@ function EditTask({
         </>
       }
     >
-      <div className="task-form">
+      <div className={styles.taskForm}>
         <TaskFields
           key={task.id}
           value={task}
@@ -305,8 +305,8 @@ function EditTask({
           gallery={<Gallery taskId={task.id} onAdd={intake.add} />}
           belowDescription={
             <>
-              <section className="tf-section">
-                <div className="tf-section-head">
+              <section>
+                <div className={styles.tfSectionHead}>
                   <h3>Планы</h3>
                   <button className="btn sm" onClick={createDoc}>
                     <FilePlus2 size={14} />
@@ -314,11 +314,11 @@ function EditTask({
                   </button>
                 </div>
                 {linked.length ? (
-                  <ul className="doc-links">
+                  <ul className={styles.docLinks}>
                     {linked.map((a) => (
                       <li key={a.id}>
                         <button
-                          className="doc-link"
+                          className={styles.docLink}
                           onClick={() => {
                             onOpenArtifact(a.id);
                             onClose();
@@ -340,8 +340,8 @@ function EditTask({
                 )}
               </section>
 
-              <section className="tf-section">
-                <div className="tf-section-head">
+              <section>
+                <div className={styles.tfSectionHead}>
                   <h3>Файлы</h3>
                 </div>
                 <Attachments taskId={task.id} onAdd={intake.add} error={intake.error} />
@@ -507,9 +507,9 @@ function TaskFields({
 
   return (
     <>
-      <div className="tf-title-row">
+      <div className={styles.tfTitleRow}>
         <button
-          className={cx('tf-icon', !value.icon && 'no-icon')}
+          className={cx(styles.tfIcon, !value.icon && styles.noIcon)}
           onClick={() => setPickingIcon((v) => !v)}
           aria-label="Иконка задачи"
           title="Иконка задачи (предмет)"
@@ -521,7 +521,7 @@ function TaskFields({
           )}
         </button>
         <textarea
-          className="tf-title"
+          className={styles.tfTitle}
           rows={1}
           value={title.value}
           placeholder="Что нужно сделать?"
@@ -563,8 +563,8 @@ function TaskFields({
         </div>
       )}
 
-      <div className="tf-meta">
-        <div className="seg tf-imp" role="group" aria-label="Важность" title="Важность">
+      <div className={styles.tfMeta}>
+        <div className={cx('seg', styles.tfImp)} role="group" aria-label="Важность" title="Важность">
           {PRIORITIES.map((p) => (
             <button
               key={p.value}
@@ -606,11 +606,11 @@ function TaskFields({
             </option>
           ))}
         </select>
-        <div className="tf-assignee">
-          <span className="tf-assignee-input">
-            <UserRound size={14} className="faint tf-field-icon" />
+        <div className={styles.tfAssignee}>
+          <span className={styles.tfAssigneeInput}>
+            <UserRound size={14} className={cx('faint', styles.tfFieldIcon)} />
             <input
-              className="input with-icon"
+              className={cx('input', styles.withIcon)}
               aria-label="Исполнитель"
               title="Исполнитель"
               list="tf-users"
@@ -640,11 +640,11 @@ function TaskFields({
         <PlaceField compact value={value.place} onChange={(place) => onPatch({ place })} />
       </div>
 
-      <section className="tf-section">
-        <div className="tf-section-head">
+      <section>
+        <div className={styles.tfSectionHead}>
           <h3>Описание</h3>
           {descMode === 'edit' && (
-            <div className="tf-insert">
+            <div className={styles.tfInsert}>
               <ItemPicker
                 small
                 placeholder="Вставить предмет…"
@@ -687,7 +687,7 @@ function TaskFields({
             onMediaChange={images.noteMedia}
           />
         ) : (
-          <div className="tf-desc" onDoubleClick={() => setDescMode('edit')}>
+          <div className={styles.tfDesc} onDoubleClick={() => setDescMode('edit')}>
             <Markdown
               source={value.description}
               onToggleTask={(line) => {
@@ -697,13 +697,13 @@ function TaskFields({
             />
           </div>
         )}
-        {gallery && <div className="tf-gallery">{gallery}</div>}
+        {gallery && <div className={styles.tfGallery}>{gallery}</div>}
       </section>
 
       {belowDescription}
 
-      <section className="tf-section">
-        <div className="tf-section-head">
+      <section>
+        <div className={styles.tfSectionHead}>
           <h3>Ресурсы и чеклист</h3>
           <button
             className="btn sm"

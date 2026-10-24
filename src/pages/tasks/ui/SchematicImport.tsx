@@ -5,7 +5,7 @@ import { addMaterials, schematicMaterials, type SchematicMaterials } from '@/lib
 import { cx } from '@/shared/lib';
 import type { ChecklistEntry } from '@/types';
 import { Modal } from '@/shared/ui';
-import './SchematicImport.css';
+import styles from './SchematicImport.module.css';
 
 interface Props {
   checklist: ChecklistEntry[];
@@ -95,7 +95,7 @@ export function SchematicImport({ checklist, onApply, onClose }: Props) {
       }
     >
       <div
-        className="si"
+        className={styles.si}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault();
@@ -114,7 +114,7 @@ export function SchematicImport({ checklist, onApply, onClose }: Props) {
           }}
         />
         {schems.length === 0 ? (
-          <button className="si-drop" onClick={() => inputRef.current?.click()} disabled={busy}>
+          <button className={styles.siDrop} onClick={() => inputRef.current?.click()} disabled={busy}>
             <FileUp size={22} />
             {busy ? 'Читаю схему…' : 'Выберите или перетащите .nbt-схемы Create'}
             <span className="faint small">
@@ -123,7 +123,7 @@ export function SchematicImport({ checklist, onApply, onClose }: Props) {
           </button>
         ) : (
           <>
-            <ul className="si-files">
+            <ul className={styles.siFiles}>
               {schems.map((s, i) => (
                 <li key={`${s.fileName}-${i}`}>
                   <span className="grow">
@@ -145,11 +145,11 @@ export function SchematicImport({ checklist, onApply, onClose }: Props) {
                 </li>
               ))}
             </ul>
-            <div className="row si-tools">
+            <div className={cx('row', styles.siTools)}>
               <button className="btn sm" onClick={() => inputRef.current?.click()} disabled={busy}>
                 <FileUp size={14} /> Ещё схема
               </button>
-              <label className="row small si-copies">
+              <label className={cx('row', 'small', styles.siCopies)}>
                 Копий
                 <input
                   className="input"
@@ -168,20 +168,20 @@ export function SchematicImport({ checklist, onApply, onClose }: Props) {
                 Ничего
               </button>
             </div>
-            <ul className="si-list">
+            <ul className={styles.siList}>
               {total.map((m) => (
-                <li key={m.id} className={cx(off.has(m.id) && 'off', !m.known && 'unknown')}>
+                <li key={m.id} className={cx(off.has(m.id) && styles.off, !m.known && styles.unknown)}>
                   <label>
                     <input type="checkbox" checked={!off.has(m.id)} onChange={() => toggle(m.id)} />
                     <ItemIcon id={m.id} size={24} />
-                    <span className="grow si-name">
+                    <span className={cx('grow', styles.siName)}>
                       <span>{m.known ? itemName(items?.byId.get(m.id), m.id) : 'Нет такого предмета в сборке'}</span>
                       <code className="faint small">
                         {m.id}
                         {m.from.size > 0 && ` ← ${[...m.from].join(', ')}`}
                       </code>
                     </span>
-                    <span className="si-qty">×{(m.qty * copies).toLocaleString('ru-RU')}</span>
+                    <span className={styles.siQty}>×{(m.qty * copies).toLocaleString('ru-RU')}</span>
                   </label>
                 </li>
               ))}
