@@ -197,7 +197,7 @@ export function loadUsages(root) {
       if (!ts.isImportDeclaration(st) || !ts.isStringLiteral(st.moduleSpecifier)) continue;
       const spec = st.moduleSpecifier.text;
       if (!CSS_EXT.test(spec)) continue;
-      const abs = resolve(dirname(file), spec);
+      const abs = spec.startsWith('@/') ? resolve(root, spec.slice(2)) : resolve(dirname(file), spec);
       cssImports.push(abs);
       const name = st.importClause?.name?.text;
       if (name && MODULE_EXT.test(spec)) modules.set(name, abs);

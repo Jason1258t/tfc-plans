@@ -54,6 +54,31 @@ comments, commit messages, guides, MCP tool output. Keep Russian UI labels verba
   one session is about to span several unrelated features, finish and start a new session instead of growing the
   context.
 
+## Where code goes (`src/`)
+
+Light FSD in progress (task «Переезд фронтенда на облегчённый FSD», plan doc attached): layers `app → pages → entities →
+shared`, a layer imports only from the ones to its right. Not every layer is mandatory; **when in doubt put the file next
+to its main user**, not where the scheme says it "should" be. Until the move is done (`src/components`, `src/lib`,
+`src/data` still exist) put **new** code by these rules and don't mass-move old files outside the migration branches.
+
+| Code is needed by                                                           | Goes to                                                                  |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| one page                                                                    | `pages/<x>/` (`ui/` components, `model/` logic), page file `<X>Page.tsx` |
+| two or more pages, has domain knowledge (tasks, schematics, guides, items…) | `entities/<name>/` (UI optional)                                         |
+| any page, no domain knowledge (Modal, Button, util, firebase wrapper)       | `shared/ui`, `shared/lib`, `shared/api`                                  |
+| app shell, providers, theme                                                 | `app/`                                                                   |
+
+- Every module folder has an `index.ts` with only its **public** part (not `export *`); import from outside through it:
+  `@/entities/schematic`, not `@/entities/schematic/lib/schematicMesh`. One component = one flat file
+  (`Button.tsx` + `Button.module.css`), a folder only for multi-file ones — no `Button/Button.tsx`.
+- Import alias `@/…` = `src/…` (`vite.config.ts` + `tsconfig.app.json`). Inside one folder use relative `./x`; across
+  folders `@/…`. CSS imports stay relative (`./X.module.css`).
+- **Files that Node scripts import directly** (`scripts/`, `cli/`, `server/`: `lib/addonVersions`, `datapackFiles`,
+  `freshness`, `projection`, `recipeRefs`, `recipeFilter`, `nbt`, `schematicFile`, `files.config`, `hash`) must keep
+  **relative** imports — Node doesn't know `@/`. Check with `grep -rn "src/" scripts cli server` before moving them.
+- Harmful (avoid): `shared` importing upward, import cycles, the same code in several places. Everything else is a
+  recommendation; exceptions are fine if they are noted in the code.
+
 ## Skills
 
 Step-by-step procedures in `.claude/skills/<name>/SKILL.md` (standard `SKILL.md` format; `.agents/skills` is a symlink
