@@ -39,13 +39,13 @@ import { entryRecipeId, kubejsScript, scriptFileName } from '@/lib/kubejsFix';
 import { downloadScript, freeScriptName, NEW_SCRIPT_TEXT } from '@/lib/kubejsScripts';
 import { cx, timeAgo, uid } from '@/shared/lib';
 import type { Datapack, DatapackEntry, KubejsScript } from '@/types';
-import './DatapacksPage.css';
+import styles from './DatapacksPage.module.css';
 
-const KIND: Record<DatapackEntry['kind'], { label: string; cls: string }> = {
-  add: { label: 'новый', cls: 'k-add' },
-  replace: { label: 'замена', cls: 'k-replace' },
-  remove: { label: 'удаление', cls: 'k-remove' },
-  file: { label: 'файл', cls: 'k-file' },
+const KIND: Record<DatapackEntry['kind'], string> = {
+  add: 'новый',
+  replace: 'замена',
+  remove: 'удаление',
+  file: 'файл',
 };
 
 function download(bytes: Uint8Array, name: string) {
@@ -107,10 +107,10 @@ export function DatapacksPage() {
   };
 
   return (
-    <div className="dp-layout">
-      <aside className="dp-list">
+    <div className={styles.dpLayout}>
+      <aside className={styles.dpList}>
         <PackNav />
-        <div className="dp-list-head">
+        <div className={styles.dpListHead} data-tour="dp-list-head">
           <span>Датапаки</span>
           <button className="btn ghost sm icon" onClick={create} aria-label="Новый датапак" title="Новый датапак">
             <Plus size={15} />
@@ -129,18 +129,18 @@ export function DatapacksPage() {
             {packs.map((p) => (
               <li key={p.id}>
                 <button
-                  className={cx('dp-item', p.id === selectedId && 'active')}
+                  className={cx(styles.dpItem, p.id === selectedId && styles.active)}
                   onClick={() => setParams({ pack: p.id })}
                 >
                   <Package size={15} className="faint" />
                   <span className="grow">
-                    <span className="dp-item-name">{p.name}</span>
+                    <span className={styles.dpItemName}>{p.name}</span>
                     <span className="faint small">
                       {p.entries.length} файл(ов) · {p.updatedBy}, {timeAgo(p.updatedAt)}
                     </span>
                   </span>
                   {p.install && (
-                    <span className="dp-badge" title="Отмечен «Ставить в мир»: программа tfc поставит его в мир">
+                    <span className={styles.dpBadge} title="Отмечен «Ставить в мир»: программа tfc поставит его в мир">
                       в мир
                     </span>
                   )}
@@ -149,7 +149,7 @@ export function DatapacksPage() {
             ))}
           </ul>
         )}
-        <div className="dp-list-head dp-list-head-next">
+        <div className={cx(styles.dpListHead, styles.dpListHeadNext)}>
           <span>Скрипты KubeJS</span>
           <button
             className="btn ghost sm icon"
@@ -171,18 +171,18 @@ export function DatapacksPage() {
             {scripts.map((s) => (
               <li key={s.id}>
                 <button
-                  className={cx('dp-item', s.id === scriptId && 'active')}
+                  className={cx(styles.dpItem, s.id === scriptId && styles.active)}
                   onClick={() => setParams({ script: s.id })}
                 >
                   <FileTerminal size={15} className="faint" />
                   <span className="grow">
-                    <span className="dp-item-name mono">{s.fileName}</span>
+                    <span className={cx(styles.dpItemName, 'mono')}>{s.fileName}</span>
                     <span className="faint small">
                       {s.updatedBy}, {timeAgo(s.updatedAt)}
                     </span>
                   </span>
                   {s.install && (
-                    <span className="dp-badge" title="Отмечен «Ставить на сервер»: программа tfc поставит его">
+                    <span className={styles.dpBadge} title="Отмечен «Ставить на сервер»: программа tfc поставит его">
                       на сервер
                     </span>
                   )}
@@ -192,20 +192,20 @@ export function DatapacksPage() {
           </ul>
         )}
       </aside>
-      <main className="dp-main">
+      <main className={styles.dpMain}>
         {script && scripts ? (
           <ScriptEditor key={script.id} script={script} scripts={scripts} onDeleted={() => setParams({})} />
         ) : pack ? (
           <PackEditor key={pack.id} pack={pack} onDeleted={() => setParams({})} />
         ) : (
-          <div className="dp-empty">
+          <div className={styles.dpEmpty}>
             <Package size={36} className="faint" />
             <h2>Датапаки</h2>
             <p className="muted">
               Новые рецепты по шаблону из сборки, замена и удаление существующих, произвольные файлы. Экспорт в zip —
               его можно сразу приложить к задаче, чтобы хост сервера закинул в <code>world/datapacks/</code>.
             </p>
-            <button className="btn primary" onClick={create}>
+            <button className="btn primary" data-tour="dp-new" onClick={create}>
               <Plus size={16} /> Новый датапак
             </button>
           </div>
@@ -318,16 +318,16 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
   };
 
   return (
-    <div className="dp-editor">
-      <section className="dp-meta">
-        <div className="dp-meta-row">
+    <div className={styles.dpEditor}>
+      <section className={styles.dpMeta}>
+        <div className={styles.dpMetaRow}>
           <div className="grow">
             <label className="label" htmlFor="dp-name">
               Название
             </label>
             <input
               id="dp-name"
-              className="input dp-name"
+              className={cx('input', styles.dpName)}
               value={name}
               onChange={(e) => setName(e.target.value)}
               onBlur={() => name.trim() && name.trim() !== pack.name && update({ name: name.trim() })}
@@ -371,7 +371,7 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
         />
       </section>
 
-      <div className="dp-toolbar">
+      <div className={styles.dpToolbar}>
         <button className="btn" onClick={() => setCatalogMode('template')}>
           <FilePlus2 size={15} /> Рецепт по шаблону
         </button>
@@ -415,7 +415,7 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
       </div>
 
       {saving && !saving.busy && (
-        <div className={cx('dp-saved', saving.error && 'error')}>
+        <div className={cx(styles.dpSaved, saving.error && styles.error)}>
           <span>
             {saving.error ? (
               <>Не сохранилось: {saving.error}</>
@@ -433,7 +433,7 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
       )}
 
       {issues.length > 0 && (
-        <div className="dp-issues">
+        <div className={styles.dpIssues}>
           {issues.map((i, n) => (
             <div key={n}>
               <AlertTriangle size={13} /> <code>{i.path}</code> — {i.message}
@@ -448,12 +448,14 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
           файл.
         </div>
       ) : (
-        <ul className="dp-entries">
+        <ul className={styles.dpEntries}>
           {pack.entries.map((e) => (
-            <li key={e.id} className="dp-entry">
-              <span className={cx('dp-kind', KIND[e.kind].cls)}>{KIND[e.kind].label}</span>
-              <button className="dp-entry-main" onClick={() => setEditing(e)} title="Редактировать">
-                <code className="dp-path">{e.path}</code>
+            <li key={e.id} className={styles.dpEntry}>
+              <span className={styles.dpKind} data-kind={e.kind}>
+                {KIND[e.kind]}
+              </span>
+              <button className={styles.dpEntryMain} onClick={() => setEditing(e)} title="Редактировать">
+                <code className={styles.dpPath}>{e.path}</code>
                 <span className="faint small">
                   {[e.recipeType, e.sourceRecipe && `из ${e.sourceRecipe}`, e.note].filter(Boolean).join(' · ')}
                 </span>
@@ -472,7 +474,7 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
               )}
               {kjsHits.has(e.id) && (
                 <button
-                  className="btn sm dp-kjs"
+                  className={cx('btn sm', styles.dpKjs)}
                   onClick={() => openConstructor(e)}
                   title={`Удаляется KubeJS: ${kjsHits
                     .get(e.id)!
@@ -498,7 +500,7 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
         </ul>
       )}
 
-      <footer className="dp-foot faint small">
+      <footer className={cx(styles.dpFoot, 'faint', 'small')}>
         <span className="grow">
           pack_format {PACK_FORMAT} (Minecraft 1.21.1) · создал {pack.author}, изменено {timeAgo(pack.updatedAt)}.
           Установка: zip в <code>world/datapacks/</code>; рецепты — <code>/reload</code>, реестры — перезапуск сервера.
