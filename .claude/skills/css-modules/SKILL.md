@@ -161,7 +161,10 @@ node scripts/ui/shots.mjs capture before --only <page>   # desktop 1440×900 + m
   `[role=dialog]`, `[role=tablist]`, `input[aria-label='…']`, `clickText` (a trailing counter like «Схемы 6» is
   ignored). No stable hook → add an `aria-label` in the page code in the `before` branch state, not during the move.
 - Shots land in `$TMPDIR/tfc-shots/<branch>/before`; `--out DIR` to change. Uses installed Chrome (`CHROME_PATH`
-  otherwise) with a persistent profile, nick `ClaudeTest`, onboarding off, animations frozen.
+  otherwise) with a persistent profile, nick `ClaudeTest`, onboarding off, animations frozen. No admin rights or
+  Keychain access needed (`--use-mock-keychain`). Profile `~/.cache/tfc-plans/shots-profile`; if another run holds
+  it, the next free `shots-profile-N` is used; `~/.cache` not writable → a temp profile; `TFC_SHOTS_PROFILE=<dir>`
+  forces one. An interrupted run kills its Chrome. Several captures at once are fine.
 - Data is live Firestore: take `before` right before editing and `after` soon after; a diff only in a data row
   (someone edited a task, a new task appeared) is noise — say so in the report. The script waits for network quiet
   (Firestore channels and reCAPTCHA excluded; `SHOTS_DEBUG=1` prints requests that never finish).
