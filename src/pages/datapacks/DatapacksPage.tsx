@@ -15,12 +15,12 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { EntryEditor } from '../components/EntryEditor';
-import { KubejsConstructor } from '../components/KubejsConstructor';
-import { InstallToggle, ScriptEditor } from '../components/KubejsScripts';
+import { EntryEditor } from './ui/EntryEditor';
+import { KubejsConstructor } from '@/components/KubejsConstructor';
+import { InstallToggle, ScriptEditor } from './ui/KubejsScripts';
 import { Modal, PackNav } from '@/shared/ui';
-import { RecipeCatalog } from '../components/RecipeCatalog';
-import { useData } from '../data/DataContext';
+import { RecipeCatalog } from '@/components/RecipeCatalog';
+import { useData } from '@/data/DataContext';
 import { datapacksStore, kubejsScriptsStore } from '@/entities/datapack';
 import {
   buildZip,
@@ -32,13 +32,13 @@ import {
   staleIssues,
   validatePack,
   zipName,
-} from '../lib/datapack';
-import { filesEnabled, removeFile, uploadFile } from '../lib/files';
+} from '@/lib/datapack';
+import { filesEnabled, removeFile, uploadFile } from '@/lib/files';
 import { useItems, useRecipes, type Recipe, tagFromPath, tagKey, useTags } from '@/shared/pack-data';
-import { entryRecipeId, kubejsScript, scriptFileName } from '../lib/kubejsFix';
-import { downloadScript, freeScriptName, NEW_SCRIPT_TEXT } from '../lib/kubejsScripts';
+import { entryRecipeId, kubejsScript, scriptFileName } from '@/lib/kubejsFix';
+import { downloadScript, freeScriptName, NEW_SCRIPT_TEXT } from '@/lib/kubejsScripts';
 import { cx, timeAgo, uid } from '@/shared/lib';
-import type { Datapack, DatapackEntry, KubejsScript } from '../types';
+import type { Datapack, DatapackEntry, KubejsScript } from '@/types';
 import './DatapacksPage.css';
 
 const KIND: Record<DatapackEntry['kind'], { label: string; cls: string }> = {

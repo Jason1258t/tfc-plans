@@ -1,12 +1,12 @@
 import { Lightbulb, Pencil, RefreshCw, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useData } from '../data/DataContext';
+import { useData } from '@/data/DataContext';
 import { generateRecipeHint, geminiEnabled, geminiErrorText } from '@/shared/api';
-import { getHint, hintsEnabled, saveHint, type RecipeHint } from '../lib/recipeHints';
+import { getHint, hintsEnabled, saveHint, type RecipeHint } from '../model/recipeHints';
 import { typeFieldStats, type RecipeCatalog } from '@/shared/pack-data';
 import { timeAgo } from '@/shared/lib';
-import { Markdown } from './Markdown';
-import { MarkdownField } from './MarkdownField';
+import { Markdown } from '@/components/Markdown';
+import { MarkdownField } from '@/components/MarkdownField';
 
 const SOURCE_LABEL: Record<RecipeHint['source'], string> = {
   claude: 'первичное наполнение',

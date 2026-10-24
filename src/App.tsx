@@ -11,7 +11,7 @@ import { VisitTracker } from './components/VisitTracker';
 import { AddonPage } from './pages/AddonPage';
 import { AddonsPage } from './pages/AddonsPage';
 import { DocPage } from './pages/DocPage';
-import { DatapacksPage } from './pages/DatapacksPage';
+import { DatapacksPage } from './pages/datapacks';
 import { RecipesPage } from './pages/recipes';
 import { TagsPage } from './pages/TagsPage';
 import { FilesPage } from './pages/files';
