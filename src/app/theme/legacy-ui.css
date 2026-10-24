@@ -278,98 +278,12 @@ select.input {
 
 /* ------------------------------------------------------------------ модалки */
 
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  background: rgb(15 12 8 / 0.45);
-  backdrop-filter: blur(2px);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 6vh 16px 32px;
-  overflow-y: auto;
-  animation: fade-in 0.12s ease-out;
-}
-
-.modal {
-  width: 100%;
-  max-width: 720px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  animation: pop-in 0.14s ease-out;
-}
-
-.modal.narrow {
-  max-width: 420px;
-}
-
-.modal.wide {
-  max-width: 1120px;
-}
-
-.modal-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 16px 0 20px;
-}
-
-.modal-head h2 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  flex: 1;
-}
-
-.modal-body {
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.modal-foot {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  border-top: 1px solid var(--border);
-}
+/* Окна переехали в shared/ui/Modal.module.css; здесь остаётся только общая анимация появления —
+   её используют другие всплывающие блоки (например, галерея). */
 
 @keyframes fade-in {
   from {
     opacity: 0;
-  }
-}
-
-@keyframes pop-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px) scale(0.99);
-  }
-}
-
-@media (max-width: 600px) {
-  .modal-backdrop {
-    padding: 0;
-  }
-  .modal,
-  .modal.narrow,
-  .modal.wide {
-    max-width: none;
-    min-height: 100%;
-    border-radius: 0;
-    border: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .modal-backdrop,
-  .modal {
-    animation: none;
   }
 }
 
