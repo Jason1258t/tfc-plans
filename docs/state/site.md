@@ -211,6 +211,18 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   largest face texture from that side, uv by position. Browser-checked on old_brick_factory (2004 copycats: cornices
   of steps, girder panels); not compared with the game. Not done: layer view still shows the icon, Create: Connected
   copycats, doors/trapdoors/fences/walls of Copycats+ (they have vanilla-like models? not checked).
+- **Create parts drawn by code** (2026-10-24, task «Отрисовка create»): builder `block-models.mjs` adds `pm` (path →
+  model) with every `models/block/**` of mods in `PARTIAL_NAMESPACES` (Create: 1887 incl. 444 never referenced by
+  blockstates; create.json ~140 → ~230 KB gz). Site `partialQuads(ref, turns)` (blockModels.ts) bakes one with turns
+  around the centre; `lib/createParts.ts` — registry by block id from Create 6.0.10 visuals/renderers: belt
+  (BeltRenderer: start/middle/end + bottom, diagonal, pulley), gearbox halves, encased shafts/chain drive/adjustable
+  gearshift/speed controller/pistons (shaft), clutch/gearshift/sequenced (split halves), creative motor, cuckoo
+  clock, encased fan (half + propeller), drill head, pump cog, millstone inner, crushing wheel, powered shaft,
+  crafter cog, press (shaft + head), mixer (cog, pole, head), deployer (shaft, pole, pointing hand), encased cogs
+  (shaftless cog + halves by top/bottom_shaft). Machines at rest (press head up, deployer retracted). Missing `pm`
+  (old data) → the old look. **Needs the host:** `tfc admin rebuild --pull` + `tfc admin publish --live` so the pack
+  server publishes the new create.json. Not done: mechanical arm, steam engine, flywheel, hand crank, saw, water
+  wheels, bearings, gauges, funnels/tunnels flaps.
 - **Library preview** (`lib/schematicRender.ts`): on save the browser draws a 480×320 webp (~15–20 KB) with
   replacements into the `preview` field (rule: ≤300k chars); old records have a «нарисовать превью» button. Tested in
   the browser on two library schematics (8.6k blocks → 27k faces, 80 ms); saving with preview via the button not

@@ -34,6 +34,8 @@ interface BlockFile {
   geo: Element[][];
   m: [number, number[]][];
   b: Record<string, { v?: [string, Part[]][]; mp?: [When | null, Part[]][] }>;
+  /** Модели-части (их дорисовывает код игры): путь модели → модель */
+  pm?: Record<string, number>;
 }
 
 export type Dir = 'up' | 'down' | 'north' | 'south' | 'east' | 'west';
@@ -359,6 +361,36 @@ export function blockModel(id: string, props: Map<string, string>): BlockModel |
   const [ns] = id.includes(':') ? id.split(':', 2) : ['minecraft'];
   if (ready.has(ns)) baked.set(key, res);
   return res;
+}
+
+/** Поворот вокруг центра блока: ось и угол в градусах (правая тройка, как PoseStack.rotateXDegrees…) */
+export type Turn = ['x' | 'y' | 'z', number];
+
+const partialBaked = new Map<string, Quad[] | null>();
+/**
+ * Грани модели-части ('create:block/belt/start') с поворотами вокруг центра. turns — в порядке применения к вершине
+ * (у PoseStack — обратный порядку вызовов: center().rotateY(a).rotateX(b) → сначала X, потом Y).
+ * null — части нет в данных (файл мода старый или не загружен).
+ */
+export function partialQuads(ref: string, turns: Turn[] = []): Quad[] | null {
+  const key = `${ref}|${turns.join(';')}`;
+  if (partialBaked.has(key)) return partialBaked.get(key)!;
+  const [ns, path] = ref.split(':', 2);
+  const file = ready.get(ns);
+  const m = file?.pm?.[path];
+  if (!file || m == null) return null;
+  const raw: Quad[] = [];
+  bakePart(file, [m, 0, 0], raw);
+  const turn = (v: Vec3) => turns.reduce((d, [a, g]) => (g ? axisRot(d, a, g) : d), v);
+  const out = raw.map((q) => {
+    const p = q.p.map((c) => {
+      const d = turn([c[0] - 0.5, c[1] - 0.5, c[2] - 0.5]);
+      return [d[0] + 0.5, d[1] + 0.5, d[2] + 0.5].map((x) => Math.round(x * 1e5) / 1e5) as Vec3;
+    }) as Quad['p'];
+    return { ...q, p, n: turn(q.n), cull: q.cull ? dirOf(turn(NORMALS[q.cull])) : null };
+  });
+  partialBaked.set(key, out);
+  return out;
 }
 
 /**

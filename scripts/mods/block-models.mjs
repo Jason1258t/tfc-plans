@@ -12,7 +12,11 @@
  *     m: [[geo, [tex по слотам]], …]                      — модель = геометрия + текстуры слотов (общая геометрия
  *                                                           у всех cube_all, у ступенек всех пород и т. п.),
  *     b: { "<путь блока>": { v: [["facing=north,half=top", [[m, x, y, uvlock?], …]], …] }
- *                        | { mp: [[when | null, [[m, x, y, uvlock?], …]], …] } } }
+ *                        | { mp: [[when | null, [[m, x, y, uvlock?], …]], …] } },
+ *     pm?: { "block/belt/start": m, … } }                — все модели models/block/** по пути: из них игра кодом
+ *                                                           собирает части блока (ремень, полувалы, голова пресса
+ *                                                           Create; на многие не ссылается ни один blockstate) —
+ *                                                           только у модов из PARTIAL_NAMESPACES, правила — на сайте
  *
  * Модель OBJ (neoforge:obj, ie_obj) — элементы-треугольники { o: [x, y, z, u, v] × 3 (пиксели модели, uv 0–16 от
  * верха текстуры), s }. Загрузчик-обёртка (листва и растения TFC, полки Firmalife) — его базовая модель.
@@ -28,6 +32,13 @@ import { loadTexture, objTriangles } from '../mcp/render.mjs';
 import { loadModel, readJsonRes, resolveTexture, resLoc } from '../mcp/resources.mjs';
 
 export const BLOCK_MODELS_VERSION = 1;
+
+/**
+ * Моды, у которых блоки дорисовываются частями из своих моделей (Flywheel-визуалы и BlockEntityRenderer Create):
+ * им в файл добавляются все модели models/block/** по пути (у Create 6.0.10 на 444 из 1901 не ссылаются blockstates).
+ * Как части ставятся к блоку — src/lib/createParts.ts.
+ */
+export const PARTIAL_NAMESPACES = new Set(['create']);
 
 const DIRS = new Set(['up', 'down', 'north', 'south', 'east', 'west']);
 
@@ -73,13 +84,22 @@ function wrapped(layers, m) {
 }
 
 /**
- * writeBlockModels({ layers, blockstates, outDir, iconsDir, copyTexture, log }):
+ * writeBlockModels({ layers, blockstates, models, outDir, iconsDir, copyTexture, log }):
  *   layers — слои ресурсов (scripts/mcp/resources.mjs), blockstates — [{ ns, path }] всех блоков сборки,
+ *   models — [{ ns, path: 'block/…' }] моделей блоков модов из PARTIAL_NAMESPACES (раздел pm),
  *   copyTexture(id) → путь в icons/ или null (файл текстуры из распакованных jar); нет файла (атлас TFC:
  *   paletted_permutations) — рисуем текстуру сами в iconsDir.
  * Возвращает { blocks, models, geometry, textures, noModel, kb, warnings }.
  */
-export function writeBlockModels({ layers, blockstates, outDir, iconsDir, copyTexture, log = () => {} }) {
+export function writeBlockModels({
+  layers,
+  blockstates,
+  models: modelFiles = [],
+  outDir,
+  iconsDir,
+  copyTexture,
+  log = () => {},
+}) {
   fs.rmSync(outDir, { recursive: true, force: true });
   fs.mkdirSync(outDir, { recursive: true });
   const warnings = [];
@@ -165,6 +185,10 @@ export function writeBlockModels({ layers, blockstates, outDir, iconsDir, copyTe
 
   const byNs = new Map();
   for (const b of blockstates) (byNs.get(b.ns) ?? byNs.set(b.ns, []).get(b.ns)).push(b.path);
+  const partialsOf = new Map();
+  for (const m of modelFiles)
+    if (PARTIAL_NAMESPACES.has(m.ns)) (partialsOf.get(m.ns) ?? partialsOf.set(m.ns, []).get(m.ns)).push(m.path);
+  let partials = 0;
   let blocks = 0;
   let models = 0;
   let geometry = 0;
@@ -241,14 +265,36 @@ export function writeBlockModels({ layers, blockstates, outDir, iconsDir, copyTe
       if (b[p]) blocks++;
     }
     if (!Object.keys(b).length) continue;
-    const text = JSON.stringify({ v: BLOCK_MODELS_VERSION, tex, geo, m: mods, b });
+    const pm = {};
+    for (const p of (partialsOf.get(ns) ?? []).sort()) {
+      const m = modelOf(`${ns}:${p}`);
+      if (m >= 0) pm[p] = m;
+    }
+    partials += Object.keys(pm).length;
+    const text = JSON.stringify({
+      v: BLOCK_MODELS_VERSION,
+      tex,
+      geo,
+      m: mods,
+      b,
+      ...(Object.keys(pm).length ? { pm } : {}),
+    });
     fs.writeFileSync(path.join(outDir, `${ns}.json`), text);
     bytes += text.length;
     models += mods.length;
     geometry += geo.length;
   }
   log(
-    `модели блоков: ${blocks} блоков, ${models} моделей, ${geometry} геометрий, ${textures.size} текстур, без элементов ${noModel} — block-models/ ${Math.round(bytes / 1024)}KB`,
+    `модели блоков: ${blocks} блоков, ${models} моделей, ${geometry} геометрий, ${textures.size} текстур, без элементов ${noModel}, частей ${partials} — block-models/ ${Math.round(bytes / 1024)}KB`,
   );
-  return { blocks, models, geometry, textures: textures.size, noModel, kb: Math.round(bytes / 1024), warnings };
+  return {
+    blocks,
+    models,
+    geometry,
+    textures: textures.size,
+    noModel,
+    partials,
+    kb: Math.round(bytes / 1024),
+    warnings,
+  };
 }
