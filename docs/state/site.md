@@ -32,6 +32,10 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   меняет подпись на «Создать с планом» — прежняя отдельная кнопка в подвале убрана, план выбирается в самом окне.
   Проверено на дев-сервере 1440 и 390 px (создание и правка существующей задачи; создание задачи с планом — план
   открылся, тестовые записи удалены).
+- **Разделитель списка как в исходнике** (2026-10-24, задача yLwV1gkgTGNWeLmVaJFo): план или описание, набранное
+  «1)», в просмотре рисуется со скобкой (у ol ставится data-delim по строке исходника, CSS-счётчик добавляет «)»),
+  «1.» — с точкой, вложенные — «2.1)». Правка живого редактора — в пакете cm-live-markdown 0.1.4 (маркер вне курсора
+  берёт разделитель из исходника, на это есть тесты в пакете); на сайте версия поднимается после публикации в npm.
 - **Task image gallery** (2026-10-24, task wLnZtM8UKnm1aNIlAyYn): saved images and images of a new-task draft are one
   list, so a draft thumbnail also opens the full-screen view (no zoom cursor that does nothing any more; the view says
   «не загружено — появится после создания задачи»). Hovering a thumbnail shows a cross that deletes the image after a
