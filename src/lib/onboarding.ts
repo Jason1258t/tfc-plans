@@ -136,7 +136,7 @@ const TOURS: Tour[] = [
   ]),
   T('recipes', 'Рецепты', 'site-datapacks', [
     {
-      target: '.recipes-page input, .recipes-page',
+      target: 'main input, main',
       title: 'Каталог рецептов',
       body: 'Все рецепты сборки. Выберите предмет — увидите, что из него делают и из чего делают его. Рецепт отсюда уходит в датапак как образец, замена или удаление.',
     },

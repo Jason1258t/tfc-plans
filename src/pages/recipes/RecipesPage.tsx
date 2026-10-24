@@ -7,9 +7,9 @@ import { useData } from '@/data/DataContext';
 import { datapacksStore } from '@/entities/datapack';
 import { entryFromRecipe, entryWithId } from '@/lib/datapack';
 import { useRecipes, type Recipe } from '@/shared/pack-data';
-import { timeAgo } from '@/shared/lib';
+import { cx, timeAgo } from '@/shared/lib';
 import type { Datapack, DatapackEntry } from '@/types';
-import './RecipesPage.css';
+import styles from './RecipesPage.module.css';
 
 export type Pending = (pack: Pick<Datapack, 'namespace' | 'entries'>) => DatapackEntry;
 
@@ -26,8 +26,8 @@ export function RecipesPage() {
 
   return (
     <PackSection>
-      <main className="recipes-page">
-        <div className="recipes-head">
+      <main className={styles.recipesPage}>
+        <div className={styles.recipesHead}>
           <div className="grow">
             <h1>Рецепты сборки</h1>
             <p className="faint small">
@@ -46,7 +46,7 @@ export function RecipesPage() {
         </div>
 
         {kubejs ? (
-          <p className="recipes-kjs faint small">
+          <p className={cx(styles.recipesKjs, 'faint', 'small')}>
             KubeJS:{' '}
             {kubejs.layers
               .map((l) => `${l.name} — ${l.scripts} скриптов, ${l.rules} удалений/замен, +${l.added} рецептов`)
@@ -56,7 +56,7 @@ export function RecipesPage() {
           </p>
         ) : (
           catalog && (
-            <p className="recipes-kjs faint small">
+            <p className={cx(styles.recipesKjs, 'faint', 'small')}>
               Скрипты KubeJS не импортированы — удаления сборки не учитываются:{' '}
               <code>npm run kubejs -- kubejs.zip</code>.
             </p>
@@ -133,7 +133,7 @@ export function PackPicker({ make, onClose }: { make: Pending; onClose: () => vo
       {!packs ? (
         <p className="faint">Загружаю…</p>
       ) : (
-        <ul className="recipes-packs">
+        <ul className={styles.recipesPacks}>
           {packs.map((p) => (
             <li key={p.id}>
               <button onClick={() => put(p)}>
