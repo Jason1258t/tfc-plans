@@ -18,8 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
-import { ItemIcon } from '../components/ItemIcon';
-import { ItemPicker } from '../components/ItemPicker';
+import { ItemIcon, ItemPicker, blockEntry, inPack, isBlock, itemName, useItems } from '@/shared/pack-data';
 import {
   ApplyFavoritesDialog,
   FavoritesPanel,
@@ -33,8 +32,7 @@ import { SchematicLayers } from '../components/SchematicLayers';
 import { SchematicLibrary } from '../components/SchematicLibrary';
 import { useData } from '../data/DataContext';
 import { filesEnabled, formatSize } from '../lib/files';
-import { geminiEnabled } from '../lib/gemini';
-import { blockEntry, inPack, isBlock, itemName, useItems } from '../lib/items';
+import { geminiEnabled } from '@/shared/api';
 import {
   applyRules,
   changesIn,

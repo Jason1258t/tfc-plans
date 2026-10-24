@@ -1,6 +1,6 @@
 /**
  * Данные сборки для MCP: предметы, рецепты (с учётом KubeJS), теги, справочник — из public/ основной копии.
- * Слияние источников — как на сайте (src/lib/items.ts, recipes.ts, tags.ts, reference.ts, meals.ts): те модули
+ * Слияние источников — как на сайте (src/shared/pack-data/items.ts, recipes.ts, tags.ts, reference.ts, meals.ts): те модули
  * тянут React и fetch, поэтому здесь их логика повторена, а фильтры KubeJS и входы/выходы рецепта взяты
  * теми же модулями без импортов (recipeFilter.ts, recipeRefs.ts).
  *
@@ -10,8 +10,8 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { matchFilter } from '../../src/lib/recipeFilter.ts';
-import { collectRefs } from '../../src/lib/recipeRefs.ts';
+import { matchFilter } from '../../src/shared/pack-data/recipeFilter.ts';
+import { collectRefs } from '../../src/shared/pack-data/recipeRefs.ts';
 import { PACK_MODS } from '../pack-cache.mjs';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -97,7 +97,7 @@ export const itemName = (id) => {
   return it ? (it.r ?? it.e) : null;
 };
 
-/** Как searchItems в src/lib/items.ts: все слова запроса; начало имени > начало слова > вхождение; не ваниль выше */
+/** Как searchItems в src/shared/pack-data/items.ts: все слова запроса; начало имени > начало слова > вхождение; не ваниль выше */
 export function searchItems(query) {
   const words = norm(query).split(/\s+/).filter(Boolean);
   if (!words.length) return [];
@@ -132,7 +132,7 @@ export function searchItems(query) {
 
 const tagKey = (kind, id) => `${kind}|${id}`;
 
-/** Как loadTags в src/lib/tags.ts: источники модов в порядке загрузки + операции KubeJS после них */
+/** Как loadTags в src/shared/pack-data/tags.ts: источники модов в порядке загрузки + операции KubeJS после них */
 export const tags = () =>
   memo('tags', ['tags.json', 'kubejs.json'], (raw, kjs) => {
     const ops = new Map();
@@ -204,7 +204,7 @@ const isRemoval = (j) => {
   return (Array.isArray(conds) && conds.some((c) => c?.type === 'neoforge:false')) || Object.keys(j).length === 0;
 };
 
-/** Как kubejsHits в src/lib/recipes.ts */
+/** Как kubejsHits в src/shared/pack-data/recipes.ts */
 function kubejsHits(rules, target) {
   const removed = [];
   const maybe = [];
@@ -237,7 +237,7 @@ export function datapackRecipe(file, text) {
 }
 
 /**
- * Каталог как loadRecipes в src/lib/recipes.ts: kubejs/data и рецепты скриптов с тем же id заменяют рецепт мода,
+ * Каталог как loadRecipes в src/shared/pack-data/recipes.ts: kubejs/data и рецепты скриптов с тем же id заменяют рецепт мода,
  * удаления KubeJS — только для рецептов из датапаков. Дополнительно: входы/выходы после replaceInput/replaceOutput
  * (когда from и to — строки), чтобы «из чего делают X» находило и рецепты, где X подставил скрипт.
  *

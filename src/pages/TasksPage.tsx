@@ -5,7 +5,7 @@ import { ArtifactPane } from '../components/ArtifactPane';
 import { CompareDialog } from '../components/CompareDialog';
 import { DocsSection } from '../components/DocsSection';
 import { GroupDialog } from '../components/GroupDialog';
-import { ItemIcon } from '../components/ItemIcon';
+import { ItemIcon } from '@/shared/pack-data';
 import { TaskDialog, type TaskDialogMode } from '../components/TaskDialog';
 import { TaskRow } from '../components/TaskRow';
 import { useData } from '../data/DataContext';

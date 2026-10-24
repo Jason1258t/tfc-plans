@@ -2,10 +2,9 @@ import { ArrowRight, Ban, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { datapacksStore } from '@/entities/datapack';
-import { itemName, type ItemIndex } from '../lib/items';
+import { itemName, type ItemIndex, ItemIcon } from '@/shared/pack-data';
 import { methodLabel, type EngineStats, type FuelRecipe, type LiquidFamily, type LiquidStack } from '../lib/reference';
 import type { Datapack } from '../types';
-import { ItemIcon } from './ItemIcon';
 
 /**
  * Жидкое топливо: нефть и её переработка, бензин, дизель, этанол, растительное масло, биодизель.

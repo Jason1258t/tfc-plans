@@ -3,8 +3,7 @@ import { useData } from '../data/DataContext';
 import { groupsStore } from '@/entities/group';
 import { tasksStore } from '@/entities/task';
 import type { Group } from '../types';
-import { ItemIcon } from './ItemIcon';
-import { ItemPicker } from './ItemPicker';
+import { ItemIcon, ItemPicker } from '@/shared/pack-data';
 import { Modal } from '@/shared/ui';
 
 interface Props {

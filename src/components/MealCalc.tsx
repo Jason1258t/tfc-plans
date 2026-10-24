@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { itemName, type ItemIndex } from '../lib/items';
+import type { TagCatalog } from '@/shared/pack-data';
+import { itemName, type ItemIndex, ItemIcon } from '@/shared/pack-data';
 import {
   calcComputed,
   calcDynamic,
@@ -12,8 +13,6 @@ import {
   type MealResult,
 } from '../lib/meals';
 import { NUTRIENTS, type Nutrient } from '../lib/reference';
-import type { TagCatalog } from '../lib/tags';
-import { ItemIcon } from './ItemIcon';
 
 const NUTRIENT_LABEL: Record<Nutrient, string> = {
   grain: 'зерновые',

@@ -6,7 +6,7 @@ import { recipeActions, RecipeBrowser } from '../components/RecipeCatalog';
 import { useData } from '../data/DataContext';
 import { datapacksStore } from '@/entities/datapack';
 import { entryFromRecipe, entryWithId } from '../lib/datapack';
-import { useRecipes, type Recipe } from '../lib/recipes';
+import { useRecipes, type Recipe } from '@/shared/pack-data';
 import { timeAgo } from '@/shared/lib';
 import type { Datapack, DatapackEntry } from '../types';
 import './RecipesPage.css';

@@ -1,6 +1,6 @@
 import type { ChecklistEntry } from '../types';
-import type { ExtractedResource } from './gemini';
-import { matchItem, type ItemIndex } from './items';
+import type { ExtractedResource } from '@/shared/api';
+import { matchItem, type ItemIndex } from '@/shared/pack-data';
 import { uid } from '@/shared/lib';
 
 /**

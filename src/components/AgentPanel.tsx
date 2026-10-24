@@ -13,8 +13,8 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { tasksStore } from '@/entities/task';
-import { askGemini, describeTask, extractResources, geminiEnabled, geminiErrorText } from '../lib/gemini';
-import { useItems } from '../lib/items';
+import { askGemini, describeTask, extractResources, geminiEnabled, geminiErrorText } from '@/shared/api';
+import { useItems } from '@/shared/pack-data';
 import { mergeResources } from '../lib/resources';
 import { cx } from '@/shared/lib';
 import type { Artifact, Task } from '../types';

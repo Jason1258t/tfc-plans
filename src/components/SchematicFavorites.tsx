@@ -2,9 +2,8 @@ import { ArrowRight, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { replaceFavoritesStore } from '@/entities/schematic';
 import { deriveVariants } from '../lib/replaceFavorites';
-import { blockEntry, isBlock, itemName, type ItemIndex } from '../lib/items';
+import { blockEntry, isBlock, itemName, type ItemIndex, ItemIcon } from '@/shared/pack-data';
 import type { ReplaceFavorite } from '../types';
-import { ItemIcon } from './ItemIcon';
 import { Modal } from '@/shared/ui';
 
 export interface Pair {

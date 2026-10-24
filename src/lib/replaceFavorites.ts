@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { replaceFavoritesStore } from '@/entities/schematic';
 import type { ReplaceFavorite } from '../types';
-import type { ItemIndex } from './items';
+import type { ItemIndex } from '@/shared/pack-data';
 
 /** Подписка на избранные замены; null — ещё грузятся */
 export function useFavorites(): ReplaceFavorite[] | null {

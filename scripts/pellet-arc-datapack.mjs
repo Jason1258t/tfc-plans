@@ -20,8 +20,8 @@ import { strToU8, zipSync } from 'fflate';
 import { DOCS, ROOT, deployer, fromValue, toValue, token } from './firestore-rest.mjs';
 import { PACK_FORMAT } from '../src/lib/datapackFiles.ts';
 import { recipeHash } from '../src/shared/lib/hash.ts';
-import { matchFilter } from '../src/lib/recipeFilter.ts';
-import { recipeRefs } from '../src/lib/recipeRefs.ts';
+import { matchFilter } from '../src/shared/pack-data/recipeFilter.ts';
+import { recipeRefs } from '../src/shared/pack-data/recipeRefs.ts';
 
 const NS = 'tfc_plans_pellets';
 const NAME = 'Пеллеты и брикеты в дуговой печи';

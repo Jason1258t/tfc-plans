@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { ItemIndex } from './items';
+import type { ItemIndex } from '@/shared/pack-data';
 import type { Schematic } from './schematic';
 import { buildMesh, type MeshData } from './schematicMesh';
 

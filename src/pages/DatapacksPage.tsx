@@ -34,11 +34,9 @@ import {
   zipName,
 } from '../lib/datapack';
 import { filesEnabled, removeFile, uploadFile } from '../lib/files';
-import { useItems } from '../lib/items';
+import { useItems, useRecipes, type Recipe, tagFromPath, tagKey, useTags } from '@/shared/pack-data';
 import { entryRecipeId, kubejsScript, scriptFileName } from '../lib/kubejsFix';
 import { downloadScript, freeScriptName, NEW_SCRIPT_TEXT } from '../lib/kubejsScripts';
-import { useRecipes, type Recipe } from '../lib/recipes';
-import { tagFromPath, tagKey, useTags } from '../lib/tags';
 import { cx, timeAgo, uid } from '@/shared/lib';
 import type { Datapack, DatapackEntry, KubejsScript } from '../types';
 import './DatapacksPage.css';

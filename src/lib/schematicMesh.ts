@@ -9,7 +9,7 @@ import {
 } from './blockModels';
 import { codeParts, hasCodeParts } from './createParts';
 import { COPYCAT_BASE, copycatMaterials, copycatParts, isCopycat, type Material } from './copycats';
-import { placedBy, textureUrl, type ItemIndex } from './items';
+import { placedBy, textureUrl, type ItemIndex } from '@/shared/pack-data';
 import { EMPTY_BLOCKS, REMOVE, type Schematic } from './schematic';
 import { blockNbtOf, buildGrid, namesByState, propsByState, stateOf } from './schematicEdit';
 

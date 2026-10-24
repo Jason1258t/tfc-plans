@@ -6,8 +6,8 @@ import { Member, TagEditor } from '../components/TagEditor';
 import { useData } from '../data/DataContext';
 import { datapacksStore } from '@/entities/datapack';
 import { useSearchTrack } from '@/shared/api';
-import { useItems } from '../lib/items';
 import {
+  useItems,
   directMembers,
   flattenTag,
   kindsOf,
@@ -20,7 +20,7 @@ import {
   useTags,
   type Tag,
   type TagKind,
-} from '../lib/tags';
+} from '@/shared/pack-data';
 import { cx, uid } from '@/shared/lib';
 import type { Datapack, DatapackEntry } from '../types';
 import { PackPicker, type Pending } from './RecipesPage';

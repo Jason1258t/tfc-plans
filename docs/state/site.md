@@ -123,7 +123,7 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
 - **Blocks without an item** (2026-10-23, task GiAd4ombssZTQL3l26WL): `public/blocks.json` (`scripts/mods/blocks.mjs`:
   blockstate files of all jars + vanilla, item from `loot_table/blocks/…`, fallback without `wall_`) — create:belt,
   belt funnels, powered shaft, glass/encased pipes, piston head, wall torches/signs, potted plants are recognised (name +
-  icon of the placing item, `blockEntry`/`placedBy` in `lib/items.ts`) and counted as that item in task materials.
+  icon of the placing item, `blockEntry`/`placedBy` in `shared/pack-data/items.ts`) and counted as that item in task materials.
   Replacement targets must be blocks (`isBlock`: block-only or item with `b`): pickers in the editor and layers show
   only blocks, the agent gets only blocks, download refuses non-block targets, favourites mark them «не блок» (the
   shared favourite `create:belt → create:belt_connector` turned belts into nothing). Old data without `b` — no check.

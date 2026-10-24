@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { directMembers, flattenTag, type TagCatalog } from './tags';
+import { directMembers, flattenTag, type TagCatalog } from '@/shared/pack-data';
 
 /**
  * Мультиблоки IE и Advanced TFC Tech (public/multiblocks.json, scripts/mods/multiblocks.mjs): шаблон структуры,

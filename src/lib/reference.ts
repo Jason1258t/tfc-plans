@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { ItemIndex } from './items';
+import type { ItemIndex } from '@/shared/pack-data';
 
 /** Справочник сборки: public/reference.json, собирается scripts/mods/reference.mjs вместе с библиотекой предметов */
 export type Grade = 'poor' | 'normal' | 'rich' | 'single' | 'deposit';

@@ -7,7 +7,7 @@ import { usePendingIds } from '@/shared/api';
 import { checklistProgress, entryDone } from '../lib/tasks';
 import { cx, timeAgo } from '@/shared/lib';
 import { PRIORITIES, type Task } from '../types';
-import { ItemIcon } from './ItemIcon';
+import { ItemIcon } from '@/shared/pack-data';
 import { tooltipHandlers } from '@/shared/ui';
 
 interface Props {

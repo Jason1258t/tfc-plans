@@ -4,7 +4,7 @@
  * (с учётом зеркала). Тег и предмет пересекаются, если предмет состоит в теге; тег, которого нет в индексе тегов,
  * ничего не покрывает (пустой тег). Отдельно: рецепт с тем же id — новый его заменит в слое поверх.
  */
-import { recipeRefs } from '../../../src/lib/recipeRefs.ts';
+import { recipeRefs } from '../../../src/shared/pack-data/recipeRefs.ts';
 import { siteRecipes } from '../site-datapacks.mjs';
 import { directMembers, flattenTag, getTag, isActive, recipeStatus, tags } from '../data.mjs';
 import { named, paging, short, str } from '../fmt.mjs';
@@ -64,7 +64,7 @@ function gridOf(j) {
       if (ch === ' ') return null;
       const k = key[ch];
       if (k == null) return ch; // символ без ключа — не разобрать
-      return typeof k === 'string' ? k : k.tag ? `#${k.tag}` : k.item ?? k;
+      return typeof k === 'string' ? k : k.tag ? `#${k.tag}` : (k.item ?? k);
     }),
   );
 }
@@ -142,7 +142,8 @@ async function recipeConflicts(a) {
     cand.outputs.push(...r.outputs.filter((x) => !cand.outputs.includes(x)));
   }
   if (!cand.type) throw new Error('нужен type (или поле type в recipe JSON)');
-  if (!cand.id && !cand.inputs.length && !cand.outputs.length) throw new Error('дайте recipe (JSON), inputs или id существующего рецепта');
+  if (!cand.id && !cand.inputs.length && !cand.outputs.length)
+    throw new Error('дайте recipe (JSON), inputs или id существующего рецепта');
 
   const same = cat.list.filter((r) => r.t === cand.type || r.t.endsWith(`:${cand.type}`)).filter(isActive);
   const out = [

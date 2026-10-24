@@ -15,7 +15,7 @@ import {
   type Setting,
 } from '../lib/power';
 import { cx } from '@/shared/lib';
-import { ItemIcon } from './ItemIcon';
+import { ItemIcon } from '@/shared/pack-data';
 import { IeConsumers } from './PowerIeLoads';
 import './PowerTab.css';
 

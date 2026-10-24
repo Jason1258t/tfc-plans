@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { isBlock, searchItems, useItems, type McItem } from '../lib/items';
+import { isBlock, searchItems, useItems, type McItem } from './items';
 import { cx } from '@/shared/lib';
 import { ItemIcon } from './ItemIcon';
 import './ItemPicker.css';

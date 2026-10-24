@@ -5,7 +5,7 @@ import { useData } from '../data/DataContext';
 import { schematicsStore } from '@/entities/schematic';
 import { useSearchTrack } from '@/shared/api';
 import { formatSize } from '../lib/files';
-import { useItems } from '../lib/items';
+import { useItems } from '@/shared/pack-data';
 import { REMOVE, type Schematic } from '../lib/schematic';
 import { openFromLibrary, refreshPreview, removeFromLibrary } from '../lib/schematicLibrary';
 import { cx, timeAgo } from '@/shared/lib';

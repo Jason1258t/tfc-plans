@@ -1,4 +1,4 @@
-import { textureUrl } from './items';
+import { textureUrl } from '@/shared/pack-data';
 
 /**
  * Модели блоков из jar (scripts/mods/block-models.mjs → /block-models/<ns>.json): blockstate → модели с элементами.

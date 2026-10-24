@@ -1,9 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { itemName, useItems } from '../lib/items';
+import { itemName, useItems, ItemIcon } from '@/shared/pack-data';
 import { FILE_SCHEME, imageSrc, UPLOADING_SCHEME } from '../lib/planImages';
-import { ItemIcon } from './ItemIcon';
 
 /**
  * Markdown с поддержкой ссылок на предметы:

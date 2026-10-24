@@ -5,7 +5,7 @@ import { readNick } from '../../lib/nick';
 import { cx } from '@/shared/lib';
 import type { Guide, GuideChecked } from '../../types';
 import { CHECKED } from './guideMeta';
-import { ItemIcon } from '../ItemIcon';
+import { ItemIcon } from '@/shared/pack-data';
 import { GuideBody, type GuideKit } from './GuideBody';
 import { GuideEditor } from './GuideEditor';
 import { GuideHistory } from './GuideHistory';

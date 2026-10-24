@@ -1,6 +1,5 @@
-import { filterToJs, type FilterTarget, type KjsFilter } from './recipeFilter';
-import { recipeRefs } from './recipeRefs';
-import type { KjsRule } from './recipes';
+import type { KjsRule } from '@/shared/pack-data';
+import { filterToJs, type FilterTarget, type KjsFilter, recipeRefs } from '@/shared/pack-data';
 
 /**
  * Конструктор для рецепта, который режет KubeJS: правка скрипта («снять ограничение»)

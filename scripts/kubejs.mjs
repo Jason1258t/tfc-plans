@@ -31,8 +31,8 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 import { unzipSync } from 'fflate';
 import { ROOT } from './firestore-rest.mjs';
-import { matchFilter } from '../src/lib/recipeFilter.ts';
-import { recipeRefs } from '../src/lib/recipeRefs.ts';
+import { matchFilter } from '../src/shared/pack-data/recipeFilter.ts';
+import { recipeRefs } from '../src/shared/pack-data/recipeRefs.ts';
 import { ingredientOf, skilletEntryValues } from './mods/cuisine.mjs';
 import { oreChains } from './mods/reference.mjs';
 

@@ -5,8 +5,7 @@ import { firebaseEnabled } from '@/shared/api';
 import { lastSeenUpdate, usePackUpdates } from '../lib/packUpdates';
 import './Header.css';
 import { OnboardingMenu } from './Onboarding';
-import { ItemIcon } from './ItemIcon';
-import { ItemIdSearch } from './ItemIdSearch';
+import { ItemIcon, ItemIdSearch } from '@/shared/pack-data';
 import { Modal, tooltipHandlers } from '@/shared/ui';
 import { SyncBadge } from './SyncBadge';
 

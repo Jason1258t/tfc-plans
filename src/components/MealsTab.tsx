@@ -1,7 +1,15 @@
 import { Search } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { itemName, type ItemIndex } from '../lib/items';
+import {
+  itemName,
+  type ItemIndex,
+  useTags,
+  type TagCatalog,
+  hasStatus,
+  useRecipes,
+  ItemIcon,
+} from '@/shared/pack-data';
 import {
   computedTitle,
   dynamicTitle,
@@ -18,10 +26,7 @@ import {
   type MealSlot,
 } from '../lib/meals';
 import { NUTRIENTS, type Food, type Nutrient } from '../lib/reference';
-import { useTags, type TagCatalog } from '../lib/tags';
-import { hasStatus, useRecipes } from '../lib/recipes';
 import { CONFIG_ORIGIN_LABEL, useModConfig, type ConfigOrigin } from '../lib/config';
-import { ItemIcon } from './ItemIcon';
 import { ComputedCalc, DynamicCalc, FamilyCalc, type FoodLookup } from './MealCalc';
 import { SkilletCard } from './SkilletCard';
 import './MealsTab.css';

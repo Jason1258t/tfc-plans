@@ -1,10 +1,9 @@
 import { FileUp, X } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
-import { itemName, useItems } from '../lib/items';
+import { itemName, useItems, ItemIcon } from '@/shared/pack-data';
 import { addMaterials, schematicMaterials, type SchematicMaterials } from '../lib/materials';
 import { cx } from '@/shared/lib';
 import type { ChecklistEntry } from '../types';
-import { ItemIcon } from './ItemIcon';
 import { Modal } from '@/shared/ui';
 import './SchematicImport.css';
 

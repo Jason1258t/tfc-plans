@@ -10,15 +10,14 @@ import {
   type Shape,
   type Vec,
 } from './schematicFile';
-import { fuzzyCandidates } from './fuzzy';
+import { fuzzyCandidates, blockEntry, isBlock, type ItemIndex } from '@/shared/pack-data';
 import {
   geminiErrorText,
   suggestReplacements,
   type BlockRow,
   type CandidateRow,
   type ReplacementAnswer,
-} from './gemini';
-import { blockEntry, isBlock, type ItemIndex } from './items';
+} from '@/shared/api';
 
 // Файл схемы с заменами и формой — общий с Node модуль schematicFile.ts; здесь — то, что нужно только сайту
 export {
