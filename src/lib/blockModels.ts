@@ -361,24 +361,41 @@ export function blockModel(id: string, props: Map<string, string>): BlockModel |
   return res;
 }
 
-/** Элемент модели как в JSON jar — для частей, которые игра дорисовывает кодом (отводы трубы Create) */
+/**
+ * Элемент модели как в JSON jar — для частей, которые игра дорисовывает кодом (отводы трубы Create, копикаты).
+ * Без uv — по положению грани (как в игре); tex у грани — своя текстура вместо общей.
+ */
 export interface RawElement {
   from: Vec3;
   to: Vec3;
-  faces: Partial<Record<Dir, { uv: [number, number, number, number]; rotation?: number }>>;
+  faces: Partial<
+    Record<
+      Dir,
+      { uv?: [number, number, number, number]; rotation?: number; tex?: string; cullface?: Dir; tint?: boolean }
+    >
+  >;
 }
 
-/** Грани элементов с одной текстурой, повёрнутые как вариант blockstate (x, y) */
+/** Грани элементов (текстура tex, если у грани нет своей), повёрнутые как вариант blockstate (x, y) */
 export function bakeElements(els: RawElement[], tex: string, rx = 0, ry = 0): Quad[] {
+  const texs = [tex];
+  const slot = (t?: string) => {
+    if (!t) return 0;
+    const i = texs.indexOf(t);
+    return i >= 0 ? i : texs.push(t) - 1;
+  };
   const geo: Element[] = els.map((e) => ({
     f: e.from,
     t: e.to,
     faces: Object.fromEntries(
-      Object.entries(e.faces).map(([d, f]) => [d, { s: 0, uv: f!.uv, r: f!.rotation }]),
+      Object.entries(e.faces).map(([d, f]) => [
+        d,
+        { s: slot(f!.tex), uv: f!.uv, r: f!.rotation, c: f!.cullface, i: f!.tint ? 0 : undefined },
+      ]),
     ) as Element['faces'],
   }));
   const out: Quad[] = [];
-  bakePart({ v: 0, tex: [tex], geo: [geo], m: [[0, [0]]], b: {} }, [0, rx, ry], out);
+  bakePart({ v: 0, tex: texs, geo: [geo], m: [[0, texs.map((_, i) => i)]], b: {} }, [0, rx, ry], out);
   return out;
 }
 

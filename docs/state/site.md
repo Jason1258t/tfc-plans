@@ -202,6 +202,15 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   pipes/valves/pumps → rim_connector, anything else → drain (fluid capability assumed). Layer view unchanged (icon).
   Browser-checked on cargoairshipforsamb1y with only pipes/tanks/pumps left: solid pipes with flanges instead of
   loose plates; not compared with the game side by side.
+- **Copycats in 3D** (2026-10-24, task «Отрисовка create»): copycat blockstates point at `block/air`, the game cuts
+  the shape out of the material's model. `lib/copycats.ts` — registry of shapes by block id from mod code (Create
+  6.0.10 `AllShapes` STEP_BOTTOM/TOP, CASING_3PX; Copycats+ 3.0.8 `CCShapes`: slab, byte, byte panel, half panel,
+  layer, slice, corner/vertical slice, vertical step, beam, board, slope as an 8-step staircase, stairs) and materials
+  from the schematic block nbt (`Material`, or `material_data.<part>.material` for multi-part Copycats+); the
+  schematic's replacements apply to materials too, none — `copycat_base`. Each box face gets the material model's
+  largest face texture from that side, uv by position. Browser-checked on old_brick_factory (2004 copycats: cornices
+  of steps, girder panels); not compared with the game. Not done: layer view still shows the icon, Create: Connected
+  copycats, doors/trapdoors/fences/walls of Copycats+ (they have vanilla-like models? not checked).
 - **Library preview** (`lib/schematicRender.ts`): on save the browser draws a 480×320 webp (~15–20 KB) with
   replacements into the `preview` field (rule: ≤300k chars); old records have a «нарисовать превью» button. Tested in
   the browser on two library schematics (8.6k blocks → 27k faces, 80 ms); saving with preview via the button not

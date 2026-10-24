@@ -89,6 +89,14 @@ export function stateOf(s: Schematic, index: number): number {
   return st?.type === T.Int ? st.value : -1;
 }
 
+/** Данные блок-сущности (nbt) блока по индексу в списке blocks */
+export function blockNbtOf(s: Schematic, index: number): Compound | null {
+  const b = blocksOf(s)[index];
+  if (b?.type !== T.Compound) return null;
+  const nbt = b.value.get('nbt');
+  return nbt?.type === T.Compound ? nbt.value : null;
+}
+
 /** Позиция блока по индексу в списке blocks */
 export function posOfIndex(s: Schematic, index: number): Vec | null {
   const b = blocksOf(s)[index];
