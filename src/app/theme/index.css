@@ -1,0 +1,13 @@
+/*
+ * Глобальные стили приложения. Порядок слоёв: theme (токены, база, старые общие классы) ниже ui (shared/ui),
+ * стили страниц и компонентов — без слоя, поэтому всегда перекрывают оба. Подробности — скил css-modules.
+ */
+@layer theme, ui;
+
+@import '@fontsource-variable/inter';
+@import './tokens.css' layer(theme);
+@import './base.css' layer(theme);
+/* .btn, .input, .seg, .modal… — пока ими пользуются страницы; уходят по мере переноса в shared/ui */
+@import './legacy-ui.css' layer(theme);
+@import './markdown.css' layer(theme);
+@import './utilities.css' layer(theme);
