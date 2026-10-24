@@ -8,7 +8,7 @@ import { cx, timeAgo } from '@/shared/lib';
 import type { Artifact } from '../types';
 import { AgentPanel } from './AgentPanel';
 import './ArtifactPane.css';
-import { ItemPicker } from './ItemPicker';
+import { ItemPicker } from '@/shared/pack-data';
 import type { LiveMarkdownHandle } from './LiveMarkdown';
 import { Markdown, itemToken, toggleTaskLine } from './Markdown';
 import { useTextImages } from './useTextImages';

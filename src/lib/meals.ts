@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { loadKubejsData, type Nutrient } from './reference';
-import { directMembers, flattenTag, tagKey, type TagCatalog } from './tags';
+import { directMembers, flattenTag, tagKey, type TagCatalog } from '@/shared/pack-data';
 
 /**
  * Сборные блюда (public/meals.json, собирает scripts/mods/meals.mjs): еда, питательность которой зависит от того,

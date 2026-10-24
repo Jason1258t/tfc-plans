@@ -1,15 +1,14 @@
 import { AlertTriangle, ChevronDown, ChevronRight, Package, Pencil, Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ItemIcon } from '../components/ItemIcon';
+import { ItemIcon, useItems, type ItemIndex } from '@/shared/pack-data';
 import { Markdown } from '../components/Markdown';
 import { MarkdownField } from '../components/MarkdownField';
 import { TfcDownload } from '../components/TfcDownload';
 import { useData } from '../data/DataContext';
 import { datapacksStore } from '@/entities/datapack';
-import { generatePatchNotes, geminiEnabled, geminiErrorText } from '../lib/gemini';
+import { generatePatchNotes, geminiEnabled, geminiErrorText } from '@/shared/api';
 import { addonById } from '../lib/addons';
-import { useItems, type ItemIndex } from '../lib/items';
 import { UpdatesNav } from './FreshnessPage';
 import {
   datapackRisks,

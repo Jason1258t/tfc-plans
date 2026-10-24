@@ -2,11 +2,20 @@ import { strToU8, zipSync } from 'fflate';
 import { datapackFiles } from './datapackFiles';
 import type { Datapack, DatapackEntry } from '../types';
 import { recipeHash, uid } from '@/shared/lib';
-import type { ItemIndex } from './items';
+import type { ItemIndex } from '@/shared/pack-data';
+import {
+  kindsOf,
+  TAG_KIND_LABEL,
+  tagFromPath,
+  type TagCatalog,
+  recipeRefs,
+  itemRefsOf,
+  kubejsHits,
+  recipePath,
+  type Recipe,
+  type RecipeCatalog,
+} from '@/shared/pack-data';
 import { entryRecipeId, recipePathOf, targetFromJson } from './kubejsFix';
-import { kindsOf, TAG_KIND_LABEL, tagFromPath, type TagCatalog } from './tags';
-import { recipeRefs } from './recipeRefs';
-import { itemRefsOf, kubejsHits, recipePath, type Recipe, type RecipeCatalog } from './recipes';
 
 export { PACK_FORMAT, zipName } from './datapackFiles';
 

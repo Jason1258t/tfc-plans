@@ -66,6 +66,7 @@ to its main user**, not where the scheme says it "should" be. Until the move is 
 | one page                                                                    | `pages/<x>/` (`ui/` components, `model/` logic), page file `<X>Page.tsx` |
 | two or more pages, has domain knowledge (tasks, schematics, guides, items…) | `entities/<name>/` (UI optional)                                         |
 | any page, no domain knowledge (Modal, Button, util, firebase wrapper)       | `shared/ui`, `shared/lib`, `shared/api`                                  |
+| any page, общий справочник пакета (предметы, рецепты, теги, поиск)          | `shared/pack-data`                                                       |
 | app shell, providers, theme                                                 | `app/`                                                                   |
 
 - Every module folder has an `index.ts` with only its **public** part (not `export *`); import from outside through it:
@@ -74,8 +75,8 @@ to its main user**, not where the scheme says it "should" be. Until the move is 
 - Import alias `@/…` = `src/…` (`vite.config.ts` + `tsconfig.app.json`). Inside one folder use relative `./x`; across
   folders `@/…`. CSS imports stay relative (`./X.module.css`).
 - **Files that Node scripts import directly** (`scripts/`, `cli/`, `server/`: `lib/addonVersions`, `datapackFiles`,
-  `freshness`, `projection`, `recipeRefs`, `recipeFilter`, `nbt`, `schematicFile`, `files.config`, `shared/lib/hash`)
-  must keep **relative** imports — Node doesn't know `@/`. Check with `grep -rn "src/" scripts cli server` before moving
+  `freshness`, `projection`, `shared/pack-data/recipeRefs`, `shared/pack-data/recipeFilter`, `nbt`, `schematicFile`,
+  `files.config`, `shared/lib/hash`) must keep **relative** imports — Node doesn't know `@/`. Check with `grep -rn "src/" scripts cli server` before moving
   them.
 - Harmful (avoid): `shared` importing upward, import cycles, the same code in several places. Everything else is a
   recommendation; exceptions are fine if they are noted in the code.
@@ -136,7 +137,7 @@ things — [docs/plans/mcp-next.md](docs/plans/mcp-next.md).
 - The dev server talks to **production Firestore**. Don't leave test records in shared collections. Preview nick is
   `ClaudeTest` (cookie `tfc_nick`) for every agent; deliberate writes on the user's request are signed with your agent
   name.
-- Site modules are importable from the page: `await import('/src/lib/recipes.ts')`. Prefer element refs or page JS
+- Site modules are importable from the page: `await import('/src/shared/pack-data/recipes.ts')`. Prefer element refs or page JS
   over clicking screenshot coordinates. Local file into the page: put it in `public/__test.*`, `fetch` +
   `DataTransfer` into `input[type=file]`, then delete.
 - A hidden browser pane freezes the page — long operations look like hangs.

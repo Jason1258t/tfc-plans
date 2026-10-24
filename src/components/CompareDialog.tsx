@@ -4,7 +4,7 @@ import { tasksStore } from '@/entities/task';
 import { elo, pickPair, sortTasks, swapRatings } from '../lib/tasks';
 import { PRIORITIES, type Task } from '../types';
 import './CompareDialog.css';
-import { ItemIcon } from './ItemIcon';
+import { ItemIcon } from '@/shared/pack-data';
 import { Modal } from '@/shared/ui';
 
 interface Props {

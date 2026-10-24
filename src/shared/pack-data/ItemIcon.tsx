@@ -1,4 +1,4 @@
-import { blockEntry, guiIcon, itemName, textureUrl, useItems } from '../lib/items';
+import { blockEntry, guiIcon, itemName, textureUrl, useItems } from './items';
 import { cx } from '@/shared/lib';
 import { tooltipHandlers } from '@/shared/ui';
 

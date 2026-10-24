@@ -1,18 +1,19 @@
 import { Ban, ChevronDown, ChevronRight, Copy, FilePen, Search, ShieldAlert, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { itemName, useItems } from '../lib/items';
-import { filterToJs } from '../lib/recipeFilter';
 import {
+  itemName,
+  useItems,
+  filterToJs,
   recipePath,
   searchRecipes,
   STATUS_LABEL,
   type Recipe,
   type RecipeCatalog as Catalog,
   type RecipeStatus,
-} from '../lib/recipes';
+  ItemIcon,
+  ItemPicker,
+} from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
-import { ItemIcon } from './ItemIcon';
-import { ItemPicker } from './ItemPicker';
 import { Modal } from '@/shared/ui';
 import { track, useSearchTrack } from '@/shared/api';
 import './KubejsConstructor.css';

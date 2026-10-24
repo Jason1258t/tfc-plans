@@ -1,11 +1,9 @@
 import { Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { itemName, type ItemIndex } from '../lib/items';
-import { hasStatus, useRecipes, type Recipe } from '../lib/recipes';
+import { itemName, type ItemIndex, hasStatus, useRecipes, type Recipe, ItemIcon } from '@/shared/pack-data';
 import { NUTRIENTS, type Food, type Nutrient } from '../lib/reference';
 import { cx } from '@/shared/lib';
-import { ItemIcon } from './ItemIcon';
 import './DishesTab.css';
 
 const NUTRIENT_LABEL: Record<Nutrient, string> = {

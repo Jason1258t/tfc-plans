@@ -1,7 +1,7 @@
 import { ChevronDown, ChevronUp, Download, FlipHorizontal2, RotateCcw } from 'lucide-react';
 import { lazy, Suspense, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { iconUrl, itemName, useItems, type ItemIndex } from '../lib/items';
+import { iconUrl, itemName, useItems, type ItemIndex, sourceName, useTags, ItemIcon } from '@/shared/pack-data';
 import {
   alternatives,
   blockForm,
@@ -17,9 +17,7 @@ import {
   type MultiblockData,
 } from '../lib/multiblocks';
 import { machineRates, usePower, useSettings, type PowerData, type Setting } from '../lib/power';
-import { sourceName, useTags } from '../lib/tags';
 import { cx } from '@/shared/lib';
-import { ItemIcon } from './ItemIcon';
 import './MultiblocksTab.css';
 
 /**

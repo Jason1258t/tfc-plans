@@ -5,8 +5,7 @@ import { BotanyTab } from '../components/BotanyTab';
 import { DishesTab } from '../components/DishesTab';
 import { MealsTab } from '../components/MealsTab';
 import { mealsByItem, useMeals, type Meals } from '../lib/meals';
-import { useTags } from '../lib/tags';
-import { ItemIcon } from '../components/ItemIcon';
+import { useTags, ItemIcon, itemName, useItems, type ItemIndex } from '@/shared/pack-data';
 import { LiquidFuelTab } from '../components/LiquidFuelTab';
 import { MapPage } from './MapPage';
 import { MultiblocksTab } from '../components/MultiblocksTab';
@@ -15,7 +14,6 @@ import { GUIDES_SUBS, type GuidesSub } from '../components/guides/guideMeta';
 import { PowerTab } from '../components/PowerTab';
 import { POWER_SUBS, type PowerSub } from '../lib/power';
 import type { BotanySub } from '../lib/botany';
-import { itemName, useItems, type ItemIndex } from '../lib/items';
 import {
   formatTicks,
   GRADE_LABEL,

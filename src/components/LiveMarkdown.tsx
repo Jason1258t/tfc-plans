@@ -3,7 +3,7 @@ import { refreshLivePreview, type InlineToken, type LiveMarkdownOptions } from '
 import { LiveMarkdown as Editor, type LiveMarkdownHandle, type LiveMarkdownProps } from 'cm-live-markdown/react';
 import { forwardRef } from 'react';
 import { createRoot } from 'react-dom/client';
-import { guiIcon, itemName, loadItems, type ItemIndex } from '../lib/items';
+import { guiIcon, itemName, loadItems, type ItemIndex } from '@/shared/pack-data';
 import { imageSrc, UPLOADING_SCHEME } from '../lib/planImages';
 import { isImage } from '../lib/uploads';
 import './LiveMarkdown.css';

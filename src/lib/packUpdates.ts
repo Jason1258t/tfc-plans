@@ -5,7 +5,7 @@ import type { Datapack } from '../types';
 import { loadAddonVersions } from '../data/addonVersions';
 import { ADDONS } from './addons';
 import { addonChangelogsFrom, type AddonVersion } from './addonVersions';
-import { itemRefsOf } from './recipes';
+import { itemRefsOf } from '@/shared/pack-data';
 
 /** Запись об обновлении сборки — пишет scripts/pack-release.mjs при деплое */
 export interface ModRef {

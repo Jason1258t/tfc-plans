@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { blockEntry, blockIcon, isBlock, itemName, useItems } from '../lib/items';
+import { blockEntry, blockIcon, isBlock, itemName, useItems, ItemIcon, ItemPicker } from '@/shared/pack-data';
 import { EMPTY_BLOCKS, REMOVE, type Schematic, type Vec } from '../lib/schematic';
 import { blockTopView } from '../lib/blockModels';
 import { drawnByCode, isFullCube } from '../lib/schematicMesh';
@@ -39,8 +39,6 @@ import {
 } from '../lib/schematicEdit';
 import type { ReplaceFavorite } from '../types';
 import { cx } from '@/shared/lib';
-import { ItemIcon } from './ItemIcon';
-import { ItemPicker } from './ItemPicker';
 import './SchematicLayers.css';
 
 // three.js — отдельным куском, грузится только при переходе в 3D

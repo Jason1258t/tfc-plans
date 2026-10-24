@@ -1,13 +1,10 @@
 import { AlertTriangle, Braces, CheckCircle2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { typeOfContent } from '../lib/datapack';
-import { itemName, useItems } from '../lib/items';
-import { itemRefsOf, type RecipeCatalog } from '../lib/recipes';
+import { itemName, useItems, itemRefsOf, type RecipeCatalog, ItemIcon, ItemIdSearch } from '@/shared/pack-data';
 import type { DatapackEntry } from '../types';
 import './EntryEditor.css';
 import { HintPanel } from './HintPanel';
-import { ItemIcon } from './ItemIcon';
-import { ItemIdSearch } from './ItemIdSearch';
 import { Modal } from '@/shared/ui';
 
 const KIND_LABEL: Record<DatapackEntry['kind'], string> = {

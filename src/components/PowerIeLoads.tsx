@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { deviceTick, machineRates, type IeDevice, type IeMachine, type PowerData, type Setting } from '../lib/power';
-import { ItemIcon } from './ItemIcon';
+import { ItemIcon } from '@/shared/pack-data';
 
 /**
  * Потребители IE и Advanced TFC Tech: таблицы (вкладка «Сеть IE») и набор нагрузки для расчёта генератора (гайд

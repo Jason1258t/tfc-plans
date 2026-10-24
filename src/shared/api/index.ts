@@ -1,6 +1,26 @@
 /** Общий слой API: Firebase, подписки Firestore, состояние синхронизации и аналитика. Снаружи — `@/shared/api`. */
 export { app, appCheck, auth, authReady, db, firebaseEnabled } from './firebase';
 export { createCollectionStore, type CollectionStore } from './store';
+export type {
+  AskParams,
+  BlockRow,
+  CandidateRow,
+  ChatTurn,
+  ExtractedResource,
+  GeneratedHint,
+  PatchNotesInput,
+  ReplacementAnswer,
+} from './gemini';
+export {
+  askGemini,
+  describeTask,
+  extractResources,
+  geminiEnabled,
+  geminiErrorText,
+  generatePatchNotes,
+  generateRecipeHint,
+  suggestReplacements,
+} from './gemini';
 export { clearSyncError, usePendingIds, useSyncStatus, type SyncStatus } from './sync';
 export {
   analyticsOff,

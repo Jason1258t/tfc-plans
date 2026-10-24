@@ -1,5 +1,5 @@
 import type { ChecklistEntry } from '../types';
-import type { ItemIndex } from './items';
+import type { ItemIndex } from '@/shared/pack-data';
 import { readNbt, T, type Compound, type Tag } from './nbt';
 import { uid } from '@/shared/lib';
 

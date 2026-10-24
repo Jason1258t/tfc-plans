@@ -11,9 +11,8 @@ import {
   type AddonBlock,
   type AddonsSub,
 } from '../lib/addons';
-import { itemName, useItems } from '../lib/items';
+import { itemName, useItems, ItemIcon } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
-import { ItemIcon } from './ItemIcon';
 import './PowerTab.css';
 
 const AddonsGuidesSection = lazy(() => import('./guides/AddonsGuidesSection'));

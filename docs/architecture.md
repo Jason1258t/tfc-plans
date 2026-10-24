@@ -63,13 +63,19 @@ Collections: `tasks`, `groups`, `artifacts`, `files` (+`chunks`, package `firest
 ## Code map
 
 ````
-src/shared/       общее без знаний о предметной области; снаружи — через index.ts папки
+src/shared/       общее для всего сайта; снаружи — через index.ts папки. lib/api/ui — без знаний о предметной
+                  области; pack-data — общий справочник пакета (предметы, рецепты, теги), нужный почти всем страницам
   lib/             util (uid, timeAgo, cx), hash (fnv1a, recipeHash — тот же отпечаток, что в сборке пакета),
                    calcExpr (формулы гайдов: свой разборщик, без eval; проверяется и из Node)
   api/             firebase (приложение, Firestore, вход, App Check), store (фабрика CRUD по коллекциям, без Firebase —
-                   localStorage), sync (состояние синхронизации), analytics (свой лог посещений)
+                   localStorage), sync (состояние синхронизации), analytics (свой лог посещений), gemini (запросы к
+                   Gemini: цепочки моделей с запасными, таймаут 90 с; предметы — из shared/pack-data)
   ui/              Modal (окно с заголовком и подвалом), Tooltip (одна подсказка на страницу в стиле Minecraft),
                    PackNav/PackSection (выбор вкладки общего раздела: датапаки, рецепты, теги)
+  pack-data/       данные пакета, нужные почти всем страницам: items (useItems, itemName, searchItems, иконки),
+                   recipes (каталог, статусы KubeJS, поиск), recipeFilter/recipeRefs (фильтры и входы/выходы рецепта),
+                   tags (слияние источников и KubeJS), fuzzy (fuse.js — только подсказки замен в схемах),
+                   ItemIcon/ItemPicker/ItemIdSearch
 src/entities/     сущности: типы и свои коллекции (карточки задач появятся здесь же, в ветках fsd-entities и страниц)
   task/            Task, ChecklistEntry, PRIORITIES/STATUSES, tasksStore      group/  Group, groupsStore
   artifact/        Artifact, artifactsStore                                    guide/  Guide, GuideRevision
@@ -80,13 +86,10 @@ src/types.ts      временный общий выход типов — реэ
 src/pages/        TasksPage (+ docs section DocsSection), DocPage, files/FilesPage, SchematicsPage, AddonsPage (AddonsTab),
                   DatapacksPage/RecipesPage/TagsPage (one section, PackNav on the left), ReferencePage (tabs: «Гайды» —
                   GuidesTab, «Карта» — MapPage, «Мультиблоки» — MultiblocksTab), UpdatesPage
-src/components/   Onboarding (texts — lib/onboarding.ts), ItemPicker/ItemIcon, FileBadge (kinds — lib/fileKinds.ts),
+src/components/   Onboarding (texts — lib/onboarding.ts), FileBadge (kinds — lib/fileKinds.ts),
                   RecipeCatalog (RecipeBrowser), KubejsConstructor, SchematicLibrary, WorldMap, …
 src/lib/
-  items.ts fuzzy.ts            item library, search (fuse.js — only for schematic replacement suggestions)
-  recipes.ts recipeFilter.ts   recipe catalogue + KubeJS: statuses, filters
-  recipeRefs.ts kubejsFix.ts   recipe inputs/outputs; KubeJS-removal workaround builder
-  tags.ts                      tags: merging sources and KubeJS, search, datapack edit file (UI — TagEditor)
+  kubejsFix.ts                 KubeJS-removal workaround builder (item library, recipes, tags — shared/pack-data)
   datapack.ts datapackFiles.ts datapack records, zip, checks; datapack files (shared with Node)
   kubejsScripts.ts             site KubeJS scripts (collection kubejsScripts, UI — components/KubejsScripts)
   nbt.ts schematic.ts materials.ts schematicLibrary.ts   .nbt schematics: replace/remove blocks, materials, library
@@ -102,7 +105,7 @@ src/lib/
   guideFormat.ts               guide number format {{x | 1 В}} (formulas — shared/lib/calcExpr.ts)
   guideScope.ts powerGuideScope.ts   names for formulas: shared functions + section (settings, power.json, power.ts)
   projection.ts geo.ts atlas.ts config.ts   TFC Real World map, world settings from server config
-  packUpdates.ts gemini.ts     pack updates, Gemini requests (model chains with fallbacks, 90 s timeout)
+  packUpdates.ts               pack updates (Gemini requests — shared/api/gemini.ts)
   files.ts files.config.ts     attachments: wrapper over fileStorage/ (Firestore or own server — VITE_FILES_SERVER)
 src/components/guides/  GuidesSection, GuideEditor/History/Help, CalcBlock (```calc), GuideBody (Markdown + {{…}} +
                   «::name» widgets), powerWidgets; format — docs/plans/guides.md

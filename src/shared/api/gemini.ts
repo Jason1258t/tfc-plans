@@ -1,8 +1,10 @@
 import { getAI, getGenerativeModel, GoogleAIBackend, Schema, type GenerativeModel } from 'firebase/ai';
-import { app, track } from '@/shared/api';
-import type { Task } from '../types';
-import type { ItemIndex } from './items';
-import { itemName } from './items';
+import { app } from './firebase';
+import { track } from './analytics';
+import type { Task } from '@/entities/task';
+// Глубокий импорт мимо index.ts намеренно: pack-data/index реэкспортирует ItemIdSearch, а он берёт useSearchTrack
+// из этого же общего API — через index получился бы цикл shared/api → gemini → pack-data → ItemIdSearch → shared/api.
+import { itemName, type ItemIndex } from '@/shared/pack-data/items';
 
 export const geminiEnabled = Boolean(app);
 

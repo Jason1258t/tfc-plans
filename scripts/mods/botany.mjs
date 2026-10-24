@@ -21,7 +21,7 @@ import path from 'node:path';
 import { argTypes, clinitValues, enumConstants, instructions, lambdaTargets, parseClass } from './classfile.mjs';
 import { configDefaults } from './config-defaults.mjs';
 import { itemTags } from './reference.mjs';
-import { recipeRefs } from '../../src/lib/recipeRefs.ts';
+import { recipeRefs } from '../../src/shared/pack-data/recipeRefs.ts';
 
 const FIELDS = {
   min_temperature: 'minT',

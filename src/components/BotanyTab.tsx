@@ -22,12 +22,10 @@ import {
 } from '../lib/botany';
 import { useBotanyConfig, type BotanyConfig } from '../lib/botanyConfig';
 import { CONFIG_ORIGIN_LABEL } from '../lib/config';
-import { itemName, useItems, type ItemIndex } from '../lib/items';
+import { itemName, useItems, type ItemIndex, useTags, ItemIcon } from '@/shared/pack-data';
 import { mealsByItem, useMeals, type MealRef } from '../lib/meals';
 import type { Food } from '../lib/reference';
-import { useTags } from '../lib/tags';
 import { cx } from '@/shared/lib';
-import { ItemIcon } from './ItemIcon';
 import './BotanyTab.css';
 
 const SUBTABS: PlantKind[] = ['crop', 'bush', 'tree', 'plant'];

@@ -468,8 +468,9 @@ scripts/mcp/
                       (addons_list, addon_check, addon_versions, addon_version_get/put), candidates (candidate_get)
 ```
 
-Data merging repeats the site (`src/lib/items.ts`, `recipes.ts`, `tags.ts`, `reference.ts`, `meals.ts`) — those modules
-pull React and fetch. Import-free modules (`recipeFilter.ts`, `recipeRefs.ts`, `projection.ts`) are imported directly.
+Data merging repeats the site (`src/shared/pack-data` — `items.ts`, `recipes.ts`, `tags.ts`; `src/lib/reference.ts`,
+`meals.ts`) — those modules pull React and fetch. Import-free modules (`shared/pack-data/recipeFilter.ts`,
+`shared/pack-data/recipeRefs.ts`, `lib/projection.ts`) are imported directly.
 Changed merging on the site — change `data.mjs` too.
 
 ### Adding a tool

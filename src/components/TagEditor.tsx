@@ -1,7 +1,8 @@
 import { Droplet, Hash, Plus, Undo2, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { searchItems, useItems } from '../lib/items';
 import {
+  searchItems,
+  useItems,
   baseMembers,
   ID_RE,
   memberName,
@@ -14,9 +15,9 @@ import {
   type TagCatalog,
   type TagEdit,
   type TagKind,
-} from '../lib/tags';
+  ItemIcon,
+} from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
-import { ItemIcon } from './ItemIcon';
 import { Modal } from '@/shared/ui';
 import './TagEditor.css';
 
