@@ -9,6 +9,14 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 - Datapacks, recipes and tags are one section with a tab chooser on the left (`/datapacks`, `/recipes`, `/tags` unchanged).
 - Map is a reference tab (`/reference?tab=map`). Full-page doc — `/doc/{id}` (old `/docs/{id}` and `/map?x=…` redirect).
 
+## Styles (CSS Modules migration, started 2026-10-24)
+
+- Plan and rules — skill `css-modules`: tokens/base in `src/app/theme`, repeated UI in `src/shared/ui`, page styles in
+  `X.module.css` (`localsConvention: 'camelCaseOnly'` in `vite.config.ts`). Tools: `scripts/ui/classes.mjs` (class
+  usages, dead/library classes, duplicates, module key check), `scripts/ui/shots.mjs` + `scenarios.json` (desktop and
+  mobile screenshots, before/after diff via installed Chrome).
+- Migrated so far: nothing — all styles are still global (`src/index.css` + 41 page/component CSS files).
+
 ## Documents (file storage)
 
 `/docs` (`/files` points there): whole storage in one list — search by name, author, task and schematic, filter by

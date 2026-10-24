@@ -58,7 +58,7 @@ comments, commit messages, guides, MCP tool output. Keep Russian UI labels verba
 
 Step-by-step procedures in `.claude/skills/<name>/SKILL.md` (standard `SKILL.md` format; `.agents/skills` is a symlink
 to the same folder for Codex and other agents that look there): `ship`, `addon-dev`, `addon-release`,
-`integration-plan`, `update-plan`, `recipe-dev`, `dev-session`, `deploy`. If your harness doesn't load skills, open the `SKILL.md` and follow it. Edit skills
+`integration-plan`, `update-plan`, `recipe-dev`, `dev-session`, `deploy`, `css-modules`. If your harness doesn't load skills, open the `SKILL.md` and follow it. Edit skills
 only in `.claude/skills/`.
 
 ## Commands
@@ -73,6 +73,8 @@ npx prettier --write <files>   # singleQuote, printWidth 120; don't run on all o
 npm run deploy:site    # deploy the site; pack data on Hosting stays as the pack server published it (no jars; works from a worktree)
 # npx firebase deploy --only hosting — blocked (would upload local pack data); pack data → pack server, see docs/pack-server.md
 npx firebase deploy --only firestore:rules
+npm run ui:classes -- --css <file>   # where CSS classes are used (own / shared / dead / library) — skill css-modules
+npm run ui:shots -- capture before --only <page>   # desktop+mobile screenshots; then `capture after`, `diff before after`
 npm run mods | serverconfig | kubejs | world | pack | guides | pack:fetch | pack:publish | freshness   # see docs/architecture.md
 ```
 
