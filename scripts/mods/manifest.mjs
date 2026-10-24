@@ -5,7 +5,7 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { cfFingerprint } from '../../src/lib/freshness.ts';
+import { cfFingerprint } from '../../src/pages/updates/model/freshness.ts';
 import { openJar } from './zipfile.mjs';
 
 /** FNV-1a 32 бита — такой же считает сайт (src/shared/lib/hash.ts), чтобы сверять рецепты датапаков со сборкой */

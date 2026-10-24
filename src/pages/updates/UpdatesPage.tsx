@@ -2,13 +2,13 @@ import { AlertTriangle, ChevronDown, ChevronRight, Package, Pencil, Sparkles } f
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ItemIcon, useItems, type ItemIndex } from '@/shared/pack-data';
-import { Markdown } from '../components/Markdown';
-import { MarkdownField } from '../components/MarkdownField';
-import { TfcDownload } from '../components/TfcDownload';
-import { useData } from '../data/DataContext';
+import { Markdown } from '../../components/Markdown';
+import { MarkdownField } from '../../components/MarkdownField';
+import { TfcDownload } from './ui/TfcDownload';
+import { useData } from '../../data/DataContext';
 import { datapacksStore } from '@/entities/datapack';
 import { generatePatchNotes, geminiEnabled, geminiErrorText } from '@/shared/api';
-import { addonById } from '../lib/addons';
+import { addonById } from '../../lib/addons';
 import { UpdatesNav } from './FreshnessPage';
 import {
   datapackRisks,
@@ -21,9 +21,9 @@ import {
   type DatapackRisk,
   type ModRef,
   type PackUpdate,
-} from '../lib/packUpdates';
+} from './model/packUpdates';
 import { cx, timeAgo } from '@/shared/lib';
-import type { Datapack } from '../types';
+import type { Datapack } from '../../types';
 import './UpdatesPage.css';
 
 /** Лента обновлений сборки: патчноут от модели + машинная разница (моды, предметы, рецепты, датапаки) */

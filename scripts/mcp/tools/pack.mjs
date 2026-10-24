@@ -3,7 +3,7 @@
  * (Firestore packUpdates, пишет scripts/pack-release.mjs при деплое). Firestore — только чтение и с кешем.
  */
 import { DOCS, fromValue } from '../../firestore-rest.mjs';
-import { STATUS_LABEL, STATUS_ORDER } from '../../../src/lib/freshness.ts';
+import { STATUS_LABEL, STATUS_ORDER } from '../../../src/pages/updates/model/freshness.ts';
 import path from 'node:path';
 import { downloadVersionJar, freshnessReport, modChangelog, summary as freshSummary } from '../../freshness.mjs';
 import { archiveMods, jarMeta } from '../code-index.mjs';
