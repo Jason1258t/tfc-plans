@@ -2,8 +2,8 @@ import { FilePen, FilePlus2, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PackSection } from '@/shared/ui';
-import { Member, TagEditor } from '../components/TagEditor';
-import { useData } from '../data/DataContext';
+import { Member, TagEditor } from './ui/TagEditor';
+import { useData } from '../../data/DataContext';
 import { datapacksStore } from '@/entities/datapack';
 import { useSearchTrack } from '@/shared/api';
 import {
@@ -22,7 +22,7 @@ import {
   type TagKind,
 } from '@/shared/pack-data';
 import { cx, uid } from '@/shared/lib';
-import type { Datapack, DatapackEntry } from '../types';
+import type { Datapack, DatapackEntry } from '../../types';
 import { PackPicker, type Pending } from '@/pages/recipes';
 import './TagsPage.css';
 
