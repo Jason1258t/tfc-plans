@@ -21,7 +21,7 @@ import { cx } from '@/shared/lib';
 import type { GuideChecked } from '../../types';
 import { Markdown } from '../Markdown';
 import { MarkdownField } from '../MarkdownField';
-import { Modal } from '../Modal';
+import { Modal } from '@/shared/ui';
 import { CHECKED } from './guideMeta';
 import { CheckedBadge } from './GuidesSection';
 import './AddonVersions.css';

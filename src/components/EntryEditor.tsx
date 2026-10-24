@@ -8,7 +8,7 @@ import './EntryEditor.css';
 import { HintPanel } from './HintPanel';
 import { ItemIcon } from './ItemIcon';
 import { ItemIdSearch } from './ItemIdSearch';
-import { Modal } from './Modal';
+import { Modal } from '@/shared/ui';
 
 const KIND_LABEL: Record<DatapackEntry['kind'], string> = {
   add: 'Новый рецепт',

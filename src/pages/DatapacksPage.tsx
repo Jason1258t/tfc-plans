@@ -18,7 +18,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { EntryEditor } from '../components/EntryEditor';
 import { KubejsConstructor } from '../components/KubejsConstructor';
 import { InstallToggle, ScriptEditor } from '../components/KubejsScripts';
-import { Modal } from '../components/Modal';
+import { Modal, PackNav } from '@/shared/ui';
 import { RecipeCatalog } from '../components/RecipeCatalog';
 import { useData } from '../data/DataContext';
 import { datapacksStore, kubejsScriptsStore } from '@/shared/api';
@@ -33,7 +33,6 @@ import {
   validatePack,
   zipName,
 } from '../lib/datapack';
-import { PackNav } from '../components/PackNav';
 import { filesEnabled, removeFile, uploadFile } from '../lib/files';
 import { useItems } from '../lib/items';
 import { entryRecipeId, kubejsScript, scriptFileName } from '../lib/kubejsFix';

@@ -8,7 +8,7 @@ import { kubejsHits, ruleIsIdOnly, type KjsRule } from '../lib/recipes';
 import { kubejsScript, liftPatch, scriptFileName, targetFromJson } from '../lib/kubejsFix';
 import { downloadScript, freeScriptName } from '../lib/kubejsScripts';
 import type { KubejsScript } from '../types';
-import { Modal } from './Modal';
+import { Modal } from '@/shared/ui';
 import './KubejsConstructor.css';
 
 interface Props {

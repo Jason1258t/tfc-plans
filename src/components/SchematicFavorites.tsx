@@ -5,7 +5,7 @@ import { deriveVariants } from '../lib/replaceFavorites';
 import { blockEntry, isBlock, itemName, type ItemIndex } from '../lib/items';
 import type { ReplaceFavorite } from '../types';
 import { ItemIcon } from './ItemIcon';
-import { Modal } from './Modal';
+import { Modal } from '@/shared/ui';
 
 export interface Pair {
   from: string;

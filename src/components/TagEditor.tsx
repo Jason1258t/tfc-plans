@@ -17,7 +17,7 @@ import {
 } from '../lib/tags';
 import { cx } from '@/shared/lib';
 import { ItemIcon } from './ItemIcon';
-import { Modal } from './Modal';
+import { Modal } from '@/shared/ui';
 import './TagEditor.css';
 
 interface Props {

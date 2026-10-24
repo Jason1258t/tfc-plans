@@ -5,7 +5,7 @@ import { elo, pickPair, sortTasks, swapRatings } from '../lib/tasks';
 import { PRIORITIES, type Task } from '../types';
 import './CompareDialog.css';
 import { ItemIcon } from './ItemIcon';
-import { Modal } from './Modal';
+import { Modal } from '@/shared/ui';
 
 interface Props {
   /** Задачи, участвующие в сравнении (текущий фильтр, без выполненных) */

@@ -1,7 +1,7 @@
 import { Copy, Check, Settings, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Modal } from '../components/Modal';
+import { Modal } from '@/shared/ui';
 import { WorldMap, type MapMarker } from '../components/WorldMap';
 import { useData } from '../data/DataContext';
 import {

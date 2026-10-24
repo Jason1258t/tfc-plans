@@ -66,10 +66,12 @@ src/shared/       общее без знаний о предметной обл�
                    calcExpr (формулы гайдов: свой разборщик, без eval; проверяется и из Node)
   api/             firebase (приложение, Firestore, вход, App Check), store (CRUD по коллекциям, без Firebase —
                    localStorage), sync (состояние синхронизации), analytics (свой лог посещений)
+  ui/              Modal (окно с заголовком и подвалом), Tooltip (одна подсказка на страницу в стиле Minecraft),
+                   PackNav/PackSection (выбор вкладки общего раздела: датапаки, рецепты, теги)
 src/pages/        TasksPage (+ docs section DocsSection), DocPage, files/FilesPage, SchematicsPage, AddonsPage (AddonsTab),
                   DatapacksPage/RecipesPage/TagsPage (one section, PackNav on the left), ReferencePage (tabs: «Гайды» —
                   GuidesTab, «Карта» — MapPage, «Мультиблоки» — MultiblocksTab), UpdatesPage
-src/components/   Onboarding (texts — lib/onboarding.ts), Modal, ItemPicker/ItemIcon, FileBadge (kinds — lib/fileKinds.ts),
+src/components/   Onboarding (texts — lib/onboarding.ts), ItemPicker/ItemIcon, FileBadge (kinds — lib/fileKinds.ts),
                   RecipeCatalog (RecipeBrowser), KubejsConstructor, SchematicLibrary, WorldMap, …
 src/lib/
   items.ts fuzzy.ts            item library, search (fuse.js — only for schematic replacement suggestions)
