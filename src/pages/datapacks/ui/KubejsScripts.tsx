@@ -1,11 +1,11 @@
 import { Download, FileTerminal, Save } from 'lucide-react';
 import { useState } from 'react';
-import { useData } from '../data/DataContext';
+import { useData } from '@/data/DataContext';
 import { kubejsScriptsStore } from '@/entities/datapack';
-import { SCRIPT_FILE_RE } from '../lib/kubejsFix';
-import { downloadScript } from '../lib/kubejsScripts';
+import { SCRIPT_FILE_RE } from '@/lib/kubejsFix';
+import { downloadScript } from '@/lib/kubejsScripts';
 import { cx, timeAgo } from '@/shared/lib';
-import type { KubejsScript } from '../types';
+import type { KubejsScript } from '@/types';
 
 /** Отметка «Ставить в мир» / «Ставить на сервер» с подсказкой */
 export function InstallToggle({

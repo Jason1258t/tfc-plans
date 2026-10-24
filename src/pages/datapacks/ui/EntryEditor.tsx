@@ -1,8 +1,8 @@
 import { AlertTriangle, Braces, CheckCircle2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { typeOfContent } from '../lib/datapack';
+import { typeOfContent } from '@/lib/datapack';
 import { itemName, useItems, itemRefsOf, type RecipeCatalog, ItemIcon, ItemIdSearch } from '@/shared/pack-data';
-import type { DatapackEntry } from '../types';
+import type { DatapackEntry } from '@/types';
 import './EntryEditor.css';
 import { HintPanel } from './HintPanel';
 import { Modal } from '@/shared/ui';
