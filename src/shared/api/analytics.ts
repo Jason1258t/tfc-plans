@@ -11,8 +11,8 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { useEffect } from 'react';
-import { auth, authReady, db } from '../firebase';
-import { readNick } from '../lib/nick';
+import { auth, authReady, db } from './firebase';
+import { readNick } from '@/lib/nick';
 
 /**
  * Статистика сайта: кто заходит, какие разделы открывает, что делает. Своя, в Firestore — без Google Analytics.

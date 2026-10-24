@@ -2,7 +2,7 @@ import { Download, FileBox, ImagePlus, Library, Search, Trash2, X } from 'lucide
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useData } from '../data/DataContext';
-import { schematicsStore } from '../data/store';
+import { schematicsStore, useSearchTrack } from '@/shared/api';
 import { formatSize } from '../lib/files';
 import { useItems } from '../lib/items';
 import { REMOVE, type Schematic } from '../lib/schematic';
@@ -11,7 +11,6 @@ import { cx, timeAgo } from '@/shared/lib';
 import type { SavedSchematic } from '../types';
 import { Markdown } from './Markdown';
 import { MarkdownField } from './MarkdownField';
-import { useSearchTrack } from '../data/analytics';
 
 interface Props {
   /** id записей, уже открытых в редакторе */

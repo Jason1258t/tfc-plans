@@ -6,7 +6,7 @@ import { Markdown } from '../components/Markdown';
 import { MarkdownField } from '../components/MarkdownField';
 import { TfcDownload } from '../components/TfcDownload';
 import { useData } from '../data/DataContext';
-import { datapacksStore } from '../data/store';
+import { datapacksStore } from '@/shared/api';
 import { generatePatchNotes, geminiEnabled, geminiErrorText } from '../lib/gemini';
 import { addonById } from '../lib/addons';
 import { useItems, type ItemIndex } from '../lib/items';

@@ -5,7 +5,7 @@ import { Modal } from '../components/Modal';
 import { PackSection } from '../components/PackNav';
 import { recipeActions, RecipeBrowser } from '../components/RecipeCatalog';
 import { useData } from '../data/DataContext';
-import { datapacksStore } from '../data/store';
+import { datapacksStore } from '@/shared/api';
 import { entryFromRecipe, entryWithId } from '../lib/datapack';
 import { useRecipes, type Recipe } from '../lib/recipes';
 import { timeAgo } from '@/shared/lib';

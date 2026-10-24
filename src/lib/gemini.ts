@@ -1,9 +1,8 @@
 import { getAI, getGenerativeModel, GoogleAIBackend, Schema, type GenerativeModel } from 'firebase/ai';
-import { app } from '../firebase';
+import { app, track } from '@/shared/api';
 import type { Task } from '../types';
 import type { ItemIndex } from './items';
 import { itemName } from './items';
-import { track } from '../data/analytics';
 
 export const geminiEnabled = Boolean(app);
 

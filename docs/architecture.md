@@ -56,7 +56,7 @@ Collections: `tasks`, `groups`, `artifacts`, `files` (+`chunks`, package `firest
 - No real auth: anonymous sign-in + nick cookie. Rules check data shape and `nick(...)`, not ownership.
 - `config` and creating `packUpdates` are closed to the site — only scripts write them.
 - The `files` block in `firestore.rules` is generated: `npm run rules:files`, don't edit between the markers.
-- Shared CRUD — `src/data/store.ts` (`make<T, N>('collection')`), with a localStorage fallback without Firebase.
+- Shared CRUD — `src/shared/api/store.ts` (`make<T, N>('collection')`), with a localStorage fallback without Firebase.
 
 ## Code map
 
@@ -64,6 +64,8 @@ Collections: `tasks`, `groups`, `artifacts`, `files` (+`chunks`, package `firest
 src/shared/       общее без знаний о предметной области; снаружи — через index.ts папки
   lib/             util (uid, timeAgo, cx), hash (fnv1a, recipeHash — тот же отпечаток, что в сборке пакета),
                    calcExpr (формулы гайдов: свой разборщик, без eval; проверяется и из Node)
+  api/             firebase (приложение, Firestore, вход, App Check), store (CRUD по коллекциям, без Firebase —
+                   localStorage), sync (состояние синхронизации), analytics (свой лог посещений)
 src/pages/        TasksPage (+ docs section DocsSection), DocPage, files/FilesPage, SchematicsPage, AddonsPage (AddonsTab),
                   DatapacksPage/RecipesPage/TagsPage (one section, PackNav on the left), ReferencePage (tabs: «Гайды» —
                   GuidesTab, «Карта» — MapPage, «Мультиблоки» — MultiblocksTab), UpdatesPage

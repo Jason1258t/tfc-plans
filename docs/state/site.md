@@ -54,7 +54,7 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   «не загружено — появится после создания задачи»). Hovering a thumbnail shows a cross that deletes the image after a
   confirmation (the view's trash does the same); on touch screens the cross is always visible. Checked in the browser
   on the dev server: draft open/Esc, draft delete with cancel and confirm, saved task with two images, cross on hover.
-- Sync status (2026-10-23, `src/data/sync.ts` + `SyncBadge`): Firestore uses a persistent local cache, so a browser
+- Sync status (2026-10-23, `src/shared/api/sync.ts` + `SyncBadge`): Firestore uses a persistent local cache, so a browser
   that can't reach the server (seen: reCAPTCHA/App Check failing on a PC) silently shows its own copy. Subscriptions
   now listen with metadata: header badge «нет связи» (fromCache > 6 s or `navigator.onLine` false, with unsent count),
   «отправка» (pending > 1.5 s), «ошибка сохранения» (rejected write, dismissable); a clock on a task card while its
@@ -377,7 +377,7 @@ the step is centred.
 
 ## Site analytics (2026-10-23, task «Аналитика действий на сайте», group «Разработка»)
 
-- Own log in Firestore, no Google Analytics. `src/data/analytics.ts`: events buffered in memory, one batch every 30 s
+- Own log in Firestore, no Google Analytics. `src/shared/api/analytics.ts`: events buffered in memory, one batch every 30 s
   and on tab hide → `visits/{id}` (one doc per tab visit: uid, nick, device, `events[]` ≤ 400, `expireAt`) +
   `visitDays/{YYYY-MM-DD}` counters via `increment` (visits, views by section, actions, searches incl. `<where>:пусто`,
   events per nick).

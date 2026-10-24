@@ -1,7 +1,6 @@
 import { CloudOff, Clock, TriangleAlert, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { firebaseEnabled } from '../firebase';
-import { clearSyncError, useSyncStatus } from '../data/sync';
+import { firebaseEnabled, clearSyncError, useSyncStatus } from '@/shared/api';
 import { tooltipHandlers } from './Tooltip';
 
 /** Короткая отправка (доли секунды) не показывается — значок только если ждём дольше */

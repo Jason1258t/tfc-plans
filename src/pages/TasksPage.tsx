@@ -9,11 +9,10 @@ import { ItemIcon } from '../components/ItemIcon';
 import { TaskDialog, type TaskDialogMode } from '../components/TaskDialog';
 import { TaskRow } from '../components/TaskRow';
 import { useData } from '../data/DataContext';
-import { groupsStore } from '../data/store';
+import { groupsStore, useSearchTrack } from '@/shared/api';
 import { SORTS, sortTasks, type SortMode } from '../lib/tasks';
 import { cx, timeAgo } from '@/shared/lib';
 import { PRIORITIES, type Group, type Priority } from '../types';
-import { useSearchTrack } from '../data/analytics';
 import './TasksPage.css';
 
 const ALL = '__all';

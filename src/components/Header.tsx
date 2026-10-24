@@ -1,7 +1,7 @@
 import { Bell, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { firebaseEnabled } from '../firebase';
+import { firebaseEnabled } from '@/shared/api';
 import { lastSeenUpdate, usePackUpdates } from '../lib/packUpdates';
 import './Header.css';
 import { OnboardingMenu } from './Onboarding';

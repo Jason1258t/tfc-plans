@@ -1,7 +1,7 @@
 import { Download, FileTerminal, Save } from 'lucide-react';
 import { useState } from 'react';
 import { useData } from '../data/DataContext';
-import { kubejsScriptsStore } from '../data/store';
+import { kubejsScriptsStore } from '@/shared/api';
 import { SCRIPT_FILE_RE } from '../lib/kubejsFix';
 import { downloadScript } from '../lib/kubejsScripts';
 import { cx, timeAgo } from '@/shared/lib';

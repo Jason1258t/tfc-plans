@@ -1,10 +1,9 @@
 import { getToken } from 'firebase/app-check';
-import { appCheck, auth, authReady, db } from '../firebase';
+import { appCheck, auth, authReady, db, track } from '@/shared/api';
 import filesConfig from './files.config';
 import { firestoreAdapter } from './fileStorage/firestore';
 import { serverAdapter } from './fileStorage/server';
 import type { FileAdapter, StoredFile } from './fileStorage/types';
-import { track } from '../data/analytics';
 
 /**
  * Вложения задач и исходники схем. Хранилище — за интерфейсом FileAdapter (lib/fileStorage):

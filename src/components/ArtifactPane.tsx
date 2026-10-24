@@ -1,7 +1,7 @@
 import { BookOpen, Columns2, Eye, ImagePlus, Maximize2, Minimize2, Pencil, Trash2, X } from 'lucide-react';
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { useData } from '../data/DataContext';
-import { artifactsStore } from '../data/store';
+import { artifactsStore } from '@/shared/api';
 import { filesEnabled } from '../lib/files';
 import { removeOrphanImages } from '../lib/planImages';
 import { cx, timeAgo } from '@/shared/lib';

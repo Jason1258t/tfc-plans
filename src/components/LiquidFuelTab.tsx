@@ -1,7 +1,7 @@
 import { ArrowRight, Ban, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { datapacksStore } from '../data/store';
+import { datapacksStore } from '@/shared/api';
 import { itemName, type ItemIndex } from '../lib/items';
 import { methodLabel, type EngineStats, type FuelRecipe, type LiquidFamily, type LiquidStack } from '../lib/reference';
 import type { Datapack } from '../types';

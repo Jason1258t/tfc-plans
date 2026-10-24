@@ -1,8 +1,9 @@
 import { collection, documentId, getDocs, orderBy, query, where } from 'firebase/firestore';
 import { RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { authReady, db } from '../firebase';
 import {
+  authReady,
+  db,
   analyticsOff,
   flush,
   purgeExpired,
@@ -10,7 +11,7 @@ import {
   type Visit,
   type VisitDay,
   type VisitEvent,
-} from '../data/analytics';
+} from '@/shared/api';
 import { cx } from '@/shared/lib';
 import './StatsPage.css';
 

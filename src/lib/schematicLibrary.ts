@@ -1,4 +1,4 @@
-import { schematicsStore } from '../data/store';
+import { schematicsStore } from '@/shared/api';
 import type { SavedSchematic } from '../types';
 import { fileBlob, removeFile, uploadFile } from './files';
 import type { ItemIndex } from './items';
