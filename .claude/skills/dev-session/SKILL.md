@@ -22,6 +22,8 @@ The workflow is in AGENTS.md. This skill drives it with two MCP servers: **`tfc-
 
 ## 3. Finish
 
+- Stop the dev server you started from the worktree (Claude: `preview_stop`) — a running Vite breaks the worktree
+  removal in `ship`.
 - `tfc-plans-dev` `commit worktree=<short> message="Раздел: что сделано"` (one line, Russian).
 - Skill `ship` — `tfc-plans-dev` `ship worktree=<short>` for the preview, then `confirm=true`; it merges `--no-ff`,
   pushes `origin/main`, removes the worktree and branch. (Deploy needed → ship skill’s raw steps.)

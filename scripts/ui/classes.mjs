@@ -159,6 +159,19 @@ function cmdCss(file) {
       if (c.scope === 'library') s += `  ← ${c.library}`;
       lines.push(s);
     }
+    // Селекторы по классу в коде (подсказки онбординга, querySelector): после перевода на модуль класс станет
+    // хэшем, и они молча перестанут находить элемент
+    const bySelector = entry.module ? [] : res.filter((c) => c.strong.some((u) => u.kind === 'selector'));
+    if (bySelector.length) {
+      lines.push('\n⚠ СЕЛЕКТОРЫ В КОДЕ — перевести на теги/роли/aria-label до переноса в модуль:');
+      for (const c of bySelector)
+        lines.push(
+          `  .${c.name}  ← ${grouped(
+            c.strong.filter((u) => u.kind === 'selector'),
+            4,
+          ).join('; ')}`,
+        );
+    }
     return lines.join('\n');
   });
 }
