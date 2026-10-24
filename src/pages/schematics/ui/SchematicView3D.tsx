@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { useItems } from '@/shared/pack-data';
-import type { Schematic, Vec } from '../lib/schematic';
-import { buildMesh } from '../lib/schematicMesh';
-import { disposeMesh, meshObject, newRenderer } from '../lib/schematicRender';
+import type { Schematic, Vec } from '@/lib/schematic';
+import { buildMesh } from '@/lib/schematicMesh';
+import { disposeMesh, meshObject, newRenderer } from '@/lib/schematicRender';
 
 interface Props {
   schematic: Schematic;

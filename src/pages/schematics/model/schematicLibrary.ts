@@ -1,9 +1,9 @@
 import { schematicsStore } from '@/entities/schematic';
-import type { SavedSchematic } from '../types';
-import { fileBlob, removeFile, uploadFile } from './files';
+import type { SavedSchematic } from '@/types';
+import { fileBlob, removeFile, uploadFile } from '@/lib/files';
 import type { ItemIndex } from '@/shared/pack-data';
-import { editedSource, loadSchematic, type Schematic } from './schematic';
-import { savedEdits } from './schematicFile';
+import { editedSource, loadSchematic, type Schematic } from '@/lib/schematic';
+import { savedEdits } from '@/lib/schematicFile';
 
 /**
  * Библиотека схем. Исходник .nbt — в хранилище файлов без привязки к задаче, в записи — имя и замены.
@@ -105,7 +105,7 @@ const MAX_PREVIEW = 280_000;
  */
 export async function makePreview(s: Schematic, replace: Map<string, string>, items: ItemIndex) {
   try {
-    const { renderPreview } = await import('./schematicRender');
+    const { renderPreview } = await import('@/lib/schematicRender');
     const url = await renderPreview(s, replace, items);
     return url.length <= MAX_PREVIEW ? url : null;
   } catch (e) {

@@ -11,8 +11,8 @@ import {
   type FoodValues,
   type MealFamily,
   type MealResult,
-} from '../lib/meals';
-import { NUTRIENTS, type Nutrient } from '../lib/reference';
+} from '@/lib/meals';
+import { NUTRIENTS, type Nutrient } from '@/lib/reference';
 
 const NUTRIENT_LABEL: Record<Nutrient, string> = {
   grain: 'зерновые',
