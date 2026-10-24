@@ -361,6 +361,27 @@ export function blockModel(id: string, props: Map<string, string>): BlockModel |
   return res;
 }
 
+/** Элемент модели как в JSON jar — для частей, которые игра дорисовывает кодом (отводы трубы Create) */
+export interface RawElement {
+  from: Vec3;
+  to: Vec3;
+  faces: Partial<Record<Dir, { uv: [number, number, number, number]; rotation?: number }>>;
+}
+
+/** Грани элементов с одной текстурой, повёрнутые как вариант blockstate (x, y) */
+export function bakeElements(els: RawElement[], tex: string, rx = 0, ry = 0): Quad[] {
+  const geo: Element[] = els.map((e) => ({
+    f: e.from,
+    t: e.to,
+    faces: Object.fromEntries(
+      Object.entries(e.faces).map(([d, f]) => [d, { s: 0, uv: f!.uv, r: f!.rotation }]),
+    ) as Element['faces'],
+  }));
+  const out: Quad[] = [];
+  bakePart({ v: 0, tex: [tex], geo: [geo], m: [[0, [0]]], b: {} }, [0, rx, ry], out);
+  return out;
+}
+
 // ---------------------------------------------------------------- вид сверху (редактор слоёв)
 
 const SIZE = 32;

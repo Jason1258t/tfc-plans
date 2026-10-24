@@ -1,4 +1,11 @@
-import { blockModel, loadBlockModels, type Dir as ModelDir, type Quad } from './blockModels';
+import {
+  bakeElements,
+  blockModel,
+  loadBlockModels,
+  type Dir as ModelDir,
+  type Quad,
+  type RawElement,
+} from './blockModels';
 import { placedBy, textureUrl, type ItemIndex } from './items';
 import { EMPTY_BLOCKS, REMOVE, type Schematic } from './schematic';
 import { buildGrid, namesByState, propsByState, stateOf } from './schematicEdit';
@@ -23,11 +30,134 @@ const FLUID = /(^|:)(water|lava)$|[:/]fluid\//;
 /** Текстуры в оттенках серого, которые игра красит по биому */
 const TINTED = /leaves|grass|vine|lily_pad|fern|sugar_cane/;
 /**
- * Модель в jar — только часть блока, остальное рисует код игры: берём запасную форму (жидкостная труба Create —
- * в модели одни стенки, кольца и отводы дорисовывает PipeAttachmentModel)
+ * Модель в jar — только часть блока, остальное рисует код игры: берём запасную форму. Жидкостная труба Create
+ * (в модели одни стенки, отводы дорисовывает PipeAttachmentModel) в 3D — модель + отводы ниже, в слоях — иконка
  */
 const CODE_DRAWN = /(^|:)fluid_pipe$/;
 export const drawnByCode = (id: string) => CODE_DRAWN.test(id);
+
+// ---------------------------------------------------------------- отводы жидкостной трубы Create
+
+/**
+ * Жидкостная труба Create: модель в jar — только стенки сердцевины, к каждой соединённой стороне игра добавляет
+ * части по соседу (FluidPipeBlockEntity.StandardPipeFluidTransportBehaviour.getRenderedRimAttachment, Create 6.0.10).
+ * Части — модели block/fluid_pipe/{connection,rim_connector,rim,drain}/north.json, повёрнутые к стороне.
+ */
+const PIPE = 'create:fluid_pipe';
+const PIPE_TEX = 'create/block/pipes';
+const PIPE_PARTS: Record<'connection' | 'rim_connector' | 'rim' | 'drain', RawElement[]> = {
+  connection: [
+    {
+      from: [4, 4, 0],
+      to: [12, 12, 4],
+      faces: {
+        east: { uv: [0, 0, 4, 2], rotation: 90 },
+        west: { uv: [0, 2, 4, 0], rotation: 90 },
+        up: { uv: [0, 2, 4, 0], rotation: 180 },
+        down: { uv: [0, 0, 4, 2], rotation: 180 },
+      },
+    },
+  ],
+  rim_connector: [
+    {
+      from: [4, 4, 0],
+      to: [12, 12, 4],
+      faces: {
+        east: { uv: [4, 0, 8, 2], rotation: 90 },
+        west: { uv: [4, 2, 8, 0], rotation: 90 },
+        up: { uv: [4, 2, 8, 0], rotation: 180 },
+        down: { uv: [4, 0, 8, 2], rotation: 180 },
+      },
+    },
+  ],
+  rim: [
+    {
+      from: [3, 3, 0],
+      to: [13, 13, 2],
+      faces: {
+        north: { uv: [11, 11, 16, 16] },
+        east: { uv: [10.5, 11, 9.5, 16] },
+        south: { uv: [11, 11, 16, 16] },
+        west: { uv: [9.5, 16, 10.5, 11] },
+        up: { uv: [10.5, 11, 9.5, 16], rotation: 270 },
+        down: { uv: [9.5, 16, 10.5, 11], rotation: 270 },
+      },
+    },
+  ],
+  drain: [
+    {
+      from: [2.95, 2.95, -1.1],
+      to: [13.05, 13.05, 2],
+      faces: {
+        north: { uv: [11, 11, 16, 16] },
+        east: { uv: [10.5, 11, 9, 16] },
+        south: { uv: [11, 11, 16, 16] },
+        west: { uv: [9, 16, 10.5, 11] },
+        up: { uv: [9, 11, 10.5, 16], rotation: 90 },
+        down: { uv: [10.5, 16, 9, 11], rotation: 90 },
+      },
+    },
+    {
+      from: [4.95, 4.95, -3.95],
+      to: [11.05, 11.05, -0.95],
+      faces: {
+        north: { uv: [13, 8, 16, 11] },
+        east: { uv: [12, 8, 13.5, 11] },
+        west: { uv: [12, 8, 13.5, 11], rotation: 180 },
+        up: { uv: [12, 8, 13.5, 11], rotation: 270 },
+        down: { uv: [12, 8, 13.5, 11], rotation: 90 },
+      },
+    },
+  ],
+};
+/** Поворот модели «на север» к стороне: [x, y] варианта */
+const TURN: Record<ModelDir, [number, number]> = {
+  north: [0, 0],
+  east: [0, 90],
+  south: [0, 180],
+  west: [0, 270],
+  up: [270, 0],
+  down: [90, 0],
+};
+const OPPOSITE: Record<ModelDir, ModelDir> = {
+  north: 'south',
+  south: 'north',
+  east: 'west',
+  west: 'east',
+  up: 'down',
+  down: 'up',
+};
+const AXIS: Record<ModelDir, string> = { north: 'z', south: 'z', east: 'x', west: 'x', up: 'y', down: 'y' };
+const pipeBaked = new Map<string, Quad[]>();
+const pipePart = (part: keyof typeof PIPE_PARTS, d: ModelDir) => {
+  const key = `${part}/${d}`;
+  let q = pipeBaked.get(key);
+  if (!q) pipeBaked.set(key, (q = bakeElements(PIPE_PARTS[part], PIPE_TEX, ...TURN[d])));
+  return q;
+};
+/** Прямая труба: соединены ровно две противоположные стороны — ось, иначе null (FluidPropagator.getStraightPipeAxis) */
+function straightAxis(p: Map<string, string>): string | null {
+  const on = (Object.keys(TURN) as ModelDir[]).filter((d) => p.get(d) === 'true');
+  return on.length === 2 && OPPOSITE[on[0]] === on[1] ? AXIS[on[0]] : null;
+}
+/** Части отвода трубы к стороне d по соседу (id и свойства; null — пусто) */
+function pipeAttachment(d: ModelDir, self: Map<string, string>, nb: { id: string; p: Map<string, string> } | null) {
+  if (self.get(d) !== 'true') return [];
+  const back = nb?.p.get(OPPOSITE[d]) === 'true';
+  let kind: 'none' | 'connection' | 'detailed' | 'rim' | 'drain';
+  if (!nb) kind = 'rim';
+  else if (nb.id === 'create:mechanical_pump') kind = nb.p.get('facing') === OPPOSITE[d] ? 'none' : 'detailed';
+  else if (nb.id === 'create:encased_fluid_pipe') kind = 'rim';
+  else if (nb.id === PIPE) kind = back ? (straightAxis(self) === AXIS[d] ? 'connection' : 'detailed') : 'rim';
+  else if (nb.id === 'create:glass_fluid_pipe') kind = 'rim';
+  // Свои трубы, клапаны и насосы Create и аддонов — без фланца; остальное (бак, бассейн…) — слив
+  else if (/pipe|valve|pump/.test(nb.id)) kind = 'detailed';
+  else kind = 'drain';
+  if (kind === 'none') return [];
+  if (kind === 'connection') return pipePart('connection', d);
+  const extra = kind === 'rim' ? pipePart('rim', d) : kind === 'drain' ? pipePart('drain', d) : [];
+  return [...pipePart('rim_connector', d), ...extra];
+}
 /** Невидимые в игре блоки (свет прожектора IE, барьер) — в 3D не рисуются */
 const INVISIBLE = /(^|:)(fake_light|barrier|light|structure_void)$/;
 
@@ -460,6 +590,9 @@ export async function buildMesh(
     tint: boolean;
     /** Грани модели из jar; null — запасная форма boxes */
     quads: Quad[] | null;
+    /** Жидкостная труба Create: к модели добавляются отводы по соседям */
+    pipe: boolean;
+    p: Map<string, string>;
   }
   const namespaces = new Set<string>();
   for (const name of names) {
@@ -472,12 +605,23 @@ export async function buildMesh(
     const id = replace.get(name) ?? name;
     if (id === REMOVE || EMPTY_BLOCKS.has(id) || INVISIBLE.test(id)) return null;
     const p = props[st] ?? new Map();
-    const model = CODE_DRAWN.test(id) ? null : blockModel(id, p);
+    const pipe = id === PIPE;
+    const model = CODE_DRAWN.test(id) && !pipe ? null : blockModel(id, p);
     const boxes = model ? [] : shapeOf(id, p);
     const full = model ? model.full : boxes.length === 1 && boxes[0] === FULL;
     const see = SEE_THROUGH.test(id);
     const tex = model ? { side: null, top: null } : texturesOf(id, items);
-    return { id, boxes, opaque: full && !see, clear: see, ...tex, tint: TINTED.test(id), quads: model?.quads ?? null };
+    return {
+      id,
+      boxes,
+      opaque: full && !see,
+      clear: see,
+      ...tex,
+      tint: TINTED.test(id),
+      quads: model?.quads ?? null,
+      pipe: pipe && !!model,
+      p,
+    };
   });
 
   // Занятость: индекс записи палитры по клетке (-1 — пусто)
@@ -501,6 +645,7 @@ export async function buildMesh(
     if (m?.side) paths.add(m.side);
     if (m?.top) paths.add(m.top);
     for (const q of m?.quads ?? []) if (q.tex) paths.add(q.tex);
+    if (m?.pipe) paths.add(PIPE_TEX);
   }
   const atlas = await buildAtlas([...paths]);
 
@@ -526,7 +671,17 @@ export async function buildMesh(
         if (st < 0) continue;
         const m = metas[st]!;
         if (m.quads) {
-          for (const q of m.quads) {
+          let quads = m.quads;
+          if (m.pipe) {
+            quads = [...quads];
+            for (const d of Object.keys(TURN) as ModelDir[]) {
+              const n = NB[d];
+              const nb = at(x + n[0], y + n[1], z + n[2]);
+              const nm = nb >= 0 ? metas[nb] : null;
+              quads.push(...pipeAttachment(d, m.p, nm && { id: nm.id, p: nm.p }));
+            }
+          }
+          for (const q of quads) {
             if (q.cull) {
               const n = NB[q.cull];
               const nb = at(x + n[0], y + n[1], z + n[2]);

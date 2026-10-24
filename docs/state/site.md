@@ -181,6 +181,14 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   test schematic (gearbox, funnels, belt funnel, tunnels, rope connectors, shaft, cogwheels, blaze burner, valve
   handle, crushing wheel, stairs, fence, depot, press, pipe, chest, TFC leaves). Not done: tint colours are guessed
   by block name (code decides in game), no AO/emissive/animation, weighted random variants take the first.
+- **Create fluid pipe in 3D** (2026-10-24, task «Все еще порблемы с отрисовкой»): the jar core walls (multipart) plus
+  the parts the game adds in code — `fluid_pipe/{connection,rim_connector,rim,drain}/north.json` copied into
+  `schematicMesh.ts` (`PIPE_PARTS`), turned to each connected side; which part by the neighbour as in
+  `StandardPipeFluidTransportBehaviour.getRenderedRimAttachment` (Create 6.0.10, decompiled): straight pipe → pipe
+  = connection, bend → rim_connector, empty/glass/encased/non-connecting pipe → rim, pump facing it → nothing, other
+  pipes/valves/pumps → rim_connector, anything else → drain (fluid capability assumed). Layer view unchanged (icon).
+  Browser-checked on cargoairshipforsamb1y with only pipes/tanks/pumps left: solid pipes with flanges instead of
+  loose plates; not compared with the game side by side.
 - **Library preview** (`lib/schematicRender.ts`): on save the browser draws a 480×320 webp (~15–20 KB) with
   replacements into the `preview` field (rule: ≤300k chars); old records have a «нарисовать превью» button. Tested in
   the browser on two library schematics (8.6k blocks → 27k faces, 80 ms); saving with preview via the button not
