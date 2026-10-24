@@ -1,14 +1,14 @@
 import { Download, Search, Trash2, Upload } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FileBadge, FileKindDot } from '../components/FileBadge';
-import { useData } from '../data/DataContext';
-import { schematicsStore } from '../data/store';
-import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, uploadFile } from '../lib/files';
-import { FILE_KINDS, fileKind, type FileKind } from '../lib/fileKinds';
-import { prepareFile, validateFiles } from '../lib/uploads';
-import { timeAgo } from '../lib/util';
-import type { SavedSchematic } from '../types';
+import { FileBadge, FileKindDot } from '../../components/FileBadge';
+import { useData } from '../../data/DataContext';
+import { schematicsStore } from '../../data/store';
+import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, uploadFile } from '../../lib/files';
+import { FILE_KINDS, fileKind, type FileKind } from '../../lib/fileKinds';
+import { prepareFile, validateFiles } from '../../lib/uploads';
+import { timeAgo } from '../../lib/util';
+import type { SavedSchematic } from '../../types';
 import './FilesPage.css';
 
 const KINDS: { id: FileKind | 'all'; label: string }[] = [{ id: 'all', label: 'Все' }, ...FILE_KINDS];
