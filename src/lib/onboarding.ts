@@ -148,7 +148,7 @@ const TOURS: Tour[] = [
   ]),
   T('tags', 'Теги', 'site-datapacks', [
     {
-      target: '.tags-search, .tags-bar',
+      target: 'main [role=search], main input',
       title: 'Теги сборки',
       body: 'Ищите по id тега или по тому, что в него входит — можно по-русски. У тега видно, какой мод что добавил и что поменял KubeJS. «Править датапаком» — добавить или убрать значения.',
     },
