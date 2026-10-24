@@ -80,9 +80,32 @@ env = { TFC_FIRESTORE_KEY = "/abs/home/.config/tfc/mcp-firestore.json", TFC_AGEN
 }
 ```
 
-**DeepSeek TUI and others** — any harness with stdio MCP: same command and env. Skills — if it scans `.claude/skills`
-or `.agents/skills` (claimed for DeepSeek TUI, not checked), they load; otherwise AGENTS.md tells it to open
-`SKILL.md` by hand.
+**DeepSeek Harness (DSH)** — checked 2026-10-24: servers are added in the profile patch
+`~/.dsh/profiles/desktop/cordis.patch.yml` (outside the repo) as `insert` entries of `@deepseek-ai/dsh-mcp-client`. The
+running app picks the patch up in place (no restart) and the tools appear as `mcp__tfc-pack__*`. Give an **absolute**
+`node` path — a GUI-launched app has no fnm/nvm `PATH` — and keep `cwd` at the main checkout:
+
+```yaml
+- insert:
+    - id: mcp-tfc-pack
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: tfc-pack
+        transport: stdio
+        command: /abs/home/.local/share/fnm/aliases/default/bin/node
+        args: ['/abs/path/to/tfc-taskmanager/scripts/mcp/server.mjs']
+        cwd: /abs/path/to/tfc-taskmanager
+        env:
+          TFC_FIRESTORE_KEY: /abs/home/.config/tfc/mcp-firestore.json
+          TFC_AGENT_NICK: DeepSeek
+```
+
+A second entry with `serverName: tfc-plans-dev` and `scripts/mcp-dev/server.mjs` adds the git tools. Checked: both
+servers connected, Firestore read through `groups_list`, `git_state` lists the worktrees. Skills: DSH loads
+`.claude/skills` by name.
+
+**Others** — any harness with stdio MCP: same command, args and env; skills load if it scans `.claude/skills` or
+`.agents/skills`, otherwise AGENTS.md tells it to open `SKILL.md` by hand.
 
 **`tfc-plans-dev`** (git/workflow) — a second stdio server `node <repo>/scripts/mcp-dev/server.mjs`, no env needed (it
 finds the main checkout via `git rev-parse --git-common-dir`; `TFC_PLANS_REPO` overrides). Add it as a second `mcpServers`
