@@ -1,14 +1,14 @@
 import { ArrowLeft } from 'lucide-react';
 import { lazy, Suspense } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { AddonHead, AddonInstall } from '../components/AddonsTab';
-import { addonById } from '../lib/addons';
-import '../components/BotanyTab.css';
-import '../components/PowerTab.css';
-import './ReferencePage.css';
+import { AddonHead, AddonInstall } from '@/components/AddonsTab';
+import { addonById } from '@/lib/addons';
+import '@/components/BotanyTab.css';
+import '@/components/PowerTab.css';
+import '@/pages/ReferencePage.css';
 
-const AddonArticle = lazy(() => import('../components/guides/AddonArticle'));
-const AddonVersions = lazy(() => import('../components/guides/AddonVersions'));
+const AddonArticle = lazy(() => import('@/components/guides/AddonArticle'));
+const AddonVersions = lazy(() => import('@/components/guides/AddonVersions'));
 
 /** Страница аддона /addons/<мод>: карточка (версия, скачать, как поставить), версии с ченджлогами и подробное описание-статья */
 export function AddonPage() {
