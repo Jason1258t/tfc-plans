@@ -1,4 +1,8 @@
-.layers-overlay {
+/* Оверлей «Слои» и объёмный вид: шапка, панель инструментов, канвас, легенда слоя, меню выделения.
+   Модуль импортируют SchematicLayers и SchematicView3D — вид 3D живёт внутри того же оверлея,
+   поэтому его классы здесь (и правило «подсказка над 3D» — тоже). */
+
+.overlay {
   position: fixed;
   inset: 0;
   z-index: 95;
@@ -7,8 +11,8 @@
   background: var(--bg);
 }
 
-.layers-head,
-.layers-toolbar {
+.head,
+.toolbar {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -18,7 +22,7 @@
   flex-wrap: wrap;
 }
 
-.layers-head h2 {
+.head h2 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
@@ -27,29 +31,29 @@
   white-space: nowrap;
 }
 
-.layers-y {
+.y {
   min-width: 96px;
   text-align: center;
   font-size: 13px;
 }
 
-.layers-step {
+.step {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
-.layers-range {
+.range {
   width: min(240px, 40vw);
 }
 
-.layers-main {
+.main {
   flex: 1;
   min-height: 0;
   display: flex;
 }
 
-.layers-canvas {
+.canvas {
   position: relative;
   flex: 1;
   min-width: 0;
@@ -57,7 +61,7 @@
   background: var(--surface-2);
 }
 
-.layers-canvas canvas {
+.canvas canvas {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -66,7 +70,7 @@
   touch-action: none;
 }
 
-.layers-hover {
+.hover {
   position: absolute;
   left: 8px;
   top: 8px;
@@ -83,14 +87,14 @@
   pointer-events: none;
 }
 
-.layers-hover code,
-.layers-menu-names code {
+.hover code,
+.menuNames code {
   font-size: 12px;
   color: var(--text-2);
   word-break: break-all;
 }
 
-.layers-hint {
+.hint {
   position: absolute;
   left: 50%;
   bottom: 8px;
@@ -103,7 +107,11 @@
   pointer-events: none;
 }
 
-.layers-menu {
+.hint.hidden {
+  display: none;
+}
+
+.menu {
   position: absolute;
   width: 300px;
   display: flex;
@@ -116,30 +124,30 @@
   box-shadow: var(--shadow-lg);
 }
 
-.layers-menu-names {
+.menuNames {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-.layers-scope {
+.scope {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.layers-scope label {
+.scope label {
   display: flex;
   align-items: center;
   gap: 6px;
   cursor: pointer;
 }
 
-.layers-note {
+.note {
   margin: 0;
 }
 
-.layers-legend {
+.legend {
   width: 240px;
   flex-shrink: 0;
   overflow-y: auto;
@@ -148,12 +156,12 @@
   background: var(--surface);
 }
 
-.layers-legend h3 {
+.legend h3 {
   margin: 0 0 8px;
   font-weight: 600;
 }
 
-.layers-legend ul {
+.legend ul {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -162,7 +170,7 @@
   gap: 2px;
 }
 
-.layers-legend li {
+.legend li {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -171,24 +179,20 @@
   font-size: 13px;
 }
 
-.layers-legend li.on {
+.legend li.on {
   background: var(--surface-3);
 }
 
 @media (max-width: 720px) {
-  .layers-legend {
+  .legend {
     display: none;
   }
-  .layers-hint {
+  .hint {
     display: none;
   }
 }
 
-.layers-hint.hidden {
-  display: none;
-}
-
-.layers-mode {
+.mode {
   display: inline-flex;
   gap: 2px;
   padding: 2px;
@@ -196,15 +200,17 @@
   background: var(--surface-2);
 }
 
-.layers-mode .btn {
+.mode :global(.btn) {
   border-color: transparent;
   background: transparent;
 }
 
-.layers-mode .btn.on {
+.mode :global(.btn).on {
   background: var(--surface);
   border-color: var(--border);
 }
+
+/* ------------------------------------------------------------------ вид 3D */
 
 .view3d {
   position: absolute;
@@ -224,7 +230,7 @@
   touch-action: none;
 }
 
-.view3d-stats {
+.view3dStats {
   position: absolute;
   left: 8px;
   top: 8px;
@@ -233,7 +239,7 @@
 }
 
 /* Рамка объекта (перетаскивание ЛКМ) */
-.view3d-frame {
+.view3dFrame {
   position: absolute;
   z-index: 1;
   border: 2px dashed var(--accent);
@@ -241,18 +247,18 @@
   pointer-events: none;
 }
 
-.view3d-error {
+.view3dError {
   position: absolute;
   top: 40px;
   z-index: 1;
 }
 
-.view3d ~ .layers-hint {
+.view3d ~ .hint {
   z-index: 2;
 }
 
 /* Выделение: панель действий справа сверху (слева сверху — подсказка блока под курсором) */
-.layers-selection {
+.selection {
   position: absolute;
   right: 8px;
   top: 8px;
@@ -269,7 +275,7 @@
   z-index: 2;
 }
 
-.layers-menu-select {
+.menuSelect {
   flex-wrap: wrap;
   gap: 4px;
 }

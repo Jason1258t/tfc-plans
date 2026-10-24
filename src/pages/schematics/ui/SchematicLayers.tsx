@@ -39,7 +39,8 @@ import {
 } from '@/lib/schematicEdit';
 import type { ReplaceFavorite } from '@/types';
 import { cx } from '@/shared/lib';
-import './SchematicLayers.css';
+import section from '../SchematicsSection.module.css';
+import styles from './SchematicLayers.module.css';
 
 // three.js — отдельным куском, грузится только при переходе в 3D
 const SchematicView3D = lazy(() => import('./SchematicView3D'));
@@ -859,8 +860,8 @@ export function SchematicLayers({
   };
 
   return createPortal(
-    <div className="layers-overlay" role="dialog" aria-modal="true" aria-label={`Слои схемы ${s.fileName}`}>
-      <div className="layers-head">
+    <div className={styles.overlay} role="dialog" aria-modal="true" aria-label={`Слои схемы ${s.fileName}`}>
+      <div className={styles.head}>
         <Layers size={18} className="faint" />
         <h2 className="grow">
           {s.fileName}
@@ -896,12 +897,12 @@ export function SchematicLayers({
         </button>
       </div>
 
-      <div className="layers-toolbar">
-        <div className="layers-mode" role="tablist" aria-label="Вид">
+      <div className={styles.toolbar}>
+        <div className={styles.mode} role="tablist" aria-label="Вид">
           <button
             role="tab"
             aria-selected={mode === '2d'}
-            className={cx('btn sm', mode === '2d' && 'on')}
+            className={cx('btn sm', mode === '2d' && styles.on)}
             onClick={() => setMode('2d')}
           >
             <Layers size={14} />
@@ -910,14 +911,14 @@ export function SchematicLayers({
           <button
             role="tab"
             aria-selected={mode === '3d'}
-            className={cx('btn sm', mode === '3d' && 'on')}
+            className={cx('btn sm', mode === '3d' && styles.on)}
             onClick={() => (setMode('3d'), setMenu(null))}
           >
             <Box size={14} />
             3D
           </button>
         </div>
-        <span className="layers-step">
+        <span className={styles.step}>
           <button
             className="btn sm icon"
             onClick={() => stepY(-1)}
@@ -929,7 +930,7 @@ export function SchematicLayers({
           </button>
           <input
             type="range"
-            className="layers-range"
+            className={styles.range}
             min={0}
             max={Math.max(0, sy - 1)}
             value={layerY}
@@ -949,13 +950,16 @@ export function SchematicLayers({
             <ChevronUp size={16} />
           </button>
         </span>
-        <span className="layers-y">
+        <span className={styles.y}>
           Слой <b>{layerY + 1}</b> из {sy}
         </span>
         <span className="faint small">{layerTotal} блоков</span>
         {mode === '2d' ? (
           <>
-            <label className="toggle sm-toggle" title="Бледно показывать блоки слоя ниже там, где на этом слое пусто">
+            <label
+              className={cx('toggle', section.smToggle)}
+              title="Бледно показывать блоки слоя ниже там, где на этом слое пусто"
+            >
               <input type="checkbox" checked={ghost} onChange={(e) => setGhost(e.target.checked)} />
               Слой ниже
             </label>
@@ -981,12 +985,12 @@ export function SchematicLayers({
           </>
         ) : (
           <>
-            <label className="toggle sm-toggle" title="Скрыть слои выше выбранного — заглянуть внутрь">
+            <label className={cx('toggle', section.smToggle)} title="Скрыть слои выше выбранного — заглянуть внутрь">
               <input type="checkbox" checked={cut} onChange={(e) => setCut(e.target.checked)} />
               Срез по слою
             </label>
             <label
-              className="toggle sm-toggle"
+              className={cx('toggle', section.smToggle)}
               title="Текстуры блоков; без них — средний цвет текстуры, проще и быстрее"
             >
               <input type="checkbox" checked={textured} onChange={(e) => setTextured(e.target.checked)} />
@@ -997,8 +1001,8 @@ export function SchematicLayers({
         )}
       </div>
 
-      <div className="layers-main">
-        <div className="layers-canvas" ref={wrapRef}>
+      <div className={styles.main}>
+        <div className={styles.canvas} ref={wrapRef}>
           <canvas
             ref={canvasRef}
             onPointerDown={onPointerDown}
@@ -1009,7 +1013,7 @@ export function SchematicLayers({
             onContextMenu={(e) => e.preventDefault()}
           />
           {mode === '3d' && (
-            <Suspense fallback={<div className="view3d faint small">Загружаю 3D…</div>}>
+            <Suspense fallback={<div className={cx(styles.view3d, 'faint', 'small')}>Загружаю 3D…</div>}>
               <SchematicView3D
                 schematic={s}
                 replace={replace}
@@ -1020,7 +1024,7 @@ export function SchematicLayers({
                 onHover={(p) => setHover3d(p ? indexAtPos(p) : -1)}
                 onFrame={frame3d}
               />
-              <div className="layers-hint faint small">
+              <div className={cx(styles.hint, 'faint', 'small')}>
                 Клик — выделить блок · двойной клик — группу · рамка ЛКМ — выделить объект (без пола и стен) · Shift —
                 добавить, повторно — снять · Delete — убрать · зажатое колесо (или Alt+ЛКМ) — вращать вокруг точки под
                 курсором · ПКМ — сдвигать · колесо — масштаб · ↑↓ — слой среза · блоки по моделям из сборки, у части
@@ -1029,7 +1033,7 @@ export function SchematicLayers({
             </Suspense>
           )}
           {hoverInfo && !menu && (
-            <div className="layers-hover small">
+            <div className={cx(styles.hover, 'small')}>
               <b>{shownName(effective(hoverInfo.name))}</b>
               <code>{effective(hoverInfo.name)}</code>
               {effective(hoverInfo.name) !== hoverInfo.name && (
@@ -1041,13 +1045,13 @@ export function SchematicLayers({
               </span>
             </div>
           )}
-          <div className={cx('layers-hint faint small', mode === '3d' && 'hidden')}>
+          <div className={cx(styles.hint, 'faint', 'small', mode === '3d' && styles.hidden)}>
             ЛКМ — заменить · двойной клик — выделить группу · Shift+клик или рамка — выделить, повторно — снять · ПКМ
             (можно провести) — убрать · колесо — масштаб · перетаскивание — сдвиг · ↑↓ — слои · Ctrl+Z / Ctrl+Shift+Z —
             отмена и повтор · Delete — убрать выделенное · Esc — снять выделение
           </div>
           {selected.size === 0 && selNote && (
-            <div className="layers-selection small" role="status">
+            <div className={cx(styles.selection, 'small')} role="status">
               <div className="row">
                 <span className="grow faint">{selNote}</span>
                 <button className="btn ghost sm icon" onClick={() => setSelNote(null)} aria-label="Скрыть">
@@ -1057,7 +1061,7 @@ export function SchematicLayers({
             </div>
           )}
           {selected.size > 0 && (
-            <div className="layers-selection small" role="region" aria-label="Выделение">
+            <div className={cx(styles.selection, 'small')} role="region" aria-label="Выделение">
               <div className="row">
                 <SquareDashedMousePointer size={15} className="faint" />
                 <span className="grow">
@@ -1110,10 +1114,10 @@ export function SchematicLayers({
             </div>
           )}
           {mode === '2d' && menu && info && (
-            <div className="layers-menu" style={{ left: menu.left, top: menu.top }}>
+            <div className={styles.menu} style={{ left: menu.left, top: menu.top }}>
               <div className="row">
                 <ItemIcon id={effective(info.name)} size={28} />
-                <span className="grow layers-menu-names">
+                <span className={cx('grow', styles.menuNames)}>
                   <span>{shownName(effective(info.name))}</span>
                   <code>{effective(info.name)}</code>
                 </span>
@@ -1126,7 +1130,7 @@ export function SchematicLayers({
                 {effective(info.name) !== info.name && <> · в исходнике {info.name}</>}
                 {info.props.length > 0 && <> · {info.props.map(([k, v]) => `${k}=${v}`).join(', ')}</>}
               </div>
-              <div className="layers-scope" role="radiogroup" aria-label="К чему применить">
+              <div className={styles.scope} role="radiogroup" aria-label="К чему применить">
                 {SCOPES.map(([k, label]) => (
                   <label key={k} className="small">
                     <input type="radio" name="layers-scope" checked={scope === k} onChange={() => setScope(k)} />
@@ -1136,7 +1140,7 @@ export function SchematicLayers({
                 ))}
               </div>
               <ItemPicker small blocksOnly autoFocus placeholder="Заменить на…" onPick={(it) => apply(it.i)} />
-              <div className="row layers-menu-select">
+              <div className={cx('row', styles.menuSelect)}>
                 <button
                   className="btn ghost sm"
                   onClick={() => {
@@ -1168,7 +1172,7 @@ export function SchematicLayers({
                 )}
               </div>
               {scope === 'all' && (
-                <p className="faint small layers-note">
+                <p className={cx('faint', 'small', styles.note)}>
                   Общая замена — как в списке блоков: для всех открытых схем, по id {info.name}.
                 </p>
               )}
@@ -1176,14 +1180,14 @@ export function SchematicLayers({
           )}
         </div>
 
-        <aside className="layers-legend">
+        <aside className={styles.legend}>
           <h3 className="small">На этом слое</h3>
           {legend.length === 0 && <p className="faint small">Пусто</p>}
           <ul>
             {legend.map(([id, n]) => (
               <li
                 key={id}
-                className={cx(highlight === id && 'on')}
+                className={cx(highlight === id && styles.on)}
                 onMouseEnter={() => setHighlight(id)}
                 onMouseLeave={() => setHighlight(null)}
                 title={id}
