@@ -181,6 +181,14 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   test schematic (gearbox, funnels, belt funnel, tunnels, rope connectors, shaft, cogwheels, blaze burner, valve
   handle, crushing wheel, stairs, fence, depot, press, pipe, chest, TFC leaves). Not done: tint colours are guessed
   by block name (code decides in game), no AO/emissive/animation, weighted random variants take the first.
+- **Create fluid pipe in 3D** (2026-10-24, task «Все еще порблемы с отрисовкой»): the jar core walls (multipart) plus
+  the parts the game adds in code — `fluid_pipe/{connection,rim_connector,rim,drain}/north.json` copied into
+  `schematicMesh.ts` (`PIPE_PARTS`), turned to each connected side; which part by the neighbour as in
+  `StandardPipeFluidTransportBehaviour.getRenderedRimAttachment` (Create 6.0.10, decompiled): straight pipe → pipe
+  = connection, bend → rim_connector, empty/glass/encased/non-connecting pipe → rim, pump facing it → nothing, other
+  pipes/valves/pumps → rim_connector, anything else → drain (fluid capability assumed). Layer view unchanged (icon).
+  Browser-checked on cargoairshipforsamb1y with only pipes/tanks/pumps left: solid pipes with flanges instead of
+  loose plates; not compared with the game side by side.
 - **Library preview** (`lib/schematicRender.ts`): on save the browser draws a 480×320 webp (~15–20 KB) with
   replacements into the `preview` field (rule: ≤300k chars); old records have a «нарисовать превью» button. Tested in
   the browser on two library schematics (8.6k blocks → 27k faces, 80 ms); saving with preview via the button not
@@ -248,7 +256,7 @@ fertiliser blocks, calendar with month labels. `.class` parsing — `scripts/mod
   `ie_obj` take `1 − v`, checked in ObjModel / PolygonUtils), so the viewer always keeps `flipY = true`; the
   `flipV` field in data is ignored. Before the fix 24 of 27 models had textures upside down.
 - Guides section «Мультиблоки» (`?tab=guides&sub=multiblocks`, `section: multiblocks`): widget `::multiblock id=…
-  [full] [materials]`; articles mb-assembly, mb-tfc (what changed: arc furnace from fire bricks, IE blast bricks not
+[full] [materials]`; articles mb-assembly, mb-tfc (what changed: arc furnace from fire bricks, IE blast bricks not
   craftable in the pack, smelter via KubeJS), mb-coke-oven, mb-excavator.
 - Since 2026-10-19 group «Добыча Create» (Create Ore Excavation): coe-prospecting — veins (chunk, «one per square»,
   infinite, Chinese names from the pack script), detector, atlas, sampling drill, table of all veins; coe-drilling —
