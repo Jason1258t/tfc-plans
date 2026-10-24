@@ -13,7 +13,7 @@ import {
   type VisitEvent,
 } from '@/shared/api';
 import { cx } from '@/shared/lib';
-import './StatsPage.css';
+import styles from './StatsPage.module.css';
 
 /**
  * Статистика сайта — страница только по прямой ссылке /stats (в меню её нет).
@@ -326,8 +326,8 @@ export function StatsPage() {
   const sel = s?.persons.find((p) => p.nick === person) ?? null;
 
   return (
-    <main className="stats-page">
-      <div className="stats-head">
+    <main className={styles.statsPage}>
+      <div className={styles.head}>
         <h1>Статистика сайта</h1>
         <p className="faint small">
           Кто заходит, какие разделы открывает и что делает. Подробные заходы хранятся 90 дней (старые удаляются при
@@ -336,7 +336,7 @@ export function StatsPage() {
         </p>
       </div>
 
-      <div className="stats-bar">
+      <div className={styles.bar}>
         <div className="seg">
           {PERIODS.map((p) => (
             <button key={p.days} aria-pressed={days === p.days} onClick={() => setDays(p.days)}>
@@ -345,7 +345,7 @@ export function StatsPage() {
           ))}
         </div>
         {import.meta.env.DEV && (
-          <label className="stats-check small">
+          <label className={cx(styles.check, 'small')}>
             <input type="checkbox" checked={dev} onChange={(e) => setDev(e.target.checked)} /> проверочные (dev)
           </label>
         )}
@@ -353,43 +353,43 @@ export function StatsPage() {
           <RefreshCw size={14} /> Обновить
         </button>
         <span className="grow" />
-        <label className="stats-check small">
+        <label className={cx(styles.check, 'small')}>
           <input type="checkbox" checked={off} onChange={(e) => toggleOff(e.target.checked)} /> не считать меня в этом
           браузере
         </label>
       </div>
 
-      {error && <div className="stats-error">Не загрузилось: {error}</div>}
+      {error && <div className={styles.error}>Не загрузилось: {error}</div>}
       {!s && !error && <div className="empty">Загружаю…</div>}
 
       {s && (
         <>
-          <div className="stats-tiles">
+          <div className={styles.tiles}>
             <Tile label="Людей" value={s.people} />
             <Tile label="Заходов" value={s.visitCount} />
             <Tile label="Просмотров разделов" value={s.viewCount} />
             <Tile label="Действий" value={s.actionCount} />
           </div>
 
-          <section className="stats-card">
+          <section className={styles.card}>
             <h2>Заходы по дням</h2>
-            <div className="stats-chart" role="img" aria-label="Заходы по дням">
+            <div className={styles.chart} role="img" aria-label="Заходы по дням">
               {s.chart.map((c) => (
                 <div
                   key={c.t}
-                  className={cx('stats-col', !c.inPeriod && 'out')}
+                  className={cx(styles.col, !c.inPeriod && styles.out)}
                   title={`${new Date(c.t).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}: заходов ${c.visits}, людей ${c.people}, просмотров ${c.views}`}
                 >
-                  <span className="stats-col-n">{c.visits || ''}</span>
-                  <div className="stats-col-bar" style={{ height: `${(c.visits / chartMax) * 100}%` }} />
-                  <span className="stats-col-d">{new Date(c.t).getDate()}</span>
+                  <span className={styles.colN}>{c.visits || ''}</span>
+                  <div className={styles.colBar} style={{ height: `${(c.visits / chartMax) * 100}%` }} />
+                  <span className={styles.colD}>{new Date(c.t).getDate()}</span>
                 </div>
               ))}
             </div>
           </section>
 
-          <div className="stats-grid">
-            <section className="stats-card">
+          <div className={styles.grid}>
+            <section className={styles.card}>
               <h2>Разделы</h2>
               <Table
                 head={['Раздел', 'Просмотров', 'Людей', 'Время']}
@@ -401,21 +401,21 @@ export function StatsPage() {
                 ])}
               />
             </section>
-            <section className="stats-card">
+            <section className={styles.card}>
               <h2>Действия</h2>
               <Table head={['Что', 'Раз']} rows={s.actions.map(([k, n]) => [actionLabel(k), n])} />
             </section>
           </div>
 
-          <div className="stats-grid">
-            <section className="stats-card">
+          <div className={styles.grid}>
+            <section className={styles.card}>
               <h2>Искали и не нашли</h2>
               <Table
                 head={['Где', 'Запрос', 'Раз', 'Кто']}
                 rows={s.misses.map((r) => [SEARCH_LABEL[r.where] ?? r.where, r.q, r.n, [...r.who].join(', ')])}
               />
             </section>
-            <section className="stats-card">
+            <section className={styles.card}>
               <h2>Частые поиски</h2>
               <Table
                 head={['Где', 'Запрос', 'Раз', 'Нашлось']}
@@ -424,7 +424,7 @@ export function StatsPage() {
             </section>
           </div>
 
-          <section className="stats-card">
+          <section className={styles.card}>
             <h2>Люди</h2>
             <Table
               head={['Ник', 'Последний раз', 'Заходов', 'Событий', 'Время', 'Чаще всего']}
@@ -446,12 +446,12 @@ export function StatsPage() {
           </section>
 
           {sel && (
-            <section className="stats-card">
+            <section className={styles.card}>
               <h2>Заходы: {sel.nick}</h2>
-              <div className="stats-visits">
+              <div className={styles.visits}>
                 {sel.visits.map((v) => (
-                  <div key={v.id} className="stats-visit">
-                    <button className="stats-visit-head" onClick={() => setOpenVisit(openVisit === v.id ? null : v.id)}>
+                  <div key={v.id} className={styles.visit}>
+                    <button className={styles.visitHead} onClick={() => setOpenVisit(openVisit === v.id ? null : v.id)}>
                       <b>{fmtDateTime(v.startedAt)}</b>
                       <span className="faint">
                         {fmtDuration(v.lastAt - v.startedAt)} · событий {v.events.length} ·{' '}
@@ -459,7 +459,7 @@ export function StatsPage() {
                       </span>
                     </button>
                     {openVisit === v.id && (
-                      <ol className="stats-timeline">
+                      <ol className={styles.timeline}>
                         {[...v.events]
                           .sort((a, b) => a.t - b.t)
                           .map((e) => (
@@ -483,8 +483,8 @@ export function StatsPage() {
 
 function Tile({ label, value }: { label: string; value: number }) {
   return (
-    <div className="stats-tile">
-      <div className="stats-tile-v">{value}</div>
+    <div className={styles.tile}>
+      <div className={styles.tileValue}>{value}</div>
       <div className="faint small">{label}</div>
     </div>
   );
@@ -493,8 +493,8 @@ function Tile({ label, value }: { label: string; value: number }) {
 function Table({ head, rows, selected = -1 }: { head: string[]; rows: ReactNode[][]; selected?: number }) {
   if (!rows.length) return <div className="faint small">Пока пусто</div>;
   return (
-    <div className="stats-table-wrap">
-      <table className="stats-table">
+    <div className={styles.tableWrap}>
+      <table className={styles.table}>
         <thead>
           <tr>
             {head.map((h, i) => (
@@ -506,7 +506,7 @@ function Table({ head, rows, selected = -1 }: { head: string[]; rows: ReactNode[
         </thead>
         <tbody>
           {rows.map((r, i) => (
-            <tr key={i} className={cx(i === selected && 'sel')}>
+            <tr key={i} className={cx(i === selected && styles.sel)}>
               {r.map((c, j) => (
                 <td key={j} className={j && typeof c === 'number' ? 'num' : undefined}>
                   {c}
