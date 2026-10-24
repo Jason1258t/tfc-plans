@@ -1,0 +1,64 @@
+/** Модель задачи: статусы, важность и сама задача с чеклистом и местом в мире. */
+
+export type TaskStatus = 'todo' | 'doing' | 'done';
+
+/** Важность задачи: 0 — низкая … 3 — критическая */
+export type Priority = 0 | 1 | 2 | 3;
+
+export const PRIORITIES: { value: Priority; label: string; short: string; color: string }[] = [
+  { value: 0, label: 'Низкая', short: 'Низк.', color: 'var(--imp-0)' },
+  { value: 1, label: 'Обычная', short: 'Обычн.', color: 'var(--imp-1)' },
+  { value: 2, label: 'Высокая', short: 'Высок.', color: 'var(--imp-2)' },
+  { value: 3, label: 'Критическая', short: 'Крит.', color: 'var(--imp-3)' },
+];
+
+export const STATUSES: { value: TaskStatus; label: string }[] = [
+  { value: 'todo', label: 'Надо сделать' },
+  { value: 'doing', label: 'В работе' },
+  { value: 'done', label: 'Готово' },
+];
+
+/**
+ * Пункт чеклиста. Если указан itemId — это ресурс, который нужно собрать (got из qty),
+ * иначе — обычный пункт, отмечаемый галочкой (done).
+ */
+export interface ChecklistEntry {
+  id: string;
+  text: string;
+  itemId?: string;
+  qty?: number;
+  got?: number;
+  done?: boolean;
+}
+
+export interface TaskPlace {
+  x: number;
+  z: number;
+  label?: string;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  /** Markdown */
+  description: string;
+  status: TaskStatus;
+  priority: Priority;
+  /** Elo-рейтинг из режима «Что важнее?» */
+  rating: number;
+  checklist: ChecklistEntry[];
+  /** Иконка задачи — id предмета */
+  icon?: string | null;
+  groupId: string | null;
+  author: string;
+  /** Кто взялся за задачу */
+  assignee?: string | null;
+  /** Когда задачу отметили выполненной */
+  completedAt?: number | null;
+  /** Где в мире: блоковые координаты и подпись (база, жила, точка экспедиции) — показывается на карте */
+  place?: TaskPlace | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type NewTask = Omit<Task, 'id' | 'createdAt' | 'updatedAt'>;

@@ -2,22 +2,6 @@ import { collection, deleteDoc, doc, onSnapshot, setDoc, updateDoc, writeBatch }
 import { authReady, db } from './firebase';
 import { forgetSubscription, reportError, reportSnapshot, syncKey } from './sync';
 import { track } from './analytics';
-import type {
-  Artifact,
-  Datapack,
-  Group,
-  KubejsScript,
-  NewArtifact,
-  NewDatapack,
-  NewGroup,
-  NewKubejsScript,
-  NewReplaceFavorite,
-  NewSavedSchematic,
-  NewTask,
-  ReplaceFavorite,
-  SavedSchematic,
-  Task,
-} from '@/types';
 
 /** Минимальный CRUD + подписка на коллекцию. Реализации: Firestore и localStorage. */
 export interface CollectionStore<T extends { id: string }, N> {
@@ -150,12 +134,9 @@ function localStore<T extends { id: string }, N extends object>(name: string): C
   };
 }
 
-const make = db ? firestoreStore : localStore;
-
-export const tasksStore = make<Task, NewTask>('tasks');
-export const groupsStore = make<Group, NewGroup>('groups');
-export const artifactsStore = make<Artifact, NewArtifact>('artifacts');
-export const datapacksStore = make<Datapack, NewDatapack>('datapacks');
-export const schematicsStore = make<SavedSchematic, NewSavedSchematic>('schematics');
-export const replaceFavoritesStore = make<ReplaceFavorite, NewReplaceFavorite>('replaceFavorites');
-export const kubejsScriptsStore = make<KubejsScript, NewKubejsScript>('kubejsScripts');
+/**
+ * Хранилище коллекции по имени: Firestore, а без Firebase — localStorage.
+ * Сами коллекции создаёт сущность, которой они принадлежат (`entities/<x>/store.ts`) — общий слой не знает
+ * о задачах, датапаках и схемах.
+ */
+export const createCollectionStore = db ? firestoreStore : localStore;

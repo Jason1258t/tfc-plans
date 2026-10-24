@@ -4,7 +4,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PackSection } from '@/shared/ui';
 import { Member, TagEditor } from '../components/TagEditor';
 import { useData } from '../data/DataContext';
-import { datapacksStore, useSearchTrack } from '@/shared/api';
+import { datapacksStore } from '@/entities/datapack';
+import { useSearchTrack } from '@/shared/api';
 import { useItems } from '../lib/items';
 import {
   directMembers,

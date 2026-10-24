@@ -4,7 +4,7 @@ import { KubejsConstructor } from '../components/KubejsConstructor';
 import { Modal, PackSection } from '@/shared/ui';
 import { recipeActions, RecipeBrowser } from '../components/RecipeCatalog';
 import { useData } from '../data/DataContext';
-import { datapacksStore } from '@/shared/api';
+import { datapacksStore } from '@/entities/datapack';
 import { entryFromRecipe, entryWithId } from '../lib/datapack';
 import { useRecipes, type Recipe } from '../lib/recipes';
 import { timeAgo } from '@/shared/lib';

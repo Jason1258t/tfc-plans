@@ -1,7 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Artifact, Group, SiteUser, Task } from '../types';
 import { subscribeFiles, type FileMeta } from '../lib/files';
-import { artifactsStore, groupsStore, tasksStore } from '@/shared/api';
+import { artifactsStore } from '@/entities/artifact';
+import { groupsStore } from '@/entities/group';
+import { tasksStore } from '@/entities/task';
 import { subscribeUsers, touchPresence } from './users';
 
 interface Data {

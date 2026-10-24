@@ -27,7 +27,7 @@ import {
   type Pair,
   type PlanRow,
 } from '../components/SchematicFavorites';
-import { replaceFavoritesStore } from '@/shared/api';
+import { replaceFavoritesStore } from '@/entities/schematic';
 import { useFavorites } from '../lib/replaceFavorites';
 import { SchematicLayers } from '../components/SchematicLayers';
 import { SchematicLibrary } from '../components/SchematicLibrary';

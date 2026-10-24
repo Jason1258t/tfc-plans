@@ -1,4 +1,4 @@
-import { schematicsStore } from '@/shared/api';
+import { schematicsStore } from '@/entities/schematic';
 import type { SavedSchematic } from '../types';
 import { fileBlob, removeFile, uploadFile } from './files';
 import type { ItemIndex } from './items';

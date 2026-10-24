@@ -1,7 +1,8 @@
 import { BookOpen, Plus, Search } from 'lucide-react';
 import { useState } from 'react';
 import { useData } from '../data/DataContext';
-import { artifactsStore, useSearchTrack } from '@/shared/api';
+import { artifactsStore } from '@/entities/artifact';
+import { useSearchTrack } from '@/shared/api';
 import { cx, timeAgo } from '@/shared/lib';
 import './DocsSection.css';
 

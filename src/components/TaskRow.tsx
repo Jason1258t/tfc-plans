@@ -2,7 +2,8 @@ import { Check, Clock, Copy, FileText, Image as ImageIcon, Paperclip, UserRound 
 import { isImage } from '../lib/uploads';
 import { useData } from '../data/DataContext';
 import { useState } from 'react';
-import { tasksStore, usePendingIds } from '@/shared/api';
+import { tasksStore } from '@/entities/task';
+import { usePendingIds } from '@/shared/api';
 import { checklistProgress, entryDone } from '../lib/tasks';
 import { cx, timeAgo } from '@/shared/lib';
 import { PRIORITIES, type Task } from '../types';

@@ -2,7 +2,7 @@ import { Check, Copy, Download, FilePlus2, Save, ShieldOff, Wand2 } from 'lucide
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../data/DataContext';
-import { kubejsScriptsStore } from '@/shared/api';
+import { kubejsScriptsStore } from '@/entities/datapack';
 import { filterToJs } from '../lib/recipeFilter';
 import { kubejsHits, ruleIsIdOnly, type KjsRule } from '../lib/recipes';
 import { kubejsScript, liftPatch, scriptFileName, targetFromJson } from '../lib/kubejsFix';
