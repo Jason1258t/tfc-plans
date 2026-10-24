@@ -1,7 +1,7 @@
 import { BookOpen, Boxes, Eye, FilePlus2, Pencil, Sparkles, Trash2, UserRound, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useData } from '../data/DataContext';
-import { artifactsStore, tasksStore } from '../data/store';
+import { artifactsStore, tasksStore } from '@/shared/api';
 import { extractResources, geminiEnabled, geminiErrorText } from '../lib/gemini';
 import { useItems } from '../lib/items';
 import { mergeResources } from '../lib/resources';

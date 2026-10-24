@@ -1,6 +1,6 @@
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
-import { authReady, db } from '../firebase';
+import { authReady, db } from '@/shared/api';
 
 /**
  * Конфиги модов, импортированные скриптом scripts/serverconfig.mjs (коллекция config, только чтение).

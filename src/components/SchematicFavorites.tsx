@@ -1,6 +1,6 @@
 import { ArrowRight, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { replaceFavoritesStore } from '../data/store';
+import { replaceFavoritesStore } from '@/shared/api';
 import { deriveVariants } from '../lib/replaceFavorites';
 import { blockEntry, isBlock, itemName, type ItemIndex } from '../lib/items';
 import type { ReplaceFavorite } from '../types';

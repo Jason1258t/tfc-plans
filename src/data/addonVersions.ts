@@ -1,5 +1,5 @@
 import { collection, doc, getDocs, limit, onSnapshot, orderBy, query, where, writeBatch } from 'firebase/firestore';
-import { authReady, db } from '../firebase';
+import { authReady, db } from '@/shared/api';
 import { ADDON_VERSIONS, sortVersions, type AddonVersion, type AddonVersionRevision } from '../lib/addonVersions';
 
 /**

@@ -33,7 +33,7 @@ import {
   type Vein,
 } from '../lib/reference';
 import { cx } from '@/shared/lib';
-import { useSearchTrack } from '../data/analytics';
+import { useSearchTrack } from '@/shared/api';
 import './ReferencePage.css';
 
 type Tab = 'ores' | 'fuel' | 'metals' | 'food' | 'botany' | 'power' | 'multiblocks' | 'guides' | 'map';

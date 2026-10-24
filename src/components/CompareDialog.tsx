@@ -1,6 +1,6 @@
 import { ArrowUpDown } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { tasksStore } from '../data/store';
+import { tasksStore } from '@/shared/api';
 import { elo, pickPair, sortTasks, swapRatings } from '../lib/tasks';
 import { PRIORITIES, type Task } from '../types';
 import './CompareDialog.css';

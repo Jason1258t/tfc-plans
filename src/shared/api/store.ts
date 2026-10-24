@@ -1,5 +1,5 @@
 import { collection, deleteDoc, doc, onSnapshot, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
-import { authReady, db } from '../firebase';
+import { authReady, db } from './firebase';
 import { forgetSubscription, reportError, reportSnapshot, syncKey } from './sync';
 import { track } from './analytics';
 import type {
@@ -17,7 +17,7 @@ import type {
   ReplaceFavorite,
   SavedSchematic,
   Task,
-} from '../types';
+} from '@/types';
 
 /** Минимальный CRUD + подписка на коллекцию. Реализации: Firestore и localStorage. */
 export interface CollectionStore<T extends { id: string }, N> {

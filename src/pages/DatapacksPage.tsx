@@ -21,7 +21,7 @@ import { InstallToggle, ScriptEditor } from '../components/KubejsScripts';
 import { Modal } from '../components/Modal';
 import { RecipeCatalog } from '../components/RecipeCatalog';
 import { useData } from '../data/DataContext';
-import { datapacksStore, kubejsScriptsStore } from '../data/store';
+import { datapacksStore, kubejsScriptsStore } from '@/shared/api';
 import {
   buildZip,
   entryFromRecipe,

@@ -1,5 +1,5 @@
 import { collection, doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
-import { auth, authReady, db } from '../firebase';
+import { auth, authReady, db } from '@/shared/api';
 import type { SiteUser } from '../types';
 
 /**

@@ -1,6 +1,6 @@
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { useEffect, useMemo, useState } from 'react';
-import { authReady, db } from '../firebase';
+import { authReady, db } from '@/shared/api';
 import { configValue, useModConfig, type ModConfig } from './config';
 import { blockToGeo, geoToBlock, greatCircleKm, insideMap, type WorldProjection } from './projection';
 

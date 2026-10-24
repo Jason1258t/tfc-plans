@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileBadge, FileKindDot } from '../../components/FileBadge';
 import { useData } from '../../data/DataContext';
-import { schematicsStore } from '../../data/store';
+import { schematicsStore } from '@/shared/api';
 import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, uploadFile } from '../../lib/files';
 import { FILE_KINDS, fileKind, type FileKind } from '../../lib/fileKinds';
 import { prepareFile, validateFiles } from '../../lib/uploads';

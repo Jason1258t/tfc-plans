@@ -14,7 +14,7 @@ import { cx } from '@/shared/lib';
 import { ItemIcon } from './ItemIcon';
 import { ItemPicker } from './ItemPicker';
 import { Modal } from './Modal';
-import { track, useSearchTrack } from '../data/analytics';
+import { track, useSearchTrack } from '@/shared/api';
 import './KubejsConstructor.css';
 import './RecipeCatalog.css';
 

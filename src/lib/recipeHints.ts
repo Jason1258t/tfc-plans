@@ -1,5 +1,5 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { authReady, db } from '../firebase';
+import { authReady, db } from '@/shared/api';
 
 /** Подсказка по заполнению рецептов одного типа (коллекция recipeHints) */
 export interface RecipeHint {

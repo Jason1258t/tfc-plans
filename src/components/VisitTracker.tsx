@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { track, trackView } from '../data/analytics';
+import { track, trackView } from '@/shared/api';
 
 /** Статистика: переходы по разделам, открытие задачи (?task=) и гайда (?g=). Ничего не рисует */
 export function VisitTracker() {

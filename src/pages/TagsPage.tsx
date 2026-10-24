@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PackSection } from '../components/PackNav';
 import { Member, TagEditor } from '../components/TagEditor';
 import { useData } from '../data/DataContext';
-import { datapacksStore } from '../data/store';
+import { datapacksStore, useSearchTrack } from '@/shared/api';
 import { useItems } from '../lib/items';
 import {
   directMembers,
@@ -23,7 +23,6 @@ import {
 import { cx, uid } from '@/shared/lib';
 import type { Datapack, DatapackEntry } from '../types';
 import { PackPicker, type Pending } from './RecipesPage';
-import { useSearchTrack } from '../data/analytics';
 import './TagsPage.css';
 
 const SHOWN = 120;

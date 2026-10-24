@@ -1,5 +1,5 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, authReady, db } from '../firebase';
+import { auth, authReady, db } from '@/shared/api';
 
 /**
  * Какие подсказки знакомства уже показаны: Firestore onboarding/{uid} — uid анонимного входа, то есть свой документ

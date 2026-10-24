@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { replaceFavoritesStore } from '../data/store';
+import { replaceFavoritesStore } from '@/shared/api';
 import type { ReplaceFavorite } from '../types';
 import type { ItemIndex } from './items';
 

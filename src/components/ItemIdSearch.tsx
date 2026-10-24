@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { searchItems, useItems } from '../lib/items';
 import { cx } from '@/shared/lib';
 import { ItemIcon } from './ItemIcon';
-import { useSearchTrack } from '../data/analytics';
+import { useSearchTrack } from '@/shared/api';
 import './ItemIdSearch.css';
 
 interface Props {
