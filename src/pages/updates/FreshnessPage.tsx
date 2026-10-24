@@ -10,7 +10,7 @@ import {
   type FreshReport,
   type FreshStatus,
   type ManifestMod,
-} from '../lib/freshness';
+} from './model/freshness';
 import { cx, timeAgo } from '@/shared/lib';
 import './UpdatesPage.css';
 import './FreshnessPage.css';
