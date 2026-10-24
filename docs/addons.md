@@ -19,6 +19,7 @@
 | Miner Tools (`miner_tools`) | `tools/miner-tools-mod` | Снаряжение шахтёра: пояс, который не даёт подбирать выбранное (камешки, гравий, землю), окно фильтра, слот Curios «пояс»; каска (1.1.0) — аккумулятор FE от IE, фонарь через LambDynamicLights, вдвое меньше урона от падающих блоков | 1.1.0 проверена на сервере разработки (с Curios, GeckoLib, IE); в игре — нет |
 | Create: Stress Fix (`stress_fix`) | `tools/stress-fix-mod` | Сеть вращения Create не копит фантомную нагрузку/мощность «незагруженной части» после перезахода: обнуляет её, когда вся сеть загружена; `/stressfix` | проверен на сервере разработки (`test-server.sh`, воспроизведение ошибки и исправление), в игре — нет |
 | IE Extras (`ie_extras`) | `tools/ie-extras-mod` | К Immersive Engineering и TFC: аналоговый нагреватель — FE-нагреватель тигля и тепловых устройств TFC, температура по силе сигнала красного камня (0–15 → 0–1600 °C) | 1.0.0 — на сервере разработки (тигель, плавка меди, расход); в игре — нет |
+| Create Aeronautics Extra (`create_aeronautics_extra`) | `tools/create-aeronautics-extra-mod` | Бортовая электрика для машин и кораблей Aeronautics: бортовой компьютер — вал Create, клеммы EE и до 4 модулей: генераторный (как компактный генератор) и аккумуляторный (ячейка аккумулятора EE 24 В) | 1.0.0 — на сервере разработки, в т. ч. на подуровне Sable (`SABLE=1`); в игре — нет |
 | TP Trace (`tp_trace`) | `tools/tp-trace-mod` | Диагностика, не для сборки: пишет в лог скачки позиции игроков и телепорты со стеком вызовов | проверен на сервере разработки; карточка `unlisted`: на сайте только jar (`/addons/tp-trace-1.0.0.jar`), в списке аддонов и `tfc pull addons` нет |
 
 ## Когда нужен аддон, а когда нет
@@ -183,6 +184,17 @@ tools/<имя>-mod/
 Обёртка метода с клиентским классом в сигнатуре (`ClientLevel`) так на сервере не проверяется — Mixin не находит
 метаданные класса. Применение на клиенте `ee_extras` пишет в лог (`WireFixCheck`). Подсказку с Ом/м и током EE вешает через `TooltipModifier.REGISTRY` Create — для своих
 предметов её надо зарегистрировать самому (`LinesClient`).
+
+## Корабли Create Aeronautics (Sable)
+
+Проверено по байткоду sable 2.0.5 и EE 1.1.2 (`create-aeronautics-extra`): корабль Aeronautics — подуровень Sable, его
+блоки лежат в чанках-участках того же `ServerLevel` (`ServerLevelPlot` берёт `level.getChunkSource()`), поэтому
+блок-сущности, сеть вращения Create и устройства EE на корабле работают как на земле — «контрапшенов» Create
+(`MovementBehaviour`, `MovementContext`) тут нет. При сборке корабля (`SubLevelAssemblyHelper.moveBlocks`) Sable
+переносит блоки с блок-сущностями, а EE своим миксином `SubLevelAssemblyHelperMixin` — контакты, провода и устройства
+(`DevicesSavedData.moveSubLevelDevices`). Устройству аддона проще всего не хранить своё состояние, а брать его у
+блок-сущности. Проверка без игры: `SABLE=1 ./test-server.sh` (Sable требует NeoForge 21.1.228+ — сервер идёт на
+21.1.251 из кеша Gradle) и `/sable assemble area <от> <до>`.
 
 ## Графика
 
