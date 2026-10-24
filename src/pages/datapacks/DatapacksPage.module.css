@@ -134,7 +134,7 @@
   background: color-mix(in srgb, var(--imp-2) 12%, transparent);
 }
 
-.dp-saved .btn {
+.dp-saved :global(.btn) {
   margin-left: auto;
 }
 
@@ -183,22 +183,22 @@
   border-radius: 4px;
 }
 
-.k-add {
+.dp-kind[data-kind='add'] {
   color: var(--accent);
   background: var(--accent-soft);
 }
 
-.k-replace {
+.dp-kind[data-kind='replace'] {
   color: var(--imp-1);
   background: color-mix(in srgb, var(--imp-1) 12%, transparent);
 }
 
-.k-remove {
+.dp-kind[data-kind='remove'] {
   color: var(--danger);
   background: var(--danger-soft);
 }
 
-.k-file {
+.dp-kind[data-kind='file'] {
   color: var(--text-2);
   background: var(--surface-2);
 }
@@ -303,7 +303,14 @@
   min-height: 360px;
 }
 
-.dp-item-name.mono {
+.dp-item-name:global(.mono) {
   font-family: var(--font-mono);
   font-size: 12.5px;
+}
+
+/* Подсветка навигации раздела внутри списка — правило переехало из PackNav.css */
+@media (max-width: 900px) {
+  .dp-list :global(.pack-nav) {
+    margin-bottom: 12px;
+  }
 }

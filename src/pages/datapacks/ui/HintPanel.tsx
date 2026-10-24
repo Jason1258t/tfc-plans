@@ -4,9 +4,10 @@ import { useData } from '@/data/DataContext';
 import { generateRecipeHint, geminiEnabled, geminiErrorText } from '@/shared/api';
 import { getHint, hintsEnabled, saveHint, type RecipeHint } from '../model/recipeHints';
 import { typeFieldStats, type RecipeCatalog } from '@/shared/pack-data';
-import { timeAgo } from '@/shared/lib';
+import { cx, timeAgo } from '@/shared/lib';
 import { Markdown } from '@/components/Markdown';
 import { MarkdownField } from '@/components/MarkdownField';
+import styles from './HintPanel.module.css';
 
 const SOURCE_LABEL: Record<RecipeHint['source'], string> = {
   claude: 'первичное наполнение',
@@ -38,7 +39,10 @@ export function HintPanel({ type, catalog }: { type: string | undefined; catalog
     };
   }, [type]);
 
-  if (!type) return <div className="hint-box faint small">Тип рецепта не определён — укажи поле «type» в JSON.</div>;
+  if (!type)
+    return (
+      <div className={cx(styles.hintBox, 'faint', 'small')}>Тип рецепта не определён — укажи поле «type» в JSON.</div>
+    );
   if (!hintsEnabled) return null;
 
   const generate = async () => {
@@ -84,10 +88,10 @@ export function HintPanel({ type, catalog }: { type: string | undefined; catalog
   const count = catalog?.types.find(([t]) => t === type)?.[1] ?? 0;
 
   return (
-    <div className="hint-box">
-      <div className="hint-head">
+    <div className={styles.hintBox}>
+      <div className={styles.hintHead}>
         <Lightbulb size={15} />
-        <span className="grow hint-title">{hint?.title ?? type}</span>
+        <span className={cx('grow', styles.hintTitle)}>{hint?.title ?? type}</span>
         {hint && !editing && (
           <button
             className="btn ghost sm icon"
@@ -99,7 +103,7 @@ export function HintPanel({ type, catalog }: { type: string | undefined; catalog
           </button>
         )}
       </div>
-      <code className="hint-type">
+      <code className={styles.hintType}>
         {type}
         {count > 0 && <span className="faint"> · {count} рецептов в сборке</span>}
       </code>
@@ -121,7 +125,7 @@ export function HintPanel({ type, catalog }: { type: string | undefined; catalog
         </>
       ) : hint ? (
         <>
-          <Markdown source={hint.body} className="hint-body" />
+          <Markdown source={hint.body} className={styles.hintBody} />
           <div className="faint small">
             {SOURCE_LABEL[hint.source] ?? hint.source} · {hint.updatedBy}, {timeAgo(hint.updatedAt)}
           </div>

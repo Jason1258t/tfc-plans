@@ -83,3 +83,9 @@
   background: var(--surface-2);
   color: var(--danger);
 }
+
+/* Поле с моноширинным шрифтом (id предметов, пути, скрипты) — общий помощник */
+.mono-input {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}

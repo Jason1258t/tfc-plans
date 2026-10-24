@@ -6,6 +6,7 @@ import { SCRIPT_FILE_RE } from '@/lib/kubejsFix';
 import { downloadScript } from '@/lib/kubejsScripts';
 import { cx, timeAgo } from '@/shared/lib';
 import type { KubejsScript } from '@/types';
+import styles from '../DatapacksPage.module.css';
 
 /** Отметка «Ставить в мир» / «Ставить на сервер» с подсказкой */
 export function InstallToggle({
@@ -21,7 +22,7 @@ export function InstallToggle({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <label className={cx('dp-install', checked && 'on')}>
+    <label className={cx(styles.dpInstall, checked && styles.on)}>
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       <span>
         <b>{label}</b>
@@ -69,8 +70,8 @@ export function ScriptEditor({
   };
 
   return (
-    <div className="dp-editor">
-      <section className="dp-meta">
+    <div className={styles.dpEditor}>
+      <section className={styles.dpMeta}>
         <div>
           <label className="label" htmlFor="kjs-name">
             Файл в <code>kubejs/server_scripts/</code>
@@ -83,11 +84,13 @@ export function ScriptEditor({
             onBlur={saveName}
           />
           {!nameValid && (
-            <div className="dp-field-error small">
+            <div className={cx(styles.dpFieldError, 'small')}>
               Только латиница, цифры, _ . - и .js на конце (например, <code>tfc_plans_recipes.js</code>)
             </div>
           )}
-          {nameValid && nameTaken && <div className="dp-field-error small">Скрипт с таким именем уже есть</div>}
+          {nameValid && nameTaken && (
+            <div className={cx(styles.dpFieldError, 'small')}>Скрипт с таким именем уже есть</div>
+          )}
         </div>
         <InstallToggle
           checked={!!script.install}
@@ -97,7 +100,7 @@ export function ScriptEditor({
         />
       </section>
 
-      <div className="dp-toolbar">
+      <div className={styles.dpToolbar}>
         <span className="grow faint small">{dirty ? 'Есть несохранённые правки' : ''}</span>
         <button className="btn" onClick={() => downloadScript(text, script.fileName)}>
           <Download size={15} /> Скачать .js
@@ -114,7 +117,7 @@ export function ScriptEditor({
         </button>
       </div>
       {remoteChanged && (
-        <div className="dp-saved error">
+        <div className={cx(styles.dpSaved, styles.error)}>
           <span>
             Скрипт изменил {script.updatedBy} {timeAgo(script.updatedAt)}
             {dirty ? ' — «Сохранить» затрёт его правку' : ''}.
@@ -134,14 +137,14 @@ export function ScriptEditor({
       {error && <div className="error-box">Не сохранилось: {error}</div>}
 
       <textarea
-        className="input mono dp-script-text"
+        className={cx('input mono', styles.dpScriptText)}
         spellCheck={false}
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={24}
       />
 
-      <footer className="dp-foot faint small">
+      <footer className={cx(styles.dpFoot, 'faint', 'small')}>
         <span className="grow">
           <FileTerminal size={12} /> создал {script.author}, изменил {script.updatedBy} {timeAgo(script.updatedAt)}.
           Установка вручную: файл в <code>kubejs/server_scripts/</code> на сервере, затем <code>/reload</code>.

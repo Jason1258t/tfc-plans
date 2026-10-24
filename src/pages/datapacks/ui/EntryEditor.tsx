@@ -1,9 +1,10 @@
 import { AlertTriangle, Braces, CheckCircle2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { cx } from '@/shared/lib';
 import { typeOfContent } from '@/lib/datapack';
 import { itemName, useItems, itemRefsOf, type RecipeCatalog, ItemIcon, ItemIdSearch } from '@/shared/pack-data';
 import type { DatapackEntry } from '@/types';
-import './EntryEditor.css';
+import styles from './EntryEditor.module.css';
 import { HintPanel } from './HintPanel';
 import { Modal } from '@/shared/ui';
 
@@ -77,8 +78,8 @@ export function EntryEditor({ entry, catalog, onSave, onClose }: Props) {
         </>
       }
     >
-      <div className="ee-layout">
-        <div className="ee-main">
+      <div className={styles.eeLayout}>
+        <div className={styles.eeMain}>
           <label className="label" htmlFor="ee-path">
             Путь в zip
           </label>
@@ -94,7 +95,7 @@ export function EntryEditor({ entry, catalog, onSave, onClose }: Props) {
                 : undefined
             }
           />
-          <div className="ee-editor-head">
+          <div className={styles.eeEditorHead}>
             <span className="label" style={{ margin: 0 }}>
               Содержимое
             </span>
@@ -110,7 +111,7 @@ export function EntryEditor({ entry, catalog, onSave, onClose }: Props) {
             )}
           </div>
           <textarea
-            className="input mono ee-text"
+            className={cx('input mono', styles.eeText)}
             value={content}
             spellCheck={false}
             onChange={(e) => setContent(e.target.value)}
@@ -129,16 +130,16 @@ export function EntryEditor({ entry, catalog, onSave, onClose }: Props) {
             (error ? (
               <div className="error-box">JSON с ошибкой: {error}</div>
             ) : (
-              <div className="ee-ok small">
+              <div className={cx(styles.eeOk, 'small')}>
                 <CheckCircle2 size={14} /> JSON корректен{type ? ` · тип ${type}` : ''}
               </div>
             ))}
           {refs.length > 0 && (
-            <div className="ee-refs">
+            <div className={styles.eeRefs}>
               {refs.map(([id, ok]) => (
                 <span
                   key={id}
-                  className={ok ? 'ee-ref' : 'ee-ref unknown'}
+                  className={cx(styles.eeRef, !ok && styles.unknown)}
                   title={ok ? id : `${id} — нет в библиотеке предметов`}
                 >
                   {ok ? <ItemIcon id={id} size={16} tip={false} /> : <AlertTriangle size={13} />}
@@ -164,9 +165,9 @@ export function EntryEditor({ entry, catalog, onSave, onClose }: Props) {
             onChange={(e) => setNote(e.target.value)}
           />
         </div>
-        <aside className="ee-side">
+        <aside className={styles.eeSide}>
           <HintPanel type={type} catalog={catalog} />
-          <div className="ee-id-search">
+          <div>
             <div className="label">Найти id предмета</div>
             <ItemIdSearch compact limit={25} />
           </div>
