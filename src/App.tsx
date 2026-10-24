@@ -19,7 +19,7 @@ import { ReferencePage } from './pages/ReferencePage';
 import { FreshnessPage } from './pages/FreshnessPage';
 import { UpdatesPage } from './pages/UpdatesPage';
 import { SchematicsPage } from './pages/SchematicsPage';
-import { StatsPage } from './pages/StatsPage';
+import { StatsPage } from './pages/stats';
 import { TasksPage } from './pages/TasksPage';
 
 /** Старые ссылки на карту (в том числе с точками в адресе) ведут во вкладку справочника */
