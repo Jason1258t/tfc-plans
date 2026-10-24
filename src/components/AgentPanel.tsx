@@ -12,7 +12,7 @@ import {
   WrapText,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { tasksStore } from '@/shared/api';
+import { tasksStore } from '@/entities/task';
 import { askGemini, describeTask, extractResources, geminiEnabled, geminiErrorText } from '../lib/gemini';
 import { useItems } from '../lib/items';
 import { mergeResources } from '../lib/resources';

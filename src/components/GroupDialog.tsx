@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useData } from '../data/DataContext';
-import { groupsStore, tasksStore } from '@/shared/api';
+import { groupsStore } from '@/entities/group';
+import { tasksStore } from '@/entities/task';
 import type { Group } from '../types';
 import { ItemIcon } from './ItemIcon';
 import { ItemPicker } from './ItemPicker';

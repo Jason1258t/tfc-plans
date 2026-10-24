@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { replaceFavoritesStore } from '@/shared/api';
+import { replaceFavoritesStore } from '@/entities/schematic';
 import type { ReplaceFavorite } from '../types';
 import type { ItemIndex } from './items';
 

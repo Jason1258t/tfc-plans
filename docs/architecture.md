@@ -56,7 +56,9 @@ Collections: `tasks`, `groups`, `artifacts`, `files` (+`chunks`, package `firest
 - No real auth: anonymous sign-in + nick cookie. Rules check data shape and `nick(...)`, not ownership.
 - `config` and creating `packUpdates` are closed to the site — only scripts write them.
 - The `files` block in `firestore.rules` is generated: `npm run rules:files`, don't edit between the markers.
-- Shared CRUD — `src/shared/api/store.ts` (`make<T, N>('collection')`), with a localStorage fallback without Firebase.
+- Shared CRUD — `src/shared/api/store.ts` (`createCollectionStore<T, N>('collection')`), with a localStorage fallback
+  without Firebase. It knows nothing about entities: the collections themselves are created by their entity
+  (`src/entities/<x>/store.ts`).
 
 ## Code map
 
@@ -64,10 +66,17 @@ Collections: `tasks`, `groups`, `artifacts`, `files` (+`chunks`, package `firest
 src/shared/       общее без знаний о предметной области; снаружи — через index.ts папки
   lib/             util (uid, timeAgo, cx), hash (fnv1a, recipeHash — тот же отпечаток, что в сборке пакета),
                    calcExpr (формулы гайдов: свой разборщик, без eval; проверяется и из Node)
-  api/             firebase (приложение, Firestore, вход, App Check), store (CRUD по коллекциям, без Firebase —
+  api/             firebase (приложение, Firestore, вход, App Check), store (фабрика CRUD по коллекциям, без Firebase —
                    localStorage), sync (состояние синхронизации), analytics (свой лог посещений)
   ui/              Modal (окно с заголовком и подвалом), Tooltip (одна подсказка на страницу в стиле Minecraft),
                    PackNav/PackSection (выбор вкладки общего раздела: датапаки, рецепты, теги)
+src/entities/     сущности: типы и свои коллекции (карточки задач появятся здесь же, в ветках fsd-entities и страниц)
+  task/            Task, ChecklistEntry, PRIORITIES/STATUSES, tasksStore      group/  Group, groupsStore
+  artifact/        Artifact, artifactsStore                                    guide/  Guide, GuideRevision
+  datapack/        Datapack, DatapackEntry, KubejsScript, datapacksStore/kubejsScriptsStore
+  schematic/       SavedSchematic, ReplaceFavorite, schematicsStore/replaceFavoritesStore
+  user/            SiteUser (справочник ников)
+src/types.ts      временный общий выход типов — реэкспорт из entities/<x>/types.ts, исчезнет с переездом страниц
 src/pages/        TasksPage (+ docs section DocsSection), DocPage, files/FilesPage, SchematicsPage, AddonsPage (AddonsTab),
                   DatapacksPage/RecipesPage/TagsPage (one section, PackNav on the left), ReferencePage (tabs: «Гайды» —
                   GuidesTab, «Карта» — MapPage, «Мультиблоки» — MultiblocksTab), UpdatesPage

@@ -2,7 +2,8 @@ import { Download, FileBox, ImagePlus, Library, Search, Trash2, X } from 'lucide
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useData } from '../data/DataContext';
-import { schematicsStore, useSearchTrack } from '@/shared/api';
+import { schematicsStore } from '@/entities/schematic';
+import { useSearchTrack } from '@/shared/api';
 import { formatSize } from '../lib/files';
 import { useItems } from '../lib/items';
 import { REMOVE, type Schematic } from '../lib/schematic';
