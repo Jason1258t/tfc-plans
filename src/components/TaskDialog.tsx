@@ -69,9 +69,11 @@ function CreateTask({
   const intake = useFileIntake({ addPending: (f) => setPendingFiles((list) => [...list, ...f]) });
   const removePending = (f: File) => setPendingFiles((list) => list.filter((x) => x !== f));
   const [uploadNote, setUploadNote] = useState<string | null>(null);
+  // План — не «кнопка в подвале», а выбор в самом окне: под описанием видно, что план будет
+  const [withPlan, setWithPlan] = useState(false);
   const canSave = draft.title.trim().length > 0 && !busy;
 
-  const save = async (withDoc: boolean) => {
+  const save = async () => {
     if (!canSave) return;
     setBusy(true);
     try {
@@ -86,7 +88,7 @@ function CreateTask({
           alert(`Задача создана, но файл «${f.name}» не загрузился: ${e instanceof Error ? e.message : e}`);
         }
       }
-      if (withDoc) {
+      if (withPlan) {
         const docId = await artifactsStore.add({
           title: `План: ${title}`,
           content: '',
@@ -113,16 +115,13 @@ function CreateTask({
             Отмена
           </button>
           <button
-            className="btn"
+            className="btn primary"
             disabled={!canSave}
-            onClick={() => save(true)}
-            title="Создать и открыть документ-план"
+            onClick={save}
+            title={withPlan ? 'Создать задачу и открыть её план' : 'Создать задачу'}
           >
-            <FilePlus2 size={16} />
-            <span className="hide-sm">Создать с планом</span>
-          </button>
-          <button className="btn primary" disabled={!canSave} onClick={() => save(false)}>
-            Создать
+            {withPlan && <FilePlus2 size={16} />}
+            {withPlan ? 'Создать с планом' : 'Создать'}
           </button>
         </>
       }
@@ -132,7 +131,7 @@ function CreateTask({
         onKeyDown={(e) => {
           if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
             e.preventDefault();
-            save(false);
+            save();
           }
         }}
       >
@@ -143,17 +142,54 @@ function CreateTask({
           autoFocusTitle
           gallery={<Gallery pending={pendingFiles} onRemovePending={removePending} onAdd={intake.add} />}
           belowDescription={
-            <section className="tf-section">
-              <div className="tf-section-head">
-                <h3>Файлы</h3>
-              </div>
-              <Attachments
-                pending={pendingFiles}
-                onRemovePending={removePending}
-                onAdd={intake.add}
-                error={intake.error}
-              />
-            </section>
+            <>
+              <section className="tf-section">
+                <div className="tf-section-head">
+                  <h3>Планы</h3>
+                  {!withPlan && (
+                    <button className="btn sm" onClick={() => setWithPlan(true)} title="Создать задачу вместе с планом">
+                      <FilePlus2 size={14} />
+                      Новый план
+                    </button>
+                  )}
+                </div>
+                {withPlan ? (
+                  <ul className="doc-links">
+                    <li>
+                      <div className="doc-link planned">
+                        <BookOpen size={16} className="faint" />
+                        <span className="grow">План: {draft.title.trim() || 'без названия'}</span>
+                        <span className="faint small">создастся вместе с задачей</span>
+                        <button
+                          className="btn ghost sm icon"
+                          aria-label="Не создавать план"
+                          title="Не создавать план"
+                          onClick={() => setWithPlan(false)}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    </li>
+                  </ul>
+                ) : (
+                  <div className="faint small">
+                    План — отдельный Markdown-документ с этапами и агентом Gemini. «Новый план» создаст его вместе с
+                    задачей и откроет справа.
+                  </div>
+                )}
+              </section>
+              <section className="tf-section">
+                <div className="tf-section-head">
+                  <h3>Файлы</h3>
+                </div>
+                <Attachments
+                  pending={pendingFiles}
+                  onRemovePending={removePending}
+                  onAdd={intake.add}
+                  error={intake.error}
+                />
+              </section>
+            </>
           }
         />
       </div>

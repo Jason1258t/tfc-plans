@@ -128,6 +128,18 @@
   background: var(--amethyst-soft);
 }
 
+/* План, который появится вместе с новой задачей: предпросмотр, а не ссылка */
+.doc-link.planned {
+  cursor: default;
+  border-style: dashed;
+  background: transparent;
+}
+
+.doc-link.planned:hover {
+  border-color: var(--border);
+  background: transparent;
+}
+
 @media (max-width: 600px) {
   .tf-meta select.input {
     max-width: none;
