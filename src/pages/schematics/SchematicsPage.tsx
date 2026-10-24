@@ -19,19 +19,13 @@ import {
 } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { ItemIcon, ItemPicker, blockEntry, inPack, isBlock, itemName, useItems } from '@/shared/pack-data';
-import {
-  ApplyFavoritesDialog,
-  FavoritesPanel,
-  SmartAddDialog,
-  type Pair,
-  type PlanRow,
-} from '../components/SchematicFavorites';
+import { ApplyFavoritesDialog, FavoritesPanel, SmartAddDialog, type Pair, type PlanRow } from './ui/SchematicFavorites';
 import { replaceFavoritesStore } from '@/entities/schematic';
-import { useFavorites } from '../lib/replaceFavorites';
-import { SchematicLayers } from '../components/SchematicLayers';
-import { SchematicLibrary } from '../components/SchematicLibrary';
-import { useData } from '../data/DataContext';
-import { filesEnabled, formatSize } from '../lib/files';
+import { useFavorites } from './model/replaceFavorites';
+import { SchematicLayers } from './ui/SchematicLayers';
+import { SchematicLibrary } from './ui/SchematicLibrary';
+import { useData } from '@/data/DataContext';
+import { filesEnabled, formatSize } from '@/lib/files';
 import { geminiEnabled } from '@/shared/api';
 import {
   applyRules,
@@ -47,8 +41,8 @@ import {
   type Rule,
   type RuleResult,
   type Schematic,
-} from '../lib/schematic';
-import { makePreview, saveToLibrary } from '../lib/schematicLibrary';
+} from '@/lib/schematic';
+import { makePreview, saveToLibrary } from './model/schematicLibrary';
 import { cx } from '@/shared/lib';
 import './SchematicsPage.css';
 

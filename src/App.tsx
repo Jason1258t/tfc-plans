@@ -16,7 +16,7 @@ import { TagsPage } from './pages/tags';
 import { FilesPage } from './pages/files';
 import { ReferencePage } from './pages/ReferencePage';
 import { FreshnessPage, UpdatesPage } from './pages/updates';
-import { SchematicsPage } from './pages/SchematicsPage';
+import { SchematicsPage } from './pages/schematics';
 import { StatsPage } from './pages/stats';
 import { TasksPage } from './pages/tasks';
 

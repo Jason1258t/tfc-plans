@@ -18,9 +18,9 @@ import {
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { blockEntry, blockIcon, isBlock, itemName, useItems, ItemIcon, ItemPicker } from '@/shared/pack-data';
-import { EMPTY_BLOCKS, REMOVE, type Schematic, type Vec } from '../lib/schematic';
-import { blockTopView } from '../lib/blockModels';
-import { drawnByCode, isFullCube } from '../lib/schematicMesh';
+import { EMPTY_BLOCKS, REMOVE, type Schematic, type Vec } from '@/lib/schematic';
+import { blockTopView } from '@/lib/blockModels';
+import { drawnByCode, isFullCube } from '@/lib/schematicMesh';
 import {
   buildGrid,
   canRedo,
@@ -36,8 +36,8 @@ import {
   revertEdits,
   stateOf,
   undoEdit,
-} from '../lib/schematicEdit';
-import type { ReplaceFavorite } from '../types';
+} from '@/lib/schematicEdit';
+import type { ReplaceFavorite } from '@/types';
 import { cx } from '@/shared/lib';
 import './SchematicLayers.css';
 
