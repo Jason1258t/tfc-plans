@@ -20,12 +20,12 @@
 
 ## Эры и маршрут по модам
 
-| Этап | Моды | Типичные типы рецептов |
-| --- | --- | --- |
-| До электричества | TerraFirmaCraft (+ Firmalife) | `tfc:heating`, `tfc:anvil`, `tfc:welding`, `tfc:casting`, `tfc:alloy`, `tfc:knapping`, `tfc:barrel_*`, `tfc:pot`, `tfc:quern`, `tfc:glassworking` |
-| Механика | Create (+ аддоны) | `create:mixing`, `create:compacting`, `create:pressing`, `create:cutting`, `create:crushing`, `create:milling`, `create:splashing`, `create:filling`, `create:deploying`, `create:sequenced_assembly`, `create:mechanical_crafting` |
-| Электричество | Immersive Engineering (+ аддоны) | `immersiveengineering:crusher`, `metal_press`, `arc_furnace`, `sawmill`, `mixer`, `squeezer`, `fermenter`, `refinery`, `coke_oven` |
-| Электроэнергетика | Electro Energetics + аддоны | crafting + спец. устройства мода (рецепты чаще в аддоне, см. скил `addon-dev`) |
+| Этап              | Моды                             | Типичные типы рецептов                                                                                                                                                                                                              |
+| ----------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| До электричества  | TerraFirmaCraft (+ Firmalife)    | `tfc:heating`, `tfc:anvil`, `tfc:welding`, `tfc:casting`, `tfc:alloy`, `tfc:knapping`, `tfc:barrel_*`, `tfc:pot`, `tfc:quern`, `tfc:glassworking`                                                                                   |
+| Механика          | Create (+ аддоны)                | `create:mixing`, `create:compacting`, `create:pressing`, `create:cutting`, `create:crushing`, `create:milling`, `create:splashing`, `create:filling`, `create:deploying`, `create:sequenced_assembly`, `create:mechanical_crafting` |
+| Электричество     | Immersive Engineering (+ аддоны) | `immersiveengineering:crusher`, `metal_press`, `arc_furnace`, `sawmill`, `mixer`, `squeezer`, `fermenter`, `refinery`, `coke_oven`                                                                                                  |
+| Электроэнергетика | Electro Energetics + аддоны      | crafting + спец. устройства мода (рецепты чаще в аддоне, см. скил `addon-dev`)                                                                                                                                                      |
 
 ## Материалы — по роли
 

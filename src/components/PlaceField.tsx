@@ -1,4 +1,4 @@
-import { MapPin, X } from 'lucide-react';
+import { ExternalLink, MapPin, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -10,15 +10,18 @@ import {
   useWorldSettings,
   worldProjection,
 } from '../lib/geo';
+import { cx } from '../lib/util';
 import type { TaskPlace } from '../types';
 
 interface Props {
   value: TaskPlace | null | undefined;
   onChange: (place: TaskPlace | null) => void;
+  /** В одну строку с важностью и статусом: без подписи «Где», значок внутри поля */
+  compact?: boolean;
 }
 
 /** «Где»: координаты блока (x z) или город из TFC Real World — пересчитывается в блоки по проекции мира */
-export function PlaceField({ value, onChange }: Props) {
+export function PlaceField({ value, onChange, compact }: Props) {
   const geo = useGeo();
   const world = useWorldSettings();
   const profile = useMemo(() => (geo ? worldProjection(geo, world) : null), [geo, world]);
@@ -46,8 +49,8 @@ export function PlaceField({ value, onChange }: Props) {
   };
 
   return (
-    <div className="tf-place">
-      <span className="label">Где</span>
+    <div className={cx('tf-place', compact && 'compact')}>
+      {!compact && <span className="label">Где</span>}
       {value ? (
         <div className="row tf-place-set">
           <MapPin size={14} className="faint" />
@@ -56,6 +59,7 @@ export function PlaceField({ value, onChange }: Props) {
           </code>
           <input
             className="input grow"
+            aria-label="Подпись места"
             placeholder="Подпись: база, шахта…"
             defaultValue={value.label ?? ''}
             maxLength={60}
@@ -63,8 +67,13 @@ export function PlaceField({ value, onChange }: Props) {
               e.target.value !== (value.label ?? '') && onChange({ ...value, label: e.target.value || undefined })
             }
           />
-          <Link className="btn sm" to={`/reference?tab=map&x=${value.x}&z=${value.z}`}>
-            На карте
+          <Link
+            className={cx('btn sm', compact && 'icon')}
+            to={`/reference?tab=map&x=${value.x}&z=${value.z}`}
+            aria-label="На карте"
+            title="На карте"
+          >
+            {compact ? <ExternalLink size={14} /> : 'На карте'}
           </Link>
           <button className="btn ghost sm icon" aria-label="Убрать место" onClick={() => onChange(null)}>
             <X size={14} />
@@ -72,9 +81,11 @@ export function PlaceField({ value, onChange }: Props) {
         </div>
       ) : (
         <div className="tf-place-input">
+          {compact && <MapPin size={14} className="faint tf-field-icon" />}
           <input
-            className="input"
-            placeholder="x z, «51.5 -0.12» или город — Enter"
+            className={cx('input', compact && 'with-icon')}
+            aria-label="Где"
+            placeholder={compact ? 'Где: x z или город' : 'x z, «51.5 -0.12» или город — Enter'}
             value={text}
             onChange={(e) => {
               setText(e.target.value);

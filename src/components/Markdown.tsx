@@ -18,6 +18,11 @@ export const itemToken = (id: string, qty?: number) => `[[${id}${qty ? `|${qty}`
 /** Блоки кода ```…``` и `код` в строке: запись [[id]] в них показывается как есть (справка, примеры) */
 const CODE = /^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1[^\n]*$|(`+)(?!`)[\s\S]*?[^`]\2(?!`)/gm;
 
+/** Разделитель нумерованного списка в исходнике (строка 1-based): «.» или «)» */
+function orderedDelim(source: string, line: number) {
+  return /^\s*\d+\)\s/.test(source.split('\n')[line - 1] ?? '') ? ')' : '.';
+}
+
 const items = (text: string) =>
   text.replace(ITEM_TOKEN, (_, id: string, qty?: string) => `[item](item:${id}${qty ? `?${qty}` : ''})`);
 
@@ -148,12 +153,21 @@ export function Markdown({ source, className, onToggleTask, link, block, schemes
               )
             );
           },
-          // Нумерация рисуется CSS-счётчиком (3.1, 3.1.1) — номер первого пункта передаём ему
-          ol: ({ node: _node, start, children, ...rest }) => (
-            <ol {...rest} start={start} style={{ counterReset: `md-item ${(start ?? 1) - 1}` }}>
-              {children}
-            </ol>
-          ),
+          // Нумерация рисуется CSS-счётчиком (3.1, 3.1.1): номер первого пункта передаём ему, а разделитель
+          // («.» или «)») берём из исходника — список, набранный «1)», остаётся со скобкой
+          ol: ({ node, start, children, ...rest }) => {
+            const line = node?.position?.start.line;
+            return (
+              <ol
+                {...rest}
+                start={start}
+                data-delim={line && orderedDelim(source, line) === ')' ? ')' : undefined}
+                style={{ counterReset: `md-item ${(start ?? 1) - 1}` }}
+              >
+                {children}
+              </ol>
+            );
+          },
           li: ({ node, children, ...rest }) => (
             <li {...rest}>
               <TaskLine.Provider value={node?.position?.start.line ?? null}>{children}</TaskLine.Provider>

@@ -17,6 +17,8 @@ tools/**/build
 tools/**/run
 tools/**/.gradle
 tools/**/*.jar
+# Ресурсы аддонов пишет art/gen_assets.py — отступы не prettier-овские, проверка только шумит
+tools/**/src/main/resources/**
 server/*/data
 out
 package-lock.json

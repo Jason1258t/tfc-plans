@@ -9,12 +9,12 @@ site work log.
 
 ## Shared pieces
 
-| Piece | Where | Who reads it as is |
-| --- | --- | --- |
-| Rules | `AGENTS.md` (+ nested) | Codex, Cursor, OpenCode, Copilot, Zed, … natively; Claude Code via `@AGENTS.md` in `CLAUDE.md`; Gemini CLI after the setting below |
-| Skills | `.claude/skills/<name>/SKILL.md`, symlink `.agents/skills` → same folder | Claude Code (`.claude/skills`), Codex (`.agents/skills`); others — open the file by hand, AGENTS.md lists them |
-| MCP server | `scripts/mcp/server.mjs` (stdio, no deps, Node 24) | Claude Code via `.mcp.json`; others — own config, below |
-| Preview ports | `.claude/launch.json` (local, gitignored) | Claude Code app only; others run `npm run dev -- --port 5176 --strictPort` |
+| Piece         | Where                                                                    | Who reads it as is                                                                                                                 |
+| ------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Rules         | `AGENTS.md` (+ nested)                                                   | Codex, Cursor, OpenCode, Copilot, Zed, … natively; Claude Code via `@AGENTS.md` in `CLAUDE.md`; Gemini CLI after the setting below |
+| Skills        | `.claude/skills/<name>/SKILL.md`, symlink `.agents/skills` → same folder | Claude Code (`.claude/skills`), Codex (`.agents/skills`); others — open the file by hand, AGENTS.md lists them                     |
+| MCP server    | `scripts/mcp/server.mjs` (stdio, no deps, Node 24)                       | Claude Code via `.mcp.json`; others — own config, below                                                                            |
+| Preview ports | `.claude/launch.json` (local, gitignored)                                | Claude Code app only; others run `npm run dev -- --port 5176 --strictPort`                                                         |
 
 `.agents/skills` is a git symlink: on Windows it needs `git config core.symlinks true` (Developer Mode), otherwise it
 checks out as a text file — then point the agent at `.claude/skills` directly.

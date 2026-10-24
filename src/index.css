@@ -599,6 +599,10 @@ select.input {
 .md ol > li:not(.task-list-item)::before {
   content: counters(md-item, '.') '.';
 }
+/* Разделитель как в исходнике: список, набранный «1)», рисуется со скобкой (атрибут ставит Markdown) */
+.md ol[data-delim=')'] > li:not(.task-list-item)::before {
+  content: counters(md-item, '.') ')';
+}
 .md ul > li:not(.task-list-item)::before {
   content: '•';
 }

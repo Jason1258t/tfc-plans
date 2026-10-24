@@ -69,6 +69,7 @@ Firebase Hosting Admin. Если этот путь не взлетит — за�
 ### Работа без ПК с Minecraft
 
 Два пути, оба нужны:
+
 - **Пересборка на сервере.** Поменял разборщик в `scripts/` → `git push` → `tfc admin rebuild`: сервер подтягивает
   код, собирает данные из хранимой сборки и публикует только изменённое. Ни jar, ни `firebase login` на рабочей
   машине не нужны.
@@ -85,6 +86,7 @@ Node 22+, без зависимостей (как `server/file-server`), systemd
 Можно ставить на ту же машину, что и сервер файлов, отдельной службой.
 
 **Хранилище:**
+
 - `blobs/<sha256>` — файлы по содержимому: одинаковый jar в десяти версиях лежит один раз.
 - `snapshots/<id>.json` — снимок сборки: `{ id, createdAt, author, note, mc, loader, files: [{ path, sha256, size, kind }] }`,
   `kind` — `mod | config | defaultconfig | serverconfig | kubejs | resourcepack | world-data | world-datapack`
@@ -98,18 +100,18 @@ Node 22+, без зависимостей (как `server/file-server`), systemd
 
 **API (черновик):**
 
-| Запрос | Кто | Что |
-| --- | --- | --- |
-| `GET /pack/current` | player | текущий снимок |
-| `GET /pack/snapshots`, `GET /pack/snapshots/:id` | player | история, снимок |
-| `GET /blobs/:sha256` | player | файл |
-| `POST /blobs/missing` | admin | каких файлов из списка нет — заливать только их |
-| `PUT /blobs/:sha256` | admin | залить файл (сверка хеша) |
-| `POST /pack/snapshots` | admin | создать снимок → запускает сборку данных |
-| `POST /pack/current` | admin | сделать снимок текущим (и опубликовать его данные) |
-| `GET /site/schematics`, `/site/datapacks`, `/site/kubejs` | player | что есть на сайте (из Firestore, с кешем) |
-| `GET /site/files/:id` | player | файл с сайта (исходник схемы, zip датапака) |
-| `GET /jobs/:id` | admin | ход сборки данных и публикации (лог) |
+| Запрос                                                    | Кто    | Что                                                |
+| --------------------------------------------------------- | ------ | -------------------------------------------------- |
+| `GET /pack/current`                                       | player | текущий снимок                                     |
+| `GET /pack/snapshots`, `GET /pack/snapshots/:id`          | player | история, снимок                                    |
+| `GET /blobs/:sha256`                                      | player | файл                                               |
+| `POST /blobs/missing`                                     | admin  | каких файлов из списка нет — заливать только их    |
+| `PUT /blobs/:sha256`                                      | admin  | залить файл (сверка хеша)                          |
+| `POST /pack/snapshots`                                    | admin  | создать снимок → запускает сборку данных           |
+| `POST /pack/current`                                      | admin  | сделать снимок текущим (и опубликовать его данные) |
+| `GET /site/schematics`, `/site/datapacks`, `/site/kubejs` | player | что есть на сайте (из Firestore, с кешем)          |
+| `GET /site/files/:id`                                     | player | файл с сайта (исходник схемы, zip датапака)        |
+| `GET /jobs/:id`                                           | admin  | ход сборки данных и публикации (лог)               |
 
 ## Программа `tfc`
 
@@ -120,8 +122,11 @@ esbuild) под Windows, macOS, Linux, Node ставить не нужно. По
 **Настройка** — `~/.config/tfc/config.json` (Windows — `%APPDATA%\tfc`), несколько профилей:
 
 ```jsonc
-{ "server": "https://pack.example.com", "token": "…",
-  "profiles": { "main": { "instance": "C:/…/instances/TFC RealWorld", "world": "saves/Наш мир", "side": "client" } } }
+{
+  "server": "https://pack.example.com",
+  "token": "…",
+  "profiles": { "main": { "instance": "C:/…/instances/TFC RealWorld", "world": "saves/Наш мир", "side": "client" } },
+}
 ```
 
 `tfc init` спрашивает папку версии (узнаёт инстансы Prism/MultiMC/CurseForge/лаунчера и папку сервера по
@@ -129,22 +134,23 @@ esbuild) под Windows, macOS, Linux, Node ставить не нужно. По
 
 **Команды:**
 
-| Команда | Кто | Что делает |
-| --- | --- | --- |
-| `tfc init`, `tfc login <ключ>` | все | настройка профиля и сервера |
-| `tfc status` | все | чем папка отличается от текущей сборки и сайта — ничего не меняет |
-| `tfc sync [mods\|config\|resourcepacks]` | все | докачать/обновить из сборки; лишнее — только с подтверждением |
-| `tfc pull schematics [имя…]` | все | схемы библиотеки сайта → `<версия>/schematics/` (с заменами и формой, как кнопка «скачать») |
-| `tfc pull datapacks [имя…]` | все | датапаки сайта → `<мир>/datapacks/` |
-| `tfc pull kubejs` | хост | скрипты с сайта → `<версия>/kubejs/server_scripts/tfc-plans/` |
-| `tfc build [mods\|kubejs\|config\|world…]` | хост | все режимы сборки данных локально (то, что `npm run mods` и др.), в `out/` — посмотреть до заливки |
-| `tfc publish [--note …]` | хост | залить сборку на сервер (только недостающие файлы), сервер собирает и публикует данные |
-| `tfc admin invite/revoke/rollback` | хост | ключи, откат на прошлый снимок |
-| `tfc admin rebuild [части]` | разработчик | сервер обновляет свой код (`git pull`), пересобирает данные текущего снимка и публикует разницу |
-| `tfc fetch [--into <папка>]` | разработчик | скачать текущую сборку с сервера в папку проекта (`mods/`, `instance/`) — чтобы собирать и проверять на любой машине и в worktree |
-| `tfc config set <файл>` | разработчик | поменять конфиг в снимке (новый снимок на основе текущего) и пересобрать — без ПК хоста |
+| Команда                                    | Кто         | Что делает                                                                                                                        |
+| ------------------------------------------ | ----------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `tfc init`, `tfc login <ключ>`             | все         | настройка профиля и сервера                                                                                                       |
+| `tfc status`                               | все         | чем папка отличается от текущей сборки и сайта — ничего не меняет                                                                 |
+| `tfc sync [mods\|config\|resourcepacks]`   | все         | докачать/обновить из сборки; лишнее — только с подтверждением                                                                     |
+| `tfc pull schematics [имя…]`               | все         | схемы библиотеки сайта → `<версия>/schematics/` (с заменами и формой, как кнопка «скачать»)                                       |
+| `tfc pull datapacks [имя…]`                | все         | датапаки сайта → `<мир>/datapacks/`                                                                                               |
+| `tfc pull kubejs`                          | хост        | скрипты с сайта → `<версия>/kubejs/server_scripts/tfc-plans/`                                                                     |
+| `tfc build [mods\|kubejs\|config\|world…]` | хост        | все режимы сборки данных локально (то, что `npm run mods` и др.), в `out/` — посмотреть до заливки                                |
+| `tfc publish [--note …]`                   | хост        | залить сборку на сервер (только недостающие файлы), сервер собирает и публикует данные                                            |
+| `tfc admin invite/revoke/rollback`         | хост        | ключи, откат на прошлый снимок                                                                                                    |
+| `tfc admin rebuild [части]`                | разработчик | сервер обновляет свой код (`git pull`), пересобирает данные текущего снимка и публикует разницу                                   |
+| `tfc fetch [--into <папка>]`               | разработчик | скачать текущую сборку с сервера в папку проекта (`mods/`, `instance/`) — чтобы собирать и проверять на любой машине и в worktree |
+| `tfc config set <файл>`                    | разработчик | поменять конфиг в снимке (новый снимок на основе текущего) и пересобрать — без ПК хоста                                           |
 
 **Правила синхронизации — чтобы не сломать игроку игру:**
+
 - Программа помнит, что сама ставила (`<версия>/.tfc/state.json`: путь → хеш). Удаляет только то, что ставила сама
   и чего больше нет в сборке. Свои моды игрока (миникарта, шейдеры) не трогает, только показывает в `status`.
 - Конфиг, который игрок поменял после последней синхронизации, не перезаписывается молча: спрашивает или
@@ -185,7 +191,7 @@ esbuild) под Windows, macOS, Linux, Node ставить не нужно. По
    умеет брать токен из сервисного ключа (JWT на `node:crypto`). `npm run pack -- <папка версии> [--world …]` —
    одна команда на всё (этап 1 из pack-directory). Поведение сайта не меняется.
    **Готово (2026-10-20).** `buildMods({ modsDir, outDir, cacheDir, fresh })`, `importKubejsLayer` / `buildKubejs({ instanceDir,
-   outDir })`, `configDocs` / `importServerConfig`, `worldDocs` / `importWorld`, `packRelease({ manifestFile, prevFile })`,
+outDir })`, `configDocs` / `importServerConfig`, `worldDocs` / `importWorld`, `packRelease({ manifestFile, prevFile })`,
    `runPack({ input, world, only, outDir, instanceDir, cacheDir, dryRun })`; запись config — `writeConfigDocs`.
    Токен из сервисного ключа — JWT RS256 на `node:crypto`, проверен на локальной заглушке токен-сервера (подпись,
    поля, кеш); на настоящем ключе Google не проверялся — ключа ещё нет. Выход `npm run mods` и `npm run kubejs`
@@ -208,7 +214,7 @@ esbuild) под Windows, macOS, Linux, Node ставить не нужно. По
    - `init` (инстансы Prism/MultiMC/CurseForge/Modrinth/ATLauncher, папка сервера по `server.properties`, мир по
      `level-name` или из `saves/`), `login` (роль по ключу), профили; `status`, `sync [части]` (`--dry-run`,
      `--force`, `--undo`), `publish`, `build` (обёртка `runPack` без записи в Firestore), `admin keys/invite/revoke/
-     history/use/rollback/rebuild/publish/jobs`.
+history/use/rollback/rebuild/publish/jobs`.
    - Белый список — общий с сервером (`server/pack-server/lib/paths.mjs`); снимок — с клиентской папки хоста,
      `serverconfig/` — из `--server-dir`. На папке сервера `sync` по умолчанию не трогает моды.
    - Старую версию мода под другим именем jar убирает по id мода (`META-INF/neoforge.mods.toml` / `fabric.mod.json`,
@@ -260,7 +266,7 @@ esbuild) под Windows, macOS, Linux, Node ставить не нужно. По
      датапаки с `advancements/` — запрет папок мира срабатывал на любой глубине. Теперь — только в корне версии
      и `world/<папка>`.
    - В программе (2026-10-20): `tfc admin rebuild [части] [--pull] [--publish none|dry-run|live]`, `tfc admin publish
-     [--live]`, `tfc admin jobs [id|last] [--follow]` — задание, лог по ходу (только целые строки: сервер режет лог
+[--live]`, `tfc admin jobs [id|last] [--follow]` — задание, лог по ходу (только целые строки: сервер режет лог
      по байтам) и итог публикации простыми словами (Hosting, `config`, `packUpdates`). По умолчанию всё пробно, даже
      если на сервере `AUTO_PUBLISH=live`; `live` — только текущий снимок и с вопросом (без терминала — `--yes`).
      Проверено node-скриптом с локальным сервером и подставным процессом сборки; на боевом — только отказ без ключа.
@@ -284,7 +290,7 @@ esbuild) под Windows, macOS, Linux, Node ставить не нужно. По
      (то же имя есть — заменить текст или сохранить как `_2`). Файл ставится в `kubejs/server_scripts/<fileName>`.
    - `src/lib/schematicFile.ts` — замены и форма схемы поверх `nbt.ts` (импорт `./nbt.ts` с расширением, Node его
      запускает), fuse.js и Gemini остались в `schematic.ts`. Для `tfc`: `schematicFromLibrary(байты исходника,
-     запись schematics) → байты .nbt`; исходник — `files/{fileId}` (пакет firestore-files). Проверено: старый и
+запись schematics) → байты .nbt`; исходник — `files/{fileId}` (пакет firestore-files). Проверено: старый и
      новый код дают одинаковый NBT на 4 схемах библиотеки и 60 случаях на шаблонах мультиблоков (замены, удаление,
      обрезка, воздух, площадка); Node и браузер — одинаковый NBT (gzip у них разный, сравнивался распакованный).
    - `tfc pull datapacks|kubejs|schematics|all [имя…]` (`cli/lib/pull.mjs`). Контент — через сервер сборки
