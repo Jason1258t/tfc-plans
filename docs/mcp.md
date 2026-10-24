@@ -28,21 +28,21 @@ and parameter descriptions are in English (the agent reads them); tool output st
 
 The server builds nothing itself: it reads what the site scripts built. Stale site data → stale answers.
 
-| What | From | Refresh with |
-| --- | --- | --- |
-| Items, recipes, tags, reference, mod manifest | `public/*.json` | `npm run mods` |
-| KubeJS rules and recipes, `kubejs/data` | `public/kubejs.json`, `kubejs-data.json` | `npm run kubejs` |
-| KubeJS sources | `instance/kubejs/<layer>/` | `npm run pack:fetch -- --kubejs` |
-| Mod code, books, translations, loot tables | `~/.cache/tfc-plans/pack/mods/*.jar` (and nested jar-in-jar) | `npm run pack:fetch` |
-| Candidate mods (not in the pack) | `<root>/.cache/mcp/candidates/*.jar` | `candidate_get` (path / Modrinth / link) |
-| Minecraft + NeoForge code and sources (Mojang names) | `tools/<addon>/build/moddev/artifacts/neoforge-*.jar`, `-sources.jar` | addon build (`./gradlew build`, docs/addons.md) |
-| Vanilla translations | `.cache/assets/minecraft-1.21.1/` | `npm run mods` (fills the cache) |
-| Resource packs | `instance/resourcepacks/` | `npm run pack:fetch` |
-| Minecraft and NeoForge resources (models, textures) | `tools/<addon>/build/moddev/artifacts/neoforge-*-client-extra-aka-minecraft-resources.jar` and `neoforge-*.jar` | addon build |
-| Addon resources and classes | `tools/<mod>/src/main/resources`, `build/classes/java/main` | addon edit, `./gradlew build` |
-| Server and world configs | Firestore `config` | `npm run serverconfig`, `npm run world` |
-| Guides, tasks, datapacks (also as a recipe layer), schematics, site scripts | Firestore | site edits |
-| Pack updates | Firestore `packUpdates` | written on deploy (`pack-release.mjs`) |
+| What                                                                        | From                                                                                                            | Refresh with                                    |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Items, recipes, tags, reference, mod manifest                               | `public/*.json`                                                                                                 | `npm run mods`                                  |
+| KubeJS rules and recipes, `kubejs/data`                                     | `public/kubejs.json`, `kubejs-data.json`                                                                        | `npm run kubejs`                                |
+| KubeJS sources                                                              | `instance/kubejs/<layer>/`                                                                                      | `npm run pack:fetch -- --kubejs`                |
+| Mod code, books, translations, loot tables                                  | `~/.cache/tfc-plans/pack/mods/*.jar` (and nested jar-in-jar)                                                    | `npm run pack:fetch`                            |
+| Candidate mods (not in the pack)                                            | `<root>/.cache/mcp/candidates/*.jar`                                                                            | `candidate_get` (path / Modrinth / link)        |
+| Minecraft + NeoForge code and sources (Mojang names)                        | `tools/<addon>/build/moddev/artifacts/neoforge-*.jar`, `-sources.jar`                                           | addon build (`./gradlew build`, docs/addons.md) |
+| Vanilla translations                                                        | `.cache/assets/minecraft-1.21.1/`                                                                               | `npm run mods` (fills the cache)                |
+| Resource packs                                                              | `instance/resourcepacks/`                                                                                       | `npm run pack:fetch`                            |
+| Minecraft and NeoForge resources (models, textures)                         | `tools/<addon>/build/moddev/artifacts/neoforge-*-client-extra-aka-minecraft-resources.jar` and `neoforge-*.jar` | addon build                                     |
+| Addon resources and classes                                                 | `tools/<mod>/src/main/resources`, `build/classes/java/main`                                                     | addon edit, `./gradlew build`                   |
+| Server and world configs                                                    | Firestore `config`                                                                                              | `npm run serverconfig`, `npm run world`         |
+| Guides, tasks, datapacks (also as a recipe layer), schematics, site scripts | Firestore                                                                                                       | site edits                                      |
+| Pack updates                                                                | Firestore `packUpdates`                                                                                         | written on deploy (`pack-release.mjs`)          |
 
 A git worktree has no `public/` or `instance/`: the server finds the main checkout
 (`git rev-parse --git-common-dir`) and reads from there. Pack jars are not in the repo at all: they live in the snapshot
@@ -52,22 +52,22 @@ pack:fetch»; data tools (items, recipes, tags) work from `public/`.
 
 Paths can be set via env vars (for running on the pack server):
 
-| Variable | Default |
-| --- | --- |
-| `TFC_PACK_ROOT` | main checkout root |
-| `TFC_PUBLIC_DIR` | `<root>/public` |
-| `TFC_PACK_CACHE` | `~/.cache/tfc-plans/pack` (snapshot copy from `npm run pack:fetch`) |
-| `TFC_MODS_DIR` | `$TFC_PACK_CACHE/mods`; when set, `.cache/mcp`, `instance/`, `tools/` are looked up next to it (pack server) |
-| `TFC_INSTANCE_DIR` | `<root>/instance` |
-| `TFC_KUBEJS_DIR` | `<root>/instance/kubejs` |
-| `TFC_VANILLA_DIR` | `<root>/.cache/assets/minecraft-1.21.1` |
-| `TFC_PLATFORM_JAR` / `TFC_PLATFORM_SOURCES` | newest `neoforge-X.jar` / `-sources.jar` in `tools/*/build/moddev/artifacts` |
-| `TFC_DECOMPILER` | newest Vineflower in the Gradle cache |
-| `TFC_AGENT_NICK` | `Claude` — author / `updatedBy` of every write (tasks, docs, guides, config proposals, addon versions); set per agent, see [agents.md](agents.md) |
+| Variable                                    | Default                                                                                                                                           |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TFC_PACK_ROOT`                             | main checkout root                                                                                                                                |
+| `TFC_PUBLIC_DIR`                            | `<root>/public`                                                                                                                                   |
+| `TFC_PACK_CACHE`                            | `~/.cache/tfc-plans/pack` (snapshot copy from `npm run pack:fetch`)                                                                               |
+| `TFC_MODS_DIR`                              | `$TFC_PACK_CACHE/mods`; when set, `.cache/mcp`, `instance/`, `tools/` are looked up next to it (pack server)                                      |
+| `TFC_INSTANCE_DIR`                          | `<root>/instance`                                                                                                                                 |
+| `TFC_KUBEJS_DIR`                            | `<root>/instance/kubejs`                                                                                                                          |
+| `TFC_VANILLA_DIR`                           | `<root>/.cache/assets/minecraft-1.21.1`                                                                                                           |
+| `TFC_PLATFORM_JAR` / `TFC_PLATFORM_SOURCES` | newest `neoforge-X.jar` / `-sources.jar` in `tools/*/build/moddev/artifacts`                                                                      |
+| `TFC_DECOMPILER`                            | newest Vineflower in the Gradle cache                                                                                                             |
+| `TFC_AGENT_NICK`                            | `Claude` — author / `updatedBy` of every write (tasks, docs, guides, config proposals, addon versions); set per agent, see [agents.md](agents.md) |
 
 ## Tools
 
-66 in total. Asterisk — required parameter. Lists have `limit` and `offset`; the answer says «дальше: offset=…».
+73 in total. Asterisk — required parameter. Lists have `limit` and `offset`; the answer says «дальше: offset=…».
 
 Regex queries (`query` of `log_analyze`, `regex=true` in searches, `grep`, `members`) are case-insensitive; leading
 Java/PCRE flags (`(?i)…`, `(?s)…`) are accepted. Non-regex search understands «`a|b`» — any of.
@@ -84,35 +84,36 @@ The order «`kubejs/data` over world datapacks» follows the site, not checked i
 separate line «есть на сайте, но не ставится». Files are built by the same `src/lib/datapackFiles.ts` as the site; the
 collection is read whole (~10 reads) every 10 minutes. Without Firestore login — no layer, with a warning.
 
-| Tool | Does |
-| --- | --- |
-| `items_search(query*, mod)` | find an item by Russian/English name or id |
-| `item_get(id*)` | item: mod, jar, tags, recipe count, food/fuel/melting/botany |
-| `recipes_for(output*, status, type)` | how to obtain: recipes with the item, fluid or tag as output, with in-game status |
-| `recipes_using(input*, via_tags, status, type)` | where used: directly, via tags and after KubeJS replacements |
-| `recipe_get(id*)` | full recipe: source, which KubeJS rule removes or changes it (file:line), JSON |
-| `tag_members(tag*, kind, expand)` | tag members after mods and KubeJS, nested tags expanded |
-| `tags_of(id*, kind)` | tags containing an item, fluid or block |
+| Tool                                                  | Does                                                                                                                                                                                                                |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `items_search(query*, mod)`                           | find an item by Russian/English name or id                                                                                                                                                                          |
+| `item_get(id*)`                                       | item: mod, jar, tags, recipe count, food/fuel/melting/botany                                                                                                                                                        |
+| `recipes_for(output*, status, type)`                  | how to obtain: recipes with the item, fluid or tag as output, with in-game status                                                                                                                                   |
+| `recipes_using(input*, via_tags, status, type)`       | where used: directly, via tags and after KubeJS replacements                                                                                                                                                        |
+| `recipe_get(id*)`                                     | full recipe: source, which KubeJS rule removes or changes it (file:line), JSON                                                                                                                                      |
+| `recipe_conflicts(type, recipe, id, inputs, outputs)` | would a new recipe be intercepted: same type + same inputs (tags considered) or same shaped grid (mirror); same id → replaced. Sources: mods, kubejs/data, KubeJS scripts, site datapacks (KubeJS removals applied) |
+| `tag_members(tag*, kind, expand)`                     | tag members after mods and KubeJS, nested tags expanded                                                                                                                                                             |
+| `tags_of(id*, kind)`                                  | tags containing an item, fluid or block                                                                                                                                                                             |
 
 Recipe status: «работает», «изменён KubeJS», «удалён KubeJS», «отключён заглушкой датапака» or «работает, но есть
 удаление с неразборчивым фильтром».
 
 ### Reference and settings
 
-| Tool | Does |
-| --- | --- |
-| `reference_get(section, filter, id)` | site reference sections: `ores`, `smelt`, `chains`, `metals`, `fuels`, `liquid`, `foods`, `botany`, `greenhouse`, `meals`, `skillet`, `multiblocks`, `power` (with `kubejs/data` corrections) |
-| `config_get(file, key, mod)` | mod settings by layer: world save > `serverconfig/` > pack `config/` > value from mod code. TOML (`<mod>-server/common.toml`, `<mod>/server.toml`) and since 2026-10-21 JSON5 at the root of `config/` (`worldborder.json5` and other Collective mods; nested `*.json5` — import with `--all`). Unapplied edits marked ⏳ |
-| `config_propose(note, edits)` | propose a TOML config edit: `edits: [{ file, key, value }]`, full key (`blocks.crops.cropGrowthModifier`); checks key, type and range from mod code, layer (a world-save key is refused), no pending edit of the same key. Writes Firestore `configChanges` (signed `Claude`); the host applies files — `tfc admin changes pull` (docs/tfc-app.md) |
-| `config_changes(status, id, cancel)` | edits and the host's per-key result (`pending` default, `applied`, `rejected`, `cancelled`, `all`); `cancel=<id>` cancels an unapplied one |
+| Tool                                 | Does                                                                                                                                                                                                                                                                                                                                               |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `reference_get(section, filter, id)` | site reference sections: `ores`, `smelt`, `chains`, `metals`, `fuels`, `liquid`, `foods`, `botany`, `greenhouse`, `meals`, `skillet`, `multiblocks`, `power` (with `kubejs/data` corrections)                                                                                                                                                      |
+| `config_get(file, key, mod)`         | mod settings by layer: world save > `serverconfig/` > pack `config/` > value from mod code. TOML (`<mod>-server/common.toml`, `<mod>/server.toml`) and since 2026-10-21 JSON5 at the root of `config/` (`worldborder.json5` and other Collective mods; nested `*.json5` — import with `--all`). Unapplied edits marked ⏳                          |
+| `config_propose(note, edits)`        | propose a TOML config edit: `edits: [{ file, key, value }]`, full key (`blocks.crops.cropGrowthModifier`); checks key, type and range from mod code, layer (a world-save key is refused), no pending edit of the same key. Writes Firestore `configChanges` (signed `Claude`); the host applies files — `tfc admin changes pull` (docs/tfc-app.md) |
+| `config_changes(status, id, cancel)` | edits and the host's per-key result (`pending` default, `applied`, `rejected`, `cancelled`, `all`); `cancel=<id>` cancels an unapplied one                                                                                                                                                                                                         |
 
 ### Pack
 
-| Tool | Does |
-| --- | --- |
-| `mods_list(query, sort)` | pack mods: id, name, version, jar, item and recipe counts |
-| `mod_get(id*)` | mod: sha1, items, recipes by status, recipe types, tags, configs |
-| `pack_updates(id, section, kind, mod, query)` | pack update history: feed, full record, mod changelog from Modrinth, patch notes. 10 min cache |
+| Tool                                                                 | Does                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mods_list(query, sort)`                                             | pack mods: id, name, version, jar, item and recipe counts                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `mod_get(id*)`                                                       | mod: sha1, items, recipes by status, recipe types, tags, configs                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `pack_updates(id, section, kind, mod, query)`                        | pack update history: feed, full record, mod changelog from Modrinth, patch notes. 10 min cache                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `mods_freshness(status, mod, deps, beta, neoforge, refresh, format)` | how far behind each mod is (Modrinth by sha1, CurseForge by fingerprint, needs `CURSE_FORGE_API_KEY`; pack devs' GitHub releases by jar name, optional `GITHUB_TOKEN` / `gh` login): colour by x/y/z lag, newer betas, new required deps; `mod` — one mod + changelogs of newer **releases**, oldest first, paged by version (`offset`/`limit`; HTML → text); `beta=true` — with betas, up to the newest beta; `deps=true` — downloads the new jar (cache `.cache/mcp/fresh/` next to `mods/`), checks its `neoforge.mods.toml` and jar-in-jar against the pack with our jar swapped out (as `mods_check`; `neoforge=` for NeoForge ranges), changed/removed ranges vs ours, pack mods whose ranges it breaks; `format=json` — raw report. Live, 10 min cache. Plan — [plans/mod-freshness.md](plans/mod-freshness.md); update plan from it — skill `update-plan` |
 
 ### KubeJS sources
@@ -120,19 +121,19 @@ Recipe status: «работает», «изменён KubeJS», «удалён K
 Marks in answers: `−` remove, `~` replaceInput/Output, `+` recipe, `#` tag, `@` own item — what the site parsed from the
 line. If files are newer than the parse, the tool warns: time for `npm run kubejs`.
 
-| Tool | Does |
-| --- | --- |
-| `kubejs_files(layer, folder, path)` | files by layer (`pack`, `world`) and folder, with line and parsed-record counts |
-| `kubejs_search(query*, regex, context, layer, folder, path)` | search script text and `data`/`assets` files: words, «`a|b`», or regex (`regex=true`) |
-| `kubejs_read(path*, grep, notes)` | file by lines with parse marks |
+| Tool                                                         | Does                                                                            |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| `kubejs_files(layer, folder, path)`                          | files by layer (`pack`, `world`) and folder, with line and parsed-record counts |
+| `kubejs_search(query*, regex, context, layer, folder, path)` | search script text and `data`/`assets` files: words, «`a                        | b`», or regex (`regex=true`) |
+| `kubejs_read(path*, grep, notes)`                            | file by lines with parse marks                                                  |
 
 ### Mod code
 
-| Tool | Does |
-| --- | --- |
+| Tool                              | Does                                                                              |
+| --------------------------------- | --------------------------------------------------------------------------------- |
 | `jar_find(pattern*, jar, nested)` | files and classes in jars: path part, dotted class or glob (`data/tfc/**/*.json`) |
-| `jar_read(jar*, path*, grep)` | text file from a jar by lines |
-| `jar_javap(class*, jar, method)` | bytecode of a class or one method; without `jar` the class is found via the index |
+| `jar_read(jar*, path*, grep)`     | text file from a jar by lines                                                     |
+| `jar_javap(class*, jar, method)`  | bytecode of a class or one method; without `jar` the class is found via the index |
 
 `jar` — file name, part of it or mod id; nested — `<jar>!<path>` (or an unambiguous part of the name); Minecraft +
 NeoForge — `minecraft`.
@@ -141,8 +142,8 @@ NeoForge — `minecraft`.
 
 For integration analysis (skill `integration-plan`): read a mod that isn't installed without unzip/javap.
 
-| Tool | Does |
-| --- | --- |
+| Tool                                                                         | Does                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `candidate_get(jar, path, modrinth, version, url, download, section, query)` | registers a candidate jar into `.cache/mcp/candidates/`: `path` — local file (scratchpad), `modrinth` — slug/id (newest NeoForge 1.21.1 release or `version`; unknown slug → search hints), `url` — direct link from cdn.modrinth.com / forgecdn.net / GitHub. **Without `download=true` nothing is downloaded** — it reports file, source and size to ask the user. Summary: mods and versions, license, deps checked against the pack like `mods_check` (as a replacement if the mod is already in the pack), jar-in-jar vs pack versions, side, content by `block./item./fluid…` lang keys with ru_ru coverage, blockstates, recipes by type, tags (`c:`), worldgen and biome modifiers, other data, `ModConfigSpec` classes, mixin configs and targets also mixed by pack mods. `section=` `content`, `recipes`, `tags`, `worldgen`, `config` or `mixins` — full lists (`query` filters; tags show if the pack has the same tag). No args — registered candidates |
 
 After `candidate_get`, `jar="candidate:<file or part>"` (nested: `candidate:<file>!META-INF/jarjar/x.jar`) works in
@@ -157,19 +158,19 @@ the loader, and nested-in-nested) and Minecraft + NeoForge with Mojang names fro
 in ~3.5 s on first request (~75k classes), then rebuilt only for changed jars. `.class` parsing is own
 (`bytecode.mjs`), no JDK.
 
-| Tool | Does |
-| --- | --- |
-| `class_find(query*, jar, kind, mixin, platform)` | classes by name part, full name or glob (`*Furnace*`): kind, parent, jar and mod; mixin targets |
-| `class_info(class*, jar, members, synthetic)` | class from bytecode: ancestors with mods, interfaces, annotations, fields with constants, methods with signatures and source lines (`:66–89` — for crash stacks), mixins on the class, other jars with the same class; ⚠ if a common class references client-only classes (below) |
-| `class_hierarchy(class*, jar, direction, depth, platform)` | ancestors and all interfaces; tree of subclasses and implementations across the pack |
-| `code_refs(target*, kind, jar, subtypes, self, platform, access, side)` | who uses it — with method and line: class (`extends`, `new`, calls, signatures, annotations and mixin targets), method/field (`Owner#name`, `*#name`; `subtypes` — calls via subclasses; the owner class itself included; for a class — `self` to include it), string (`"tfc:…"`, config key). For fields — «ЗАПИСЬ»/«чтение» (`access=write` — only writers); each site shows the code side. ~2–6 s over the pack |
-| `event_listeners(event*, subtypes, platform, kubejs)` | who listens to a NeoForge event: `@SubscribeEvent` with the event, its ancestors and subclasses (priority, `@EventBusSubscriber`), `addListener(…)` with lambdas and method refs; KubeJS scripts — `NativeEvents.onEvent`/`Java.loadClass` with the class and KubeJS events (`PlayerEvents.loggedIn` …) dispatched from KubeJS's own handler |
-| `mixins(target, method, class, mod, platform)` | `target` — mixins on a class by method (`@Inject`/`@Redirect`/`@Overwrite`/MixinExtras, `at`, priority, config), possible conflicts and ⚠ «mixin on this class may crash a dedicated server»; `class` — one mixin; `mod` — a mod's mixins and configs; no params — overview: targets without class, undeclared configs, classes mixed by many mods |
-| `bytecode(class, jar, method, query, diff)` | compact bytecode, own parser, no JDK — instead of `javap` in a shell. Without `method`: one line per method — calls, fields read/WRITTEN, strings, numbers, created classes (`query` — only methods mentioning it). `method` (regex): op stream per source line without stack noise — locals by name, constants, fields, calls, branches with target lines (`[a]` — target in the same line, `↑` — backwards = loop), `switch`, lambdas, string concat; boxing calls dropped. `jar` also takes a **path**: a `.jar`, a classes folder (`tools/<addon>/build/classes/java/main`, `run/.mixin.out/class` — class after mixins, libs from Gradle) or a `.class`. `diff=<jar or path>` — the other version: with `class` — fields/methods added/removed/changed with call/field/constant differences; with `method` — line diff; without `class` — which classes of two jars changed (byte-equal skipped, line-number-only counted separately) |
-| `decompile(class*, jar, method, grep)` | source: mods — Vineflower (cache `.cache/mcp/decompile`, ~1–4 s first time), Minecraft — `-sources.jar`; `method` — one method only |
-| `jar_grep(query*, regex, path, jar, nested, context)` | text in jar files (json, toml, lang, mixins.json, data/, assets/), no classes; «`a|b`» |
-| `mods_check(mod, neoforge, minecraft, side)` | dependencies from `neoforge.mods.toml` of all jars and nested: missing mod, wrong version, incompatible, mod in two jars, same classes in different jars, minimum NeoForge; `mod` — one mod and who depends on it |
-| `log_analyze(path, text, level, query)` | log or crash report (`latest.log`, `crash-*.txt`, `.gz`, game folder — takes the newest; or stack text): deduplicated errors, stack → mod, mixin handlers → mod, `NoSuchMethodError` decoding, missing class, mixin not applied, missing dependency, broken recipes and KubeJS scripts. Crash report: header (Connector, Sable ask to retry without them), thread, exception, mods in stack, mixins on top frames, section details (level, block, entity), system and player mod-list diff. `level=timeline` — game chronology (below). Player IPs hidden |
+| Tool                                                                    | Does                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `class_find(query*, jar, kind, mixin, platform)`                        | classes by name part, full name or glob (`*Furnace*`): kind, parent, jar and mod; mixin targets                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `class_info(class*, jar, members, synthetic)`                           | class from bytecode: ancestors with mods, interfaces, annotations, fields with constants, methods with signatures and source lines (`:66–89` — for crash stacks), mixins on the class, other jars with the same class; ⚠ if a common class references client-only classes (below)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `class_hierarchy(class*, jar, direction, depth, platform)`              | ancestors and all interfaces; tree of subclasses and implementations across the pack                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `code_refs(target*, kind, jar, subtypes, self, platform, access, side)` | who uses it — with method and line: class (`extends`, `new`, calls, signatures, annotations and mixin targets), method/field (`Owner#name`, `*#name`; `subtypes` — calls via subclasses; the owner class itself included; for a class — `self` to include it), string (`"tfc:…"`, config key). For fields — «ЗАПИСЬ»/«чтение» (`access=write` — only writers); each site shows the code side. ~2–6 s over the pack                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `event_listeners(event*, subtypes, platform, kubejs)`                   | who listens to a NeoForge event: `@SubscribeEvent` with the event, its ancestors and subclasses (priority, `@EventBusSubscriber`), `addListener(…)` with lambdas and method refs; KubeJS scripts — `NativeEvents.onEvent`/`Java.loadClass` with the class and KubeJS events (`PlayerEvents.loggedIn` …) dispatched from KubeJS's own handler                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `mixins(target, method, class, mod, platform)`                          | `target` — mixins on a class by method (`@Inject`/`@Redirect`/`@Overwrite`/MixinExtras, `at`, priority, config), possible conflicts and ⚠ «mixin on this class may crash a dedicated server»; `class` — one mixin; `mod` — a mod's mixins and configs; no params — overview: targets without class, undeclared configs, classes mixed by many mods                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `bytecode(class, jar, method, query, diff)`                             | compact bytecode, own parser, no JDK — instead of `javap` in a shell. Without `method`: one line per method — calls, fields read/WRITTEN, strings, numbers, created classes (`query` — only methods mentioning it). `method` (regex): op stream per source line without stack noise — locals by name, constants, fields, calls, branches with target lines (`[a]` — target in the same line, `↑` — backwards = loop), `switch`, lambdas, string concat; boxing calls dropped. `jar` also takes a **path**: a `.jar`, a classes folder (`tools/<addon>/build/classes/java/main`, `run/.mixin.out/class` — class after mixins, libs from Gradle) or a `.class`. `diff=<jar or path>` — the other version: with `class` — fields/methods added/removed/changed with call/field/constant differences; with `method` — line diff; without `class` — which classes of two jars changed (byte-equal skipped, line-number-only counted separately) |
+| `decompile(class*, jar, method, grep)`                                  | source: mods — Vineflower (cache `.cache/mcp/decompile`, ~1–4 s first time), Minecraft — `-sources.jar`; `method` — one method only                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `jar_grep(query*, regex, path, jar, nested, context)`                   | text in jar files (json, toml, lang, mixins.json, data/, assets/), no classes; «`a                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | b`» |
+| `mods_check(mod, neoforge, minecraft, side)`                            | dependencies from `neoforge.mods.toml` of all jars and nested: missing mod, wrong version, incompatible, mod in two jars, same classes in different jars, minimum NeoForge; `mod` — one mod and who depends on it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `log_analyze(path, text, level, query)`                                 | log or crash report (`latest.log`, `crash-*.txt`, `.gz`, game folder — takes the newest; or stack text): deduplicated errors, stack → mod, mixin handlers → mod, `NoSuchMethodError` decoding, missing class, mixin not applied, missing dependency, broken recipes and KubeJS scripts. Crash report: header (Connector, Sable ask to retry without them), thread, exception, mods in stack, mixins on top frames, section details (level, block, entity), system and player mod-list diff. `level=timeline` — game chronology (below). Player IPs hidden                                                                                                                                                                                                                                                                                                                                                                                  |
 
 Verified against code, not memory:
 
@@ -209,11 +210,11 @@ TFC field guide (Patchouli, with entries from 14 addons and pack KubeJS — 173 
 engineer's manual (133 entries, Russian only in addon sections). Layers: jar → KubeJS → resource packs, top wins. Index
 built in memory in ~75 ms on first request.
 
-| Tool | Does |
-| --- | --- |
-| `books_list(book, category, lang)` | books; with `book` — table of contents with entry ids |
-| `book_search(query*, book, category, lang)` | full-text search (Russian words by stem: «крица» finds «крицы») |
-| `book_entry(id*, book, lang)` | entry as readable text: no markup, recipes with pack status, climate and settings substituted |
+| Tool                                        | Does                                                                                          |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `books_list(book, category, lang)`          | books; with `book` — table of contents with entry ids                                         |
+| `book_search(query*, book, category, lang)` | full-text search (Russian words by stem: «крица» finds «крицы»)                               |
+| `book_entry(id*, book, lang)`               | entry as readable text: no markup, recipes with pack status, climate and settings substituted |
 
 Not indexed: IE entries built by code (deposits, shaders) and Ponder scenes.
 
@@ -221,12 +222,12 @@ Not indexed: IE entries built by code (deposits, shaders) and Ponder scenes.
 
 The item library is items only. Blocks without items, entities, fluids, effects are found via translations.
 
-| Tool | Does |
-| --- | --- |
+| Tool                             | Does                                                                                                |
+| -------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `lang_search(query*, kind, mod)` | ru/en translations of all jars, vanilla, KubeJS and resource packs (~53k keys): entry kind, id, mod |
-| `block_get(id*)` | block: names, whether it has an item, block tags, blockstate and models, drops |
-| `loot_for(id*, kind, raw)` | loot table of a block, entity, chest: pools, counts, conditions, NeoForge global modifiers |
-| `loot_sources(item*, kind)` | where an item drops from: directly, via tag, nested table, modifier |
+| `block_get(id*)`                 | block: names, whether it has an item, block tags, blockstate and models, drops                      |
+| `loot_for(id*, kind, raw)`       | loot table of a block, entity, chest: pools, counts, conditions, NeoForge global modifiers          |
+| `loot_sources(item*, kind)`      | where an item drops from: directly, via tag, nested table, modifier                                 |
 
 Tables from `kubejs/data` override mod files with the same path.
 
@@ -236,11 +237,11 @@ The Minecraft client can't run from MCP (no display), so what it does with resou
 here. Resources are resolved by layer as in game (first that has the file): pack resource packs → KubeJS assets → addon
 folders `tools/<mod>/src/main/resources` (fresher than their jars) → mod jars → Minecraft and NeoForge.
 
-| Tool | Does |
-| --- | --- |
+| Tool                                                                            | Does                                                                                                                                                                                                                                                                                                                          |
+| ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `model_render(id*, kind, state, view, size, addon, texture, bones, silhouette)` | **PNG image**: blockstate → variant → model with `parent` → 3D under `display.gui` rotation (or top/side view); `item/generated` items — by layers; GeckoLib model (`kind=geo` or id `ns:geo/….geo.json`) with `texture=`. Text: model chain (GeckoLib — bone tree with cube counts), where each texture comes from, warnings |
-| `texture_get(path*, size, colors, addon)` | texture **image** (nearest-neighbour upscale) and palette: frequent colours with shares, size, animation frames, source |
-| `resources_check(addon \| mod, props, filter, limit, verbose)` | check a pack mod or an addon from `tools/`: errors, warnings, info |
+| `texture_get(path*, size, colors, addon)`                                       | texture **image** (nearest-neighbour upscale) and palette: frequent colours with shares, size, animation frames, source                                                                                                                                                                                                       |
+| `resources_check(addon \| mod, props, filter, limit, verbose)`                  | check a pack mod or an addon from `tools/`: errors, warnings, info                                                                                                                                                                                                                                                            |
 
 Renderer (`scripts/mcp/render.mjs`) — port of `tools/ee-extras-mod/art/iso.py` plus: `parent`, element rotation
 (`rotation`, `rescale`), variant `x`/`y` rotation, default `uv`, face `rotation`, normal shading, translucency,
@@ -259,6 +260,7 @@ A group module is `{ name, loaders, flat, items, objCallbacks }`: model-loader g
 (`models/index.mjs`). The engine (`render.mjs`) calls the registry via `modelContext` and knows no mod names; a handler
 that crashed or didn't recognise data after a mod update is «не умею»: the item stays a texture, the reason goes to
 warnings, the build doesn't stop. Current groups:
+
 - `minecraft.mjs` — chests, beds, shulkers, banners, heads (incl. dragon and piglin; mirrored cubes `mirror`), shield,
   conduit, decorated pot — Minecraft entity models (ModelPart tools — `scripts/mcp/entityModels.mjs`);
 - `neoforge.mjs` — `composite`, `fluid_container` (fluid bucket: fluid texture and colour from mod classes,
@@ -297,6 +299,7 @@ gives the reason. A failing or stale rule — warning in the `npm run mods` log,
 `inflate`, cube `mirror`, per-face UV (`uv`/`uv_size`, negative `uv_size` mirrors, `uv_rotation`) and box UV
 (`uv: [u, v]`). Pose — rest from the file, no animations. The model faces south like entities and armour in game (180°
 Y): `view=south` — front (file `north` face is the front), `gui` — from above, front and the model's right side.
+
 - `id`: `miner_tools:geo/miner_helmet.geo.json`, `miner_tools:geo/miner_helmet` or `miner_tools:miner_helmet` with
   `kind=geo`; no file — list of GeckoLib models in that namespace.
 - `texture`: `ns:textures/….png`, `assets/ns/textures/….png` or `ns:entity/x`. Without it — search by model name in
@@ -351,6 +354,7 @@ and textures come from pack jars and Minecraft. Exit code 1 if something didn't 
 
   Keys built by code (`key + ".tooltip"`, `"ns.cable." + x`) — only counted. The «проверено» line lists all checked keys
   (incl. names) and how many came from code;
+
 - `PartialModel.of(…)` points to an existing model; blocks have a loot table (except fluids).
 
 For an addon it uses `src/main/resources` and `build/classes/java/main` (without compiled classes — resources only); an
@@ -368,11 +372,11 @@ of the same-named `tools/` folder; the layer is labelled with that path in the a
 Projection — the same `src/lib/projection.ts` as the site. Climate reimplemented from TFC Real World 4.1.4 and TFC
 4.2.9 bytecode (including how Java reads greyscale maps). Scale, profile and spawn — from the server config.
 
-| Tool | Does |
-| --- | --- |
-| `map_point(x, z, lat, lon, text, y)` | block ↔ lat/lon (also accepts an F3 line), nearest cities, land/sea, average TFC climate, altitude correction, distance from spawn |
-| `map_rocks(x, z, lat, lon, text)` | possible rocks at each depth with shares, ore veins in them |
-| `map_find(query*)` | city, country or region → lat/lon and block; for a country — its cities |
+| Tool                                                                 | Does                                                                                                                                                                                                                                            |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `map_point(x, z, lat, lon, text, y)`                                 | block ↔ lat/lon (also accepts an F3 line), nearest cities, land/sea, average TFC climate, altitude correction, distance from spawn                                                                                                              |
+| `map_rocks(x, z, lat, lon, text)`                                    | possible rocks at each depth with shares, ore veins in them                                                                                                                                                                                     |
+| `map_find(query*)`                                                   | city, country or region → lat/lon and block; for a country — its cities                                                                                                                                                                         |
 | `map_regions(x1, z1, x2, z2, x, z, radius, text, dim, kinds, world)` | block rectangle → `r.X.Z.mca` files (`region`, `entities`, `poi`) in the dimension folder (`DIM-1` — nether, `DIM1` — end, `dimensions/<ns>/…`) and PowerShell commands: list, copy, delete (delete commented out); an `ls` line for the server |
 
 The world seed picks the exact rock, so `map_rocks` gives options, not an answer. The mod data has no country borders:
@@ -380,11 +384,11 @@ a region is named by the nearest city. Climate and rocks not compared with the g
 
 ### Reference guides
 
-| Tool | Does |
-| --- | --- |
-| `guides_list(section, query)` | guides: id, title, section, verified flag, editors |
-| `guide_search(query*, section)` | search guide text |
-| `guide_get(id*)` | guide in `npm run guides` format and its `revision` |
+| Tool                                       | Does                                                                 |
+| ------------------------------------------ | -------------------------------------------------------------------- |
+| `guides_list(section, query)`              | guides: id, title, section, verified flag, editors                   |
+| `guide_search(query*, section)`            | search guide text                                                    |
+| `guide_get(id*)`                           | guide in `npm run guides` format and its `revision`                  |
 | `guide_put(id*, markdown*, baseRevision*)` | **write to the shared DB**: signed `Claude`, version goes to history |
 
 `guide_put` refuses if the article changed after `guide_get` (Firestore precondition on `updateTime`); for a new article
@@ -392,13 +396,14 @@ a region is named by the nearest city. Climate and rocks not compared with the g
 
 ### Pack addons
 
-| Tool | Does |
-| --- | --- |
-| `addons_list(root)` | addon cards `tools/*/addon.json`: version, folder, side, blocks; flags source/jar/site version mismatch, missing page |
-| `addon_check(id*, root)` | release check: card vs `gradle.properties`/`build.sh` and jar (modId, version, items, sha256), version record in `addonVersions` (changelog, status, jar uploaded and matching), block ids, recipes, `icons/`, site page `addon-<mod>` (section, `::addon-block` widgets, version mentioned, jar items not described), deployed version |
-| `addon_versions(id*, full, root)` | versions of an addon (Firestore `addonVersions`): date, status, checked, jar on the pack server, changelog missing; `full` — with changelogs. One read per version |
-| `addon_version_get(id*, version*)` | one version: changelog, checkedNote, revision |
-| `addon_version_put(id*, version*, baseRevision*, changelog, status, checked, checkedNote, date, jar)` | create (`"new"`) or edit a version (signed Claude, revision kept); `jar` — local path, records file/sha256/size (the file itself goes up with `npm run tfc -- admin addon upload`) |
+| Tool                                                                                                  | Does                                                                                                                                                                                                                                                                                                                                    |
+| ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `addons_list(root)`                                                                                   | addon cards `tools/*/addon.json`: version, folder, side, blocks; flags source/jar/site version mismatch, missing page                                                                                                                                                                                                                   |
+| `addon_devserver(addon*, commands, env, timeout)`                                                     | run the addon test server (gradlew runServer + RCON), return replies and error lines; cross-platform, no python — replaces the manual `test-server.sh` run                                                                                                                                                                              |
+| `addon_check(id*, root)`                                                                              | release check: card vs `gradle.properties`/`build.sh` and jar (modId, version, items, sha256), version record in `addonVersions` (changelog, status, jar uploaded and matching), block ids, recipes, `icons/`, site page `addon-<mod>` (section, `::addon-block` widgets, version mentioned, jar items not described), deployed version |
+| `addon_versions(id*, full, root)`                                                                     | versions of an addon (Firestore `addonVersions`): date, status, checked, jar on the pack server, changelog missing; `full` — with changelogs. One read per version                                                                                                                                                                      |
+| `addon_version_get(id*, version*)`                                                                    | one version: changelog, checkedNote, revision                                                                                                                                                                                                                                                                                           |
+| `addon_version_put(id*, version*, baseRevision*, changelog, status, checked, checkedNote, date, jar)` | create (`"new"`) or edit a version (signed Claude, revision kept); `jar` — local path, records file/sha256/size (the file itself goes up with `npm run tfc -- admin addon upload`)                                                                                                                                                      |
 
 `root` — repo root to read cards from (a git worktree with the new release); default — main checkout. The page itself
 is a guide: `guide_get addon-<mod>` → `guide_put`. Reads: one Firestore document per addon plus `/addons/index.json`
@@ -410,17 +415,18 @@ Each answer states how many Firestore reads it cost. Lists are read with a field
 document is a separate request. uids, cookies and tokens never appear in answers. Only tasks and plan docs are written
 (author and `updatedBy` — `Claude`); datapacks, scripts and schematics are read-only.
 
-| Tool | Does |
-| --- | --- |
-| `tasks_list(query, status, assignee, group)` / `task_get(id*, doc_chars)` | tasks and groups; a task with checklist, attachments (no content), docs, site link and `revision` |
-| `groups_list(query)` | task groups: id, name, icon, order — find a group by name («фиксы») |
+| Tool                                                                                          | Does                                                                                                                                                                                                                    |
+| --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tasks_list(query, status, assignee, group)` / `task_get(id*, doc_chars)`                     | tasks and groups; a task with checklist, attachments (no content), docs, site link and `revision`                                                                                                                       |
+| `groups_list(query)`                                                                          | task groups: id, name, icon, order — find a group by name («фиксы»)                                                                                                                                                     |
+| `users_list(query)`                                                                           | site members (the nick directory written on every visit): nick, first and last seen — who a task can be assigned to                                                                                                     |
 | `task_create(title*, description, group, priority, status, checklist, icon, assignee, place)` | **write**: a task as from «Новая задача» (rating 1000, `completedAt` when `done`); `group` — id or name; `checklist` — strings, `{ text, done }` or resources `{ itemId, qty, got }` (item checked against the library) |
-| `task_update(id*, baseRevision*, …task_create fields, checklist_add)` | **write**: only passed fields change; `checklist` replaces the checklist (existing item ids kept), `checklist_add` appends; a status change sets/clears `completedAt`; `"-"` clears group, icon, assignee |
-| `artifacts_list(query, task)` / `artifact_get(id*, offset, limit)` | plan docs (`artifacts`): list by title and task (`"-"` — unattached); doc by lines and its `revision` |
-| `artifact_put(id, baseRevision, title, content, task)` | **write**: without `id` — new doc («План: <task>» if no title), with `id` — edit passed fields; `content` — whole text |
-| `datapacks_list(query, install)` / `datapack_get(id*, path)` | datapacks; zip file as the site builds it |
-| `kubejs_site_list(query, install)` / `kubejs_site_get(id*)` | KubeJS scripts added on the site (not pack scripts) |
-| `schematics_list(query)` / `schematic_get(id*)` | Create schematics: size, blocks, replacements |
+| `task_update(id*, baseRevision*, …task_create fields, checklist_add)`                         | **write**: only passed fields change; `checklist` replaces the checklist (existing item ids kept), `checklist_add` appends; a status change sets/clears `completedAt`; `"-"` clears group, icon, assignee               |
+| `artifacts_list(query, task)` / `artifact_get(id*, offset, limit)`                            | plan docs (`artifacts`): list by title and task (`"-"` — unattached); doc by lines and its `revision`                                                                                                                   |
+| `artifact_put(id, baseRevision, title, content, task)`                                        | **write**: without `id` — new doc («План: <task>» if no title), with `id` — edit passed fields; `content` — whole text                                                                                                  |
+| `datapacks_list(query, install)` / `datapack_get(id*, path)`                                  | datapacks; zip file as the site builds it                                                                                                                                                                               |
+| `kubejs_site_list(query, install)` / `kubejs_site_get(id*)`                                   | KubeJS scripts added on the site (not pack scripts)                                                                                                                                                                     |
+| `schematics_list(query)` / `schematic_get(id*)`                                               | Create schematics: size, blocks, replacements                                                                                                                                                                           |
 
 `task_update` and `artifact_put` with `id` refuse if the task/doc changed after `task_get`/`artifact_get`:
 `baseRevision` is their `revision` (Firestore `updateTime`; checked before writing and as the write's precondition). The
@@ -431,8 +437,7 @@ plans (`docs/plans/*.md`) have no tool — they're plain files, read them direct
 ## Limits
 
 - Answers are capped at 20 000 chars: longer ones are cut with «сузьте запрос».
-- Firestore free tier — 50k reads/day for everyone. Configs cached 5 min, guides 1, pack updates 10, site content lists
-  3. Don't call site-content tools in a loop.
+- Firestore free tier — 50k reads/day for everyone. Configs cached 5 min, guides 1, pack updates 10, site content lists 3. Don't call site-content tools in a loop.
 - First recipe request — 1–3 s (catalogue load), then tens of ms.
 - `resources_check` of a big mod (TFC) ~15 s, an addon < 1 s; `model_render` — fractions of a second.
 
@@ -470,7 +475,7 @@ Changed merging on the site — change `data.mjs` too.
 ### Adding a tool
 
 1. New section — file `scripts/mcp/tools/<section>.mjs` with `export const TOOLS = [{ name, description, inputSchema,
-   handler }]` and an import line in `tools.mjs` (the `TOOLS` list at the end). A tool in an existing section — into its
+handler }]` and an import line in `tools.mjs` (the `TOOLS` list at the end). A tool in an existing section — into its
    file.
 2. `handler(args)` returns text (may be `async`) or `{ text, images: [PNG Buffer] }` — images go out as MCP `image`
    content. Lists — via `page(list, args, fmt)`, item ids — via `named(id)`. Input error — `throw new Error('…')`: the

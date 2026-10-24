@@ -1,4 +1,4 @@
-import { BookOpen, ListChecks, Plus, Scale, Search } from 'lucide-react';
+import { BookOpen, ListChecks, Plus, Scale, Search, Users, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArtifactPane } from '../components/ArtifactPane';
@@ -11,7 +11,7 @@ import { TaskRow } from '../components/TaskRow';
 import { useData } from '../data/DataContext';
 import { groupsStore } from '../data/store';
 import { SORTS, sortTasks, type SortMode } from '../lib/tasks';
-import { cx } from '../lib/util';
+import { cx, timeAgo } from '../lib/util';
 import { PRIORITIES, type Group, type Priority } from '../types';
 import { useSearchTrack } from '../data/analytics';
 import './TasksPage.css';
@@ -35,7 +35,7 @@ function writePref(key: string, v: string) {
 }
 
 export function TasksPage() {
-  const { tasks, groups, artifacts, loading, error, nick } = useData();
+  const { tasks, groups, artifacts, loading, error, nick, people: allPeople } = useData();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const groupFilter = params.get('group') ?? ALL;
@@ -44,6 +44,10 @@ export function TasksPage() {
   const docId = params.get('doc');
   // Раздел «Планы» (Markdown-документы) живёт здесь же, вместо списка задач
   const docsView = params.get('view') === 'docs';
+  // Раздел «Люди» — справочник участников сайта
+  const peopleView = params.get('view') === 'people';
+  // Фильтр по человеку: его задачи как автора или исполнителя
+  const who = params.get('who');
 
   const [sort, setSort] = useState<SortMode>(() => readPref('tfc-tm:sort', 'priority'));
   const [search, setSearch] = useState('');
@@ -78,10 +82,11 @@ export function TasksPage() {
       if (groupFilter === NONE && t.groupId) return false;
       if (groupFilter !== ALL && groupFilter !== NONE && t.groupId !== groupFilter) return false;
       if (mine && t.author !== nick && t.assignee !== nick) return false;
+      if (who && t.assignee !== who && t.author !== who) return false;
       if (q && !`${t.title}\n${t.description}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [tasks, groupFilter, mine, nick, search]);
+  }, [tasks, groupFilter, mine, nick, search, who]);
   useSearchTrack('tasks', search, inScope.length);
 
   const active = useMemo(
@@ -105,6 +110,18 @@ export function TasksPage() {
 
   const countFor = (id: string) =>
     tasks.filter((t) => t.status !== 'done' && (id === ALL || (id === NONE ? !t.groupId : t.groupId === id))).length;
+
+  const people = useMemo(
+    () =>
+      [...allPeople]
+        .sort((a, b) => b.lastSeen - a.lastSeen || a.id.localeCompare(b.id))
+        .map((u) => ({
+          ...u,
+          doing: tasks.filter((t) => t.assignee === u.id && t.status !== 'done').length,
+          authored: tasks.filter((t) => t.author === u.id && t.status !== 'done').length,
+        })),
+    [allPeople, tasks],
+  );
 
   const dialog: TaskDialogMode | null = creating
     ? { kind: 'create', groupId: groupFilter !== ALL && groupFilter !== NONE ? groupFilter : null }
@@ -139,7 +156,10 @@ export function TasksPage() {
       <aside className="groups">
         <ul className="groups-sections">
           <li>
-            <button className={cx('group-item', !docsView && 'active')} onClick={() => setParam({ view: null })}>
+            <button
+              className={cx('group-item', !docsView && !peopleView && 'active')}
+              onClick={() => setParam({ view: null })}
+            >
               <span className="group-icon">
                 <ListChecks size={16} />
               </span>
@@ -154,6 +174,15 @@ export function TasksPage() {
               </span>
               <span className="grow group-name">Планы</span>
               <span className="group-count">{artifacts.length || ''}</span>
+            </button>
+          </li>
+          <li>
+            <button className={cx('group-item', peopleView && 'active')} onClick={() => setParam({ view: 'people' })}>
+              <span className="group-icon">
+                <Users size={16} />
+              </span>
+              <span className="grow group-name">Люди</span>
+              <span className="group-count">{allPeople.length || ''}</span>
             </button>
           </li>
         </ul>
@@ -220,6 +249,38 @@ export function TasksPage() {
       <main className="tasks-main">
         {docsView ? (
           <DocsSection openId={docId} onOpen={(id) => setParam({ doc: id })} />
+        ) : peopleView ? (
+          <section className="people">
+            <header className="people-head">
+              <h2>Люди</h2>
+              <span className="faint small">
+                Кто заходил на сайт. Нажмите на человека — увидите его задачи; назначить можно в карточке задачи.
+              </span>
+            </header>
+            {people.length === 0 ? (
+              <div className="empty">Список пуст — наполнится, когда участники откроют сайт.</div>
+            ) : (
+              <ul className="people-list">
+                {people.map((u) => (
+                  <li key={u.id}>
+                    <button className="person" onClick={() => setParam({ view: null, group: null, who: u.id })}>
+                      <span className="person-avatar">{u.id.slice(0, 1).toUpperCase()}</span>
+                      <span className="person-main">
+                        <span className="person-name">
+                          {u.id}
+                          {u.id === nick && <span className="faint"> — вы</span>}
+                        </span>
+                        <span className="person-sub faint small">
+                          в работе {u.doing} · автор {u.authored} ·{' '}
+                          {u.lastSeen > 0 ? 'был(а) ' + timeAgo(u.lastSeen) : 'только в задачах'}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         ) : (
           <>
             <div className="tasks-top">
@@ -288,6 +349,11 @@ export function TasksPage() {
                 <input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} />
                 Мои
               </label>
+              {who && (
+                <button className="who-chip" onClick={() => setParam({ who: null })}>
+                  {who} <X size={13} />
+                </button>
+              )}
             </div>
 
             {error && <div className="error-box">Ошибка базы данных: {error}</div>}

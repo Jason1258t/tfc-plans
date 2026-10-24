@@ -18,6 +18,16 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
 
 - Tasks: list, priority, Elo comparison («Что важнее?»: full ranking list, ⇅ between neighbour rows swaps their
   ratings, equal ratings → the raised one gets +1; 2026-10-23), groups (drag in the left list to reorder — writes `order`; desktop only, HTML5 DnD), resource checklist, attachments and gallery, place on the map.
+- **Листинг пользователей** (2026-10-24, задача zPIOFYQZqIM0Qf72CgL3 «Листинг пользователей сайта»): справочник ников
+  users/{ник} — пишется при каждом заходе (firstSeen/lastSeen, uid). В левом меню задач — раздел «Люди»: участники с их
+  открытыми задачами, клик фильтрует список по человеку. «Исполнитель» в задаче — поле с подсказкой известных ников
+  (можно вписать любой) плюс «Взять себя»/«Отказаться». Позволяет назначить задачу любому игроку/агенту, а потом сказать
+  «запусти работу по назначенным задачам» (MCP tasks_list assignee=… уже умеет; users_list показывает участников).
+- **Task image gallery** (2026-10-24, task wLnZtM8UKnm1aNIlAyYn): saved images and images of a new-task draft are one
+  list, so a draft thumbnail also opens the full-screen view (no zoom cursor that does nothing any more; the view says
+  «не загружено — появится после создания задачи»). Hovering a thumbnail shows a cross that deletes the image after a
+  confirmation (the view's trash does the same); on touch screens the cross is always visible. Checked in the browser
+  on the dev server: draft open/Esc, draft delete with cancel and confirm, saved task with two images, cross on hover.
 - Sync status (2026-10-23, `src/data/sync.ts` + `SyncBadge`): Firestore uses a persistent local cache, so a browser
   that can't reach the server (seen: reCAPTCHA/App Check failing on a PC) silently shows its own copy. Subscriptions
   now listen with metadata: header badge «нет связи» (fromCache > 6 s or `navigator.onLine` false, with unsent count),

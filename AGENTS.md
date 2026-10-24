@@ -32,9 +32,12 @@ comments, commit messages, guides, MCP tool output. Keep Russian UI labels verba
   `/Users/ivan/vscodeProjects/tfc-taskmanager` stays on `main`: never edit or switch branches there. Without a worktree
   — read and answer only. Before editing shared agent files (`AGENTS.md`, skills, `docs/mcp.md`) check
   `git worktree list` / `git log main..<branch>` of other worktrees for the same files.
+- **Lint and format are mandatory** before commit: `npm run lint` (zero errors) and format your changed files
+  with `npx prettier --write <files>` (or `npm run format -- <files>`). The `ship` tool (tfc-plans-dev) refuses to merge if the
+  branch changed files fail `oxlint` or `prettier --check`; CI (`.github/workflows/ci.yml`) repeats `oxlint`, `tsc` and a changed-file `prettier --check` on every push to `main`.
 - **Work log on the site** for dev and fix work (groups «Разработка» and «Фиксы»): at the start find the task
-  (`tasks_list group=…`) or create one there (`task_create`), set `doing` + assignee = your agent name (`Claude`,
-  `Codex`, `Gemini`…; the same name as `TFC_AGENT_NICK`, see [docs/agents.md](docs/agents.md)); at the end — `done`
+  (`tasks_list group=…`) or create one there (`task_create`), set `doing` + assignee = **your own agent name** (= `TFC_AGENT_NICK`; never `Claude` unless you are Claude —
+  `Codex`, `Gemini`, `Cursor`, `DeepSeek`…; see [docs/agents.md](docs/agents.md)); at the end — `done`
   and a short Russian note in the description: what changed for players, what was checked, what wasn't. A task already
   `doing` under another agent — don't take it, ask the user. Found a separate problem along the way — a new task in
   the right group. A few Firestore reads per task — fine, don't loop.
@@ -55,7 +58,7 @@ comments, commit messages, guides, MCP tool output. Keep Russian UI labels verba
 
 Step-by-step procedures in `.claude/skills/<name>/SKILL.md` (standard `SKILL.md` format; `.agents/skills` is a symlink
 to the same folder for Codex and other agents that look there): `ship`, `addon-dev`, `addon-release`,
-`integration-plan`, `update-plan`. If your harness doesn't load skills, open the `SKILL.md` and follow it. Edit skills
+`integration-plan`, `update-plan`, `recipe-dev`, `dev-session`, `deploy`. If your harness doesn't load skills, open the `SKILL.md` and follow it. Edit skills
 only in `.claude/skills/`.
 
 ## Commands
@@ -89,7 +92,8 @@ resources → `resources_check` + `model_render`; developing an addon (new addon
 releasing an addon to the site → skill `addon-release`
 (`addon_check`). Pack config changes → `config_propose`, not "edit the file". Other pack file changes
 (KubeJS scripts, lang, resources, whole files) → `npm run tfc -- admin propose <overlay dir> --note …` (agent key in
-`~/.config/tfc`; base on the current snapshot, `tfc admin updates` to see status); the host pulls and approves. Site
+the `tfc` app settings — `%APPDATA%\tfc\config.json` on Windows, `~/.config/tfc/config.json` on macOS/Linux, see
+`cli/lib/config.mjs`; base on the current snapshot, `tfc admin updates` to see status); the host pulls and approves. Site
 tasks/plans/guides → its write tools (signed with `TFC_AGENT_NICK`, default `Claude`, with `baseRevision`), not ad-hoc
 scripts. Site-content tools cost Firestore reads — don't loop them. Tool reference — [docs/mcp.md](docs/mcp.md).
 

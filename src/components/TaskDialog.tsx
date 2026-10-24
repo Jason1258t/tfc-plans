@@ -438,7 +438,7 @@ function TaskFields({
   gallery,
   taskId,
 }: FieldsProps) {
-  const { groups, nick } = useData();
+  const { groups, nick, people } = useData();
   const title = useTextField(value.title, live, (v) => {
     // В черновике пишем как есть; у существующей задачи пустое название не сохраняем
     if (!live) onPatch({ title: v });
@@ -571,20 +571,36 @@ function TaskFields({
           </select>
         </div>
         <div className="tf-field">
-          <span className="label">Исполнитель</span>
-          {value.assignee === nick ? (
-            <button className="btn" style={{ width: '100%' }} onClick={() => onPatch({ assignee: null })}>
-              Я · отказаться
-            </button>
-          ) : (
-            <button
-              className="btn"
-              style={{ width: '100%' }}
-              onClick={() => onPatch({ assignee: nick, status: value.status === 'todo' ? 'doing' : value.status })}
-            >
-              {value.assignee ? `${value.assignee} → я` : 'Взять себе'}
-            </button>
-          )}
+          <label className="label" htmlFor="tf-assignee">
+            Исполнитель
+          </label>
+          <div className="tf-assignee">
+            <input
+              id="tf-assignee"
+              className="input"
+              list="tf-users"
+              value={value.assignee ?? ''}
+              placeholder="Никто"
+              onChange={(e) => onPatch({ assignee: e.target.value.trim() || null })}
+            />
+            <datalist id="tf-users">
+              {people.map((u) => (
+                <option key={u.id} value={u.id} />
+              ))}
+            </datalist>
+            {value.assignee === nick ? (
+              <button className="btn" onClick={() => onPatch({ assignee: null })}>
+                Отказаться
+              </button>
+            ) : (
+              <button
+                className="btn"
+                onClick={() => onPatch({ assignee: nick, status: value.status === 'todo' ? 'doing' : value.status })}
+              >
+                Взять себе
+              </button>
+            )}
+          </div>
         </div>
       </div>
       <PlaceField value={value.place} onChange={(place) => onPatch({ place })} />

@@ -26,9 +26,14 @@ The server is one command: `node <repo>/scripts/mcp/server.mjs`. Environment:
 - `TFC_FIRESTORE_KEY` — service key for site content (default `~/.config/tfc/mcp-firestore.json`, setup in
   `scripts/mcp/firestore-key.example.md`). Use an absolute path: `${VAR:-default}` expansion is Claude Code syntax.
 - `TFC_AGENT_NICK` — name written as author / `updatedBy` on tasks, plan docs, guides, config proposals and addon
-  versions (default `Claude`). Set it per agent: `Codex`, `Gemini`, `Cursor`…, and use the same name as task assignee.
+  versions (default `Claude`). **Every agent sets its own name here** — never leave the default `Claude` unless you
+  are Claude (`Codex`, `Gemini`, `Cursor`, `DeepSeek`…); use the same name as task assignee.
 - The server finds `public/` of the main checkout itself (also from a worktree; override with `TFC_PACK_ROOT`); pack
   jars — from the snapshot cache `~/.cache/tfc-plans/pack/mods` (`npm run pack:fetch`; `TFC_MODS_DIR` overrides).
+
+Paths differ per system: on Windows `~` is `%USERPROFILE%`, and the `tfc` app keeps **its own** settings (pack server
+address and player/admin key) at `%APPDATA%\tfc\config.json` — not in `~/.config/tfc`, where only the MCP Firestore key
+lives (`configDir()` in `cli/lib/config.mjs`); `npm run pack:fetch` reads the same file.
 
 Point the agent at the main checkout's `server.mjs` (absolute path) — then it works from any worktree. Config shapes
 below are from the tools' docs as remembered on 2026-10-23, not run here — check the current docs if one fails.
@@ -78,6 +83,10 @@ env = { TFC_FIRESTORE_KEY = "/abs/home/.config/tfc/mcp-firestore.json", TFC_AGEN
 **DeepSeek TUI and others** — any harness with stdio MCP: same command and env. Skills — if it scans `.claude/skills`
 or `.agents/skills` (claimed for DeepSeek TUI, not checked), they load; otherwise AGENTS.md tells it to open
 `SKILL.md` by hand.
+
+**`tfc-plans-dev`** (git/workflow) — a second stdio server `node <repo>/scripts/mcp-dev/server.mjs`, no env needed (it
+finds the main checkout via `git rev-parse --git-common-dir`; `TFC_PLANS_REPO` overrides). Add it as a second `mcpServers`
+entry next to `tfc-pack`. Tools: `git_state`, `worktree_add`, `commit`, `ship`, `worktree_remove` — see [mcp-dev.md](mcp-dev.md).
 
 Personal configs (absolute paths, keys) stay out of git; commit a shared one only when it has no machine paths.
 
