@@ -132,7 +132,7 @@ function TourView({ tour, onClose }: { tour: Tour; onClose: (off: boolean) => vo
     const started = performance.now();
     let scrolled = false;
     const tick = () => {
-      setPaused(Boolean(document.querySelector('.modal-backdrop')));
+      setPaused(Boolean(document.querySelector('[role="dialog"]')));
       if (step.target && (!el || !el.isConnected)) el = findTarget(step);
       if (el) {
         if (!scrolled) {
