@@ -145,6 +145,10 @@ node scripts/ui/shots.mjs capture before --only <page>   # desktop 1440×900 + m
   (`dark`). **Add scenarios for every state the page has**: tabs, opened dialogs, menus, empty/error states, dark
   theme for at least the main view — `name` as `<page>.<state>` so `--only <page>` picks them all. Commit new
   scenarios with the branch.
+- **Selectors in scenarios never use our class names** (`waitFor`, `click`, `within`, `mask`): after the move to a
+  module `.files-bar` becomes a hash and the `after` run can't find it. Use tags and a11y: `main`, `header`,
+  `[role=dialog]`, `[role=tablist]`, `input[aria-label='…']`, `clickText` (a trailing counter like «Схемы 6» is
+  ignored). No stable hook → add an `aria-label` in the page code in the `before` branch state, not during the move.
 - Shots land in `$TMPDIR/tfc-shots/<branch>/before`; `--out DIR` to change. Uses installed Chrome (`CHROME_PATH`
   otherwise) with a persistent profile, nick `ClaudeTest`, onboarding off, animations frozen.
 - Data is live Firestore: take `before` right before editing and `after` soon after; a diff only in a data row
