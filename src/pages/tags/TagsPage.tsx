@@ -24,7 +24,7 @@ import {
 import { cx, uid } from '@/shared/lib';
 import type { Datapack, DatapackEntry } from '../../types';
 import { PackPicker, type Pending } from '@/pages/recipes';
-import './TagsPage.css';
+import styles from './TagsPage.module.css';
 
 const SHOWN = 120;
 
@@ -88,8 +88,8 @@ export function TagsPage() {
 
   return (
     <PackSection>
-      <main className="tags-page">
-        <div className="tags-head">
+      <main className={styles.tagsPage}>
+        <div className={styles.tagsHead}>
           <div className="grow">
             <h1>Теги сборки</h1>
             <p className="faint small">
@@ -103,16 +103,16 @@ export function TagsPage() {
         </div>
 
         {pack && (
-          <p className="tags-pack small">
+          <p className={cx(styles.tagsPack, 'small')}>
             Правка пойдёт в датапак <b>{pack.name}</b>.{' '}
-            <button className="link" onClick={() => set({ pack: null })}>
+            <button className={styles.link} onClick={() => set({ pack: null })}>
               Выбирать при сохранении
             </button>
           </p>
         )}
 
-        <div className="tags-bar">
-          <div className="tags-search">
+        <div className={styles.tagsBar}>
+          <div className={styles.tagsSearch} role="search" aria-label="Поиск по тегам">
             <Search size={15} className="faint" />
             <input
               className="input"
@@ -144,16 +144,16 @@ export function TagsPage() {
             Тегов нет: пересоберите библиотеку (<code>npm run mods</code>) — она создаёт <code>public/tags.json</code>.
           </p>
         ) : (
-          <div className="tags-body">
-            <aside className="tags-list">
-              <div className="faint small tags-count">
+          <div className={styles.tagsBody}>
+            <aside className={styles.tagsList}>
+              <div className={cx(styles.tagsCount, 'faint', 'small')}>
                 Найдено {found.length}
                 {found.length > shown.length && `, показано ${shown.length}`}
               </div>
               <ul>
                 {shown.map((t) => (
                   <li key={t.key}>
-                    <button className={cx(t.key === selectedKey && 'active')} onClick={() => set({ tag: t.key })}>
+                    <button className={cx(t.key === selectedKey && styles.active)} onClick={() => set({ tag: t.key })}>
                       <code>{t.i}</code>
                       <span className="faint small">
                         <KindLabel kind={t.k} /> {directMembers(t).length}
@@ -169,7 +169,7 @@ export function TagsPage() {
               )}
             </aside>
 
-            <section className="tags-detail">
+            <section className={styles.tagsDetail}>
               {tag ? (
                 <TagDetail
                   key={tag.key}
@@ -179,7 +179,7 @@ export function TagsPage() {
                   onOpenTag={(id, k = tag.k) => set({ tag: tagKey(k, id) })}
                 />
               ) : (
-                <div className="tags-hint faint">
+                <div className={cx(styles.tagsHint, 'faint')}>
                   Выберите тег слева. Например <code>c:plantoil</code> — масла для биодизеля, или найдите тег по
                   предмету.
                 </div>
@@ -227,8 +227,8 @@ function TagDetail({
   const others = cat ? kindsOf(cat, tag.i).filter((k) => k !== tag.k) : [];
 
   return (
-    <div className="tag-detail">
-      <div className="tag-detail-head">
+    <div className={styles.tagDetail}>
+      <div className={styles.tagDetailHead}>
         <div className="grow">
           <h2>
             <code>#{tag.i}</code>
@@ -244,10 +244,10 @@ function TagDetail({
       </div>
 
       {others.length > 0 ? (
-        <p className="tag-kind-note small">
+        <p className={cx(styles.tagKindNote, 'small')}>
           Тег с таким же именем есть и у вида{' '}
           {others.map((k) => (
-            <button key={k} className="link" onClick={() => onOpenTag(tag.i, k)}>
+            <button key={k} className={styles.link} onClick={() => onOpenTag(tag.i, k)}>
               <KindLabel kind={k} />
             </button>
           ))}{' '}
@@ -256,7 +256,7 @@ function TagDetail({
       ) : (
         tag.k !== 'item' &&
         tag.k !== 'fluid' && (
-          <p className="tag-kind-note small">
+          <p className={cx(styles.tagKindNote, 'small')}>
             Это тег вида «{TAG_KIND_LABEL[tag.k]}»: в рецептах (<code>"tag": "{tag.i}"</code>) он не сработает — рецепты
             берут теги предметов и жидкостей.
           </p>
@@ -264,7 +264,7 @@ function TagDetail({
       )}
 
       <h3>Откуда берётся</h3>
-      <ol className="tag-sources">
+      <ol className={styles.tagSources}>
         {tag.s.map((s, n) => (
           <li key={n}>
             <b>{sourceName(s.s)}</b>
@@ -273,13 +273,13 @@ function TagDetail({
               {s.v.length ? ` · +${s.v.length}` : ''}
               {s.x?.length ? ` · −${s.x.length}` : ''}
             </span>
-            <span className="tag-source-ids small">
+            <span className={cx(styles.tagSourceIds, 'small')}>
               {s.v.slice(0, 6).map((v) => (
                 <code key={v}>{v}</code>
               ))}
               {s.v.length > 6 && <span className="faint">и ещё {s.v.length - 6}</span>}
               {s.x?.map((v) => (
-                <code key={v} className="neg">
+                <code key={v} className={styles.neg}>
                   −{v}
                 </code>
               ))}
@@ -296,9 +296,9 @@ function TagDetail({
                 {o.file}:{o.line}
               </code>
             </span>
-            <span className="tag-source-ids small">
+            <span className={cx(styles.tagSourceIds, 'small')}>
               {o.v.slice(0, 6).map((v) => (
-                <code key={v} className={cx(o.op === 'remove' && 'neg')}>
+                <code key={v} className={cx(o.op === 'remove' && styles.neg)}>
                   {o.op === 'remove' ? '−' : ''}
                   {v}
                 </code>
@@ -319,11 +319,11 @@ function TagDetail({
       )}
 
       <h3>Состав сейчас</h3>
-      <ul className="tag-members">
+      <ul className={styles.tagMembers}>
         {list.map((m) => (
           <li key={m}>
             {m.startsWith('#') ? (
-              <button className="link" onClick={() => onOpenTag(m.slice(1))}>
+              <button className={styles.link} onClick={() => onOpenTag(m.slice(1))}>
                 <Member cat={cat} kind={tag.k} id={m} />
               </button>
             ) : (
@@ -343,5 +343,9 @@ function TagDetail({
 
 /** Ярлык вида тега: предметы, блоки, жидкости, сущности — своим цветом */
 function KindLabel({ kind }: { kind: TagKind }) {
-  return <span className={`tag-kind tag-kind-${kind}`}>{TAG_KIND_LABEL[kind]}</span>;
+  return (
+    <span className={styles.tagKind} data-kind={kind}>
+      {TAG_KIND_LABEL[kind]}
+    </span>
+  );
 }

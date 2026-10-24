@@ -19,7 +19,7 @@ import {
 } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
 import { Modal } from '@/shared/ui';
-import './TagEditor.css';
+import styles from './TagEditor.module.css';
 
 interface Props {
   cat: TagCatalog;
@@ -49,7 +49,7 @@ export function Member({
   const isRef = id.startsWith('#');
   const name = isRef ? null : memberName(cat, items, kind, id);
   return (
-    <span className={cx('tag-member', className)}>
+    <span className={cx(styles.tagMember, className)}>
       {isRef ? (
         <Hash size={18} className="faint" />
       ) : kind === 'fluid' ? (
@@ -57,9 +57,9 @@ export function Member({
       ) : (
         <ItemIcon id={id} size={20} tip={false} />
       )}
-      <span className="tag-member-text">
-        {name && name !== id && <span className="tag-member-name">{name}</span>}
-        <code className="tag-member-id">{id}</code>
+      <span className={styles.tagMemberText}>
+        {name && name !== id && <span className={styles.tagMemberName}>{name}</span>}
+        <code className={styles.tagMemberId}>{id}</code>
       </span>
     </span>
   );
@@ -102,7 +102,7 @@ function MemberInput({ cat, kind, onAdd }: { cat: TagCatalog; kind: TagKind; onA
   };
 
   return (
-    <div className="tag-add">
+    <div className={styles.tagAdd}>
       <input
         className="input"
         value={q}
@@ -125,7 +125,7 @@ function MemberInput({ cat, kind, onAdd }: { cat: TagCatalog; kind: TagKind; onA
         }}
       />
       {open && (suggestions.length > 0 || typedOk) && (
-        <ul className="tag-add-list">
+        <ul className={styles.tagAddList}>
           {suggestions.map((s) => (
             <li key={s.id}>
               <button
@@ -211,7 +211,7 @@ export function TagEditor({ cat, kind, tagId, existing, onSave, onClose, saveLab
         </>
       }
     >
-      <div className="tag-editor">
+      <div className={styles.tagEditor}>
         {!tagId && (
           <div>
             <label className="label" htmlFor="te-id">
@@ -228,7 +228,7 @@ export function TagEditor({ cat, kind, tagId, existing, onSave, onClose, saveLab
           </div>
         )}
 
-        <div className="tag-modes">
+        <div className={styles.tagModes}>
           <span className="seg">
             <button aria-pressed={!edit.replace} onClick={() => setEdit((e) => ({ ...e, replace: false }))}>
               Дополнить
@@ -244,7 +244,7 @@ export function TagEditor({ cat, kind, tagId, existing, onSave, onClose, saveLab
           </p>
         </div>
 
-        <div className="tag-cols">
+        <div className={styles.tagCols}>
           <section>
             <h3>
               Сейчас в сборке <span className="faint small">{base.length}</span>
@@ -252,9 +252,9 @@ export function TagEditor({ cat, kind, tagId, existing, onSave, onClose, saveLab
             {base.length === 0 ? (
               <p className="faint small">Тег пуст или такого тега нет.</p>
             ) : (
-              <ul className="tag-list">
+              <ul className={styles.tagList}>
                 {base.map((m) => (
-                  <li key={m} className={cx(removedSet.has(m) && 'removed')}>
+                  <li key={m} className={cx(removedSet.has(m) && styles.removed)}>
                     <Member cat={cat} kind={kind} id={m} />
                     <button
                       className="btn ghost sm icon"
@@ -275,7 +275,7 @@ export function TagEditor({ cat, kind, tagId, existing, onSave, onClose, saveLab
               Добавить <span className="faint small">{edit.added.length}</span>
             </h3>
             <MemberInput cat={cat} kind={kind} onAdd={addMember} />
-            <ul className="tag-list">
+            <ul className={styles.tagList}>
               {edit.added.map((m) => (
                 <li key={m}>
                   <Member cat={cat} kind={kind} id={m} />
@@ -297,13 +297,13 @@ export function TagEditor({ cat, kind, tagId, existing, onSave, onClose, saveLab
         </div>
 
         {unknownRemoved.length > 0 && (
-          <p className="tag-warn small">
+          <p className={cx(styles.tagWarn, 'small')}>
             Убирается то, чего нет в известном составе: {unknownRemoved.join(', ')}. Если эти значения добавит другой
             датапак или скрипт, правило всё равно сработает.
           </p>
         )}
 
-        <details className="tag-preview" open>
+        <details className={styles.tagPreview} open>
           <summary>Итог: {result.length} значений · файл датапака</summary>
           <pre>{content}</pre>
         </details>
