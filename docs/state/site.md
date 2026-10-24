@@ -261,7 +261,7 @@ fertiliser blocks, calendar with month labels. `.class` parsing — `scripts/mod
   `ie_obj` take `1 − v`, checked in ObjModel / PolygonUtils), so the viewer always keeps `flipY = true`; the
   `flipV` field in data is ignored. Before the fix 24 of 27 models had textures upside down.
 - Guides section «Мультиблоки» (`?tab=guides&sub=multiblocks`, `section: multiblocks`): widget `::multiblock id=…
-  [full] [materials]`; articles mb-assembly, mb-tfc (what changed: arc furnace from fire bricks, IE blast bricks not
+[full] [materials]`; articles mb-assembly, mb-tfc (what changed: arc furnace from fire bricks, IE blast bricks not
   craftable in the pack, smelter via KubeJS), mb-coke-oven, mb-excavator.
 - Since 2026-10-19 group «Добыча Create» (Create Ore Excavation): coe-prospecting — veins (chunk, «one per square»,
   infinite, Chinese names from the pack script), detector, atlas, sampling drill, table of all veins; coe-drilling —

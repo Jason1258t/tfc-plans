@@ -67,7 +67,7 @@ its one-liner in STATE.md.
 
 - **Two-core cable shell** (EE Extras 2.0 and EE 1.1.2 itself): `CEEPartialModels.DUPLEX_WIRE_SEGMENT` references
   `electroenergetics:block/duplex_wire_segment`, absent from all pack jars and KubeJS (`resources_check
-  mod=electroenergetics`, 2026-10-21). See how laid cable renders.
+mod=electroenergetics`, 2026-10-21). See how laid cable renders.
 - **Datapack `electroenergetics_missing`** (Firestore `datapacks/JyhxDrNwnrhEPfZElEMn`, zip attached to task «датапак
   Create Electro Energetics», `tasks/V5yKUg2ghPKQDB5mg3NI`): 6 recipes missing from the mod — three-phase brush
   assembly, synchroscope, lamp and fuse from burnt ones, two-wire cable spool, two-wire connector. Recipes invented by
