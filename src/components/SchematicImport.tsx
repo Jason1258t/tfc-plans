@@ -5,7 +5,7 @@ import { addMaterials, schematicMaterials, type SchematicMaterials } from '../li
 import { cx } from '@/shared/lib';
 import type { ChecklistEntry } from '../types';
 import { ItemIcon } from './ItemIcon';
-import { Modal } from './Modal';
+import { Modal } from '@/shared/ui';
 import './SchematicImport.css';
 
 interface Props {

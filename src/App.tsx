@@ -3,7 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from '
 import { Header } from './components/Header';
 import { Onboarding } from './components/Onboarding';
 import { NickDialog } from './components/NickDialog';
-import { TooltipLayer } from './components/Tooltip';
+import { TooltipLayer } from '@/shared/ui';
 import { DataProvider } from './data/DataContext';
 import { readNick, writeNick } from './lib/nick';
 import { ErrorBoundary } from './components/ErrorBoundary';

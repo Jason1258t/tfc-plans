@@ -1,7 +1,7 @@
 import { CloudOff, Clock, TriangleAlert, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { firebaseEnabled, clearSyncError, useSyncStatus } from '@/shared/api';
-import { tooltipHandlers } from './Tooltip';
+import { tooltipHandlers } from '@/shared/ui';
 
 /** Короткая отправка (доли секунды) не показывается — значок только если ждём дольше */
 const SENDING_DELAY_MS = 1500;

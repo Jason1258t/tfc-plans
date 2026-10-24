@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { validateNick } from '../lib/nick';
-import { Modal } from './Modal';
+import { Modal } from '@/shared/ui';
 
 interface Props {
   initial?: string;

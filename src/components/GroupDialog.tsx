@@ -4,7 +4,7 @@ import { groupsStore, tasksStore } from '@/shared/api';
 import type { Group } from '../types';
 import { ItemIcon } from './ItemIcon';
 import { ItemPicker } from './ItemPicker';
-import { Modal } from './Modal';
+import { Modal } from '@/shared/ui';
 
 interface Props {
   /** null — новая группа */

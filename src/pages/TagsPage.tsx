@@ -1,7 +1,7 @@
 import { FilePen, FilePlus2, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { PackSection } from '../components/PackNav';
+import { PackSection } from '@/shared/ui';
 import { Member, TagEditor } from '../components/TagEditor';
 import { useData } from '../data/DataContext';
 import { datapacksStore, useSearchTrack } from '@/shared/api';

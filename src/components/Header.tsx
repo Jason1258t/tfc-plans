@@ -7,9 +7,8 @@ import './Header.css';
 import { OnboardingMenu } from './Onboarding';
 import { ItemIcon } from './ItemIcon';
 import { ItemIdSearch } from './ItemIdSearch';
-import { Modal } from './Modal';
+import { Modal, tooltipHandlers } from '@/shared/ui';
 import { SyncBadge } from './SyncBadge';
-import { tooltipHandlers } from './Tooltip';
 
 interface Props {
   nick: string;

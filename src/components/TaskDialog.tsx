@@ -15,7 +15,7 @@ import { Checklist } from './Checklist';
 import { ItemIcon } from './ItemIcon';
 import { ItemPicker } from './ItemPicker';
 import { Markdown, itemToken, toggleTaskLine } from './Markdown';
-import { Modal } from './Modal';
+import { Modal } from '@/shared/ui';
 import { PlaceField } from './PlaceField';
 import { SchematicImport } from './SchematicImport';
 import './TaskDialog.css';

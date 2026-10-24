@@ -1,6 +1,6 @@
 import { blockEntry, guiIcon, itemName, textureUrl, useItems } from '../lib/items';
 import { cx } from '@/shared/lib';
-import { tooltipHandlers } from './Tooltip';
+import { tooltipHandlers } from '@/shared/ui';
 
 interface Props {
   /** id предмета (tfc:metal/ingot/copper) или блока без предмета (create:belt — иконкой предмета, которым ставят) */

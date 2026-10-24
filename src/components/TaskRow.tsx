@@ -7,7 +7,7 @@ import { checklistProgress, entryDone } from '../lib/tasks';
 import { cx, timeAgo } from '@/shared/lib';
 import { PRIORITIES, type Task } from '../types';
 import { ItemIcon } from './ItemIcon';
-import { tooltipHandlers } from './Tooltip';
+import { tooltipHandlers } from '@/shared/ui';
 
 interface Props {
   task: Task;
