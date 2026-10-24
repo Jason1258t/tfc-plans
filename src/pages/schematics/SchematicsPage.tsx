@@ -44,7 +44,9 @@ import {
 } from '@/lib/schematic';
 import { makePreview, saveToLibrary } from './model/schematicLibrary';
 import { cx } from '@/shared/lib';
-import './SchematicsPage.css';
+// общие классы раздела (список файлов, подписи блоков, поиск) — свой модуль рядом
+import section from './SchematicsSection.module.css';
+import styles from './SchematicsPage.module.css';
 
 const RULES_KEY = 'tfc-tm:schematic-rules';
 const DEFAULT_RULES: Rule[] = [
@@ -111,11 +113,11 @@ const replaceSig = (s: Schematic, replace: Map<string, string>) =>
   JSON.stringify([[...replace].filter(([from]) => s.counts.has(from)).sort(), s.shape, s.rev]);
 
 /** Коротко о форме схемы — для свёрнутой строки файла */
-const shapeSummary = (sh: Schematic['shape']) =>
+const shapeSummary = (shape: Schematic['shape']) =>
   [
-    sh.crop && `обрезка ${sh.sides}/${sh.bottom}/${sh.top}`,
-    sh.platform && `площадка ${sh.platformHeight}${sh.platformHollow ? ', пустая' : ''}`,
-    sh.clearAir && 'очистка',
+    shape.crop && `обрезка ${shape.sides}/${shape.bottom}/${shape.top}`,
+    shape.platform && `площадка ${shape.platformHeight}${shape.platformHollow ? ', пустая' : ''}`,
+    shape.clearAir && 'очистка',
   ]
     .filter(Boolean)
     .join(' · ');
@@ -368,7 +370,7 @@ export function SchematicsPage() {
 
   return (
     <div
-      className={cx('schem-page', dragging && 'dragging')}
+      className={cx(styles.page, dragging && styles.dragging)}
       onDragOver={(e) => {
         if (!e.dataTransfer.types.includes('Files')) return;
         e.preventDefault();
@@ -381,7 +383,7 @@ export function SchematicsPage() {
         addFiles([...e.dataTransfer.files]);
       }}
     >
-      <div className="schem-head">
+      <div className={styles.head}>
         <div className="grow">
           <h1>Замена блоков в схемах</h1>
           <p className="muted">
@@ -389,7 +391,7 @@ export function SchematicsPage() {
             никуда не загружаются.
           </p>
         </div>
-        <button className="btn primary" onClick={() => inputRef.current?.click()}>
+        <button className="btn primary" data-tour="schem-open" onClick={() => inputRef.current?.click()}>
           <Upload size={16} />
           Открыть .nbt
         </button>
@@ -417,22 +419,22 @@ export function SchematicsPage() {
       {exportError && <div className="error-box">{exportError}</div>}
 
       {schematics.length === 0 ? (
-        <button className="schem-drop" onClick={() => inputRef.current?.click()}>
+        <button className={styles.drop} data-tour="schem-drop" onClick={() => inputRef.current?.click()}>
           <FileBox size={32} />
           <span>Перетащите сюда .nbt-схемы или нажмите, чтобы выбрать</span>
           <span className="faint small">Можно несколько файлов сразу — замены применятся ко всем</span>
         </button>
       ) : (
         <>
-          <ul className="schem-files">
+          <ul className={section.files}>
             {schematics.map((s) => {
               const ch = changesIn(s, replace);
               const shaped = shapedSize(s, replace);
               return (
-                <li key={s.key} className="schem-file">
+                <li key={s.key} className={section.file}>
                   <FileBox size={18} className="faint" />
                   <span className="grow">
-                    <span className="schem-file-name">{s.fileName}</span>
+                    <span className={section.fileName}>{s.fileName}</span>
                     <span className="faint small">
                       {formatSize(s.fileSize)}
                       {s.size && ` · ${s.size.join('×')}`}
@@ -449,9 +451,9 @@ export function SchematicsPage() {
                   >
                     <X size={15} />
                   </button>
-                  <div className="schem-file-tools">
+                  <div className={section.fileTools}>
                     <button
-                      className={cx('btn sm', shapeOpen.has(s.key) && 'active')}
+                      className={cx('btn sm', shapeOpen.has(s.key) && styles.active)}
                       onClick={() => toggleShape(s.key)}
                       aria-expanded={shapeOpen.has(s.key)}
                       title="Обрезка краёв, отступы, площадка под схемой, очистка пространства"
@@ -459,7 +461,7 @@ export function SchematicsPage() {
                       <Ruler size={14} />
                       Форма
                       {shapeSummary(s.shape) && <span className="faint">: {shapeSummary(s.shape)}</span>}
-                      <ChevronDown size={13} className={cx('chev', shapeOpen.has(s.key) && 'open')} />
+                      <ChevronDown size={13} className={cx(styles.chev, shapeOpen.has(s.key) && styles.open)} />
                     </button>
                     <button
                       className="btn sm"
@@ -502,13 +504,13 @@ export function SchematicsPage() {
                       </button>
                     )}
                     {saving[s.key] && saving[s.key] !== 'saving' && (
-                      <span className="schem-save-error small">{saving[s.key]}</span>
+                      <span className={cx(styles.saveError, 'small')}>{saving[s.key]}</span>
                     )}
                   </div>
                   {shapeOpen.has(s.key) && (
-                    <div className="schem-shape">
+                    <div className={styles.shape}>
                       <label
-                        className="toggle sm-toggle"
+                        className={cx('toggle', section.smToggle)}
                         title="Убрать пустое место по краям: габарит — по крайним блокам, воздух не считается"
                       >
                         <input
@@ -525,7 +527,7 @@ export function SchematicsPage() {
                           ['top', 'сверху'],
                         ] as const
                       ).map(([k, label]) => (
-                        <label key={k} className="schem-pad small">
+                        <label key={k} className={cx(styles.pad, 'small')}>
                           <span className="faint">Отступ {label}</span>
                           <input
                             type="number"
@@ -537,7 +539,10 @@ export function SchematicsPage() {
                           />
                         </label>
                       ))}
-                      <label className="toggle sm-toggle" title="Слои блока под всей схемой, ниже нижнего отступа">
+                      <label
+                        className={cx('toggle', section.smToggle)}
+                        title="Слои блока под всей схемой, ниже нижнего отступа"
+                      >
                         <input
                           type="checkbox"
                           checked={s.shape.platform}
@@ -547,7 +552,7 @@ export function SchematicsPage() {
                       </label>
                       {s.shape.platform && (
                         <>
-                          <label className="schem-pad small">
+                          <label className={cx(styles.pad, 'small')}>
                             <span className="faint">Высота</span>
                             <input
                               type="number"
@@ -562,7 +567,7 @@ export function SchematicsPage() {
                             />
                           </label>
                           {pickingPlatform === s.key ? (
-                            <span className="schem-platform-pick">
+                            <span className={styles.platformPick}>
                               <ItemPicker
                                 small
                                 blocksOnly
@@ -592,7 +597,7 @@ export function SchematicsPage() {
                             </button>
                           )}
                           <label
-                            className="toggle sm-toggle"
+                            className={cx('toggle', section.smToggle)}
                             title="При высоте больше 1: сплошной только верхний слой, ниже — стенки по периметру, пустота внутри и без дна"
                           >
                             <input
@@ -605,7 +610,7 @@ export function SchematicsPage() {
                         </>
                       )}
                       <label
-                        className="toggle sm-toggle"
+                        className={cx('toggle', section.smToggle)}
                         title="Записать воздух во все свободные клетки итогового объёма (и в отступы), чтобы при вставке схема расчищала место, а не оставляла то, что там было"
                       >
                         <input
@@ -622,21 +627,21 @@ export function SchematicsPage() {
             })}
           </ul>
 
-          <div className="schem-work">
-            <div className="schem-toolbar">
-              <span className="tool-split">
+          <div className={styles.work}>
+            <div className={styles.toolbar}>
+              <span className={styles.toolSplit}>
                 <button
-                  className={cx('btn sm', panel === 'smart' && 'active')}
+                  className={cx('btn sm', panel === 'smart' && styles.active)}
                   onClick={() => togglePanel('smart')}
                   aria-expanded={panel === 'smart'}
                   title="Правила замены и агент Gemini"
                 >
-                  <Wand2 size={14} className="ai-ico" />
+                  <Wand2 size={14} className={styles.aiIco} />
                   Умная замена
-                  <ChevronDown size={13} className={cx('chev', panel === 'smart' && 'open')} />
+                  <ChevronDown size={13} className={cx(styles.chev, panel === 'smart' && styles.open)} />
                 </button>
                 <button
-                  className={cx('btn sm primary', useAgent && 'agent-run')}
+                  className={cx('btn sm primary', useAgent && styles.agentRun)}
                   onClick={runSmart}
                   disabled={!items || !!progress || (!useAgent && !rules.some((r) => r.from.trim()))}
                   title={
@@ -652,21 +657,23 @@ export function SchematicsPage() {
               {result && panel !== 'smart' && (
                 <button className="btn ghost sm" onClick={() => togglePanel('smart')} title="Показать подробности">
                   заменено {result.applied.size}
-                  {result.failed.length > 0 && <span className="bad-count">· не удалось {result.failed.length}</span>}
+                  {result.failed.length > 0 && (
+                    <span className={styles.badCount}>· не удалось {result.failed.length}</span>
+                  )}
                 </button>
               )}
               {favorites && (
-                <span className="tool-split">
+                <span className={styles.toolSplit}>
                   <button
-                    className={cx('btn sm', panel === 'favs' && 'active')}
+                    className={cx('btn sm', panel === 'favs' && styles.active)}
                     onClick={() => togglePanel('favs')}
                     aria-expanded={panel === 'favs'}
                     title="Избранные замены — общие для всех схем"
                   >
-                    <Star size={14} className="fav-star on" />
+                    <Star size={14} className={cx(styles.favStar, styles.on)} />
                     Избранное
                     <span className="faint">{favorites.length}</span>
-                    <ChevronDown size={13} className={cx('chev', panel === 'favs' && 'open')} />
+                    <ChevronDown size={13} className={cx(styles.chev, panel === 'favs' && styles.open)} />
                   </button>
                   <button
                     className="btn sm"
@@ -678,11 +685,11 @@ export function SchematicsPage() {
                   </button>
                 </span>
               )}
-              <label className="search">
+              <label className={cx(section.search, section.searchTight)}>
                 <Search size={15} className="faint" />
                 <input placeholder="Фильтр блоков" value={filter} onChange={(e) => setFilter(e.target.value)} />
               </label>
-              <span className="faint small nowrap">
+              <span className={cx('faint', 'small', styles.nowrap)}>
                 Заменено {replacedTypes} из {blocks.length}
               </span>
               {replace.size > 0 && (
@@ -697,7 +704,7 @@ export function SchematicsPage() {
             </div>
 
             {panel === 'smart' && (
-              <section className="schem-rules">
+              <section className={styles.rulesBox}>
                 <div className="row">
                   <p className="faint small grow" style={{ margin: 0 }}>
                     {useAgent
@@ -705,7 +712,7 @@ export function SchematicsPage() {
                       : 'Правила по очереди заменяют подстроку в id блока. Замена принимается, только если такой предмет есть в сборке.'}
                   </p>
                   {geminiEnabled && (
-                    <label className="toggle sm-toggle agent-toggle">
+                    <label className={cx('toggle', section.smToggle, styles.agentToggle)}>
                       <input
                         type="checkbox"
                         checked={agentPrefs.enabled}
@@ -718,14 +725,14 @@ export function SchematicsPage() {
                 </div>
                 {useAgent && (
                   <input
-                    className="input agent-hint"
+                    className={cx('input', styles.agentHint)}
                     value={agentPrefs.hint}
                     placeholder="Пожелания агенту: «дуб → эвкалипт, камень → гранит, стекло оставить»"
                     aria-label="Пожелания агенту"
                     onChange={(e) => updateAgent({ hint: e.target.value })}
                   />
                 )}
-                <ul className="rules">
+                <ul className={styles.rules}>
                   {rules.map((r, i) => (
                     <li key={i}>
                       <input
@@ -761,12 +768,12 @@ export function SchematicsPage() {
                     </button>
                   </li>
                 </ul>
-                <label className="toggle sm-toggle" style={{ alignSelf: 'flex-start' }}>
+                <label className={cx('toggle', section.smToggle)} style={{ alignSelf: 'flex-start' }}>
                   <input type="checkbox" checked={overwrite} onChange={(e) => setOverwrite(e.target.checked)} />
                   Перезаписывать ручные замены
                 </label>
                 {result && (
-                  <div className="rule-result">
+                  <div className={styles.ruleResult}>
                     <div>
                       Заменено типов блоков: <b>{result.applied.size}</b>
                       {result.kind === 'agent' && (
@@ -781,7 +788,7 @@ export function SchematicsPage() {
                       {result.failed.length > 0 && (
                         <>
                           {' '}
-                          · не удалось: <b className="bad-count">{result.failed.length}</b>
+                          · не удалось: <b className={styles.badCount}>{result.failed.length}</b>
                         </>
                       )}
                     </div>
@@ -792,14 +799,14 @@ export function SchematicsPage() {
                             ? 'Для этих блоков не нашлось предмета в сборке'
                             : 'Не удалось подобрать замену'}
                         </summary>
-                        <ul className="rule-failed">
+                        <ul className={styles.ruleFailed}>
                           {result.failed.map((f) => (
                             <li key={f.source}>
                               <code>{f.source}</code>
                               {f.target && (
                                 <>
                                   {' '}
-                                  → <code className="bad">{f.target}</code>
+                                  → <code className={styles.bad}>{f.target}</code>
                                 </>
                               )}
                               {'reason' in f && <span className="faint"> — {f.reason}</span>}
@@ -809,9 +816,9 @@ export function SchematicsPage() {
                       </details>
                     )}
                     {result.kind === 'agent' && result.kept.length > 0 && (
-                      <details className="kept">
+                      <details className={styles.kept}>
                         <summary>Оставлены как есть</summary>
-                        <ul className="rule-failed">
+                        <ul className={styles.ruleFailed}>
                           {result.kept.map((f) => (
                             <li key={f.source}>
                               <code>{f.source}</code>
@@ -828,23 +835,25 @@ export function SchematicsPage() {
 
             {panel === 'favs' && favorites && <FavoritesPanel favorites={favorites} items={items} />}
 
-            <ul className="schem-blocks">
+            <ul className={styles.blocks}>
               {shown.map(({ id, count }) => {
                 const known = blockEntry(items, id);
                 const to = replace.get(id);
                 return (
-                  <li key={id} className={cx('schem-row', to && 'replaced', to === REMOVE && 'removed')}>
-                    <div className="schem-src">
+                  <li key={id} className={cx(styles.row, to && styles.replaced, to === REMOVE && styles.removed)}>
+                    <div className={styles.src}>
                       <ItemIcon id={id} size={28} />
-                      <span className="grow schem-names">
-                        <span className="schem-name">{known ? itemName(known) : id.split(':').pop()}</span>
-                        <code className="schem-id">{id}</code>
+                      <span className={cx('grow', section.names)}>
+                        <span className={cx(section.name, to === REMOVE && styles.nameStruck)}>
+                          {known ? itemName(known) : id.split(':').pop()}
+                        </span>
+                        <code className={section.id}>{id}</code>
                       </span>
                       {!known && <span className="tag">нет в сборке</span>}
-                      <span className="schem-count">×{count}</span>
+                      <span className={styles.count}>×{count}</span>
                     </div>
-                    <ArrowRight size={16} className="schem-arrow" />
-                    <div className="schem-dst">
+                    <ArrowRight size={16} className={cx(section.arrow, to && section.arrowAccent)} />
+                    <div className={styles.dst}>
                       {picking === id ? (
                         <div className="row grow">
                           <div className="grow">
@@ -865,10 +874,10 @@ export function SchematicsPage() {
                         </div>
                       ) : to === REMOVE ? (
                         <>
-                          <span className="schem-target schem-removed">
+                          <span className={cx(styles.target, styles.removed)}>
                             <Trash2 size={18} className="faint" />
-                            <span className="grow schem-names">
-                              <span className="schem-name">Удалён из схемы</span>
+                            <span className={cx('grow', section.names)}>
+                              <span className={section.name}>Удалён из схемы</span>
                               <span className="faint small">принтер не будет ставить этот блок</span>
                             </span>
                           </span>
@@ -884,16 +893,16 @@ export function SchematicsPage() {
                       ) : to ? (
                         <>
                           <button
-                            className="schem-target"
+                            className={styles.target}
                             onClick={() => setPicking(id)}
                             title={reasons.get(id) ? `Агент: ${reasons.get(id)}` : 'Выбрать другой'}
                           >
                             <ItemIcon id={to} size={28} />
-                            <span className="grow schem-names">
-                              <span className="schem-name">{itemName(blockEntry(items, to), to)}</span>
-                              <code className="schem-id">{to}</code>
+                            <span className={cx('grow', section.names)}>
+                              <span className={section.name}>{itemName(blockEntry(items, to), to)}</span>
+                              <code className={section.id}>{to}</code>
                             </span>
-                            <span className={cx('tag', 'mod-tag', modOf(to) !== modOf(id) && 'mod-changed')}>
+                            <span className={cx('tag', styles.modTag, modOf(to) !== modOf(id) && styles.modChanged)}>
                               {modOf(to)}
                             </span>
                             {reasons.get(id) && <Sparkles size={13} className="ai-ico" aria-label="Выбрано агентом" />}
@@ -911,7 +920,7 @@ export function SchematicsPage() {
                                   fav ? 'В избранном — нажмите, чтобы убрать' : 'В избранное (с умным дополнением)'
                                 }
                               >
-                                <Star size={15} className={cx('fav-star', fav && 'on')} />
+                                <Star size={15} className={cx(styles.favStar, fav && styles.on)} />
                               </button>
                             );
                           })()}
@@ -924,12 +933,12 @@ export function SchematicsPage() {
                             <X size={15} />
                           </button>
                           {(alts.get(id)?.length ?? 0) > 0 && (
-                            <div className="schem-alts">
+                            <div className={styles.alts}>
                               <span className="faint small">ещё:</span>
                               {alts.get(id)!.map((alt) => (
                                 <button
                                   key={alt}
-                                  className="alt-chip"
+                                  className={styles.altChip}
                                   onClick={() => swapAlt(id, alt)}
                                   title={`Заменить на ${alt}`}
                                 >
@@ -947,15 +956,15 @@ export function SchematicsPage() {
                               ...new Set((favorites ?? []).filter((f) => f.from === id).map((f) => f.to)),
                             ].filter((t) => isBlock(items, t));
                             return opts.length > 0 ? (
-                              <span className="schem-fav-chips">
+                              <span className={styles.favChips}>
                                 {opts.map((t) => (
                                   <button
                                     key={t}
-                                    className="fav-chip"
+                                    className={styles.favChip}
                                     onClick={() => setTarget(id, t)}
                                     title={`Из избранного: ${t}`}
                                   >
-                                    <Star size={12} className="fav-star on" />
+                                    <Star size={12} className={cx(styles.favStar, styles.on)} />
                                     <ItemIcon id={t} size={18} tip={false} />
                                     <span>{itemName(blockEntry(items, t), t)}</span>
                                   </button>
@@ -963,7 +972,7 @@ export function SchematicsPage() {
                               </span>
                             ) : null;
                           })()}
-                          <button className="btn ghost sm schem-choose" onClick={() => setPicking(id)}>
+                          <button className={cx('btn', 'ghost', 'sm', styles.choose)} onClick={() => setPicking(id)}>
                             Выбрать замену…
                           </button>
                           <button

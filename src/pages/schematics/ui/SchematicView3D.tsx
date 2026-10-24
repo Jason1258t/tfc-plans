@@ -5,6 +5,9 @@ import { useItems } from '@/shared/pack-data';
 import type { Schematic, Vec } from '@/lib/schematic';
 import { buildMesh } from '@/lib/schematicMesh';
 import { disposeMesh, meshObject, newRenderer } from '@/lib/schematicRender';
+import { cx } from '@/shared/lib';
+// классы .view3d* живут в модуле слоёв: 3D показывается внутри того же оверлея
+import styles from './SchematicLayers.module.css';
 
 interface Props {
   schematic: Schematic;
@@ -399,12 +402,12 @@ export default function SchematicView3D({
   }, [selected, maxY]);
 
   return (
-    <div className="view3d" ref={wrapRef}>
-      {error && <div className="error-box view3d-error">{error}</div>}
-      {stats && <div className="view3d-stats faint small">{stats}</div>}
+    <div className={styles.view3d} ref={wrapRef}>
+      {error && <div className={cx('error-box', styles.view3dError)}>{error}</div>}
+      {stats && <div className={cx(styles.view3dStats, 'faint', 'small')}>{stats}</div>}
       {rect && (
         <div
-          className="view3d-frame"
+          className={styles.view3dFrame}
           style={{
             left: Math.min(rect.x0, rect.x1),
             top: Math.min(rect.y0, rect.y1),

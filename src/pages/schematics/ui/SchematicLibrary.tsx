@@ -9,6 +9,8 @@ import { useItems } from '@/shared/pack-data';
 import { REMOVE, type Schematic } from '@/lib/schematic';
 import { openFromLibrary, refreshPreview, removeFromLibrary } from '../model/schematicLibrary';
 import { cx, timeAgo } from '@/shared/lib';
+import section from '../SchematicsSection.module.css';
+import styles from './SchematicLibrary.module.css';
 import type { SavedSchematic } from '@/types';
 import { Markdown } from '@/components/Markdown';
 import { MarkdownField } from '@/components/MarkdownField';
@@ -94,12 +96,12 @@ export function SchematicLibrary({ openIds, onOpen, onDownload }: Props) {
   };
 
   return (
-    <section className="schem-library">
+    <section className={styles.library} data-tour="schem-library">
       <div className="row">
         <Library size={17} className="faint" />
         <h3 className="grow">Библиотека схем</h3>
         {list && list.length > 5 && (
-          <label className="search">
+          <label className={section.search}>
             <Search size={15} className="faint" />
             <input placeholder="Найти схему" value={filter} onChange={(e) => setFilter(e.target.value)} />
           </label>
@@ -113,20 +115,20 @@ export function SchematicLibrary({ openIds, onOpen, onDownload }: Props) {
           Пока пусто. Откройте .nbt, настройте замены и нажмите «В библиотеку» — схема станет доступна всем.
         </p>
       ) : (
-        <ul className="schem-files">
+        <ul className={section.files}>
           {shown.map((entry) => {
             const isOpen = openIds.has(entry.id);
             return (
-              <li key={entry.id} className={cx('schem-file', selectedId === entry.id && 'selected')}>
+              <li key={entry.id} className={cx(section.file, selectedId === entry.id && section.fileSelected)}>
                 <button
-                  className="schem-lib-pick"
+                  className={styles.libPick}
                   onClick={() => setSelectedId(selectedId === entry.id ? null : entry.id)}
                   aria-expanded={selectedId === entry.id}
                   title="Превью и описание"
                 >
                   <FileBox size={18} className="faint" />
                   <span className="grow">
-                    <span className="schem-lib-name">{entry.name}</span>
+                    <span className={styles.libName}>{entry.name}</span>
                     <span className="faint small">{summary(entry)}</span>
                   </span>
                 </button>
@@ -241,10 +243,10 @@ function SchematicPanel({ entry, busy, canRender, onPreview, onClose, onError }:
   };
 
   return createPortal(
-    <aside className="schem-panel" aria-label={`Схема ${entry.name}`}>
-      <div className="schem-panel-head">
+    <aside className={styles.panel} aria-label={`Схема ${entry.name}`}>
+      <div className={styles.panelHead}>
         <input
-          className="schem-panel-name"
+          className={styles.panelName}
           value={name}
           maxLength={120}
           onChange={(e) => setName(e.target.value)}
@@ -264,11 +266,11 @@ function SchematicPanel({ entry, busy, canRender, onPreview, onClose, onError }:
         </button>
       </div>
 
-      <div className="schem-panel-body">
+      <div className={styles.panelBody}>
         {entry.preview ? (
-          <img className="schem-panel-preview" src={entry.preview} alt={`Превью ${entry.name}`} />
+          <img className={styles.panelPreview} src={entry.preview} alt={`Превью ${entry.name}`} />
         ) : (
-          <div className="schem-panel-preview empty faint small">Превью ещё нет</div>
+          <div className={cx(styles.panelPreview, 'empty', 'faint', 'small')}>Превью ещё нет</div>
         )}
         <div className="row">
           <span className="faint small grow">
@@ -280,9 +282,9 @@ function SchematicPanel({ entry, busy, canRender, onPreview, onClose, onError }:
           </button>
         </div>
 
-        <p className="faint small schem-panel-meta">{summary(entry)}</p>
+        <p className={cx('faint', 'small', styles.panelMeta)}>{summary(entry)}</p>
 
-        <div className="schem-panel-desc">
+        <div className={styles.panelDesc}>
           <div className="row">
             <h4 className="grow">Описание</h4>
             {saving && <span className="faint small">Сохраняю…</span>}
@@ -299,7 +301,7 @@ function SchematicPanel({ entry, busy, canRender, onPreview, onClose, onError }:
             />
           ) : (
             <div
-              className="schem-panel-desc-view"
+              className={styles.panelDescView}
               role="button"
               tabIndex={0}
               onClick={(e) => !(e.target as HTMLElement).closest('a') && setEditing(true)}

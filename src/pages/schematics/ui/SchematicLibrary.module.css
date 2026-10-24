@@ -1,0 +1,164 @@
+/* Библиотека схем: строка с поиском, список записей (список — общий, SchematicsSection.module.css)
+   и панель выбранной схемы справа. */
+
+.library {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.library h3 {
+  margin: 0;
+}
+
+.library p {
+  margin: 0;
+}
+
+.libPick {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.libPick > :global(.grow) {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.libName {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.libPick:hover .libName {
+  color: var(--accent);
+}
+
+/* Панель схемы справа */
+.panel {
+  position: fixed;
+  top: var(--header-h);
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  width: min(420px, 100vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  animation: panelIn 0.14s ease-out;
+}
+
+@keyframes panelIn {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 10px 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panelName {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 6px;
+  margin-left: -6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.panelName:hover {
+  border-color: var(--border);
+}
+
+.panelName:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+
+.panelBody {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 24px;
+}
+
+.panelPreview {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: contain;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+/* превью ещё нет: та же коробка, но пунктиром (.empty — глобальный помощник) */
+.panelPreview:global(.empty) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px dashed var(--border-strong);
+}
+
+.panelMeta {
+  margin: 0;
+}
+
+.panelDesc {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.panelDesc h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.panelDesc textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.panelDescView {
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  cursor: text;
+}
+
+.panelDescView:hover,
+.panelDescView:focus-visible {
+  border-color: var(--border);
+  background: var(--surface-2);
+}
