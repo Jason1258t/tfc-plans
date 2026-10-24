@@ -7,7 +7,7 @@ import { MealsTab } from '../components/MealsTab';
 import { mealsByItem, useMeals, type Meals } from '../lib/meals';
 import { useTags, ItemIcon, itemName, useItems, type ItemIndex } from '@/shared/pack-data';
 import { LiquidFuelTab } from '../components/LiquidFuelTab';
-import { MapPage } from './MapPage';
+import { MapPage } from '@/pages/map';
 import { MultiblocksTab } from '../components/MultiblocksTab';
 import { GuidesTab } from '../components/GuidesTab';
 import { GUIDES_SUBS, type GuidesSub } from '../components/guides/guideMeta';
