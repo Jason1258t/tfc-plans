@@ -10,8 +10,18 @@
 // Снимки лежат в DIR/<метка>/<сценарий>.<desktop|mobile>.png; DIR по умолчанию —
 // $TMPDIR/tfc-shots/<ветка git>. Chrome — CHROME_PATH или стандартные пути.
 import { spawn, execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { homedir, tmpdir } from 'node:os';
+import {
+  accessSync,
+  constants,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  readlinkSync,
+  writeFileSync,
+} from 'node:fs';
+import { homedir, hostname, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -55,12 +65,56 @@ function findChrome() {
   return found;
 }
 
+// Профиль занят живым Chrome: второй запуск с тем же --user-data-dir передаёт управление первому и молча выходит.
+// Chrome держит символьную ссылку SingletonLock → «хост-pid»
+function profileBusy(dir) {
+  try {
+    const [host, pid] = readlinkSync(join(dir, 'SingletonLock')).split(/-(?=\d+$)/);
+    if (host !== hostname()) return false;
+    process.kill(Number(pid), 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Запуск headless Chrome. Профиль постоянный (~/.cache/tfc-plans/shots-profile): тот же анонимный
- * пользователь Firebase между запусками, а не новый на каждый снимок.
+ * Папка профиля. Постоянная (~/.cache/tfc-plans/shots-profile): тот же анонимный пользователь Firebase между
+ * запусками. Если её держит другой запуск (параллельные агенты, «до» и «после» одновременно) — следующий слот
+ * shots-profile-2…8; если ~/.cache недоступна для записи (песочница агента) — временная папка. TFC_SHOTS_PROFILE —
+ * своя папка.
  */
+function pickProfile() {
+  if (process.env.TFC_SHOTS_PROFILE) return process.env.TFC_SHOTS_PROFILE;
+  const base = join(process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache'), 'tfc-plans');
+  for (let n = 1; n <= 8; n++) {
+    const dir = join(base, n === 1 ? 'shots-profile' : `shots-profile-${n}`);
+    try {
+      mkdirSync(dir, { recursive: true });
+      accessSync(dir, constants.W_OK);
+    } catch {
+      break;
+    }
+    if (!profileBusy(dir)) return dir;
+  }
+  return mkdtempSync(join(tmpdir(), 'tfc-shots-profile-'));
+}
+
+// Chrome живёт дольше скрипта, если того прервали (Ctrl+C, таймаут агента) — гасим его сами
+const children = new Set();
+const killChildren = () => {
+  for (const p of children) p.kill();
+};
+process.on('exit', killChildren);
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP'])
+  process.on(sig, () => {
+    killChildren();
+    process.exit(130);
+  });
+
+/** Запуск headless Chrome со своим профилем (см. pickProfile) */
 export async function launchChrome({ profile } = {}) {
-  const dir = profile ?? join(process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache'), 'tfc-plans', 'shots-profile');
+  const dir = profile ?? pickProfile();
   mkdirSync(dir, { recursive: true });
   const proc = spawn(
     findChrome(),
@@ -70,6 +124,9 @@ export async function launchChrome({ profile } = {}) {
       `--user-data-dir=${dir}`,
       '--no-first-run',
       '--no-default-browser-check',
+      // Без них macOS просит пароль к «Chrome Safe Storage» в Связке ключей — агент упирается в системное окно
+      '--use-mock-keychain',
+      '--password-store=basic',
       '--hide-scrollbars',
       '--mute-audio',
       '--force-color-profile=srgb',
@@ -78,6 +135,8 @@ export async function launchChrome({ profile } = {}) {
     ],
     { stdio: ['ignore', 'ignore', 'pipe'] },
   );
+  children.add(proc);
+  proc.on('exit', () => children.delete(proc));
   const wsUrl = await new Promise((ok, fail) => {
     let buf = '';
     const t = setTimeout(() => fail(new Error(`Chrome не ответил за 15 с:\n${buf}`)), 15000);
@@ -89,7 +148,13 @@ export async function launchChrome({ profile } = {}) {
         ok(m[1]);
       }
     });
-    proc.on('exit', (code) => fail(new Error(`Chrome завершился (${code}):\n${buf}`)));
+    proc.on('exit', (code) =>
+      fail(
+        new Error(
+          `Chrome завершился (${code}), профиль ${dir}${profileBusy(dir) ? ' занят другим Chrome — TFC_SHOTS_PROFILE=<своя папка>' : ''}:\n${buf}`,
+        ),
+      ),
+    );
   });
   const browser = await connect(wsUrl);
   return {
