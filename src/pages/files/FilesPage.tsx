@@ -7,9 +7,9 @@ import { schematicsStore } from '../../data/store';
 import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, uploadFile } from '../../lib/files';
 import { FILE_KINDS, fileKind, type FileKind } from '../../lib/fileKinds';
 import { prepareFile, validateFiles } from '../../lib/uploads';
-import { timeAgo } from '../../lib/util';
+import { cx, timeAgo } from '../../lib/util';
 import type { SavedSchematic } from '../../types';
-import './FilesPage.css';
+import styles from './FilesPage.module.css';
 
 const KINDS: { id: FileKind | 'all'; label: string }[] = [{ id: 'all', label: 'Все' }, ...FILE_KINDS];
 
@@ -79,15 +79,15 @@ export function FilesPage() {
 
   if (!filesEnabled)
     return (
-      <main className="files-page">
+      <main className={styles.filesPage}>
         <h1>Документы</h1>
         <div className="empty">Хранилище файлов доступно, когда подключён Firebase.</div>
       </main>
     );
 
   return (
-    <main className="files-page">
-      <div className="files-head">
+    <main className={styles.filesPage}>
+      <div className={styles.filesHead}>
         <div className="grow">
           <h1>Документы</h1>
           <p className="faint small">
@@ -112,7 +112,7 @@ export function FilesPage() {
         />
       </div>
 
-      <div className="files-bar">
+      <div className={styles.filesBar} role="search" aria-label="Поиск и фильтр файлов">
         <label className="search">
           <Search size={15} className="faint" />
           <input
@@ -140,7 +140,7 @@ export function FilesPage() {
       </div>
 
       {uploading && (
-        <p className="files-uploading small">
+        <p className={cx(styles.filesUploading, 'small')}>
           Загружаю «{uploading.name}» — {Math.round(uploading.progress * 100)}%
         </p>
       )}
@@ -151,9 +151,9 @@ export function FilesPage() {
       ) : shown.length === 0 ? (
         <div className="empty">{rows.length ? 'Ничего не найдено' : 'Файлов пока нет'}</div>
       ) : (
-        <ul className="files-list">
+        <ul className={styles.filesList}>
           {shown.map(({ file: f, task, schematic }) => (
-            <li key={f.id} className="files-row">
+            <li key={f.id} className={styles.filesRow}>
               <FileBadge
                 name={f.name}
                 type={f.type}
@@ -193,7 +193,7 @@ export function FilesPage() {
           ))}
         </ul>
       )}
-      <p className="faint small files-note">Один файл — до {formatSize(MAX_FILE_SIZE)}.</p>
+      <p className={cx('faint', 'small', styles.filesNote)}>Один файл — до {formatSize(MAX_FILE_SIZE)}.</p>
     </main>
   );
 }
