@@ -1,11 +1,13 @@
 import {
   bakeElements,
   blockModel,
+  partialQuads,
   loadBlockModels,
   type Dir as ModelDir,
   type Quad,
   type RawElement,
 } from './blockModels';
+import { codeParts, hasCodeParts } from './createParts';
 import { COPYCAT_BASE, copycatMaterials, copycatParts, isCopycat, type Material } from './copycats';
 import { placedBy, textureUrl, type ItemIndex } from './items';
 import { EMPTY_BLOCKS, REMOVE, type Schematic } from './schematic';
@@ -703,7 +705,13 @@ export async function buildMesh(
     const p = props[st] ?? new Map();
     const pipe = id === PIPE;
     const copycat = isCopycat(id);
-    const model = copycat ? { quads: [], full: false } : CODE_DRAWN.test(id) && !pipe ? null : blockModel(id, p);
+    let model = copycat ? { quads: [], full: false } : CODE_DRAWN.test(id) && !pipe ? null : blockModel(id, p);
+    // Части, которые игра рисует кодом (ремень, полувалы, голова пресса Create); нет их в данных — как раньше
+    if (hasCodeParts(id)) {
+      const parts = codeParts(id, p).map((r) => partialQuads(r.model, r.turns));
+      if (parts.length && parts.every((q) => q))
+        model = { quads: [...(model?.quads ?? []), ...parts.flatMap((q) => q!)], full: model?.full ?? false };
+    }
     const boxes = model ? [] : shapeOf(id, p);
     const full = model ? model.full : boxes.length === 1 && boxes[0] === FULL;
     const see = SEE_THROUGH.test(id);

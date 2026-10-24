@@ -35,7 +35,7 @@ import { isCuisineClass, isCuisineData } from './mods/cuisine.mjs';
 import { writePower } from './mods/power.mjs';
 import { writeMultiblocks } from './mods/multiblocks.mjs';
 import { makeRenderer } from './mods/icons3d.mjs';
-import { writeBlockModels } from './mods/block-models.mjs';
+import { PARTIAL_NAMESPACES, writeBlockModels } from './mods/block-models.mjs';
 import { platformAssets } from './mods/platform-assets.mjs';
 import { MODS as MCP_MODS } from './mcp/data.mjs';
 import { PACK_MODS } from './pack-cache.mjs';
@@ -729,9 +729,25 @@ export async function buildMods({
       }
     }
   }
+  // Модели блоков модов, которые дорисовывают блоки частями (PARTIAL_NAMESPACES): кандидаты в части
+  const partialModels = [];
+  for (const ns of PARTIAL_NAMESPACES) {
+    const seen = new Set();
+    for (const root of assetRoots.get(ns) ?? []) {
+      const dir = path.join(root, ns, 'models', 'block');
+      if (!fs.existsSync(dir)) continue;
+      for (const f of fs.readdirSync(dir, { recursive: true })) {
+        const rel = String(f).split(path.sep).join('/');
+        if (!rel.endsWith('.json') || seen.has(rel)) continue;
+        seen.add(rel);
+        partialModels.push({ ns, path: `block/${rel.slice(0, -5)}` });
+      }
+    }
+  }
   const blockModels = writeBlockModels({
     layers: icons3d.layers,
     blockstates,
+    models: partialModels,
     outDir: path.join(outDir, 'block-models'),
     iconsDir: OUT_ICONS,
     copyTexture: (id) => {
