@@ -1,4 +1,4 @@
-import { BookOpen, Boxes, Eye, FilePlus2, Pencil, Sparkles, Trash2, X } from 'lucide-react';
+import { BookOpen, Boxes, Eye, FilePlus2, Pencil, Sparkles, Trash2, UserRound, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useData } from '../data/DataContext';
 import { artifactsStore, tasksStore } from '../data/store';
@@ -142,13 +142,20 @@ function CreateTask({
           onPatch={(p) => setDraft((d) => ({ ...d, ...p }))}
           autoFocusTitle
           gallery={<Gallery pending={pendingFiles} onRemovePending={removePending} onAdd={intake.add} />}
+          belowDescription={
+            <section className="tf-section">
+              <div className="tf-section-head">
+                <h3>Файлы</h3>
+              </div>
+              <Attachments
+                pending={pendingFiles}
+                onRemovePending={removePending}
+                onAdd={intake.add}
+                error={intake.error}
+              />
+            </section>
+          }
         />
-        <section className="tf-section">
-          <div className="tf-section-head">
-            <h3>Файлы</h3>
-          </div>
-          <Attachments pending={pendingFiles} onRemovePending={removePending} onAdd={intake.add} error={intake.error} />
-        </section>
       </div>
     </Modal>
   );
@@ -261,49 +268,52 @@ function EditTask({
           }
           checklistError={aiError}
           gallery={<Gallery taskId={task.id} onAdd={intake.add} />}
-        />
-
-        <section className="tf-section">
-          <div className="tf-section-head">
-            <h3>Файлы</h3>
-          </div>
-          <Attachments taskId={task.id} onAdd={intake.add} error={intake.error} />
-        </section>
-
-        <section className="tf-section">
-          <div className="tf-section-head">
-            <h3>Планы</h3>
-            <button className="btn sm" onClick={createDoc}>
-              <FilePlus2 size={14} />
-              Новый план
-            </button>
-          </div>
-          {linked.length ? (
-            <ul className="doc-links">
-              {linked.map((a) => (
-                <li key={a.id}>
-                  <button
-                    className="doc-link"
-                    onClick={() => {
-                      onOpenArtifact(a.id);
-                      onClose();
-                    }}
-                  >
-                    <BookOpen size={16} className="faint" />
-                    <span className="grow">{a.title || 'Без названия'}</span>
-                    <span className="faint small">
-                      {a.updatedBy} · {timeAgo(a.updatedAt)}
-                    </span>
+          belowDescription={
+            <>
+              <section className="tf-section">
+                <div className="tf-section-head">
+                  <h3>Планы</h3>
+                  <button className="btn sm" onClick={createDoc}>
+                    <FilePlus2 size={14} />
+                    Новый план
                   </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="faint small">
-              Для сложных планов — отдельный Markdown-документ с агентом Gemini. Откроется справа от списка.
-            </div>
-          )}
-        </section>
+                </div>
+                {linked.length ? (
+                  <ul className="doc-links">
+                    {linked.map((a) => (
+                      <li key={a.id}>
+                        <button
+                          className="doc-link"
+                          onClick={() => {
+                            onOpenArtifact(a.id);
+                            onClose();
+                          }}
+                        >
+                          <BookOpen size={16} className="faint" />
+                          <span className="grow">{a.title || 'Без названия'}</span>
+                          <span className="faint small">
+                            {a.updatedBy} · {timeAgo(a.updatedAt)}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="faint small">
+                    Для сложных планов — отдельный Markdown-документ с агентом Gemini. Откроется справа от списка.
+                  </div>
+                )}
+              </section>
+
+              <section className="tf-section">
+                <div className="tf-section-head">
+                  <h3>Файлы</h3>
+                </div>
+                <Attachments taskId={task.id} onAdd={intake.add} error={intake.error} />
+              </section>
+            </>
+          }
+        />
       </div>
     </Modal>
   );
@@ -366,6 +376,8 @@ interface FieldsProps {
   checklistError?: string | null;
   /** Галерея картинок под описанием */
   gallery?: React.ReactNode;
+  /** Секции сразу под описанием: планы, вложения, чеклист — в нужном окну порядке */
+  belowDescription?: React.ReactNode;
   /** Существующая задача: картинки из описания загружаются в её вложения */
   taskId?: string;
 }
@@ -436,6 +448,7 @@ function TaskFields({
   checklistExtra,
   checklistError,
   gallery,
+  belowDescription,
   taskId,
 }: FieldsProps) {
   const { groups, nick, people } = useData();
@@ -516,94 +529,81 @@ function TaskFields({
       )}
 
       <div className="tf-meta">
-        <div className="tf-field tf-imp">
-          <span className="label">Важность</span>
-          <div className="seg" role="group" aria-label="Важность">
-            {PRIORITIES.map((p) => (
-              <button
-                key={p.value}
-                type="button"
-                aria-pressed={value.priority === p.value}
-                onClick={() => onPatch({ priority: p.value })}
-              >
-                <span className="imp-dot" style={{ background: p.color }} />
-                {p.label}
-              </button>
-            ))}
-          </div>
+        <div className="seg tf-imp" role="group" aria-label="Важность" title="Важность">
+          {PRIORITIES.map((p) => (
+            <button
+              key={p.value}
+              type="button"
+              aria-pressed={value.priority === p.value}
+              title={p.label}
+              onClick={() => onPatch({ priority: p.value })}
+            >
+              <span className="imp-dot" style={{ background: p.color }} />
+              {p.label}
+            </button>
+          ))}
         </div>
-        <div className="tf-field">
-          <label className="label" htmlFor="tf-status">
-            Статус
-          </label>
-          <select
-            id="tf-status"
-            className="input"
-            value={value.status}
-            onChange={(e) => {
-              const status = e.target.value as Task['status'];
-              onPatch({ status, completedAt: status === 'done' ? Date.now() : null });
-            }}
-          >
-            {STATUSES.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="tf-field">
-          <label className="label" htmlFor="tf-group">
-            Группа
-          </label>
-          <select
-            id="tf-group"
-            className="input"
-            value={value.groupId ?? ''}
-            onChange={(e) => onPatch({ groupId: e.target.value || null })}
-          >
-            <option value="">Без группы</option>
-            {groups.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="tf-field">
-          <label className="label" htmlFor="tf-assignee">
-            Исполнитель
-          </label>
-          <div className="tf-assignee">
+        <select
+          className="input"
+          aria-label="Статус"
+          value={value.status}
+          onChange={(e) => {
+            const status = e.target.value as Task['status'];
+            onPatch({ status, completedAt: status === 'done' ? Date.now() : null });
+          }}
+        >
+          {STATUSES.map((s) => (
+            <option key={s.value} value={s.value}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+        <select
+          className="input"
+          aria-label="Группа"
+          value={value.groupId ?? ''}
+          onChange={(e) => onPatch({ groupId: e.target.value || null })}
+        >
+          <option value="">Без группы</option>
+          {groups.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.name}
+            </option>
+          ))}
+        </select>
+        <div className="tf-assignee">
+          <span className="tf-assignee-input">
+            <UserRound size={14} className="faint tf-field-icon" />
             <input
-              id="tf-assignee"
-              className="input"
+              className="input with-icon"
+              aria-label="Исполнитель"
+              title="Исполнитель"
               list="tf-users"
               value={value.assignee ?? ''}
               placeholder="Никто"
               onChange={(e) => onPatch({ assignee: e.target.value.trim() || null })}
             />
-            <datalist id="tf-users">
-              {people.map((u) => (
-                <option key={u.id} value={u.id} />
-              ))}
-            </datalist>
-            {value.assignee === nick ? (
-              <button className="btn" onClick={() => onPatch({ assignee: null })}>
-                Отказаться
-              </button>
-            ) : (
-              <button
-                className="btn"
-                onClick={() => onPatch({ assignee: nick, status: value.status === 'todo' ? 'doing' : value.status })}
-              >
-                Взять себе
-              </button>
-            )}
-          </div>
+          </span>
+          <datalist id="tf-users">
+            {people.map((u) => (
+              <option key={u.id} value={u.id} />
+            ))}
+          </datalist>
+          {value.assignee === nick ? (
+            <button className="btn sm" onClick={() => onPatch({ assignee: null })}>
+              Отказаться
+            </button>
+          ) : (
+            <button
+              className="btn sm"
+              onClick={() => onPatch({ assignee: nick, status: value.status === 'todo' ? 'doing' : value.status })}
+            >
+              Взять себе
+            </button>
+          )}
         </div>
+        <PlaceField compact value={value.place} onChange={(place) => onPatch({ place })} />
       </div>
-      <PlaceField value={value.place} onChange={(place) => onPatch({ place })} />
 
       <section className="tf-section">
         <div className="tf-section-head">
@@ -664,6 +664,8 @@ function TaskFields({
         )}
         {gallery && <div className="tf-gallery">{gallery}</div>}
       </section>
+
+      {belowDescription}
 
       <section className="tf-section">
         <div className="tf-section-head">
