@@ -4,7 +4,9 @@ import { Link } from 'react-router-dom';
 import { itemName, type ItemIndex, hasStatus, useRecipes, type Recipe, ItemIcon } from '@/shared/pack-data';
 import { NUTRIENTS, type Food, type Nutrient } from '@/lib/reference';
 import { cx } from '@/shared/lib';
-import './DishesTab.css';
+import '../ReferenceShared.css';
+import shell from '../ReferenceShell.module.css';
+import styles from './DishesTab.module.css';
 
 const NUTRIENT_LABEL: Record<Nutrient, string> = {
   grain: 'Зерн.',
@@ -130,7 +132,7 @@ export function DishesTab({ items, foods }: { items: ItemIndex | null; foods: Fo
 
   return (
     <>
-      <div className="ref-filters">
+      <div className={cx(shell.filters, shell.filtersEnd)}>
         <label className="search grow">
           <Search size={15} className="faint" />
           <input
@@ -153,7 +155,7 @@ export function DishesTab({ items, foods }: { items: ItemIndex | null; foods: Fo
           ))}
         </select>
       </div>
-      <p className="faint small ref-note">
+      <p className={cx('faint', 'small', shell.note)}>
         Еда с постоянной питательностью по способу приготовления — типу рецепта. Только рецепты, работающие в игре: с
         учётом удалений и добавлений KubeJS{removed ? ` (скрыто удалённых: ${removed})` : ''}. Рецепты блюд, чья
         питательность зависит от начинки ({dynamic}), — в «Сборных блюдах». В игре не проверялось. Показано{' '}
@@ -163,7 +165,7 @@ export function DishesTab({ items, foods }: { items: ItemIndex | null; foods: Fo
         <div className="empty">Ничего не подходит.</div>
       ) : (
         <div className="ref-table-wrap">
-          <table className="ref-table dishes-table">
+          <table className="ref-table">
             <thead>
               <tr>
                 <th>Блюдо</th>
@@ -185,15 +187,15 @@ export function DishesTab({ items, foods }: { items: ItemIndex | null; foods: Fo
                 return (
                   <tr key={r.key}>
                     <td>
-                      <div className="ref-ing">
+                      <div className={shell.ing}>
                         <ItemIcon id={r.item} size={24} />
-                        <div className="ref-ing-name">
+                        <div className={shell.ingName}>
                           <span>{name(r.item)}</span>
                           {r.fromRecipe && <span className="faint small">питательность задана рецептом</span>}
                         </div>
                       </div>
                     </td>
-                    <td className="small dishes-type">
+                    <td className={cx('small', styles.type)}>
                       {items?.byId.has(r.type) && <span>{name(r.type)}</span>}
                       <code className="faint">{r.type}</code>
                     </td>
@@ -204,12 +206,12 @@ export function DishesTab({ items, foods }: { items: ItemIndex | null; foods: Fo
                       </td>
                     ))}
                     <td className={cx('num', r.food.decay > 1.5 && 'warn')}>×{r.food.decay}</td>
-                    <td className="small dishes-inputs">
+                    <td className={cx('small', styles.inputs)}>
                       {inputs.slice(0, 6).map((i) =>
                         i.startsWith('#') ? (
                           <code key={i}>{i}</code>
                         ) : (
-                          <span key={i} className="dishes-chip">
+                          <span key={i} className={styles.chip}>
                             <ItemIcon id={i} size={18} tip={false} />
                             {name(i)}
                           </span>

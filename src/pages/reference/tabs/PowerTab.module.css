@@ -1,0 +1,33 @@
+/* Вкладка «Электричество»: только её собственные блоки. Всё остальное — общее:
+   .power, .power-h, .power-note, .power-form, .power-out(s) и блоки аддонов — в PowerShared.css
+   (их берут гайды, загрузки IE и карточки аддонов), таблицы и карточки — в ../ReferenceShared.css. */
+
+.chain {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.step {
+  align-self: stretch;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.step p {
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.stepIcons {
+  display: flex;
+  gap: 2px;
+  flex: none;
+  min-width: 28px;
+}

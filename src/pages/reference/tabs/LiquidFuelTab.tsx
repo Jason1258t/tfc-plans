@@ -4,7 +4,11 @@ import { Link } from 'react-router-dom';
 import { datapacksStore } from '@/entities/datapack';
 import { itemName, type ItemIndex, ItemIcon } from '@/shared/pack-data';
 import { methodLabel, type EngineStats, type FuelRecipe, type LiquidFamily, type LiquidStack } from '@/lib/reference';
+import { cx } from '@/shared/lib';
 import type { Datapack } from '@/types';
+import '../ReferenceShared.css';
+import shell from '../ReferenceShell.module.css';
+import styles from './LiquidFuelTab.module.css';
 
 /**
  * Жидкое топливо: нефть и её переработка, бензин, дизель, этанол, растительное масло, биодизель.
@@ -90,7 +94,7 @@ export function LiquidFuelTab({ families, items }: { families: LiquidFamily[]; i
 
   return (
     <>
-      <div className="ref-filters">
+      <div className={cx(shell.filters, shell.filtersEnd)}>
         <label className="search grow">
           <Search size={15} className="faint" />
           <input
@@ -105,7 +109,7 @@ export function LiquidFuelTab({ families, items }: { families: LiquidFamily[]; i
 
       {burnable.length > 0 && !q && <BurnTable families={burnable} items={items} />}
 
-      <div className="ref-minerals">
+      <div className={shell.minerals}>
         {visible.map((f) => (
           <FamilyCard key={f.tag} fam={f} items={items} byTag={byTag} removedBy={removedBy} />
         ))}
@@ -119,7 +123,7 @@ export function LiquidFuelTab({ families, items }: { families: LiquidFamily[]; i
 function OilCard({ items }: { items: ItemIndex | null }) {
   const icon = (id: string) => (items?.byId.has(id) ? <ItemIcon id={id} size={20} /> : null);
   return (
-    <section className="ref-card lf-oil">
+    <section className="ref-card">
       <header className="ref-card-head">
         {icon('createdieselgenerators:crude_oil_bucket')}
         <div className="grow">
@@ -129,7 +133,7 @@ function OilCard({ items }: { items: ItemIndex | null }) {
           </div>
         </div>
       </header>
-      <ul className="lf-facts">
+      <ul className={styles.facts}>
         <li>
           Нефть лежит <b>под чанками</b>, а не жилами: у каждого чанка свой запас, он считается по сиду мира шумом —
           поэтому нефтяные чанки идут пятнами. Ниже порога (4 млн mB) нефти в чанке нет, выше 10 млн mB — чанк
@@ -186,7 +190,7 @@ function BurnTable({ families, items }: { families: LiquidFamily[]; items: ItemI
         </div>
       </header>
       <div className="ref-table-wrap">
-        <table className="ref-table lf-burn">
+        <table className={cx('ref-table', styles.burn)}>
           <thead>
             <tr>
               <th>Топливо</th>
@@ -203,8 +207,8 @@ function BurnTable({ families, items }: { families: LiquidFamily[]; items: ItemI
               return (
                 <tr key={f.tag}>
                   <td>
-                    <div className="ref-ing">
-                      {icon ? <ItemIcon id={icon} size={22} /> : <span className="ref-ing-blank" />}
+                    <div className={shell.ing}>
+                      {icon ? <ItemIcon id={icon} size={22} /> : <span className={shell.ingBlank} />}
                       <span>{familyName(f, items)}</span>
                     </div>
                   </td>
@@ -252,7 +256,7 @@ function StackView({
     const name = one ? fluidName(one, items) : fam ? familyName(fam, items) : st.id;
     const icon = fam ? familyIcon(fam, items) : null;
     return (
-      <span className="lf-stack" title={st.id}>
+      <span className={styles.stack} title={st.id}>
         {icon && <ItemIcon id={icon} size={18} />}
         {st.amount != null && <b>{st.amount} mB</b>} {name.toLowerCase()}
       </span>
@@ -261,13 +265,13 @@ function StackView({
   const id = st.kind === 'tag' ? st.items?.[0] : st.id;
   const label = st.kind === 'tag' ? `#${st.id}` : itemName(items?.byId.get(st.id), st.id);
   return (
-    <span className="lf-stack" title={st.kind === 'tag' ? `${st.id}: ${(st.items ?? []).join(', ')}` : st.id}>
+    <span className={styles.stack} title={st.kind === 'tag' ? `${st.id}: ${(st.items ?? []).join(', ')}` : st.id}>
       {id && <ItemIcon id={id} size={18} />}
       {st.count && st.count > 1 ? `${st.count}× ` : ''}
       {st.kind === 'tag' && id ? itemName(items?.byId.get(id), id) : label}
       {st.kind === 'tag' && (st.items?.length ?? 0) > 1 && <span className="faint small"> и др.</span>}
       {st.kind === 'tag' && !st.items?.length && (
-        <span className="lf-empty small"> — в сборке нет таких предметов</span>
+        <span className={cx(styles.empty, 'small')}> — в сборке нет таких предметов</span>
       )}
       {st.chance != null && st.chance < 1 && <span className="faint small"> {Math.round(st.chance * 100)}%</span>}
     </span>
@@ -291,8 +295,8 @@ function RecipeLine({
     r.meta.energy && `${r.meta.energy.toLocaleString('ru-RU')} RF`,
   ].filter(Boolean);
   return (
-    <li className={removed ? 'lf-removed' : undefined}>
-      <span className="lf-io">
+    <li className={removed ? styles.removed : undefined}>
+      <span className={styles.io}>
         {r.inputs.map((s, i) => (
           <StackView key={i} st={s} items={items} byTag={byTag} />
         ))}
@@ -312,7 +316,7 @@ function RecipeLine({
         </span>
       )}
       {removed && (
-        <Link className="small lf-removed-tag" to={`/datapacks?pack=${removed.id}`} title={r.id}>
+        <Link className={cx('small', styles.removedTag)} to={`/datapacks?pack=${removed.id}`} title={r.id}>
           <Ban size={12} /> удаляется датапаком «{removed.name}»
         </Link>
       )}
@@ -358,7 +362,7 @@ function FamilyCard({
         {icon ? <ItemIcon id={icon} size={32} /> : null}
         <div className="grow">
           <h2>{familyName(fam, items)}</h2>
-          <div className="lf-fluids faint small">
+          <div className={cx(styles.fluids, 'faint', 'small')}>
             <code>#{fam.tag}</code>
             {fam.fluids.length > 1 && (
               <span>
@@ -380,7 +384,7 @@ function FamilyCard({
         <MethodGroup key={type} type={type} list={list} items={items} byTag={byTag} removedBy={removedBy} />
       ))}
       {useGroups.length > 0 && (
-        <details className="lf-use">
+        <details className={styles.use}>
           <summary>
             Где используется <span className="faint small">{recipesCount(fam.use?.length ?? 0)}</span>
           </summary>
@@ -402,20 +406,20 @@ function PumpjackMethod({ items }: { items: ItemIndex | null }) {
     'createdieselgenerators:pumpjack_hole',
   ].filter((id) => items?.byId.has(id));
   return (
-    <div className="lf-method">
+    <div className={styles.method}>
       <h4>
-        станок-качалка <span className="lf-unverified small">не проверено в игре</span>
+        станок-качалка <span className={cx(styles.unverified, 'small')}>не проверено в игре</span>
       </h4>
-      <ul className="lf-recipes">
+      <ul className={styles.recipes}>
         <li>
-          <span className="lf-io">
+          <span className={styles.io}>
             {parts.map((id) => (
-              <span key={id} className="lf-stack" title={itemName(items?.byId.get(id), id)}>
+              <span key={id} className={styles.stack} title={itemName(items?.byId.get(id), id)}>
                 <ItemIcon id={id} size={18} />
               </span>
             ))}
             <ArrowRight size={13} className="faint" />
-            <span className="lf-stack">
+            <span className={styles.stack}>
               {items?.byId.has('createdieselgenerators:crude_oil_bucket') && (
                 <ItemIcon id="createdieselgenerators:crude_oil_bucket" size={18} />
               )}
@@ -453,11 +457,11 @@ function MethodGroup({
   const [all, setAll] = useState(false);
   const shown = all ? list : list.slice(0, 6);
   return (
-    <div className="lf-method">
+    <div className={styles.method}>
       <h4>
         {methodLabel(type)} <span className="faint small">{list.length > 1 ? recipesCount(list.length) : ''}</span>
       </h4>
-      <ul className="lf-recipes">
+      <ul className={styles.recipes}>
         {shown.map((r) => (
           <RecipeLine key={r.id} r={r} items={items} byTag={byTag} removed={removedBy.get(r.id)} />
         ))}

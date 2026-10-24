@@ -32,7 +32,9 @@ import {
 } from '@/lib/reference';
 import { cx } from '@/shared/lib';
 import { useSearchTrack } from '@/shared/api';
-import './ReferencePage.css';
+import './ReferenceShared.css';
+import shell from './ReferenceShell.module.css';
+import styles from './ReferencePage.module.css';
 
 type Tab = 'ores' | 'fuel' | 'metals' | 'food' | 'botany' | 'power' | 'multiblocks' | 'guides' | 'map';
 const TABS: { id: Tab; label: string }[] = [
@@ -77,8 +79,8 @@ function Reference() {
     : 0;
 
   return (
-    <main className={cx('ref-page', tab === 'map' && 'wide')}>
-      <div className="ref-head">
+    <main className={cx(shell.page, tab === 'map' && shell.pageWide)}>
+      <div className={shell.head}>
         <div className="grow">
           <h1>Справочник</h1>
           <p className="faint small">
@@ -87,7 +89,7 @@ function Reference() {
           </p>
         </div>
       </div>
-      <div className="seg ref-tabs" role="tablist">
+      <div className={cx('seg', styles.tabs)} role="tablist">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -150,7 +152,7 @@ function Reference() {
               <span className="faint small">{ref.liquid?.families.length ?? ''}</span>
             </button>
           </nav>
-          <div className="botany-main ref-fuel-main">
+          <div className={cx('botany-main', shell.fuelMain)}>
             {!liquid ? (
               <FuelTab fuels={ref.fuels} items={items} />
             ) : ref.liquid ? (
@@ -184,7 +186,7 @@ function Reference() {
               <span>Готовые блюда</span>
             </button>
           </nav>
-          <div className="botany-main ref-fuel-main">
+          <div className={cx('botany-main', shell.fuelMain)}>
             {params.get('sub') === 'meals' ? (
               <MealsTab items={items} foods={ref.foods} initialQuery={params.get('q') ?? ''} />
             ) : params.get('sub') === 'dishes' ? (
@@ -287,8 +289,8 @@ function OresTab({ ref_, items }: { ref_: Reference; items: ItemIndex | null }) 
 
   return (
     <>
-      <div className="ref-filters">
-        <label className="search grow">
+      <div className={shell.filters}>
+        <label className="search grow" data-tour="ref-search">
           <Search size={15} className="faint" />
           <input
             placeholder="Руда или металл: касситерит, олово, железо…"
@@ -304,19 +306,19 @@ function OresTab({ ref_, items }: { ref_: Reference; items: ItemIndex | null }) 
             </option>
           ))}
         </select>
-        <label className="row small ref-check">
+        <label className={cx('row', 'small', styles.check)}>
           <input type="checkbox" checked={showRocks} onChange={(e) => setShowRocks(e.target.checked)} />
           Дайки и гравий
         </label>
       </div>
-      <p className="faint small ref-note">
+      <p className={cx('faint', 'small', shell.note)}>
         Редкость — в среднем одна жила на столько чанков. Высоты — Y, где может начинаться жила. Руду в этой сборке не
         плавят напрямую: путь до металла показан цепочкой.
       </p>
       {visible.length === 0 ? (
         <div className="empty">Ничего не найдено</div>
       ) : (
-        <div className="ref-minerals">
+        <div className={shell.minerals}>
           {visible.map((g) => (
             <MineralCard key={g.mineral} group={g} ref_={ref_} items={items} yRange={[yMin, yMax]} rock={rock} />
           ))}
@@ -353,9 +355,9 @@ function MineralCard({
         <ItemIcon id={group.main} size={32} />
         <div className="grow">
           <h2>{itemName(items?.byId.get(group.main), group.main)}</h2>
-          <div className="ref-grades">
+          <div className={styles.grades}>
             {grades.map((i) => (
-              <span key={i.item} className="ref-grade" title={itemName(items?.byId.get(i.item), i.item)}>
+              <span key={i.item} className={styles.grade} title={itemName(items?.byId.get(i.item), i.item)}>
                 <ItemIcon id={i.item} size={18} />
                 {GRADE_LABEL[i.grade]}
               </span>
@@ -363,7 +365,7 @@ function MineralCard({
           </div>
         </div>
         {smelt && (
-          <div className="ref-metal" title={smelt.fluid}>
+          <div className={styles.metal} title={smelt.fluid}>
             {ingot && <ItemIcon id={ingot} size={24} />}
             <div>
               <div>{metalName(smelt.fluid, items)}</div>
@@ -374,11 +376,11 @@ function MineralCard({
       </header>
 
       {(chain || (smelt && direct.length > 0)) && (
-        <div className="ref-chain" aria-label="Путь до металла">
+        <div className={styles.chain} aria-label="Путь до металла">
           <ItemIcon id={group.main} size={22} />
           {(chain ?? []).map((s) => (
-            <span key={s.item} className="ref-step">
-              <span className="ref-step-arrow">
+            <span key={s.item} className={styles.step}>
+              <span className={styles.stepArrow}>
                 <ArrowRight size={14} />
                 <span className="faint small">{s.methods.map(methodLabel).join(' / ')}</span>
               </span>
@@ -386,8 +388,8 @@ function MineralCard({
             </span>
           ))}
           {smelt && (
-            <span className="ref-step">
-              <span className="ref-step-arrow">
+            <span className={styles.step}>
+              <span className={styles.stepArrow}>
                 <ArrowRight size={14} />
                 <span
                   className="faint small"
@@ -407,8 +409,8 @@ function MineralCard({
         </div>
       )}
 
-      <div className="ref-veins-wrap">
-        <table className="ref-veins">
+      <div className={styles.veinsWrap}>
+        <table className={styles.veins}>
           <thead>
             <tr>
               <th>Жила</th>
@@ -429,7 +431,7 @@ function MineralCard({
                     {v.indicator?.blocks[0] && (
                       <>
                         {' · признак '}
-                        <span className="ref-indicator" title="Признак на поверхности">
+                        <span className={styles.indicator} title="Признак на поверхности">
                           <ItemIcon id={v.indicator.blocks[0]} size={16} />
                         </span>
                       </>
@@ -448,9 +450,9 @@ function MineralCard({
                   {v.density != null && <span className="faint small"> · {Math.round(v.density * 100)}%</span>}
                 </td>
                 <td>
-                  <div className="ref-rocks">
+                  <div className={styles.rocks}>
                     {v.rocks.map((r) => (
-                      <span key={r} className={cx(rock === r && 'active')}>
+                      <span key={r} data-active={rock === r}>
                         <ItemIcon id={r} size={18} />
                       </span>
                     ))}
@@ -469,9 +471,9 @@ function MineralCard({
 function Shares({ items }: { items: { item: string; grade: string; share: number }[] }) {
   if (items.length <= 1) return <span className="faint">—</span>;
   return (
-    <span className="ref-shares">
+    <span className={styles.shares}>
       {items.map((i) => (
-        <span key={i.item} className={`grade-${i.grade}`} title={GRADE_LABEL[i.grade as keyof typeof GRADE_LABEL]}>
+        <span key={i.item} data-grade={i.grade} title={GRADE_LABEL[i.grade as keyof typeof GRADE_LABEL]}>
           {i.share}%
         </span>
       ))}
@@ -483,13 +485,13 @@ function YBar({ min, max, range }: { min: number | null; max: number | null; ran
   if (min == null || max == null) return <span className="faint">—</span>;
   const span = range[1] - range[0] || 1;
   return (
-    <div className="ref-y">
+    <div className={styles.y}>
       <span>
         {min}…{max}
       </span>
-      <div className="ref-y-track" aria-hidden>
+      <div className={styles.yTrack} aria-hidden>
         <div
-          className="ref-y-fill"
+          className={styles.yFill}
           style={{ left: `${((min - range[0]) / span) * 100}%`, width: `${((max - min) / span) * 100}%` }}
         />
       </div>
@@ -502,9 +504,9 @@ function YBar({ min, max, range }: { min: number | null; max: number | null; ran
 function IngredientCell({ ids, label, items }: { ids: string[]; label: string | null; items: ItemIndex | null }) {
   const first = ids[0];
   return (
-    <div className="ref-ing">
-      {first ? <ItemIcon id={first} size={24} /> : <span className="ref-ing-blank" />}
-      <div className="ref-ing-name">
+    <div className={shell.ing}>
+      {first ? <ItemIcon id={first} size={24} /> : <span className={shell.ingBlank} />}
+      <div className={shell.ingName}>
         <span>{first ? itemName(items?.byId.get(first), first) : (label ?? '?')}</span>
         {ids.length > 1 && (
           <span className="faint small" title={ids.map((i) => itemName(items?.byId.get(i), i)).join(', ')}>
@@ -556,13 +558,13 @@ function FuelTab({ fuels, items }: { fuels: Fuel[]; items: ItemIndex | null }) {
   useSearchTrack('fuel', query, list.length);
   return (
     <>
-      <div className="ref-filters">
-        <label className="search grow">
+      <div className={cx(shell.filters, shell.filtersEnd)}>
+        <label className="search grow" data-tour="ref-search">
           <Search size={15} className="faint" />
           <input placeholder="Уголь, кокс, торф…" value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
       </div>
-      <p className="faint small ref-note">
+      <p className={cx('faint', 'small', shell.note)}>
         Для горна, костра и печей TFC (дерево и деревянные изделия не показываются). Чистота влияет на то, насколько
         топливо годится для горна (меньше — больше дыма и ниже эффективность).
       </p>
@@ -631,8 +633,8 @@ function FoodTab({ foods, items, meals }: { foods: Food[]; items: ItemIndex | nu
   useSearchTrack('food', query, list.length);
   return (
     <>
-      <div className="ref-filters">
-        <label className="search grow">
+      <div className={cx(shell.filters, shell.filtersEnd)}>
+        <label className="search grow" data-tour="ref-search">
           <Search size={15} className="faint" />
           <input placeholder="Хлеб, говядина, ягоды…" value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
@@ -650,7 +652,7 @@ function FoodTab({ foods, items, meals }: { foods: Food[]; items: ItemIndex | nu
           ))}
         </select>
       </div>
-      <p className="faint small ref-note">
+      <p className={cx('faint', 'small', shell.note)}>
         Порча — множитель скорости: больше 1 портится быстрее. {list.length} из {foods.length}.
       </p>
       <div className="ref-table-wrap">
@@ -721,8 +723,8 @@ function MetalsTab({ ref_, items }: { ref_: Reference; items: ItemIndex | null }
   useSearchTrack('metals', query, list.length);
   return (
     <>
-      <div className="ref-filters">
-        <label className="search grow">
+      <div className={shell.filters}>
+        <label className="search grow" data-tour="ref-search">
           <Search size={15} className="faint" />
           <input placeholder="Медь, бронза, сталь…" value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
@@ -740,8 +742,8 @@ function MetalsTab({ ref_, items }: { ref_: Reference; items: ItemIndex | null }
             {list.map((m) => (
               <tr key={m.id}>
                 <td>
-                  <div className="ref-ing">
-                    {m.ingot ? <ItemIcon id={m.ingot} size={24} /> : <span className="ref-ing-blank" />}
+                  <div className={shell.ing}>
+                    {m.ingot ? <ItemIcon id={m.ingot} size={24} /> : <span className={shell.ingBlank} />}
                     <span>{m.name}</span>
                     {m.source.startsWith('kubejs/') && (
                       <span

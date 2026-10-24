@@ -1,11 +1,12 @@
-/* Подвкладка «Готовые блюда»: таблица справочника (ReferencePage.css) плюс свои ячейки */
-.dishes-type span,
-.dishes-type code {
+/* Подвкладка «Готовые блюда»: таблица справочника (ReferenceShared.css) плюс свои ячейки. */
+
+.type span,
+.type code {
   display: block;
   white-space: nowrap;
 }
 
-.dishes-inputs {
+.inputs {
   display: flex;
   flex-wrap: wrap;
   gap: 2px 8px;
@@ -13,11 +14,11 @@
   min-width: 180px;
 }
 
-.dishes-inputs code {
+.inputs code {
   overflow-wrap: anywhere;
 }
 
-.dishes-chip {
+.chip {
   display: inline-flex;
   align-items: center;
   gap: 3px;

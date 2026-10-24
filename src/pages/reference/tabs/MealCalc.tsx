@@ -13,6 +13,8 @@ import {
   type MealResult,
 } from '@/lib/meals';
 import { NUTRIENTS, type Nutrient } from '@/lib/reference';
+import { cx } from '@/shared/lib';
+import styles from './MealsTab.module.css';
 
 const NUTRIENT_LABEL: Record<Nutrient, string> = {
   grain: 'зерновые',
@@ -37,9 +39,9 @@ interface Field {
 
 function Result({ r, items }: { r: MealResult; items: ItemIndex | null }) {
   return (
-    <div className="meal-result small">
+    <div className={cx(styles.result, 'small')}>
       {r.item && (
-        <span className="meal-chip">
+        <span className={styles.chip}>
           <ItemIcon id={r.item} size={20} tip={false} />
           <b>{itemName(items?.byId.get(r.item), r.item)}</b>
         </span>
@@ -75,7 +77,7 @@ function Fields({
   const label = (options: string[], id: string) =>
     options.some((o) => o !== id && name(o) === name(id)) ? `${name(id)} (${id.split(':')[0]})` : name(id);
   return (
-    <div className="meal-calc-fields">
+    <div className={styles.calcFields}>
       {fields.map((f) => (
         <label key={f.key}>
           <span className="faint small">{f.label}</span>
@@ -186,7 +188,7 @@ export function FamilyCalc({
   );
   const shown = Object.fromEntries(fields.map((fl) => [fl.key, chosen(fl)]));
   return (
-    <details className="meal-calc">
+    <details className={styles.calc}>
       <summary>Калькулятор</summary>
       <Fields fields={fields} value={shown} onChange={(k, id) => setValue((v) => ({ ...v, [k]: id }))} items={items} />
       {missing > 0 ? (
@@ -234,7 +236,7 @@ export function ComputedCalc({
   }));
   const picked = fields.map((fl) => value[fl.key]).filter(Boolean);
   return (
-    <details className="meal-calc">
+    <details className={styles.calc}>
       <summary>Калькулятор</summary>
       <Fields fields={fields} value={value} onChange={(k, id) => setValue((v) => ({ ...v, [k]: id }))} items={items} />
       {fixed.length > 0 && (
@@ -281,7 +283,7 @@ export function DynamicCalc({
   }));
   const picked = fields.map((fl) => value[fl.key]).filter(Boolean);
   return (
-    <details className="meal-calc">
+    <details className={styles.calc}>
       <summary>Калькулятор</summary>
       <Fields fields={fields} value={value} onChange={(k, id) => setValue((v) => ({ ...v, [k]: id }))} items={items} />
       {picked.length === 0 ? (

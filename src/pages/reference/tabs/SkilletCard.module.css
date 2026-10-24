@@ -1,11 +1,13 @@
-/* Карточка сковороды Cuisine Delight: общий вид — из MealsTab.css, здесь только свои списки и строки калькулятора */
-.skillet-groups {
+/* Карточка сковороды Cuisine Delight: общий вид карточки — из MealsTab.module.css,
+   здесь только свои списки и строки калькулятора. */
+
+.groups {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.skillet-products {
+.products {
   list-style: none;
   margin: 6px 0 4px;
   padding: 0;
@@ -14,36 +16,38 @@
   gap: 3px;
 }
 
-.skillet-products li {
+.products li {
   display: flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
 }
 
-.skillet-products li > .faint {
+/* .faint — общая утилита из темы */
+.products li > :global(.faint) {
   text-align: right;
 }
 
-.skillet-rows {
+.rows {
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin: 8px 0;
 }
 
-.skillet-row {
+.row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 56px minmax(0, 130px) auto;
   gap: 6px;
   align-items: center;
 }
 
-.skillet-row .input {
+/* .input — ещё глобальная кнопка темы */
+.row :global(.input) {
   width: 100%;
   min-width: 0;
 }
 
-.skillet-warn {
+.warn {
   color: var(--danger, #c0392b);
 }

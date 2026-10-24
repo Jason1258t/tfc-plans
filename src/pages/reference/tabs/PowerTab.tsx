@@ -17,7 +17,9 @@ import {
 import { cx } from '@/shared/lib';
 import { ItemIcon } from '@/shared/pack-data';
 import { IeConsumers } from '@/components/PowerIeLoads';
-import './PowerTab.css';
+import '../ReferenceShared.css';
+import './PowerShared.css';
+import styles from './PowerTab.module.css';
 
 /**
  * Справочник → «Электричество». Три вида энергии сборки и переходы между ними:
@@ -221,7 +223,7 @@ function Link_({ data, ee, ie }: { data: PowerData; ee: Get; ie: Get }) {
 
       <section className="ref-card">
         <h2 className="power-h">Переходы и курсы</h2>
-        <div className="power-chain">
+        <div className={styles.chain}>
           <ChainStep icons={[EE_BLOCK.rotor, EE_BLOCK.stator, EE_BLOCK.brushes]} title="Вал Create → электричество">
             Генератор: роторы, вокруг каждого до {rotor?.sides ?? 4} статоров, на конце щёточный узел (собирает до{' '}
             {rotor?.maxRotors ?? '—'} роторов подряд). Каждый статор даёт{' '}
@@ -287,8 +289,8 @@ function Link_({ data, ee, ie }: { data: PowerData; ee: Get; ie: Get }) {
 
 function ChainStep({ icons, title, children }: { icons: string[]; title: string; children: ReactNode }) {
   return (
-    <div className="power-step">
-      <div className="power-step-icons">
+    <div className={styles.step}>
+      <div className={styles.stepIcons}>
         {icons.map((id) => (
           <ItemIcon key={id} id={id} size={28} />
         ))}

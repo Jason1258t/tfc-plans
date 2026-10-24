@@ -1,0 +1,90 @@
+/* Оболочка раздела «Справочник»: страница, её шапка, строка фильтров и общие ячейки таблиц.
+   Модуль импортируют и справочник (ReferencePage), и страницы аддонов (pages/addons) — им нужны
+   те же .page/.head, поэтому это один общий модуль, а не три копии. Вкладки берут отсюда .filters,
+   .note и .ing*. */
+
+.page {
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Широкий вид — для карты мира */
+.pageWide {
+  max-width: 1400px;
+}
+
+.head h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 650;
+}
+
+.head p {
+  margin: 0;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Ботаника: поля с подписью сверху выше соседних — ровняем строку фильтров по нижнему краю */
+.filtersEnd {
+  align-items: flex-end;
+}
+
+/* .search — ещё глобальная утилита (TasksPage.css), свой поиск переедет отдельной веткой */
+.filters :global(.search) {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.filters :global(select.input) {
+  width: auto;
+  max-width: 100%;
+}
+
+.note {
+  margin: 0;
+}
+
+.minerals {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Подразделы топлива: содержимое — как у обычной вкладки, столбиком */
+.fuelMain {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ---------------------------------------------------------------- ячейка «из чего» */
+
+.ing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 180px;
+}
+
+.ingName {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ingBlank {
+  width: 24px;
+  height: 24px;
+  flex: none;
+}
