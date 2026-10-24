@@ -11,7 +11,7 @@ import {
   type VisitDay,
   type VisitEvent,
 } from '../data/analytics';
-import { cx } from '../lib/util';
+import { cx } from '@/shared/lib';
 import './StatsPage.css';
 
 /**

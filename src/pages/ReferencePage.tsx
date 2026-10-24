@@ -32,7 +32,7 @@ import {
   type Reference,
   type Vein,
 } from '../lib/reference';
-import { cx } from '../lib/util';
+import { cx } from '@/shared/lib';
 import { useSearchTrack } from '../data/analytics';
 import './ReferencePage.css';
 

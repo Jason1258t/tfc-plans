@@ -4,7 +4,7 @@ import { useData } from '../data/DataContext';
 import { generateRecipeHint, geminiEnabled, geminiErrorText } from '../lib/gemini';
 import { getHint, hintsEnabled, saveHint, type RecipeHint } from '../lib/recipeHints';
 import { typeFieldStats, type RecipeCatalog } from '../lib/recipes';
-import { timeAgo } from '../lib/util';
+import { timeAgo } from '@/shared/lib';
 import { Markdown } from './Markdown';
 import { MarkdownField } from './MarkdownField';
 

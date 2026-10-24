@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { itemName, type ItemIndex } from '../lib/items';
 import { hasStatus, useRecipes, type Recipe } from '../lib/recipes';
 import { NUTRIENTS, type Food, type Nutrient } from '../lib/reference';
-import { cx } from '../lib/util';
+import { cx } from '@/shared/lib';
 import { ItemIcon } from './ItemIcon';
 import './DishesTab.css';
 

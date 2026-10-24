@@ -1,7 +1,7 @@
 import { Check, Copy, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { searchItems, useItems } from '../lib/items';
-import { cx } from '../lib/util';
+import { cx } from '@/shared/lib';
 import { ItemIcon } from './ItemIcon';
 import { useSearchTrack } from '../data/analytics';
 import './ItemIdSearch.css';

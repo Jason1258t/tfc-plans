@@ -18,7 +18,7 @@ import {
 } from '../lib/multiblocks';
 import { machineRates, usePower, useSettings, type PowerData, type Setting } from '../lib/power';
 import { sourceName, useTags } from '../lib/tags';
-import { cx } from '../lib/util';
+import { cx } from '@/shared/lib';
 import { ItemIcon } from './ItemIcon';
 import './MultiblocksTab.css';
 

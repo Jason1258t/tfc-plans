@@ -38,7 +38,7 @@ import {
   undoEdit,
 } from '../lib/schematicEdit';
 import type { ReplaceFavorite } from '../types';
-import { cx } from '../lib/util';
+import { cx } from '@/shared/lib';
 import { ItemIcon } from './ItemIcon';
 import { ItemPicker } from './ItemPicker';
 import './SchematicLayers.css';

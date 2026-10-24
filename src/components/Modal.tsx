@@ -1,7 +1,7 @@
 import { X } from 'lucide-react';
 import { useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { cx } from '../lib/util';
+import { cx } from '@/shared/lib';
 
 interface Props {
   onClose: () => void;

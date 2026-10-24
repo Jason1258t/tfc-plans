@@ -1,7 +1,7 @@
 import { File as FileIcon, FileArchive, FileBox, FileCode, FileText, Image, Package } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { fileKind, type FileKind } from '../lib/fileKinds';
-import { cx } from '../lib/util';
+import { cx } from '@/shared/lib';
 import './FileBadge.css';
 
 const ICONS = {

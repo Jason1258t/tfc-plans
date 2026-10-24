@@ -23,7 +23,7 @@ import {
   type Point,
   type WorldSettings,
 } from '../lib/geo';
-import { cx, timeAgo } from '../lib/util';
+import { cx, timeAgo } from '@/shared/lib';
 import './MapPage.css';
 
 const LAYER_KEY = 'tfc-tm:map-layer';

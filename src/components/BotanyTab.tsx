@@ -26,7 +26,7 @@ import { itemName, useItems, type ItemIndex } from '../lib/items';
 import { mealsByItem, useMeals, type MealRef } from '../lib/meals';
 import type { Food } from '../lib/reference';
 import { useTags } from '../lib/tags';
-import { cx } from '../lib/util';
+import { cx } from '@/shared/lib';
 import { ItemIcon } from './ItemIcon';
 import './BotanyTab.css';
 

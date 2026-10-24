@@ -7,7 +7,7 @@ import { formatSize } from '../lib/files';
 import { useItems } from '../lib/items';
 import { REMOVE, type Schematic } from '../lib/schematic';
 import { openFromLibrary, refreshPreview, removeFromLibrary } from '../lib/schematicLibrary';
-import { cx, timeAgo } from '../lib/util';
+import { cx, timeAgo } from '@/shared/lib';
 import type { SavedSchematic } from '../types';
 import { Markdown } from './Markdown';
 import { MarkdownField } from './MarkdownField';

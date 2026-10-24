@@ -1,6 +1,6 @@
 import { Check, Copy, Download, Terminal } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { cx } from '../lib/util';
+import { cx } from '@/shared/lib';
 
 /** public/tfc/version.json — его пишет npm run tfc:dist */
 interface TfcVersion {

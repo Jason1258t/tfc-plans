@@ -23,7 +23,7 @@ import {
   type ModRef,
   type PackUpdate,
 } from '../lib/packUpdates';
-import { cx, timeAgo } from '../lib/util';
+import { cx, timeAgo } from '@/shared/lib';
 import type { Datapack } from '../types';
 import './UpdatesPage.css';
 

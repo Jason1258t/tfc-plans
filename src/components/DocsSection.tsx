@@ -2,7 +2,7 @@ import { BookOpen, Plus, Search } from 'lucide-react';
 import { useState } from 'react';
 import { useData } from '../data/DataContext';
 import { artifactsStore } from '../data/store';
-import { cx, timeAgo } from '../lib/util';
+import { cx, timeAgo } from '@/shared/lib';
 import { useSearchTrack } from '../data/analytics';
 import './DocsSection.css';
 

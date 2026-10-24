@@ -1,13 +1,12 @@
 import { strToU8, zipSync } from 'fflate';
 import { datapackFiles } from './datapackFiles';
 import type { Datapack, DatapackEntry } from '../types';
-import { recipeHash } from './hash';
+import { recipeHash, uid } from '@/shared/lib';
 import type { ItemIndex } from './items';
 import { entryRecipeId, recipePathOf, targetFromJson } from './kubejsFix';
 import { kindsOf, TAG_KIND_LABEL, tagFromPath, type TagCatalog } from './tags';
 import { recipeRefs } from './recipeRefs';
 import { itemRefsOf, kubejsHits, recipePath, type Recipe, type RecipeCatalog } from './recipes';
-import { uid } from './util';
 
 export { PACK_FORMAT, zipName } from './datapackFiles';
 

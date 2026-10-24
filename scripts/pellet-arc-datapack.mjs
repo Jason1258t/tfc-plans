@@ -19,7 +19,7 @@ import path from 'node:path';
 import { strToU8, zipSync } from 'fflate';
 import { DOCS, ROOT, deployer, fromValue, toValue, token } from './firestore-rest.mjs';
 import { PACK_FORMAT } from '../src/lib/datapackFiles.ts';
-import { recipeHash } from '../src/lib/hash.ts';
+import { recipeHash } from '../src/shared/lib/hash.ts';
 import { matchFilter } from '../src/lib/recipeFilter.ts';
 import { recipeRefs } from '../src/lib/recipeRefs.ts';
 

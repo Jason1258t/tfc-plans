@@ -11,7 +11,7 @@ import { TaskRow } from '../components/TaskRow';
 import { useData } from '../data/DataContext';
 import { groupsStore } from '../data/store';
 import { SORTS, sortTasks, type SortMode } from '../lib/tasks';
-import { cx, timeAgo } from '../lib/util';
+import { cx, timeAgo } from '@/shared/lib';
 import { PRIORITIES, type Group, type Priority } from '../types';
 import { useSearchTrack } from '../data/analytics';
 import './TasksPage.css';

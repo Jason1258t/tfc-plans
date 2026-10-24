@@ -1,7 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { errorText, type Scope } from '../../lib/calcExpr';
+import { cx, errorText, type Scope } from '@/shared/lib';
 import { formatValue, parseSpec } from '../../lib/guideFormat';
-import { cx } from '../../lib/util';
 import { Markdown } from '../Markdown';
 import { useGuideEditing, useGuideLink } from './guideLinks';
 import { expand, value, yaml } from './guideText';

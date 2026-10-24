@@ -61,6 +61,9 @@ Collections: `tasks`, `groups`, `artifacts`, `files` (+`chunks`, package `firest
 ## Code map
 
 ````
+src/shared/       общее без знаний о предметной области; снаружи — через index.ts папки
+  lib/             util (uid, timeAgo, cx), hash (fnv1a, recipeHash — тот же отпечаток, что в сборке пакета),
+                   calcExpr (формулы гайдов: свой разборщик, без eval; проверяется и из Node)
 src/pages/        TasksPage (+ docs section DocsSection), DocPage, files/FilesPage, SchematicsPage, AddonsPage (AddonsTab),
                   DatapacksPage/RecipesPage/TagsPage (one section, PackNav on the left), ReferencePage (tabs: «Гайды» —
                   GuidesTab, «Карта» — MapPage, «Мультиблоки» — MultiblocksTab), UpdatesPage
@@ -83,7 +86,7 @@ src/lib/
   reference.ts meals.ts        reference (ores, fuel, liquid fuel, food, metals); composite meals and calculators
   multiblocks.ts               IE multiblocks: templates, tag substitutes (UI — MultiblocksTab, CSS 3D)
   power.ts                     electricity: Create SU ↔ EE (V/A/W) ↔ IE FE/t, formulas from code (UI — PowerTab)
-  calcExpr.ts guideFormat.ts   guide formulas (own parser, no eval/imports) and number format {{x | 1 В}}
+  guideFormat.ts               guide number format {{x | 1 В}} (formulas — shared/lib/calcExpr.ts)
   guideScope.ts powerGuideScope.ts   names for formulas: shared functions + section (settings, power.json, power.ts)
   projection.ts geo.ts atlas.ts config.ts   TFC Real World map, world settings from server config
   packUpdates.ts gemini.ts     pack updates, Gemini requests (model chains with fallbacks, 90 s timeout)

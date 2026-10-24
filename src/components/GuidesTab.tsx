@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { usePower, useSettings, type PowerData } from '../lib/power';
-import { cx } from '../lib/util';
+import { cx } from '@/shared/lib';
 import { GUIDES_SUBS, type GuidesSub } from './guides/guideMeta';
 import './PowerTab.css';
 

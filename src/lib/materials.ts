@@ -1,7 +1,7 @@
 import type { ChecklistEntry } from '../types';
 import type { ItemIndex } from './items';
 import { readNbt, T, type Compound, type Tag } from './nbt';
-import { uid } from './util';
+import { uid } from '@/shared/lib';
 
 /**
  * Список материалов схемы (.nbt Create / структура ванили): блоки → предметы, которые нужно собрать.

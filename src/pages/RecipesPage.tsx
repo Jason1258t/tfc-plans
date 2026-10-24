@@ -8,7 +8,7 @@ import { useData } from '../data/DataContext';
 import { datapacksStore } from '../data/store';
 import { entryFromRecipe, entryWithId } from '../lib/datapack';
 import { useRecipes, type Recipe } from '../lib/recipes';
-import { timeAgo } from '../lib/util';
+import { timeAgo } from '@/shared/lib';
 import type { Datapack, DatapackEntry } from '../types';
 import './RecipesPage.css';
 

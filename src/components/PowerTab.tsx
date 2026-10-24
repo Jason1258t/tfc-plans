@@ -14,7 +14,7 @@ import {
   type PowerSub,
   type Setting,
 } from '../lib/power';
-import { cx } from '../lib/util';
+import { cx } from '@/shared/lib';
 import { ItemIcon } from './ItemIcon';
 import { IeConsumers } from './PowerIeLoads';
 import './PowerTab.css';

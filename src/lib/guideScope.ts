@@ -1,4 +1,4 @@
-import { CalcError, type Scope } from './calcExpr';
+import { CalcError, type Scope } from '@/shared/lib';
 import { formatValue, parseSpec, plural, watts } from './guideFormat';
 
 /**

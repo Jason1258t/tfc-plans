@@ -8,7 +8,7 @@ import path from 'node:path';
 import { cfFingerprint } from '../../src/lib/freshness.ts';
 import { openJar } from './zipfile.mjs';
 
-/** FNV-1a 32 бита — такой же считает сайт (src/lib/hash.ts), чтобы сверять рецепты датапаков со сборкой */
+/** FNV-1a 32 бита — такой же считает сайт (src/shared/lib/hash.ts), чтобы сверять рецепты датапаков со сборкой */
 export function fnv1a(str) {
   let h = 0x811c9dc5;
   for (let i = 0; i < str.length; i++) {

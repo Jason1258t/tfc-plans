@@ -11,7 +11,7 @@ import {
   type FreshStatus,
   type ManifestMod,
 } from '../lib/freshness';
-import { cx, timeAgo } from '../lib/util';
+import { cx, timeAgo } from '@/shared/lib';
 import './UpdatesPage.css';
 import './FreshnessPage.css';
 

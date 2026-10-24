@@ -20,7 +20,7 @@ import {
   type Tag,
   type TagKind,
 } from '../lib/tags';
-import { cx, uid } from '../lib/util';
+import { cx, uid } from '@/shared/lib';
 import type { Datapack, DatapackEntry } from '../types';
 import { PackPicker, type Pending } from './RecipesPage';
 import { useSearchTrack } from '../data/analytics';

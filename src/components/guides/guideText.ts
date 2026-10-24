@@ -1,5 +1,5 @@
 import { parse as parseYaml } from 'yaml';
-import { CalcError, errorText, evalExpr, parseExpr, type Expr, type Scope } from '../../lib/calcExpr';
+import { CalcError, errorText, evalExpr, parseExpr, type Expr, type Scope } from '@/shared/lib';
 import { formatValue, parseSpec, splitSpec, TEMPLATE } from '../../lib/guideFormat';
 
 /**
