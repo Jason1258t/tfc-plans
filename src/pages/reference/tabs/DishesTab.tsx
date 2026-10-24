@@ -133,7 +133,7 @@ export function DishesTab({ items, foods }: { items: ItemIndex | null; foods: Fo
   return (
     <>
       <div className={cx(shell.filters, shell.filtersEnd)}>
-        <label className="search grow">
+        <label className={cx(shell.search, 'grow')}>
           <Search size={15} className="faint" />
           <input
             placeholder="Блюдо или продукт: паста, рис, варенье…"

@@ -95,7 +95,7 @@ export function LiquidFuelTab({ families, items }: { families: LiquidFamily[]; i
   return (
     <>
       <div className={cx(shell.filters, shell.filtersEnd)}>
-        <label className="search grow">
+        <label className={cx(shell.search, 'grow')}>
           <Search size={15} className="faint" />
           <input
             placeholder="Нефть, бензин, дизель, этанол, биодизель…"

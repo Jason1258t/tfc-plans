@@ -608,7 +608,7 @@ export function MealsTab({
   return (
     <>
       <div className={cx(shell.filters, shell.filtersEnd)}>
-        <label className="search grow">
+        <label className={cx(shell.search, 'grow')}>
           <Search size={15} className="faint" />
           <input
             placeholder="Блюдо или продукт: сэндвич, сыр, томат…"

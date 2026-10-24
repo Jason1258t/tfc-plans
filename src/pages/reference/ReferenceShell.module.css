@@ -40,8 +40,34 @@
   align-items: flex-end;
 }
 
-/* .search — ещё глобальная утилита (TasksPage.css), свой поиск переедет отдельной веткой */
-.filters :global(.search) {
+/* Строка поиска: раньше оформление приходило из глобального .search (TasksPage.css),
+   но его перенесли в модуль страницы задач — теперь у раздела своё, здесь. */
+.search {
+  flex: 1 1 200px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.search:focus-within {
+  border-color: var(--accent);
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+}
+
+/* В строке фильтров поиск занимает всё свободное место */
+.filters .search {
   flex: 1 1 280px;
   min-width: 0;
 }

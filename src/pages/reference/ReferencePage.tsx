@@ -290,7 +290,7 @@ function OresTab({ ref_, items }: { ref_: Reference; items: ItemIndex | null }) 
   return (
     <>
       <div className={shell.filters}>
-        <label className="search grow" data-tour="ref-search">
+        <label className={cx(shell.search, 'grow')} data-tour="ref-search">
           <Search size={15} className="faint" />
           <input
             placeholder="Руда или металл: касситерит, олово, железо…"
@@ -559,7 +559,7 @@ function FuelTab({ fuels, items }: { fuels: Fuel[]; items: ItemIndex | null }) {
   return (
     <>
       <div className={cx(shell.filters, shell.filtersEnd)}>
-        <label className="search grow" data-tour="ref-search">
+        <label className={cx(shell.search, 'grow')} data-tour="ref-search">
           <Search size={15} className="faint" />
           <input placeholder="Уголь, кокс, торф…" value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
@@ -634,7 +634,7 @@ function FoodTab({ foods, items, meals }: { foods: Food[]; items: ItemIndex | nu
   return (
     <>
       <div className={cx(shell.filters, shell.filtersEnd)}>
-        <label className="search grow" data-tour="ref-search">
+        <label className={cx(shell.search, 'grow')} data-tour="ref-search">
           <Search size={15} className="faint" />
           <input placeholder="Хлеб, говядина, ягоды…" value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
@@ -724,7 +724,7 @@ function MetalsTab({ ref_, items }: { ref_: Reference; items: ItemIndex | null }
   return (
     <>
       <div className={shell.filters}>
-        <label className="search grow" data-tour="ref-search">
+        <label className={cx(shell.search, 'grow')} data-tour="ref-search">
           <Search size={15} className="faint" />
           <input placeholder="Медь, бронза, сталь…" value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>

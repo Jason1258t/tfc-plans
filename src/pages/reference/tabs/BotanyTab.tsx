@@ -143,7 +143,7 @@ export function BotanyTab({
       ) : (
         <div className="botany-main">
           <div className={cx(shell.filters, shell.filtersEnd)}>
-            <label className="search grow">
+            <label className={cx(shell.search, 'grow')}>
               <Search size={15} className="faint" />
               <input
                 placeholder={
@@ -813,7 +813,7 @@ function Greenhouse({
   return (
     <div className="botany-main">
       <div className={cx(shell.filters, shell.filtersEnd)}>
-        <label className="search grow">
+        <label className={cx(shell.search, 'grow')}>
           <Search size={15} className="faint" />
           <input placeholder="Томат, ваниль, виноград…" value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
