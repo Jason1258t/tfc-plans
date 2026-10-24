@@ -62,7 +62,7 @@ footer: мелкий текст
 
 Без `inputs` и `outputs` блок — просто таблица в тексте (так сделаны таблица проводов и «кому мешает переменный ток»).
 
-**Формулы** (`src/lib/calcExpr.ts`) — свой разборщик, без `eval`: числа, строки, списки, `+ - * / % ^`, сравнения,
+**Формулы** (`src/shared/lib/calcExpr.ts`) — свой разборщик, без `eval`: числа, строки, списки, `+ - * / % ^`, сравнения,
 `and or not`, `a ? b : c`, `if(условие, то, иначе)`, поля, вызовы, лямбды `x => …`. Видны только имена из области:
 общие функции (`src/lib/guideScope.ts`: `min max round range map find sum fmt watts plural…`) и имена раздела
 (`src/lib/powerGuideScope.ts`: настройки `ee/ie/att/create`, `data` — power.json, `alternator`, `alternatorLoad`,

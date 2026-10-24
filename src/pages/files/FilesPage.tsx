@@ -7,7 +7,7 @@ import { schematicsStore } from '../../data/store';
 import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, uploadFile } from '../../lib/files';
 import { FILE_KINDS, fileKind, type FileKind } from '../../lib/fileKinds';
 import { prepareFile, validateFiles } from '../../lib/uploads';
-import { cx, timeAgo } from '../../lib/util';
+import { cx, timeAgo } from '@/shared/lib';
 import type { SavedSchematic } from '../../types';
 import styles from './FilesPage.module.css';
 

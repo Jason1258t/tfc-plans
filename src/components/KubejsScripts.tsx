@@ -4,7 +4,7 @@ import { useData } from '../data/DataContext';
 import { kubejsScriptsStore } from '../data/store';
 import { SCRIPT_FILE_RE } from '../lib/kubejsFix';
 import { downloadScript } from '../lib/kubejsScripts';
-import { cx, timeAgo } from '../lib/util';
+import { cx, timeAgo } from '@/shared/lib';
 import type { KubejsScript } from '../types';
 
 /** Отметка «Ставить в мир» / «Ставить на сервер» с подсказкой */

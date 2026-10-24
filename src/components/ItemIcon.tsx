@@ -1,5 +1,5 @@
 import { blockEntry, guiIcon, itemName, textureUrl, useItems } from '../lib/items';
-import { cx } from '../lib/util';
+import { cx } from '@/shared/lib';
 import { tooltipHandlers } from './Tooltip';
 
 interface Props {

@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 import { useData } from '../data/DataContext';
 import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, type FileMeta } from '../lib/files';
 import { dismissUpload, isImage, useUploads } from '../lib/uploads';
-import { cx, timeAgo } from '../lib/util';
+import { cx, timeAgo } from '@/shared/lib';
 import './Attachments.css';
 import { FileBadge } from './FileBadge';
 

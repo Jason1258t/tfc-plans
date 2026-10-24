@@ -5,7 +5,7 @@ import { artifactsStore, tasksStore } from '../data/store';
 import { extractResources, geminiEnabled, geminiErrorText } from '../lib/gemini';
 import { useItems } from '../lib/items';
 import { mergeResources } from '../lib/resources';
-import { cx, timeAgo } from '../lib/util';
+import { cx, timeAgo } from '@/shared/lib';
 import { PRIORITIES, STATUSES, type NewTask, type Task } from '../types';
 import { filesEnabled, removeFile, uploadFile } from '../lib/files';
 import { isImage, prepareFile, startUpload, validateFiles } from '../lib/uploads';

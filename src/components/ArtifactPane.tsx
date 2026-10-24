@@ -4,7 +4,7 @@ import { useData } from '../data/DataContext';
 import { artifactsStore } from '../data/store';
 import { filesEnabled } from '../lib/files';
 import { removeOrphanImages } from '../lib/planImages';
-import { cx, timeAgo } from '../lib/util';
+import { cx, timeAgo } from '@/shared/lib';
 import type { Artifact } from '../types';
 import { AgentPanel } from './AgentPanel';
 import './ArtifactPane.css';

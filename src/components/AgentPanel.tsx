@@ -16,7 +16,7 @@ import { tasksStore } from '../data/store';
 import { askGemini, describeTask, extractResources, geminiEnabled, geminiErrorText } from '../lib/gemini';
 import { useItems } from '../lib/items';
 import { mergeResources } from '../lib/resources';
-import { cx } from '../lib/util';
+import { cx } from '@/shared/lib';
 import type { Artifact, Task } from '../types';
 import './AgentPanel.css';
 import { Markdown } from './Markdown';

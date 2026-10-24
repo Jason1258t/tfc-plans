@@ -12,7 +12,7 @@ import {
   type AddonsSub,
 } from '../lib/addons';
 import { itemName, useItems } from '../lib/items';
-import { cx } from '../lib/util';
+import { cx } from '@/shared/lib';
 import { ItemIcon } from './ItemIcon';
 import './PowerTab.css';
 

@@ -1,7 +1,7 @@
 import type { ChecklistEntry } from '../types';
 import type { ExtractedResource } from './gemini';
 import { matchItem, type ItemIndex } from './items';
-import { uid } from './util';
+import { uid } from '@/shared/lib';
 
 /**
  * Сливает найденные Gemini ресурсы в чеклист: сопоставляет названия с библиотекой предметов,

@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { tasksStore } from '../data/store';
 import { usePendingIds } from '../data/sync';
 import { checklistProgress, entryDone } from '../lib/tasks';
-import { cx, timeAgo } from '../lib/util';
+import { cx, timeAgo } from '@/shared/lib';
 import { PRIORITIES, type Task } from '../types';
 import { ItemIcon } from './ItemIcon';
 import { tooltipHandlers } from './Tooltip';

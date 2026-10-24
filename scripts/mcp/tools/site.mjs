@@ -319,7 +319,7 @@ async function groupsList(a) {
   ]);
 }
 
-/** Как uid() в src/lib/util.ts — id пункта чеклиста */
+/** Как uid() в src/shared/lib/util.ts — id пункта чеклиста */
 const uid = () => crypto.randomUUID().replaceAll('-', '').slice(0, 12);
 
 /** Предмет по id — только из библиотеки сайта, иначе отказ */

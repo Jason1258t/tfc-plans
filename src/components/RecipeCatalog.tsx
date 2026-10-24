@@ -10,7 +10,7 @@ import {
   type RecipeCatalog as Catalog,
   type RecipeStatus,
 } from '../lib/recipes';
-import { cx } from '../lib/util';
+import { cx } from '@/shared/lib';
 import { ItemIcon } from './ItemIcon';
 import { ItemPicker } from './ItemPicker';
 import { Modal } from './Modal';

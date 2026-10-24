@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { useData } from '../data/DataContext';
 import { downloadFile, fileUrl, filesEnabled, formatSize, removeFile, type FileMeta } from '../lib/files';
 import { dismissUpload, isImage, useUploads } from '../lib/uploads';
-import { cx, timeAgo } from '../lib/util';
+import { cx, timeAgo } from '@/shared/lib';
 import './Gallery.css';
 
 interface Props {

@@ -74,8 +74,9 @@ to its main user**, not where the scheme says it "should" be. Until the move is 
 - Import alias `@/…` = `src/…` (`vite.config.ts` + `tsconfig.app.json`). Inside one folder use relative `./x`; across
   folders `@/…`. CSS imports stay relative (`./X.module.css`).
 - **Files that Node scripts import directly** (`scripts/`, `cli/`, `server/`: `lib/addonVersions`, `datapackFiles`,
-  `freshness`, `projection`, `recipeRefs`, `recipeFilter`, `nbt`, `schematicFile`, `files.config`, `hash`) must keep
-  **relative** imports — Node doesn't know `@/`. Check with `grep -rn "src/" scripts cli server` before moving them.
+  `freshness`, `projection`, `recipeRefs`, `recipeFilter`, `nbt`, `schematicFile`, `files.config`, `shared/lib/hash`)
+  must keep **relative** imports — Node doesn't know `@/`. Check with `grep -rn "src/" scripts cli server` before moving
+  them.
 - Harmful (avoid): `shared` importing upward, import cycles, the same code in several places. Everything else is a
   recommendation; exceptions are fine if they are noted in the code.
 

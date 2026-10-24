@@ -2,7 +2,7 @@ import { ArrowLeft, BookOpen, Eye, EyeOff, History, Pencil, Plus } from 'lucide-
 import { useEffect, useMemo, useState } from 'react';
 import { guidesEnabled, subscribeGuides } from '../../data/guides';
 import { readNick } from '../../lib/nick';
-import { cx } from '../../lib/util';
+import { cx } from '@/shared/lib';
 import type { Guide, GuideChecked } from '../../types';
 import { CHECKED } from './guideMeta';
 import { ItemIcon } from '../ItemIcon';

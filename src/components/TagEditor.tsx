@@ -15,7 +15,7 @@ import {
   type TagEdit,
   type TagKind,
 } from '../lib/tags';
-import { cx } from '../lib/util';
+import { cx } from '@/shared/lib';
 import { ItemIcon } from './ItemIcon';
 import { Modal } from './Modal';
 import './TagEditor.css';

@@ -17,7 +17,7 @@ import {
   type AddonVersionStatus,
 } from '../../lib/addonVersions';
 import { readNick } from '../../lib/nick';
-import { cx } from '../../lib/util';
+import { cx } from '@/shared/lib';
 import type { GuideChecked } from '../../types';
 import { Markdown } from '../Markdown';
 import { MarkdownField } from '../MarkdownField';

@@ -10,7 +10,7 @@ import {
   useWorldSettings,
   worldProjection,
 } from '../lib/geo';
-import { cx } from '../lib/util';
+import { cx } from '@/shared/lib';
 import type { TaskPlace } from '../types';
 
 interface Props {

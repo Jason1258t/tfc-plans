@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { guideRevisions } from '../../data/guides';
-import { cx } from '../../lib/util';
+import { cx } from '@/shared/lib';
 import type { Guide, GuideRevision } from '../../types';
 import { Modal } from '../Modal';
 import { GuideBody, type GuideKit } from './GuideBody';

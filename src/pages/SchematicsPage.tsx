@@ -51,7 +51,7 @@ import {
   type Schematic,
 } from '../lib/schematic';
 import { makePreview, saveToLibrary } from '../lib/schematicLibrary';
-import { cx } from '../lib/util';
+import { cx } from '@/shared/lib';
 import './SchematicsPage.css';
 
 const RULES_KEY = 'tfc-tm:schematic-rules';

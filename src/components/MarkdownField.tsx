@@ -1,6 +1,6 @@
 import { Suspense, forwardRef, lazy, type ComponentProps } from 'react';
 import type { LiveMarkdownHandle } from './LiveMarkdown';
-import { cx } from '../lib/util';
+import { cx } from '@/shared/lib';
 import './MarkdownField.css';
 
 const LiveMarkdown = lazy(() => import('./LiveMarkdown'));
