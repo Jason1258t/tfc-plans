@@ -6,9 +6,10 @@ import {
   type Quad,
   type RawElement,
 } from './blockModels';
+import { COPYCAT_BASE, copycatMaterials, copycatParts, isCopycat, type Material } from './copycats';
 import { placedBy, textureUrl, type ItemIndex } from './items';
 import { EMPTY_BLOCKS, REMOVE, type Schematic } from './schematic';
-import { buildGrid, namesByState, propsByState, stateOf } from './schematicEdit';
+import { blockNbtOf, buildGrid, namesByState, propsByState, stateOf } from './schematicEdit';
 
 /**
  * Геометрия схемы для 3D: блок — грани его модели из jar (src/lib/blockModels.ts), а нет модели (рисует код:
@@ -160,6 +161,84 @@ function pipeAttachment(d: ModelDir, self: Map<string, string>, nb: { id: string
 }
 /** Невидимые в игре блоки (свет прожектора IE, барьер) — в 3D не рисуются */
 const INVISIBLE = /(^|:)(fake_light|barrier|light|structure_void)$/;
+
+// ---------------------------------------------------------------- копикаты
+
+const copycatBaked = new Map<string, Quad[]>();
+/**
+ * Грани копиката: коробки формы (lib/copycats.ts), на каждой стороне — текстура материала части с той же стороны,
+ * uv по положению грани (как вырезает игра). Материал заменён по заменам схемы.
+ */
+function copycatQuads(
+  id: string,
+  p: Map<string, string>,
+  mats: Map<string, Material>,
+  replace: Map<string, string>,
+  items: ItemIndex,
+): Quad[] {
+  const parts = copycatParts(id, p);
+  const matOf = (part: string): Material => {
+    const m = mats.get(part) ?? mats.get('') ?? { id: COPYCAT_BASE, p: new Map() };
+    const to = replace.get(m.id);
+    if (!to) return m;
+    return to === REMOVE ? { id: COPYCAT_BASE, p: new Map() } : { id: to, p: m.p };
+  };
+  const used = parts.map((x) => matOf(x.part));
+  const key = `${id}[${[...p].join()}]${used.map((m) => `${m.id}[${[...m.p].join()}]`).join('|')}`;
+  const hit = copycatBaked.get(key);
+  if (hit) return hit;
+  const faceCache = new Map<string, Partial<Record<ModelDir, { tex: string; tint?: boolean }>>>();
+  const facesOf = (mat: Material) => {
+    const k = `${mat.id}[${[...mat.p].join()}]`;
+    let f = faceCache.get(k);
+    if (f) return f;
+    f = {};
+    const model = blockModel(mat.id, mat.p) ?? blockModel(COPYCAT_BASE, new Map());
+    const fallback = texturesOf(mat.id, items);
+    for (const d of Object.keys(NORMAL) as ModelDir[]) {
+      const nv = NORMAL[d];
+      let best: Quad | null = null;
+      let area = 0;
+      for (const q of model?.quads ?? []) {
+        if (!q.tex || q.n[0] * nv[0] + q.n[1] * nv[1] + q.n[2] * nv[2] < 0.9) continue;
+        const [a, b, c] = q.p;
+        const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+        const v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+        const s = Math.hypot(u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]);
+        if (s > area) [best, area] = [q, s];
+      }
+      const t = d === 'up' || d === 'down' ? fallback.top : fallback.side;
+      f[d] = best ? { tex: best.tex!, tint: best.tint } : { tex: t ?? 'create/block/copycat_base' };
+    }
+    faceCache.set(k, f);
+    return f;
+  };
+  const els: RawElement[] = parts.map(({ box: [x0, y0, z0, x1, y1, z1] }, i) => {
+    const tex = facesOf(used[i]);
+    const edge: Record<ModelDir, boolean> = {
+      down: y0 === 0,
+      up: y1 === 16,
+      north: z0 === 0,
+      south: z1 === 16,
+      west: x0 === 0,
+      east: x1 === 16,
+    };
+    const faces: RawElement['faces'] = {};
+    for (const d of Object.keys(edge) as ModelDir[]) faces[d] = { ...tex[d], cullface: edge[d] ? d : undefined };
+    return { from: [x0, y0, z0], to: [x1, y1, z1], faces };
+  });
+  const q = bakeElements(els, 'create/block/copycat_base');
+  copycatBaked.set(key, q);
+  return q;
+}
+const NORMAL: Record<ModelDir, [number, number, number]> = {
+  up: [0, 1, 0],
+  down: [0, -1, 0],
+  east: [1, 0, 0],
+  west: [-1, 0, 0],
+  south: [0, 0, 1],
+  north: [0, 0, -1],
+};
 
 function shapeOf(id: string, p: Map<string, string>): Box[] {
   const name = id.split(':')[1] ?? id;
@@ -592,6 +671,8 @@ export async function buildMesh(
     quads: Quad[] | null;
     /** Жидкостная труба Create: к модели добавляются отводы по соседям */
     pipe: boolean;
+    /** Копикат: грани по материалу из nbt клетки (copycatQuads) */
+    copycat: boolean;
     p: Map<string, string>;
   }
   const namespaces = new Set<string>();
@@ -599,6 +680,21 @@ export async function buildMesh(
     const id = name && (replace.get(name) ?? name);
     if (id && id !== REMOVE) namespaces.add(id.includes(':') ? id.split(':')[0] : 'minecraft');
   }
+  // Материалы копикатов: их модели тоже нужны
+  const materials = new Map<number, Map<string, Material>>();
+  if (names.some((n) => n && isCopycat(replace.get(n) ?? n)))
+    for (const [, layer] of grid.layers)
+      for (const bi of layer) {
+        if (bi < 0) continue;
+        const n = names[stateOf(s, bi)];
+        if (!n || !isCopycat(replace.get(n) ?? n)) continue;
+        const mats = copycatMaterials(blockNbtOf(s, bi));
+        materials.set(bi, mats);
+        for (const m of mats.values()) {
+          const id = replace.get(m.id) ?? m.id;
+          if (id !== REMOVE) namespaces.add(id.split(':')[0]);
+        }
+      }
   await loadBlockModels(namespaces);
   const metas: (Meta | null)[] = names.map((name, st) => {
     if (!name) return null;
@@ -606,7 +702,8 @@ export async function buildMesh(
     if (id === REMOVE || EMPTY_BLOCKS.has(id) || INVISIBLE.test(id)) return null;
     const p = props[st] ?? new Map();
     const pipe = id === PIPE;
-    const model = CODE_DRAWN.test(id) && !pipe ? null : blockModel(id, p);
+    const copycat = isCopycat(id);
+    const model = copycat ? { quads: [], full: false } : CODE_DRAWN.test(id) && !pipe ? null : blockModel(id, p);
     const boxes = model ? [] : shapeOf(id, p);
     const full = model ? model.full : boxes.length === 1 && boxes[0] === FULL;
     const see = SEE_THROUGH.test(id);
@@ -620,12 +717,15 @@ export async function buildMesh(
       tint: TINTED.test(id),
       quads: model?.quads ?? null,
       pipe: pipe && !!model,
+      copycat,
       p,
     };
   });
 
   // Занятость: индекс записи палитры по клетке (-1 — пусто)
   const cell = new Int32Array(sx * sy * sz).fill(-1);
+  /** Грани копикатов по клетке */
+  const own = new Map<number, Quad[]>();
   const at = (x: number, y: number, z: number) =>
     x < 0 || y < 0 || z < 0 || x >= sx || y > maxY || z >= sz ? -1 : cell[(y * sz + z) * sx + x];
   let blocks = 0;
@@ -634,8 +734,11 @@ export async function buildMesh(
     for (let i = 0; i < layer.length; i++) {
       if (layer[i] < 0) continue;
       const st = stateOf(s, layer[i]);
-      if (!metas[st]) continue;
+      const m = metas[st];
+      if (!m) continue;
       cell[y * sz * sx + i] = st;
+      if (m.copycat)
+        own.set(y * sz * sx + i, copycatQuads(m.id, m.p, materials.get(layer[i]) ?? new Map(), replace, items));
       blocks++;
     }
   }
@@ -647,6 +750,7 @@ export async function buildMesh(
     for (const q of m?.quads ?? []) if (q.tex) paths.add(q.tex);
     if (m?.pipe) paths.add(PIPE_TEX);
   }
+  for (const qs of own.values()) for (const q of qs) if (q.tex) paths.add(q.tex);
   const atlas = await buildAtlas([...paths]);
 
   const pos: number[] = [];
@@ -671,7 +775,7 @@ export async function buildMesh(
         if (st < 0) continue;
         const m = metas[st]!;
         if (m.quads) {
-          let quads = m.quads;
+          let quads = m.copycat ? (own.get((y * sz + z) * sx + x) ?? []) : m.quads;
           if (m.pipe) {
             quads = [...quads];
             for (const d of Object.keys(TURN) as ModelDir[]) {
