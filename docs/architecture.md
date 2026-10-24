@@ -83,7 +83,7 @@ src/entities/     сущности: типы и свои коллекции (к�
   schematic/       SavedSchematic, ReplaceFavorite, schematicsStore/replaceFavoritesStore
   user/            SiteUser (справочник ников)
 src/types.ts      временный общий выход типов — реэкспорт из entities/<x>/types.ts, исчезнет с переездом страниц
-src/pages/        TasksPage (+ docs section DocsSection), DocPage, files/FilesPage, stats/StatsPage, SchematicsPage, AddonsPage (AddonsTab),
+src/pages/        TasksPage (+ docs section DocsSection), DocPage, files/FilesPage, stats/StatsPage, recipes/RecipesPage (PackPicker), SchematicsPage, AddonsPage (AddonsTab),
                   DatapacksPage/RecipesPage/TagsPage (one section, PackNav on the left), ReferencePage (tabs: «Гайды» —
                   GuidesTab, «Карта» — MapPage, «Мультиблоки» — MultiblocksTab), UpdatesPage
 src/components/   Onboarding (texts — lib/onboarding.ts), FileBadge (kinds — lib/fileKinds.ts),

@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { KubejsConstructor } from '../components/KubejsConstructor';
+import { KubejsConstructor } from '@/components/KubejsConstructor';
 import { Modal, PackSection } from '@/shared/ui';
-import { recipeActions, RecipeBrowser } from '../components/RecipeCatalog';
-import { useData } from '../data/DataContext';
+import { recipeActions, RecipeBrowser } from '@/components/RecipeCatalog';
+import { useData } from '@/data/DataContext';
 import { datapacksStore } from '@/entities/datapack';
-import { entryFromRecipe, entryWithId } from '../lib/datapack';
+import { entryFromRecipe, entryWithId } from '@/lib/datapack';
 import { useRecipes, type Recipe } from '@/shared/pack-data';
 import { timeAgo } from '@/shared/lib';
-import type { Datapack, DatapackEntry } from '../types';
+import type { Datapack, DatapackEntry } from '@/types';
 import './RecipesPage.css';
 
 export type Pending = (pack: Pick<Datapack, 'namespace' | 'entries'>) => DatapackEntry;

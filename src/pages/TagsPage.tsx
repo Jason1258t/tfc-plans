@@ -23,7 +23,7 @@ import {
 } from '@/shared/pack-data';
 import { cx, uid } from '@/shared/lib';
 import type { Datapack, DatapackEntry } from '../types';
-import { PackPicker, type Pending } from './RecipesPage';
+import { PackPicker, type Pending } from '@/pages/recipes';
 import './TagsPage.css';
 
 const SHOWN = 120;

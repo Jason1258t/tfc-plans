@@ -12,7 +12,7 @@ import { AddonPage } from './pages/AddonPage';
 import { AddonsPage } from './pages/AddonsPage';
 import { DocPage } from './pages/DocPage';
 import { DatapacksPage } from './pages/DatapacksPage';
-import { RecipesPage } from './pages/RecipesPage';
+import { RecipesPage } from './pages/recipes';
 import { TagsPage } from './pages/TagsPage';
 import { FilesPage } from './pages/files';
 import { ReferencePage } from './pages/ReferencePage';
