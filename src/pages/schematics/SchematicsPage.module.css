@@ -1,0 +1,430 @@
+/* Страница «Схемы»: шапка, зона перетаскивания, карточка файла, умная замена, таблица блоков.
+   Список файлов, подписи блоков, поиск и малый переключатель — общие, в SchematicsSection.module.css. */
+
+.page {
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.page.dragging {
+  outline: 2px dashed var(--accent);
+  outline-offset: -8px;
+  border-radius: var(--radius-lg);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.head h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 650;
+}
+
+.head p {
+  margin: 0;
+}
+
+.drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 56px 16px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.drop:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.shape {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border);
+}
+
+.pad {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pad input {
+  width: 56px;
+}
+
+.platformPick {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 220px;
+}
+
+/* ------------------------------------------------------------------ умная замена */
+
+.rulesBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--amethyst) 35%, var(--border));
+  border-radius: var(--radius);
+  background: linear-gradient(to bottom, var(--amethyst-soft), var(--surface) 80px);
+}
+
+.aiIco {
+  color: var(--amethyst);
+}
+
+/* Правила — плиткой по 2–3 в ряд, а не столбиком на всю ширину */
+.rules {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 6px 14px;
+}
+
+.rules li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.rules :global(.input) {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.ruleResult {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: 13px;
+}
+
+.ruleResult summary {
+  margin-top: 6px;
+  cursor: pointer;
+  color: var(--danger);
+}
+
+.ruleFailed {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  max-height: 220px;
+  overflow-y: auto;
+  font-size: 12px;
+}
+
+.ruleFailed code {
+  font-family: var(--font-mono);
+}
+
+.ruleFailed .bad {
+  color: var(--danger);
+  text-decoration: line-through;
+}
+
+.ruleResult details.kept summary {
+  color: var(--text-2);
+}
+
+.badCount {
+  color: var(--danger);
+}
+
+/* ------------------------------------------------------------------ таблица блоков */
+
+/* Рабочая область: панель инструментов прилипает под шапкой, пока листается список блоков */
+.work {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.toolbar {
+  position: sticky;
+  top: var(--header-h);
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 0 -8px;
+  padding: 8px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Кнопка раздела + действие раздела — одной плашкой */
+.toolSplit {
+  display: inline-flex;
+}
+
+.toolSplit > :global(.btn):first-child:not(:last-child) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.toolSplit > :global(.btn) + :global(.btn) {
+  margin-left: -1px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.page :global(.btn).active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.chev {
+  transition: transform 0.12s;
+  opacity: 0.7;
+}
+
+.chev.open {
+  transform: rotate(180deg);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.blocks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  min-height: 48px;
+}
+
+.row + .row {
+  border-top: 1px solid var(--border);
+}
+
+.row.replaced {
+  background: color-mix(in srgb, var(--accent-soft) 60%, transparent);
+}
+
+.src,
+.dst {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.dst {
+  flex-wrap: wrap;
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.target {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.target:hover {
+  border-color: var(--border-strong);
+}
+
+.choose {
+  color: var(--text-3);
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.row.removed {
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
+/* зачёркнутое имя блока в удалённой строке: класс идёт вместе с общим .name */
+.nameStruck {
+  text-decoration: line-through;
+}
+
+.removed {
+  cursor: default;
+}
+
+.removed:hover {
+  border-color: transparent;
+}
+
+.modTag {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+/* Замена уводит блок в другой мод (minecraft → tfc) — подсвечиваем, чтобы одноимённые не путались */
+.modTag.modChanged {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+.agentToggle {
+  color: var(--amethyst);
+}
+
+.agentToggle:has(input:checked) {
+  border-color: var(--amethyst);
+  background: var(--amethyst-soft);
+  color: var(--amethyst);
+}
+
+.agentToggle input {
+  accent-color: var(--amethyst);
+}
+
+.agentHint {
+  font-size: 13px;
+}
+
+.agentRun {
+  background: var(--amethyst);
+  border-color: var(--amethyst);
+  color: #fff;
+}
+
+.agentRun:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--amethyst) 85%, #000);
+}
+
+/* звёздочка «в избранном»: .on — состояние, поэтому локальный класс */
+.favStar {
+  color: var(--faint, currentColor);
+}
+
+.favStar.on {
+  color: #e0a800;
+  fill: currentColor;
+}
+
+.alts {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding-left: 6px;
+}
+
+.altChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 7px 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+  font-size: 12px;
+  cursor: pointer;
+  max-width: 220px;
+}
+
+.altChip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.altChip:hover {
+  border-color: var(--amethyst);
+  background: var(--amethyst-soft);
+}
+
+.saveError {
+  color: var(--danger);
+}
+
+.favChips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.favChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.favChip:hover {
+  border-color: #e0a800;
+}
+
+@media (max-width: 700px) {
+  .head {
+    flex-direction: column;
+  }
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    padding: 8px 10px;
+  }
+  .dst {
+    padding-left: 38px;
+  }
+  /* На телефоне панель в три строки — не держим её на экране, места и так мало */
+  .toolbar {
+    position: static;
+  }
+  .rulesBox > :global(.row) {
+    flex-wrap: wrap;
+  }
+}

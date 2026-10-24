@@ -4,7 +4,7 @@ import { itemName, useItems, ItemIcon, ItemPicker } from '@/shared/pack-data';
 import { entryDone } from '../model/tasks';
 import { cx, uid } from '@/shared/lib';
 import type { ChecklistEntry } from '@/types';
-import './Checklist.css';
+import styles from './Checklist.module.css';
 
 interface Props {
   entries: ChecklistEntry[];
@@ -41,17 +41,17 @@ export function Checklist({ entries, onChange }: Props) {
   const doneCount = entries.filter(entryDone).length;
 
   return (
-    <div className="checklist">
+    <div>
       {entries.length > 0 && (
-        <ul className="cl-list">
+        <ul className={styles.clList}>
           {entries.map((e) => {
             const done = entryDone(e);
             return (
-              <li key={e.id} className={cx('cl-row', done && 'done')}>
+              <li key={e.id} className={cx(styles.clRow, done && styles.done)}>
                 {e.itemId ? (
                   <>
                     <button
-                      className={cx('cl-check', done && 'on')}
+                      className={cx(styles.clCheck, done && styles.on)}
                       aria-label={done ? 'Сбросить' : 'Собрано всё'}
                       aria-pressed={done}
                       onClick={() => patch(e.id, { got: done ? 0 : (e.qty ?? 1) })}
@@ -59,8 +59,10 @@ export function Checklist({ entries, onChange }: Props) {
                       {done && <Check size={12} strokeWidth={3} />}
                     </button>
                     <ItemIcon id={e.itemId} size={22} />
-                    <span className="grow cl-text">{itemName(items?.byId.get(e.itemId), e.text || e.itemId)}</span>
-                    <span className="cl-counter">
+                    <span className={cx('grow', styles.clText)}>
+                      {itemName(items?.byId.get(e.itemId), e.text || e.itemId)}
+                    </span>
+                    <span className={styles.clCounter}>
                       <button
                         className="btn ghost sm icon"
                         aria-label="Минус один"
@@ -69,7 +71,7 @@ export function Checklist({ entries, onChange }: Props) {
                         <Minus size={14} />
                       </button>
                       <input
-                        className="cl-num"
+                        className={styles.clNum}
                         type="number"
                         min={0}
                         value={e.got ?? 0}
@@ -78,7 +80,7 @@ export function Checklist({ entries, onChange }: Props) {
                       />
                       <span className="faint">/</span>
                       <input
-                        className="cl-num"
+                        className={styles.clNum}
                         type="number"
                         min={1}
                         value={e.qty ?? 1}
@@ -97,17 +99,17 @@ export function Checklist({ entries, onChange }: Props) {
                 ) : (
                   <>
                     <button
-                      className={cx('cl-check', done && 'on')}
+                      className={cx(styles.clCheck, done && styles.on)}
                       aria-label={done ? 'Снять отметку' : 'Отметить'}
                       aria-pressed={done}
                       onClick={() => patch(e.id, { done: !e.done })}
                     >
                       {done && <Check size={12} strokeWidth={3} />}
                     </button>
-                    <span className="grow cl-text">{e.text}</span>
+                    <span className={cx('grow', styles.clText)}>{e.text}</span>
                   </>
                 )}
-                <span className="cl-actions">
+                <span className={styles.clActions}>
                   <button className="btn ghost sm icon" aria-label="Выше" onClick={() => move(e.id, -1)}>
                     <ChevronUp size={14} />
                   </button>
@@ -125,7 +127,7 @@ export function Checklist({ entries, onChange }: Props) {
       )}
       <div className="row">
         <input
-          className="input cl-qty"
+          className={cx('input', styles.clQty)}
           type="number"
           min={1}
           value={qty}

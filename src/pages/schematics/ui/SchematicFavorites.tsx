@@ -5,6 +5,9 @@ import { deriveVariants } from '../model/replaceFavorites';
 import { blockEntry, isBlock, itemName, type ItemIndex, ItemIcon } from '@/shared/pack-data';
 import type { ReplaceFavorite } from '@/types';
 import { Modal } from '@/shared/ui';
+import { cx } from '@/shared/lib';
+import section from '../SchematicsSection.module.css';
+import styles from './SchematicFavorites.module.css';
 
 export interface Pair {
   from: string;
@@ -19,11 +22,11 @@ export interface PlanRow {
 }
 
 const Block = ({ id, items }: { id: string; items: ItemIndex | null }) => (
-  <span className="fav-block">
+  <span className={styles.favBlock}>
     <ItemIcon id={id} size={22} tip={false} />
-    <span className="grow schem-names">
-      <span className="schem-name">{itemName(blockEntry(items, id), id)}</span>
-      <code className="schem-id">{id}</code>
+    <span className={cx('grow', section.names)}>
+      <span className={section.name}>{itemName(blockEntry(items, id), id)}</span>
+      <code className={section.id}>{id}</code>
     </span>
   </span>
 );
@@ -32,17 +35,17 @@ const Block = ({ id, items }: { id: string; items: ItemIndex | null }) => (
 export function FavoritesPanel({ favorites, items }: { favorites: ReplaceFavorite[]; items: ItemIndex | null }) {
   const sorted = [...favorites].sort((a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to));
   return (
-    <section className="schem-favs">
+    <section className={styles.favs}>
       {sorted.length === 0 ? (
         <p className="faint small">
           Пусто. Замените блок и нажмите ★ рядом с заменой — она станет доступна во всех схемах.
         </p>
       ) : (
-        <ul className="fav-list">
+        <ul className={styles.favList}>
           {sorted.map((f) => (
-            <li key={f.id} className="fav-row">
+            <li key={f.id} className={styles.favRow}>
               <Block id={f.from} items={items} />
-              <ArrowRight size={15} className="schem-arrow" />
+              <ArrowRight size={15} className={section.arrow} />
               <Block id={f.to} items={items} />
               {items && !isBlock(items, f.to) && (
                 <span
@@ -130,9 +133,9 @@ export function SmartAddDialog({
         </>
       }
     >
-      <div className="fav-row main">
+      <div className={cx(styles.favRow, styles.main)}>
         <Block id={pair.from} items={items} />
-        <ArrowRight size={15} className="schem-arrow" />
+        <ArrowRight size={15} className={section.arrow} />
         <Block id={pair.to} items={items} />
       </div>
       {variants.length > 0 && (
@@ -140,11 +143,11 @@ export function SmartAddDialog({
           <p className="small faint">
             Такие же замены для производных блоков. Отмечены те, что есть в загруженных схемах.
           </p>
-          <ul className="fav-list">
+          <ul className={styles.favList}>
             {variants.map((v) => {
               const exists = v.to && favorites.some((f) => f.from === v.from && f.to === v.to);
               return (
-                <li key={v.from} className="fav-row">
+                <li key={v.from} className={styles.favRow}>
                   <label className="toggle">
                     <input
                       type="checkbox"
@@ -154,9 +157,9 @@ export function SmartAddDialog({
                     />
                   </label>
                   <Block id={v.from} items={items} />
-                  <ArrowRight size={15} className="schem-arrow" />
+                  <ArrowRight size={15} className={section.arrow} />
                   {v.to ? <Block id={v.to} items={items} /> : <span className="faint small">в сборке нет аналога</span>}
-                  <span className="faint small fav-note">
+                  <span className={cx('faint', 'small', styles.favNote)}>
                     {exists ? 'уже в избранном' : v.inSchematic ? 'есть в схеме' : 'нет в схемах'}
                   </span>
                 </li>
@@ -211,10 +214,10 @@ export function ApplyFavoritesDialog({
         </>
       }
     >
-      <ul className="fav-list">
+      <ul className={styles.favList}>
         {plan.map((r) => (
-          <li key={r.from} className="fav-row stacked">
-            <div className="fav-row">
+          <li key={r.from} className={cx(styles.favRow, styles.stacked)}>
+            <div className={styles.favRow}>
               <label className="toggle">
                 <input
                   type="checkbox"
@@ -223,18 +226,18 @@ export function ApplyFavoritesDialog({
                 />
               </label>
               <Block id={r.from} items={items} />
-              <span className="faint small fav-note">×{r.count}</span>
+              <span className={cx('faint', 'small', styles.favNote)}>×{r.count}</span>
             </div>
-            <div className="fav-options">
+            <div className={styles.favOptions}>
               {r.options.map((o) => (
-                <label key={o} className="fav-option">
+                <label key={o} className={styles.favOption}>
                   <input
                     type={r.options.length > 1 ? 'radio' : 'checkbox'}
                     name={`fav-${r.from}`}
                     checked={choice.get(r.from) === o}
                     onChange={() => setChoice((m) => new Map(m).set(r.from, o))}
                   />
-                  <ArrowRight size={14} className="schem-arrow" />
+                  <ArrowRight size={14} className={section.arrow} />
                   <Block id={o} items={items} />
                 </label>
               ))}

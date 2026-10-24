@@ -1,0 +1,124 @@
+/* Общее у страницы схем, библиотеки и избранного: список файлов, подпись блока, поиск, размер переключателя.
+   Модуль импортируют страница, библиотека и избранное — поэтому он лежит в корне слайса. */
+
+.files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+/* выбранная запись библиотеки — класс идёт вместе с .file */
+.fileSelected {
+  border-color: var(--accent);
+}
+
+/* Инструменты схемы — своей строкой под именем файла (в одну строку с ним не помещаются) */
+.fileTools {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.fileName {
+  display: block;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+/* Пара «имя блока + id» в таблице замен и в избранном */
+.names {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.id {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arrow {
+  color: var(--text-3);
+}
+
+/* стрелка в строке, где замена есть */
+.arrowAccent {
+  color: var(--accent);
+}
+
+/* Поиск. Раньше оформление приходило из глобального .search (TasksPage.css); теперь своё — иначе
+   в «Библиотеке схем» поле осталось бы без рамки и с иконкой не в строке. */
+.search {
+  flex: 1 1 200px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.search:focus-within {
+  border-color: var(--accent);
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+}
+
+/* в панели инструментов поиску нельзя раздуваться шире строки */
+.searchTight {
+  min-width: 0;
+}
+
+/* малый переключатель (глобальный .toggle из TasksPage.css + свой размер) */
+.smToggle {
+  height: 28px;
+  font-size: 13px;
+}
+
+@media (max-width: 700px) {
+  .file {
+    flex-wrap: wrap;
+  }
+  .file > :global(.grow) {
+    flex-basis: calc(100% - 40px);
+  }
+  /* на телефоне стрелку в строке блока не показываем — экономим строку */
+  .arrow {
+    display: none;
+  }
+}

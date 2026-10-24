@@ -4,7 +4,7 @@ import { useData } from '@/data/DataContext';
 import { artifactsStore } from '@/entities/artifact';
 import { useSearchTrack } from '@/shared/api';
 import { cx, timeAgo } from '@/shared/lib';
-import './DocsSection.css';
+import styles from './DocsSection.module.css';
 
 interface Props {
   /** Документ, открытый справа */
@@ -35,8 +35,8 @@ export function DocsSection({ openId, onOpen }: Props) {
 
   return (
     <>
-      <div className="tasks-top">
-        <label className="search">
+      <div className={styles.top}>
+        <label className={styles.search}>
           <Search size={15} className="faint" />
           <input
             placeholder="Поиск по планам"
@@ -50,7 +50,7 @@ export function DocsSection({ openId, onOpen }: Props) {
           План
         </button>
       </div>
-      <p className="muted docs-lead">
+      <p className={cx('muted', styles.docsLead)}>
         Markdown-планы для сложных задач. Обычно создаются из задачи; здесь — все сразу, включая планы без задачи.
       </p>
       {loading ? (
@@ -58,18 +58,18 @@ export function DocsSection({ openId, onOpen }: Props) {
       ) : list.length === 0 ? (
         <div className="empty">{q.trim() ? 'Ничего не найдено' : 'Планов пока нет'}</div>
       ) : (
-        <ul className="docs-list">
+        <ul className={styles.docsList}>
           {list.map((a) => {
             const task = tasks.find((t) => t.id === a.taskId);
             const firstLine = a.content.replace(/^#.*$/m, '').trim().split('\n')[0]?.slice(0, 140);
             return (
               <li key={a.id}>
-                <button className={cx('doc-item', a.id === openId && 'active')} onClick={() => onOpen(a.id)}>
-                  <BookOpen size={18} className="doc-item-icon" />
+                <button className={cx(styles.docItem, a.id === openId && styles.active)} onClick={() => onOpen(a.id)}>
+                  <BookOpen size={18} className={styles.docItemIcon} />
                   <span className="grow">
-                    <span className="doc-item-title">{a.title || 'Без названия'}</span>
-                    {firstLine && <span className="doc-item-preview">{firstLine}</span>}
-                    <span className="doc-item-meta">
+                    <span className={styles.docItemTitle}>{a.title || 'Без названия'}</span>
+                    {firstLine && <span className={styles.docItemPreview}>{firstLine}</span>}
+                    <span className={styles.docItemMeta}>
                       {task ? `↳ ${task.title}` : 'без задачи'} · {a.updatedBy}, {timeAgo(a.updatedAt)}
                     </span>
                   </span>

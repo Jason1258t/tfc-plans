@@ -1,16 +1,16 @@
-.task-form {
+.taskForm {
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
 
-.tf-title-row {
+.tfTitleRow {
   display: flex;
   align-items: flex-start;
   gap: 10px;
 }
 
-.tf-icon {
+.tfIcon {
   width: 40px;
   height: 40px;
   flex: none;
@@ -23,15 +23,15 @@
   cursor: pointer;
 }
 
-.tf-icon.no-icon .item-icon {
+.tfIcon.noIcon :global(.item-icon) {
   opacity: 0.45;
 }
 
-.tf-icon:hover {
+.tfIcon:hover {
   border-color: var(--border-strong);
 }
 
-.tf-title {
+.tfTitle {
   flex: 1;
   min-width: 0;
   border: 0;
@@ -46,35 +46,35 @@
   min-height: 40px;
 }
 
-.tf-title::placeholder {
+.tfTitle::placeholder {
   color: var(--text-3);
 }
 
 /* Важность, статус, группа, исполнитель и «где» — одной компактной строкой, без подписей:
    значения полей сами говорят, что это («Надо сделать», «Без группы», «Никто») */
-.tf-meta {
+.tfMeta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
 
-.tf-meta .seg.tf-imp {
+.tfMeta :global(.seg).tfImp {
   flex: 0 1 auto;
   min-width: 0;
 }
 
-.tf-meta .seg.tf-imp button {
+.tfMeta :global(.seg).tfImp button {
   padding: 0 8px;
   font-size: 12px;
 }
 
-.tf-meta select.input {
+.tfMeta select:global(.input) {
   width: auto;
   max-width: 220px;
 }
 
-.tf-section-head {
+.tfSectionHead {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -82,7 +82,7 @@
   min-height: 28px;
 }
 
-.tf-section-head h3 {
+.tfSectionHead h3 {
   margin: 0;
   font-size: 13px;
   font-weight: 600;
@@ -90,18 +90,18 @@
   flex: 1;
 }
 
-.tf-insert {
+.tfInsert {
   width: 220px;
 }
 
-.tf-desc {
+.tfDesc {
   padding: 10px 12px;
   border-radius: var(--radius);
   background: var(--surface-2);
   cursor: text;
 }
 
-.doc-links {
+.docLinks {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -110,7 +110,7 @@
   gap: 4px;
 }
 
-.doc-link {
+.docLink {
   width: 100%;
   display: flex;
   align-items: center;
@@ -123,71 +123,73 @@
   text-align: left;
 }
 
-.doc-link:hover {
+.docLink:hover {
   border-color: var(--amethyst);
   background: var(--amethyst-soft);
 }
 
 /* План, который появится вместе с новой задачей: предпросмотр, а не ссылка */
-.doc-link.planned {
+.docLink.planned {
   cursor: default;
   border-style: dashed;
   background: transparent;
 }
 
-.doc-link.planned:hover {
+.docLink.planned:hover {
   border-color: var(--border);
   background: transparent;
 }
 
 @media (max-width: 600px) {
-  .tf-meta select.input {
+  .tfMeta select:global(.input) {
     max-width: none;
   }
   /* Узкий экран: важность занимает свою строку и переносится по кнопкам, а не уезжает за край */
-  .tf-meta .seg.tf-imp {
+  .tfMeta :global(.seg).tfImp {
     flex: 1 1 100%;
     flex-wrap: wrap;
   }
-  .tf-meta .seg.tf-imp button {
+  .tfMeta :global(.seg).tfImp button {
     flex: 1 1 auto;
     justify-content: center;
     padding: 0 6px;
   }
-  .tf-insert {
+  .tfInsert {
     width: 150px;
   }
-  .hide-sm {
+  /* Утилита общая (шапка, справочник, галерея) — прячем как раньше */
+  :global(.hide-sm) {
     display: none;
   }
 }
 
-.tf-gallery {
+.tfGallery {
   margin-top: 10px;
 }
 
-.tf-place {
+.tfPlace {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-/* «Где» в общей строке: значок внутри поля, ширина — по остатку строки */
-.tf-place.compact {
+/* «Где» в общей строке: значок внутри поля, ширина — по остатку строки. Поля «где» — часть этой формы
+   (их рисует ui/PlaceField, он берёт классы отсюда) */
+.tfPlace.compact {
   flex: 1 1 200px;
   min-width: 0;
 }
 
-.tf-place.compact .tf-place-set {
+.tfPlace.compact .tfPlaceSet {
   flex-wrap: wrap;
 }
 
-.tf-place.compact .tf-place-set .input {
+.tfPlace.compact .tfPlaceSet :global(.input) {
   flex: 1 1 120px;
 }
 
 /* Значок внутри поля ввода: «где» и «исполнитель» */
-.tf-field-icon {
+.tfFieldIcon {
   position: absolute;
   left: 10px;
   top: 50%;
@@ -195,26 +197,26 @@
   pointer-events: none;
 }
 
-.input.with-icon {
+:global(.input).withIcon {
   padding-left: 30px;
 }
 
-.tf-place-set {
+.tfPlaceSet {
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.tf-place-set .input {
+.tfPlaceSet :global(.input) {
   flex: 1 1 160px;
   width: auto;
   min-width: 0;
 }
 
-.tf-place-input {
+.tfPlaceInput {
   position: relative;
 }
 
-.tf-place-suggest {
+.tfPlaceSuggest {
   position: absolute;
   z-index: 5;
   top: calc(100% + 4px);
@@ -229,7 +231,7 @@
   box-shadow: var(--shadow-md);
 }
 
-.tf-place-suggest button {
+.tfPlaceSuggest button {
   width: 100%;
   text-align: left;
   padding: 6px 8px;
@@ -240,15 +242,15 @@
   cursor: pointer;
 }
 
-.tf-place-suggest button:hover {
+.tfPlaceSuggest button:hover {
   background: var(--surface-2);
 }
 
-.tf-place-err {
+.tfPlaceErr {
   margin-top: 4px;
 }
 
-.tf-assignee {
+.tfAssignee {
   display: flex;
   flex: 1 1 220px;
   min-width: 0;
@@ -256,20 +258,20 @@
   gap: 6px;
 }
 
-.tf-assignee-input {
+.tfAssigneeInput {
   position: relative;
   display: flex;
   flex: 1;
   min-width: 0;
 }
 
-.tf-assignee .input {
+.tfAssignee :global(.input) {
   flex: 1;
   width: auto;
   min-width: 0;
 }
 
-.tf-assignee .btn {
+.tfAssignee :global(.btn) {
   flex: none;
   white-space: nowrap;
 }

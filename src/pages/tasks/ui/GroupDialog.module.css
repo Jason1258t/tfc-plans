@@ -1,0 +1,13 @@
+/* Рамка иконки: такой же вид у иконки группы (GroupDialog.module.css), пока не вынесено в shared/ui */
+.tfIcon {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  cursor: pointer;
+}

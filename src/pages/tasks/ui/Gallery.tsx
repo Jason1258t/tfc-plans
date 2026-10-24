@@ -5,7 +5,7 @@ import { useData } from '@/data/DataContext';
 import { downloadFile, fileUrl, filesEnabled, formatSize, removeFile, type FileMeta } from '@/lib/files';
 import { dismissUpload, isImage, useUploads } from '@/lib/uploads';
 import { cx, timeAgo } from '@/shared/lib';
-import './Gallery.css';
+import styles from './Gallery.module.css';
 
 interface Props {
   taskId?: string;
@@ -72,7 +72,7 @@ export function Gallery({ taskId, pending, onRemovePending, onAdd }: Props) {
 
   return (
     <div
-      className={cx('gallery', dragging && 'dragging')}
+      className={cx(styles.gallery, dragging && styles.dragging)}
       onDragOver={(e) => {
         if (!e.dataTransfer.types.includes('Files')) return;
         e.preventDefault();
@@ -87,25 +87,29 @@ export function Gallery({ taskId, pending, onRemovePending, onAdd }: Props) {
       }}
     >
       {hasAny && (
-        <div className="gallery-grid">
+        <div className={styles.galleryGrid}>
           {shots.map((shot) => (
             <Thumb key={shot.key} shot={shot} onOpen={() => setOpenKey(shot.key)} onRemove={() => remove(shot)} />
           ))}
           {uploads.map((u) => (
-            <div key={u.key} className={cx('g-thumb uploading', u.error && 'failed')} title={u.error ?? u.name}>
+            <div
+              key={u.key}
+              className={cx(styles.gThumb, styles.uploading, u.error && styles.failed)}
+              title={u.error ?? u.name}
+            >
               {u.preview && <img src={u.preview} alt={u.name} />}
               {u.error ? (
-                <button className="g-overlay err" onClick={() => dismissUpload(u.key)}>
+                <button className={cx(styles.gOverlay, styles.err)} onClick={() => dismissUpload(u.key)}>
                   Ошибка · скрыть
                 </button>
               ) : (
-                <span className="g-overlay">{Math.round(u.progress * 100)}%</span>
+                <span className={styles.gOverlay}>{Math.round(u.progress * 100)}%</span>
               )}
             </div>
           ))}
         </div>
       )}
-      <button type="button" className="gallery-add" onClick={() => inputRef.current?.click()}>
+      <button type="button" className={styles.galleryAdd} onClick={() => inputRef.current?.click()}>
         <ImagePlus size={15} />
         {dragging ? 'Отпустите, чтобы добавить' : 'Добавить изображения'}
         <span className="faint small hide-sm">или Ctrl+V — вставить скриншот</span>
@@ -157,11 +161,17 @@ function Thumb({ shot, onOpen, onRemove }: { shot: Shot; onOpen: () => void; onR
   const { url: savedUrl, failed } = useImageUrl(shot.kind === 'file' ? shot.file : undefined);
   const url = shot.kind === 'pending' ? shot.url : savedUrl;
   return (
-    <div className="g-thumb" title={shot.name}>
-      <button type="button" className="g-open" onClick={onOpen} aria-label={'Открыть ' + shot.name}>
-        {url ? <img src={url} alt={shot.name} /> : <span className={cx('g-skeleton', failed && 'failed')} />}
+    <div className={styles.gThumb} title={shot.name}>
+      <button type="button" className={styles.gOpen} onClick={onOpen} aria-label={'Открыть ' + shot.name}>
+        {url ? <img src={url} alt={shot.name} /> : <span className={cx(styles.gSkeleton, failed && styles.failed)} />}
       </button>
-      <button type="button" className="g-remove" onClick={onRemove} aria-label={'Удалить ' + shot.name} title="Удалить">
+      <button
+        type="button"
+        className={styles.gRemove}
+        onClick={onRemove}
+        aria-label={'Удалить ' + shot.name}
+        title="Удалить"
+      >
         <X size={13} />
       </button>
     </div>
@@ -209,46 +219,46 @@ function Lightbox({
 
   return createPortal(
     <div
-      className="lightbox"
+      className={styles.lightbox}
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
       role="dialog"
       aria-label={shot.name}
     >
-      <div className="lb-top">
-        <span className="lb-title">
+      <div className={styles.lbTop}>
+        <span className={styles.lbTitle}>
           {shot.name}
-          <span className="lb-meta">
+          <span className={styles.lbMeta}>
             {meta}
             {shots.length > 1 && ' · ' + (index + 1) + ' из ' + shots.length}
           </span>
         </span>
         {shot.kind === 'file' ? (
-          <button className="lb-btn" onClick={() => downloadFile(shot.file)} aria-label="Скачать" title="Скачать">
+          <button className={styles.lbBtn} onClick={() => downloadFile(shot.file)} aria-label="Скачать" title="Скачать">
             <Download size={18} />
           </button>
         ) : (
-          <a className="lb-btn" href={shot.url} download={shot.name} aria-label="Скачать" title="Скачать">
+          <a className={styles.lbBtn} href={shot.url} download={shot.name} aria-label="Скачать" title="Скачать">
             <Download size={18} />
           </a>
         )}
-        <button className="lb-btn" onClick={() => onRemove(shot)} aria-label="Удалить" title="Удалить">
+        <button className={styles.lbBtn} onClick={() => onRemove(shot)} aria-label="Удалить" title="Удалить">
           <Trash2 size={18} />
         </button>
-        <button className="lb-btn" onClick={onClose} aria-label="Закрыть" title="Закрыть (Esc)">
+        <button className={styles.lbBtn} onClick={onClose} aria-label="Закрыть" title="Закрыть (Esc)">
           <X size={20} />
         </button>
       </div>
       {url ? (
-        <img className="lb-img" src={url} alt={shot.name} onMouseDown={(e) => e.stopPropagation()} />
+        <img className={styles.lbImg} src={url} alt={shot.name} onMouseDown={(e) => e.stopPropagation()} />
       ) : (
-        <div className="lb-loading">Загрузка…</div>
+        <div className={styles.lbLoading}>Загрузка…</div>
       )}
       {shots.length > 1 && (
         <>
-          <button className="lb-nav prev" onClick={() => go(-1)} aria-label="Предыдущее">
+          <button className={cx(styles.lbNav, styles.prev)} onClick={() => go(-1)} aria-label="Предыдущее">
             <ChevronLeft size={28} />
           </button>
-          <button className="lb-nav next" onClick={() => go(1)} aria-label="Следующее">
+          <button className={cx(styles.lbNav, styles.next)} onClick={() => go(1)} aria-label="Следующее">
             <ChevronRight size={28} />
           </button>
         </>
