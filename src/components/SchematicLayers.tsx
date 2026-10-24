@@ -171,7 +171,7 @@ export function SchematicLayers({
   const [y, setY] = useState(grid.minY);
   const layerY = Math.min(Math.max(0, y), Math.max(0, sy - 1));
   const [ghost, setGhost] = useState(true);
-  const [mode, setMode] = useState<'2d' | '3d'>('2d');
+  const [mode, setMode] = useState<'2d' | '3d'>('3d');
   /** 3D: показывать только слои до текущего */
   const [cut, setCut] = useState(false);
   const [textured, setTextured] = useState(true);

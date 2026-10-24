@@ -68,6 +68,15 @@
   background: var(--surface);
 }
 
+/* Инструменты схемы — своей строкой под именем файла (в одну строку с ним не помещаются) */
+.schem-file-tools {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
 .schem-shape {
   flex-basis: 100%;
   display: flex;
