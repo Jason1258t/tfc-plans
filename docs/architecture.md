@@ -61,7 +61,7 @@ Collections: `tasks`, `groups`, `artifacts`, `files` (+`chunks`, package `firest
 ## Code map
 
 ````
-src/pages/        TasksPage (+ docs section DocsSection), DocPage, FilesPage, SchematicsPage, AddonsPage (AddonsTab),
+src/pages/        TasksPage (+ docs section DocsSection), DocPage, files/FilesPage, SchematicsPage, AddonsPage (AddonsTab),
                   DatapacksPage/RecipesPage/TagsPage (one section, PackNav on the left), ReferencePage (tabs: «Гайды» —
                   GuidesTab, «Карта» — MapPage, «Мультиблоки» — MultiblocksTab), UpdatesPage
 src/components/   Onboarding (texts — lib/onboarding.ts), Modal, ItemPicker/ItemIcon, FileBadge (kinds — lib/fileKinds.ts),
