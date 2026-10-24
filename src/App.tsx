@@ -14,7 +14,7 @@ import { DatapacksPage } from './pages/datapacks';
 import { RecipesPage } from './pages/recipes';
 import { TagsPage } from './pages/tags';
 import { FilesPage } from './pages/files';
-import { ReferencePage } from './pages/ReferencePage';
+import { ReferencePage } from './pages/reference';
 import { FreshnessPage, UpdatesPage } from './pages/updates';
 import { SchematicsPage } from './pages/SchematicsPage';
 import { StatsPage } from './pages/stats';

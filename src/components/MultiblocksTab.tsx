@@ -15,8 +15,8 @@ import {
   type MbShape,
   type Multiblock,
   type MultiblockData,
-} from '../lib/multiblocks';
-import { machineRates, usePower, useSettings, type PowerData, type Setting } from '../lib/power';
+} from '@/lib/multiblocks';
+import { machineRates, usePower, useSettings, type PowerData, type Setting } from '@/lib/power';
 import { cx } from '@/shared/lib';
 import './MultiblocksTab.css';
 
@@ -28,7 +28,7 @@ import './MultiblocksTab.css';
 
 const HAMMER = 'immersiveengineering:hammer';
 
-const MultiblockFormed = lazy(() => import('./MultiblockFormed'));
+const MultiblockFormed = lazy(() => import('@/components/MultiblockFormed'));
 
 /** Иконка машины; у блоков с объёмной моделью (верстак, молниетвод) её нет — тогда самый частый блок структуры */
 function mbIcon(m: Multiblock, items: ItemIndex | null): string | null {

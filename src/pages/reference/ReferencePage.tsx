@@ -1,19 +1,19 @@
 import { ArrowRight, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
-import { BotanyTab } from '../components/BotanyTab';
-import { DishesTab } from '../components/DishesTab';
-import { MealsTab } from '../components/MealsTab';
-import { mealsByItem, useMeals, type Meals } from '../lib/meals';
+import { BotanyTab } from './tabs/BotanyTab';
+import { DishesTab } from './tabs/DishesTab';
+import { MealsTab } from './tabs/MealsTab';
+import { mealsByItem, useMeals, type Meals } from '@/lib/meals';
 import { useTags, ItemIcon, itemName, useItems, type ItemIndex } from '@/shared/pack-data';
-import { LiquidFuelTab } from '../components/LiquidFuelTab';
+import { LiquidFuelTab } from './tabs/LiquidFuelTab';
 import { MapPage } from '@/pages/map';
-import { MultiblocksTab } from '../components/MultiblocksTab';
-import { GuidesTab } from '../components/GuidesTab';
-import { GUIDES_SUBS, type GuidesSub } from '../components/guides/guideMeta';
-import { PowerTab } from '../components/PowerTab';
-import { POWER_SUBS, type PowerSub } from '../lib/power';
-import type { BotanySub } from '../lib/botany';
+import { MultiblocksTab } from '@/components/MultiblocksTab';
+import { GuidesTab } from './tabs/GuidesTab';
+import { GUIDES_SUBS, type GuidesSub } from '@/components/guides/guideMeta';
+import { PowerTab } from './tabs/PowerTab';
+import { POWER_SUBS, type PowerSub } from '@/lib/power';
+import type { BotanySub } from '@/lib/botany';
 import {
   formatTicks,
   GRADE_LABEL,
@@ -29,7 +29,7 @@ import {
   type Nutrient,
   type Reference,
   type Vein,
-} from '../lib/reference';
+} from '@/lib/reference';
 import { cx } from '@/shared/lib';
 import { useSearchTrack } from '@/shared/api';
 import './ReferencePage.css';

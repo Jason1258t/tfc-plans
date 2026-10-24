@@ -1,6 +1,6 @@
 import { Plus, X } from 'lucide-react';
 import { useMemo, useState, type ComponentType, type ReactNode } from 'react';
-import { CONFIG_ORIGIN_LABEL, useModConfig, type ConfigOrigin, type ModConfig } from '../lib/config';
+import { CONFIG_ORIGIN_LABEL, useModConfig, type ConfigOrigin, type ModConfig } from '@/lib/config';
 import type { TagCatalog } from '@/shared/pack-data';
 import { itemName, type ItemIndex, ItemIcon } from '@/shared/pack-data';
 import {
@@ -15,8 +15,8 @@ import {
   type SkilletMeal,
   type SkilletPick,
   type SkilletState,
-} from '../lib/meals';
-import { NUTRIENTS, type Nutrient } from '../lib/reference';
+} from '@/lib/meals';
+import { NUTRIENTS, type Nutrient } from '@/lib/reference';
 import './SkilletCard.css';
 
 const NUTRIENT_LABEL: Record<Nutrient, string> = {
