@@ -1,37 +1,37 @@
-.map-page {
+.page {
   width: 100%;
   min-height: 0;
 }
 
-.map-layout {
+.layout {
   display: grid;
   grid-template-columns: 340px minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 }
 
-.map-side {
+.side {
   display: flex;
   flex-direction: column;
   gap: 12px;
   min-width: 0;
 }
 
-.map-title {
+.title {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.map-title h2 {
+.title h2 {
   margin: 0;
   font-size: 22px;
   font-weight: 650;
   flex: 1;
 }
 
-.map-warn {
+.warn {
   margin: 0;
   padding: 8px 10px;
   border-radius: var(--radius);
@@ -39,7 +39,7 @@
   border: 1px solid color-mix(in srgb, var(--imp-2) 40%, var(--border));
 }
 
-.map-point {
+.point {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
@@ -49,32 +49,31 @@
   gap: 8px;
 }
 
-.map-point-head {
+.pointHead {
   gap: 8px;
 }
 
-.map-dot {
+.dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   flex: none;
 }
-.map-dot.a {
+
+/* Какая точка: A — акцент, B — «алмаз» */
+.dot[data-color='a'] {
   background: var(--accent);
 }
-.map-dot.b {
+
+.dot[data-color='b'] {
   background: var(--diamond);
 }
 
-.map-input {
+.inputWrap {
   position: relative;
 }
 
-.map-input .input {
-  width: 100%;
-}
-
-.map-suggest {
+.suggest {
   position: absolute;
   z-index: 10;
   top: calc(100% + 4px);
@@ -89,7 +88,7 @@
   box-shadow: var(--shadow-md);
 }
 
-.map-suggest button {
+.suggest button {
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -104,29 +103,29 @@
   text-align: left;
 }
 
-.map-suggest button:hover {
+.suggest button:hover {
   background: var(--surface-2);
 }
 
-.map-point-info {
+.pointInfo {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.map-coords {
+.coords {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
 }
 
-.map-coords code {
+.coords code {
   font-size: 14px;
   margin-right: auto;
 }
 
-.map-near {
+.near {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -135,25 +134,25 @@
   gap: 2px;
 }
 
-.map-near li {
+.near li {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
 }
 
-.map-distance {
+.distance {
   padding: 10px 12px;
   border-radius: var(--radius-lg);
   background: var(--surface-2);
   font-size: 14px;
 }
 
-.map-hint {
+.hint {
   line-height: 1.4;
 }
 
-.map-tasks ul {
+.tasks ul {
   list-style: none;
   margin: 6px 0 0;
   padding: 0;
@@ -162,13 +161,13 @@
   gap: 2px;
 }
 
-.map-tasks li {
+.tasks li {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.map-main {
+.main {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -177,121 +176,48 @@
   top: calc(var(--header-h, 56px) + 12px);
 }
 
-.map-layers {
+.layers {
   align-self: flex-start;
   flex-wrap: wrap;
 }
 
-.map-form-row {
+.formRow {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.map-form-grid {
+.formGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
 
-/* ---------------------------------------------------------------- canvas */
-
-.wmap {
-  position: relative;
-  height: calc(100vh - var(--header-h, 56px) - 90px);
-  min-height: 320px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  background: var(--surface-2);
-}
-
-.wmap canvas {
-  display: block;
-  touch-action: none;
-  cursor: crosshair;
-}
-
-.wmap-zoom {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.wmap-readout {
-  position: absolute;
-  left: 8px;
-  bottom: 8px;
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--bg) 80%, transparent);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  pointer-events: none;
-}
-
-@media (max-width: 900px) {
-  .map-layout {
-    grid-template-columns: 1fr;
-  }
-  .map-main {
-    position: static;
-    order: -1;
-  }
-  .wmap {
-    height: 60vh;
-  }
-}
-
-.wmap-pin {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  margin: -5px 0 0 -5px;
-  border-radius: 50%;
-  background: var(--text);
-  border: 2px solid var(--bg);
-  box-shadow: 0 0 0 1px var(--text);
-  pointer-events: none;
-}
-
-.wmap-popup {
-  position: absolute;
-  z-index: 2;
-  padding: 10px 12px;
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  box-shadow: var(--shadow-lg);
-}
-
-.map-popup {
+.popup {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.map-popup-head code {
+.popupHead code {
   font-size: 16px;
   font-weight: 600;
 }
 
-.map-popup-actions {
+.popupActions {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 2px;
 }
 
-.map-popup-actions .map-dot {
+/* В карточке точки кружок меньше, чем в панели */
+.popupActions .dot {
   width: 8px;
   height: 8px;
 }
 
-.map-fieldset {
+.fieldset {
   border: 0;
   margin: 0;
   padding: 0;
@@ -301,14 +227,24 @@
   gap: 12px;
 }
 
-.map-fieldset:disabled {
+.fieldset:disabled {
   opacity: 0.6;
 }
 
-.map-config-note {
+.configNote {
   margin: 0;
   padding: 8px 10px;
   border-radius: var(--radius);
   background: var(--surface-2);
   line-height: 1.45;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .main {
+    position: static;
+    order: -1;
+  }
 }
