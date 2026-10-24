@@ -1,4 +1,4 @@
-import type { ChecklistEntry } from '../types';
+import type { ChecklistEntry } from '@/entities/task';
 import type { ExtractedResource } from '@/shared/api';
 import { matchItem, type ItemIndex } from '@/shared/pack-data';
 import { uid } from '@/shared/lib';

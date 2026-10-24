@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { itemName, useItems, ItemIcon, ItemPicker } from '@/shared/pack-data';
 import { entryDone } from '../model/tasks';
 import { cx, uid } from '@/shared/lib';
-import type { ChecklistEntry } from '@/types';
+import type { ChecklistEntry } from '@/entities/task';
 import styles from './Checklist.module.css';
 
 interface Props {

@@ -1,12 +1,12 @@
 import { Check, Copy, Download, FilePlus2, Save, ShieldOff, Wand2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useData } from '../data/DataContext';
+import { useNick } from '@/entities/user';
 import { kubejsScriptsStore } from '@/entities/datapack';
 import { filterToJs, kubejsHits, ruleIsIdOnly, type KjsRule } from '@/shared/pack-data';
 import { kubejsScript, liftPatch, scriptFileName, targetFromJson } from '../lib/kubejsFix';
 import { downloadScript, freeScriptName } from '../lib/kubejsScripts';
-import type { KubejsScript } from '../types';
+import type { KubejsScript } from '@/entities/datapack';
 import { Modal } from '@/shared/ui';
 import './KubejsConstructor.css';
 
@@ -59,7 +59,7 @@ export function KubejsConstructor({ recipeId, json, rules, namespace, onNewEntry
   const script = kubejsScript([{ id: newId, json }], `Рецепт ${recipeId} без удаления KubeJS`);
   const fileName = scriptFileName(newId.split(':')[1] ?? '');
 
-  const { nick } = useData();
+  const nick = useNick();
   const [scripts, setScripts] = useState<KubejsScript[] | null>(null);
   useEffect(() => kubejsScriptsStore.subscribe(setScripts), []);
   /** Сохранённый на сайте скрипт: id и имя файла */

@@ -1,6 +1,6 @@
 import { collection, doc, getDocs, limit, onSnapshot, orderBy, query, where, writeBatch } from 'firebase/firestore';
 import { authReady, db, track } from '@/shared/api';
-import type { Guide, GuideRevision } from '../types';
+import type { Guide, GuideRevision } from '@/entities/guide';
 
 /**
  * Гайды справочника — коллекция guides, у каждого история правок guides/{id}/revisions (последняя запись — текущая

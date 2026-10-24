@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { guidesEnabled, subscribeGuides } from '../../data/guides';
 import { readNick } from '@/shared/lib/nick';
 import { cx } from '@/shared/lib';
-import type { Guide, GuideChecked } from '../../types';
+import type { Guide, GuideChecked } from '@/entities/guide';
 import { CHECKED } from './guideMeta';
 import { ItemIcon } from '@/shared/pack-data';
 import { GuideBody, type GuideKit } from './GuideBody';

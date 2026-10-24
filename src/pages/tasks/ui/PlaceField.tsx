@@ -11,7 +11,7 @@ import {
   worldProjection,
 } from '@/lib/geo';
 import { cx } from '@/shared/lib';
-import type { TaskPlace } from '@/types';
+import type { TaskPlace } from '@/entities/task';
 import styles from './TaskDialog.module.css';
 
 interface Props {

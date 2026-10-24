@@ -24,7 +24,7 @@ import { replaceFavoritesStore } from '@/entities/schematic';
 import { useFavorites } from './model/replaceFavorites';
 import { SchematicLayers } from './ui/SchematicLayers';
 import { SchematicLibrary } from './ui/SchematicLibrary';
-import { useData } from '@/data/DataContext';
+import { useNick } from '@/entities/user';
 import { filesEnabled, formatSize } from '@/lib/files';
 import { geminiEnabled } from '@/shared/api';
 import {
@@ -129,7 +129,7 @@ const modOf = (id: string) => id.split(':')[0];
 
 export function SchematicsPage() {
   const items = useItems();
-  const { nick } = useData();
+  const nick = useNick();
   /** key схемы → идёт сохранение в библиотеку / текст ошибки */
   const [saving, setSaving] = useState<Record<string, 'saving' | string>>({});
   /** key схемы → замены на момент сохранения (галочка, пока их не меняли) */

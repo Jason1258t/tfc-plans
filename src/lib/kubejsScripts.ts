@@ -1,5 +1,5 @@
 /** Скрипты KubeJS на сайте (коллекция kubejsScripts): имена файлов, шаблон, скачивание */
-import type { KubejsScript } from '../types';
+import type { KubejsScript } from '@/entities/datapack';
 
 /** Свободное имя файла: tfc_plans.js → tfc_plans_2.js, если такое уже есть */
 export function freeScriptName(name: string, scripts: KubejsScript[], exceptId?: string) {

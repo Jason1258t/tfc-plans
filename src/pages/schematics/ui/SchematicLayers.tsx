@@ -37,7 +37,7 @@ import {
   stateOf,
   undoEdit,
 } from '@/lib/schematicEdit';
-import type { ReplaceFavorite } from '@/types';
+import type { ReplaceFavorite } from '@/entities/schematic';
 import { cx } from '@/shared/lib';
 import section from '../SchematicsSection.module.css';
 import styles from './SchematicLayers.module.css';

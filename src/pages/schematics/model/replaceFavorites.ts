@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { replaceFavoritesStore } from '@/entities/schematic';
-import type { ReplaceFavorite } from '@/types';
+import type { ReplaceFavorite } from '@/entities/schematic';
 import type { ItemIndex } from '@/shared/pack-data';
 
 /** Подписка на избранные замены; null — ещё грузятся */

@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { cx } from '@/shared/lib';
 import { typeOfContent } from '@/lib/datapack';
 import { itemName, useItems, itemRefsOf, type RecipeCatalog, ItemIcon, ItemIdSearch } from '@/shared/pack-data';
-import type { DatapackEntry } from '@/types';
+import type { DatapackEntry } from '@/entities/datapack';
 import styles from './EntryEditor.module.css';
 import { HintPanel } from './HintPanel';
 import { Modal } from '@/shared/ui';

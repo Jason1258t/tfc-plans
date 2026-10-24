@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { useData } from '@/data/DataContext';
+import { useNick } from '@/entities/user';
+import { useGroups } from '@/entities/group';
+import { useTasks } from '@/entities/task';
 import { groupsStore } from '@/entities/group';
 import { tasksStore } from '@/entities/task';
-import type { Group } from '@/types';
+import type { Group } from '@/entities/group';
 import { ItemIcon, ItemPicker } from '@/shared/pack-data';
 import { Modal } from '@/shared/ui';
 import styles from './GroupDialog.module.css';
@@ -15,7 +17,9 @@ interface Props {
 }
 
 export function GroupDialog({ group, onClose, onDeleted }: Props) {
-  const { groups, tasks, nick } = useData();
+  const { items: groups } = useGroups();
+  const { items: tasks } = useTasks();
+  const nick = useNick();
   const [name, setName] = useState(group?.name ?? '');
   const [icon, setIcon] = useState<string | null>(group?.icon ?? null);
 

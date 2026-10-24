@@ -1,7 +1,7 @@
 import { Download, FileBox, ImagePlus, Library, Search, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useData } from '@/data/DataContext';
+import { useNick } from '@/entities/user';
 import { schematicsStore } from '@/entities/schematic';
 import { useSearchTrack } from '@/shared/api';
 import { formatSize } from '@/lib/files';
@@ -11,7 +11,7 @@ import { openFromLibrary, refreshPreview, removeFromLibrary } from '../model/sch
 import { cx, timeAgo } from '@/shared/lib';
 import section from '../SchematicsSection.module.css';
 import styles from './SchematicLibrary.module.css';
-import type { SavedSchematic } from '@/types';
+import type { SavedSchematic } from '@/entities/schematic';
 import { Markdown } from '@/components/Markdown';
 import { MarkdownField } from '@/components/MarkdownField';
 
@@ -204,7 +204,7 @@ interface PanelProps {
 
 /** Панель справа: превью, название и описание (правят все, сохраняется при уходе с поля) */
 function SchematicPanel({ entry, busy, canRender, onPreview, onClose, onError }: PanelProps) {
-  const { nick } = useData();
+  const nick = useNick();
   const [name, setName] = useState(entry.name);
   const [description, setDescription] = useState(entry.description ?? '');
   const [editing, setEditing] = useState(false);

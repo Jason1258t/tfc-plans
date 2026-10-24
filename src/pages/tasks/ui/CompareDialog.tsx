@@ -2,7 +2,7 @@ import { ArrowUpDown } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { tasksStore } from '@/entities/task';
 import { elo, pickPair, sortTasks, swapRatings } from '../model/tasks';
-import { PRIORITIES, type Task } from '@/types';
+import { PRIORITIES, type Task } from '@/entities/task';
 import styles from './CompareDialog.module.css';
 import { ItemIcon } from '@/shared/pack-data';
 import { Modal } from '@/shared/ui';

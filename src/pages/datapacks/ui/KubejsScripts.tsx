@@ -1,11 +1,11 @@
 import { Download, FileTerminal, Save } from 'lucide-react';
 import { useState } from 'react';
-import { useData } from '@/data/DataContext';
+import { useNick } from '@/entities/user';
 import { kubejsScriptsStore } from '@/entities/datapack';
 import { SCRIPT_FILE_RE } from '@/lib/kubejsFix';
 import { downloadScript } from '@/lib/kubejsScripts';
 import { cx, timeAgo } from '@/shared/lib';
-import type { KubejsScript } from '@/types';
+import type { KubejsScript } from '@/entities/datapack';
 import styles from '../DatapacksPage.module.css';
 
 /** Отметка «Ставить в мир» / «Ставить на сервер» с подсказкой */
@@ -42,7 +42,7 @@ export function ScriptEditor({
   scripts: KubejsScript[];
   onDeleted: () => void;
 }) {
-  const { nick } = useData();
+  const nick = useNick();
   const [fileName, setFileName] = useState(script.fileName);
   const [text, setText] = useState(script.text);
   const [error, setError] = useState<string | null>(null);

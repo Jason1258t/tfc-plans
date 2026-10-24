@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { guideRevisions } from '../../data/guides';
 import { cx } from '@/shared/lib';
-import type { Guide, GuideRevision } from '../../types';
+import type { Guide, GuideRevision } from '@/entities/guide';
 import { Modal } from '@/shared/ui';
 import { GuideBody, type GuideKit } from './GuideBody';
 

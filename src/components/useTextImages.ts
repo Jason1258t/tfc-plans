@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { useData } from '../data/DataContext';
+import { useNick } from '@/entities/user';
+import { useFiles } from '@/entities/file';
+import { useArtifacts } from '@/entities/artifact';
+import { useTasks } from '@/entities/task';
 import {
   FILE_SCHEME,
   fileRefs,
@@ -33,7 +36,10 @@ interface Options {
  * ссылка на которую ещё не сохранена, не трогаем. При открытии подчищается то, что не убралось раньше.
  */
 export function useTextImages({ owner, taskId, initial, content, setContent, insert }: Options) {
-  const { nick, files, artifacts, tasks } = useData();
+  const nick = useNick();
+  const { items: files } = useFiles();
+  const { items: artifacts } = useArtifacts();
+  const { items: tasks } = useTasks();
   const [uploading, setUploading] = useState(0);
 
   const seen = useRef(fileRefs(initial));

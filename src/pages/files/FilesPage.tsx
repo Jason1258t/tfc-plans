@@ -2,20 +2,24 @@ import { Download, Search, Trash2, Upload } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileBadge, FileKindDot } from '../../components/FileBadge';
-import { useData } from '../../data/DataContext';
+import { useNick } from '@/entities/user';
+import { useFiles } from '@/entities/file';
+import { useTasks } from '@/entities/task';
 import { schematicsStore } from '@/entities/schematic';
 import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, uploadFile } from '../../lib/files';
 import { FILE_KINDS, fileKind, type FileKind } from '../../lib/fileKinds';
 import { prepareFile, validateFiles } from '../../lib/uploads';
 import { cx, timeAgo } from '@/shared/lib';
-import type { SavedSchematic } from '../../types';
+import type { SavedSchematic } from '@/entities/schematic';
 import styles from './FilesPage.module.css';
 
 const KINDS: { id: FileKind | 'all'; label: string }[] = [{ id: 'all', label: 'Все' }, ...FILE_KINDS];
 
 /** Всё файловое хранилище сайта: вложения задач, исходники библиотеки схем, файлы без привязки */
 export function FilesPage() {
-  const { files, tasks, nick, loading } = useData();
+  const { items: files } = useFiles();
+  const { items: tasks, loading } = useTasks();
+  const nick = useNick();
   const [schematics, setSchematics] = useState<SavedSchematic[]>([]);
   const [q, setQ] = useState('');
   const [kind, setKind] = useState<FileKind | 'all'>('all');

@@ -5,7 +5,7 @@ import { datapacksStore } from '@/entities/datapack';
 import { itemName, type ItemIndex, ItemIcon } from '@/shared/pack-data';
 import { methodLabel, type EngineStats, type FuelRecipe, type LiquidFamily, type LiquidStack } from '@/lib/reference';
 import { cx } from '@/shared/lib';
-import type { Datapack } from '@/types';
+import type { Datapack } from '@/entities/datapack';
 import '../ReferenceShared.css';
 import shell from '../ReferenceShell.module.css';
 import styles from './LiquidFuelTab.module.css';

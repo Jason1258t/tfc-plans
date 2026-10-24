@@ -8,12 +8,18 @@ import { GroupDialog } from './ui/GroupDialog';
 import { ItemIcon } from '@/shared/pack-data';
 import { TaskDialog, type TaskDialogMode } from './ui/TaskDialog';
 import { TaskRow } from './ui/TaskRow';
-import { useData } from '@/data/DataContext';
+import { useNick } from '@/entities/user';
+import { useTasks } from '@/entities/task';
+import { useGroups } from '@/entities/group';
+import { useArtifacts } from '@/entities/artifact';
+import { usePeople } from '@/entities/user';
 import { groupsStore } from '@/entities/group';
 import { useSearchTrack } from '@/shared/api';
 import { SORTS, sortTasks, type SortMode } from './model/tasks';
 import { cx, timeAgo } from '@/shared/lib';
-import { PRIORITIES, type Group, type Priority } from '@/types';
+import { PRIORITIES } from '@/entities/task';
+import type { Group } from '@/entities/group';
+import type { Priority } from '@/entities/task';
 import styles from './TasksPage.module.css';
 
 const ALL = '__all';
@@ -35,7 +41,11 @@ function writePref(key: string, v: string) {
 }
 
 export function TasksPage() {
-  const { tasks, groups, artifacts, loading, error, nick, people: allPeople } = useData();
+  const { items: tasks, loading, error } = useTasks();
+  const { items: groups } = useGroups();
+  const { items: artifacts } = useArtifacts();
+  const nick = useNick();
+  const allPeople = usePeople();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const groupFilter = params.get('group') ?? ALL;

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { replaceFavoritesStore } from '@/entities/schematic';
 import { deriveVariants } from '../model/replaceFavorites';
 import { blockEntry, isBlock, itemName, type ItemIndex, ItemIcon } from '@/shared/pack-data';
-import type { ReplaceFavorite } from '@/types';
+import type { ReplaceFavorite } from '@/entities/schematic';
 import { Modal } from '@/shared/ui';
 import { cx } from '@/shared/lib';
 import section from '../SchematicsSection.module.css';

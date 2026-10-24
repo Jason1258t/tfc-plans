@@ -1,4 +1,4 @@
-import type { GuideChecked } from '../../types';
+import type { GuideChecked } from '@/entities/guide';
 
 /** Насколько проверен гайд — подпись и подсказка значка */
 export const CHECKED: Record<GuideChecked, { label: string; title: string }> = {

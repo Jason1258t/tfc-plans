@@ -20,7 +20,10 @@ import { KubejsConstructor } from '@/components/KubejsConstructor';
 import { InstallToggle, ScriptEditor } from './ui/KubejsScripts';
 import { Modal, PackNav } from '@/shared/ui';
 import { RecipeCatalog } from '@/components/RecipeCatalog';
-import { useData } from '@/data/DataContext';
+import { useNick } from '@/entities/user';
+import { useFiles } from '@/entities/file';
+import { useTasks } from '@/entities/task';
+import { useGroups } from '@/entities/group';
 import { datapacksStore, kubejsScriptsStore } from '@/entities/datapack';
 import {
   buildZip,
@@ -38,7 +41,7 @@ import { useItems, useRecipes, type Recipe, tagFromPath, tagKey, useTags } from 
 import { entryRecipeId, kubejsScript, scriptFileName } from '@/lib/kubejsFix';
 import { downloadScript, freeScriptName, NEW_SCRIPT_TEXT } from '@/lib/kubejsScripts';
 import { cx, timeAgo, uid } from '@/shared/lib';
-import type { Datapack, DatapackEntry, KubejsScript } from '@/types';
+import type { Datapack, DatapackEntry, KubejsScript } from '@/entities/datapack';
 import styles from './DatapacksPage.module.css';
 
 const KIND: Record<DatapackEntry['kind'], string> = {
@@ -60,7 +63,7 @@ function download(bytes: Uint8Array, name: string) {
 }
 
 export function DatapacksPage() {
-  const { nick } = useData();
+  const nick = useNick();
   const [params, setParams] = useSearchParams();
   const [packs, setPacks] = useState<Datapack[] | null>(null);
   const [scripts, setScripts] = useState<KubejsScript[] | null>(null);
@@ -216,7 +219,8 @@ export function DatapacksPage() {
 }
 
 function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void }) {
-  const { nick, files } = useData();
+  const nick = useNick();
+  const { items: files } = useFiles();
   const navigate = useNavigate();
   const catalog = useRecipes();
   const [name, setName] = useState(pack.name);
@@ -537,7 +541,9 @@ function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void
 
 /** Собрать zip и приложить к задаче — хост скачает его оттуда */
 function AttachDialog({ pack, onClose }: { pack: Datapack; onClose: () => void }) {
-  const { tasks, groups, nick } = useData();
+  const { items: tasks } = useTasks();
+  const { items: groups } = useGroups();
+  const nick = useNick();
   const navigate = useNavigate();
   const [taskId, setTaskId] = useState('');
   const [busy, setBusy] = useState(false);

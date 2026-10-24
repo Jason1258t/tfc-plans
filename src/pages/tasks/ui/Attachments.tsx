@@ -1,6 +1,6 @@
 import { Download, Paperclip, Trash2, X } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { useData } from '@/data/DataContext';
+import { useFiles } from '@/entities/file';
 import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, type FileMeta } from '@/lib/files';
 import { dismissUpload, isImage, useUploads } from '@/lib/uploads';
 import { cx, timeAgo } from '@/shared/lib';
@@ -20,7 +20,7 @@ interface Props {
 
 /** Список вложений, кроме картинок — те показываются галереей */
 export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: Props) {
-  const { files } = useData();
+  const { items: files } = useFiles();
   const uploads = useUploads(taskId).filter((u) => !u.image);
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);

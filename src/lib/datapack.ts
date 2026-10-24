@@ -1,6 +1,6 @@
 import { strToU8, zipSync } from 'fflate';
 import { datapackFiles } from './datapackFiles';
-import type { Datapack, DatapackEntry } from '../types';
+import type { Datapack, DatapackEntry } from '@/entities/datapack';
 import { recipeHash, uid } from '@/shared/lib';
 import type { ItemIndex } from '@/shared/pack-data';
 import {
