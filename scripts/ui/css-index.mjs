@@ -44,6 +44,16 @@ export function selectorClasses(selector) {
   return [...new Set([...clean.matchAll(CLASS_IN_SELECTOR)].map((m) => m[1]))];
 }
 
+// :global(.seg) в CSS-модуле — чужой глобальный класс, а не класс модуля
+const GLOBAL_PART = /:global\(([^()]*(?:\([^()]*\)[^()]*)*)\)/g;
+
+/** Классы селектора модуля: { local, global } — из :global(...) отдельно */
+export function moduleSelectorClasses(selector) {
+  const global = [...selector.matchAll(GLOBAL_PART)].flatMap((m) => selectorClasses(m[1]));
+  const local = selectorClasses(selector.replace(GLOBAL_PART, ' '));
+  return { local, global: [...new Set(global)] };
+}
+
 /**
  * Разбор CSS/SCSS в список правил: { selector, classes, decls, line, at } —
  * at — цепочка @media/@supports снаружи. @keyframes и @font-face пропускаются.
@@ -79,7 +89,10 @@ export function parseCss(source) {
         } else {
           const selectors = expand(parents, head);
           const rule = { selector: selectors.join(', '), selectors, classes: [], decls: [], line: preludeLine, at };
-          rule.classes = [...new Set(selectors.flatMap(selectorClasses))];
+          const parts = selectors.map(moduleSelectorClasses);
+          rule.classes = [...new Set(parts.flatMap((p) => p.local))];
+          // Классы из :global(...): в модуле это переопределение чужого глобального класса
+          rule.globals = [...new Set(parts.flatMap((p) => p.global))];
           rules.push(rule);
           const declStart = i;
           block(selectors, at);
@@ -254,12 +267,15 @@ export function loadUsages(root) {
 const CLASS_CALLS = /^(cx|clsx|classnames|classNames|cn)$/;
 const SELECTOR_CALLS = /^(querySelector|querySelectorAll|closest|matches)$/;
 const CLASSLIST = /^(add|remove|toggle|contains|replace)$/;
+const SELECTOR_PROPS = /^(target|selector|waitFor|within|click|mask)$/;
 
 function classContext(node) {
   for (let p = node.parent; p; p = p.parent) {
     if (ts.isImportDeclaration(p) || ts.isExportDeclaration(p)) return 'import';
     if (ts.isJsxAttribute(p)) return /^(className|class)$/.test(p.name.getText()) ? 'class' : 'string';
     if (ts.isPropertyAssignment(p) && /^(className|class)$/.test(p.name.getText())) return 'class';
+    // Цели подсказок онбординга и похожие поля — CSS-селекторы, а не списки классов
+    if (ts.isPropertyAssignment(p) && SELECTOR_PROPS.test(p.name.getText())) return 'selector';
     if (ts.isCallExpression(p)) {
       const callee = p.expression;
       const name = ts.isIdentifier(callee)
@@ -294,11 +310,17 @@ export function buildIndex(root) {
   const { usages, imports, files } = loadUsages(root);
   const defs = new Map(); // класс → [{ file, line, selector, at, module }]
   for (const { file, rules, module } of css)
-    for (const r of rules)
+    for (const r of rules) {
       for (const c of r.classes) {
         if (!defs.has(c)) defs.set(c, []);
         defs.get(c).push({ file, line: r.line, selector: r.selector, at: r.at, module });
       }
+      // :global(.x) из модуля — ещё одно место, где стилизуют глобальный .x
+      for (const c of r.globals ?? []) {
+        if (!defs.has(c)) defs.set(c, []);
+        defs.get(c).push({ file, line: r.line, selector: r.selector, at: r.at, module: false, viaGlobal: true });
+      }
+    }
   const uses = new Map();
   const dynamic = [];
   for (const u of usages) {

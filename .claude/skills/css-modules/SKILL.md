@@ -108,7 +108,10 @@ page branch.
 ### 1. Task, worktree, dev server
 
 - `dev-session`: task in «Разработка» («CSS Modules: <страница>»), worktree `refactor/css-<page>`.
-- Dev server on 5176 (`npm run dev -- --port 5176 --strictPort`, Claude: `preview_start dev-alt`).
+- **`npm ci` in the worktree** (a few seconds). Don't symlink `node_modules` from the main checkout: Vite then serves
+  fonts via `/@fs/<main checkout>/…`, gets 403, and the shots use a fallback font instead of Inter.
+- Dev server on 5176 (`npm run dev -- --port 5176 --strictPort`, Claude: `preview_start dev-alt`). **Stop it before
+  `ship`** — otherwise Vite recreates `node_modules/.vite` and `git worktree remove` fails with «Directory not empty».
 
 ### 2. Inventory — never delete what is used
 
@@ -132,6 +135,14 @@ node scripts/ui/classes.mjs --dupes --dir src/pages        # repeated declaratio
 | рисует библиотека     | class comes from node_modules (CodeMirror, remark-gfm…)                                 | keep global name, `:global(...)` under a local class                                                                                                    |
 
 `[стилизуется ещё в …]` — other CSS files style the same class: after the move, check those pages in the shots too.
+
+**`⚠ СЕЛЕКТОРЫ В КОДЕ`** at the end of `--css` — code finds elements by these classes: onboarding tour targets
+(`target:` in `src/lib/onboarding.ts`), `querySelector`/`closest`. After the move the class is a hash and the
+selector silently finds nothing (the tour step falls back to the middle of the screen, no error). **Before
+converting**, rewrite each to tags/roles/aria/text: `target: 'main button', text: 'Загрузить'` (`text` picks the
+element containing it), `main [role=search]`, `[aria-label="…"]`; add a `role`/`aria-label` to the element if there is
+no hook. Then open the tour for the page (header «?» → «Подсказки раздела …») and check every step highlights the
+right element. Global classes in that list (`.btn`, `.primary`) break later, when that UI moves to `shared/ui`.
 
 ### 3. Baseline screenshots — before any edit
 
@@ -173,7 +184,8 @@ node scripts/ui/shots.mjs capture before --only <page>   # desktop 1440×900 + m
 ### 5. Check
 
 ```bash
-node scripts/ui/classes.mjs --check           # styles.x missing in the module = typo → exit 1; lists unused module classes
+node scripts/ui/classes.mjs --check           # styles.x missing in the module = typo → exit 1; lists unused module
+                                              # classes (classes inside :global(...) are not counted as the module's)
 node scripts/ui/classes.mjs --css src/pages/X.module.css
 npx tsc -b && npm run lint && npx prettier --write <changed files>
 node scripts/ui/shots.mjs capture after --only <page>
@@ -185,12 +197,13 @@ node scripts/ui/shots.mjs diff before after   # ✓ ≤ 0.1% changed pixels and 
 - Also run the shots of pages listed in `[стилизуется ещё в …]` and of other users of any shared component you
   touched (`classes.mjs --component` / grep the component name).
 - Browser console on the page — no new errors.
+- Onboarding tour of the page still highlights the right elements (see «СЕЛЕКТОРЫ В КОДЕ» above).
 
 ### 6. Finish
 
 - Remove the old global CSS import; nothing may import a deleted file (`tsc`/dev server will fail).
 - Update `docs/state/site.md` (one line: which pages are on modules, which shared components exist).
-- `ship`. Task note in Russian: what was migrated, which shared components appeared, screenshot diff result
+- Stop the dev server, then `ship`. Task note in Russian: what was migrated, which shared components appeared, screenshot diff result
   (desktop/mobile, which states), what wasn't checked.
 
 ## Pitfalls

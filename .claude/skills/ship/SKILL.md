@@ -13,6 +13,9 @@ Main folder: `MAIN=/Users/ivan/vscodeProjects/tfc-taskmanager` (always on `main`
 ## 1. Before merging (in the worktree)
 
 - Everything committed: `git status --short` is empty. Commit message `Раздел: что сделано` (Russian, one line).
+- **Dev server started from this worktree is stopped** (Claude: `preview_stop`; otherwise kill the `vite` process
+  whose cwd is the worktree). A running Vite recreates `node_modules/.vite` while the worktree is being deleted, and
+  `git worktree remove` fails with «Directory not empty».
 - Checks relevant to the change passed: `npx tsc -b` (TS), `npm run lint` (oxlint, zero errors), `prettier --check`
   on changed files (`npx prettier --write <files>` to fix). The `ship` tool runs `oxlint` + `prettier --check` on the branch changed
   files and refuses on failure.
