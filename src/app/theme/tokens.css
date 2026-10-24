@@ -1,0 +1,82 @@
+/*
+ * Палитра — из Minecraft: камень/глубинный сланец для поверхностей,
+ * трава/изумруд как акцент, лазурит/золото/редстоун для важности, аметист — агент Gemini.
+ */
+:root {
+  --bg: #f4f3ef;
+  --surface: #ffffff;
+  --surface-2: #f0efea;
+  --surface-3: #e6e4dd;
+  --border: #dcd9d0;
+  --border-strong: #c4c0b4;
+  --text: #1f1d1a;
+  --text-2: #5c5850;
+  --text-3: #8b867b;
+
+  --accent: #4c8a2b; /* трава */
+  --accent-hover: #3f7523;
+  --accent-soft: #e3efd9;
+  --accent-text: #ffffff;
+
+  --diamond: #1b9e98;
+  --amethyst: #8a4fc7;
+  --amethyst-soft: #f1e8fa;
+  --danger: #c43a2f; /* редстоун */
+  --danger-soft: #fbe5e2;
+
+  --imp-0: #8f8b82; /* камень */
+  --imp-1: #2f6fc4; /* лазурит */
+  --imp-2: #d48c06; /* золото */
+  --imp-3: #d03a2e; /* редстоун */
+
+  --shadow-sm: 0 1px 2px rgb(30 25 15 / 0.06);
+  --shadow-md: 0 4px 16px rgb(30 25 15 / 0.08), 0 1px 3px rgb(30 25 15 / 0.06);
+  --shadow-lg: 0 16px 48px rgb(30 25 15 / 0.18);
+
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-lg: 14px;
+
+  --font: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --header-h: 56px;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #18181a;
+    --surface: #212124;
+    --surface-2: #29292d;
+    --surface-3: #323237;
+    --border: #36363b;
+    --border-strong: #4a4a50;
+    --text: #ecebe8;
+    --text-2: #b0aea8;
+    --text-3: #7f7d78;
+
+    --accent: #6cbf44;
+    --accent-hover: #7fd156;
+    --accent-soft: #24331c;
+    --accent-text: #0f1a09;
+
+    --diamond: #4ad6cf;
+    --amethyst: #b07ef0;
+    --amethyst-soft: #2c2338;
+    --danger: #ef5b4f;
+    --danger-soft: #3a1f1c;
+
+    --imp-0: #8d8a84;
+    --imp-1: #5b9cf0;
+    --imp-2: #f2b233;
+    --imp-3: #f0594c;
+
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 16px rgb(0 0 0 / 0.35);
+    --shadow-lg: 0 16px 48px rgb(0 0 0 / 0.5);
+
+    color-scheme: dark;
+  }
+}

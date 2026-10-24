@@ -16,23 +16,39 @@ comments in code) — Russian.
 
 ```
 src/app/theme/          global, loaded once from main.tsx
-  index.css             @layer order + imports below
+  index.css             `@layer theme, ui;` + `@import './x.css' layer(theme)` for each file below (done 2026-10-24)
   tokens.css            :root variables (colors, radii, shadows, fonts, --header-h), dark theme
-  base.css              reset, html/body, headings, links, focus ring, scrollbars
+  base.css              reset, html/body, form font inherit, links, focus ring, selection
+  legacy-ui.css         old global .btn .input .seg .imp-* .tag .progress .tooltip .item-icon .modal — shrinks as
+                        pages move to shared/ui, deleted when empty
   markdown.css          .md content (rendered by react-markdown — tag selectors, must stay global)
-  utilities.css         .muted .faint .small .grow .row .sr-only … — legacy helpers until replaced
+  utilities.css         .item-chip .row .grow .muted .faint .small .empty .error-box .sr-only .crash — legacy helpers
 src/shared/ui/          reusable UI, no business logic, no Firestore, no page knowledge
-  Button/Button.tsx  Button.module.css  index.ts
-  Input/ …  Segmented/ …  Modal/ …  Tag/ …  Panel/ …  Stack/ …
-  index.ts              re-exports: import { Button, Input } from '../shared/ui'
-src/pages/X.tsx + X.module.css
-src/components/Y.tsx + Y.module.css
+  Button.tsx  Button.module.css          flat: one component = one .tsx + its .module.css
+  Input.tsx  Input.module.css  Modal.tsx  Modal.module.css  Tag.tsx …  Stack.tsx …
+  Segmented/            a folder only for a multi-file component:
+    Segmented.tsx  SegmentedItem.tsx  Segmented.module.css  index.ts   ← exports only Segmented
+  index.ts              re-exports ONLY the public API: import { Button, Input } from '../shared/ui'
+src/pages/<x>/          FSD-style page slice (when the page is moved — see FSD plan below)
+  <X>Page.tsx  <X>Page.module.css
+  ui/Y.tsx  ui/Y.module.css               components used only by this page
+  index.ts              one export: the page
 ```
+
+- Component needed by **one** page → that page's `ui/` (not `src/components/`); needed by **2+** pages → `shared/ui`
+  (pure UI) or an `entities/…` slice (knows a domain object: task, schematic, item).
+- `index.ts` exports only what other folders may import; internals stay unexported, so agents can read the
+  `index.ts` and skip the rest.
+- Until a page is moved into `src/pages/<x>/`, its module stays next to the current file
+  (`src/pages/X.module.css`, `src/components/Y.module.css`).
+- The FSD move plan: site task `vtRZTcm2J6nVW7IP4nuv`, doc https://tfc-plans-fd2c.web.app/doc/LlO7AQQpDzD5zsDs5tfL.
+  **Moving files and converting CSS are separate branches**: first `git mv` to the new place (+ imports, `tsc`),
+  then the CSS module — otherwise before/after screenshots mix two changes.
 
 Rules that keep it predictable:
 
-- **Cascade layers.** `app/theme/index.css` starts with `@layer theme, ui;`. Theme files are wrapped in
-  `@layer theme { … }`, every `shared/ui/*.module.css` in `@layer ui { … }`. Page/component modules are **unlayered**
+- **Cascade layers.** `app/theme/index.css` starts with `@layer theme, ui;` and imports theme files with
+  `layer(theme)` (no wrapping inside the files); every `shared/ui/*.module.css` wraps its rules in `@layer ui { … }`. Page/component modules are **unlayered**
   → a page tweak passed through `className` always beats the shared component, regardless of chunk load order. Never
   fight specificity with `!important` or doubled selectors.
 - **Tokens only.** Colors, radii, shadows, fonts — `var(--…)` from `tokens.css`. A new hex/rgb literal in a module is
@@ -62,7 +78,9 @@ in the `--dupes` report, same markup shape). Used once → keep it local in the 
   element, `ref` forwarding for inputs), and `className` merged last for local tweaks. Keep prop names close to the
   old modifiers so replacement is mechanical: `className="btn primary sm"` → `<Button variant="primary" size="sm">`.
 - **No outer margins** inside shared components — spacing belongs to the parent (`Stack gap`, page module).
-- One component per folder with `index.ts`; add it to `src/shared/ui/index.ts`. Short JSDoc in Russian on props.
+- Flat file `shared/ui/Button.tsx` + `Button.module.css`; a folder with its own `index.ts` only for a component made
+  of several files, and that `index.ts` exports only the public part. Add the public export to
+  `src/shared/ui/index.ts`. Short JSDoc in Russian on props.
 - Shared component styles must reproduce the old global look **pixel for pixel** — copy declarations from the old
   rule (`node scripts/ui/classes.mjs btn` shows every rule that styles it, including page overrides).
 
@@ -75,10 +93,10 @@ page branch.
 
 ## Order of work (whole project)
 
-1. **Foundation** (one branch): split `src/index.css` into `src/app/theme/*` (pure move, same order, wrapped in
-   `@layer theme`), point `main.tsx` at `app/theme/index.css`. Shots for **all** scenarios must diff at 0%.
-   ⚠ Wrapping globals in a layer lowers them below every unlayered page CSS — check the diff carefully; if a page
-   relied on a global winning, fix that page rule, not the layer order.
+1. ✅ **Foundation** (2026-10-24, `refactor/css-theme`): `src/index.css` split into `src/app/theme/*` in the same
+   order, `layer(theme)`; all 50 shot pairs (desktop + mobile, light + dark) unchanged. Layering lowered globals
+   below page CSS and nothing relied on the old order. New global rules go into the matching theme file, not into
+   page CSS.
 2. **shared/ui core** (one branch each or together): `Button`, `Input`, `Segmented`, `Modal`, `Stack` — components
    plus migrating 1–2 small users each to prove them.
 3. **Pages/components, smallest first** (`wc -l src/**/*.css`), one per branch. Components whose styles live in a
@@ -130,7 +148,11 @@ node scripts/ui/shots.mjs capture before --only <page>   # desktop 1440×900 + m
 - Shots land in `$TMPDIR/tfc-shots/<branch>/before`; `--out DIR` to change. Uses installed Chrome (`CHROME_PATH`
   otherwise) with a persistent profile, nick `ClaudeTest`, onboarding off, animations frozen.
 - Data is live Firestore: take `before` right before editing and `after` soon after; a diff only in a data row
-  (someone edited a task) is noise — say so in the report.
+  (someone edited a task, a new task appeared) is noise — say so in the report. The script waits for network quiet
+  (Firestore channels and reCAPTCHA excluded; `SHOTS_DEBUG=1` prints requests that never finish).
+- **Unsure whether a diff is yours?** Rebuild the baseline with the same script: temporarily restore the old files
+  (`git show HEAD:<path> > <path>`, revert the import), `capture before2 --only <page>`, put your version back,
+  `capture after2`, `diff before2 after2`. Never use `git stash` (shared between worktrees).
 
 ### 4. Convert
 

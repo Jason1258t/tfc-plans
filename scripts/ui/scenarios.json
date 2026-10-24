@@ -17,7 +17,19 @@
       "fullPage": false,
       "note": "окно новой задачи"
     },
+    { "name": "tasks.dark", "path": "/", "waitFor": ".tasks-main", "theme": "dark" },
+    {
+      "name": "tasks.new-dialog.dark",
+      "path": "/",
+      "waitFor": ".tasks-main",
+      "actions": [{ "clickText": "Задача", "within": ".tasks-main" }, { "wait": ".modal" }],
+      "fullPage": false,
+      "theme": "dark"
+    },
     { "name": "docs", "path": "/docs" },
+    { "name": "schematics.dark", "path": "/schematics", "theme": "dark" },
+    { "name": "reference.food.dark", "path": "/reference?tab=food", "waitFor": ".ref-page", "theme": "dark" },
+    { "name": "reference.guides.dark", "path": "/reference?tab=guides", "waitFor": ".ref-page", "theme": "dark" },
     { "name": "schematics", "path": "/schematics" },
     { "name": "datapacks", "path": "/datapacks" },
     { "name": "recipes", "path": "/recipes" },

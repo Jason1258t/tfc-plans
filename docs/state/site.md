@@ -15,7 +15,9 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
   `X.module.css` (`localsConvention: 'camelCaseOnly'` in `vite.config.ts`). Tools: `scripts/ui/classes.mjs` (class
   usages, dead/library classes, duplicates, module key check), `scripts/ui/shots.mjs` + `scenarios.json` (desktop and
   mobile screenshots, before/after diff via installed Chrome).
-- Migrated so far: nothing — all styles are still global (`src/index.css` + 41 page/component CSS files).
+- Done: foundation — `src/index.css` split into `src/app/theme/` (tokens, base, legacy-ui, markdown, utilities) under
+  `@layer theme`; screenshots of all pages (desktop/mobile, light/dark) unchanged. Pages and components: still 41
+  global CSS files, none on modules yet.
 
 ## Documents (file storage)
 

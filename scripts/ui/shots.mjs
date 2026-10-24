@@ -33,6 +33,9 @@ export const VIEWPORTS = {
 const FREEZE_CSS = `*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}
 ::-webkit-scrollbar{display:none}`;
 
+// Запросы, которые не заканчиваются никогда: слушатели Firestore, HMR Vite, iframe reCAPTCHA (App Check)
+const LONG_POLL = /\/Listen\/channel|\/Write\/channel|google\.firestore|__vite_ping|\/@vite\/|^wss?:|\/recaptcha\//;
+
 // ── Chrome и DevTools Protocol ───────────────────────────────────
 function findChrome() {
   const candidates = [
@@ -244,12 +247,31 @@ export async function capture(chrome, { baseUrl, scenario, viewport, setup }) {
           const s = document.createElement('style'); s.textContent = ${JSON.stringify(FREEZE_CSS)}; document.head.appendChild(s);
         });`,
     });
+    // Запросы в полёте: данные (каталоги, Firestore) догружаются после тишины в DOM —
+    // без этого «до» и «после» снимаются на разных стадиях загрузки
+    const inflight = new Map();
+    let lastNet = Date.now();
+    page.on('Network.requestWillBeSent', (p) => {
+      if (LONG_POLL.test(p.request.url)) return;
+      inflight.set(p.requestId, p.request.url);
+      lastNet = Date.now();
+    });
+    const done = (p) => {
+      if (inflight.delete(p.requestId)) lastNet = Date.now();
+    };
+    page.on('Network.loadingFinished', done);
+    page.on('Network.loadingFailed', done);
     const loaded = page.once('Page.loadEventFired', 45000);
     await page.send('Page.navigate', { url: url.href });
     await loaded;
     if (scenario.waitFor) await waitFor(page, scenario.waitFor, 20000);
     for (const a of scenario.actions ?? []) await runAction(page, a);
-    const settled = await evaluate(page, SETTLE(scenario.quietMs ?? 700, scenario.maxWaitMs ?? 15000));
+    const maxWait = scenario.maxWaitMs ?? 15000;
+    const netStart = Date.now();
+    while ((inflight.size || Date.now() - lastNet < 500) && Date.now() - netStart < maxWait) await sleep(100);
+    if (inflight.size && process.env.SHOTS_DEBUG)
+      console.log('  висят запросы:', [...inflight.values()].join('\n    '));
+    const settled = await evaluate(page, SETTLE(scenario.quietMs ?? 700, maxWait));
     // Меняющееся само по себе (время, счётчики онлайна) — закрашиваем, чтобы не мешало сравнению
     const mask = [...(setup.mask ?? []), ...(scenario.mask ?? [])];
     if (mask.length)
