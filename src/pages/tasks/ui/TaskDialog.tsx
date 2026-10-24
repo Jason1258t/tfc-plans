@@ -1,25 +1,25 @@
 import { BookOpen, Boxes, Eye, FilePlus2, Pencil, Sparkles, Trash2, UserRound, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useData } from '../data/DataContext';
+import { useData } from '@/data/DataContext';
 import { artifactsStore } from '@/entities/artifact';
 import { tasksStore } from '@/entities/task';
 import { extractResources, geminiEnabled, geminiErrorText } from '@/shared/api';
 import { useItems, ItemIcon, ItemPicker } from '@/shared/pack-data';
-import { mergeResources } from '../lib/resources';
+import { mergeResources } from '@/lib/resources';
 import { cx, timeAgo } from '@/shared/lib';
-import { PRIORITIES, STATUSES, type NewTask, type Task } from '../types';
-import { filesEnabled, removeFile, uploadFile } from '../lib/files';
-import { isImage, prepareFile, startUpload, validateFiles } from '../lib/uploads';
+import { PRIORITIES, STATUSES, type NewTask, type Task } from '@/types';
+import { filesEnabled, removeFile, uploadFile } from '@/lib/files';
+import { isImage, prepareFile, startUpload, validateFiles } from '@/lib/uploads';
 import { Attachments } from './Attachments';
 import { Gallery } from './Gallery';
 import { Checklist } from './Checklist';
-import { Markdown, itemToken, toggleTaskLine } from './Markdown';
+import { Markdown, itemToken, toggleTaskLine } from '@/components/Markdown';
 import { Modal } from '@/shared/ui';
 import { PlaceField } from './PlaceField';
 import { SchematicImport } from './SchematicImport';
 import './TaskDialog.css';
-import { MarkdownField } from './MarkdownField';
-import { useTextImages } from './useTextImages';
+import { MarkdownField } from '@/components/MarkdownField';
+import { useTextImages } from '@/components/useTextImages';
 
 export type TaskDialogMode = { kind: 'create'; groupId: string | null } | { kind: 'edit'; taskId: string };
 

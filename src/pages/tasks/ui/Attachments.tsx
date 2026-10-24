@@ -1,11 +1,11 @@
 import { Download, Paperclip, Trash2, X } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { useData } from '../data/DataContext';
-import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, type FileMeta } from '../lib/files';
-import { dismissUpload, isImage, useUploads } from '../lib/uploads';
+import { useData } from '@/data/DataContext';
+import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, type FileMeta } from '@/lib/files';
+import { dismissUpload, isImage, useUploads } from '@/lib/uploads';
 import { cx, timeAgo } from '@/shared/lib';
 import './Attachments.css';
-import { FileBadge } from './FileBadge';
+import { FileBadge } from '@/components/FileBadge';
 
 interface Props {
   /** Существующая задача; без него — черновик новой задачи */

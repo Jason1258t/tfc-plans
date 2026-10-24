@@ -9,9 +9,9 @@ import {
   useGeo,
   useWorldSettings,
   worldProjection,
-} from '../lib/geo';
+} from '@/lib/geo';
 import { cx } from '@/shared/lib';
-import type { TaskPlace } from '../types';
+import type { TaskPlace } from '@/types';
 
 interface Props {
   value: TaskPlace | null | undefined;

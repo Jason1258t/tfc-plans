@@ -1,19 +1,19 @@
 import { BookOpen, ListChecks, Plus, Scale, Search, Users, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArtifactPane } from '../components/ArtifactPane';
-import { CompareDialog } from '../components/CompareDialog';
-import { DocsSection } from '../components/DocsSection';
-import { GroupDialog } from '../components/GroupDialog';
+import { ArtifactPane } from '@/components/ArtifactPane';
+import { CompareDialog } from './ui/CompareDialog';
+import { DocsSection } from './ui/DocsSection';
+import { GroupDialog } from './ui/GroupDialog';
 import { ItemIcon } from '@/shared/pack-data';
-import { TaskDialog, type TaskDialogMode } from '../components/TaskDialog';
-import { TaskRow } from '../components/TaskRow';
-import { useData } from '../data/DataContext';
+import { TaskDialog, type TaskDialogMode } from './ui/TaskDialog';
+import { TaskRow } from './ui/TaskRow';
+import { useData } from '@/data/DataContext';
 import { groupsStore } from '@/entities/group';
 import { useSearchTrack } from '@/shared/api';
-import { SORTS, sortTasks, type SortMode } from '../lib/tasks';
+import { SORTS, sortTasks, type SortMode } from './model/tasks';
 import { cx, timeAgo } from '@/shared/lib';
-import { PRIORITIES, type Group, type Priority } from '../types';
+import { PRIORITIES, type Group, type Priority } from '@/types';
 import './TasksPage.css';
 
 const ALL = '__all';
