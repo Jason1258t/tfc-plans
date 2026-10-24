@@ -29,7 +29,9 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
   states (`active`, `selected`, …) local.
 - Left: **17 global CSS outside `src/app/theme`** — 12 in `src/components/` (Header, Markdown, RecipeCatalog,
   MultiblocksTab, guides, …), shared parts of the reference, `shared/pack-data` (ItemPicker, ItemIdSearch), `PackNav`.
-  `src/shared/ui` not created yet: buttons/inputs/segmented still come from `legacy-ui.css`.
+  `src/shared/ui` not created yet: buttons/inputs/segmented still come from `legacy-ui.css`. The `.search` row lives in
+  `legacy-ui.css` for the three un-migrated places (header id search, recipe catalogue, «Документы») — the page modules
+  of tasks/schematics/reference have their own; it goes away with `shared/ui`.
 
 ## Documents (file storage)
 
