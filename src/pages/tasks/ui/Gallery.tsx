@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight, Download, ImagePlus, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useData } from '@/data/DataContext';
+import { useFiles } from '@/entities/file';
 import { downloadFile, fileUrl, filesEnabled, formatSize, removeFile, type FileMeta } from '@/lib/files';
 import { dismissUpload, isImage, useUploads } from '@/lib/uploads';
 import { cx, timeAgo } from '@/shared/lib';
@@ -21,7 +21,7 @@ type Shot =
 
 /** Картинки задачи: превью-сетка под описанием + просмотр на весь экран */
 export function Gallery({ taskId, pending, onRemovePending, onAdd }: Props) {
-  const { files } = useData();
+  const { items: files } = useFiles();
   const uploads = useUploads(taskId).filter((u) => u.image);
   const inputRef = useRef<HTMLInputElement>(null);
   const [openKey, setOpenKey] = useState<string | null>(null);

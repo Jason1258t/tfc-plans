@@ -18,7 +18,8 @@ import { describeTask } from '@/entities/task';
 import { useItems } from '@/shared/pack-data';
 import { mergeResources } from '../lib/resources';
 import { cx } from '@/shared/lib';
-import type { Artifact, Task } from '../types';
+import type { Artifact } from '@/entities/artifact';
+import type { Task } from '@/entities/task';
 import './AgentPanel.css';
 import { Markdown } from './Markdown';
 

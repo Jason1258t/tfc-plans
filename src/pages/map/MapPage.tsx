@@ -3,7 +3,9 @@ import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Modal } from '@/shared/ui';
 import { WorldMap, type MapMarker } from './ui/WorldMap';
-import { useData } from '@/data/DataContext';
+import { useNick } from '@/entities/user';
+import { useGroups } from '@/entities/group';
+import { useTasks } from '@/entities/task';
 import {
   bearing,
   geoName,
@@ -57,7 +59,8 @@ export function MapPage() {
 }
 
 function MapView({ geo, profile, world }: { geo: GeoData; profile: GeoProfile; world: WorldSettings }) {
-  const { tasks, groups } = useData();
+  const { items: tasks } = useTasks();
+  const { items: groups } = useGroups();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const [layer, setLayerState] = useState<MapLayer>(() => {
@@ -446,7 +449,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
 // ---------------------------------------------------------------- настройки мира
 
 function WorldSettingsDialog({ geo, world, onClose }: { geo: GeoData; world: WorldSettings; onClose: () => void }) {
-  const { nick } = useData();
+  const nick = useNick();
   const [draft, setDraft] = useState(world);
   const [busy, setBusy] = useState(false);
   const profiles = Object.values(geo.profiles).sort((a, b) => a.index - b.index);

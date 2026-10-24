@@ -1,5 +1,5 @@
 import { schematicsStore } from '@/entities/schematic';
-import type { SavedSchematic } from '@/types';
+import type { SavedSchematic } from '@/entities/schematic';
 import { fileBlob, removeFile, uploadFile } from '@/lib/files';
 import type { ItemIndex } from '@/shared/pack-data';
 import { editedSource, loadSchematic, type Schematic } from '@/lib/schematic';

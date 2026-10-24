@@ -1,13 +1,18 @@
 import { BookOpen, Boxes, Eye, FilePlus2, Pencil, Sparkles, Trash2, UserRound, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useData } from '@/data/DataContext';
+import { useNick } from '@/entities/user';
+import { useTasks } from '@/entities/task';
+import { useGroups } from '@/entities/group';
+import { useArtifacts } from '@/entities/artifact';
+import { useFiles } from '@/entities/file';
+import { usePeople } from '@/entities/user';
 import { artifactsStore } from '@/entities/artifact';
 import { tasksStore } from '@/entities/task';
 import { extractResources, geminiEnabled, geminiErrorText } from '@/shared/api';
 import { useItems, ItemIcon, ItemPicker } from '@/shared/pack-data';
 import { mergeResources } from '@/lib/resources';
 import { cx, timeAgo } from '@/shared/lib';
-import { PRIORITIES, STATUSES, type NewTask, type Task } from '@/types';
+import { PRIORITIES, STATUSES, type NewTask, type Task } from '@/entities/task';
 import { filesEnabled, removeFile, uploadFile } from '@/lib/files';
 import { isImage, prepareFile, startUpload, validateFiles } from '@/lib/uploads';
 import { Attachments } from './Attachments';
@@ -48,7 +53,7 @@ function CreateTask({
   onClose: () => void;
   onOpenArtifact: (id: string) => void;
 }) {
-  const { nick } = useData();
+  const nick = useNick();
   const [draft, setDraft] = useState<NewTask>(() => ({
     title: '',
     description: '',
@@ -207,7 +212,10 @@ function EditTask({
   onClose: () => void;
   onOpenArtifact: (id: string) => void;
 }) {
-  const { tasks, artifacts, files, loading, nick } = useData();
+  const { items: tasks, loading } = useTasks();
+  const { items: artifacts } = useArtifacts();
+  const { items: files } = useFiles();
+  const nick = useNick();
   const intake = useFileIntake({ taskId, author: nick });
   const items = useItems();
   const task = tasks.find((t) => t.id === taskId);
@@ -486,7 +494,9 @@ function TaskFields({
   belowDescription,
   taskId,
 }: FieldsProps) {
-  const { groups, nick, people } = useData();
+  const { items: groups } = useGroups();
+  const nick = useNick();
+  const people = usePeople();
   const title = useTextField(value.title, live, (v) => {
     // В черновике пишем как есть; у существующей задачи пустое название не сохраняем
     if (!live) onPatch({ title: v });

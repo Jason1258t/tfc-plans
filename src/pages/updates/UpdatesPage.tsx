@@ -5,7 +5,9 @@ import { ItemIcon, useItems, type ItemIndex } from '@/shared/pack-data';
 import { Markdown } from '../../components/Markdown';
 import { MarkdownField } from '../../components/MarkdownField';
 import { TfcDownload } from './ui/TfcDownload';
-import { useData } from '../../data/DataContext';
+import { useNick } from '@/entities/user';
+import { useGroups } from '@/entities/group';
+import { useTasks } from '@/entities/task';
 import { datapacksStore } from '@/entities/datapack';
 import { generatePatchNotes, geminiEnabled, geminiErrorText } from '@/shared/api';
 import { addonById } from '../../lib/addons';
@@ -23,7 +25,7 @@ import {
   type PackUpdate,
 } from './model/packUpdates';
 import { cx, timeAgo } from '@/shared/lib';
-import type { Datapack } from '../../types';
+import type { Datapack } from '@/entities/datapack';
 import sectionStyles from './UpdatesSection.module.css';
 import styles from './UpdatesPage.module.css';
 
@@ -73,7 +75,9 @@ function UpdateCard({
   packs: Datapack[];
   latest: boolean;
 }) {
-  const { nick, groups, tasks } = useData();
+  const nick = useNick();
+  const { items: groups } = useGroups();
+  const { items: tasks } = useTasks();
   const risks = useMemo(() => datapackRisks(u, packs), [u, packs]);
   // Список изменений свёрнут у всех обновлений, включая последнее: сверху и так патчноут
   const [open, setOpen] = useState(false);

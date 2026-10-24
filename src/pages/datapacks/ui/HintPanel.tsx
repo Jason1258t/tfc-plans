@@ -1,6 +1,6 @@
 import { Lightbulb, Pencil, RefreshCw, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useData } from '@/data/DataContext';
+import { useNick } from '@/entities/user';
 import { generateRecipeHint, geminiEnabled, geminiErrorText } from '@/shared/api';
 import { getHint, hintsEnabled, saveHint, type RecipeHint } from '../model/recipeHints';
 import { typeFieldStats, type RecipeCatalog } from '@/shared/pack-data';
@@ -17,7 +17,7 @@ const SOURCE_LABEL: Record<RecipeHint['source'], string> = {
 
 /** Подсказка по заполнению рецептов типа: из Firestore, с генерацией/обновлением агентом и ручной правкой */
 export function HintPanel({ type, catalog }: { type: string | undefined; catalog: RecipeCatalog | null }) {
-  const { nick } = useData();
+  const nick = useNick();
   const [hint, setHint] = useState<RecipeHint | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

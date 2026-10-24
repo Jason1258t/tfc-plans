@@ -18,7 +18,7 @@ import {
 } from '../../lib/addonVersions';
 import { readNick } from '@/shared/lib/nick';
 import { cx } from '@/shared/lib';
-import type { GuideChecked } from '../../types';
+import type { GuideChecked } from '@/entities/guide';
 import { Markdown } from '../Markdown';
 import { MarkdownField } from '../MarkdownField';
 import { Modal } from '@/shared/ui';

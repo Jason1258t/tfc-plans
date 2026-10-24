@@ -1,11 +1,14 @@
 import { BookOpen, Columns2, Eye, ImagePlus, Maximize2, Minimize2, Pencil, Trash2, X } from 'lucide-react';
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
-import { useData } from '../data/DataContext';
+import { useNick } from '@/entities/user';
+import { useArtifacts } from '@/entities/artifact';
+import { useFiles } from '@/entities/file';
+import { useTasks } from '@/entities/task';
 import { artifactsStore } from '@/entities/artifact';
 import { filesEnabled } from '../lib/files';
 import { removeOrphanImages } from '../lib/planImages';
 import { cx, timeAgo } from '@/shared/lib';
-import type { Artifact } from '../types';
+import type { Artifact } from '@/entities/artifact';
 import { AgentPanel } from './AgentPanel';
 import './ArtifactPane.css';
 import { ItemPicker } from '@/shared/pack-data';
@@ -28,7 +31,7 @@ interface Props {
 }
 
 export function ArtifactPane(props: Props) {
-  const { artifacts, loading } = useData();
+  const { items: artifacts, loading } = useArtifacts();
   const artifact = artifacts.find((a) => a.id === props.artifactId);
   if (!artifact) {
     return (
@@ -52,7 +55,10 @@ const PLACEHOLDER =
   '# План\n\nMarkdown: заголовки, списки, таблицы, - [ ] чекбоксы.\nПредметы: [[tfc:metal/ingot/bronze|4]] — или «Вставить предмет».\n\nИли попросите агента ниже составить план.';
 
 function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDeleted }: Props & { artifact: Artifact }) {
-  const { tasks, nick, files, artifacts } = useData();
+  const { items: tasks } = useTasks();
+  const nick = useNick();
+  const { items: files } = useFiles();
+  const { items: artifacts } = useArtifacts();
   const task = tasks.find((t) => t.id === artifact.taskId);
 
   // Открытие — только чтение; редактор подключается, когда правку включили явно («Текст»)

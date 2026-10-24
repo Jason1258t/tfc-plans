@@ -1,4 +1,5 @@
-import type { Artifact, Task } from '../types';
+import type { Artifact } from '@/entities/artifact';
+import type { Task } from '@/entities/task';
 import { fileUrl, removeFile, uploadFile, type FileMeta } from './files';
 import { isImage, prepareFile, validateFiles } from './uploads';
 

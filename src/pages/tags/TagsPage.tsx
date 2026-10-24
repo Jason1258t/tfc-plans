@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PackSection } from '@/shared/ui';
 import { Member, TagEditor } from './ui/TagEditor';
-import { useData } from '../../data/DataContext';
+import { useNick } from '@/entities/user';
 import { datapacksStore } from '@/entities/datapack';
 import { useSearchTrack } from '@/shared/api';
 import {
@@ -22,7 +22,7 @@ import {
   type TagKind,
 } from '@/shared/pack-data';
 import { cx, uid } from '@/shared/lib';
-import type { Datapack, DatapackEntry } from '../../types';
+import type { Datapack, DatapackEntry } from '@/entities/datapack';
 import { PackPicker, type Pending } from '@/pages/recipes';
 import styles from './TagsPage.module.css';
 
@@ -33,7 +33,7 @@ export function TagsPage() {
   const cat = useTags();
   const items = useItems();
   const navigate = useNavigate();
-  const { nick } = useData();
+  const nick = useNick();
   const [params, setParams] = useSearchParams();
   const kind = (params.get('kind') as TagKind | 'all' | null) ?? 'all';
   const selectedKey = params.get('tag');

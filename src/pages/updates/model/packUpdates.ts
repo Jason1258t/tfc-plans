@@ -1,7 +1,7 @@
 import { collection, doc, onSnapshot, orderBy, query, updateDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { authReady, db } from '@/shared/api';
-import type { Datapack } from '../../../types';
+import type { Datapack } from '@/entities/datapack';
 import { loadAddonVersions } from '../../../data/addonVersions';
 import { ADDONS } from '../../../lib/addons';
 import { addonChangelogsFrom, type AddonVersion } from '../../../lib/addonVersions';

@@ -1,6 +1,8 @@
 import { BookOpen, Plus, Search } from 'lucide-react';
 import { useState } from 'react';
-import { useData } from '@/data/DataContext';
+import { useNick } from '@/entities/user';
+import { useArtifacts } from '@/entities/artifact';
+import { useTasks } from '@/entities/task';
 import { artifactsStore } from '@/entities/artifact';
 import { useSearchTrack } from '@/shared/api';
 import { cx, timeAgo } from '@/shared/lib';
@@ -14,7 +16,9 @@ interface Props {
 
 /** Раздел «Планы» на странице задач: все Markdown-планы, с задачей и без */
 export function DocsSection({ openId, onOpen }: Props) {
-  const { artifacts, tasks, nick, loading } = useData();
+  const { items: artifacts } = useArtifacts();
+  const { items: tasks, loading } = useTasks();
+  const nick = useNick();
   const [q, setQ] = useState('');
 
   const list = artifacts

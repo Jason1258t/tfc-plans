@@ -1,11 +1,11 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArtifactPane } from '../components/ArtifactPane';
-import { useData } from '../data/DataContext';
+import { useArtifacts } from '@/entities/artifact';
 
 /** Документ на всю страницу */
 export function DocPage() {
   const { id = '' } = useParams();
-  const { artifacts } = useData();
+  const { items: artifacts } = useArtifacts();
   const navigate = useNavigate();
   const taskId = artifacts.find((a) => a.id === id)?.taskId;
 

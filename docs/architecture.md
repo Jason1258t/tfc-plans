@@ -59,6 +59,9 @@ Collections: `tasks`, `groups`, `artifacts`, `files` (+`chunks`, package `firest
 - Shared CRUD — `src/shared/api/store.ts` (`createCollectionStore<T, N>('collection')`), with a localStorage fallback
   without Firebase. It knows nothing about entities: the collections themselves are created by their entity
   (`src/entities/<x>/store.ts`).
+- Состояние для страниц — zustand-хранилища сущностей (`useTasks()`, `useGroups()`, `useFiles()`…), по одному на
+  коллекцию. Подписки на них и отметку присутствия запускает `src/app/model/startData.ts` (один раз, после выбора
+  ника); ник — `entities/user/nick.ts`. Провайдера данных больше нет.
 
 ## Code map
 
@@ -76,13 +79,16 @@ src/shared/       общее для всего сайта; снаружи — ч
                    recipes (каталог, статусы KubeJS, поиск), recipeFilter/recipeRefs (фильтры и входы/выходы рецепта),
                    tags (слияние источников и KubeJS), fuzzy (fuse.js — только подсказки замен в схемах),
                    ItemIcon/ItemPicker/ItemIdSearch
-src/entities/     сущности: типы и свои коллекции (карточки задач появятся здесь же, в ветках fsd-entities и страниц)
-  task/            Task, ChecklistEntry, PRIORITIES/STATUSES, tasksStore      group/  Group, groupsStore
-  artifact/        Artifact, artifactsStore                                    guide/  Guide, GuideRevision
+src/entities/     сущности: типы, коллекции и zustand-хранилища для страниц
+  task/            Task, ChecklistEntry, PRIORITIES/STATUSES, tasksStore, useTasks, describeTask
+  group/           Group, groupsStore, useGroups
+  artifact/        Artifact, artifactsStore, useArtifacts
+  guide/           Guide, GuideRevision
   datapack/        Datapack, DatapackEntry, KubejsScript, datapacksStore/kubejsScriptsStore
   schematic/       SavedSchematic, ReplaceFavorite, schematicsStore/replaceFavoritesStore
-  user/            SiteUser (справочник ников)
-src/types.ts      временный общий выход типов — реэкспорт из entities/<x>/types.ts, исчезнет с переездом страниц
+  user/            SiteUser, useUsers/usePeople, useNick (ник заходившего), touchPresence
+  file/            useFiles — список вложений (само хранилище — src/lib/files.ts)
+src/app/          каркас: App.tsx (маршруты), model/startData (подписки), theme (токены и базовые стили)
 src/pages/        TasksPage (+ docs section DocsSection), DocPage, files/FilesPage, stats/StatsPage, recipes/RecipesPage (PackPicker), SchematicsPage, AddonsPage (AddonsTab),
                   DatapacksPage/RecipesPage/TagsPage (one section, PackNav on the left), ReferencePage (tabs: «Гайды» —
                   GuidesTab, «Карта» — MapPage, «Мультиблоки» — MultiblocksTab), UpdatesPage

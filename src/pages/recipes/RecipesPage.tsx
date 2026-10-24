@@ -3,12 +3,12 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { KubejsConstructor } from '@/components/KubejsConstructor';
 import { Modal, PackSection } from '@/shared/ui';
 import { recipeActions, RecipeBrowser } from '@/components/RecipeCatalog';
-import { useData } from '@/data/DataContext';
+import { useNick } from '@/entities/user';
 import { datapacksStore } from '@/entities/datapack';
 import { entryFromRecipe, entryWithId } from '@/lib/datapack';
 import { useRecipes, type Recipe } from '@/shared/pack-data';
 import { cx, timeAgo } from '@/shared/lib';
-import type { Datapack, DatapackEntry } from '@/types';
+import type { Datapack, DatapackEntry } from '@/entities/datapack';
 import styles from './RecipesPage.module.css';
 
 export type Pending = (pack: Pick<Datapack, 'namespace' | 'entries'>) => DatapackEntry;
@@ -99,7 +99,7 @@ export function RecipesPage() {
 
 /** Куда положить рецепт: существующий датапак или новый */
 export function PackPicker({ make, onClose }: { make: Pending; onClose: () => void }) {
-  const { nick } = useData();
+  const nick = useNick();
   const navigate = useNavigate();
   const [packs, setPacks] = useState<Datapack[] | null>(null);
   useEffect(
