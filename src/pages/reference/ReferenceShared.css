@@ -1,0 +1,178 @@
+/* Глобальные классы раздела «Справочник» — пока их берут компоненты, которые ещё не переехали на модули:
+   components/MultiblocksTab, components/PowerIeLoads, components/AddonsTab, components/guides/*.
+   В модулях эти имена станут хэшами, и чужие className="ref-card" перестанут находить правила,
+   поэтому до переезда тех компонентов держим здесь обычным (не модульным) CSS. */
+
+/* ---------------------------------------------------------------- карточки */
+
+.ref-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ref-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ref-card-head h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- таблицы */
+
+.ref-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.ref-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.ref-table th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-3);
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.ref-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.ref-table th.sortable:hover {
+  color: var(--text);
+}
+
+.ref-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ref-table tr:last-child td {
+  border-bottom: none;
+}
+
+.ref-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ref-table th.nut {
+  text-align: right;
+}
+
+.ref-table td.zero {
+  color: var(--text-3);
+}
+
+.ref-table td.warn {
+  color: var(--imp-3);
+}
+
+.ref-table .nut-grain:not(.zero) {
+  color: #d9a441;
+}
+.ref-table .nut-fruit:not(.zero) {
+  color: #e2626b;
+}
+.ref-table .nut-vegetables:not(.zero) {
+  color: var(--accent);
+}
+.ref-table .nut-protein:not(.zero) {
+  color: #c7764c;
+}
+.ref-table .nut-dairy:not(.zero) {
+  color: var(--diamond);
+}
+
+@media (max-width: 640px) {
+  .ref-table .nut {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- подразделы с боковым меню */
+/* Каркас «меню слева, содержимое справа»: им пользуются не только вкладки справочника,
+   но и мультиблоки, аддоны и гайды (components/MultiblocksTab, components/AddonsTab, tabs/GuidesTab). */
+
+.botany {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .botany {
+    grid-template-columns: 1fr;
+  }
+}
+
+.botany-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  position: sticky;
+  top: calc(var(--header-h) + 12px);
+}
+
+@media (max-width: 760px) {
+  .botany-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    position: static;
+  }
+}
+
+.botany-nav button {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.botany-nav button:hover {
+  background: var(--surface-2);
+}
+
+.botany-nav button.active {
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+
+.botany-main {
+  min-width: 0;
+}

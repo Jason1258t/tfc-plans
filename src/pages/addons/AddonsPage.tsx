@@ -1,14 +1,14 @@
 import { useSearchParams } from 'react-router-dom';
 import { AddonsTab } from '@/components/AddonsTab';
-import '@/pages/reference/tabs/BotanyTab.css';
-import '@/pages/reference/ReferencePage.css';
+import '@/pages/reference/ReferenceShared.css';
+import shell from '@/pages/reference/ReferenceShell.module.css';
 
 /** Свои моды группы и гайды «как написать свой». Прежний адрес — /reference?tab=addons. */
 export function AddonsPage() {
   const [params, setParams] = useSearchParams();
   return (
-    <main className="ref-page">
-      <div className="ref-head">
+    <main className={shell.page}>
+      <div className={shell.head}>
         <div className="grow">
           <h1>Аддоны</h1>
           <p className="faint small">

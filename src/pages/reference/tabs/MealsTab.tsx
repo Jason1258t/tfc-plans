@@ -29,7 +29,10 @@ import { NUTRIENTS, type Food, type Nutrient } from '@/lib/reference';
 import { CONFIG_ORIGIN_LABEL, useModConfig, type ConfigOrigin } from '@/lib/config';
 import { ComputedCalc, DynamicCalc, FamilyCalc, type FoodLookup } from './MealCalc';
 import { SkilletCard } from './SkilletCard';
-import './MealsTab.css';
+import { cx } from '@/shared/lib';
+import '../ReferenceShared.css';
+import shell from '../ReferenceShell.module.css';
+import styles from './MealsTab.module.css';
 
 const NUTRIENT_LABEL: Record<Nutrient, string> = {
   grain: 'зерновые',
@@ -60,11 +63,11 @@ function TagMembers({ tag, cat, items }: { tag: string; cat: TagCatalog | null; 
     [cat, tag, items],
   );
   return (
-    <details className="meal-tag">
+    <details className={styles.tag}>
       <summary>
         <code>#{tag}</code> <span className="faint">{cat ? `${list.length} предм.` : '…'}</span>
       </summary>
-      <ul className="meal-members">
+      <ul className={styles.members}>
         {list.map((id) => (
           <li key={id}>
             <ItemIcon id={id} size={20} tip={false} />
@@ -79,9 +82,9 @@ function TagMembers({ tag, cat, items }: { tag: string; cat: TagCatalog | null; 
 function ItemChips({ ids, items }: { ids: string[]; items: ItemIndex | null }) {
   const name = useNames(items);
   return (
-    <span className="meal-chips">
+    <span className={styles.chips}>
       {ids.map((id) => (
-        <span key={id} className="meal-chip">
+        <span key={id} className={styles.chip}>
           <ItemIcon id={id} size={20} tip={false} />
           {name(id)}
         </span>
@@ -94,7 +97,7 @@ function SlotRow({ slot, cat, items }: { slot: MealSlot; cat: TagCatalog | null;
   const alt = slot.items.length + slot.tags.length > 1;
   return (
     <li>
-      <b className="meal-count">×{range(slot.min, slot.max)}</b>
+      <b className={styles.count}>×{range(slot.min, slot.max)}</b>
       <div className="grow">
         {alt && <span className="faint small">любое из: </span>}
         {slot.items.length > 0 && <ItemChips ids={slot.items} items={items} />}
@@ -141,16 +144,16 @@ function MealShell({
   children: ReactNode;
 }) {
   return (
-    <li className="meal-card">
-      <header className="meal-head">
-        <span className="meal-icons">{icons}</span>
-        <span className="meal-title">
+    <li className={styles.card}>
+      <header className={styles.head}>
+        <span className={styles.icons}>{icons}</span>
+        <span className={styles.title}>
           <b title={title}>{title}</b>
           <span className="faint small">{sub}</span>
         </span>
-        {amount && <span className="meal-amount small">{amount}</span>}
+        {amount && <span className={cx(styles.amount, 'small')}>{amount}</span>}
       </header>
-      <div className="meal-body">{children}</div>
+      <div className={styles.body}>{children}</div>
     </li>
   );
 }
@@ -197,7 +200,7 @@ function FamilyCard({
       {f.baseCount > 0 && (
         <section>
           <h4>Основа ×{f.baseCount} — на выбор, у каждого вида своя</h4>
-          <ul className="meal-bases">
+          <ul className={styles.bases}>
             {f.dishes.map((d) => (
               <li key={d.item}>
                 <ItemChips ids={d.bases} items={items} />
@@ -209,7 +212,7 @@ function FamilyCard({
 
       <section>
         <h4>{f.baseCount > 0 ? 'Начинки' : 'Что класть'}</h4>
-        <ul className="meal-slots">
+        <ul className={styles.slots}>
           {foods.map((s) => (
             <SlotRow key={s.key} slot={s} cat={cat} items={items} />
           ))}
@@ -219,7 +222,7 @@ function FamilyCard({
       {tools.length > 0 && (
         <section>
           <h4>Инструмент и посуда</h4>
-          <ul className="meal-slots">
+          <ul className={styles.slots}>
             {tools.map((s) => (
               <SlotRow key={s.key} slot={s} cat={cat} items={items} />
             ))}
@@ -233,7 +236,7 @@ function FamilyCard({
           Само блюдо: {baseLine(f.base)}.{f.portions.length === 0 && ' Ингредиенты питательности не добавляют.'}
         </p>
         {f.portions.length > 0 && (
-          <ul className="meal-portions small">
+          <ul className={cx(styles.portions, 'small')}>
             {f.portions.map((p, i) => (
               <li key={i}>
                 <b>
@@ -257,7 +260,7 @@ function FamilyCard({
           </p>
         )}
       </section>
-      <p className="small meal-recipes">
+      <p className="small">
         <span className="faint">Рецепты в каталоге: </span>
         {f.dishes.map((d, i) => (
           <span key={d.item}>
@@ -315,9 +318,9 @@ function ComputedCard({
     >
       <section>
         <h4>Что класть</h4>
-        <ul className="meal-slots">
+        <ul className={styles.slots}>
           <li>
-            <b className="meal-count">
+            <b className={styles.count}>
               ×
               {counts.length
                 ? range(Math.min(...counts) - fixed.length, Math.max(...counts) - fixed.length)
@@ -331,9 +334,9 @@ function ComputedCard({
           </li>
         </ul>
         {fixed.length > 0 && (
-          <ul className="meal-slots">
+          <ul className={styles.slots}>
             <li>
-              <b className="meal-count">×{fixed.length}</b>
+              <b className={styles.count}>×{fixed.length}</b>
               <div className="grow">
                 <span className="faint small">обязательно: </span>
                 <ItemChips ids={fixed} items={items} />
@@ -342,9 +345,9 @@ function ComputedCard({
           </ul>
         )}
         {bowls.length > 0 && (
-          <ul className="meal-slots">
+          <ul className={styles.slots}>
             <li>
-              <b className="meal-count">посуда</b>
+              <b className={styles.count}>посуда</b>
               <div className="grow">
                 {bowls.map((t) => (
                   <TagMembers key={t} tag={t} cat={cat} items={items} />
@@ -362,7 +365,7 @@ function ComputedCard({
       </section>
       <section>
         <h4>Что получится</h4>
-        <ul className="meal-portions small">
+        <ul className={cx(styles.portions, 'small')}>
           {c.servings && counts.length > 0 && (
             <li>
               <b>Порций:</b> {counts.map((n) => `из ${n} продуктов — ${servings(n)}`).join(', ')}
@@ -434,10 +437,10 @@ function DynamicCard({
     >
       <section>
         <h4>Что класть</h4>
-        <ul className="meal-slots">
+        <ul className={styles.slots}>
           {d.ingredientTag && (
             <li>
-              <b className="meal-count">×1–{d.slots ?? '?'}</b>
+              <b className={styles.count}>×1–{d.slots ?? '?'}</b>
               <div className="grow">
                 <TagMembers tag={d.ingredientTag} cat={cat} items={items} />
               </div>
@@ -445,7 +448,7 @@ function DynamicCard({
           )}
           {d.carrierTag && (
             <li>
-              <b className="meal-count">посуда</b>
+              <b className={styles.count}>посуда</b>
               <div className="grow">
                 <TagMembers tag={d.carrierTag} cat={cat} items={items} />
               </div>
@@ -460,7 +463,7 @@ function DynamicCard({
       </section>
       <section>
         <h4>Что получится</h4>
-        <ul className="meal-portions small">
+        <ul className={cx(styles.portions, 'small')}>
           <li>
             <b>Питательные группы:</b> сумма по всем продуктам
             {d.nutrients.dropMin ? '; самая маленькая группа обнуляется' : ''}
@@ -604,8 +607,8 @@ export function MealsTab({
 
   return (
     <>
-      <div className="ref-filters">
-        <label className="search grow">
+      <div className={cx(shell.filters, shell.filtersEnd)}>
+        <label className={cx(shell.search, 'grow')}>
           <Search size={15} className="faint" />
           <input
             placeholder="Блюдо или продукт: сэндвич, сыр, томат…"
@@ -614,7 +617,7 @@ export function MealsTab({
           />
         </label>
       </div>
-      <p className="faint small ref-note">
+      <p className={cx('faint', 'small', shell.note)}>
         Сборное блюдо — еда, питательность которой складывается из того, что в неё положили: к значениям самого блюда
         прибавляется доля от каждого ингредиента. Поиск по продукту показывает блюда, в которые он годится. Состав тегов
         — с учётом правок KubeJS{hiddenRecipes > 0 ? `; рецептов, удалённых KubeJS, скрыто: ${hiddenRecipes}` : ''}. В
@@ -624,7 +627,7 @@ export function MealsTab({
       {shownCount === 0 ? (
         <div className="empty">Ничего не подходит.</div>
       ) : (
-        <ul className="meal-grid">
+        <ul className={styles.grid}>
           {computed.map((c) => (
             <ComputedCard key={c.kind} c={c} cat={cat} items={items} food={food} />
           ))}

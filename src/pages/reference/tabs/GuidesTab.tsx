@@ -2,7 +2,8 @@ import { lazy, Suspense } from 'react';
 import { usePower, useSettings, type PowerData } from '@/lib/power';
 import { cx } from '@/shared/lib';
 import { GUIDES_SUBS, type GuidesSub } from '@/components/guides/guideMeta';
-import './PowerTab.css';
+import '../ReferenceShared.css';
+import './PowerShared.css';
 
 const PowerGuidesSection = lazy(() => import('@/components/guides/PowerGuidesSection'));
 const AddonsGuidesSection = lazy(() => import('@/components/guides/AddonsGuidesSection'));

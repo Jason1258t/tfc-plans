@@ -14,7 +14,7 @@ import {
 import { itemName, useItems, ItemIcon } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
 // Стили справочника временно берём из его будущей общей папки — AddonsTab переедет в entities/addon
-import '@/pages/reference/tabs/PowerTab.css';
+import '@/pages/reference/tabs/PowerShared.css';
 
 const AddonsGuidesSection = lazy(() => import('./guides/AddonsGuidesSection'));
 

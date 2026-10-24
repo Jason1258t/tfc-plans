@@ -1,47 +1,23 @@
+/* Электричество: классы, которые используют не только вкладка «Электричество»,
+   но и гайды (components/guides: CalcBlock, powerWidgets, GuidesSection, GuideEditor, GuideHistory, AddonArticle),
+   карточки аддонов (components/AddonsTab) и загрузки IE (components/PowerIeLoads).
+   Держим обычным CSS, пока те компоненты не переехали на модули: в модуле имена станут хэшами
+   и их className="power-note" перестанут находить правила. */
+
 .power {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.power-h {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-
 .power p {
   margin: 0;
 }
 
-.power-chain {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.power-step {
-  align-self: stretch;
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-2);
-}
-
-.power-step p {
-  margin-top: 4px;
-  line-height: 1.5;
-}
-
-.power-step-icons {
-  display: flex;
-  gap: 2px;
-  flex: none;
-  min-width: 28px;
+.power-h {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .power-note {
@@ -111,11 +87,6 @@
 
 .power-back {
   align-self: flex-start;
-}
-
-.power-guides {
-  margin: 0;
-  padding-left: 18px;
 }
 
 .power-article h3 {
@@ -278,6 +249,8 @@
 .power-figure-wide svg {
   max-width: 100%;
 }
+
+/* ---------------------------------------------------------------- карточки аддонов */
 
 .power-addon-row {
   display: flex;

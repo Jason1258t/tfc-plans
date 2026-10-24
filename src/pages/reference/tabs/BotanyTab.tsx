@@ -26,7 +26,9 @@ import { itemName, useItems, type ItemIndex, useTags, ItemIcon } from '@/shared/
 import { mealsByItem, useMeals, type MealRef } from '@/lib/meals';
 import type { Food } from '@/lib/reference';
 import { cx } from '@/shared/lib';
-import './BotanyTab.css';
+import '../ReferenceShared.css';
+import shell from '../ReferenceShell.module.css';
+import styles from './BotanyTab.module.css';
 
 const SUBTABS: PlantKind[] = ['crop', 'bush', 'tree', 'plant'];
 type Sort = 'name' | 'minT' | 'maxT';
@@ -140,8 +142,8 @@ export function BotanyTab({
         />
       ) : (
         <div className="botany-main">
-          <div className="ref-filters">
-            <label className="search grow">
+          <div className={cx(shell.filters, shell.filtersEnd)}>
+            <label className={cx(shell.search, 'grow')}>
               <Search size={15} className="faint" />
               <input
                 placeholder={
@@ -151,7 +153,7 @@ export function BotanyTab({
                 onChange={(e) => setQuery(e.target.value)}
               />
             </label>
-            <label className="botany-field">
+            <label className={styles.field}>
               <span className="faint small">Температура, °C</span>
               <input
                 className="input"
@@ -161,7 +163,7 @@ export function BotanyTab({
                 onChange={(e) => setTemp(e.target.value)}
               />
             </label>
-            <label className="botany-field">
+            <label className={styles.field}>
               <span className="faint small">Влажность, %</span>
               <input
                 className="input"
@@ -188,7 +190,7 @@ export function BotanyTab({
           {list.length === 0 ? (
             <div className="empty">Ничего не подходит.</div>
           ) : (
-            <ul className="botany-grid">
+            <ul className={styles.grid}>
               {list.map((p) => (
                 <PlantCard
                   key={p.i}
@@ -316,7 +318,7 @@ function Summary({
       note: `${CONFIG_ORIGIN_LABEL[cal.dayOrigin]}; игровые сутки (день и ночь) — ${DAY_MINUTES} мин`,
     });
   return (
-    <section className="botany-summary">
+    <section className={styles.summary}>
       <dl>
         {facts.map((f) => (
           <div key={f.label}>
@@ -336,10 +338,10 @@ function Summary({
         Показано {shown} из {total}.
       </p>
       {sub !== 'crop' && (
-        <p className="botany-legend small">
+        <p className={cx(styles.legend, 'small')}>
           {(Object.keys(LIFE_LABEL) as (keyof typeof LIFE_LABEL)[]).map((l) => (
             <span key={l}>
-              <i className={`life-${l.toLowerCase()}`} /> {LIFE_LABEL[l]}
+              <i data-life={l.toLowerCase()} /> {LIFE_LABEL[l]}
             </span>
           ))}
         </p>
@@ -370,9 +372,9 @@ function RangeBar({
   const left = min === undefined ? 0 : pos(min);
   const right = max === undefined ? 100 : pos(max);
   return (
-    <span className={cx('botany-bar', kind)} aria-hidden="true">
+    <span className={styles.bar} data-kind={kind} aria-hidden="true">
       <span
-        className={cx(min === undefined && 'open-left', max === undefined && 'open-right')}
+        className={cx(min === undefined && styles.openLeft, max === undefined && styles.openRight)}
         style={{ left: `${left}%`, width: `${Math.max(2, right - left)}%` }}
       />
     </span>
@@ -422,20 +424,20 @@ function PlantCard({
   const fruiting = (p.life ?? []).flatMap((l, i) => (l === 'FRUITING' ? [monthLabel(months[i], i)] : []));
 
   return (
-    <li className="botany-card">
-      <header className="botany-card-head">
-        {icon ? <ItemIcon id={icon} size={40} tip={false} /> : <span className="botany-noicon" />}
+    <li className={styles.card}>
+      <header className={styles.cardHead}>
+        {icon ? <ItemIcon id={icon} size={40} tip={false} /> : <span className={styles.noicon} />}
         <div className="grow">
-          <div className="botany-name">{name}</div>
+          <div className={styles.name}>{name}</div>
           <code className="faint small">{p.i}</code>
         </div>
-        {p.block && <span className="botany-chip">{CROP_BLOCK_LABEL[p.block] ?? p.block}</span>}
-        {p.spreading && <span className="botany-chip">раскидистый{p.maxHeight ? `, до ${p.maxHeight} бл.` : ''}</span>}
+        {p.block && <span className={styles.chip}>{CROP_BLOCK_LABEL[p.block] ?? p.block}</span>}
+        {p.spreading && <span className={styles.chip}>раскидистый{p.maxHeight ? `, до ${p.maxHeight} бл.` : ''}</span>}
       </header>
 
       <section>
         <h4>Где растёт</h4>
-        <div className="botany-range">
+        <div className={styles.range}>
           <span>Температура</span>
           <RangeBar min={p.r.minT} max={p.r.maxT} lo={scale.minT} hi={scale.maxT} kind="temp" />
           <b>
@@ -443,7 +445,7 @@ function PlantCard({
             {p.r.wigT ? ` ±${ru(p.r.wigT)}` : ''}
           </b>
         </div>
-        <div className="botany-range">
+        <div className={styles.range}>
           <span>Влажность</span>
           {p.tempOnly ? (
             <span className="faint">на рост не влияет</span>
@@ -460,9 +462,9 @@ function PlantCard({
       {p.npk && (
         <section>
           <h4>Удобрения</h4>
-          <div className="botany-npk">
+          <div className={styles.npk}>
             {p.npk.map((v, i) => (
-              <div key={i} className={cx(v > 0 && 'takes', v < 0 && 'gives')}>
+              <div key={i} data-kind={v > 0 ? 'takes' : v < 0 ? 'gives' : undefined}>
                 <b>{NPK_LETTER[i]}</b>
                 <span>{NPK_NAME[i]}</span>
                 <em>{v > 0 ? `берёт ${ru(v, 2)}` : v < 0 ? `возвращает ${ru(-v, 2)}` : 'не влияет'}</em>
@@ -475,7 +477,7 @@ function PlantCard({
       {(p.drops || food || seedName || p.grow) && (
         <section>
           <h4>{p.k === 'crop' ? 'Урожай' : 'Плод'}</h4>
-          <dl className="botany-stats">
+          <dl className={styles.stats}>
             {p.drops?.map((d) => (
               <div key={d.item}>
                 <dt>
@@ -510,7 +512,7 @@ function PlantCard({
             {seedName && (
               <div>
                 <dt>Сажать</dt>
-                <dd className="botany-seed">
+                <dd className={styles.seed}>
                   <ItemIcon id={p.seed} size={18} tip={false} /> {seedName}
                 </dd>
               </div>
@@ -549,11 +551,11 @@ function PlantCard({
             Календарь
             {fruiting.length > 0 && <span className="faint"> · плодоносит: {fruiting.join(', ')}</span>}
           </h4>
-          <ol className="botany-life">
+          <ol className={styles.life}>
             {p.life.map((l, i) => (
               <li
                 key={i}
-                className={cx(l && `life-${l.toLowerCase()}`)}
+                data-life={l ? l.toLowerCase() : undefined}
                 title={`${monthLabel(months[i], i)}: ${l ? LIFE_LABEL[l] : '—'}`}
               >
                 {monthLabel(months[i], i)}
@@ -568,7 +570,7 @@ function PlantCard({
           <h4>
             Куда идёт <span className="faint">· рецептов: {p.uses.recipes}</span>
           </h4>
-          <div className="botany-uses">
+          <div className={styles.uses}>
             {p.uses.items.slice(0, USES_SHOWN).map((id) => (
               <ItemIcon key={id} id={id} size={28} />
             ))}
@@ -578,7 +580,7 @@ function PlantCard({
             {!dishes && p.uses.generic ? <span className="faint small">+ сборные блюда: {p.uses.generic}</span> : null}
           </div>
           {dishes && dishes.length > 0 && (
-            <div className="botany-dishes small">
+            <div className={cx(styles.dishes, 'small')}>
               <span className="faint">В сборные блюда:</span>
               {dishes.map((d) => (
                 <Link key={d.key + d.title} to={`/reference?tab=food&sub=meals&q=${encodeURIComponent(name)}`}>
@@ -593,7 +595,7 @@ function PlantCard({
       {p.vine && (
         <section>
           <h4>Лоза</h4>
-          <ul className="botany-notes">
+          <ul className={styles.notes}>
             {p.vine.stages && <li>Росток у земли проходит {p.vine.stages} стадии.</li>}
             {p.vine.up && <li>Взрослый росток поднимается на шпагат над собой — без шпагата выше он не растёт.</li>}
             {p.vine.sideways && <li>Дальше лоза расходится вдоль шпагата в обе стороны и на столбы шпалеры.</li>}
@@ -617,7 +619,7 @@ function PlantCard({
             ) : null}
           </h4>
           {p.quality.radius && p.quality.row ? (
-            <p className="small botany-quality-note">
+            <p className={cx('small', styles.qualityNote)}>
               Каждое растение лозы осматривает квадрат {p.quality.radius * 2 + 1}×{p.quality.radius * 2 + 1} вокруг себя
               {p.quality.layers === 2 ? ' на своём уровне и уровнем ниже' : ''} ({(p.quality.radius * 2 + 1) ** 2}{' '}
               блоков в слое). Счётчики складываются по всему ряду: по растениям, стоящим через каждые{' '}
@@ -627,7 +629,7 @@ function PlantCard({
               раз.
             </p>
           ) : null}
-          <dl className="botany-quality">
+          <dl className={styles.quality}>
             {p.quality.traits.map((t) => {
               // Имя ключа конфига: «Dirt_grown» из DIRT_GROWN
               const cap = t.trait.charAt(0) + t.trait.slice(1).toLowerCase();
@@ -649,7 +651,7 @@ function PlantCard({
       {p.wild && (
         <section>
           <h4>В природе</h4>
-          <p className="botany-wild">
+          <p className={styles.wild}>
             {[
               rangeLabel(p.wild.minT, p.wild.maxT, '°C'),
               rangeLabel(p.wild.minW, p.wild.maxW, 'мм грунтовой влаги'),
@@ -810,8 +812,8 @@ function Greenhouse({
 
   return (
     <div className="botany-main">
-      <div className="ref-filters">
-        <label className="search grow">
+      <div className={cx(shell.filters, shell.filtersEnd)}>
+        <label className={cx(shell.search, 'grow')}>
           <Search size={15} className="faint" />
           <input placeholder="Томат, ваниль, виноград…" value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
@@ -824,7 +826,7 @@ function Greenhouse({
           ))}
         </select>
       </div>
-      <section className="botany-summary">
+      <section className={styles.summary}>
         <dl>
           {facts.map((f) => (
             <div key={f.label}>
@@ -837,7 +839,7 @@ function Greenhouse({
           ))}
         </dl>
         {reasons.length > 0 && (
-          <div className="botany-reasons small">
+          <div className={cx(styles.reasons, 'small')}>
             <b>Грядка не растёт, если</b>
             <ul>
               {reasons.map((r) => (
@@ -848,7 +850,7 @@ function Greenhouse({
           </div>
         )}
         {watering.length > 0 && (
-          <div className="botany-reasons small">
+          <div className={cx(styles.reasons, 'small')}>
             <b>Полив</b>
             <ul>
               {watering.map((w) => (
@@ -869,26 +871,26 @@ function Greenhouse({
       {shown.length === 0 ? (
         <div className="empty">Ничего не подходит.</div>
       ) : (
-        <ul className="botany-grid">
+        <ul className={styles.grid}>
           {shown.map((g) => {
             const food = g.crop ? foodBy.get(g.crop) : undefined;
             const seedName = g.seed ? itemName(items?.byId.get(g.seed), g.seed) : null;
             return (
-              <li key={g.i} className="botany-card">
-                <header className="botany-card-head">
-                  {g.crop ? <ItemIcon id={g.crop} size={40} tip={false} /> : <span className="botany-noicon" />}
+              <li key={g.i} className={styles.card}>
+                <header className={styles.cardHead}>
+                  {g.crop ? <ItemIcon id={g.crop} size={40} tip={false} /> : <span className={styles.noicon} />}
                   <div className="grow">
-                    <div className="botany-name">{nameOf(g)}</div>
+                    <div className={styles.name}>{nameOf(g)}</div>
                     <code className="faint small">{g.i}</code>
                   </div>
-                  {g.planter && <span className="botany-chip">{PLANTER_LABEL[g.planter] ?? g.planter}</span>}
+                  {g.planter && <span className={styles.chip}>{PLANTER_LABEL[g.planter] ?? g.planter}</span>}
                 </header>
                 {g.npk && (
                   <section>
                     <h4>Удобрения</h4>
-                    <div className="botany-npk">
+                    <div className={styles.npk}>
                       {g.npk.map((v, i) => (
-                        <div key={i} className={cx(v > 0 && 'takes', v < 0 && 'gives')}>
+                        <div key={i} data-kind={v > 0 ? 'takes' : v < 0 ? 'gives' : undefined}>
                           <b>{NPK_LETTER[i]}</b>
                           <span>{NPK_NAME[i]}</span>
                           <em>{v > 0 ? `берёт ${ru(v, 2)}` : v < 0 ? `возвращает ${ru(-v, 2)}` : 'не влияет'}</em>
@@ -899,7 +901,7 @@ function Greenhouse({
                 )}
                 <section>
                   <h4>Посадка и урожай</h4>
-                  <dl className="botany-stats">
+                  <dl className={styles.stats}>
                     {g.tier !== undefined && (
                       <div>
                         <dt>Теплица</dt>
@@ -914,7 +916,7 @@ function Greenhouse({
                     {seedName && (
                       <div>
                         <dt>Сажать</dt>
-                        <dd className="botany-seed">
+                        <dd className={styles.seed}>
                           <ItemIcon id={g.seed} size={18} tip={false} /> {seedName}
                         </dd>
                       </div>

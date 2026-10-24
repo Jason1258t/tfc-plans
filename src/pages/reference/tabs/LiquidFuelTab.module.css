@@ -1,0 +1,98 @@
+/* Вкладка «Жидкое топливо». Таблицы (.ref-table) и карточки (.ref-card) — в ../ReferenceShared.css,
+   строка фильтров и ячейка «из чего» — в ../ReferenceShell.module.css. */
+
+.facts {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* .item-icon — общая иконка предмета из темы */
+.facts :global(.item-icon) {
+  vertical-align: -4px;
+}
+
+.fluids {
+  overflow-wrap: anywhere;
+}
+
+.method h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.recipes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.recipes li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.io {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.stack {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.removed .io {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+.removedTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--imp-3);
+}
+
+.burn td {
+  white-space: nowrap;
+}
+
+.empty {
+  color: var(--imp-2);
+}
+
+.unverified {
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--imp-2) 50%, var(--border));
+  color: var(--imp-2);
+  font-weight: 500;
+}
+
+.use > summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.use {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

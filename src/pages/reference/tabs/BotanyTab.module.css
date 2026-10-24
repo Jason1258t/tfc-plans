@@ -1,65 +1,7 @@
-.botany {
-  display: grid;
-  grid-template-columns: 200px 1fr;
-  gap: 16px;
-  align-items: start;
-}
+/* Вкладка «Ботаника»: карточки культур и теплицы. Каркас подразделов (.botany, .botany-nav,
+   .botany-main) остался в ../ReferenceShared.css — им пользуются мультиблоки, аддоны и гайды. */
 
-@media (max-width: 760px) {
-  .botany {
-    grid-template-columns: 1fr;
-  }
-}
-
-.botany-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 6px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  position: sticky;
-  top: calc(var(--header-h) + 12px);
-}
-
-@media (max-width: 760px) {
-  .botany-nav {
-    flex-direction: row;
-    flex-wrap: wrap;
-    position: static;
-  }
-}
-
-.botany-nav button {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  align-items: center;
-  padding: 7px 10px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text);
-  text-align: left;
-  cursor: pointer;
-  font: inherit;
-}
-
-.botany-nav button:hover {
-  background: var(--surface-2);
-}
-
-.botany-nav button.active {
-  background: var(--accent-soft);
-  font-weight: 600;
-}
-
-.botany-main {
-  min-width: 0;
-}
-
-.botany-field {
+.field {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -67,7 +9,7 @@
 }
 
 /* Общие сроки подраздела */
-.botany-summary {
+.summary {
   margin: 10px 0 14px;
   padding: 12px 14px;
   border: 1px solid var(--border);
@@ -75,36 +17,36 @@
   background: var(--surface);
 }
 
-.botany-summary dl {
+.summary dl {
   margin: 0 0 8px;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 8px 20px;
 }
 
-.botany-summary dt {
+.summary dt {
   font-size: 12px;
   color: var(--text-3);
 }
 
-.botany-summary dd {
+.summary dd {
   margin: 0;
   line-height: 1.4;
 }
 
-.botany-summary p {
+.summary p {
   margin: 0;
   line-height: 1.5;
 }
 
-.botany-legend {
+.legend {
   display: flex;
   gap: 14px;
   flex-wrap: wrap;
   margin-top: 8px !important;
 }
 
-.botany-legend i {
+.legend i {
   display: inline-block;
   width: 12px;
   height: 12px;
@@ -113,8 +55,9 @@
   background: var(--surface-3);
 }
 
-/* Карточки */
-.botany-grid {
+/* ---------------------------------------------------------------- карточки */
+
+.grid {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -123,7 +66,7 @@
   gap: 14px;
 }
 
-.botany-card {
+.card {
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -133,27 +76,27 @@
   gap: 14px;
 }
 
-.botany-card-head {
+.cardHead {
   display: flex;
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
 }
 
-.botany-noicon {
+.noicon {
   width: 40px;
   height: 40px;
   border-radius: var(--radius-sm);
   background: var(--surface-2);
 }
 
-.botany-name {
+.name {
   font-size: 16px;
   font-weight: 650;
   line-height: 1.25;
 }
 
-.botany-chip {
+.chip {
   padding: 3px 9px;
   border-radius: 999px;
   background: var(--surface-2);
@@ -162,13 +105,13 @@
   line-height: 1.4;
 }
 
-.botany-card section {
+.card section {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.botany-card h4 {
+.card h4 {
   margin: 0;
   font-size: 11px;
   font-weight: 600;
@@ -177,13 +120,13 @@
   color: var(--text-3);
 }
 
-.botany-card h4 span {
+.card h4 span {
   text-transform: none;
   letter-spacing: 0;
   font-weight: 500;
 }
 
-.botany-range {
+.range {
   display: grid;
   grid-template-columns: 96px 1fr auto;
   gap: 10px;
@@ -191,17 +134,17 @@
   font-size: 13px;
 }
 
-.botany-range > span:first-child {
+.range > span:first-child {
   color: var(--text-2);
 }
 
-.botany-range b {
+.range b {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.botany-bar {
+.bar {
   position: relative;
   height: 8px;
   border-radius: 4px;
@@ -209,36 +152,36 @@
   overflow: hidden;
 }
 
-.botany-bar > span {
+.bar > span {
   position: absolute;
   top: 0;
   bottom: 0;
   border-radius: 4px;
 }
 
-.botany-bar.temp > span {
+.bar[data-kind='temp'] > span {
   background: var(--imp-2);
 }
 
-.botany-bar.water > span {
+.bar[data-kind='water'] > span {
   background: var(--imp-1);
 }
 
-.botany-bar > span.open-left {
+.bar > span.openLeft {
   mask-image: linear-gradient(to right, transparent, #000 35%);
 }
 
-.botany-bar > span.open-right {
+.bar > span.openRight {
   mask-image: linear-gradient(to left, transparent, #000 35%);
 }
 
-.botany-npk {
+.npk {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
 
-.botany-npk > div {
+.npk > div {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 0 8px;
@@ -249,7 +192,7 @@
   line-height: 1.35;
 }
 
-.botany-npk b {
+.npk b {
   grid-row: span 2;
   align-self: center;
   font-size: 18px;
@@ -257,24 +200,24 @@
   color: var(--text-3);
 }
 
-.botany-npk span {
+.npk span {
   color: var(--text-2);
 }
 
-.botany-npk em {
+.npk em {
   font-style: normal;
   font-weight: 600;
 }
 
-.botany-npk .takes em {
+.npk [data-kind='takes'] em {
   color: var(--danger);
 }
 
-.botany-npk .gives em {
+.npk [data-kind='gives'] em {
   color: var(--accent);
 }
 
-.botany-stats {
+.stats {
   margin: 0;
   display: flex;
   flex-direction: column;
@@ -282,28 +225,28 @@
   font-size: 13px;
 }
 
-.botany-stats > div {
+.stats > div {
   display: grid;
   grid-template-columns: 96px 1fr;
   gap: 10px;
 }
 
-.botany-stats dt {
+.stats dt {
   color: var(--text-2);
 }
 
-.botany-stats dd {
+.stats dd {
   margin: 0;
   line-height: 1.4;
 }
 
-.botany-seed {
+.seed {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.botany-life {
+.life {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -312,7 +255,7 @@
   gap: 2px;
 }
 
-.botany-life li {
+.life li {
   padding: 5px 0;
   border-radius: 4px;
   background: var(--surface-2);
@@ -321,39 +264,40 @@
   text-align: center;
 }
 
-.botany-life .life-healthy,
-.botany-legend .life-healthy {
+/* Состояние культуры в календаре и в легенде: data-life="healthy|flowering|fruiting" */
+.life [data-life='healthy'],
+.legend [data-life='healthy'] {
   background: var(--accent-soft);
   color: var(--text-2);
 }
 
-.botany-life .life-flowering,
-.botany-legend .life-flowering {
+.life [data-life='flowering'],
+.legend [data-life='flowering'] {
   background: var(--amethyst-soft);
   color: var(--amethyst);
 }
 
-.botany-life .life-fruiting,
-.botany-legend .life-fruiting {
+.life [data-life='fruiting'],
+.legend [data-life='fruiting'] {
   background: var(--imp-2);
   color: #fff;
   font-weight: 700;
 }
 
-.botany-wild {
+.wild {
   margin: 0;
   font-size: 13px;
   line-height: 1.45;
 }
 
-.botany-uses {
+.uses {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
 }
 
-.botany-dishes {
+.dishes {
   display: flex;
   flex-wrap: wrap;
   gap: 2px 10px;
@@ -361,17 +305,12 @@
   line-height: 1.5;
 }
 
-/* Поля с подписью сверху выше соседних — ровняем строку фильтров по нижнему краю */
-.botany .ref-filters {
-  align-items: flex-end;
-}
-
-.botany-quality-note {
+.qualityNote {
   margin: 0 0 8px;
   line-height: 1.5;
 }
 
-.botany-quality {
+.quality {
   margin: 0;
   display: flex;
   flex-direction: column;
@@ -379,17 +318,17 @@
   font-size: 13px;
 }
 
-.botany-quality dt {
+.quality dt {
   font-weight: 600;
 }
 
-.botany-quality dd {
+.quality dd {
   margin: 2px 0 0;
   color: var(--text-2);
   line-height: 1.4;
 }
 
-.botany-notes {
+.notes {
   margin: 0;
   padding-left: 18px;
   display: flex;
@@ -399,12 +338,12 @@
   line-height: 1.45;
 }
 
-.botany-reasons {
+.reasons {
   margin: 0 0 10px;
   line-height: 1.5;
 }
 
-.botany-reasons ul {
+.reasons ul {
   margin: 4px 0;
   padding-left: 18px;
 }

@@ -17,7 +17,9 @@ import {
   type SkilletState,
 } from '@/lib/meals';
 import { NUTRIENTS, type Nutrient } from '@/lib/reference';
-import './SkilletCard.css';
+import { cx } from '@/shared/lib';
+import mealStyles from './MealsTab.module.css';
+import styles from './SkilletCard.module.css';
 
 const NUTRIENT_LABEL: Record<Nutrient, string> = {
   grain: 'зерновые',
@@ -111,11 +113,11 @@ function Calc({
   const picked = rows.filter((r) => r.id);
   const r = picked.length ? calcSkillet(s, order, picked, food, cat, set) : null;
   return (
-    <details className="meal-calc">
+    <details className={mealStyles.calc}>
       <summary>Калькулятор</summary>
-      <div className="skillet-rows">
+      <div className={styles.rows}>
         {rows.map((row, i) => (
-          <div key={i} className="skillet-row">
+          <div key={i} className={styles.row}>
             <select className="input" value={row.id} onChange={(e) => update(i, { id: e.target.value })}>
               <option value="">— продукт —</option>
               {options.map((id) => (
@@ -160,20 +162,20 @@ function Calc({
         <Plus size={14} /> продукт
       </button>
       {used > capacity && (
-        <p className="small skillet-warn">
+        <p className={cx('small', styles.warn)}>
           Выбрано {used} шт., а на сковороду помещается {capacity}.
         </p>
       )}
       {!r ? (
         <p className="faint small">Выберите хотя бы один продукт.</p>
       ) : (
-        <div className="meal-result small">
+        <div className={cx(mealStyles.result, 'small')}>
           <span>
             <b>Качество {r.score} %</b>
             {!r.edible && ' — несъедобно'}
           </span>
           {r.dishes.map((id) => (
-            <span key={id} className="meal-chip">
+            <span key={id} className={mealStyles.chip}>
               <ItemIcon id={id} size={20} tip={false} />
               <b>{name(id)}</b>
             </span>
@@ -272,7 +274,7 @@ export function SkilletCard({
     >
       <section>
         <h4>Как готовить</h4>
-        <ul className="meal-portions small">
+        <ul className={cx(mealStyles.portions, 'small')}>
           <li>
             Продукты кладут на горячую сковороду, помешивают лопаткой и снимают тарелкой
             {capacity ? `; помещается ${capacity.value}${origin(capacity)}` : ''}.
@@ -300,7 +302,7 @@ export function SkilletCard({
       </section>
       <section>
         <h4>Что получится</h4>
-        <ul className="meal-portions small">
+        <ul className={cx(mealStyles.portions, 'small')}>
           <li>
             <b>Питательные группы:</b> сумма по всем продуктам
             {s.nutrients.dropMin ? '; самая маленькая группа обнуляется' : ''}; остальное × качество
@@ -334,16 +336,16 @@ export function SkilletCard({
       </section>
       <section>
         <h4>Продукты</h4>
-        <div className="skillet-groups">
+        <div className={styles.groups}>
           {shown.map(({ e, list }, i) => (
-            <details key={i} className="meal-tag">
+            <details key={i} className={mealStyles.tag}>
               <summary>
                 <b>
                   {TYPE_LABEL[e.type] ?? e.type}: {list.length === 1 ? name(list[0].id) : `${list.length} предм.`}
                 </b>{' '}
                 <span className="faint">{entryLine(e)}</span>
               </summary>
-              <ul className="skillet-products small">
+              <ul className={cx(styles.products, 'small')}>
                 {list.map(({ id, n }) => (
                   <li key={id}>
                     <ItemIcon id={id} size={20} tip={false} />
@@ -368,11 +370,11 @@ export function SkilletCard({
         </p>
       </section>
       <section>
-        <details className="meal-tag">
+        <details className={mealStyles.tag}>
           <summary>
             <b>Названия блюд</b> <span className="faint">{s.dishes.length} рецептов, доли продуктов по весу</span>
           </summary>
-          <ul className="skillet-products small">
+          <ul className={cx(styles.products, 'small')}>
             {s.dishes.map((d) => (
               <li key={d.recipe}>
                 <ItemIcon id={d.item} size={20} tip={false} />
