@@ -1,11 +1,11 @@
 import {
   ArrowRight,
   BookmarkPlus,
+  Box,
   Check,
   ChevronDown,
   Download,
   FileBox,
-  Layers,
   Plus,
   RotateCcw,
   Ruler,
@@ -451,66 +451,68 @@ export function SchematicsPage() {
                     </span>
                   </span>
                   <button
-                    className={cx('btn sm', shapeOpen.has(s.key) && 'active')}
-                    onClick={() => toggleShape(s.key)}
-                    aria-expanded={shapeOpen.has(s.key)}
-                    title="Обрезка краёв, отступы, площадка под схемой, очистка пространства"
-                  >
-                    <Ruler size={14} />
-                    Форма
-                    {shapeSummary(s.shape) && <span className="faint">: {shapeSummary(s.shape)}</span>}
-                    <ChevronDown size={13} className={cx('chev', shapeOpen.has(s.key) && 'open')} />
-                  </button>
-                  <button
-                    className="btn sm"
-                    onClick={() => setLayersFor(s.key)}
-                    title="Вид сверху по слоям: посмотреть блоки, убрать (ПКМ) или заменить (ЛКМ) отдельные"
-                  >
-                    <Layers size={14} />
-                    Слои
-                  </button>
-                  <button
-                    className="btn sm"
-                    onClick={() => downloadSchematic(s)}
-                    disabled={!items}
-                    title={`Скачать как ${outName(s.fileName)}`}
-                  >
-                    <Download size={14} />
-                    Скачать
-                  </button>
-                  {filesEnabled && (
-                    <button
-                      className="btn sm"
-                      onClick={() => save(s)}
-                      disabled={saving[s.key] === 'saving'}
-                      title={
-                        s.libraryId
-                          ? 'Записать текущие замены в библиотеку'
-                          : 'Сохранить схему с заменами в общую библиотеку'
-                      }
-                    >
-                      {s.libraryId && savedSig[s.key] === replaceSig(s, replace) ? (
-                        <Check size={14} />
-                      ) : (
-                        <BookmarkPlus size={14} />
-                      )}
-                      {saving[s.key] === 'saving'
-                        ? 'Сохраняю…'
-                        : s.libraryId
-                          ? 'Обновить в библиотеке'
-                          : 'В библиотеку'}
-                    </button>
-                  )}
-                  {saving[s.key] && saving[s.key] !== 'saving' && (
-                    <span className="schem-save-error small">{saving[s.key]}</span>
-                  )}
-                  <button
                     className="btn ghost sm icon"
                     onClick={() => setSchematics((l) => l.filter((x) => x.key !== s.key))}
                     aria-label={`Убрать ${s.fileName}`}
                   >
                     <X size={15} />
                   </button>
+                  <div className="schem-file-tools">
+                    <button
+                      className={cx('btn sm', shapeOpen.has(s.key) && 'active')}
+                      onClick={() => toggleShape(s.key)}
+                      aria-expanded={shapeOpen.has(s.key)}
+                      title="Обрезка краёв, отступы, площадка под схемой, очистка пространства"
+                    >
+                      <Ruler size={14} />
+                      Форма
+                      {shapeSummary(s.shape) && <span className="faint">: {shapeSummary(s.shape)}</span>}
+                      <ChevronDown size={13} className={cx('chev', shapeOpen.has(s.key) && 'open')} />
+                    </button>
+                    <button
+                      className="btn sm"
+                      onClick={() => setLayersFor(s.key)}
+                      title="Схема в 3D; там же — вид сверху по слоям: посмотреть блоки, убрать или заменить отдельные"
+                    >
+                      <Box size={14} />
+                      3D
+                    </button>
+                    <button
+                      className="btn sm"
+                      onClick={() => downloadSchematic(s)}
+                      disabled={!items}
+                      title={`Скачать как ${outName(s.fileName)}`}
+                    >
+                      <Download size={14} />
+                      Скачать
+                    </button>
+                    {filesEnabled && (
+                      <button
+                        className="btn sm"
+                        onClick={() => save(s)}
+                        disabled={saving[s.key] === 'saving'}
+                        title={
+                          s.libraryId
+                            ? 'Записать текущие замены в библиотеку'
+                            : 'Сохранить схему с заменами в общую библиотеку'
+                        }
+                      >
+                        {s.libraryId && savedSig[s.key] === replaceSig(s, replace) ? (
+                          <Check size={14} />
+                        ) : (
+                          <BookmarkPlus size={14} />
+                        )}
+                        {saving[s.key] === 'saving'
+                          ? 'Сохраняю…'
+                          : s.libraryId
+                            ? 'Обновить в библиотеке'
+                            : 'В библиотеку'}
+                      </button>
+                    )}
+                    {saving[s.key] && saving[s.key] !== 'saving' && (
+                      <span className="schem-save-error small">{saving[s.key]}</span>
+                    )}
+                  </div>
                   {shapeOpen.has(s.key) && (
                     <div className="schem-shape">
                       <label
