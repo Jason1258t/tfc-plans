@@ -1,7 +1,7 @@
 import { HelpCircle, X } from 'lucide-react';
 import { useDeferredValue, useRef, useState } from 'react';
 import { saveGuide, type GuideDraft } from '../../data/guides';
-import { readNick } from '../../lib/nick';
+import { readNick } from '@/shared/lib/nick';
 import type { Guide, GuideChecked } from '../../types';
 import { ItemIcon, ItemPicker } from '@/shared/pack-data';
 import type { LiveMarkdownHandle } from '../LiveMarkdown';

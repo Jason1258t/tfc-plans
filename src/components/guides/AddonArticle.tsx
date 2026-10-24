@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { guidesEnabled, subscribeGuide } from '../../data/guides';
 import { ADDONS, ADDON_GUIDE_SECTION, addonGuideId, type Addon } from '../../lib/addons';
 import { BASE_DOCS, BASE_VALUES } from '../../lib/guideScope';
-import { readNick } from '../../lib/nick';
+import { readNick } from '@/shared/lib/nick';
 import type { Guide } from '../../types';
 import { AddonBlockCard } from '../AddonsTab';
 import { CalcErrors } from './CalcBlock';

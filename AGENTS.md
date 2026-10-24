@@ -101,6 +101,7 @@ npm run deploy:site    # deploy the site; pack data on Hosting stays as the pack
 # npx firebase deploy --only hosting — blocked (would upload local pack data); pack data → pack server, see docs/pack-server.md
 npx firebase deploy --only firestore:rules
 npm run ui:classes -- --css <file>   # where CSS classes are used (own / shared / dead / library) — skill css-modules
+npm run ui:boundaries                # FSD layer imports: shared must not import pages/entities, pages must not import app
 npm run ui:shots -- capture before --only <page>   # desktop+mobile screenshots; then `capture after`, `diff before after`
 npm run mods | serverconfig | kubejs | world | pack | guides | pack:fetch | pack:publish | freshness   # see docs/architecture.md
 ```

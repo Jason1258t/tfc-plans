@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { validateNick } from '../lib/nick';
+import { validateNick } from '@/shared/lib/nick';
 import { Modal } from '@/shared/ui';
 
 interface Props {
