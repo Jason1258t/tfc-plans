@@ -56,8 +56,12 @@ export function packServer() {
 const pickEnv = () =>
   Object.fromEntries(['TFC_PACK_URL', 'TFC_PACK_TOKEN'].filter((k) => process.env[k]).map((k) => [k, process.env[k]]));
 
-async function api(srv, p, { raw = false } = {}) {
-  const r = await fetch(`${srv.url}${p}`, { headers: { Authorization: `Bearer ${srv.token}` } });
+/**
+ * Запрос к серверу сборки. signal обязателен для вызывающих с таймаутом: без него fetch висит на мёртвой сети
+ * (и, например, npm run dev из ворктри не стартует — см. ensure-mods.mjs).
+ */
+async function api(srv, p, { raw = false, signal } = {}) {
+  const r = await fetch(`${srv.url}${p}`, { headers: { Authorization: `Bearer ${srv.token}` }, signal });
   if (!r.ok) {
     const t = await r.text();
     let msg = t;
@@ -88,12 +92,14 @@ function seedFile(seeds, f) {
 
 /**
  * Кладёт файлы [{ path, sha256, size }] в dir; качает только те, что отличаются. url(f) — откуда качать;
- * seeds — папки, где такой файл уже может лежать (берётся оттуда без скачивания)
+ * seeds — папки, где такой файл уже может лежать (берётся оттуда без скачивания).
+ * options.compare — папка, с которой сверяются уже лежащие файлы (по умолчанию dir; fetchData пишет в промежуточную
+ * папку и сверяется с итоговой); options.signal — отмена загрузки (таймаут вызывающего).
  */
-async function sync(srv, dir, files, url, seeds = []) {
+async function sync(srv, dir, files, url, seeds = [], { signal, compare = dir } = {}) {
   const want = [];
   for (const f of files) {
-    const local = path.join(dir, ...f.path.split('/'));
+    const local = path.join(compare, ...f.path.split('/'));
     let same = false;
     try {
       const st = fs.statSync(local);
@@ -105,9 +111,11 @@ async function sync(srv, dir, files, url, seeds = []) {
   }
   let bytes = 0;
   let seeded = 0;
+  const written = [];
   const queue = [...want];
   const worker = async () => {
     for (let f = queue.shift(); f; f = queue.shift()) {
+      if (signal?.aborted) return; // не начинать новые загрузки после отмены
       const local = path.join(dir, ...f.path.split('/'));
       fs.mkdirSync(path.dirname(local), { recursive: true });
       const seed = seeds.length ? seedFile(seeds, f) : null;
@@ -119,19 +127,22 @@ async function sync(srv, dir, files, url, seeds = []) {
           fs.copyFileSync(seed, local);
         }
         seeded++;
+        written.push(f.path);
         continue;
       }
-      const buf = await api(srv, url(f), { raw: true });
+      const buf = await api(srv, url(f), { raw: true, signal });
       if (sha256(buf) !== f.sha256) throw new Error(`${f.path}: контрольная сумма не сошлась`);
       // Через временный файл: файл мог быть жёсткой ссылкой (на старую mods/ репозитория) — не пишем в чужой
       const tmp = `${local}.tfc-tmp`;
       fs.writeFileSync(tmp, buf);
       fs.renameSync(tmp, local);
       bytes += buf.length;
+      written.push(f.path);
     }
   };
   await Promise.all(Array.from({ length: 4 }, worker));
-  return { total: files.length, fetched: want.length - seeded, seeded, bytes };
+  signal?.throwIfAborted();
+  return { total: files.length, fetched: want.length - seeded, seeded, bytes, written };
 }
 
 /** Файлы под корнями, которых нет в списке, — убрать (данные модов на сервере их уже не содержат) */
@@ -153,19 +164,38 @@ function prune(dir, roots, keep) {
 
 const mb = (n) => `${(n / 1024 / 1024).toFixed(1)} МБ`;
 
-/** Данные модов, собранные сервером для текущего снимка → outDir (public/) */
-export async function fetchData({ outDir = path.join(ROOT, 'public'), srv = packServer() } = {}) {
+/**
+ * Данные модов, собранные сервером для текущего снимка → outDir (public/).
+ * Качаем во временную папку рядом и переносим на место только когда всё скачалось: таймаут или ошибка сети
+ * (signal) оставляют прежние данные как есть, а не половину нового снимка.
+ */
+export async function fetchData({ outDir = path.join(ROOT, 'public'), srv = packServer(), signal } = {}) {
   if (!srv) throw new Error('нет TFC_PACK_URL / TFC_PACK_TOKEN (окружение или .env.local) и входа в программу tfc');
-  const idx = await api(srv, '/data');
+  const idx = await api(srv, '/data', { signal });
   // Только то, что собирает npm run mods (scripts/data-roots.mjs)
   const files = idx.files.filter((f) => MODS_OUTPUTS.includes(f.path.split('/')[0]));
   if (!files.some((f) => f.path === 'items.json')) throw new Error(`в данных снимка ${idx.snapshot} нет данных модов`);
-  const r = await sync(
-    srv,
-    outDir,
-    files,
-    (f) => `/data/${idx.snapshot}/${f.path.split('/').map(encodeURIComponent).join('/')}`,
-  );
+  const stage = path.join(outDir, '.tfc-data-new');
+  fs.rmSync(stage, { recursive: true, force: true });
+  let r;
+  try {
+    r = await sync(
+      srv,
+      stage,
+      files,
+      (f) => `/data/${idx.snapshot}/${f.path.split('/').map(encodeURIComponent).join('/')}`,
+      [],
+      { signal, compare: outDir },
+    );
+    // Одинаковые файлы не качались и в промежуточной папке их нет — их не трогаем вовсе
+    for (const rel of r.written) {
+      const dst = path.join(outDir, ...rel.split('/'));
+      fs.mkdirSync(path.dirname(dst), { recursive: true });
+      fs.renameSync(path.join(stage, ...rel.split('/')), dst);
+    }
+  } finally {
+    fs.rmSync(stage, { recursive: true, force: true });
+  }
   const roots = [...new Set(files.map((f) => f.path.split('/')[0]))];
   const removed = prune(outDir, roots, new Set(files.map((f) => f.path)));
   log(

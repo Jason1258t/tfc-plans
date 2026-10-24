@@ -18,7 +18,10 @@ folder|zip>` — all at once with folder discovery, whitelist and `instance/sour
   with `TFC_MODS_DIR` set, as on the pack server, they sit next to the jars as before), `npm run mods`, freshness
   fingerprints, `tools/*/libs.sh|test-server.sh|build.sh`, `ee-extras` art. `npm run dev` never reads jars:
   `ensure-mods.mjs` copies missing `public/` from the main checkout, then syncs mod data from the pack server
-  (`/data`), soft-failing to the old data; `TFC_KEEP_MODS=1` = offline. Pack server address/key: env, `.env.local`,
+  (`/data`), soft-failing to the old data; the whole download is capped at 60 s (`TFC_PACK_TIMEOUT_MS`, 2026-10-24 —
+  a worktree used to hang for minutes on a slow or dead server) and staged in `public/.tfc-data-new`, so a timeout or
+  a network error leaves the files as they were; a full pull without a timeout is `npm run pack:fetch -- --data`.
+  `TFC_KEEP_MODS=1` = offline. Pack server address/key: env, `.env.local`,
   else the `tfc` app login (`%APPDATA%\tfc\config.json` on Windows, `~/.config/tfc/config.json` on macOS/Linux —
   `configDir()` in `cli/lib/config.mjs`). The host may delete the old `mods/` (cache holds hard links).
 - Guard against building without mods: the library build stops if the jar dir is empty but the previous build had mods (`TFC_ALLOW_NO_MODS=1` bypass); `pack-release` writes nothing at 0 mods or a loss of more

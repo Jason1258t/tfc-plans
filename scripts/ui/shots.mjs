@@ -167,7 +167,8 @@ export async function launchChrome({ profile } = {}) {
       return page;
     },
     async close() {
-      await browser.send('Browser.close').catch(() => {});
+      // Не ждём вечно: зависший Chrome не должен держать скрипт после конца снимков
+      await Promise.race([browser.send('Browser.close').catch(() => {}), sleep(3000)]);
       proc.kill();
     },
   };
@@ -296,6 +297,26 @@ async function runAction(page, a) {
   }
   if (a.eval) return evaluate(page, a.eval);
   throw new Error(`Неизвестное действие: ${JSON.stringify(a)}`);
+}
+
+/**
+ * Сторожевой таймаут на один снимок: Chrome изредка замирает на первом же кадре (цель жива, Runtime.evaluate не
+ * отвечает) — скрипт висит молча, без файлов и без ошибки. Прервать такой запрос нельзя, поэтому неудачный снимок
+ * бросаем с внятным сообщением и один раз повторяем.
+ */
+const SHOT_TIMEOUT_S = Number(process.env.SHOTS_TIMEOUT_S);
+const SHOT_TIMEOUT_MS = (Number.isFinite(SHOT_TIMEOUT_S) && SHOT_TIMEOUT_S > 0 ? SHOT_TIMEOUT_S : 120) * 1000;
+
+function withWatchdog(promise, ms = SHOT_TIMEOUT_MS) {
+  let timer;
+  const timeout = new Promise((_, fail) => {
+    timer = setTimeout(
+      () =>
+        fail(Object.assign(new Error(`нет ответа за ${Math.round(ms / 1000)} с — Chrome завис`), { watchdog: true })),
+      ms,
+    );
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
 /** Один снимок: сценарий × вьюпорт → PNG (Buffer) */
@@ -467,16 +488,23 @@ async function main() {
     try {
       for (const scenario of list)
         for (const viewport of scenario.viewports ?? viewports) {
-          const file = join(dir, `${scenario.name}.${viewport}.png`);
-          try {
-            const { png, settled } = await capture(chrome, { baseUrl, scenario, viewport, setup });
-            writeFileSync(file, png);
-            console.log(
-              `✓ ${scenario.name}.${viewport}${settled === 'timeout' ? '  (страница не успокоилась — возможен шум)' : ''}`,
-            );
-          } catch (e) {
-            failed++;
-            console.log(`✗ ${scenario.name}.${viewport}: ${e.message}`);
+          const name = `${scenario.name}.${viewport}`;
+          const file = join(dir, `${name}.png`);
+          for (let attempt = 1; ; attempt++) {
+            try {
+              const { png, settled } = await withWatchdog(capture(chrome, { baseUrl, scenario, viewport, setup }));
+              writeFileSync(file, png);
+              console.log(`✓ ${name}${settled === 'timeout' ? '  (страница не успокоилась — возможен шум)' : ''}`);
+              break;
+            } catch (e) {
+              if (e.watchdog && attempt === 1) {
+                console.log(`… ${name}: ${e.message} — повторяю снимок`);
+                continue;
+              }
+              failed++;
+              console.log(`✗ ${name}: ${e.message}`);
+              break;
+            }
           }
         }
     } finally {

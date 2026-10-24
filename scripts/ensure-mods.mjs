@@ -2,7 +2,8 @@
 // сборки, отсюда они только берутся.
 //   1. В git worktree недостающие файлы public/ копируются из основной копии (быстро, без сети).
 //   2. Есть TFC_PACK_URL и TFC_PACK_TOKEN (окружение, .env.local или вход в программу tfc) — данные модов текущего снимка с сервера сборки
-//      (одинаковые файлы не качаются). Сервер недоступен — остаются прежние, с предупреждением.
+//      (одинаковые файлы не качаются). Таймаут на всю загрузку — TFC_PACK_TIMEOUT_MS (60 с): сервер не ответил или
+//      ответил ошибкой — остаются прежние данные, с предупреждением, дев-сервер стартует дальше.
 // TFC_KEEP_MODS=1 — без сервера сборки: взять готовые данные (в worktree — свежие из основной копии).
 // TFC_SITE_ONLY=1 (npm run deploy:site) — данные сборки не нужны вовсе: их на хостинге ставит сервер сборки.
 // Собрать данные модов руками из jar — npm run mods (jar — npm run pack:fetch).
@@ -63,12 +64,30 @@ if (siteOnly) {
 }
 
 // Сервер сборки: данные модов текущего снимка
+const PACK_TIMEOUT_MS = Number(process.env.TFC_PACK_TIMEOUT_MS) || 60_000;
 const packSrv = keepMods ? null : packServer();
 if (packSrv) {
+  // Жёсткий таймаут на всю загрузку: fetch без сигнала не прерывается, и в worktree дев-сервер висел минутами,
+  // если сервер сборки недоступен или сеть медленная. Данные при отмене не трогаются (pack-fetch пишет их
+  // в промежуточную папку и переносит на место только после удачной загрузки).
+  const ac = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    ac.abort();
+  }, PACK_TIMEOUT_MS);
   try {
-    await fetchData({ outDir: PUBLIC, srv: packSrv });
+    await fetchData({ outDir: PUBLIC, srv: packSrv, signal: ac.signal });
   } catch (e) {
-    console.warn(`[items] сервер сборки ${packSrv.url}: ${e.message} — беру прежние данные модов`);
+    const why = timedOut
+      ? `нет ответа дольше ${PACK_TIMEOUT_MS / 1000} с (TFC_PACK_TIMEOUT_MS)`
+      : (e.cause?.message ?? e.message);
+    console.warn(
+      `[items] сервер сборки ${packSrv.url}: ${why} — беру прежние данные модов, что уже лежат в public/. ` +
+        'Полная загрузка без таймаута: npm run pack:fetch -- --data; совсем без сети: TFC_KEEP_MODS=1.',
+    );
+  } finally {
+    clearTimeout(timer);
   }
 } else if (!keepMods)
   console.log(
