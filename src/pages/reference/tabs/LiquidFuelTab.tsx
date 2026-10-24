@@ -3,8 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { datapacksStore } from '@/entities/datapack';
 import { itemName, type ItemIndex, ItemIcon } from '@/shared/pack-data';
-import { methodLabel, type EngineStats, type FuelRecipe, type LiquidFamily, type LiquidStack } from '../lib/reference';
-import type { Datapack } from '../types';
+import { methodLabel, type EngineStats, type FuelRecipe, type LiquidFamily, type LiquidStack } from '@/lib/reference';
+import type { Datapack } from '@/types';
 
 /**
  * Жидкое топливо: нефть и её переработка, бензин, дизель, этанол, растительное масло, биодизель.

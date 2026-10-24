@@ -1,7 +1,7 @@
 import { useSearchParams } from 'react-router-dom';
 import { AddonsTab } from '@/components/AddonsTab';
-import '@/components/BotanyTab.css';
-import '@/pages/ReferencePage.css';
+import '@/pages/reference/tabs/BotanyTab.css';
+import '@/pages/reference/ReferencePage.css';
 
 /** Свои моды группы и гайды «как написать свой». Прежний адрес — /reference?tab=addons. */
 export function AddonsPage() {

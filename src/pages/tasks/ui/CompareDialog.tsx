@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { tasksStore } from '@/entities/task';
 import { elo, pickPair, sortTasks, swapRatings } from '../model/tasks';
 import { PRIORITIES, type Task } from '@/types';
-import './CompareDialog.css';
+import styles from './CompareDialog.module.css';
 import { ItemIcon } from '@/shared/pack-data';
 import { Modal } from '@/shared/ui';
 
@@ -52,11 +52,11 @@ export function CompareDialog({ tasks, onClose }: Props) {
         <div className="empty">Нужно хотя бы две активные задачи в текущем фильтре.</div>
       ) : (
         <>
-          <div className="cmp-pair">
+          <div className={styles.cmpPair}>
             {[a, b].map((t, i) => (
-              <button key={t.id} className="cmp-option" onClick={() => choose(t, i === 0 ? b : a)}>
+              <button key={t.id} className={styles.cmpOption} onClick={() => choose(t, i === 0 ? b : a)}>
                 {t.icon && <ItemIcon id={t.icon} size={32} tip={false} />}
-                <span className="cmp-title">{t.title}</span>
+                <span className={styles.cmpTitle}>{t.title}</span>
                 <span className="imp-pill" style={{ color: PRIORITIES[t.priority].color }}>
                   {PRIORITIES[t.priority].label}
                 </span>
@@ -75,7 +75,7 @@ export function CompareDialog({ tasks, onClose }: Props) {
         <div>
           <div className="label">Рейтинг</div>
           <div className="faint small">Наведите между строками и нажмите ⇅, чтобы поменять две задачи местами.</div>
-          <ol className="cmp-rank">
+          <ol className={styles.cmpRank}>
             {ranking.map((t, i) => (
               <li key={t.id}>
                 <span className="imp-dot" style={{ background: PRIORITIES[t.priority].color }} />
@@ -83,7 +83,7 @@ export function CompareDialog({ tasks, onClose }: Props) {
                 <span className="faint">{t.rating}</span>
                 {i < ranking.length - 1 && (
                   <button
-                    className="cmp-swap"
+                    className={styles.cmpSwap}
                     title="Поменять местами с задачей ниже"
                     aria-label={`Поменять местами «${t.title}» и «${ranking[i + 1].title}»`}
                     onClick={() => swap(t, ranking[i + 1])}
