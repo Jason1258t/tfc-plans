@@ -20,7 +20,16 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
   (`src/pages/files/FilesPage.module.css`, 2026-10-24, задача PfzufKyhwWCUYYhBs9K5) — first page on a module: own
   classes local, the three others' overrides (`.search`, `.seg`, `.fbadge`) through `:global` until shared/ui exists.
   Onboarding tour targets for that page moved to tags and roles (`main button` + text, `main [role=search]`), not
-  classes. Pages and components: 40 global CSS files left, shared/ui not created yet.
+  classes.
+- 2026-10-25 — page branches (each with before/after screenshots 0.000%): «Задачи» (whole page and its components,
+  23 files; tour targets moved to `data-tour`/roles, so «Что важнее?» is highlighted on mobile too), «Схемы» (page,
+  library, favourites, layers split into section modules; own `.search` — the global one flashed on load), «Справочник»
+  (page, 8 tabs, shared parts in `ReferenceShared.css`/`PowerShared.css`; own search classes now, no dependency on the
+  tasks page). Global through `:global` only where other pages use the class (`.toggle`, `.hide-sm`, `.imp-pill`);
+  states (`active`, `selected`, …) local.
+- Left: **17 global CSS outside `src/app/theme`** — 12 in `src/components/` (Header, Markdown, RecipeCatalog,
+  MultiblocksTab, guides, …), shared parts of the reference, `shared/pack-data` (ItemPicker, ItemIdSearch), `PackNav`.
+  `src/shared/ui` not created yet: buttons/inputs/segmented still come from `legacy-ui.css`.
 
 ## Documents (file storage)
 
