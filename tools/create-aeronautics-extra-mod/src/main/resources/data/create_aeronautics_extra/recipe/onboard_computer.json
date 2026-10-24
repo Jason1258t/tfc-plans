@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "pattern": [
+    "CEC",
+    "PBP",
+    " S "
+  ],
+  "key": {
+    "C": {
+      "item": "electroenergetics:connector"
+    },
+    "E": {
+      "item": "create:electron_tube"
+    },
+    "P": {
+      "tag": "c:plates/brass"
+    },
+    "B": {
+      "item": "create:brass_casing"
+    },
+    "S": {
+      "item": "create:shaft"
+    }
+  },
+  "result": {
+    "id": "create_aeronautics_extra:onboard_computer",
+    "count": 1
+  }
+}

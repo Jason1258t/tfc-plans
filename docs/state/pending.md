@@ -24,6 +24,10 @@ its one-liner in STATE.md.
   generator, rectifiers, inverters, small engine and genset (terminals of both generators moved into terminal boxes —
   placed wires should follow), rotating half-shaft, bucket by hand and Create pipes into the tank, JEI/EMI recipes, a real CDG engine driving
   compact generators, fuels other than diesel. Details — [addons.md](addons.md).
+- **Create Aeronautics Extra 1.0.0** (2026-10-24, `create-aeronautics-extra-1.0.0.jar`, onboard computer): host
+  installs (`tfc pull addons`, server and players) and `tfc publish`. In game: block looks and rotating half-shaft,
+  goggles and tooltips, module insert/remove by hand, JEI/EMI recipes, the block on a flying Aeronautics ship with
+  propellers. Details — [addons.md](addons.md).
 - **IE Extras 1.0.0** (2026-10-23, `ie-extras-1.0.0.jar`, analog heater): host installs (`tfc pull addons`, server and
   players) and `tfc publish`. In game: block looks and placement, Create analog lever, IE wires/connector feeding it,
   crucible cooling after lowering the signal (can't be seen on the dev server — TFC calendar stands without players),

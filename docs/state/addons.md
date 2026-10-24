@@ -106,6 +106,22 @@ SU·tick, by CDG 1.3.8 bytecode).
   frame (diesel + alternator + terminal box): `Terminals` moved to {12.25, 6}, {12.25, 10} at height 14. User rejected
   a coarse brass radiator grille — now dark core with fine fins. Terminals 24/24; not checked in game.
 
+## Create Aeronautics Extra (`tools/create-aeronautics-extra-mod`, 2026-10-24)
+
+Task «Бортовой компьютер» (`rgLoQS8DcOgxbm7r4401`, group «Разработка»; plan doc `3whWeABl6xVMiKF7MTPL` by DeepSeek —
+its 0.1.0 code was lost, rewritten from scratch by Claude). **1.0.0**: onboard computer — Create shaft in the back,
+EE «+»/«−» terminals, up to 4 modules (right-click to insert, sneak + empty hand to take the last; block drops them).
+Generator module = compact generator numbers (6 W, 8 SU, 0.5 V per rpm; stress via `calculateStressApplied` +
+`updateStressFor` on change). Battery module = EE `AccumulatorProperties` cell (24 V, 0.1 Ω, `maxAccumulatorCharge`
+36 000 C), n cells in parallel (`BatteryPack`: R/n, current split); generators charge it directly; charge kept in the
+BE, on the item as data component `charge`. Device `OnboardDevice` is stateless (reads the BE each tick).
+- **Ships:** Aeronautics ships are Sable sub-levels whose blocks live in plot chunks of the same ServerLevel (sable 2.0.5
+  `ServerLevelPlot`), and EE moves its nodes/wires/devices on assembly (`SubLevelAssemblyHelperMixin`) — so no
+  contraption code is needed (DeepSeek's plan assumed Create contraption entities — wrong for this pack).
+- Dev server (`./test-server.sh`): generation/charge/discharge match formulas (≤ 0.5 %), stress 8 SU/rpm per generator,
+  battery-to-battery over wires, restart, drops. `SABLE=1` (server on NeoForge 21.1.251 + sable jar): `/sable assemble
+  area` of the stand — keeps working on the plot. Terminals 24/24. Not checked in game.
+
 ## IE Extras (`tools/ie-extras-mod`, 2026-10-23)
 
 Blocks and features for Immersive Engineering (task «Аддон для блоков и функций IE», group «Разработка»; the user's first
