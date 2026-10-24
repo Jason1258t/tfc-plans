@@ -1,0 +1,45 @@
+{
+  "setup": {
+    "cookies": { "tfc_nick": "ClaudeTest" },
+    "localStorage": {
+      "tfc-onboarding": { "seen": {}, "off": true },
+      "tfc-tm:updates-seen": "9999999999999"
+    },
+    "mask": [".sync-badge"]
+  },
+  "scenarios": [
+    { "name": "tasks", "path": "/", "waitFor": ".tasks-main" },
+    {
+      "name": "tasks.new-dialog",
+      "path": "/",
+      "waitFor": ".tasks-main",
+      "actions": [{ "clickText": "Задача", "within": ".tasks-main" }, { "wait": ".modal" }],
+      "fullPage": false,
+      "note": "окно новой задачи"
+    },
+    { "name": "docs", "path": "/docs" },
+    { "name": "schematics", "path": "/schematics" },
+    { "name": "datapacks", "path": "/datapacks" },
+    { "name": "recipes", "path": "/recipes" },
+    { "name": "tags", "path": "/tags" },
+    { "name": "reference", "path": "/reference", "waitFor": ".ref-page" },
+    { "name": "reference.fuel", "path": "/reference?tab=fuel", "waitFor": ".ref-page" },
+    { "name": "reference.metals", "path": "/reference?tab=metals", "waitFor": ".ref-page" },
+    { "name": "reference.food", "path": "/reference?tab=food", "waitFor": ".ref-page" },
+    { "name": "reference.botany", "path": "/reference?tab=botany", "waitFor": ".ref-page" },
+    { "name": "reference.power", "path": "/reference?tab=power", "waitFor": ".ref-page" },
+    { "name": "reference.multiblocks", "path": "/reference?tab=multiblocks", "waitFor": ".ref-page" },
+    { "name": "reference.guides", "path": "/reference?tab=guides", "waitFor": ".ref-page" },
+    {
+      "name": "reference.map",
+      "path": "/reference?tab=map",
+      "waitFor": ".ref-page",
+      "fullPage": false,
+      "note": "тайлы карты догружаются — сравнивать по рамке, не по карте"
+    },
+    { "name": "addons", "path": "/addons" },
+    { "name": "updates", "path": "/updates" },
+    { "name": "freshness", "path": "/freshness" },
+    { "name": "stats", "path": "/stats" }
+  ]
+}

@@ -32,7 +32,9 @@
     "pack:fetch": "node scripts/pack-fetch.mjs",
     "pack:publish": "node scripts/publish-data.mjs",
     "tfc": "node cli/tfc.mjs",
-    "tfc:dist": "node scripts/tfc-dist.mjs"
+    "tfc:dist": "node scripts/tfc-dist.mjs",
+    "ui:classes": "node scripts/ui/classes.mjs",
+    "ui:shots": "node scripts/ui/shots.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",
