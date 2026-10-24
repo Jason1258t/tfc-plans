@@ -1,6 +1,8 @@
 import { Check, Copy, Download, Terminal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { cx } from '@/shared/lib';
+import sectionStyles from '../UpdatesSection.module.css';
+import styles from './TfcDownload.module.css';
 
 /** public/tfc/version.json — его пишет npm run tfc:dist */
 interface TfcVersion {
@@ -49,7 +51,7 @@ const mb = (n: number) => `${Math.round(n / 1024 / 1024)} МБ`;
 function Cmd({ text }: { text: string }) {
   const [done, setDone] = useState(false);
   return (
-    <div className="tfc-dl-cmd">
+    <div className={styles.cmd}>
       <pre>{text}</pre>
       <button
         className="btn sm"
@@ -89,8 +91,8 @@ export function TfcDownload() {
   ];
   const current = ways.some(([w]) => w === way) ? way : 'script';
   return (
-    <section className="upd-card tfc-dl">
-      <header className="upd-card-head">
+    <section className={sectionStyles.card}>
+      <header className={sectionStyles.cardHead}>
         <Terminal size={18} className="faint" />
         <div className="grow">
           <h2>Программа tfc — сборка на вашем ПК</h2>
@@ -100,20 +102,20 @@ export function TfcDownload() {
           </div>
         </div>
       </header>
-      <div className="tfc-dl-os">
+      <div className={styles.os}>
         {(['win', 'macos', 'linux'] as Os[]).map((o) => (
           <button key={o} className={cx('btn', o === os && 'primary')} onClick={() => setOs(o)}>
             {{ win: 'Windows', macos: 'macOS', linux: 'Linux' }[o]}
           </button>
         ))}
-        <span className="tfc-dl-sep" />
+        <span className={styles.sep} />
         {ways.map(([w, title]) => (
           <button key={w} className={cx('btn sm', w === current && 'primary')} onClick={() => setWay(w)}>
             {title}
           </button>
         ))}
       </div>
-      <ol className="tfc-dl-steps">
+      <ol className={styles.steps}>
         {current === 'script' && (
           <li>
             {TERMINAL[os]} Вставьте команду и нажмите Enter:

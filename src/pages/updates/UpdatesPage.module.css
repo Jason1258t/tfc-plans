@@ -1,0 +1,157 @@
+/* Карточка обновления и её содержимое: бейджи, патчноут, риски датапаков, списки модов, предметов и рецептов.
+   Колонка, шапка и сама карточка — в UpdatesSection.module.css (общее для обеих страниц раздела). */
+
+.badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.badges :global(.tag) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badges .kAdd {
+  color: var(--accent);
+}
+
+.badges .kUpd {
+  color: var(--diamond);
+}
+
+.badges .kDel,
+.badges .kWarn {
+  color: var(--imp-3);
+}
+
+.notes {
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  min-width: 0;
+}
+
+.notes > :first-child {
+  margin-top: 0;
+}
+
+.notesActions,
+.notesMeta,
+.notesEmpty {
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.notesEmpty {
+  margin-top: 0;
+}
+
+.risks {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--imp-3) 45%, var(--border));
+  background: color-mix(in srgb, var(--imp-3) 8%, transparent);
+  font-size: 13px;
+}
+
+.risks h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.risks ul {
+  margin: 0;
+  padding-left: 18px;
+  overflow-wrap: anywhere;
+}
+
+.toggle {
+  align-self: flex-start;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.block h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.block > summary {
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.mods {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.mods summary {
+  cursor: pointer;
+}
+
+.changelog {
+  margin: 6px 0 8px 14px;
+  padding: 8px 12px;
+  border-left: 2px solid var(--border-strong);
+  font-size: 13px;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  align-items: center;
+}
+
+.recipes {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  max-height: 280px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+
+.types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+}
+
+/* ссылка «наш аддон» в списке модов: .tag глобальный, местная надстройка */
+.mods :global(.tag).addon {
+  font-size: 11px;
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  text-decoration: none;
+}
