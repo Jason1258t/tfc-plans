@@ -1,4 +1,4 @@
-import type { ChecklistEntry, Task } from '../types';
+import type { ChecklistEntry, Task } from '@/types';
 
 export const entryDone = (c: ChecklistEntry) => (c.itemId ? (c.got ?? 0) >= (c.qty ?? 1) : Boolean(c.done));
 

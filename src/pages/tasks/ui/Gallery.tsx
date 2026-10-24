@@ -1,9 +1,9 @@
 import { ChevronLeft, ChevronRight, Download, ImagePlus, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useData } from '../data/DataContext';
-import { downloadFile, fileUrl, filesEnabled, formatSize, removeFile, type FileMeta } from '../lib/files';
-import { dismissUpload, isImage, useUploads } from '../lib/uploads';
+import { useData } from '@/data/DataContext';
+import { downloadFile, fileUrl, filesEnabled, formatSize, removeFile, type FileMeta } from '@/lib/files';
+import { dismissUpload, isImage, useUploads } from '@/lib/uploads';
 import { cx, timeAgo } from '@/shared/lib';
 import './Gallery.css';
 

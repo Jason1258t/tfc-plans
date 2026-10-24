@@ -1,9 +1,9 @@
 import { Check, ChevronDown, ChevronUp, Minus, Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import { itemName, useItems, ItemIcon, ItemPicker } from '@/shared/pack-data';
-import { entryDone } from '../lib/tasks';
+import { entryDone } from '../model/tasks';
 import { cx, uid } from '@/shared/lib';
-import type { ChecklistEntry } from '../types';
+import type { ChecklistEntry } from '@/types';
 import './Checklist.css';
 
 interface Props {

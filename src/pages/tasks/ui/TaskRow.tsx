@@ -1,12 +1,12 @@
 import { Check, Clock, Copy, FileText, Image as ImageIcon, Paperclip, UserRound } from 'lucide-react';
-import { isImage } from '../lib/uploads';
-import { useData } from '../data/DataContext';
+import { isImage } from '@/lib/uploads';
+import { useData } from '@/data/DataContext';
 import { useState } from 'react';
 import { tasksStore } from '@/entities/task';
 import { usePendingIds } from '@/shared/api';
-import { checklistProgress, entryDone } from '../lib/tasks';
+import { checklistProgress, entryDone } from '../model/tasks';
 import { cx, timeAgo } from '@/shared/lib';
-import { PRIORITIES, type Task } from '../types';
+import { PRIORITIES, type Task } from '@/types';
 import { ItemIcon } from '@/shared/pack-data';
 import { tooltipHandlers } from '@/shared/ui';
 
