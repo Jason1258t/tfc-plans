@@ -220,9 +220,16 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   clock, encased fan (half + propeller), drill head, pump cog, millstone inner, crushing wheel, powered shaft,
   crafter cog, press (shaft + head), mixer (cog, pole, head), deployer (shaft, pole, pointing hand), encased cogs
   (shaftless cog + halves by top/bottom_shaft). Machines at rest (press head up, deployer retracted). Missing `pm`
-  (old data) → the old look. **Needs the host:** `tfc admin rebuild --pull` + `tfc admin publish --live` so the pack
-  server publishes the new create.json. Not done: mechanical arm, steam engine, flywheel, hand crank, saw, water
+  (old data) → the old look. Published by the pack server 2026-10-24 (agent ran `tfc admin rebuild --pull` +
+  `publish --live`); live site checked: ore2dust_compact 5108 faces. Not done: mechanical arm, steam engine, flywheel, hand crank, saw, water
   wheels, bearings, gauges, funnels/tunnels flaps.
+- **Chests in schematics** (2026-10-24, Jason: «сундуки просто обгрызанным блоком досок»): vanilla and TFC chests
+  have no block model (ChestRenderer). The item-icon registry `scripts/mcp/models/` handlers got an optional
+  `block(id)` → `{ rotate: 'facing', variants(ctx) }` (`chestBlock` in `minecraft.mjs`: single + double halves
+  `createDoubleBodyLeft/RightLayer`, textures `*_left`/`*_right`); `codeBlockModel` (index.mjs) → `codeBlock`
+  (render.mjs) → `icons3d.blockCode` → `writeBlockModels({ codeBlock })` turns the quads into OBJ triangles and
+  writes variants `facing=…,type=…` (south = y 0, ChestRenderer −facing.toYRot). 75 blocks; entity chest textures
+  copied into `icons/`. Browser-checked on ore2dust_compact (21 chests, doubles join); not compared with the game.
 - **Library preview** (`lib/schematicRender.ts`): on save the browser draws a 480×320 webp (~15–20 KB) with
   replacements into the `preview` field (rule: ≤300k chars); old records have a «нарисовать превью» button. Tested in
   the browser on two library schematics (8.6k blocks → 27k faces, 80 ms); saving with preview via the button not

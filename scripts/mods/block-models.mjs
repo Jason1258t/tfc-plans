@@ -87,14 +87,20 @@ function wrapped(layers, m) {
  * writeBlockModels({ layers, blockstates, models, outDir, iconsDir, copyTexture, log }):
  *   layers — слои ресурсов (scripts/mcp/resources.mjs), blockstates — [{ ns, path }] всех блоков сборки,
  *   models — [{ ns, path: 'block/…' }] моделей блоков модов из PARTIAL_NAMESPACES (раздел pm),
+ *   codeBlock(ns, path) → { rotate: 'facing', variants: [{ when, quads }] } | null — блок без модели, который
+ *   рисуется кодом предмета (сундуки, scripts/mcp/models/): грани → треугольники, варианты по facing × when,
  *   copyTexture(id) → путь в icons/ или null (файл текстуры из распакованных jar); нет файла (атлас TFC:
  *   paletted_permutations) — рисуем текстуру сами в iconsDir.
  * Возвращает { blocks, models, geometry, textures, noModel, kb, warnings }.
  */
+/** Поворот варианта (y) для блока, который код рисует смотрящим на юг (ChestRenderer: −facing.toYRot) */
+const FACING_Y = { south: 0, west: 90, north: 180, east: 270 };
+
 export function writeBlockModels({
   layers,
   blockstates,
   models: modelFiles = [],
+  codeBlock = null,
   outDir,
   iconsDir,
   copyTexture,
@@ -189,6 +195,7 @@ export function writeBlockModels({
   for (const m of modelFiles)
     if (PARTIAL_NAMESPACES.has(m.ns)) (partialsOf.get(m.ns) ?? partialsOf.set(m.ns, []).get(m.ns)).push(m.path);
   let partials = 0;
+  let codeBlocks = 0;
   let blocks = 0;
   let models = 0;
   let geometry = 0;
@@ -204,7 +211,36 @@ export function writeBlockModels({
     const modIdx = new Map();
     const modelOf = (ref) => {
       if (typeof ref !== 'string') return -1;
-      const b = bake(ref.includes(':') ? ref : `minecraft:${ref}`);
+      return addModel(bake(ref.includes(':') ? ref : `minecraft:${ref}`));
+    };
+    /** Грани кода (scripts/mcp/models: P — три угла в пикселях, uv 0–16) → модель из треугольников OBJ */
+    const quadsModel = (quads) => {
+      const slots = [];
+      const g = [];
+      const r3 = (v) => Math.round(v * 1000) / 1000;
+      for (const q of quads) {
+        let s = slots.indexOf(q.tex ?? '');
+        if (s < 0) s = slots.push(q.tex ?? '') - 1;
+        const [a, b, c] = q.P;
+        const d = [b[0] + c[0] - a[0], b[1] + c[1] - a[1], b[2] + c[2] - a[2]];
+        const [u1, v1, u2, v2] = q.uv;
+        const tri = (pts) => ({ o: pts.flatMap(([p, u, v]) => [...p.map(r3), r3(u), r3(v)]), s });
+        g.push(
+          tri([
+            [a, u1, v1],
+            [b, u2, v1],
+            [c, u1, v2],
+          ]),
+          tri([
+            [b, u2, v1],
+            [d, u2, v2],
+            [c, u1, v2],
+          ]),
+        );
+      }
+      return addModel(g.length ? { geoKey: JSON.stringify(g), geo: g, tex: slots } : null);
+    };
+    const addModel = (b) => {
       if (!b) return -1;
       let g = geoIdx.get(b.geoKey);
       if (g == null) {
@@ -262,6 +298,21 @@ export function writeBlockModels({
         }
         if (mp.length) b[p] = { mp };
       }
+      // Модели нет (BlockEntityRenderer), а предмет рисуется тем же кодом — грани кода, варианты по facing
+      const empty = !b[p] || (b[p].v?.every(([, pts]) => pts.every((pt) => pt[0] < 0)) ?? false);
+      const code = empty && codeBlock ? codeBlock(ns, p) : null;
+      if (code?.rotate === 'facing') {
+        const v = [];
+        for (const { when, quads } of code.variants) {
+          const m = quadsModel(quads);
+          if (m < 0) continue;
+          for (const [f, y] of Object.entries(FACING_Y)) v.push([`facing=${f}${when ? `,${when}` : ''}`, [[m, 0, y]]]);
+        }
+        if (v.length) {
+          b[p] = { v };
+          codeBlocks++;
+        }
+      }
       if (b[p]) blocks++;
     }
     if (!Object.keys(b).length) continue;
@@ -285,7 +336,7 @@ export function writeBlockModels({
     geometry += geo.length;
   }
   log(
-    `модели блоков: ${blocks} блоков, ${models} моделей, ${geometry} геометрий, ${textures.size} текстур, без элементов ${noModel}, частей ${partials} — block-models/ ${Math.round(bytes / 1024)}KB`,
+    `модели блоков: ${blocks} блоков, ${models} моделей, ${geometry} геометрий, ${textures.size} текстур, без элементов ${noModel}, частей ${partials}, кодом ${codeBlocks} — block-models/ ${Math.round(bytes / 1024)}KB`,
   );
   return {
     blocks,
@@ -294,6 +345,7 @@ export function writeBlockModels({
     textures: textures.size,
     noModel,
     partials,
+    codeBlocks,
     kb: Math.round(bytes / 1024),
     warnings,
   };

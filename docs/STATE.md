@@ -18,7 +18,6 @@ When finishing work: update the topic file, and this index only if a line below 
 
 ## In progress / waiting (details — [pending.md](state/pending.md))
 
-- Host: `tfc admin rebuild --pull` + `tfc admin publish --live` — Create parts (belts, shafts, press…) in schematic 3D.
 - Host: pack update `u20261022-150945-83a0` (Chinese KubeJS messages → ru/en): `tfc admin updates pull`, check in game,
   `tfc admin updates approve`.
 - Host: install **EE Extras 2.3** (2.2 + compact generator), **Small Diesel 1.0.0**, **IE Extras 1.0.0** and **Create Aeronautics Extra 1.0.0** + `tfc publish`; warn players

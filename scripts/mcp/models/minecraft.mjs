@@ -15,6 +15,18 @@ const CHEST = [
   part([box(0, 0, 1, 0, 0, 14, 5, 14)], { x: 0, y: 9, z: 1 }),
   part([box(0, 0, 7, -2, 14, 2, 4, 1)], { x: 0, y: 9, z: 1 }),
 ];
+// ChestRenderer.createDoubleBodyLeftLayer / createDoubleBodyRightLayer, 64×64 — половины двойного сундука
+const CHEST_LEFT = [
+  part([box(0, 19, 0, 0, 1, 15, 10, 14)]),
+  part([box(0, 0, 0, 0, 0, 15, 5, 14)], { x: 0, y: 9, z: 1 }),
+  part([box(0, 0, 0, -2, 14, 1, 4, 1)], { x: 0, y: 9, z: 1 }),
+];
+const CHEST_RIGHT = [
+  part([box(0, 19, 1, 0, 1, 15, 10, 14)]),
+  part([box(0, 0, 1, 0, 0, 15, 5, 14)], { x: 0, y: 9, z: 1 }),
+  part([box(0, 0, 15, -2, 14, 1, 4, 1)], { x: 0, y: 9, z: 1 }),
+];
+const CHEST_PARTS = { single: CHEST, left: CHEST_LEFT, right: CHEST_RIGHT };
 // BedRenderer.createHeadLayer / createFootLayer, 64×64
 const BED_HEAD = part([], {}, [
   part([box(0, 0, 0, 0, 0, 16, 16, 6)]),
@@ -107,12 +119,28 @@ const base = () => new Pose();
 const vanilla = (id) => id.startsWith('minecraft:');
 const pathOf = (id) => id.split(':')[1];
 
-/** Сундук: ChestRenderer без мира — FACING = SOUTH (поворот 0), крышка закрыта; texId — текстура entity/chest/… */
-export function chestQuads(texId) {
+/**
+ * Сундук: ChestRenderer без мира — FACING = SOUTH (поворот 0), крышка закрыта; texId — текстура entity/chest/…;
+ * type — ChestType: single, left / right — половина двойного (своя модель и текстура *_left / *_right)
+ */
+export function chestQuads(texId, type = 'single') {
   const out = [];
-  for (const pt of CHEST) renderPart(base(), pt, { id: texId, w: 64, h: 64 }, out);
+  for (const pt of CHEST_PARTS[type] ?? CHEST) renderPart(base(), pt, { id: texId, w: 64, h: 64 }, out);
   return out;
 }
+
+/**
+ * Сундук как блок схемы (block у обработчика, см. models/index.mjs): по варианту type — своя модель, поворот по facing
+ * делает сборщик. texOf(type) → текстура или null (нет половин — двойной рисуется как два одиночных)
+ */
+export const chestBlock = (texOf) => ({
+  rotate: 'facing',
+  variants: (ctx) =>
+    ['single', 'left', 'right'].flatMap((type) => {
+      const tex = [texOf(type), texOf('single')].find((t) => t && ctx.has(t));
+      return tex ? [{ when: `type=${type}`, quads: chestQuads(tex, tex === texOf(type) ? type : 'single') }] : [];
+    }),
+});
 
 const VANILLA_CHESTS = {
   chest: 'minecraft:entity/chest/normal',
@@ -142,6 +170,10 @@ export default {
       build(ctx, id) {
         const tex = VANILLA_CHESTS[pathOf(id)];
         return tex && ctx.has(tex) ? { quads: chestQuads(tex) } : null;
+      },
+      block: (id) => {
+        const tex = VANILLA_CHESTS[pathOf(id)];
+        return tex ? chestBlock((type) => (type === 'single' ? tex : `${tex}_${type}`)) : null;
       },
     },
     {
