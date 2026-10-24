@@ -12,13 +12,13 @@ import {
   type ManifestMod,
 } from './model/freshness';
 import { cx, timeAgo } from '@/shared/lib';
-import './UpdatesPage.css';
-import './FreshnessPage.css';
+import sectionStyles from './UpdatesSection.module.css';
+import styles from './FreshnessPage.module.css';
 
 /** Переключатель «Лента / Свежесть модов» — общий для двух страниц обновлений */
 export function UpdatesNav() {
   return (
-    <nav className="seg upd-nav">
+    <nav className={cx('seg', sectionStyles.nav)}>
       <NavLink to="/updates" end>
         Лента обновлений
       </NavLink>
@@ -31,6 +31,21 @@ type Filter = 'outdated' | 'all' | FreshStatus;
 const OUTDATED: FreshStatus[] = ['red', 'orange', 'yellow', 'unknown'];
 
 const SOURCE_LABEL = { modrinth: 'Modrinth', curseforge: 'CurseForge', git: 'Гит сборки', own: 'наш аддон' } as const;
+
+/** Тон статуса — класс модуля по имени статуса: динамическую строку `red`/`orange` CSS-модули не переименуют */
+const ROW_TONE: Partial<Record<FreshStatus, string>> = {
+  red: styles.red,
+  orange: styles.orange,
+  yellow: styles.yellow,
+};
+/** Точка статуса; у unknown и missing своего цвета нет — остаётся серая */
+const DOT_TONE: Partial<Record<FreshStatus, string>> = {
+  red: styles.red,
+  orange: styles.orange,
+  yellow: styles.yellow,
+  ok: styles.ok,
+  own: styles.own,
+};
 
 const fmtDate = (d?: string) => (d ? new Date(d).toLocaleDateString('ru-RU') : '');
 
@@ -106,9 +121,9 @@ export function FreshnessPage() {
   const outdated = report ? OUTDATED.reduce((n, s) => n + report.counts[s], 0) : 0;
 
   return (
-    <main className="upd-page fresh-page">
+    <main className={cx(sectionStyles.page, styles.page)}>
       <UpdatesNav />
-      <div className="upd-head">
+      <div className={sectionStyles.head}>
         <h1>Свежесть сборки</h1>
         <p className="faint small">
           Новейшие версии модов под Minecraft 1.21.1 NeoForge с Modrinth, CurseForge и{' '}
@@ -116,9 +131,10 @@ export function FreshnessPage() {
             гита разработчиков сборки
           </a>{' '}
           (по файлу jar, не по названию). Цвет — по первой отличающейся цифре версии x.y.z:{' '}
-          <span className="fresh-chip red">x</span> <span className="fresh-chip orange">y</span>{' '}
-          <span className="fresh-chip yellow">z</span>. Цвет считается по последнему релизу, беты показаны рядом.
-          Совместимость с нашими скриптами и датапаками здесь не проверяется.
+          <span className={cx(styles.chip, styles.red)}>x</span>{' '}
+          <span className={cx(styles.chip, styles.orange)}>y</span>{' '}
+          <span className={cx(styles.chip, styles.yellow)}>z</span>. Цвет считается по последнему релизу, беты показаны
+          рядом. Совместимость с нашими скриптами и датапаками здесь не проверяется.
         </p>
       </div>
 
@@ -126,7 +142,7 @@ export function FreshnessPage() {
         <div className="empty">Загружаю…</div>
       ) : (
         <>
-          <div className="fresh-meta">
+          <div className={styles.meta}>
             <div className="grow faint small">
               {report ? (
                 <>
@@ -135,7 +151,7 @@ export function FreshnessPage() {
                     const s = report.sources[k];
                     if (!s) return null;
                     return (
-                      <span key={k} className={cx(s.state !== 'ok' && 'fresh-warn')}>
+                      <span key={k} className={cx(s.state !== 'ok' && styles.warn)}>
                         {' '}
                         · {SOURCE_LABEL[k]}:{' '}
                         {s.state === 'ok'
@@ -152,7 +168,7 @@ export function FreshnessPage() {
               )}
             </div>
             <button className="btn sm" onClick={() => void recheck()} disabled={busy}>
-              <RefreshCw size={14} className={cx(busy && 'spin')} />
+              <RefreshCw size={14} className={cx(busy && styles.spin)} />
               {busy ? 'Проверяю…' : 'Перепроверить Modrinth и гит'}
             </button>
             {report && (
@@ -166,14 +182,14 @@ export function FreshnessPage() {
 
           {report && (
             <>
-              <div className="fresh-bar">
-                <div className="seg fresh-filter" role="tablist">
+              <div className={styles.bar}>
+                <div className={cx('seg', styles.filter)} role="tablist">
                   <FilterBtn on={filter === 'outdated'} onClick={() => setFilter('outdated')} n={outdated}>
                     Устаревшие
                   </FilterBtn>
                   {STATUS_ORDER.filter((s) => report.counts[s]).map((s) => (
                     <FilterBtn key={s} on={filter === s} onClick={() => setFilter(s)} n={report.counts[s]}>
-                      <span className={cx('fresh-dot', s)} />
+                      <span className={cx(styles.dot, DOT_TONE[s])} />
                       {STATUS_LABEL[s]}
                     </FilterBtn>
                   ))}
@@ -181,7 +197,7 @@ export function FreshnessPage() {
                     Все
                   </FilterBtn>
                 </div>
-                <div className="fresh-search">
+                <div className={styles.search}>
                   <Search size={15} className="faint" />
                   <input
                     className="input"
@@ -192,7 +208,7 @@ export function FreshnessPage() {
                 </div>
               </div>
               {shown.length ? (
-                <ul className="fresh-list">
+                <ul className={styles.list}>
                   {shown.map((m) => (
                     <ModRow key={m.id} mod={m} />
                   ))}
@@ -233,13 +249,13 @@ function ModRow({ mod: m }: { mod: FreshMod }) {
       ? Math.round((Date.parse(m.latest.date) - Date.parse(m.current.date)) / 864e5)
       : 0;
   return (
-    <li className={cx('fresh-row', m.status)}>
-      <span className={cx('fresh-dot', m.status)} title={STATUS_LABEL[m.status]} />
-      <div className="fresh-main">
-        <div className="fresh-name">
+    <li className={cx(styles.row, ROW_TONE[m.status])}>
+      <span className={cx(styles.dot, DOT_TONE[m.status])} title={STATUS_LABEL[m.status]} />
+      <div className={styles.main}>
+        <div>
           <b>{m.project?.title ?? m.name}</b> <code className="faint">{m.id}</code>
         </div>
-        <div className="fresh-ver">
+        <div className={styles.ver}>
           <span>{m.current?.version ?? m.version}</span>
           {m.latest && m.status !== 'ok' && (
             <>
@@ -283,7 +299,7 @@ function ModRow({ mod: m }: { mod: FreshMod }) {
                   .join(' · ')}
         </div>
         {m.newDeps?.length ? (
-          <div className="fresh-deps small">
+          <div className={cx(styles.deps, 'small')}>
             Новые обязательные зависимости:{' '}
             {m.newDeps.map((d, i) => (
               <span key={d.name}>
@@ -302,7 +318,7 @@ function ModRow({ mod: m }: { mod: FreshMod }) {
         {m.note && <div className="faint small">{m.note}</div>}
       </div>
       {m.project?.url && m.source && m.source !== 'own' && (
-        <a className="btn ghost sm fresh-src" href={m.project.url} target="_blank" rel="noreferrer">
+        <a className={cx('btn', 'ghost', 'sm', styles.src)} href={m.project.url} target="_blank" rel="noreferrer">
           {SOURCE_LABEL[m.source]}
           <ExternalLink size={12} />
         </a>

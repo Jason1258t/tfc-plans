@@ -1,0 +1,57 @@
+/* Карточка «Программа tfc»: выбор ОС и способа установки, команды с кнопкой «Копировать», шаги.
+   Сама карточка и её шапка — в UpdatesSection.module.css. */
+
+.os {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 0 4px;
+  background: var(--border);
+}
+
+.cmd {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.cmd pre {
+  flex: 1;
+  min-width: 0;
+}
+
+.cmd :global(.btn) {
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.steps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.steps li > :global(.btn) {
+  margin: 4px 6px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+
+.steps pre {
+  margin: 6px 0;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--surface-2, var(--bg));
+  border: 1px solid var(--border);
+  overflow-x: auto;
+  font-size: 13px;
+}

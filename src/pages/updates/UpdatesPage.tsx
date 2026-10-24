@@ -24,7 +24,8 @@ import {
 } from './model/packUpdates';
 import { cx, timeAgo } from '@/shared/lib';
 import type { Datapack } from '../../types';
-import './UpdatesPage.css';
+import sectionStyles from './UpdatesSection.module.css';
+import styles from './UpdatesPage.module.css';
 
 /** Лента обновлений сборки: патчноут от модели + машинная разница (моды, предметы, рецепты, датапаки) */
 export function UpdatesPage() {
@@ -38,9 +39,9 @@ export function UpdatesPage() {
   }, [updates]);
 
   return (
-    <main className="upd-page">
+    <main className={sectionStyles.page}>
       <UpdatesNav />
-      <div className="upd-head">
+      <div className={sectionStyles.head}>
         <h1>Обновления сборки</h1>
         <p className="faint small">
           Запись появляется при деплое, если поменялись jar в mods/. Патчноут пишет модель по ченджлогам модов с
@@ -114,8 +115,8 @@ function UpdateCard({
 
   const m = u.mods;
   return (
-    <article className={cx('upd-card', latest && 'latest')}>
-      <header className="upd-card-head">
+    <article className={cx(sectionStyles.card, latest && sectionStyles.latest)}>
+      <header className={sectionStyles.cardHead}>
         <Package size={18} className="faint" />
         <div className="grow">
           <h2>
@@ -127,12 +128,12 @@ function UpdateCard({
           </div>
         </div>
         {!u.baseline && (
-          <div className="upd-badges">
-            {m.added.length > 0 && <span className="tag add">+{m.added.length} мод.</span>}
-            {m.updated.length > 0 && <span className="tag upd">~{m.updated.length}</span>}
-            {m.removed.length > 0 && <span className="tag del">−{m.removed.length}</span>}
+          <div className={styles.badges}>
+            {m.added.length > 0 && <span className={cx('tag', styles.kAdd)}>+{m.added.length} мод.</span>}
+            {m.updated.length > 0 && <span className={cx('tag', styles.kUpd)}>~{m.updated.length}</span>}
+            {m.removed.length > 0 && <span className={cx('tag', styles.kDel)}>−{m.removed.length}</span>}
             {risks.length > 0 && (
-              <span className="tag warn">
+              <span className={cx('tag', styles.kWarn)}>
                 <AlertTriangle size={12} /> датапаки
               </span>
             )}
@@ -141,11 +142,11 @@ function UpdateCard({
       </header>
 
       {!u.baseline && (
-        <section className="upd-notes">
+        <section className={styles.notes}>
           {editing ? (
             <>
               <MarkdownField value={draft} onChange={setDraft} rows={14} autoFocus />
-              <div className="row upd-notes-actions">
+              <div className={cx('row', styles.notesActions)}>
                 <button className="btn ghost sm" onClick={() => setEditing(false)}>
                   Отмена
                 </button>
@@ -163,7 +164,7 @@ function UpdateCard({
           ) : u.notes ? (
             <>
               <Markdown source={u.notes.body} />
-              <div className="row faint small upd-notes-meta">
+              <div className={cx('row', 'faint', 'small', styles.notesMeta)}>
                 <span className="grow">
                   {u.notes.source === 'agent' ? 'Патчноут от модели' : 'Патчноут поправлен вручную'} ·{' '}
                   {u.notes.updatedBy} · {timeAgo(u.notes.updatedAt)}
@@ -185,7 +186,7 @@ function UpdateCard({
               </div>
             </>
           ) : (
-            <div className="row upd-notes-empty">
+            <div className={cx('row', styles.notesEmpty)}>
               <span className="faint grow">{busy ? 'Модель пишет патчноут…' : 'Патчноута пока нет.'}</span>
               {geminiEnabled && !busy && (
                 <button className="btn ai sm" onClick={generate}>
@@ -209,7 +210,7 @@ function UpdateCard({
 
       {risks.length > 0 && <Risks risks={risks} />}
 
-      <button className="btn ghost sm upd-toggle" onClick={() => setOpen((v) => !v)}>
+      <button className={cx('btn', 'ghost', 'sm', styles.toggle)} onClick={() => setOpen((v) => !v)}>
         {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         {u.baseline ? 'Состав сборки' : 'Что изменилось'}
       </button>
@@ -220,7 +221,7 @@ function UpdateCard({
 
 function Risks({ risks }: { risks: DatapackRisk[] }) {
   return (
-    <section className="upd-risks">
+    <section className={styles.risks}>
       <h3>
         <AlertTriangle size={14} /> Датапаки под угрозой
       </h3>
@@ -248,11 +249,11 @@ function ModList({
 }) {
   if (!mods.length) return null;
   return (
-    <div className="upd-block">
+    <div className={styles.block}>
       <h4>
         {title} <span className="faint">{mods.length}</span>
       </h4>
-      <ul className="upd-mods">
+      <ul className={styles.mods}>
         {mods.map((m) => (
           <li key={m.id}>
             {changelogs?.[m.id] ? (
@@ -263,7 +264,7 @@ function ModList({
                     {sources?.[m.id] === 'addon' ? 'что нового в версиях' : 'ченджлог'}
                   </span>
                 </summary>
-                <div className="upd-changelog">
+                <div className={styles.changelog}>
                   <Markdown source={changelogs[m.id]} />
                 </div>
               </details>
@@ -281,7 +282,11 @@ const ModLine = ({ m }: { m: ModRef }) => (
   <span>
     <b>{m.name}</b>{' '}
     {addonById(m.id) && (
-      <Link className="tag addon" to={`/addons/${m.id}`} title="Аддон группы — версии и описание на его странице">
+      <Link
+        className={cx('tag', styles.addon)}
+        to={`/addons/${m.id}`}
+        title="Аддон группы — версии и описание на его странице"
+      >
         наш аддон
       </Link>
     )}{' '}
@@ -299,13 +304,13 @@ function ItemGroups({ ids, total }: { ids: string[]; total: number }) {
     return [...map].sort((a, b) => b[1].length - a[1].length);
   }, [ids]);
   return (
-    <div className="upd-items">
+    <div className={styles.items}>
       {groups.map(([ns, list]) => (
-        <div key={ns} className="upd-item-group">
+        <div key={ns}>
           <div className="faint small">
             <code>{ns}</code> · {list.length}
           </div>
-          <div className="upd-icons">
+          <div className={styles.icons}>
             {list.slice(0, 48).map((id) => (
               <ItemIcon key={id} id={id} size={24} />
             ))}
@@ -327,7 +332,7 @@ function RecipeCounts({ title, ids, total }: { title: string; ids: string[]; tot
   const byNs = new Map<string, number>();
   for (const id of ids) byNs.set(nsOf(id), (byNs.get(nsOf(id)) ?? 0) + 1);
   return (
-    <details className="upd-block">
+    <details className={styles.block}>
       <summary>
         <b>{title}</b> <span className="faint">{total.toLocaleString('ru-RU')}</span>{' '}
         <span className="faint small">
@@ -338,7 +343,7 @@ function RecipeCounts({ title, ids, total }: { title: string; ids: string[]; tot
             .join(', ')}
         </span>
       </summary>
-      <ul className="upd-recipes">
+      <ul className={styles.recipes}>
         {ids.slice(0, 300).map((id) => (
           <li key={id}>
             <code>{id}</code>
@@ -353,18 +358,18 @@ function RecipeCounts({ title, ids, total }: { title: string; ids: string[]; tot
 function Details({ u }: { u: PackUpdate }) {
   if (u.baseline)
     return (
-      <div className="upd-details">
+      <div className={styles.details}>
         <ModList title="Моды" mods={[...u.mods.added].sort((a, b) => a.name.localeCompare(b.name))} />
       </div>
     );
   const t = u.totals;
   return (
-    <div className="upd-details">
+    <div className={styles.details}>
       <ModList title="Новые моды" mods={u.mods.added} changelogs={u.changelogs} sources={u.changelogSources} />
       <ModList title="Обновлённые" mods={u.mods.updated} changelogs={u.changelogs} sources={u.changelogSources} />
       <ModList title="Убранные" mods={u.mods.removed} />
       {!!t?.itemsAdded && (
-        <div className="upd-block">
+        <div className={styles.block}>
           <h4>
             Новые предметы <span className="faint">{t.itemsAdded}</span>
           </h4>
@@ -372,11 +377,11 @@ function Details({ u }: { u: PackUpdate }) {
         </div>
       )}
       {!!t?.itemsRemoved && (
-        <div className="upd-block">
+        <div className={styles.block}>
           <h4>
             Пропавшие предметы <span className="faint">{t.itemsRemoved}</span>
           </h4>
-          <ul className="upd-recipes">
+          <ul className={styles.recipes}>
             {(u.items?.removed ?? []).slice(0, 200).map((id) => (
               <li key={id}>
                 <code>{id}</code>
@@ -389,12 +394,12 @@ function Details({ u }: { u: PackUpdate }) {
       <RecipeCounts title="Изменённые рецепты" ids={u.recipes?.changed ?? []} total={t?.recipesChanged ?? 0} />
       <RecipeCounts title="Удалённые рецепты" ids={u.recipes?.removed ?? []} total={t?.recipesRemoved ?? 0} />
       {!!u.newRecipeTypes?.length && (
-        <div className="upd-block">
+        <div className={styles.block}>
           <h4>Новые типы рецептов</h4>
           <p className="faint small">
             Подсказки для них можно составить агентом в редакторе датапака (рецепт по шаблону этого типа).
           </p>
-          <div className="upd-types">
+          <div className={styles.types}>
             {u.newRecipeTypes.map((t) => (
               <code key={t}>{t}</code>
             ))}

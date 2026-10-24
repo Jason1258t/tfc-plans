@@ -1,62 +1,40 @@
-.fresh-page {
+/* Страница «Свежесть модов»: фильтры, поиск, список модов и цветовая шкала отставания.
+   Колонка, шапка и переключатель страниц — в UpdatesSection.module.css. */
+
+.page {
+  /* колонка раздела шире, чем у ленты обновлений (значение читает UpdatesSection.module.css) */
+  --updates-width: 1000px;
   --fresh-red: var(--imp-3);
   --fresh-orange: color-mix(in srgb, var(--imp-3) 50%, var(--imp-2));
   --fresh-yellow: var(--imp-2);
   --fresh-gray: var(--imp-0);
   --fresh-ok: var(--accent);
-  max-width: 1000px;
 }
 
-.upd-nav {
-  align-self: flex-start;
-}
-
-.upd-nav a {
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 4px;
-  color: var(--text-2);
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.upd-nav a:hover {
-  color: var(--text);
-}
-
-.upd-nav a.active {
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: var(--shadow-sm);
-}
-
-.fresh-meta {
+.meta {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.fresh-warn {
+.warn {
   color: var(--imp-3);
 }
 
-.fresh-bar {
+.bar {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
   align-items: center;
 }
 
-.fresh-filter {
+.filter {
   flex-wrap: wrap;
   max-width: 100%;
 }
 
-.fresh-search {
+.search {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -64,11 +42,11 @@
   min-width: 0;
 }
 
-.fresh-search .input {
+.search :global(.input) {
   width: 100%;
 }
 
-.fresh-list {
+.list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -78,7 +56,7 @@
   overflow: hidden;
 }
 
-.fresh-row {
+.row {
   display: flex;
   align-items: flex-start;
   gap: 10px;
@@ -87,21 +65,11 @@
   min-width: 0;
 }
 
-.fresh-row + .fresh-row {
+.row + .row {
   border-top: 1px solid var(--border);
 }
 
-.fresh-row.red {
-  border-left-color: var(--fresh-red);
-}
-.fresh-row.orange {
-  border-left-color: var(--fresh-orange);
-}
-.fresh-row.yellow {
-  border-left-color: var(--fresh-yellow);
-}
-
-.fresh-main {
+.main {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -110,24 +78,24 @@
   overflow-wrap: anywhere;
 }
 
-.fresh-ver {
+.ver {
   font-family: var(--font-mono);
   font-size: 13px;
 }
 
-.fresh-ver .tag {
+.ver :global(.tag) {
   margin-left: 6px;
 }
 
-.fresh-deps {
+.deps {
   color: var(--imp-3);
 }
 
-.fresh-src {
+.src {
   flex-shrink: 0;
 }
 
-.fresh-dot {
+.dot {
   display: inline-block;
   flex-shrink: 0;
   width: 9px;
@@ -137,27 +105,12 @@
   background: var(--fresh-gray);
 }
 
-.seg .fresh-dot {
+/* в фильтре точки стоят в строку кнопки */
+:global(.seg) .dot {
   margin-top: 0;
 }
 
-.fresh-dot.red {
-  background: var(--fresh-red);
-}
-.fresh-dot.orange {
-  background: var(--fresh-orange);
-}
-.fresh-dot.yellow {
-  background: var(--fresh-yellow);
-}
-.fresh-dot.ok {
-  background: var(--fresh-ok);
-}
-.fresh-dot.own {
-  background: var(--diamond);
-}
-
-.fresh-chip {
+.chip {
   display: inline-block;
   padding: 0 6px;
   border-radius: 4px;
@@ -166,31 +119,66 @@
   font-family: var(--font-mono);
 }
 
-.fresh-chip.red {
+/* цвета статусов: один класс на все элементы (строка, точка, чип) — тон задаёт пара селекторов */
+.row.red {
+  border-left-color: var(--fresh-red);
+}
+
+.row.orange {
+  border-left-color: var(--fresh-orange);
+}
+
+.row.yellow {
+  border-left-color: var(--fresh-yellow);
+}
+
+.dot.red {
   background: var(--fresh-red);
 }
-.fresh-chip.orange {
+
+.dot.orange {
   background: var(--fresh-orange);
 }
-.fresh-chip.yellow {
+
+.dot.yellow {
+  background: var(--fresh-yellow);
+}
+
+.dot.ok {
+  background: var(--fresh-ok);
+}
+
+.dot.own {
+  background: var(--diamond);
+}
+
+.chip.red {
+  background: var(--fresh-red);
+}
+
+.chip.orange {
+  background: var(--fresh-orange);
+}
+
+.chip.yellow {
   background: var(--fresh-yellow);
 }
 
 .spin {
-  animation: fresh-spin 1s linear infinite;
+  animation: spin 1s linear infinite;
 }
 
-@keyframes fresh-spin {
+@keyframes spin {
   to {
     transform: rotate(360deg);
   }
 }
 
 @media (max-width: 600px) {
-  .fresh-row {
+  .row {
     flex-wrap: wrap;
   }
-  .fresh-src {
+  .src {
     margin-left: 19px;
   }
 }
