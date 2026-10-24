@@ -3,9 +3,9 @@ import { lazy, Suspense } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { AddonHead, AddonInstall } from '@/components/AddonsTab';
 import { addonById } from '@/lib/addons';
-import '@/components/BotanyTab.css';
-import '@/components/PowerTab.css';
-import '@/pages/ReferencePage.css';
+import '@/pages/reference/tabs/BotanyTab.css';
+import '@/pages/reference/tabs/PowerTab.css';
+import '@/pages/reference/ReferencePage.css';
 
 const AddonArticle = lazy(() => import('@/components/guides/AddonArticle'));
 const AddonVersions = lazy(() => import('@/components/guides/AddonVersions'));

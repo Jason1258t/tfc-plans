@@ -13,7 +13,8 @@ import {
 } from '../lib/addons';
 import { itemName, useItems, ItemIcon } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
-import './PowerTab.css';
+// Стили справочника временно берём из его будущей общей папки — AddonsTab переедет в entities/addon
+import '@/pages/reference/tabs/PowerTab.css';
 
 const AddonsGuidesSection = lazy(() => import('./guides/AddonsGuidesSection'));
 

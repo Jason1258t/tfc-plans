@@ -1,6 +1,6 @@
 import { ArrowDown } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import { CONFIG_ORIGIN_LABEL } from '../lib/config';
+import { CONFIG_ORIGIN_LABEL } from '@/lib/config';
 import {
   alternator,
   type AlternatorParams,
@@ -13,10 +13,10 @@ import {
   type PowerData,
   type PowerSub,
   type Setting,
-} from '../lib/power';
+} from '@/lib/power';
 import { cx } from '@/shared/lib';
 import { ItemIcon } from '@/shared/pack-data';
-import { IeConsumers } from './PowerIeLoads';
+import { IeConsumers } from '@/components/PowerIeLoads';
 import './PowerTab.css';
 
 /**

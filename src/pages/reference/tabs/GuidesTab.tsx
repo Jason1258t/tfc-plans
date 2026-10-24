@@ -1,13 +1,13 @@
 import { lazy, Suspense } from 'react';
-import { usePower, useSettings, type PowerData } from '../lib/power';
+import { usePower, useSettings, type PowerData } from '@/lib/power';
 import { cx } from '@/shared/lib';
-import { GUIDES_SUBS, type GuidesSub } from './guides/guideMeta';
+import { GUIDES_SUBS, type GuidesSub } from '@/components/guides/guideMeta';
 import './PowerTab.css';
 
-const PowerGuidesSection = lazy(() => import('./guides/PowerGuidesSection'));
-const AddonsGuidesSection = lazy(() => import('./guides/AddonsGuidesSection'));
-const SiteGuidesSection = lazy(() => import('./guides/SiteGuidesSection'));
-const MultiblockGuidesSection = lazy(() => import('./guides/MultiblockGuidesSection'));
+const PowerGuidesSection = lazy(() => import('@/components/guides/PowerGuidesSection'));
+const AddonsGuidesSection = lazy(() => import('@/components/guides/AddonsGuidesSection'));
+const SiteGuidesSection = lazy(() => import('@/components/guides/SiteGuidesSection'));
+const MultiblockGuidesSection = lazy(() => import('@/components/guides/MultiblockGuidesSection'));
 
 /** Справочник → «Гайды»: все разделы гайдов. Адрес статьи — ?tab=guides[&sub=multiblocks|addons|site]&g=<id>. */
 export function GuidesTab({
