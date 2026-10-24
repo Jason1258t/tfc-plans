@@ -27,7 +27,7 @@ addon`, `formerIds` for ee_rectifier → ee_extras, rollback marked); `/updates`
   the version.
 - Checked: local pack server (`/site/addons`, upload refusals), `tfc` against it in a scratch folder (latest, pin 2.3.1,
   plain pull keeps the pin, `@latest`, no key → static index, explicit version without key refused), `pack-release
-  --dry-run` on fake previous manifests (2.3.1 → 2.3.3; ee_rectifier 1.1.0 → ee_extras), site on the dev server.
+--dry-run` on fake previous manifests (2.3.1 → 2.3.3; ee_rectifier 1.1.0 → ee_extras), site on the dev server.
 - VPS updated 2026-10-23 (`/opt/tfc-plans` git pull + `deploy/install.sh`, service restarted): live `/site/addons` lists
   all versions (401 without a key), `tfc admin addon upload` — same jar «уже записана», mismatched 2.2.0 jar refused
   (409), `tfc pull addons ee_extras@2.3.1` from the live server installed the jar with the recorded hash.
@@ -115,12 +115,13 @@ Generator module = compact generator numbers (6 W, 8 SU, 0.5 V per rpm; stress v
 `updateStressFor` on change). Battery module = EE `AccumulatorProperties` cell (24 V, 0.1 Ω, `maxAccumulatorCharge`
 36 000 C), n cells in parallel (`BatteryPack`: R/n, current split); generators charge it directly; charge kept in the
 BE, on the item as data component `charge`. Device `OnboardDevice` is stateless (reads the BE each tick).
+
 - **Ships:** Aeronautics ships are Sable sub-levels whose blocks live in plot chunks of the same ServerLevel (sable 2.0.5
   `ServerLevelPlot`), and EE moves its nodes/wires/devices on assembly (`SubLevelAssemblyHelperMixin`) — so no
   contraption code is needed (DeepSeek's plan assumed Create contraption entities — wrong for this pack).
 - Dev server (`./test-server.sh`): generation/charge/discharge match formulas (≤ 0.5 %), stress 8 SU/rpm per generator,
   battery-to-battery over wires, restart, drops. `SABLE=1` (server on NeoForge 21.1.251 + sable jar): `/sable assemble
-  area` of the stand — keeps working on the plot. Terminals 24/24. Not checked in game.
+area` of the stand — keeps working on the plot. Terminals 24/24. Not checked in game.
 
 ## IE Extras (`tools/ie-extras-mod`, 2026-10-23)
 
@@ -134,11 +135,11 @@ candidate — a heater regulated by an analog lever). Depends on TFC 4.2.9 + IE 
   `HeatCapability.provideHeatTo` — the charcoal forge path, so any `BlockCapabilities.HEAT` consumer works (TFC crucible;
   by bytecode also Firmalife vat, stovetop pot/grill, oven top, Cast Iron Grill — not tried). Piston-like placement,
   comparator = temperature 0–15, right click = status. Looks: IE external heater textures (grille, socket) by reference
-  + own side panel; up/down use own models (no x-rotation) so the side dial stays upright. Server config
-  `ie_extras-server.toml` `analogHeater`.
-  Dev server (`./test-server.sh`, `/ietest`, crucible with a copper ingot, signal via comparator from a chest): signal 10
-  → 1067 °C, ingot intact; 11 → 1173 °C, 100 mB copper; draw 22/24/9 FE/t; cools without energy; FE caps on 5 faces.
-  Not checked in game.
+  - own side panel; up/down use own models (no x-rotation) so the side dial stays upright. Server config
+    `ie_extras-server.toml` `analogHeater`.
+    Dev server (`./test-server.sh`, `/ietest`, crucible with a copper ingot, signal via comparator from a chest): signal 10
+    → 1067 °C, ingot intact; 11 → 1173 °C, 100 mB copper; draw 22/24/9 FE/t; cools without energy; FE caps on 5 faces.
+    Not checked in game.
 - Findings: the TFC crucible accepts only temperatures above its own (`CrucibleInventory.setTemperature`) and cools via
   the TFC calendar — with no players the calendar stands (`arePlayersLoggedOn`), `checkForCalendarUpdate` calls
   `onCalendarUpdate(-1)` every tick and cancels the 1 °C/t decay, so on the dev server the crucible never cools. A

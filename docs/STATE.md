@@ -5,14 +5,14 @@ task touches it. History — `git log`.
 
 ## Topic files (`docs/state/`)
 
-| File | What's in it |
-| --- | --- |
-| [site.md](state/site.md) | Site sections: structure, documents, tasks/plans, analytics (`/stats`), schematics, datapacks/KubeJS/recipes/tags, reference (botany, multiblocks, electricity), guides, onboarding, map, updates |
-| [addons.md](state/addons.md) | Pack addons in `tools/`: versions, what each does, how it was verified |
-| [infra.md](state/infra.md) | Data builders, imported configs, file storage, pack server (VPS), `tfc` app, agent config edits |
-| [mcp.md](state/mcp.md) | MCP `tfc-pack` history: what was added when and how it was verified |
-| [icons.md](state/icons.md) | Item icons: 3D renderer, hidden items, known gaps |
-| [pending.md](state/pending.md) | Full details of everything waiting for the host or an in-game check |
+| File                           | What's in it                                                                                                                                                                                      |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [site.md](state/site.md)       | Site sections: structure, documents, tasks/plans, analytics (`/stats`), schematics, datapacks/KubeJS/recipes/tags, reference (botany, multiblocks, electricity), guides, onboarding, map, updates |
+| [addons.md](state/addons.md)   | Pack addons in `tools/`: versions, what each does, how it was verified                                                                                                                            |
+| [infra.md](state/infra.md)     | Data builders, imported configs, file storage, pack server (VPS), `tfc` app, agent config edits                                                                                                   |
+| [mcp.md](state/mcp.md)         | MCP `tfc-pack` history: what was added when and how it was verified                                                                                                                               |
+| [icons.md](state/icons.md)     | Item icons: 3D renderer, hidden items, known gaps                                                                                                                                                 |
+| [pending.md](state/pending.md) | Full details of everything waiting for the host or an in-game check                                                                                                                               |
 
 When finishing work: update the topic file, and this index only if a line below changes.
 

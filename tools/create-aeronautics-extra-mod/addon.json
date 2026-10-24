@@ -14,11 +14,7 @@
       "name": "Бортовой компьютер",
       "image": "onboard_computer.png",
       "recipe": {
-        "pattern": [
-          "CEC",
-          "PBP",
-          " S "
-        ],
+        "pattern": ["CEC", "PBP", " S "],
         "key": {
           "C": {
             "item": "electroenergetics:connector"
@@ -44,10 +40,7 @@
       "name": "Генераторный модуль",
       "image": "generator_module.png",
       "recipe": {
-        "pattern": [
-          "MWM",
-          "PAP"
-        ],
+        "pattern": ["MWM", "PAP"],
         "key": {
           "M": {
             "item": "electroenergetics:magnet"
@@ -70,10 +63,7 @@
       "name": "Аккумуляторный модуль",
       "image": "battery_module.png",
       "recipe": {
-        "pattern": [
-          "A",
-          "P"
-        ],
+        "pattern": ["A", "P"],
         "key": {
           "A": {
             "item": "electroenergetics:accumulator"
