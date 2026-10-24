@@ -5,9 +5,6 @@ its one-liner in STATE.md.
 
 ## Host actions
 
-- **Create parts in schematic 3D** (2026-10-24): builder change (`pm` in `block-models/create.json`) reaches the site
-  only after `tfc admin rebuild --pull` + `tfc admin publish --live`; until then belts, shafts, press heads etc. look
-  as before. Site code is already deployed and falls back softly.
 - **Pack translation `pack-patches/l10n/`** (2026-10-22): Chinese player-facing text in pack KubeJS scripts → lang keys
   (`Text.translatableWithFallback`, English fallback) + `kubejs/assets/kubejs/lang/{en_us,ru_ru}.json`: item cleaner
   broadcasts, 27 Create Ore Excavation vein names (ids unchanged), engine refuel, lectern/controller, obsidian, welcome,

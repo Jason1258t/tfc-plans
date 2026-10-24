@@ -75,6 +75,11 @@ src/lib/
   kubejsScripts.ts             site KubeJS scripts (collection kubejsScripts, UI — components/KubejsScripts)
   nbt.ts schematic.ts materials.ts schematicLibrary.ts   .nbt schematics: replace/remove blocks, materials, library
   schematicFile.ts             schematic file with replacements and shape (shared with Node; suggestions — schematic.ts)
+  schematicMesh.ts blockModels.ts schematicRender.ts   schematic 3D / layer engine: block-models → faces, atlas,
+                               three.js; code-drawn blocks — registries createParts.ts (Create parts from `pm`),
+                               copycats.ts (shape + material from block nbt), Create pipes (by neighbours, in
+                               schematicMesh); chests etc. come baked from the builder (`codeBlock`). Package plan —
+                               site task «Новые пакеты: сборщики текстур и моделей»
   reference.ts meals.ts        reference (ores, fuel, liquid fuel, food, metals); composite meals and calculators
   multiblocks.ts               IE multiblocks: templates, tag substitutes (UI — MultiblocksTab, CSS 3D)
   power.ts                     electricity: Create SU ↔ EE (V/A/W) ↔ IE FE/t, formulas from code (UI — PowerTab)

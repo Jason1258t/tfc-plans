@@ -5,7 +5,7 @@
  *   tfc:trim (TrimmedItemModel) — броня без отделки: armor и overlay, оба с tintindex 0 (кожаная броня — цвет
  *   кожи по умолчанию DyedItemColor.LEATHER_COLOR Minecraft).
  */
-import { chestQuads } from './minecraft.mjs';
+import { chestBlock, chestQuads } from './minecraft.mjs';
 
 /** DyedItemColor.LEATHER_COLOR Minecraft 1.21.1 — кожаная броня без окраски */
 const LEATHER_COLOR = 0xffa06540;
@@ -20,6 +20,13 @@ export default {
         const m = id.split(':')[1].match(/(trapped_)?chest\/([a-z0-9_]+)$/);
         const tex = m && `tfc:entity/chest/${m[1] ? 'trapped' : 'normal'}/${m[2]}`;
         return tex && ctx.has(tex) ? { quads: chestQuads(tex) } : null;
+      },
+      block: (id) => {
+        const m = id.split(':')[1].match(/(trapped_)?chest\/([a-z0-9_]+)$/);
+        const kind = m && (m[1] ? 'trapped' : 'normal');
+        return m
+          ? chestBlock((type) => `tfc:entity/chest/${type === 'single' ? kind : `${kind}_${type}`}/${m[2]}`)
+          : null;
       },
     },
   ],

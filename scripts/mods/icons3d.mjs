@@ -14,6 +14,7 @@ import path from 'node:path';
 import { fluidLook } from '../mcp/fluids.mjs';
 import {
   DRAWN_LOADERS,
+  codeBlock,
   codeModel,
   flatLoaderSpecs,
   guiModel,
@@ -220,5 +221,12 @@ export function makeRenderer({ findAsset, outIcons, cacheDir, size = 96 }) {
     return rel;
   }
 
-  return { render, stats, layers };
+  /** Блок без модели, нарисованный кодом предмета (сундуки) — для block-models.mjs: { rotate, variants } или null */
+  function blockCode(ns, p) {
+    const own = loadModel(layers, `${ns}:item/${p}`);
+    if (own.missing.length || own.errors.length) return null;
+    return codeBlock(layers, `${ns}:${p}`, guiModel(layers, own));
+  }
+
+  return { render, stats, layers, blockCode };
 }

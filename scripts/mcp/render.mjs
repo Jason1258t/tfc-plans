@@ -26,7 +26,14 @@ import { mods } from './data.mjs';
 import { jarList, readEntry } from './jars.mjs';
 import { fluidLook } from './fluids.mjs';
 import { geoModel, isGeoId } from './geoModels.mjs';
-import { codeItemModel, expandLoader, flatLoader, objCallback, registryLoaders } from './models/index.mjs';
+import {
+  codeBlockModel,
+  codeItemModel,
+  expandLoader,
+  flatLoader,
+  objCallback,
+  registryLoaders,
+} from './models/index.mjs';
 import {
   blockstatePath,
   findResource,
@@ -330,6 +337,9 @@ export const ieObjDrawable = (m) => !m.loaderJson?.callbacks || Boolean(objCallb
 
 /** Модель предмета builtin/entity из реестра: { quads | parts, drawnBy } или null (см. models/index.mjs) */
 export const codeModel = (layers, id, own, warnings) => codeItemModel(modelContext(layers, warnings), id, own);
+
+/** Блок без модели, который рисуется тем же кодом, что его предмет (сундуки): { rotate, variants, drawnBy } или null */
+export const codeBlock = (layers, id, own, warnings) => codeBlockModel(modelContext(layers, warnings), id, own);
 
 /**
  * Геометрия OBJ (neoforge:obj, ie_obj): треугольники в пикселях модели (0–16 = блок) с uv 0–1 (v сверху, как у

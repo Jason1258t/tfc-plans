@@ -4,8 +4,10 @@
  * Модуль группы — { name, loaders?, flat?, items?, objCallbacks? }:
  *   loaders: { '<загрузчик модели>': (ctx, part) → [части] } — геометрия загрузчика (composite, конвейеры IE…);
  *   flat:    { '<загрузчик>': (ctx, model, itemId) → { specs, fluid?, wanted? } } — плоский предмет слоями (вёдра);
- *   items:   [{ name, match(id, chain) → bool, build(ctx, id, own) → { quads } | { parts } | null }] — предметы
- *            builtin/entity (рендерер предмета в коде): quads — грани модели сущности, parts — модели блоков;
+ *   items:   [{ name, match(id, chain) → bool, build(ctx, id, own) → { quads } | { parts } | null, block?(id) }] —
+ *            предметы builtin/entity (рендерер предмета в коде): quads — грани модели сущности, parts — модели блоков;
+ *            block(id) → { rotate: 'facing', variants(ctx) → [{ when: 'type=left', quads }] } | null — та же модель
+ *            для блока в схемах (BlockEntityRenderer; scripts/mods/block-models.mjs), поворот по facing — у сборщика;
  *   objCallbacks: { '<callbacks ie_obj>': { show(group), texture?, tint?(group) } } — видимые группы OBJ.
  * ctx — помощники движка (modelContext в render.mjs): ресурсы, раскрытие вложенных частей, предупреждения.
  *
@@ -77,6 +79,22 @@ export const objCallback = (name) => OBJ_CALLBACKS.get(name);
  * Предмет builtin/entity: { quads, drawnBy } (грани модели сущности) или { parts, drawnBy } (модели блоков с
  * поворотами) или null — такого рендерера в реестре нет.
  */
+/**
+ * Блок без модели (рисует BlockEntityRenderer), у которого предмет рисуется тем же кодом: { rotate, variants: [{ when,
+ * quads }], drawnBy } или null. own — модель предмета (entity), как у codeItemModel.
+ */
+export function codeBlockModel(ctx, id, own) {
+  if (!own?.entity) return null;
+  const chain = own.chain.map((c) => c.id);
+  for (const h of ITEMS) {
+    if (!h.block || !safe(ctx, `${h.group}: ${h.name}`, () => h.match(id, chain))) continue;
+    const b = safe(ctx, `${h.group}: ${h.name}`, () => h.block(id));
+    const variants = b && safe(ctx, `${h.group}: ${h.name}`, () => b.variants(ctx));
+    if (variants?.length) return { rotate: b.rotate, variants, drawnBy: h.name };
+  }
+  return null;
+}
+
 export function codeItemModel(ctx, id, own) {
   if (!own?.entity) return null;
   const chain = own.chain.map((c) => c.id);

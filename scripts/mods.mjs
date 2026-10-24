@@ -748,6 +748,7 @@ export async function buildMods({
     layers: icons3d.layers,
     blockstates,
     models: partialModels,
+    codeBlock: icons3d.blockCode,
     outDir: path.join(outDir, 'block-models'),
     iconsDir: OUT_ICONS,
     copyTexture: (id) => {
