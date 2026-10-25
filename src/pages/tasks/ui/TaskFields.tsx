@@ -1,5 +1,5 @@
 import { Boxes, Eye, Pencil, UserRound, X } from 'lucide-react';
-import { Segmented } from '@/shared/ui';
+import {Segmented, ErrorBox } from '@/shared/ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGroups } from '@/entities/group';
 import { useNick, usePeople } from '@/entities/user';
@@ -337,7 +337,7 @@ export function TaskFields({
             onClose={() => setImporting(false)}
           />
         )}
-        {checklistError && <div className="error-box">{checklistError}</div>}
+        {checklistError && <ErrorBox>{checklistError}</ErrorBox>}
         <Checklist entries={value.checklist} onChange={(checklist) => onPatch({ checklist })} />
       </section>
     </>

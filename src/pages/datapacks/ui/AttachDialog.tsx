@@ -5,7 +5,7 @@ import { useTasks } from '@/entities/task';
 import { useGroups } from '@/entities/group';
 import { buildZip, zipName } from '@/lib/datapack';
 import { uploadFile } from '@/entities/file';
-import { Modal } from '@/shared/ui';
+import {Modal, ErrorBox } from '@/shared/ui';
 import type { Datapack } from '@/entities/datapack';
 
 /** Собрать zip и приложить к задаче — хост скачает его оттуда */
@@ -83,7 +83,7 @@ export function AttachDialog({ pack, onClose }: { pack: Datapack; onClose: () =>
               </option>
             ))}
           </select>
-          {error && <div className="error-box">{error}</div>}
+          {error && <ErrorBox>{error}</ErrorBox>}
         </>
       )}
     </Modal>

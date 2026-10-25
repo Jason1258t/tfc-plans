@@ -1,4 +1,5 @@
 import { AlertTriangle, ChevronDown, ChevronRight, Package, Pencil, Sparkles } from 'lucide-react';
+import { ErrorBox } from '@/shared/ui';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ItemIcon, useItems, type ItemIndex } from '@/shared/pack-data';
@@ -208,7 +209,7 @@ function UpdateCard({
               </button>
             </div>
           )}
-          {error && <div className="error-box">{error}</div>}
+          {error && <ErrorBox>{error}</ErrorBox>}
         </section>
       )}
 

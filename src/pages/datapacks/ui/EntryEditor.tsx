@@ -6,7 +6,7 @@ import { itemName, useItems, itemRefsOf, type RecipeCatalog, ItemIcon, ItemIdSea
 import type { DatapackEntry } from '@/entities/datapack';
 import styles from './EntryEditor.module.css';
 import { HintPanel } from './HintPanel';
-import { Modal } from '@/shared/ui';
+import {Modal, ErrorBox } from '@/shared/ui';
 
 const KIND_LABEL: Record<DatapackEntry['kind'], string> = {
   add: 'Новый рецепт',
@@ -128,7 +128,7 @@ export function EntryEditor({ entry, catalog, onSave, onClose }: Props) {
           />
           {isJson &&
             (error ? (
-              <div className="error-box">JSON с ошибкой: {error}</div>
+              <ErrorBox>JSON с ошибкой: {error}</ErrorBox>
             ) : (
               <div className={cx(styles.eeOk, 'small')}>
                 <CheckCircle2 size={14} /> JSON корректен{type ? ` · тип ${type}` : ''}

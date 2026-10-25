@@ -11,7 +11,7 @@ import { FILE_KINDS, fileKind, type FileKind } from '../../lib/fileKinds';
 import { prepareFile, validateFiles } from '../../lib/uploads';
 import { cx, timeAgo } from '@/shared/lib';
 import type { SavedSchematic } from '@/entities/schematic';
-import { Search, Segmented, Button } from '@/shared/ui';
+import {Search, Segmented, Button, ErrorBox } from '@/shared/ui';
 import styles from './FilesPage.module.css';
 
 const KINDS: { id: FileKind | 'all'; label: string }[] = [{ id: 'all', label: 'Все' }, ...FILE_KINDS];
@@ -148,7 +148,7 @@ export function FilesPage() {
           Загружаю «{uploading.name}» — {Math.round(uploading.progress * 100)}%
         </p>
       )}
-      {error && <div className="error-box">{error}</div>}
+      {error && <ErrorBox>{error}</ErrorBox>}
 
       {loading ? (
         <div className="empty">Загрузка…</div>

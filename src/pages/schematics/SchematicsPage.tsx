@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { ErrorBox } from '@/shared/ui';
 import { isBlock, useItems } from '@/shared/pack-data';
 import { ApplyFavoritesDialog, FavoritesPanel, SmartAddDialog, type Pair, type PlanRow } from './ui/SchematicFavorites';
 import { replaceFavoritesStore } from '@/entities/schematic';
@@ -235,14 +236,14 @@ export function SchematicsPage() {
       <SchematicsHeader inputRef={inputRef} onFiles={addFiles} />
 
       {loadErrors.length > 0 && (
-        <div className="error-box">
+        <ErrorBox>
           {loadErrors.map((e) => (
             <div key={e}>{e}</div>
           ))}
-        </div>
+        </ErrorBox>
       )}
 
-      {exportError && <div className="error-box">{exportError}</div>}
+      <ErrorBox>{exportError}</ErrorBox>
 
       {schematics.length === 0 ? (
         <SchematicsDropzone onClick={() => inputRef.current?.click()} />
