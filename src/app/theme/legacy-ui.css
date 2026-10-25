@@ -141,46 +141,7 @@ select.input {
   margin-bottom: 4px;
 }
 
-/* Сегментированный переключатель */
-.seg {
-  display: inline-flex;
-  padding: 2px;
-  gap: 2px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-}
-
-.seg button {
-  height: 28px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--text-2);
-  cursor: pointer;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-}
-
-.seg button:hover {
-  color: var(--text);
-}
-
-.seg button[aria-pressed='true'] {
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: var(--shadow-sm);
-}
-
-.seg .count {
-  font-size: 12px;
-  color: var(--text-3);
-  font-variant-numeric: tabular-nums;
-}
+/* Сегментированный переключатель переехал в shared/ui/Segmented.module.css */
 
 /* Важность */
 .imp-dot {

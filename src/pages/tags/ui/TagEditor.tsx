@@ -18,7 +18,7 @@ import {
   ItemIcon,
 } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
-import { Input, Modal } from '@/shared/ui';
+import { Input, Modal, Segmented } from '@/shared/ui';
 import styles from './TagEditor.module.css';
 
 interface Props {
@@ -228,14 +228,14 @@ export function TagEditor({ cat, kind, tagId, existing, onSave, onClose, saveLab
         )}
 
         <div className={styles.tagModes}>
-          <span className="seg">
-            <button aria-pressed={!edit.replace} onClick={() => setEdit((e) => ({ ...e, replace: false }))}>
-              Дополнить
-            </button>
-            <button aria-pressed={edit.replace} onClick={() => setEdit((e) => ({ ...e, replace: true }))}>
-              Заменить целиком
-            </button>
-          </span>
+          <Segmented
+            value={edit.replace}
+            onChange={(v) => setEdit((e) => ({ ...e, replace: v }))}
+            options={[
+              { value: false, label: 'Дополнить' },
+              { value: true, label: 'Заменить целиком' },
+            ]}
+          />
           <p className="faint small grow">
             {edit.replace
               ? 'Файл задаёт полный состав: всё, что другие моды и датапаки добавили раньше, пропадёт. Скрипты KubeJS поверх всё равно сработают.'

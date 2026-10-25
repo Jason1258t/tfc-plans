@@ -1,4 +1,5 @@
 import { ChevronDown, ChevronUp, Download, FlipHorizontal2, RotateCcw } from 'lucide-react';
+import { Segmented } from '@/shared/ui';
 import { lazy, Suspense, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { iconUrl, itemName, useItems, type ItemIndex, sourceName, useTags, ItemIcon } from '@/shared/pack-data';
@@ -128,14 +129,15 @@ function MultiblockCard({ m, data }: { m: Multiblock; data: MultiblockData }) {
           </li>
         </ol>
         {m.extra && (
-          <div className={cx('seg', styles.fullToggle)} role="tablist">
-            <button aria-pressed={!full} onClick={() => setFull(false)}>
-              Сама машина
-            </button>
-            <button aria-pressed={full} onClick={() => setFull(true)}>
-              Целиком (как в книге)
-            </button>
-          </div>
+          <Segmented
+            className={styles.fullToggle}
+            value={full}
+            onChange={setFull}
+            options={[
+              { value: false, label: 'Сама машина' },
+              { value: true, label: 'Целиком (как в книге)' },
+            ]}
+          />
         )}
         <MbViewer key={String(full)} m={m} shape={shape} trigger={trigger} formedOk={!full} />
       </section>
@@ -172,14 +174,16 @@ function MbViewer({
     <>
       <div className={styles.toolbar}>
         {formed && (
-          <div className="seg" role="tablist" aria-label="Вид">
-            <button aria-pressed={!showFormed} onClick={() => setView('build')}>
-              Постройка
-            </button>
-            <button aria-pressed={showFormed} onClick={() => setView('formed')}>
-              Итог
-            </button>
-          </div>
+          <Segmented
+            role="tablist"
+            label="Вид"
+            value={showFormed}
+            onChange={(v) => setView(v ? 'formed' : 'build')}
+            options={[
+              { value: false, label: 'Постройка' },
+              { value: true, label: 'Итог' },
+            ]}
+          />
         )}
         {m.mirror && (
           <button className={cx('btn ghost', mirrored && styles.on)} onClick={() => setMirrored((v) => !v)}>

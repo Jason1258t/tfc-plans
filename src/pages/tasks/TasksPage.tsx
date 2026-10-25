@@ -9,6 +9,7 @@ import { ItemIcon } from '@/shared/pack-data';
 import { TaskDialog, type TaskDialogMode } from './ui/TaskDialog';
 import { TaskRow } from './ui/TaskRow';
 import { useNick } from '@/entities/user';
+import { Segmented } from '@/shared/ui';
 import { useTasks } from '@/entities/task';
 import { useGroups } from '@/entities/group';
 import { useArtifacts } from '@/entities/artifact';
@@ -300,14 +301,16 @@ export function TasksPage() {
         ) : (
           <>
             <div className={styles.tasksTop}>
-              <div className="seg" role="tablist">
-                <button aria-pressed={tab === 'active'} onClick={() => setParam({ tab: null })}>
-                  Активные <span className="count">{inScope.filter((t) => t.status !== 'done').length}</span>
-                </button>
-                <button aria-pressed={tab === 'done'} onClick={() => setParam({ tab: 'done' })}>
-                  Выполненные <span className="count">{done.length}</span>
-                </button>
-              </div>
+              <Segmented
+                role="tablist"
+                className={styles.tabs}
+                value={tab}
+                onChange={(v) => setParam({ tab: v === 'done' ? 'done' : null })}
+                options={[
+                  { value: 'active', label: 'Активные', count: inScope.filter((t) => t.status !== 'done').length },
+                  { value: 'done', label: 'Выполненные', count: done.length },
+                ]}
+              />
               <span className="grow" />
               <button
                 className="btn"

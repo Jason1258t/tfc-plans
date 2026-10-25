@@ -1,4 +1,5 @@
 import { Boxes, Eye, Pencil, UserRound, X } from 'lucide-react';
+import { Segmented } from '@/shared/ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGroups } from '@/entities/group';
 import { useNick, usePeople } from '@/entities/user';
@@ -184,20 +185,18 @@ export function TaskFields({
       )}
 
       <div className={styles.tfMeta}>
-        <div className={cx('seg', styles.tfImp)} role="group" aria-label="Важность" title="Важность">
-          {PRIORITIES.map((p) => (
-            <button
-              key={p.value}
-              type="button"
-              aria-pressed={value.priority === p.value}
-              title={p.label}
-              onClick={() => onPatch({ priority: p.value })}
-            >
-              <span className="imp-dot" style={{ background: p.color }} />
-              {p.label}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          className={styles.tfImp}
+          label="Важность"
+          value={value.priority}
+          onChange={(priority) => onPatch({ priority })}
+          options={PRIORITIES.map((p) => ({
+            value: p.value,
+            title: p.label,
+            icon: <span className="imp-dot" style={{ background: p.color }} />,
+            label: p.label,
+          }))}
+        />
         <select
           className="input"
           aria-label="Статус"
@@ -275,21 +274,17 @@ export function TaskFields({
             </div>
           )}
           {value.description && (
-            <div className="seg">
-              <button aria-pressed={descMode === 'edit'} onClick={() => setDescMode('edit')} aria-label="Править">
-                <Pencil size={13} />
-              </button>
-              <button
-                aria-pressed={descMode === 'view'}
-                onClick={() => {
-                  desc.commit();
-                  setDescMode('view');
-                }}
-                aria-label="Просмотр"
-              >
-                <Eye size={13} />
-              </button>
-            </div>
+            <Segmented
+              value={descMode}
+              onChange={(v) => {
+                if (v === 'view') desc.commit();
+                setDescMode(v);
+              }}
+              options={[
+                { value: 'edit', icon: <Pencil size={13} />, ariaLabel: 'Править' },
+                { value: 'view', icon: <Eye size={13} />, ariaLabel: 'Просмотр' },
+              ]}
+            />
           )}
         </div>
         {descMode === 'edit' || !value.description ? (

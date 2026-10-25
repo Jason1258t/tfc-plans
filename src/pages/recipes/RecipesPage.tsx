@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { KubejsConstructor } from '@/components/KubejsConstructor';
-import { Modal } from '@/shared/ui';
+import { Modal, Segmented } from '@/shared/ui';
 import { PackSection } from '@/widgets/pack-nav';
 import { recipeActions, RecipeBrowser } from '@/widgets/recipe-browser';
 import { useNick } from '@/entities/user';
@@ -36,14 +36,14 @@ export function RecipesPage() {
               отмечены — по ним можно открыть конструктор.
             </p>
           </div>
-          <span className="seg">
-            <button aria-pressed={mode === 'template'} onClick={() => setMode('template')}>
-              Шаблон
-            </button>
-            <button aria-pressed={mode === 'existing'} onClick={() => setMode('existing')}>
-              Заменить / удалить
-            </button>
-          </span>
+          <Segmented
+            value={mode}
+            onChange={setMode}
+            options={[
+              { value: 'template', label: 'Шаблон' },
+              { value: 'existing', label: 'Заменить / удалить' },
+            ]}
+          />
         </div>
 
         {kubejs ? (

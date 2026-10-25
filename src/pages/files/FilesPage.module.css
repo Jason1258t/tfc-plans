@@ -64,11 +64,11 @@
   background: var(--surface-2);
 }
 
-.filesBar :global(.seg) {
+.filesBar .filesSeg {
   flex-wrap: wrap;
 }
 
-.filesBar :global(.seg) button {
+.filesBar .filesSeg button {
   gap: 6px;
 }
 

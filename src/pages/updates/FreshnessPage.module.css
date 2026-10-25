@@ -106,7 +106,7 @@
 }
 
 /* в фильтре точки стоят в строку кнопки */
-:global(.seg) .dot {
+.filter .dot {
   margin-top: 0;
 }
 

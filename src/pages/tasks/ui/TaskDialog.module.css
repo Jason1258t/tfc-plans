@@ -59,12 +59,14 @@
   gap: 8px;
 }
 
-.tfMeta :global(.seg).tfImp {
+/* Сегмент важности — компонент shared/ui: класс идёт рядом с его собственным, двойной класс
+   нужен, чтобы перекрыть его паддинги и кегль (модули идут без слоёв, порядок не гарантирован) */
+.tfMeta .tfImp.tfImp {
   flex: 0 1 auto;
   min-width: 0;
 }
 
-.tfMeta :global(.seg).tfImp button {
+.tfMeta .tfImp.tfImp button {
   padding: 0 8px;
   font-size: 12px;
 }
@@ -145,11 +147,13 @@
     max-width: none;
   }
   /* Узкий экран: важность занимает свою строку и переносится по кнопкам, а не уезжает за край */
-  .tfMeta :global(.seg).tfImp {
+  /* Сегмент важности — компонент shared/ui: класс идёт рядом с его собственным, двойной класс
+   нужен, чтобы перекрыть его паддинги и кегль (модули идут без слоёв, порядок не гарантирован) */
+  .tfMeta .tfImp.tfImp {
     flex: 1 1 100%;
     flex-wrap: wrap;
   }
-  .tfMeta :global(.seg).tfImp button {
+  .tfMeta .tfImp.tfImp button {
     flex: 1 1 auto;
     justify-content: center;
     padding: 0 6px;
