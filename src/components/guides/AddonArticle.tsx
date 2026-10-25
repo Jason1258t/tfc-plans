@@ -5,6 +5,7 @@ import { guidesEnabled, subscribeGuide } from '../../data/guides';
 import { ADDONS, ADDON_GUIDE_SECTION, addonGuideId, type Addon } from '../../lib/addons';
 import { BASE_DOCS, BASE_VALUES } from '../../lib/guideScope';
 import { readNick } from '@/shared/lib/nick';
+import { cx } from '@/shared/lib';
 import type { Guide } from '@/entities/guide';
 import { AddonBlockCard } from '../AddonsTab';
 import { CalcErrors } from './CalcBlock';
@@ -12,7 +13,7 @@ import { GuideBody, type GuideKit } from './GuideBody';
 import { GuideEditor } from './GuideEditor';
 import { GuideHistory } from './GuideHistory';
 import { CheckedBadge } from './GuidesSection';
-import './Guides.css';
+import styles from './Guides.module.css';
 
 /** Виджет статей аддонов — блок из карточки tools/<мод>/addon.json */
 const KIT: GuideKit = {
@@ -106,7 +107,7 @@ export default function AddonArticle({ addon }: { addon: Addon }) {
   if (!guide)
     return (
       <section className="ref-card">
-        {error && <div className="guide-errors small">Не удалось загрузить: {error}</div>}
+        {error && <div className={cx(styles.guideErrors, 'small')}>Не удалось загрузить: {error}</div>}
         <div className="empty">Подробного описания пока нет</div>
         <button className="btn small" onClick={() => startEdit('new')}>
           <Plus size={14} /> Написать описание
@@ -116,21 +117,21 @@ export default function AddonArticle({ addon }: { addon: Addon }) {
 
   return (
     <>
-      <article className="ref-card power-article guide-article">
-        <header className="guide-head">
-          <span className="guide-head-icon">
+      <article className={cx('ref-card power-article', styles.guideArticle)}>
+        <header className={styles.guideHead}>
+          <span className={styles.guideHeadIcon}>
             <BookOpen size={24} />
           </span>
           <div className="grow">
             <h2 className="power-h">Подробно</h2>
-            <div className="faint small guide-meta">
+            <div className={cx('faint small', styles.guideMeta)}>
               <CheckedBadge c={guide.checked} />
               <span>
                 правил {guide.updatedBy}, {date(guide.updatedAt)}
               </span>
             </div>
           </div>
-          <div className="guide-head-actions">
+          <div className={styles.guideHeadActions}>
             <button className="btn ghost small" onClick={() => setHistory(true)} title="Прошлые версии">
               <History size={14} /> История
             </button>
@@ -140,7 +141,7 @@ export default function AddonArticle({ addon }: { addon: Addon }) {
           </div>
         </header>
         {guide.summary && (
-          <div className="power-note guide-summary">
+          <div className={cx('power-note', styles.guideSummary)}>
             <GuideBody source={`**Коротко.** ${guide.summary}`} kit={KIT} onGuide={onGuide} />
           </div>
         )}
@@ -158,7 +159,7 @@ export default function AddonArticle({ addon }: { addon: Addon }) {
           }}
         />
       )}
-      <p className="faint small guide-foot">
+      <p className={cx('faint small', styles.guideFoot)}>
         Описание и ченджлоги версий правят все игроки: кнопка «Править», каждая правка сохраняется в истории. Файл и
         рецепты — в карточке аддона рядом с исходниками и меняются с выпуском новой версии.
       </p>

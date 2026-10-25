@@ -10,7 +10,7 @@ import { GuideBody, type GuideKit } from './GuideBody';
 import { GuideEditor } from './GuideEditor';
 import { GuideHistory } from './GuideHistory';
 import { expand } from './guideText';
-import './Guides.css';
+import styles from './Guides.module.css';
 
 /**
  * Гайды раздела справочника: список карточками, статья, правка на сайте. Статьи — Firestore guides (правят все,
@@ -100,27 +100,31 @@ export function GuidesSection({
         </button>
         {!current ? (
           error ? (
-            <div className="guide-errors small">Не удалось загрузить гайды: {error}</div>
+            <div className={cx(styles.guideErrors, 'small')}>Не удалось загрузить гайды: {error}</div>
           ) : (
             <div className="empty">Гайд не найден — возможно, ссылка устарела</div>
           )
         ) : (
-          <article className="ref-card power-article guide-article">
-            <header className="guide-head">
-              <span className="guide-head-icon">
+          <article className={cx('ref-card power-article', styles.guideArticle)}>
+            <header className={styles.guideHead}>
+              <span className={styles.guideHeadIcon}>
                 {current.icon ? <ItemIcon id={current.icon} size={32} /> : <BookOpen size={24} />}
               </span>
               <div className="grow">
                 <h2 className="power-h">{current.title}</h2>
-                <div className="faint small guide-meta">
+                <div className={cx('faint small', styles.guideMeta)}>
                   {checks && <CheckedBadge c={current.checked} />}
-                  {current.hidden && <span className="guide-badge guide-badge-hidden">снят с публикации</span>}
+                  {current.hidden && (
+                    <span className={styles.guideBadge} data-kind="hidden">
+                      снят с публикации
+                    </span>
+                  )}
                   <span>
                     правил {current.updatedBy}, {date(current.updatedAt)}
                   </span>
                 </div>
               </div>
-              <div className="guide-head-actions">
+              <div className={styles.guideHeadActions}>
                 <button className="btn ghost small" onClick={() => setHistory(current)} title="Прошлые версии">
                   <History size={14} /> История
                 </button>
@@ -130,7 +134,7 @@ export function GuidesSection({
               </div>
             </header>
             {current.summary && (
-              <div className="power-note guide-summary">
+              <div className={cx('power-note', styles.guideSummary)}>
                 <GuideBody source={`**Коротко.** ${current.summary}`} kit={kit} onGuide={onGuide} />
               </div>
             )}
@@ -162,7 +166,7 @@ export function GuidesSection({
   }
 
   return (
-    <section className="guide-list">
+    <section className={styles.guideList}>
       <header className="guide-list-head">
         <div>
           <h2 className="power-h">Гайды</h2>
@@ -172,12 +176,12 @@ export function GuidesSection({
           <Plus size={14} /> Новый гайд
         </button>
       </header>
-      {error && <div className="guide-errors small">Не удалось загрузить: {error}</div>}
+      {error && <div className={cx(styles.guideErrors, 'small')}>Не удалось загрузить: {error}</div>}
       {visible.length === 0 && <div className="empty">Гайдов пока нет — напишите первый</div>}
       {[...groups].map(([name, list]) => (
-        <div key={name} className="guide-group">
-          {groups.size > 1 && <h3 className="guide-group-title">{name}</h3>}
-          <div className="guide-cards">
+        <div key={name} className={styles.guideGroup}>
+          {groups.size > 1 && <h3 className={styles.guideGroupTitle}>{name}</h3>}
+          <div className={styles.guideCards}>
             {list.map((g) => (
               <GuideCard key={g.id} g={g} kit={kit} checks={checks} onOpen={() => onGuide(g.id)} />
             ))}
@@ -185,11 +189,11 @@ export function GuidesSection({
         </div>
       ))}
       {hidden.length > 0 && (
-        <details className="guide-hidden">
+        <details className={styles.guideHidden}>
           <summary className="faint small">
             <EyeOff size={13} /> Снятые с публикации ({hidden.length})
           </summary>
-          <div className="guide-cards">
+          <div className={styles.guideCards}>
             {hidden.sort(byOrder).map((g) => (
               <GuideCard key={g.id} g={g} kit={kit} checks={checks} onOpen={() => onGuide(g.id)} />
             ))}
@@ -205,12 +209,14 @@ function GuideCard({ g, kit, checks, onOpen }: { g: Guide; kit: GuideKit; checks
   // Живые значения в «Коротко» — числами, как в статье
   const summary = useMemo(() => plain(expand(g.summary, [kit.scope.values])), [g.summary, kit.scope.values]);
   return (
-    <button className={cx('guide-card', g.hidden && 'is-hidden')} onClick={onOpen}>
-      <span className="guide-card-icon">{g.icon ? <ItemIcon id={g.icon} size={32} /> : <BookOpen size={22} />}</span>
-      <span className="guide-card-text">
-        <b className="guide-card-title">{g.title}</b>
-        {summary && <span className="guide-card-summary small">{summary}</span>}
-        <span className="guide-card-meta faint small">
+    <button className={cx(styles.guideCard, g.hidden && styles.isHidden)} onClick={onOpen}>
+      <span className={styles.guideCardIcon}>
+        {g.icon ? <ItemIcon id={g.icon} size={32} /> : <BookOpen size={22} />}
+      </span>
+      <span className={styles.guideCardText}>
+        <b className={styles.guideCardTitle}>{g.title}</b>
+        {summary && <span className={cx(styles.guideCardSummary, 'small')}>{summary}</span>}
+        <span className={cx(styles.guideCardMeta, 'faint small')}>
           {checks && <CheckedBadge c={g.checked} />}
           <span>{date(g.updatedAt)}</span>
         </span>
@@ -222,7 +228,7 @@ function GuideCard({ g, kit, checks, onOpen }: { g: Guide; kit: GuideKit; checks
 export function CheckedBadge({ c }: { c: GuideChecked }) {
   const v = CHECKED[c] ?? CHECKED.none;
   return (
-    <span className={cx('guide-badge', `guide-badge-${c}`)} title={v.title}>
+    <span className={styles.guideBadge} data-checked={c} title={v.title}>
       {v.label}
     </span>
   );
@@ -230,7 +236,7 @@ export function CheckedBadge({ c }: { c: GuideChecked }) {
 
 function GuideEditorHint({ checks }: { checks: boolean }) {
   return (
-    <p className="faint small guide-foot">
+    <p className={cx('faint small', styles.guideFoot)}>
       <Eye size={12} /> Гайды правят все игроки: кнопка «Править» в статье, каждая правка сохраняется в истории, и любую
       прошлую версию можно вернуть.
       {checks &&

@@ -4,6 +4,7 @@ import { formatValue, parseSpec } from '../../lib/guideFormat';
 import { Markdown } from '../Markdown';
 import { useGuideEditing, useGuideLink } from './guideLinks';
 import { expand, value, yaml } from './guideText';
+import styles from './Guides.module.css';
 
 /**
  * Калькулятор, описанный в статье блоком ```calc (YAML):
@@ -194,7 +195,7 @@ function Calc({ spec, envs, pickers }: { spec: Spec; envs: Scope[]; pickers?: Re
       {meta.length > 0 && (
         <div className="power-form">
           {meta.map((m) => (
-            <label key={m.name} className={cx('power-field', m.inp.toggle && 'guide-toggle')}>
+            <label key={m.name} className={cx('power-field', m.inp.toggle && styles.guideToggle)}>
               <span className="faint small">{tpl(m.inp.label ?? m.name)}</span>
               {m.options ? (
                 <select className="input" value={selected[m.name]} onChange={(e) => set(m.name, e.target.value)}>
@@ -229,7 +230,7 @@ function Calc({ spec, envs, pickers }: { spec: Spec; envs: Scope[]; pickers?: Re
                   {m.inp.picker && pickers?.[m.inp.picker] && (
                     <button
                       type="button"
-                      className={cx('btn ghost small guide-pick', openPicker === m.name && 'active')}
+                      className={cx('btn ghost small', styles.guidePick, openPicker === m.name && styles.active)}
                       onClick={() => setOpenPicker(openPicker === m.name ? null : m.name)}
                     >
                       {pickers[m.inp.picker].label}
@@ -261,13 +262,13 @@ function Calc({ spec, envs, pickers }: { spec: Spec; envs: Scope[]; pickers?: Re
                   );
             const hint = o.hint ? tpl(o.hint).trim() : '';
             return (
-              <div key={i} className={cx('power-out', bad && 'guide-out-bad', warn && 'guide-out-warn')}>
+              <div key={i} className={cx('power-out', bad && styles.guideOutBad, warn && styles.guideOutWarn)}>
                 {o.label && <span className="faint small">{tpl(o.label)}</span>}
                 <b className={cx(bad && 'power-bad')}>
                   <Md source={main} inline />
                 </b>
                 {hint && (
-                  <span className={cx('small', bad ? 'power-bad' : warn ? 'guide-warn' : 'faint')}>
+                  <span className={cx('small', bad ? 'power-bad' : warn ? styles.guideWarn : 'faint')}>
                     <Md source={hint} inline />
                   </span>
                 )}
@@ -296,7 +297,7 @@ function Calc({ spec, envs, pickers }: { spec: Spec; envs: Scope[]; pickers?: Re
       {errors.length > 0 && <CalcErrors list={errors} />}
     </>
   );
-  return boxed ? <section className="power-calc">{body}</section> : <div className="guide-plain">{body}</div>;
+  return boxed ? <section className="power-calc">{body}</section> : <div className={styles.guidePlain}>{body}</div>;
 }
 
 const optionId = (v: unknown): string =>
@@ -466,7 +467,7 @@ export function CalcErrors({ list }: { list: string[] }) {
   const editing = useGuideEditing();
   if (editing)
     return (
-      <div className="guide-errors small">
+      <div className={cx(styles.guideErrors, 'small')}>
         {list.slice(0, 12).map((e, i) => (
           <div key={i}>⚠ {e}</div>
         ))}
@@ -475,7 +476,7 @@ export function CalcErrors({ list }: { list: string[] }) {
     );
   const stale = list.some((e) => e.includes('неизвестное имя'));
   return (
-    <details className="guide-errors guide-errors-reader small">
+    <details className={cx(styles.guideErrors, styles.guideErrorsReader, 'small')}>
       <summary>
         {stale ? (
           <>

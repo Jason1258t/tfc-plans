@@ -8,6 +8,7 @@ import { BlockBoundary } from './BlockBoundary';
 import { CalcBlock, CalcErrors, type Picker } from './CalcBlock';
 import { GuideLinkContext, useGuideEditing } from './guideLinks';
 import { compile, prepare, widgetCall } from './guideText';
+import styles from './Guides.module.css';
 
 /** Виджет раздела: то, что разметкой не описать (схемы-рисунки, особые графики) */
 export type Widget = (props: { params: Record<string, string | number | boolean>; scope: Scope }) => ReactNode;
@@ -63,7 +64,7 @@ export function GuideBody({ source, kit, onGuide }: { source: string; kit: Guide
       <BlockBoundary text={source}>
         <Markdown
           source={prepared.markdown}
-          className="guide-body"
+          className={styles.guideBody}
           link={link}
           block={block}
           schemes={['gv:', 'guide:']}
@@ -87,12 +88,12 @@ function LiveValue({ src, envs, kit }: { src: string; envs: Scope[]; kit: GuideK
   } catch (err) {
     // Читателю — прочерк с подсказкой, в редакторе — сама формула
     return (
-      <span className="guide-val-error" title={errorText(err, expr.trim())}>
+      <span className={styles.guideValError} title={errorText(err, expr.trim())}>
         {editing ? `⚠ ${expr.trim()}` : '—'}
       </span>
     );
   }
-  if (!st) return <span className="guide-val">{text}</span>;
+  if (!st) return <span className={styles.guideVal}>{text}</span>;
   return (
     <span
       className={cx('power-cfg', st.changed && 'changed')}

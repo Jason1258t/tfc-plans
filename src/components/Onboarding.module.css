@@ -6,11 +6,11 @@
   pointer-events: none;
 }
 
-.tour-wait {
+.tourWait {
   visibility: hidden;
 }
 
-.tour-spot {
+.tourSpot {
   position: fixed;
   border-radius: var(--radius);
   box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.55);
@@ -23,7 +23,7 @@
 }
 
 /* Шаг без цели — просто затемнение */
-.tour-spot-none {
+.tourSpotNone {
   top: 50%;
   left: 50%;
   width: 1px;
@@ -31,7 +31,7 @@
   outline: none;
 }
 
-.tour-pop {
+.tourPop {
   position: fixed;
   width: min(360px, calc(100vw - 24px));
   padding: 14px 16px 12px;
@@ -44,44 +44,44 @@
 }
 
 @media (max-width: 599px) {
-  .tour-pop {
+  .tourPop {
     width: auto;
   }
 }
 
-.tour-head {
+.tourHead {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
 }
 
-.tour-head .btn {
+.tourHead :global(.btn) {
   margin: -4px -6px -4px 0;
 }
 
-.tour-body {
+.tourBody {
   margin: 0 0 10px;
   line-height: 1.5;
   color: var(--text-2);
 }
 
-.tour-more {
+.tourMore {
   margin: -4px 0 10px;
 }
 
-.tour-more a {
+.tourMore a {
   color: var(--accent);
 }
 
-.tour-foot {
+.tourFoot {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
 }
 
-.tour-off {
+.tourOff {
   display: block;
   margin-top: 10px;
   padding: 0;
@@ -93,16 +93,16 @@
   text-underline-offset: 2px;
 }
 
-.tour-menu-wrap {
+.tourMenuWrap {
   position: relative;
   flex: none;
 }
 
-.tour-menu-wrap > .btn {
+.tourMenuWrap > :global(.btn) {
   color: var(--text-2);
 }
 
-.tour-menu {
+.tourMenu {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
@@ -117,8 +117,8 @@
   box-shadow: var(--shadow-md);
 }
 
-.tour-menu > button,
-.tour-menu > a {
+.tourMenu > button,
+.tourMenu > a {
   padding: 7px 10px;
   border: 0;
   border-radius: var(--radius-sm);
@@ -130,23 +130,23 @@
   cursor: pointer;
 }
 
-.tour-menu > button:hover,
-.tour-menu > a:hover {
+.tourMenu > button:hover,
+.tourMenu > a:hover {
   background: var(--surface-2);
 }
 
-.tour-menu > .faint {
+.tourMenu > :global(.faint) {
   color: var(--text-3);
 }
 
-.tour-menu hr {
+.tourMenu hr {
   width: 100%;
   margin: 4px 0;
   border: 0;
   border-top: 1px solid var(--border);
 }
 
-.tour-menu-check {
+.tourMenuCheck {
   display: flex;
   align-items: center;
   gap: 8px;

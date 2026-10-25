@@ -1,6 +1,8 @@
 import { X } from 'lucide-react';
 import { useState } from 'react';
+import { cx } from '@/shared/lib';
 import type { GuideKit } from './GuideBody';
+import styles from './Guides.module.css';
 
 const CALC_EXAMPLE = `\`\`\`calc
 title: Калькулятор линии
@@ -42,11 +44,11 @@ export function GuideHelp({ kit, onClose }: { kit: GuideKit; onClose: () => void
     ([k, d]) => !q || k.toLowerCase().includes(q.toLowerCase()) || d.doc.toLowerCase().includes(q.toLowerCase()),
   );
   return (
-    <div className="guide-help ref-card">
-      <button className="btn ghost small guide-help-close" onClick={onClose} title="Закрыть справку">
+    <div className={cx(styles.guideHelp, 'ref-card')}>
+      <button className={cx('btn ghost small', styles.guideHelpClose)} onClick={onClose} title="Закрыть справку">
         <X size={14} />
       </button>
-      <div className="guide-help-cols">
+      <div className={styles.guideHelpCols}>
         <div>
           <h3>Вставки в тексте</h3>
           <ul className="small">
@@ -88,7 +90,7 @@ export function GuideHelp({ kit, onClose }: { kit: GuideKit; onClose: () => void
             <code>max(a, b)</code>) пишите в кавычках или отдельной строкой; вместо <code>?:</code> удобнее{' '}
             <code>if(условие, то, иначе)</code>.
           </p>
-          <pre className="guide-help-pre">{CALC_EXAMPLE}</pre>
+          <pre className={styles.guideHelpPre}>{CALC_EXAMPLE}</pre>
           <p className="small">
             Формулы: <code>+ - * / ^ %</code>, <code>== != &lt; &lt;= &gt; &gt;=</code>, <code>and or not</code>,{' '}
             <code>obj.поле</code>, <code>список[0]</code>, <code>x =&gt; x * 2</code>. Ошибка в формуле видна на месте,
@@ -98,7 +100,7 @@ export function GuideHelp({ kit, onClose }: { kit: GuideKit; onClose: () => void
         <div>
           <h3>Имена в формулах</h3>
           <input className="input" placeholder="Найти…" value={q} onChange={(e) => setQ(e.target.value)} />
-          <dl className="guide-help-names small">
+          <dl className={cx(styles.guideHelpNames, 'small')}>
             {names.map(([k, d]) => (
               <div key={k}>
                 <dt>
@@ -109,7 +111,7 @@ export function GuideHelp({ kit, onClose }: { kit: GuideKit; onClose: () => void
             ))}
           </dl>
           <h3>Виджеты</h3>
-          <dl className="guide-help-names small">
+          <dl className={cx(styles.guideHelpNames, 'small')}>
             {Object.entries(kit.widgets).map(([k, w]) => (
               <div key={k}>
                 <dt>

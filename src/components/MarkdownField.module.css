@@ -1,32 +1,32 @@
 /* Поле правки Markdown в формах — рамка как у .input, высота по строкам */
 
-.md-field {
+.mdField {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface);
 }
 
-.md-field:focus-within {
+.mdField:focus-within {
   border-color: var(--accent);
 }
 
-.md-field .md-field-editor,
-.md-field .md-field-editor .cm-editor {
+.mdField .mdFieldEditor,
+.mdField .mdFieldEditor :global(.cm-editor) {
   height: auto;
   min-height: var(--md-field-min);
   max-height: var(--md-field-max);
 }
 
-.md-field .md-field-editor {
+.mdField .mdFieldEditor {
   background: transparent;
   border-radius: inherit;
 }
 
-.md-field .md-field-editor .cm-content {
+.mdField .mdFieldEditor :global(.cm-content) {
   padding: 8px 12px;
 }
 
-.md-field-loading {
+.mdFieldLoading {
   min-height: var(--md-field-min);
   padding: 8px 12px;
 }
