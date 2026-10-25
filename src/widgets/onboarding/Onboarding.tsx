@@ -134,7 +134,8 @@ function TourView({ tour, onClose }: { tour: Tour; onClose: (off: boolean) => vo
     const started = performance.now();
     let scrolled = false;
     const tick = () => {
-      setPaused(Boolean(document.querySelector('[role="dialog"]')));
+      // Своя плашка тоже role="dialog" — её не считаем, иначе подсказка мигает каждый кадр
+      setPaused([...document.querySelectorAll('[role="dialog"]')].some((d) => !d.closest(`.${styles.tour}`)));
       if (step.target && (!el || !el.isConnected)) el = findTarget(step);
       if (el) {
         if (!scrolled) {
