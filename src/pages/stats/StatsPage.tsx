@@ -13,6 +13,7 @@ import {
   type VisitEvent,
 } from '@/shared/api';
 import { cx } from '@/shared/lib';
+import { Button } from '@/shared/ui';
 import styles from './StatsPage.module.css';
 
 /**
@@ -349,9 +350,9 @@ export function StatsPage() {
             <input type="checkbox" checked={dev} onChange={(e) => setDev(e.target.checked)} /> проверочные (dev)
           </label>
         )}
-        <button className="btn ghost small" onClick={() => void load()} title="Обновить">
+        <Button variant="ghost" className="small" onClick={() => void load()} title="Обновить">
           <RefreshCw size={14} /> Обновить
-        </button>
+        </Button>
         <span className="grow" />
         <label className={cx(styles.check, 'small')}>
           <input type="checkbox" checked={off} onChange={(e) => toggleOff(e.target.checked)} /> не считать меня в этом

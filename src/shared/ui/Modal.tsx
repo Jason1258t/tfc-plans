@@ -2,6 +2,7 @@ import { X } from 'lucide-react';
 import { useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { cx } from '@/shared/lib';
+import { Button } from './Button';
 import styles from './Modal.module.css';
 
 interface Props {
@@ -44,9 +45,9 @@ export function Modal({ onClose, children, title, actions, footer, narrow, wide,
             <h2>{title}</h2>
             {actions}
             {!locked && (
-              <button className="btn ghost icon" onClick={onClose} aria-label="Закрыть">
+              <Button variant="ghost" icon onClick={onClose} aria-label="Закрыть">
                 <X size={18} />
-              </button>
+              </Button>
             )}
           </div>
         )}
