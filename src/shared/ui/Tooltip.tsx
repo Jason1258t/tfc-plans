@@ -1,4 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { cx } from '@/shared/lib';
+import styles from './Tooltip.module.css';
 
 /** Глобальная подсказка в стиле Minecraft: одна на страницу, следует за курсором */
 interface TipState {
@@ -50,9 +52,9 @@ export function TooltipLayer() {
   const left = Math.min(tip.x + 12, window.innerWidth - 310);
   const top = tip.y - 30 < 4 ? tip.y + 20 : tip.y - 30;
   return (
-    <div className="tooltip" style={{ left, top }}>
+    <div className={styles.tooltip} style={{ left, top }}>
       <div>{tip.title}</div>
-      {tip.sub && <div className="sub">{tip.sub}</div>}
+      {tip.sub && <div className={cx(styles.sub)}>{tip.sub}</div>}
     </div>
   );
 }

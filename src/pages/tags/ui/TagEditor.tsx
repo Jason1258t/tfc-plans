@@ -18,7 +18,7 @@ import {
   ItemIcon,
 } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
-import { Modal } from '@/shared/ui';
+import { Input, Modal } from '@/shared/ui';
 import styles from './TagEditor.module.css';
 
 interface Props {
@@ -103,8 +103,7 @@ function MemberInput({ cat, kind, onAdd }: { cat: TagCatalog; kind: TagKind; onA
 
   return (
     <div className={styles.tagAdd}>
-      <input
-        className="input"
+      <Input
         value={q}
         placeholder={
           kind === 'fluid'
@@ -217,9 +216,9 @@ export function TagEditor({ cat, kind, tagId, existing, onSave, onClose, saveLab
             <label className="label" htmlFor="te-id">
               Id нового тега
             </label>
-            <input
+            <Input
               id="te-id"
-              className="input mono-input"
+              className="mono-input"
               value={id}
               placeholder="c:plantoil или мой_мод:мой_тег"
               onChange={(e) => setId(e.target.value.trim().toLowerCase())}
