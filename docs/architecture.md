@@ -73,8 +73,9 @@ src/shared/       общее для всего сайта; снаружи — ч
   api/             firebase (приложение, Firestore, вход, App Check), store (фабрика CRUD по коллекциям, без Firebase —
                    localStorage), sync (состояние синхронизации), analytics (свой лог посещений), gemini (запросы к
                    Gemini: цепочки моделей с запасными, таймаут 90 с; предметы — из shared/pack-data)
-  ui/              Modal (окно с заголовком и подвалом), Tooltip (одна подсказка на страницу в стиле Minecraft),
-                   PackNav/PackSection (выбор вкладки общего раздела: датапаки, рецепты, теги)
+  ui/              Modal (окно с заголовком и подвалом, стили — Modal.module.css), Tooltip (одна подсказка на
+                   страницу в стиле Minecraft), Search (строка поиска), PackNav/PackSection (выбор вкладки общего
+                   раздела: датапаки, рецепты, теги)
   pack-data/       данные пакета, нужные почти всем страницам: items (useItems, itemName, searchItems, иконки),
                    recipes (каталог, статусы KubeJS, поиск), recipeFilter/recipeRefs (фильтры и входы/выходы рецепта),
                    tags (слияние источников и KubeJS), fuzzy (fuse.js — только подсказки замен в схемах),
