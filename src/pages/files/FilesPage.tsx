@@ -11,7 +11,7 @@ import { FILE_KINDS, fileKind, type FileKind } from '../../lib/fileKinds';
 import { prepareFile, validateFiles } from '../../lib/uploads';
 import { cx, timeAgo } from '@/shared/lib';
 import type { SavedSchematic } from '@/entities/schematic';
-import { Search, Segmented } from '@/shared/ui';
+import { Search, Segmented, Button } from '@/shared/ui';
 import styles from './FilesPage.module.css';
 
 const KINDS: { id: FileKind | 'all'; label: string }[] = [{ id: 'all', label: 'Все' }, ...FILE_KINDS];
@@ -100,10 +100,10 @@ export function FilesPage() {
             {files.length > 0 && ` Всего ${files.length}, ${formatSize(total)}.`}
           </p>
         </div>
-        <button className="btn primary" onClick={() => inputRef.current?.click()} disabled={Boolean(uploading)}>
+        <Button variant="primary" onClick={() => inputRef.current?.click()} disabled={Boolean(uploading)}>
           <Upload size={16} />
           Загрузить
-        </button>
+        </Button>
         <input
           ref={inputRef}
           type="file"
@@ -175,24 +175,28 @@ export function FilesPage() {
                   'без привязки'
                 )}
               </FileBadge>
-              <button
-                className="btn ghost sm icon"
+              <Button
+                variant="ghost"
+                size="sm"
+                icon
                 onClick={() => run(f.id, () => downloadFile(f))}
                 disabled={busyId === f.id}
                 aria-label={`Скачать ${f.name}`}
                 title="Скачать"
               >
                 <Download size={15} />
-              </button>
-              <button
-                className="btn ghost sm icon"
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon
                 onClick={() => confirm(`Удалить файл «${f.name}»?`) && run(f.id, () => removeFile(f))}
                 disabled={busyId === f.id || Boolean(schematic)}
                 aria-label={`Удалить ${f.name}`}
                 title={schematic ? 'Исходник схемы — удаляется вместе со схемой в библиотеке' : 'Удалить'}
               >
                 <Trash2 size={15} />
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
