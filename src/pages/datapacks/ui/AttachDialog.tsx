@@ -4,7 +4,7 @@ import { useNick } from '@/entities/user';
 import { useTasks } from '@/entities/task';
 import { useGroups } from '@/entities/group';
 import { buildZip, zipName } from '@/lib/datapack';
-import { uploadFile } from '@/lib/files';
+import { uploadFile } from '@/entities/file';
 import { Modal } from '@/shared/ui';
 import type { Datapack } from '@/entities/datapack';
 

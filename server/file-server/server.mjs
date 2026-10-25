@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Сервер файлов для сайта «TFC Планы» — замена Firestore-хранилищу вложений (src/lib/fileStorage/server.ts).
+ * Сервер файлов для сайта «TFC Планы» — замена Firestore-хранилищу вложений (src/entities/file/fileStorage/server.ts).
  * Без зависимостей, Node 22+. Настройки — переменные окружения (см. .env.example), установка — README.md.
  *
  *   GET    /health                 — жив ли, сколько файлов (без авторизации)

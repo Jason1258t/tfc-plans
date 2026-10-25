@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useNick } from '@/entities/user';
 import { tasksStore, type NewTask } from '@/entities/task';
 import { artifactsStore } from '@/entities/artifact';
-import { uploadFile } from '@/lib/files';
+import { uploadFile } from '@/entities/file';
 import { Modal } from '@/shared/ui';
 import { cx } from '@/shared/lib';
 import { Attachments } from './Attachments';

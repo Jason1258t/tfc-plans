@@ -66,19 +66,21 @@ env = { TFC_FIRESTORE_KEY = "/abs/home/.config/tfc/mcp-firestore.json", TFC_AGEN
 
 **Cursor** — `.cursor/mcp.json` or `~/.cursor/mcp.json`, same `mcpServers` shape as above (`TFC_AGENT_NICK: "Cursor"`).
 
-**OpenCode** — `opencode.json`; reads `AGENTS.md` and `.claude/skills`:
+**OpenCode** — checked 2026-10-25 on v2.1.4: config lives in `~/.config/opencode/opencode.json` and the schema is
+`mcp.servers` (not `mcp`); the project file `opencode.json` / `.opencode.local.json` was **not** picked up (`opencode debug
+config` listed only the global folder, `opencode mcp list` said «No MCP servers configured»). The reliable route is the CLI
+from the repo root:
 
-```json
-{
-  "mcp": {
-    "tfc-pack": {
-      "type": "local",
-      "command": ["node", "/abs/path/to/tfc-taskmanager/scripts/mcp/server.mjs"],
-      "environment": { "TFC_FIRESTORE_KEY": "/abs/home/.config/tfc/mcp-firestore.json", "TFC_AGENT_NICK": "OpenCode" }
-    }
-  }
-}
+```bash
+opencode mcp add --global tfc-pack \
+  --env TFC_FIRESTORE_KEY=/abs/home/.config/tfc/mcp-firestore.json --env TFC_AGENT_NICK=OpenCode \
+  -- node /abs/path/to/tfc-taskmanager/scripts/mcp/server.mjs
+opencode mcp add --global tfc-plans-dev \
+  -- node /abs/path/to/tfc-taskmanager/scripts/mcp-dev/server.mjs
+opencode mcp list      # ✓ tfc-pack connected
 ```
+
+No `${VAR:-default}` expansion — give the absolute key path. OpenCode reads `AGENTS.md` and `.claude/skills`.
 
 **DeepSeek Harness (DSH)** — checked 2026-10-24: servers are added in the profile patch
 `~/.dsh/profiles/desktop/cordis.patch.yml` (outside the repo) as `insert` entries of `@deepseek-ai/dsh-mcp-client`. The

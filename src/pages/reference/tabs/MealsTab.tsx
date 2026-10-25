@@ -26,7 +26,7 @@ import {
   type MealSlot,
 } from '@/lib/meals';
 import { NUTRIENTS, type Food, type Nutrient } from '@/lib/reference';
-import { CONFIG_ORIGIN_LABEL, useModConfig, type ConfigOrigin } from '@/lib/config';
+import { CONFIG_ORIGIN_LABEL, useModConfig, type ConfigOrigin } from '@/entities/pack-config';
 import { ComputedCalc, DynamicCalc, FamilyCalc, type FoodLookup } from './MealCalc';
 import { SkilletCard } from './SkilletCard';
 import { cx } from '@/shared/lib';

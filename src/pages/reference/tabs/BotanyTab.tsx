@@ -21,7 +21,7 @@ import {
   type PlantKind,
 } from '@/lib/botany';
 import { useBotanyConfig, type BotanyConfig } from '@/lib/botanyConfig';
-import { CONFIG_ORIGIN_LABEL } from '@/lib/config';
+import { CONFIG_ORIGIN_LABEL } from '@/entities/pack-config';
 import { itemName, useItems, type ItemIndex, useTags, ItemIcon } from '@/shared/pack-data';
 import { mealsByItem, useMeals, type MealRef } from '@/lib/meals';
 import type { Food } from '@/lib/reference';

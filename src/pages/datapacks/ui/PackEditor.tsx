@@ -20,7 +20,7 @@ import {
   validatePack,
   zipName,
 } from '@/lib/datapack';
-import { filesEnabled, removeFile, uploadFile } from '@/lib/files';
+import { filesEnabled, removeFile, uploadFile } from '@/entities/file';
 import { useItems, useRecipes, type Recipe, tagFromPath, tagKey, useTags } from '@/shared/pack-data';
 import { entryRecipeId, kubejsScript, scriptFileName } from '@/lib/kubejsFix';
 import { downloadScript } from '@/lib/kubejsScripts';

@@ -87,8 +87,10 @@ src/entities/     сущности: типы, коллекции и zustand-хр
   datapack/        Datapack, DatapackEntry, KubejsScript, datapacksStore/kubejsScriptsStore
   schematic/       SavedSchematic, ReplaceFavorite, schematicsStore/replaceFavoritesStore
   user/            SiteUser, useUsers/usePeople, useNick (ник заходившего), touchPresence
-  file/            useFiles — список вложений (само хранилище — src/lib/files.ts)
+  file/            useFiles, файловый API (upload/download/remove) и адаптеры хранилища — entities/file/fileStorage;
+                   конфиг хранилища остался в src/lib/files.config.ts (путь зашит в npm run rules:files и скрипты)
   pack-update/     PackUpdate, лента обновлений сборки (usePackUpdates), ченджлоги аддонов, отметка «просмотрено»
+  pack-config/     настройки сборки/мира: useModConfig, configValue, слои конфига (коллекция config)
 src/app/          каркас: App.tsx (маршруты), model/startData (подписки), theme (токены и базовые стили)
 src/features/     действия и потоки, нужные нескольким страницам: только `features/entities/shared`
   guides/          GuidesSection, GuideEditor/History/Help, AddonArticle, AddonVersions, CalcBlock (```calc),
@@ -122,9 +124,9 @@ src/lib/
   power.ts                     electricity: Create SU ↔ EE (V/A/W) ↔ IE FE/t, formulas from code (UI — PowerTab)
   guideFormat.ts               guide number format {{x | 1 В}} (formulas — shared/lib/calcExpr.ts)
   guideScope.ts powerGuideScope.ts   names for formulas: shared functions + section (settings, power.json, power.ts)
-  projection.ts geo.ts atlas.ts config.ts   TFC Real World map, world settings from server config
+  projection.ts geo.ts atlas.ts   TFC Real World map, world settings from server config (чтение конфига — entities/pack-config)
   packUpdates.ts               pack updates (Gemini requests — shared/api/gemini.ts)
-  files.ts files.config.ts     attachments: wrapper over fileStorage/ (Firestore or own server — VITE_FILES_SERVER)
+  files.config.ts              attachments config; Firestore or own server (VITE_FILES_SERVER) — место зашито в правила и скрипты
 src/features/guides/  GuidesSection, GuideEditor/History/Help, CalcBlock (```calc), GuideBody (Markdown + {{…}} +
                   «::name» widgets), powerWidgets; format — docs/plans/guides.md
 server/file-server/  file server for Ubuntu (Node, no deps); migration — scripts/files-migrate.mjs

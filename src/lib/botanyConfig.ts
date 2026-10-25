@@ -1,5 +1,5 @@
 import type { BotanyMeta } from './botany';
-import { useModConfig, type ConfigOrigin, type ModConfig } from './config';
+import { useModConfig, type ConfigOrigin, type ModConfig } from '@/entities/pack-config';
 
 export interface Resolved {
   value: unknown;

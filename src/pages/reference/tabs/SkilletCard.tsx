@@ -1,6 +1,6 @@
 import { Plus, X } from 'lucide-react';
 import { useMemo, useState, type ComponentType, type ReactNode } from 'react';
-import { CONFIG_ORIGIN_LABEL, useModConfig, type ConfigOrigin, type ModConfig } from '@/lib/config';
+import { CONFIG_ORIGIN_LABEL, useModConfig, type ConfigOrigin, type ModConfig } from '@/entities/pack-config';
 import type { TagCatalog } from '@/shared/pack-data';
 import { itemName, type ItemIndex, ItemIcon } from '@/shared/pack-data';
 import {

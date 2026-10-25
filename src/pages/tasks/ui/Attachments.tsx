@@ -1,7 +1,7 @@
 import { Download, Paperclip, Trash2, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useFiles } from '@/entities/file';
-import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, type FileMeta } from '@/lib/files';
+import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, type FileMeta } from '@/entities/file';
 import { dismissUpload, isImage, useUploads } from '@/lib/uploads';
 import { cx, timeAgo } from '@/shared/lib';
 import styles from './Attachments.module.css';

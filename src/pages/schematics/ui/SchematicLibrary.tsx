@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { useNick } from '@/entities/user';
 import { schematicsStore } from '@/entities/schematic';
 import { useSearchTrack } from '@/shared/api';
-import { formatSize } from '@/lib/files';
+import { formatSize } from '@/entities/file';
 import { useItems } from '@/shared/pack-data';
 import { REMOVE, type Schematic } from '@/lib/schematic';
 import { openFromLibrary, refreshPreview, removeFromLibrary } from '../model/schematicLibrary';

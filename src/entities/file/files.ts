@@ -1,12 +1,12 @@
 import { getToken } from 'firebase/app-check';
 import { appCheck, auth, authReady, db, track } from '@/shared/api';
-import filesConfig from './files.config';
+import filesConfig from '@/lib/files.config';
 import { firestoreAdapter } from './fileStorage/firestore';
 import { serverAdapter } from './fileStorage/server';
 import type { FileAdapter, StoredFile } from './fileStorage/types';
 
 /**
- * Вложения задач и исходники схем. Хранилище — за интерфейсом FileAdapter (lib/fileStorage):
+ * Вложения задач и исходники схем. Хранилище — за интерфейсом FileAdapter (entities/file/fileStorage):
  * - по умолчанию Firestore кусками, пакет firestore-files (Firebase Storage на бесплатном тарифе недоступен);
  * - если задан VITE_FILES_SERVER — свой сервер файлов (server/file-server).
  * Здесь — тонкая обёртка с API, к которому привыкли компоненты.

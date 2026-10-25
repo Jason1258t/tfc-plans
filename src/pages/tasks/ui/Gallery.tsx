@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight, Download, ImagePlus, Trash2, X } from 'lucid
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useFiles } from '@/entities/file';
-import { downloadFile, fileUrl, filesEnabled, formatSize, removeFile, type FileMeta } from '@/lib/files';
+import { downloadFile, fileUrl, filesEnabled, formatSize, removeFile, type FileMeta } from '@/entities/file';
 import { dismissUpload, isImage, useUploads } from '@/lib/uploads';
 import { cx, timeAgo } from '@/shared/lib';
 import styles from './Gallery.module.css';

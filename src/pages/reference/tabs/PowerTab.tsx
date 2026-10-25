@@ -1,6 +1,6 @@
 import { ArrowDown } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import { CONFIG_ORIGIN_LABEL } from '@/lib/config';
+import { CONFIG_ORIGIN_LABEL } from '@/entities/pack-config';
 import {
   alternator,
   type AlternatorParams,
