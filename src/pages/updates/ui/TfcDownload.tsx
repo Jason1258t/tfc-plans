@@ -1,6 +1,6 @@
 import { Check, Copy, Download, Terminal } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { cx } from '@/shared/lib';
+import { Button } from '@/shared/ui';
 import sectionStyles from '../UpdatesSection.module.css';
 import styles from './TfcDownload.module.css';
 
@@ -53,8 +53,9 @@ function Cmd({ text }: { text: string }) {
   return (
     <div className={styles.cmd}>
       <pre>{text}</pre>
-      <button
-        className="btn sm"
+      <Button
+        size="sm"
+        className={styles.cmdBtn}
         title="Копировать команду"
         onClick={() =>
           navigator.clipboard?.writeText(text).then(() => {
@@ -64,7 +65,7 @@ function Cmd({ text }: { text: string }) {
         }
       >
         {done ? <Check size={13} /> : <Copy size={13} />} {done ? 'Скопировано' : 'Копировать'}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -104,15 +105,15 @@ export function TfcDownload() {
       </header>
       <div className={styles.os}>
         {(['win', 'macos', 'linux'] as Os[]).map((o) => (
-          <button key={o} className={cx('btn', o === os && 'primary')} onClick={() => setOs(o)}>
+          <Button key={o} variant={o === os ? 'primary' : undefined} onClick={() => setOs(o)}>
             {{ win: 'Windows', macos: 'macOS', linux: 'Linux' }[o]}
-          </button>
+          </Button>
         ))}
         <span className={styles.sep} />
         {ways.map(([w, title]) => (
-          <button key={w} className={cx('btn sm', w === current && 'primary')} onClick={() => setWay(w)}>
+          <Button key={w} variant={w === current ? 'primary' : undefined} size="sm" onClick={() => setWay(w)}>
             {title}
-          </button>
+          </Button>
         ))}
       </div>
       <ol className={styles.steps}>
