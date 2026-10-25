@@ -9,7 +9,7 @@ import { ItemIcon } from '@/shared/pack-data';
 import { TaskDialog, type TaskDialogMode } from './ui/TaskDialog';
 import { TaskRow } from './ui/TaskRow';
 import { useNick } from '@/entities/user';
-import { Button, Segmented, ErrorBox } from '@/shared/ui';
+import { Button, Segmented, Select, ErrorBox } from '@/shared/ui';
 import { useTasks } from '@/entities/task';
 import { useGroups } from '@/entities/group';
 import { useArtifacts } from '@/entities/artifact';
@@ -343,8 +343,7 @@ export function TasksPage() {
               </label>
               {tab === 'active' && (
                 <>
-                  <select
-                    className="input"
+                  <Select
                     value={minImp}
                     onChange={(e) => setMinImp(Number(e.target.value) as Priority)}
                     aria-label="Минимальная важность"
@@ -355,9 +354,8 @@ export function TasksPage() {
                         {p.label} и выше
                       </option>
                     ))}
-                  </select>
-                  <select
-                    className="input"
+                  </Select>
+                  <Select
                     value={sort}
                     onChange={(e) => {
                       setSort(e.target.value as SortMode);
@@ -370,7 +368,7 @@ export function TasksPage() {
                         {s.label}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </>
               )}
               <label className="toggle">

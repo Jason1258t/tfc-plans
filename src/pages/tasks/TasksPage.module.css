@@ -171,7 +171,8 @@
   flex-wrap: wrap;
 }
 
-.tasksFilters select:global(.input) {
+/* Фильтры — компонент shared/ui Select: его классы хэшированы, поэтому поле ищем по тегу */
+.tasksFilters select {
   width: auto;
   height: 32px;
 }
@@ -321,7 +322,7 @@
   .tasksTop .newTask {
     flex: 1;
   }
-  .tasksFilters select:global(.input) {
+  .tasksFilters select {
     flex: 1;
   }
   /* Ярлык важности — в строке задачи и в окне сравнения (класс из legacy-ui) */

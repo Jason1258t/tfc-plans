@@ -4,7 +4,7 @@ import { itemName, useItems, ItemIcon, ItemPicker } from '@/shared/pack-data';
 import { entryDone } from '../model/tasks';
 import { cx, uid } from '@/shared/lib';
 import type { ChecklistEntry } from '@/entities/task';
-import { Button } from '@/shared/ui';
+import { Button, Input } from '@/shared/ui';
 import styles from './Checklist.module.css';
 
 interface Props {
@@ -138,8 +138,8 @@ export function Checklist({ entries, onChange }: Props) {
         </ul>
       )}
       <div className="row">
-        <input
-          className={cx('input', styles.clQty)}
+        <Input
+          className={styles.clQty}
           type="number"
           min={1}
           value={qty}
