@@ -11,7 +11,8 @@ import {
   subscribeOnboarding,
 } from '../data/onboarding';
 import { requestTour, tourFor, tourRequests, WELCOME, type Tour, type TourStep } from '../lib/onboarding';
-import './Onboarding.css';
+import { cx } from '@/shared/lib';
+import styles from './Onboarding.module.css';
 
 /**
  * Подсказки знакомства: сами — при первом входе в раздел (сначала общее знакомство с сайтом), потом — из меню «?»
@@ -192,13 +193,13 @@ function TourView({ tour, onClose }: { tour: Tour; onClose: (off: boolean) => vo
   }
 
   return createPortal(
-    <div className={`tour${ready ? '' : ' tour-wait'}`}>
+    <div className={cx(styles.tour, !ready && styles.tourWait)}>
       <div
-        className={`tour-spot${box ? '' : ' tour-spot-none'}`}
+        className={cx(styles.tourSpot, !box && styles.tourSpotNone)}
         style={box ? { top: box.top, left: box.left, width: box.width, height: box.height } : undefined}
       />
-      <div ref={pop} className="tour-pop" style={style} role="dialog" aria-label={step.title}>
-        <div className="tour-head">
+      <div ref={pop} className={styles.tourPop} style={style} role="dialog" aria-label={step.title}>
+        <div className={styles.tourHead}>
           <b className="grow">{step.title}</b>
           {tour.steps.length > 1 && (
             <span className="faint small">
@@ -209,16 +210,16 @@ function TourView({ tour, onClose }: { tour: Tour; onClose: (off: boolean) => vo
             <X size={15} />
           </button>
         </div>
-        <p className="tour-body">{step.body}</p>
+        <p className={styles.tourBody}>{step.body}</p>
         {last && tour.guide && (
-          <p className="small tour-more">
+          <p className={cx('small', styles.tourMore)}>
             Подробнее — в гайде{' '}
             <Link to={`/reference?tab=guides&sub=site&g=${tour.guide}`} onClick={() => onClose(false)}>
               «О сайте»
             </Link>
           </p>
         )}
-        <div className="tour-foot">
+        <div className={styles.tourFoot}>
           <span className="grow" />
           {!last && (
             <button className="btn ghost sm" onClick={() => onClose(false)}>
@@ -234,7 +235,7 @@ function TourView({ tour, onClose }: { tour: Tour; onClose: (off: boolean) => vo
             {last ? 'Понятно' : 'Далее'}
           </button>
         </div>
-        <button className="tour-off small faint" onClick={() => onClose(true)}>
+        <button className={cx(styles.tourOff, 'small faint')} onClick={() => onClose(true)}>
           Больше не показывать подсказки
         </button>
       </div>
@@ -264,7 +265,7 @@ export function OnboardingMenu() {
   };
 
   return (
-    <div className="tour-menu-wrap" ref={ref}>
+    <div className={styles.tourMenuWrap} ref={ref}>
       <button
         className="btn ghost sm icon"
         data-tour="help"
@@ -275,7 +276,7 @@ export function OnboardingMenu() {
         <HelpCircle size={16} />
       </button>
       {open && (
-        <div className="tour-menu" role="menu">
+        <div className={styles.tourMenu} role="menu">
           {current && (
             <button role="menuitem" onClick={() => run(current)}>
               Подсказки раздела «{current.label}»
@@ -288,7 +289,7 @@ export function OnboardingMenu() {
             Гайды «О сайте»
           </Link>
           <hr />
-          <label className="tour-menu-check">
+          <label className={styles.tourMenuCheck}>
             <input type="checkbox" checked={!state.off} onChange={(e) => setOnboardingOff(!e.target.checked)} />
             Показывать подсказки в новых разделах
           </label>

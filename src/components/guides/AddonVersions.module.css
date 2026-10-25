@@ -1,10 +1,10 @@
-.addon-versions .power-h {
+.addonVersions :global(.power-h) {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.addon-versions-list {
+.addonVersionsList {
   list-style: none;
   margin: 8px 0;
   padding: 0;
@@ -13,91 +13,91 @@
   gap: 6px;
 }
 
-.addon-version {
+.addonVersion {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface);
   padding: 6px 8px;
 }
 
-.addon-version-head {
+.addonVersionHead {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.addon-version-num {
+.addonVersionNum {
   font-family: var(--font-mono);
 }
 
-.addon-version.withdrawn .addon-version-num {
+.addonVersion.withdrawn .addonVersionNum {
   text-decoration: line-through;
   color: var(--text-3);
 }
 
-.addon-version-body {
+.addonVersionBody {
   padding: 4px 4px 2px 30px;
 }
 
-.addon-version-body > :first-child {
+.addonVersionBody > :first-child {
   margin-top: 4px;
 }
 
-.addon-version-cmd {
+.addonVersionCmd {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 4px;
 }
 
-.addon-status-draft {
+.addonStatus[data-status='draft'] {
   color: var(--text-2);
 }
 
-.addon-status-released {
+.addonStatus[data-status='released'] {
   color: var(--accent);
 }
 
-.addon-status-withdrawn {
+.addonStatus[data-status='withdrawn'] {
   color: var(--danger);
 }
 
-.addon-status-latest {
+.addonStatusLatest {
   color: var(--diamond);
 }
 
-.addon-version-edit {
+.addonVersionEdit {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 8px 0 4px;
 }
 
-.addon-version-fields {
+.addonVersionFields {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
 }
 
-.addon-version-fields label,
-.addon-version-note {
+.addonVersionFields label,
+.addonVersionNote {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.addon-version-note input {
+.addonVersionNote input {
   width: 100%;
 }
 
-.addon-version-actions {
+.addonVersionActions {
   display: flex;
   gap: 8px;
 }
 
 @media (max-width: 600px) {
-  .addon-version-body {
+  .addonVersionBody {
     padding-left: 4px;
   }
 }

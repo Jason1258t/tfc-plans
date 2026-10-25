@@ -2,6 +2,7 @@ import { HelpCircle, X } from 'lucide-react';
 import { useDeferredValue, useRef, useState } from 'react';
 import { saveGuide, type GuideDraft } from '../../data/guides';
 import { readNick } from '@/shared/lib/nick';
+import { cx } from '@/shared/lib';
 import type { Guide, GuideChecked } from '@/entities/guide';
 import { ItemIcon, ItemPicker } from '@/shared/pack-data';
 import type { LiveMarkdownHandle } from '../LiveMarkdown';
@@ -10,6 +11,7 @@ import { GuideBody, type GuideKit } from './GuideBody';
 import { GuideHelp } from './GuideHelp';
 import { GuideEditingContext } from './guideLinks';
 import { CHECKED } from './guideMeta';
+import styles from './Guides.module.css';
 
 const NEW_BODY = `## Что понадобится
 
@@ -144,10 +146,10 @@ export function GuideEditor({
   };
 
   return (
-    <section className="guide-editor">
+    <section className={styles.guideEditor}>
       <header className="guide-list-head">
         <h2 className="power-h">{guide ? `Правка: ${guide.title}` : 'Новый гайд'}</h2>
-        <div className="guide-head-actions">
+        <div className={styles.guideHeadActions}>
           <button className="btn ghost small" onClick={() => setHelp(!help)}>
             <HelpCircle size={14} /> Справка
           </button>
@@ -164,15 +166,15 @@ export function GuideEditor({
         </div>
       </header>
       {restore && <div className="power-note small">Это версия из истории — сохраните, чтобы вернуть её.</div>}
-      {error && <div className="guide-errors small">{error}</div>}
+      {error && <div className={cx(styles.guideErrors, 'small')}>{error}</div>}
       {help && <GuideHelp kit={kit} onClose={() => setHelp(false)} />}
 
-      <div className="guide-fields">
-        <label className="guide-field guide-field-wide">
+      <div className={styles.guideFields}>
+        <label className={cx(styles.guideField, styles.guideFieldWide)}>
           <span className="faint small">Заголовок</span>
           <input className="input" value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} />
         </label>
-        <label className="guide-field guide-field-wide">
+        <label className={cx(styles.guideField, styles.guideFieldWide)}>
           <span className="faint small">Коротко — 1–3 предложения: в списке и плашкой наверху; можно {'{{…}}'}</span>
           <textarea
             className="input"
@@ -182,9 +184,9 @@ export function GuideEditor({
             onChange={(e) => setSummary(e.target.value)}
           />
         </label>
-        <div className="guide-field">
+        <div className={styles.guideField}>
           <span className="faint small">Значок</span>
-          <span className="guide-icon-field">
+          <span className={styles.guideIconField}>
             {icon ? (
               <>
                 <ItemIcon id={icon} size={24} />
@@ -197,7 +199,7 @@ export function GuideEditor({
             )}
           </span>
         </div>
-        <label className="guide-field">
+        <label className={styles.guideField}>
           <span className="faint small">Группа в списке</span>
           <input
             className="input"
@@ -212,16 +214,16 @@ export function GuideEditor({
             ))}
           </datalist>
         </label>
-        <label className="guide-field">
+        <label className={styles.guideField}>
           <span className="faint small">Порядок</span>
           <input
-            className="input guide-order"
+            className={cx('input', styles.guideOrder)}
             type="number"
             value={order}
             onChange={(e) => Number.isFinite(Number(e.target.value)) && setOrder(Number(e.target.value))}
           />
         </label>
-        <label className="guide-field">
+        <label className={styles.guideField}>
           <span className="faint small">Насколько проверено</span>
           <select className="input" value={checked} onChange={(e) => setChecked(e.target.value as GuideChecked)}>
             {Object.entries(CHECKED).map(([k, v]) => (
@@ -231,20 +233,21 @@ export function GuideEditor({
             ))}
           </select>
         </label>
-        <label className="guide-field guide-check">
+        <label className={cx(styles.guideField, styles.guideCheck)}>
           <input type="checkbox" checked={hidden} onChange={(e) => setHidden(e.target.checked)} />
           <span className="small">снят с публикации</span>
         </label>
       </div>
 
-      <div className="guide-split">
-        <div className="guide-source">
-          <div className="guide-source-bar">
+      <div className={styles.guideSplit}>
+        <div className={styles.guideSource}>
+          <div className={styles.guideSourceBar}>
             <span className="faint small">Текст (Markdown)</span>
             <ItemPicker small dropUp={false} onPick={(it) => insert(`[[${it.i}]]`)} placeholder="Вставить предмет…" />
           </div>
           <MarkdownField
             ref={area}
+            wrapperClassName={styles.guideMdField}
             rows={30}
             maxRows={60}
             value={body}
@@ -253,12 +256,12 @@ export function GuideEditor({
           />
         </div>
         <GuideEditingContext.Provider value>
-          <div className="guide-preview">
+          <div className={styles.guidePreview}>
             <span className="faint small">Предпросмотр — калькуляторы работают</span>
-            <article className="ref-card power-article guide-article">
+            <article className={cx('ref-card power-article', styles.guideArticle)}>
               <h2 className="power-h">{title || 'Без заголовка'}</h2>
               {previewSummary && (
-                <div className="power-note guide-summary">
+                <div className={cx('power-note', styles.guideSummary)}>
                   <GuideBody source={`**Коротко.** ${previewSummary}`} kit={kit} onGuide={onGuide} />
                 </div>
               )}

@@ -1,4 +1,6 @@
 import { Component, type ReactNode } from 'react';
+import { cx } from '@/shared/lib';
+import styles from './Guides.module.css';
 
 /** Сломанный калькулятор или виджет не роняет статью: ошибка — на его месте */
 export class BlockBoundary extends Component<
@@ -18,6 +20,6 @@ export class BlockBoundary extends Component<
 
   render() {
     if (!this.state.error) return this.props.children;
-    return <div className="guide-errors small">⚠ Блок не показан: {this.state.error.message}</div>;
+    return <div className={cx(styles.guideErrors, 'small')}>⚠ Блок не показан: {this.state.error.message}</div>;
   }
 }

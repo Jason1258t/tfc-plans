@@ -24,7 +24,8 @@ import { MarkdownField } from '../MarkdownField';
 import { Modal } from '@/shared/ui';
 import { CHECKED } from './guideMeta';
 import { CheckedBadge } from './GuidesSection';
-import './AddonVersions.css';
+import guideStyles from './Guides.module.css';
+import styles from './AddonVersions.module.css';
 
 /** Сколько последних версий развёрнуто сразу */
 const OPEN = 3;
@@ -51,12 +52,12 @@ export default function AddonVersions({ addon }: { addon: Addon }) {
   const latest = list ? latestReleased(list) : null;
   const shown = list && !all ? list.slice(0, OPEN) : list;
   return (
-    <section className="ref-card addon-versions">
+    <section className={cx('ref-card', styles.addonVersions)}>
       <h2 className="power-h">
         <Tag size={18} /> Версии
       </h2>
       {error ? (
-        <div className="guide-errors small">Не удалось загрузить версии: {error}</div>
+        <div className={cx(guideStyles.guideErrors, 'small')}>Не удалось загрузить версии: {error}</div>
       ) : !list ? (
         <div className="empty">Загружаю версии…</div>
       ) : !list.length ? (
@@ -68,7 +69,7 @@ export default function AddonVersions({ addon }: { addon: Addon }) {
             <code>tfc pull addons {addon.id}@&lt;версия&gt;</code> — программа запомнит её и не обновит сама; вернуть
             последнюю — <code>tfc pull addons {addon.id}@latest</code>. Ченджлог и «что проверено» правят все игроки.
           </p>
-          <ul className="addon-versions-list">
+          <ul className={styles.addonVersionsList}>
             {shown!.map((v) => (
               <VersionRow key={v.id} addon={addon} v={v} latest={latest?.id === v.id} />
             ))}
@@ -86,7 +87,7 @@ export default function AddonVersions({ addon }: { addon: Addon }) {
 
 function StatusBadge({ s }: { s: AddonVersionStatus }) {
   return (
-    <span className={cx('guide-badge', `addon-status-${s}`)} title={STATUS_TITLE[s]}>
+    <span className={cx(guideStyles.guideBadge, styles.addonStatus)} data-status={s} title={STATUS_TITLE[s]}>
       {STATUS_LABEL[s]}
     </span>
   );
@@ -116,8 +117,8 @@ function VersionRow({ addon, v, latest }: { addon: Addon; v: AddonVersion; lates
   };
 
   return (
-    <li className={cx('addon-version', v.status === 'withdrawn' && 'withdrawn')}>
-      <div className="addon-version-head">
+    <li className={cx(styles.addonVersion, v.status === 'withdrawn' && styles.withdrawn)}>
+      <div className={styles.addonVersionHead}>
         <button
           className="btn ghost small icon"
           onClick={() => setOpen(!open)}
@@ -125,10 +126,10 @@ function VersionRow({ addon, v, latest }: { addon: Addon; v: AddonVersion; lates
         >
           {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </button>
-        <b className="addon-version-num">{v.version}</b>
+        <b className={styles.addonVersionNum}>{v.version}</b>
         <span className="faint small">{dateRu(v.date)}</span>
         <StatusBadge s={v.status} />
-        {latest && <span className="guide-badge addon-status-latest">последняя</span>}
+        {latest && <span className={cx(guideStyles.guideBadge, styles.addonStatusLatest)}>последняя</span>}
         <CheckedBadge c={v.checked} />
         <span className="grow" />
         {v.jar && <span className="faint small">{kb(v.jar.size)}</span>}
@@ -140,7 +141,7 @@ function VersionRow({ addon, v, latest }: { addon: Addon; v: AddonVersion; lates
         </button>
       </div>
       {open && !editing && (
-        <div className="addon-version-body">
+        <div className={styles.addonVersionBody}>
           {v.changelog.trim() ? (
             <Markdown source={v.changelog} />
           ) : (
@@ -148,7 +149,7 @@ function VersionRow({ addon, v, latest }: { addon: Addon; v: AddonVersion; lates
           )}
           {v.checkedNote && <p className="faint small">Проверка: {v.checkedNote}</p>}
           {v.jar ? (
-            <p className="faint small addon-version-cmd">
+            <p className={cx('faint small', styles.addonVersionCmd)}>
               <code>{cmd}</code>
               <button
                 className="btn ghost small icon"
@@ -212,8 +213,8 @@ function VersionEditor({ v, edit, onClose }: { v: AddonVersion; edit: AddonVersi
     }
   };
   return (
-    <div className="addon-version-edit">
-      <div className="addon-version-fields">
+    <div className={styles.addonVersionEdit}>
+      <div className={styles.addonVersionFields}>
         <label>
           <span className="small">Дата</span>
           <input type="date" value={d.date} onChange={(e) => set('date', e.target.value)} />
@@ -239,7 +240,7 @@ function VersionEditor({ v, edit, onClose }: { v: AddonVersion; edit: AddonVersi
           </select>
         </label>
       </div>
-      <label className="addon-version-note">
+      <label className={styles.addonVersionNote}>
         <span className="small">Как проверяли, что не проверено</span>
         <input value={d.checkedNote} maxLength={2000} onChange={(e) => set('checkedNote', e.target.value)} />
       </label>
@@ -251,13 +252,13 @@ function VersionEditor({ v, edit, onClose }: { v: AddonVersion; edit: AddonVersi
         placeholder={'- Новый блок …\n- Исправлено …\n- Важно: …'}
       />
       {d.status === 'withdrawn' && v.status !== 'withdrawn' && (
-        <p className="small guide-errors">
+        <p className={cx('small', guideStyles.guideErrors)}>
           Отозванную версию tfc pull не ставит, а у кого она стоит — откатит на прошлую выпущенную. Напишите в
           ченджлоге, что сломано.
         </p>
       )}
-      {error && <div className="guide-errors small">Не сохранилось: {error}</div>}
-      <div className="addon-version-actions">
+      {error && <div className={cx(guideStyles.guideErrors, 'small')}>Не сохранилось: {error}</div>}
+      <div className={styles.addonVersionActions}>
         <button className="btn small" disabled={busy || d.changelog.length > 20000} onClick={save}>
           {busy ? 'Сохраняю…' : 'Сохранить'}
         </button>
@@ -290,17 +291,20 @@ function VersionHistory({
   return (
     <Modal title={`История: ${v.addon} ${v.version}`} onClose={onClose} wide>
       {error ? (
-        <div className="guide-errors small">{error}</div>
+        <div className={cx(guideStyles.guideErrors, 'small')}>{error}</div>
       ) : !list ? (
         <div className="empty">Загружаю…</div>
       ) : !list.length ? (
         <div className="empty">Правок с сайта ещё не было</div>
       ) : (
-        <div className="guide-history">
-          <ul className="guide-history-list">
+        <div className={guideStyles.guideHistory}>
+          <ul className={guideStyles.guideHistoryList}>
             {list.map((x, i) => (
               <li key={x.id}>
-                <button className={cx('guide-history-item', i === pick && 'active')} onClick={() => setPick(i)}>
+                <button
+                  className={cx(guideStyles.guideHistoryItem, i === pick && guideStyles.active)}
+                  onClick={() => setPick(i)}
+                >
                   <b>{new Date(x.at).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}</b>
                   <span className="faint small">
                     {x.updatedBy}
@@ -311,7 +315,7 @@ function VersionHistory({
             ))}
           </ul>
           {r && (
-            <div className="guide-history-view">
+            <div className={guideStyles.guideHistoryView}>
               {pick > 0 && (
                 <button className="btn small" onClick={() => onRestore(r)}>
                   Вернуть эту версию…

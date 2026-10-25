@@ -4,6 +4,7 @@ import { cx } from '@/shared/lib';
 import type { Guide, GuideRevision } from '@/entities/guide';
 import { Modal } from '@/shared/ui';
 import { GuideBody, type GuideKit } from './GuideBody';
+import styles from './Guides.module.css';
 
 /** Прошлые версии гайда: посмотреть и вернуть (через редактор — возврат тоже становится версией) */
 export function GuideHistory({
@@ -29,17 +30,17 @@ export function GuideHistory({
   return (
     <Modal title={`История: ${guide.title}`} onClose={onClose} wide>
       {error ? (
-        <div className="guide-errors small">{error}</div>
+        <div className={cx(styles.guideErrors, 'small')}>{error}</div>
       ) : !list ? (
         <div className="empty">Загружаю…</div>
       ) : !list.length ? (
         <div className="empty">Версий нет — статья сохранена до того, как появилась история</div>
       ) : (
-        <div className="guide-history">
-          <ul className="guide-history-list">
+        <div className={styles.guideHistory}>
+          <ul className={styles.guideHistoryList}>
             {list.map((x, i) => (
               <li key={x.id}>
-                <button className={cx('guide-history-item', i === pick && 'active')} onClick={() => setPick(i)}>
+                <button className={cx(styles.guideHistoryItem, i === pick && styles.active)} onClick={() => setPick(i)}>
                   <b>{new Date(x.at).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}</b>
                   <span className="faint small">
                     {x.updatedBy}
@@ -50,13 +51,13 @@ export function GuideHistory({
             ))}
           </ul>
           {r && (
-            <div className="guide-history-view">
+            <div className={styles.guideHistoryView}>
               {pick > 0 && (
                 <button className="btn small" onClick={() => onRestore(r)}>
                   Вернуть эту версию…
                 </button>
               )}
-              <article className="power-article guide-article">
+              <article className={cx('power-article', styles.guideArticle)}>
                 <h2 className="power-h">{r.title}</h2>
                 {r.summary && (
                   <div className="power-note">

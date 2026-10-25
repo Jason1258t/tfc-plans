@@ -6,7 +6,8 @@ import { createRoot } from 'react-dom/client';
 import { guiIcon, itemName, loadItems, type ItemIndex } from '@/shared/pack-data';
 import { imageSrc, UPLOADING_SCHEME } from '../lib/planImages';
 import { isImage } from '../lib/uploads';
-import './LiveMarkdown.css';
+import { cx } from '@/shared/lib';
+import styles from './LiveMarkdown.module.css';
 import { Markdown } from './Markdown';
 
 /**
@@ -90,7 +91,7 @@ const options: LiveMarkdownOptions = {
 };
 
 export const LiveMarkdown = forwardRef<LiveMarkdownHandle, Props>(function LiveMarkdown(props, ref) {
-  return <Editor ref={ref} {...props} lang="ru" options={options} />;
+  return <Editor ref={ref} {...props} className={cx(styles.editor, props.className)} lang="ru" options={options} />;
 });
 
 export default LiveMarkdown;
