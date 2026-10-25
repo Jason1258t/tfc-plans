@@ -6,4 +6,3 @@ export { Textarea } from './Textarea';
 export { Modal } from './Modal';
 export { Search } from './Search';
 export { TooltipLayer, tooltipHandlers } from './Tooltip';
-export { PackNav, PackSection } from './PackNav';

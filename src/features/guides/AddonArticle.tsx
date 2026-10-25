@@ -1,13 +1,13 @@
 import { BookOpen, History, Pencil, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { guidesEnabled, subscribeGuide } from '../../data/guides';
-import { ADDONS, ADDON_GUIDE_SECTION, addonGuideId, type Addon } from '../../lib/addons';
-import { BASE_DOCS, BASE_VALUES } from '../../lib/guideScope';
+import { guidesEnabled, subscribeGuide } from '@/data/guides';
+import { ADDONS, ADDON_GUIDE_SECTION, addonGuideId, type Addon } from '@/lib/addons';
+import { BASE_DOCS, BASE_VALUES } from '@/lib/guideScope';
 import { readNick } from '@/shared/lib/nick';
 import { cx } from '@/shared/lib';
 import type { Guide } from '@/entities/guide';
-import { AddonBlockCard } from '../AddonsTab';
+import { AddonBlockCard } from '@/features/reference-tabs';
 import { CalcErrors } from './CalcBlock';
 import { GuideBody, type GuideKit } from './GuideBody';
 import { GuideEditor } from './GuideEditor';

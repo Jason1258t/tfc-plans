@@ -1,5 +1,5 @@
 import { useSearchParams } from 'react-router-dom';
-import { AddonsTab } from '@/components/AddonsTab';
+import { AddonsTab } from '@/features/reference-tabs';
 import '@/pages/reference/ReferenceShared.css';
 import shell from '@/pages/reference/ReferenceShell.module.css';
 

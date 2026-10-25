@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArtifactPane } from '../components/ArtifactPane';
+import { ArtifactPane } from '@/widgets/agent-panel';
 import { useArtifacts } from '@/entities/artifact';
 
 /** Документ на всю страницу */

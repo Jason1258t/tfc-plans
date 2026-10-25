@@ -10,13 +10,13 @@ import {
   type Addon,
   type AddonBlock,
   type AddonsSub,
-} from '../lib/addons';
+} from '@/lib/addons';
 import { itemName, useItems, ItemIcon } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
 // Стили справочника временно берём из его будущей общей папки — AddonsTab переедет в entities/addon
-import '@/pages/reference/tabs/PowerShared.css';
+import './PowerShared.css';
 
-const AddonsGuidesSection = lazy(() => import('./guides/AddonsGuidesSection'));
+const AddonsGuidesSection = lazy(() => import('@/features/guides/AddonsGuidesSection'));
 
 /** Страница «Аддоны»: свои моды группы и гайды «как написать свой» */
 export function AddonsTab({

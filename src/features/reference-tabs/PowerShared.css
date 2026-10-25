@@ -1,6 +1,6 @@
 /* Электричество: классы, которые используют не только вкладка «Электричество»,
-   но и гайды (components/guides: CalcBlock, powerWidgets, GuidesSection, GuideEditor, GuideHistory, AddonArticle),
-   карточки аддонов (components/AddonsTab) и загрузки IE (components/PowerIeLoads).
+   но и гайды (features/guides: CalcBlock, powerWidgets, GuidesSection, GuideEditor, GuideHistory, AddonArticle),
+   карточки аддонов и загрузки IE (features/reference-tabs).
    Держим обычным CSS, пока те компоненты не переехали на модули: в модуле имена станут хэшами
    и их className="power-note" перестанут находить правила. */
 

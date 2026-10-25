@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
-import { PUMP_IMPACT_KEY, useSettings, type PowerData, type Setting } from '../../lib/power';
-import { powerScope } from '../../lib/powerGuideScope';
-import { IeLoadPicker } from '../PowerIeLoads';
+import { PUMP_IMPACT_KEY, useSettings, type PowerData, type Setting } from '@/lib/power';
+import { powerScope } from '@/lib/powerGuideScope';
+import { IeLoadPicker } from '@/features/reference-tabs';
 import type { GuideKit } from './GuideBody';
 import { GuidesSection } from './GuidesSection';
 import { POWER_WIDGETS } from './powerWidgets';

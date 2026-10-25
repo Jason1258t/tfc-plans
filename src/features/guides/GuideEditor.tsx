@@ -1,12 +1,12 @@
 import { HelpCircle, X } from 'lucide-react';
 import { useDeferredValue, useRef, useState } from 'react';
-import { saveGuide, type GuideDraft } from '../../data/guides';
+import { saveGuide, type GuideDraft } from '@/data/guides';
 import { readNick } from '@/shared/lib/nick';
 import { cx } from '@/shared/lib';
 import type { Guide, GuideChecked } from '@/entities/guide';
 import { ItemIcon, ItemPicker } from '@/shared/pack-data';
-import type { LiveMarkdownHandle } from '../LiveMarkdown';
-import { MarkdownField } from '../MarkdownField';
+import type { LiveMarkdownHandle } from '@/components/LiveMarkdown';
+import { MarkdownField } from '@/components/MarkdownField';
 import { GuideBody, type GuideKit } from './GuideBody';
 import { GuideHelp } from './GuideHelp';
 import { GuideEditingContext } from './guideLinks';

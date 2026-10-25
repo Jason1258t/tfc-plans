@@ -16,9 +16,9 @@ import {
 } from '@/lib/power';
 import { cx } from '@/shared/lib';
 import { ItemIcon } from '@/shared/pack-data';
-import { IeConsumers } from '@/components/PowerIeLoads';
+import { IeConsumers } from '@/features/reference-tabs';
 import '../ReferenceShared.css';
-import './PowerShared.css';
+import '@/features/reference-tabs/PowerShared.css';
 import styles from './PowerTab.module.css';
 
 /**
