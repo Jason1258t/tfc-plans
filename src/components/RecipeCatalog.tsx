@@ -16,8 +16,7 @@ import {
 import { cx } from '@/shared/lib';
 import { Modal, Search } from '@/shared/ui';
 import { track, useSearchTrack } from '@/shared/api';
-import './KubejsConstructor.css';
-import './RecipeCatalog.css';
+import styles from './RecipeCatalog.module.css';
 
 const PAGE = 150;
 
@@ -34,7 +33,11 @@ interface BrowserProps {
   initial?: { query?: string; type?: string; itemId?: string; usage?: boolean };
 }
 
-/** Значки: удалён / изменён / добавлен KubeJS, из kubejs/data */
+/**
+ * Значки: удалён / изменён / добавлен KubeJS, из kubejs/data.
+ * Имена классов глобальные (стили — в RecipeCatalog.module.css через :global): тот же значок
+ * ставит справочник, ReferencePage.tsx — таблица металлов.
+ */
 function StatusBadges({ r }: { r: Recipe }) {
   return (
     <>
@@ -89,9 +92,9 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
   const resetPage = () => setLimit(PAGE);
 
   return (
-    <div className="cat-browser">
-      <div className="cat-filters">
-        <Search className="cat-search">
+    <div className={styles.catBrowser}>
+      <div className={styles.catFilters}>
+        <Search className={styles.catSearch}>
           <SearchIcon size={15} className="faint" />
           <input
             autoFocus={autoFocus}
@@ -129,7 +132,7 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
             ))}
         </select>
       </div>
-      <div className="cat-item-filter">
+      <div>
         {itemId ? (
           <div className="row">
             <span className="seg">
@@ -140,7 +143,7 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
                 Где используется
               </button>
             </span>
-            <span className="cat-item-chip">
+            <span className={styles.catItemChip}>
               <ItemIcon id={itemId} size={18} />
               {itemName(items?.byId.get(itemId), itemId)}
               <button className="btn ghost sm icon" onClick={() => setItemId(null)} aria-label="Сбросить предмет">
@@ -171,14 +174,14 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
       ) : (
         <>
           <div className="faint small">Найдено: {results.length.toLocaleString('ru-RU')}</div>
-          <ul className={cx('cat-list', scroll && 'scroll')}>
+          <ul className={cx(styles.catList, scroll && styles.scroll)}>
             {results.slice(0, limit).map((r) => {
               const first = r.outputs.find((o) => !o.startsWith('#'));
               const expanded = open === r.i;
               const hitRules = [...r.kjsRemoved, ...r.kjsMaybe, ...r.kjsChanged].map((n) => rules[n]);
               return (
-                <li key={r.i} className={cx('cat-row', (r.removed || r.kjsRemoved.length > 0) && 'removed')}>
-                  <div className="cat-main">
+                <li key={r.i} className={cx(styles.catRow, (r.removed || r.kjsRemoved.length > 0) && styles.removed)}>
+                  <div className={styles.catMain}>
                     <button
                       className="btn ghost sm icon"
                       onClick={() => setOpen(expanded ? null : r.i)}
@@ -186,7 +189,7 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
                     >
                       {expanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
                     </button>
-                    <span className="cat-icons">
+                    <span className={styles.catIcons}>
                       {r.outputs
                         .filter((o) => !o.startsWith('#'))
                         .slice(0, 3)
@@ -194,18 +197,18 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
                           <ItemIcon key={o} id={o} size={22} />
                         ))}
                     </span>
-                    <span className="grow cat-names">
-                      <span className="cat-title">
+                    <span className={cx('grow', styles.catNames)}>
+                      <span className={styles.catTitle}>
                         {r.removed ? 'удалён в сборке' : first ? itemName(items?.byId.get(first), first) : r.i}
                       </span>
-                      <code className="cat-id">{r.i}</code>
+                      <code className={styles.catId}>{r.i}</code>
                     </span>
                     <StatusBadges r={r} />
                     {r.t && <span className="tag">{r.t}</span>}
-                    <span className="faint small cat-src" title={r.s}>
+                    <span className={cx('faint', 'small', styles.catSrc)} title={r.s}>
                       {r.s.split(/[-_](?=\d)/)[0]}
                     </span>
-                    <span className="cat-actions">
+                    <span className={styles.catActions}>
                       {onConstructor && r.kjsRemoved.length > 0 && (
                         <button
                           className="btn sm"
@@ -219,10 +222,10 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
                     </span>
                   </div>
                   {expanded && (
-                    <div className="cat-detail">
+                    <div className={styles.catDetail}>
                       <code className="faint small">{recipePath(r.i)}</code>
                       {r.k && (
-                        <div className="cat-kjs small">
+                        <div className={cx(styles.catKjs, 'small')}>
                           Добавлен скриптом:{' '}
                           <code>
                             {r.k.file}:{r.k.line}
@@ -231,7 +234,7 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
                         </div>
                       )}
                       {hitRules.map((rule, n) => (
-                        <div key={n} className="cat-kjs small">
+                        <div key={n} className={cx(styles.catKjs, 'small')}>
                           {rule.kind === 'remove'
                             ? 'Удаляет'
                             : rule.kind === 'replaceInput'
@@ -250,14 +253,14 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
                           )}
                         </div>
                       ))}
-                      <pre className="cat-json">{JSON.stringify(r.j, null, 2)}</pre>
+                      <pre className={styles.catJson}>{JSON.stringify(r.j, null, 2)}</pre>
                     </div>
                   )}
                 </li>
               );
             })}
             {results.length > limit && (
-              <li className="cat-more">
+              <li className={styles.catMore}>
                 <button className="btn sm" onClick={() => setLimit((l) => l + PAGE)}>
                   Показать ещё {Math.min(PAGE, results.length - limit)} из {results.length - limit}
                 </button>

@@ -1,0 +1,179 @@
+/* Каталог рецептов сборки (страница «Рецепты» и модалка в редакторе датапаков).
+   Свои классы локальные: .cat-row → styles.catRow. Классы темы (.input, .tag, .btn, .empty, .row, .grow,
+   .faint, .small) остаются глобальными — их ставит тема, поэтому внутри модуля они через :global(...). */
+
+.catFilters {
+  display: flex;
+  gap: 8px;
+}
+
+.catFilters .catSearch {
+  flex: 1;
+  height: 36px;
+}
+
+.catFilters select:global(.input) {
+  width: auto;
+  max-width: 240px;
+}
+
+.catItemChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 2px 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: var(--surface-2);
+}
+
+.catBrowser {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.catList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.catList.scroll {
+  max-height: 58vh;
+  overflow-y: auto;
+}
+
+.catKjs {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+.catRow + .catRow {
+  border-top: 1px solid var(--border);
+}
+
+.catRow.removed {
+  opacity: 0.55;
+}
+
+.catMain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px 5px 4px;
+  min-height: 44px;
+}
+
+.catIcons {
+  display: inline-flex;
+  gap: 2px;
+  min-width: 22px;
+}
+
+.catNames {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.catTitle {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catId {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catSrc {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catActions {
+  display: inline-flex;
+  gap: 4px;
+  flex: none;
+}
+
+.catDetail {
+  padding: 0 12px 10px 40px;
+}
+
+.catJson {
+  margin: 6px 0 0;
+  max-height: 260px;
+  overflow: auto;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.catMore {
+  padding: 8px 12px;
+}
+
+@media (max-width: 720px) {
+  .catFilters {
+    flex-direction: column;
+  }
+  .catFilters select:global(.input) {
+    max-width: none;
+  }
+  .catMain {
+    flex-wrap: wrap;
+  }
+  .catSrc,
+  .catMain :global(.tag) {
+    display: none;
+  }
+  .catActions {
+    flex-wrap: wrap;
+  }
+}
+
+/* ---------------------------------------------------------------- значки статуса в каталоге */
+
+/* Глобальные намеренно: имя ставят два места — каталог рецептов (RecipeCatalog.tsx) и справочник
+   (ReferencePage.tsx, таблица металлов: kubejs/data). Справочник в эту ветку не входит, его классы
+   хэшировать нельзя, поэтому имена остаются глобальными; в переводе справочника уедут в его модуль. */
+
+:global(.kjs-badge) {
+  flex: none;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+:global(.kjs-badge.removed) {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+
+:global(.kjs-badge.changed) {
+  color: var(--imp-2);
+  border-color: color-mix(in srgb, var(--imp-2) 45%, var(--border));
+}
+
+:global(.kjs-badge.added) {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
