@@ -1,6 +1,7 @@
 import { ChevronDown, RotateCcw, Search, Sparkles, Star, Wand2 } from 'lucide-react';
 import type { ReplaceFavorite } from '@/entities/schematic';
 import { cx } from '@/shared/lib';
+import { Button } from '@/shared/ui';
 import type { SmartResult } from '../model/schematicFormat';
 import type { ToolPanel } from '../model/schematicPrefs';
 import section from '../SchematicsSection.module.css';
@@ -48,8 +49,9 @@ export function SchematicsToolbar({
   return (
     <div className={styles.toolbar}>
       <span className={styles.toolSplit}>
-        <button
-          className={cx('btn sm', panel === 'smart' && styles.active)}
+        <Button
+          size="sm"
+          className={cx(panel === 'smart' && styles.active)}
           onClick={() => onTogglePanel('smart')}
           aria-expanded={panel === 'smart'}
           title="Правила замены и агент Gemini"
@@ -57,9 +59,11 @@ export function SchematicsToolbar({
           <Wand2 size={14} className={styles.aiIco} />
           Умная замена
           <ChevronDown size={13} className={cx(styles.chev, panel === 'smart' && styles.open)} />
-        </button>
-        <button
-          className={cx('btn sm primary', useAgent && styles.agentRun)}
+        </Button>
+        <Button
+          variant="primary"
+          size="sm"
+          className={cx(useAgent && styles.agentRun)}
           onClick={onRunSmart}
           disabled={!canApply || !!progress}
           title={
@@ -70,18 +74,19 @@ export function SchematicsToolbar({
         >
           {useAgent ? <Sparkles size={14} /> : <Wand2 size={14} />}
           {progress ? `Агент думает… ${progress[0]}/${progress[1]}` : 'Применить'}
-        </button>
+        </Button>
       </span>
       {result && panel !== 'smart' && (
-        <button className="btn ghost sm" onClick={() => onTogglePanel('smart')} title="Показать подробности">
+        <Button variant="ghost" size="sm" onClick={() => onTogglePanel('smart')} title="Показать подробности">
           заменено {result.applied.size}
           {result.failed.length > 0 && <span className={styles.badCount}>· не удалось {result.failed.length}</span>}
-        </button>
+        </Button>
       )}
       {favorites && (
         <span className={styles.toolSplit}>
-          <button
-            className={cx('btn sm', panel === 'favs' && styles.active)}
+          <Button
+            size="sm"
+            className={cx(panel === 'favs' && styles.active)}
             onClick={() => onTogglePanel('favs')}
             aria-expanded={panel === 'favs'}
             title="Избранные замены — общие для всех схем"
@@ -90,15 +95,15 @@ export function SchematicsToolbar({
             Избранное
             <span className="faint">{favorites.length}</span>
             <ChevronDown size={13} className={cx(styles.chev, panel === 'favs' && styles.open)} />
-          </button>
-          <button
-            className="btn sm"
+          </Button>
+          <Button
+            size="sm"
             disabled={favPlanCount === 0}
             onClick={onOpenApplyFavs}
             title="Подставить избранные замены в блоки загруженных схем, где замены ещё нет"
           >
             Подставить{favPlanCount > 0 && ` (${favPlanCount})`}
-          </button>
+          </Button>
         </span>
       )}
       <label className={cx(section.search, section.searchTight)}>
@@ -109,10 +114,10 @@ export function SchematicsToolbar({
         Заменено {replacedTypes} из {blocksCount}
       </span>
       {replaceCount > 0 && (
-        <button className="btn ghost sm" onClick={onReset}>
+        <Button variant="ghost" size="sm" onClick={onReset}>
           <RotateCcw size={14} />
           Сбросить все
-        </button>
+        </Button>
       )}
     </div>
   );

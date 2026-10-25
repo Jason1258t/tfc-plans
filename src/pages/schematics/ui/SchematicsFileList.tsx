@@ -3,6 +3,7 @@ import { ItemIcon, ItemPicker, itemName, type ItemIndex } from '@/shared/pack-da
 import { changesIn, shapedSize, type Schematic } from '@/lib/schematic';
 import { filesEnabled, formatSize } from '@/entities/file';
 import { cx } from '@/shared/lib';
+import { Button } from '@/shared/ui';
 import { clampPad, outName, replaceSig, shapeSummary } from '../model/schematicFormat';
 import section from '../SchematicsSection.module.css';
 import styles from '../SchematicsPage.module.css';
@@ -64,12 +65,13 @@ export function SchematicsFileList({
                 {s.rev !== (s.savedRev ?? 0) && ' · правки по слоям'}
               </span>
             </span>
-            <button className="btn ghost sm icon" onClick={() => onRemove(s.key)} aria-label={`Убрать ${s.fileName}`}>
+            <Button variant="ghost" size="sm" icon onClick={() => onRemove(s.key)} aria-label={`Убрать ${s.fileName}`}>
               <X size={15} />
-            </button>
+            </Button>
             <div className={section.fileTools}>
-              <button
-                className={cx('btn sm', shapeOpen.has(s.key) && styles.active)}
+              <Button
+                size="sm"
+                className={cx(shapeOpen.has(s.key) && styles.active)}
                 onClick={() => onToggleShape(s.key)}
                 aria-expanded={shapeOpen.has(s.key)}
                 title="Обрезка краёв, отступы, площадка под схемой, очистка пространства"
@@ -78,27 +80,27 @@ export function SchematicsFileList({
                 Форма
                 {shapeSummary(s.shape) && <span className="faint">: {shapeSummary(s.shape)}</span>}
                 <ChevronDown size={13} className={cx(styles.chev, shapeOpen.has(s.key) && styles.open)} />
-              </button>
-              <button
-                className="btn sm"
+              </Button>
+              <Button
+                size="sm"
                 onClick={() => onOpenLayers(s.key)}
                 title="Схема в 3D; там же — вид сверху по слоям: посмотреть блоки, убрать или заменить отдельные"
               >
                 <Box size={14} />
                 3D
-              </button>
-              <button
-                className="btn sm"
+              </Button>
+              <Button
+                size="sm"
                 onClick={() => onDownload(s)}
                 disabled={!items}
                 title={`Скачать как ${outName(s.fileName)}`}
               >
                 <Download size={14} />
                 Скачать
-              </button>
+              </Button>
               {filesEnabled && (
-                <button
-                  className="btn sm"
+                <Button
+                  size="sm"
                   onClick={() => onSave(s)}
                   disabled={saving[s.key] === 'saving'}
                   title={
@@ -113,7 +115,7 @@ export function SchematicsFileList({
                     <BookmarkPlus size={14} />
                   )}
                   {saving[s.key] === 'saving' ? 'Сохраняю…' : s.libraryId ? 'Обновить в библиотеке' : 'В библиотеку'}
-                </button>
+                </Button>
               )}
               {saving[s.key] && saving[s.key] !== 'saving' && (
                 <span className={cx(styles.saveError, 'small')}>{saving[s.key]}</span>
@@ -190,15 +192,15 @@ export function SchematicsFileList({
                             onPickPlatform(null);
                           }}
                         />
-                        <button className="btn ghost sm icon" onClick={() => onPickPlatform(null)} aria-label="Отмена">
+                        <Button variant="ghost" size="sm" icon onClick={() => onPickPlatform(null)} aria-label="Отмена">
                           <X size={15} />
-                        </button>
+                        </Button>
                       </span>
                     ) : (
-                      <button className="btn sm" onClick={() => onPickPlatform(s.key)} title={s.shape.platformBlock}>
+                      <Button size="sm" onClick={() => onPickPlatform(s.key)} title={s.shape.platformBlock}>
                         <ItemIcon id={s.shape.platformBlock} size={18} tip={false} />
                         {itemName(items?.byId.get(s.shape.platformBlock), s.shape.platformBlock)}
-                      </button>
+                      </Button>
                     )}
                     <label
                       className={cx('toggle', section.smToggle)}

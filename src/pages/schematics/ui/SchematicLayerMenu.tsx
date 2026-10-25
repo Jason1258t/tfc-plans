@@ -2,6 +2,7 @@ import { SquareDashedMousePointer, Trash2, X } from 'lucide-react';
 import { ItemIcon, ItemPicker } from '@/shared/pack-data';
 import type { CellInfo } from '@/lib/schematicEdit';
 import { cx } from '@/shared/lib';
+import { Button } from '@/shared/ui';
 import styles from './SchematicLayers.module.css';
 
 export type Scope = 'cell' | 'layer' | 'all';
@@ -57,9 +58,9 @@ export function SchematicLayerMenu({
           <span>{label(effective(info.name))}</span>
           <code>{effective(info.name)}</code>
         </span>
-        <button className="btn ghost sm icon" onClick={onClose} aria-label="Закрыть окно">
+        <Button variant="ghost" size="sm" icon onClick={onClose} aria-label="Закрыть окно">
           <X size={15} />
-        </button>
+        </Button>
       </div>
       <div className="faint small">
         x {info.pos[0]}, y {info.pos[1]}, z {info.pos[2]}
@@ -77,27 +78,28 @@ export function SchematicLayerMenu({
       </div>
       <ItemPicker small blocksOnly autoFocus placeholder="Заменить на…" onPick={(it) => onPick(it.i)} />
       <div className={cx('row', styles.menuSelect)}>
-        <button className="btn ghost sm" onClick={onToggleSelect}>
+        <Button variant="ghost" size="sm" onClick={onToggleSelect}>
           <SquareDashedMousePointer size={14} />
           {menuSelected ? 'Снять выделение' : 'Выделить'}
-        </button>
-        <button
-          className="btn ghost sm"
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={onSelectGroup}
           title="Соединённые блоки этого вида на слое — добавить к выделению"
         >
           Выделить группу <span className="faint">({menuGroupLength})</span>
-        </button>
+        </Button>
       </div>
       <div className="row">
-        <button className="btn sm danger" onClick={onRemove}>
+        <Button variant="danger" size="sm" onClick={onRemove}>
           <Trash2 size={14} />
           Убрать
-        </button>
+        </Button>
         {scope === 'all' && replace.has(info.name) && (
-          <button className="btn ghost sm" onClick={onClearGlobal}>
+          <Button variant="ghost" size="sm" onClick={onClearGlobal}>
             Отменить общую замену
-          </button>
+          </Button>
         )}
       </div>
       {scope === 'all' && (

@@ -1,5 +1,5 @@
 import { Download, FileBox, ImagePlus, Library, Search, Trash2, X } from 'lucide-react';
-import { ErrorBox } from '@/shared/ui';
+import { Button, ErrorBox } from '@/shared/ui';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNick } from '@/entities/user';
@@ -133,32 +133,34 @@ export function SchematicLibrary({ openIds, onOpen, onDownload }: Props) {
                     <span className="faint small">{summary(entry)}</span>
                   </span>
                 </button>
-                <button
-                  className="btn sm"
+                <Button
+                  size="sm"
                   disabled={busy === entry.id}
                   onClick={() => run(entry, onDownload)}
                   title="Скачать .nbt с заменами"
                 >
                   <Download size={14} />
                   Скачать
-                </button>
-                <button
-                  className="btn sm"
+                </Button>
+                <Button
+                  size="sm"
                   disabled={busy === entry.id || isOpen}
                   onClick={() => run(entry, onOpen)}
                   title={isOpen ? 'Уже открыта выше' : 'Открыть в редакторе, чтобы поправить замены'}
                 >
                   {isOpen ? 'Открыта' : 'Открыть'}
-                </button>
-                <button
-                  className="btn ghost sm icon"
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon
                   disabled={busy === entry.id}
                   onClick={() => remove(entry)}
                   aria-label={`Удалить ${entry.name}`}
                   title="Удалить из библиотеки"
                 >
                   <Trash2 size={15} />
-                </button>
+                </Button>
               </li>
             );
           })}
@@ -262,9 +264,9 @@ function SchematicPanel({ entry, busy, canRender, onPreview, onClose, onError }:
           aria-label="Название схемы"
           title="Название — можно исправить"
         />
-        <button className="btn ghost icon" onClick={onClose} aria-label="Закрыть панель">
+        <Button variant="ghost" icon onClick={onClose} aria-label="Закрыть панель">
           <X size={18} />
-        </button>
+        </Button>
       </div>
 
       <div className={styles.panelBody}>
@@ -277,10 +279,10 @@ function SchematicPanel({ entry, busy, canRender, onPreview, onClose, onError }:
           <span className="faint small grow">
             {entry.preview ? 'Блоки — по моделям из сборки. ' : ''}Рисуется в браузере при сохранении в библиотеку.
           </span>
-          <button className="btn sm" disabled={busy || !canRender} onClick={onPreview}>
+          <Button size="sm" disabled={busy || !canRender} onClick={onPreview}>
             <ImagePlus size={14} />
             {busy ? 'Рисую…' : entry.preview ? 'Перерисовать' : 'Нарисовать'}
-          </button>
+          </Button>
         </div>
 
         <p className={cx('faint', 'small', styles.panelMeta)}>{summary(entry)}</p>

@@ -8,7 +8,7 @@ import { kubejsScript, liftPatch, scriptFileName, targetFromJson } from '../lib/
 import { downloadScript, freeScriptName } from '../lib/kubejsScripts';
 import type { KubejsScript } from '@/entities/datapack';
 import { cx } from '@/shared/lib';
-import { Modal } from '@/shared/ui';
+import { Button, Modal } from '@/shared/ui';
 import styles from './KubejsConstructor.module.css';
 
 interface Props {
@@ -26,8 +26,9 @@ interface Props {
 function CopyButton({ text }: { text: string }) {
   const [done, setDone] = useState(false);
   return (
-    <button
-      className="btn ghost sm"
+    <Button
+      variant="ghost"
+      size="sm"
       onClick={() =>
         navigator.clipboard.writeText(text).then(() => {
           setDone(true);
@@ -36,7 +37,7 @@ function CopyButton({ text }: { text: string }) {
       }
     >
       {done ? <Check size={13} /> : <Copy size={13} />} {done ? 'Скопировано' : 'Копировать'}
-    </button>
+    </Button>
   );
 }
 
@@ -185,13 +186,12 @@ export function KubejsConstructor({ recipeId, json, rules, namespace, onNewEntry
             </p>
           </div>
           {onNewEntry && (
-            <button
-              className="btn"
+            <Button
               disabled={!idValid || !newHits || newHits.removed.length > 0}
               onClick={() => onNewEntry(newId, json)}
             >
               <FilePlus2 size={14} /> В датапак
-            </button>
+            </Button>
           )}
         </div>
 
@@ -204,17 +204,16 @@ export function KubejsConstructor({ recipeId, json, rules, namespace, onNewEntry
             </p>
           </div>
           <CopyButton text={script} />
-          <button className="btn" disabled={!idValid} onClick={() => downloadScript(script, fileName)}>
+          <Button disabled={!idValid} onClick={() => downloadScript(script, fileName)}>
             <Download size={14} /> .js
-          </button>
-          <button
-            className="btn"
+          </Button>
+          <Button
             disabled={!idValid || !scripts}
             onClick={saveScript}
             title="Сохранить в «Скрипты KubeJS» на сайте — оттуда его поставит программа tfc"
           >
             <Save size={14} /> На сайт
-          </button>
+          </Button>
         </div>
         {saved && (
           <p className={cx(styles.kjsOk, 'small')}>

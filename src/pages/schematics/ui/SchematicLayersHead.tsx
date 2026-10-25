@@ -1,4 +1,5 @@
 import { Layers, Redo2, RotateCcw, Undo2, X } from 'lucide-react';
+import { Button } from '@/shared/ui';
 import styles from './SchematicLayers.module.css';
 
 interface Props {
@@ -39,31 +40,27 @@ export function SchematicLayersHead({
           · {sx}×{sy}×{sz}
         </span>
       </h2>
-      <button className="btn sm" onClick={onUndo} disabled={!undoCount} title="Отменить (Ctrl+Z)">
+      <Button size="sm" onClick={onUndo} disabled={!undoCount} title="Отменить (Ctrl+Z)">
         <Undo2 size={14} />
         Отменить
-      </button>
-      <button
-        className="btn sm"
-        onClick={onRedo}
-        disabled={!redoCount}
-        title="Повторить отменённое (Ctrl+Shift+Z или Ctrl+Y)"
-      >
+      </Button>
+      <Button size="sm" onClick={onRedo} disabled={!redoCount} title="Повторить отменённое (Ctrl+Shift+Z или Ctrl+Y)">
         <Redo2 size={14} />
         Повторить
-      </button>
-      <button
-        className="btn ghost sm"
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={onRevert}
         disabled={!canRevert}
         title="Вернуть схему к виду до правок по слоям"
       >
         <RotateCcw size={14} />
         Сбросить правки
-      </button>
-      <button className="btn ghost icon" onClick={onClose} aria-label="Закрыть">
+      </Button>
+      <Button variant="ghost" icon onClick={onClose} aria-label="Закрыть">
         <X size={18} />
-      </button>
+      </Button>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { validateNick } from '@/shared/lib/nick';
-import { Modal } from '@/shared/ui';
+import { Button, Modal } from '@/shared/ui';
 
 interface Props {
   initial?: string;
@@ -27,13 +27,13 @@ export function NickDialog({ initial = '', onSave, onCancel }: Props) {
         <>
           <span className="grow" />
           {onCancel && (
-            <button className="btn ghost" onClick={onCancel}>
+            <Button variant="ghost" onClick={onCancel}>
               Отмена
-            </button>
+            </Button>
           )}
-          <button className="btn primary" onClick={submit}>
+          <Button variant="primary" onClick={submit}>
             Продолжить
-          </button>
+          </Button>
         </>
       }
     >
