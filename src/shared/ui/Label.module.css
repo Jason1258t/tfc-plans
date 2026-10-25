@@ -1,0 +1,9 @@
+/* Подпись поля. Переехала из app/theme/legacy-ui.css (`.label`) */
+
+.label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  margin-bottom: 4px;
+}

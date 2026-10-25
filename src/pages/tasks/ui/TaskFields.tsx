@@ -1,5 +1,5 @@
 import { Boxes, Eye, Pencil, UserRound, X } from 'lucide-react';
-import { Button, Segmented, ErrorBox } from '@/shared/ui';
+import { Button, Segmented, Input, Select, ErrorBox } from '@/shared/ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGroups } from '@/entities/group';
 import { useNick, usePeople } from '@/entities/user';
@@ -197,8 +197,7 @@ export function TaskFields({
             label: p.label,
           }))}
         />
-        <select
-          className="input"
+        <Select
           aria-label="Статус"
           value={value.status}
           onChange={(e) => {
@@ -211,9 +210,8 @@ export function TaskFields({
               {s.label}
             </option>
           ))}
-        </select>
-        <select
-          className="input"
+        </Select>
+        <Select
           aria-label="Группа"
           value={value.groupId ?? ''}
           onChange={(e) => onPatch({ groupId: e.target.value || null })}
@@ -224,12 +222,12 @@ export function TaskFields({
               {g.name}
             </option>
           ))}
-        </select>
+        </Select>
         <div className={styles.tfAssignee}>
           <span className={styles.tfAssigneeInput}>
             <UserRound size={14} className={cx('faint', styles.tfFieldIcon)} />
-            <input
-              className={cx('input', styles.withIcon)}
+            <Input
+              className={styles.withIcon}
               aria-label="Исполнитель"
               title="Исполнитель"
               list="tf-users"

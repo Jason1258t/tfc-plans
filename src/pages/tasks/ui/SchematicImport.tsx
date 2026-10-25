@@ -4,7 +4,7 @@ import { itemName, useItems, ItemIcon } from '@/shared/pack-data';
 import { addMaterials, schematicMaterials, type SchematicMaterials } from '@/lib/materials';
 import { cx } from '@/shared/lib';
 import type { ChecklistEntry } from '@/entities/task';
-import { Button, Modal, ErrorBox } from '@/shared/ui';
+import { Button, Input, Modal, ErrorBox } from '@/shared/ui';
 import styles from './SchematicImport.module.css';
 
 interface Props {
@@ -153,8 +153,7 @@ export function SchematicImport({ checklist, onApply, onClose }: Props) {
               </Button>
               <label className={cx('row', 'small', styles.siCopies)}>
                 Копий
-                <input
-                  className="input"
+                <Input
                   type="number"
                   min={1}
                   max={999}

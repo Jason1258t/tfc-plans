@@ -1,6 +1,5 @@
 import { ExternalLink, MapPin, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
   geoName,
   parseCoords,
@@ -11,7 +10,7 @@ import {
   worldProjection,
 } from '@/lib/geo';
 import { cx } from '@/shared/lib';
-import { Button } from '@/shared/ui';
+import { Button, ButtonLink, Input } from '@/shared/ui';
 import type { TaskPlace } from '@/entities/task';
 import styles from './TaskDialog.module.css';
 
@@ -59,8 +58,8 @@ export function PlaceField({ value, onChange, compact }: Props) {
           <code>
             {value.x} {value.z}
           </code>
-          <input
-            className="input grow"
+          <Input
+            className="grow"
             aria-label="Подпись места"
             placeholder="Подпись: база, шахта…"
             defaultValue={value.label ?? ''}
@@ -69,14 +68,15 @@ export function PlaceField({ value, onChange, compact }: Props) {
               e.target.value !== (value.label ?? '') && onChange({ ...value, label: e.target.value || undefined })
             }
           />
-          <Link
-            className={cx('btn sm', compact && 'icon')}
+          <ButtonLink
+            size="sm"
+            icon={compact}
             to={`/reference?tab=map&x=${value.x}&z=${value.z}`}
             aria-label="На карте"
             title="На карте"
           >
             {compact ? <ExternalLink size={14} /> : 'На карте'}
-          </Link>
+          </ButtonLink>
           <Button variant="ghost" size="sm" icon aria-label="Убрать место" onClick={() => onChange(null)}>
             <X size={14} />
           </Button>
@@ -84,8 +84,8 @@ export function PlaceField({ value, onChange, compact }: Props) {
       ) : (
         <div className={styles.tfPlaceInput}>
           {compact && <MapPin size={14} className={cx('faint', styles.tfFieldIcon)} />}
-          <input
-            className={cx('input', compact && styles.withIcon)}
+          <Input
+            className={cx(compact && styles.withIcon)}
             aria-label="Где"
             placeholder={compact ? 'Где: x z или город' : 'x z, «51.5 -0.12» или город — Enter'}
             value={text}
