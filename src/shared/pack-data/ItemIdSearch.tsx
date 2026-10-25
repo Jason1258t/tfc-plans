@@ -5,7 +5,7 @@ import { cx } from '@/shared/lib';
 import { Search } from '@/shared/ui';
 import { ItemIcon } from './ItemIcon';
 import { useSearchTrack } from '@/shared/api';
-import './ItemIdSearch.css';
+import styles from './ItemIdSearch.module.css';
 
 interface Props {
   autoFocus?: boolean;
@@ -33,8 +33,8 @@ export function ItemIdSearch({ autoFocus, compact, limit = 40 }: Props) {
   };
 
   return (
-    <div className={cx('id-search', compact && 'compact')}>
-      <Search className="id-search-box">
+    <div className={cx(styles.root, compact && styles.compact)}>
+      <Search className={styles.searchBox}>
         <SearchIcon size={15} className="faint" />
         <input
           value={q}
@@ -48,20 +48,23 @@ export function ItemIdSearch({ autoFocus, compact, limit = 40 }: Props) {
         />
       </Search>
       {q.trim().length >= 2 && (
-        <ul className="id-results">
-          {results.length === 0 && <li className="faint small id-empty">Ничего не найдено</li>}
+        <ul className={styles.results}>
+          {results.length === 0 && <li className={cx('faint', 'small', styles.empty)}>Ничего не найдено</li>}
           {results.map((it) => (
             <li key={it.i}>
               <ItemIcon id={it.i} size={compact ? 20 : 24} tip={false} />
-              <span className="grow id-names">
-                <span className="id-name">{it.r ?? it.e}</span>
+              <span className={cx('grow', styles.names)}>
+                <span className={styles.name}>{it.r ?? it.e}</span>
                 {it.r && !compact && <span className="faint small"> · {it.e}</span>}
-                <code className="id-code" onClick={(e) => window.getSelection()?.selectAllChildren(e.currentTarget)}>
+                <code
+                  className={styles.code}
+                  onClick={(e) => window.getSelection()?.selectAllChildren(e.currentTarget)}
+                >
                   {it.i}
                 </code>
               </span>
               <button
-                className={cx('btn ghost sm icon', copied === it.i && 'copied')}
+                className={cx('btn ghost sm icon', copied === it.i && styles.copied)}
                 onClick={() => copy(it.i)}
                 aria-label={`Скопировать ${it.i}`}
                 title="Скопировать id"
