@@ -18,7 +18,7 @@ import {
 } from '@/lib/multiblocks';
 import { machineRates, usePower, useSettings, type PowerData, type Setting } from '@/lib/power';
 import { cx } from '@/shared/lib';
-import './MultiblocksTab.css';
+import styles from './MultiblocksTab.module.css';
 
 /**
  * Справочник → «Мультиблоки»: структуры IE и Advanced TFC Tech как в книге инженера — объёмный вид, слои,
@@ -46,10 +46,10 @@ export function MultiblocksTab({ slug, onSlug }: { slug: string | null; onSlug: 
   const groups = [...new Set(data.list.map((m) => m.ns))];
   return (
     <div className="botany">
-      <nav className="botany-nav mb-nav" aria-label="Мультиблоки">
+      <nav className="botany-nav" aria-label="Мультиблоки">
         {groups.map((ns) => (
-          <div key={ns} className="mb-nav-group">
-            <div className="mb-nav-mod faint small">{MOD_LABEL[ns] ?? ns}</div>
+          <div key={ns} className={styles.navGroup}>
+            <div className={cx(styles.navMod, 'faint', 'small')}>{MOD_LABEL[ns] ?? ns}</div>
             {data.list
               .filter((m) => m.ns === ns)
               .map((m) => (
@@ -58,7 +58,7 @@ export function MultiblocksTab({ slug, onSlug }: { slug: string | null; onSlug: 
                   className={cx(m === current && 'active')}
                   onClick={() => onSlug(m === data.list[0] ? null : mbSlug(m, data.list))}
                 >
-                  <span className="mb-nav-item">
+                  <span className={styles.navItem}>
                     <ItemIcon id={mbIcon(m, items) ?? undefined} size={18} tip={false} />
                     {mbName(m)}
                   </span>
@@ -88,9 +88,9 @@ function MultiblockCard({ m, data }: { m: Multiblock; data: MultiblockData }) {
   const items = useItems();
 
   return (
-    <div className="mb-card">
+    <div className={styles.card}>
       <section className="ref-card">
-        <div className="mb-head">
+        <div className={styles.head}>
           <ItemIcon id={mbIcon(m, items) ?? undefined} size={40} />
           <div className="grow">
             <h2>{mbName(m)}</h2>
@@ -104,12 +104,12 @@ function MultiblockCard({ m, data }: { m: Multiblock; data: MultiblockData }) {
           </a>
         </div>
         {m.replaces && (
-          <p className="mb-note">
+          <p className={styles.note}>
             Шаблон заменён модом <b>{sourceName(m.source)}</b>: здесь показан его вариант, а не исходный из{' '}
             {sourceName(m.replaces)}.
           </p>
         )}
-        <ol className="mb-steps">
+        <ol className={styles.steps}>
           <li>
             Поставьте блоки по слоям снизу вверх (см. схему ниже). Пустые клетки — любые: воздух или что угодно, IE их
             не проверяет.
@@ -128,7 +128,7 @@ function MultiblockCard({ m, data }: { m: Multiblock; data: MultiblockData }) {
           </li>
         </ol>
         {m.extra && (
-          <div className="seg mb-full-toggle" role="tablist">
+          <div className={cx('seg', styles.fullToggle)} role="tablist">
             <button aria-pressed={!full} onClick={() => setFull(false)}>
               Сама машина
             </button>
@@ -170,7 +170,7 @@ function MbViewer({
   const showFormed = view === 'formed' && !!formed;
   return (
     <>
-      <div className="mb-toolbar">
+      <div className={styles.toolbar}>
         {formed && (
           <div className="seg" role="tablist" aria-label="Вид">
             <button aria-pressed={!showFormed} onClick={() => setView('build')}>
@@ -182,12 +182,12 @@ function MbViewer({
           </div>
         )}
         {m.mirror && (
-          <button className={cx('btn ghost', mirrored && 'active')} onClick={() => setMirrored((v) => !v)}>
+          <button className={cx('btn ghost', mirrored && styles.on)} onClick={() => setMirrored((v) => !v)}>
             <FlipHorizontal2 size={15} /> {mirrored ? 'Зеркально' : 'Как в книге'}
           </button>
         )}
         {!showFormed && (
-          <div className="mb-layer-ctl">
+          <div className={styles.layerCtl}>
             <button
               className="btn sm icon"
               aria-label="Слой ниже"
@@ -223,14 +223,14 @@ function MbViewer({
       {showFormed ? (
         <Suspense fallback={<div className="mb-formed empty">Загружаю просмотр…</div>}>
           <MultiblockFormed formed={formed} size={m.size} mirrored={mirrored} />
-          <p className="faint small mb-formed-foot">
+          <p className={cx('faint', 'small', styles.formedFoot)}>
             Модель собранной машины из jar мода, поставлена на место постройки
             {formed.rough ? ' (совпадение с постройкой неполное)' : ''}. Подвижные части (барабаны, поршни, лопасти) мод
             рисует отдельно — здесь их нет.
           </p>
         </Suspense>
       ) : (
-        <div className="mb-views">
+        <div className={styles.views}>
           <Iso shape={shape} trigger={trigger} upTo={top} mirrored={mirrored} />
           <LayerGrid shape={shape} trigger={trigger} y={top} mirrored={mirrored} />
         </div>
@@ -259,8 +259,8 @@ export function MultiblockEmbed({ id, full, withMaterials }: { id: string; full?
   const t = trigger && shape.blocks.find((b) => b[0] === trigger[0] && b[1] === trigger[1] && b[2] === trigger[2]);
   const triggerId = t ? shape.palette[t[3]].id : null;
   return (
-    <div className="mb-embed">
-      <div className="mb-head">
+    <div className={styles.embed}>
+      <div className={styles.head}>
         <ItemIcon id={mbIcon(m, items) ?? undefined} size={28} />
         <div className="grow">
           <Link to={`/reference?tab=multiblocks&mb=${encodeURIComponent(mbSlug(m, data.list))}`}>
@@ -335,15 +335,15 @@ function Iso({
 
   return (
     <div
-      className="mb-iso"
+      className={styles.iso}
       onPointerDown={onDown}
       onPointerMove={onMove}
       onPointerUp={() => (drag.current = null)}
       onPointerCancel={() => (drag.current = null)}
     >
-      <div className="mb-iso-scene" style={{ transform: `rotateX(${rot.pitch}deg) rotateY(${rot.yaw}deg)` }}>
+      <div className={styles.isoScene} style={{ transform: `rotateX(${rot.pitch}deg) rotateY(${rot.yaw}deg)` }}>
         <div
-          className="mb-iso-floor"
+          className={styles.isoFloor}
           style={{
             width: sx * S,
             height: sz * S,
@@ -380,7 +380,7 @@ function Iso({
         })}
       </div>
       <button
-        className="btn ghost icon mb-iso-reset"
+        className={cx('btn ghost icon', styles.isoReset)}
         aria-label="Вернуть вид"
         onClick={() => setRot({ yaw: -35, pitch: -28 })}
         onPointerDown={(e) => e.stopPropagation()}
@@ -425,7 +425,7 @@ function Cube({
     return (
       <div
         key={f}
-        className="mb-face"
+        className={styles.face}
         style={{
           width: fw,
           height: fh,
@@ -440,7 +440,7 @@ function Cube({
   };
   return (
     <div
-      className={cx('mb-cube', trigger && 'trigger', current && 'current', !url && 'noicon')}
+      className={cx(styles.cube, trigger && styles.trigger, current && styles.current, !url && styles.noicon)}
       style={{ transform: `translate3d(${pos[0]}px, ${pos[1] + dy}px, ${pos[2]}px)` }}
     >
       {faces.map(face)}
@@ -467,21 +467,24 @@ function LayerGrid({
   for (const b of shape.blocks) if (b[1] === y) at.set(`${mirrored ? sx - 1 - b[0] : b[0]},${b[2]}`, b[3]);
   const tx = trigger ? (mirrored ? sx - 1 - trigger[0] : trigger[0]) : -1;
   return (
-    <div className="mb-layer">
-      <div className="mb-grid" style={{ gridTemplateColumns: `repeat(${sx}, ${cell}px)` }}>
+    <div className={styles.layer}>
+      <div className={styles.grid} style={{ gridTemplateColumns: `repeat(${sx}, ${cell}px)` }}>
         {Array.from({ length: sz }, (_, z) =>
           Array.from({ length: sx }, (_, x) => {
             const p = at.get(`${x},${z}`);
             const isTrigger = !!trigger && trigger[1] === y && tx === x && trigger[2] === z;
             return (
-              <div key={`${x},${z}`} className={cx('mb-cell', p === undefined && 'empty', isTrigger && 'trigger')}>
+              <div
+                key={`${x},${z}`}
+                className={cx(styles.cell, p === undefined && 'empty', isTrigger && styles.trigger)}
+              >
                 {p !== undefined && <ItemIcon id={shape.palette[p].id} size={cell - 6} />}
               </div>
             );
           }),
         )}
       </div>
-      <div className="mb-front faint small">▼ лицевая сторона — здесь стоит игрок</div>
+      <div className={cx(styles.front, 'faint', 'small')}>▼ лицевая сторона — здесь стоит игрок</div>
     </div>
   );
 }
@@ -495,7 +498,7 @@ function Materials({ m, shape, data }: { m: Multiblock; shape: MbShape; data: Mu
   const list = materials(shape);
   return (
     <section className="ref-card">
-      <h3 className="mb-h">Материалы</h3>
+      <h3 className={styles.h}>Материалы</h3>
       <div className="ref-table-wrap">
         <table className="ref-table">
           <thead>
@@ -511,7 +514,7 @@ function Materials({ m, shape, data }: { m: Multiblock; shape: MbShape; data: Mu
               return (
                 <tr key={state.id}>
                   <td>
-                    <span className="mb-mat">
+                    <span className={styles.mat}>
                       <ItemIcon id={state.id} size={22} />
                       <span>
                         {itemName(items?.byId.get(state.id), state.id)}
@@ -524,13 +527,13 @@ function Materials({ m, shape, data }: { m: Multiblock; shape: MbShape; data: Mu
                     {alt ? (
                       <>
                         <button
-                          className="mb-linkbtn small"
+                          className={cx(styles.linkbtn, 'small')}
                           onClick={() => setOpen(open === state.id ? null : state.id)}
                         >
                           любой из #{alt.tag} ({alt.members.length})
                         </button>
                         {open === state.id && (
-                          <div className="mb-alts">
+                          <div className={styles.alts}>
                             {alt.members.map((id) => (
                               <ItemIcon key={id} id={id} size={22} />
                             ))}
@@ -580,7 +583,7 @@ function MachineInfo({ m }: { m: Multiblock }) {
   const r = machine ? machineRates(machine, machine.mod === 'att' ? cfg.att : cfg.ie) : null;
   return (
     <section className="ref-card">
-      <h3 className="mb-h">Работа</h3>
+      <h3 className={styles.h}>Работа</h3>
       {machine && r && (
         <p>
           Расход: <b>{r.min === r.max ? num(r.min) : `${num(r.min)}–${num(r.max)}`} FE/t</b> на операцию
@@ -644,20 +647,20 @@ function ManualEntry({ e, m }: { e: MbManual; m: Multiblock }) {
   };
   const text = showEn && e.en ? e.en : e.text;
   return (
-    <section className={cx('ref-card', fromOther && 'mb-other')}>
-      <div className="mb-manual-head">
-        <h3 className="mb-h">
+    <section className={cx('ref-card', fromOther && styles.other)}>
+      <div className={styles.manualHead}>
+        <h3 className={styles.h}>
           {fromOther ? `Изменение: ${sourceName(e.jar)}` : 'Из книги инженера'} — {e.title}
         </h3>
         {e.subtitle && <span className="faint small">«{e.subtitle}»</span>}
         {e.lang === 'en' && <span className="faint small">· по-английски, как в игре</span>}
         {e.en && (
-          <button className="mb-linkbtn small" onClick={() => setShowEn((v) => !v)}>
+          <button className={cx(styles.linkbtn, 'small')} onClick={() => setShowEn((v) => !v)}>
             {showEn ? 'по-русски' : 'оригинал'}
           </button>
         )}
       </div>
-      <div className="mb-manual">
+      <div className={styles.manual}>
         {text.split('\n\n').map((para, i) => (
           <p key={i}>
             {para.split(/(\{config:[^}]+\})/).map((part, j) => {

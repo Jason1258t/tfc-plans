@@ -1,20 +1,26 @@
-/* Справочник → «Мультиблоки» */
+/* Справочник → «Мультиблоки»: только собственные классы вкладки.
+   Глобальными остались:
+   — каркас справочника `.botany / .botany-nav / .botany-main / .ref-card / .ref-table*` (pages/reference/ReferenceShared.css),
+   — классы темы `.btn / .seg / .empty / .faint / .small / .grow / .item-icon`,
+   — `.mb-formed`, `.mb-formed-note`, `.mb-iso-hint`: их ставит отдельный компонент MultiblockFormed.tsx,
+     его модуль — отдельная задача; пока держим имена глобальными (см. :global ниже),
+   — `.empty` на пустой клетке слоя: глобальный `.empty` задаёт ей отступы и участвует в размере клетки. */
 
-.mb-nav-group {
+.navGroup {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.mb-nav-group + .mb-nav-group {
+.navGroup + .navGroup {
   margin-top: 8px;
 }
 
-.mb-nav-mod {
+.navMod {
   padding: 4px 10px 2px;
 }
 
-.mb-nav-item {
+.navItem {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -22,50 +28,50 @@
 }
 
 @media (max-width: 720px) {
-  .mb-nav-group {
+  .navGroup {
     flex-direction: row;
     flex-wrap: wrap;
     width: 100%;
   }
-  .mb-nav-mod {
+  .navMod {
     width: 100%;
   }
 }
 
-.mb-card {
+.card {
   display: flex;
   flex-direction: column;
   gap: 12px;
   min-width: 0;
 }
 
-.mb-head {
+.head {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.mb-head h2 {
+.head h2 {
   margin: 0 0 2px;
   font-size: 18px;
   font-weight: 600;
 }
 
-.mb-h {
+.h {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
 }
 
-.mb-note {
+.note {
   margin: 0;
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   background: var(--accent-soft);
 }
 
-.mb-steps {
+.steps {
   margin: 0;
   padding-left: 20px;
   display: flex;
@@ -73,33 +79,34 @@
   gap: 4px;
 }
 
-.mb-steps .item-icon {
+.steps :global(.item-icon) {
   vertical-align: -4px;
 }
 
-.mb-toolbar {
+.toolbar {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.mb-toolbar .btn.active {
+/* включённое «Зеркально» — раньше это была пара глобальных классов `.btn active` */
+.toolbar .on {
   background: var(--accent-soft);
 }
 
-.mb-layer-ctl {
+.layerCtl {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   margin-left: auto;
 }
 
-.mb-layer-ctl input[type='range'] {
+.layerCtl input[type='range'] {
   width: 140px;
 }
 
-.mb-views {
+.views {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
   gap: 12px;
@@ -107,13 +114,13 @@
 }
 
 @media (max-width: 860px) {
-  .mb-views {
+  .views {
     grid-template-columns: 1fr;
   }
 }
 
 /* объёмный вид: CSS 3D, грани с текстурой иконки блока */
-.mb-iso {
+.iso {
   position: relative;
   min-height: 380px;
   border: 1px solid var(--border);
@@ -126,18 +133,18 @@
   user-select: none;
 }
 
-.mb-iso:active {
+.iso:active {
   cursor: grabbing;
 }
 
-.mb-iso-scene {
+.isoScene {
   position: absolute;
   left: 50%;
   top: 50%;
   transform-style: preserve-3d;
 }
 
-.mb-iso-floor {
+.isoFloor {
   position: absolute;
   left: 0;
   top: 0;
@@ -148,21 +155,21 @@
   justify-content: center;
 }
 
-.mb-iso-floor span {
+.isoFloor span {
   transform: translateY(18px);
   font-size: 11px;
   color: var(--text-3);
   white-space: nowrap;
 }
 
-.mb-cube {
+.cube {
   position: absolute;
   left: 0;
   top: 0;
   transform-style: preserve-3d;
 }
 
-.mb-face {
+.face {
   position: absolute;
   left: 0;
   top: 0;
@@ -172,35 +179,36 @@
   backface-visibility: hidden;
 }
 
-.mb-cube.noicon .mb-face {
+.cube.noicon .face {
   /* у блока нет текстуры (объёмная модель, например насос IE) — нейтральная заглушка */
   background-color: #7d828c;
   background-image: repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.15) 0 3px, transparent 3px 6px);
 }
 
-.mb-cube.trigger .mb-face {
+.cube.trigger .face {
   outline: 2px solid var(--danger);
   outline-offset: -2px;
 }
 
-.mb-cube.current .mb-face {
+.cube.current .face {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55);
 }
 
-.mb-iso-reset {
+.isoReset {
   position: absolute;
   right: 6px;
   top: 6px;
 }
 
-.mb-iso-hint {
+/* подпись подсказки ставит в том числе MultiblockFormed.tsx — имя остаётся глобальным */
+:global(.mb-iso-hint) {
   position: absolute;
   left: 8px;
   bottom: 6px;
 }
 
 /* слой сверху */
-.mb-layer {
+.layer {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -212,12 +220,12 @@
   overflow-x: auto;
 }
 
-.mb-grid {
+.grid {
   display: grid;
   gap: 2px;
 }
 
-.mb-cell {
+.cell {
   aspect-ratio: 1;
   display: flex;
   align-items: center;
@@ -226,33 +234,34 @@
   background: var(--surface-2);
 }
 
-.mb-cell.empty {
+/* пустая клетка: класс `empty` — глобальный помощник темы, он же задаёт клетке отступы и её размер */
+.cell:global(.empty) {
   background: repeating-linear-gradient(45deg, transparent 0 4px, var(--surface-2) 4px 6px);
   border: 1px dashed var(--border);
 }
 
-.mb-cell.trigger {
+.cell.trigger {
   box-shadow: 0 0 0 2px var(--danger);
 }
 
-.mb-front {
+.front {
   text-align: center;
 }
 
-.mb-mat {
+.mat {
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
 
-.mb-alts {
+.alts {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
   margin-top: 6px;
 }
 
-.mb-linkbtn {
+.linkbtn {
   padding: 0;
   border: 0;
   background: none;
@@ -261,36 +270,36 @@
   text-align: left;
 }
 
-.mb-linkbtn:hover {
+.linkbtn:hover {
   text-decoration: underline;
 }
 
-.mb-manual-head {
+.manualHead {
   display: flex;
   align-items: baseline;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.mb-manual p {
+.manual p {
   margin: 0 0 8px;
   line-height: 1.5;
 }
 
-.mb-manual p:last-child {
+.manual p:last-child {
   margin-bottom: 0;
 }
 
-.mb-other {
+.other {
   border-color: var(--accent);
 }
 
-.mb-full-toggle {
+.fullToggle {
   align-self: flex-start;
 }
 
 /* виджет в гайде */
-.mb-embed {
+.embed {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -301,13 +310,13 @@
   background: var(--surface);
 }
 
-.mb-embed .ref-card {
+.embed :global(.ref-card) {
   padding: 0;
   border: 0;
 }
 
-/* итоговый вид — three.js */
-.mb-formed {
+/* итоговый вид — three.js; разметку рисует MultiblockFormed.tsx, поэтому имена классов общие */
+:global(.mb-formed) {
   position: relative;
   height: 420px;
   border: 1px solid var(--border);
@@ -317,23 +326,23 @@
   touch-action: none;
 }
 
-.mb-formed canvas {
+:global(.mb-formed) canvas {
   display: block;
 }
 
-.mb-formed-note {
+:global(.mb-formed-note) {
   position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
 }
 
-.mb-formed-foot {
+.formedFoot {
   margin: 6px 0 0;
 }
 
 @media (max-width: 720px) {
-  .mb-formed {
+  :global(.mb-formed) {
     height: 340px;
   }
 }
