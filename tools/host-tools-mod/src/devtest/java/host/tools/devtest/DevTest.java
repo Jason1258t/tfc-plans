@@ -109,6 +109,10 @@ public final class DevTest {
             check("порт 57016 отвечает на запрос списка серверов: " + motd, motd != null && motd.contains("version"));
             mc().setScreen(null);
         });
+        step(60, "свой замер пинга", () -> {
+            int ms = server().getPlayerList().getPlayers().get(0).connection.latency();
+            check("ping/pong раз в 2 с: пинг хоста по замеру аддона " + ms + " мс (без аддона — 0)", ms > 0 && ms < 1000);
+        });
         step(1, "/host повторно", () -> cmd("host"));
         step(10, "итог повтора", () -> check("повторный /host: «уже открыт»", chatHas("уже открыт")));
         step(1, "/host status", () -> cmd("host status"));

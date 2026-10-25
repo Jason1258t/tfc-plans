@@ -172,6 +172,13 @@ Watut's `@Redirect` of the same call), latency rebroadcast every 100 ticks, Shar
   doesn't tick, so `/host` waited until the menu closed — moved to server tasks, which run while paused.
 - First real-dev-client addon check: `test-client.sh` runs `runClient` with a devtest mod that creates a flat world,
   drives commands/screens, connects raw sockets (status ping, hanging login) and saves screenshots; `HTTEST` lines.
+- **1.0.1** (2026-10-25): guest ping was 0 and the tab had no numbers in the host's game. Cause: **Packet Fixer**
+  `@ModifyConstant(15000L)` in `ServerCommonPacketListenerImpl.keepConnectionAlive` → its `timeout` (120 s default)
+  is the keep-alive _interval_; latency starts at 0 and is smoothed ¾ old + ¼ new, so ~0 for 2 min and ~10 min to
+  converge. Fix: `PingProbe` — own `ClientboundPingPacket` (id tagged `0x4854xxxx`) every `probeTicks` (40), mixin on
+  the empty `handlePong` (network thread) writes (old + sample) / 2 into `latency`; vanilla clients answer by
+  themselves. Dev client with Packet Fixer + Watut: 11–13 ms on the host's own memory connection
+  (`-Dhost_tools.probeOwner=true` in the test run).
 - Not checked: a real guest over the network, Windows (host). Host's original complaint «по 10 раз нажимать» — cause
   not confirmed; if a port binds but friends can't connect, `random` doesn't help (network side).
 

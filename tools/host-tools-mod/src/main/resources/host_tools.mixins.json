@@ -3,7 +3,7 @@
   "minVersion": "0.8",
   "package": "host.tools.mixin",
   "compatibilityLevel": "JAVA_21",
-  "mixins": ["ServerConnectionListenerAccessor"],
+  "mixins": ["ServerCommonPacketListenerImplMixin", "ServerConnectionListenerAccessor"],
   "client": ["IntegratedServerMixin", "PlayerTabOverlayMixin"],
   "injectors": { "defaultRequire": 1 }
 }
