@@ -14,7 +14,7 @@ import {
   ItemPicker,
 } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
-import { Modal, Search, Segmented, Button } from '@/shared/ui';
+import { Modal, Search, Segmented, Button, Select } from '@/shared/ui';
 import { track, useSearchTrack } from '@/shared/api';
 import styles from './RecipeCatalog.module.css';
 
@@ -103,21 +103,15 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
             onChange={(e) => (setQuery(e.target.value), resetPage())}
           />
         </Search>
-        <select
-          className="input"
-          value={type}
-          onChange={(e) => (setType(e.target.value), resetPage())}
-          aria-label="Тип рецепта"
-        >
+        <Select value={type} onChange={(e) => (setType(e.target.value), resetPage())} aria-label="Тип рецепта">
           <option value="">Все типы ({catalog?.types.length ?? '…'})</option>
           {catalog?.types.map(([t, n]) => (
             <option key={t} value={t}>
               {t} · {n}
             </option>
           ))}
-        </select>
-        <select
-          className="input"
+        </Select>
+        <Select
           value={status}
           onChange={(e) => (setStatus(e.target.value as RecipeStatus | ''), resetPage())}
           aria-label="Статус в игре"
@@ -130,7 +124,7 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
                 {STATUS_LABEL[s]}
               </option>
             ))}
-        </select>
+        </Select>
       </div>
       <div>
         {itemId ? (

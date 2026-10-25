@@ -1,7 +1,7 @@
 import { Copy, Check, Settings, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Modal, Segmented, Button } from '@/shared/ui';
+import { Modal, Segmented, Button, Input, Select } from '@/shared/ui';
 import { WorldMap, type MapMarker } from './ui/WorldMap';
 import { useNick } from '@/entities/user';
 import { useGroups } from '@/entities/group';
@@ -287,8 +287,7 @@ function PointPanel({
         )}
       </div>
       <div className={styles.inputWrap}>
-        <input
-          className="input"
+        <Input
           placeholder="Город, x z, F3 или широта долгота"
           value={text}
           onChange={(e) => {
@@ -498,23 +497,18 @@ function WorldSettingsDialog({ geo, world, onClose }: { geo: GeoData; world: Wor
       <fieldset className={styles.fieldset} disabled={!!world.fromConfig}>
         <label className={styles.formRow}>
           <span className="label">Профиль</span>
-          <select
-            className="input"
-            value={draft.profile}
-            onChange={(e) => setDraft({ ...draft, profile: e.target.value })}
-          >
+          <Select value={draft.profile} onChange={(e) => setDraft({ ...draft, profile: e.target.value })}>
             {profiles.map((p) => (
               <option key={p.id} value={p.id}>
                 {geoName(p.name)} — {p.id}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <div className={styles.formGrid}>
           <label className={styles.formRow}>
             <span className="label">horizontal_scale</span>
-            <input
-              className="input"
+            <Input
               inputMode="numeric"
               placeholder={String(base?.horizontalScale ?? '')}
               value={draft.horizontalScale ?? ''}
@@ -523,8 +517,7 @@ function WorldSettingsDialog({ geo, world, onClose }: { geo: GeoData; world: Wor
           </label>
           <label className={styles.formRow}>
             <span className="label">vertical_scale</span>
-            <input
-              className="input"
+            <Input
               inputMode="numeric"
               placeholder={String(base?.verticalScale ?? '')}
               value={draft.verticalScale ?? ''}

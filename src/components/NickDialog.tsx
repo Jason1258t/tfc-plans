@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { validateNick } from '@/shared/lib/nick';
-import { Button, Modal } from '@/shared/ui';
+import { Button, Input, Modal } from '@/shared/ui';
 
 interface Props {
   initial?: string;
@@ -49,9 +49,8 @@ export function NickDialog({ initial = '', onSave, onCancel }: Props) {
         <label className="label" htmlFor="nick">
           Ник
         </label>
-        <input
+        <Input
           id="nick"
-          className="input"
           value={nick}
           autoFocus
           maxLength={24}

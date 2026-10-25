@@ -7,7 +7,7 @@ import { SCRIPT_FILE_RE } from '@/lib/kubejsFix';
 import { downloadScript } from '@/lib/kubejsScripts';
 import { cx, timeAgo } from '@/shared/lib';
 import type { KubejsScript } from '@/entities/datapack';
-import { Button } from '@/shared/ui';
+import { Button, Input, Textarea } from '@/shared/ui';
 import styles from '../DatapacksPage.module.css';
 
 /** Отметка «Ставить в мир» / «Ставить на сервер» с подсказкой */
@@ -78,9 +78,9 @@ export function ScriptEditor({
           <label className="label" htmlFor="kjs-name">
             Файл в <code>kubejs/server_scripts/</code>
           </label>
-          <input
+          <Input
             id="kjs-name"
-            className="input mono-input"
+            className="mono-input"
             value={fileName}
             onChange={(e) => setFileName(e.target.value.trim().toLowerCase())}
             onBlur={saveName}
@@ -140,8 +140,9 @@ export function ScriptEditor({
       {text.length > 200_000 && <ErrorBox>Скрипт длиннее 200 000 знаков — разбейте на несколько.</ErrorBox>}
       {error && <ErrorBox>Не сохранилось: {error}</ErrorBox>}
 
-      <textarea
-        className={cx('input mono', styles.dpScriptText)}
+      <Textarea
+        mono
+        className={styles.dpScriptText}
         spellCheck={false}
         value={text}
         onChange={(e) => setText(e.target.value)}

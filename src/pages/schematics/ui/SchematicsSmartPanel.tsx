@@ -1,7 +1,7 @@
 import { ArrowRight, Plus, Sparkles, X } from 'lucide-react';
 import type { Rule } from '@/lib/schematic';
 import { cx } from '@/shared/lib';
-import { Button } from '@/shared/ui';
+import { Button, Input } from '@/shared/ui';
 import type { SmartResult } from '../model/schematicFormat';
 import type { AgentPrefs } from '../model/schematicPrefs';
 import section from '../SchematicsSection.module.css';
@@ -52,8 +52,8 @@ export function SchematicsSmartPanel({
         )}
       </div>
       {useAgent && (
-        <input
-          className={cx('input', styles.agentHint)}
+        <Input
+          className={styles.agentHint}
           value={agentPrefs.hint}
           placeholder="Пожелания агенту: «дуб → эвкалипт, камень → гранит, стекло оставить»"
           aria-label="Пожелания агенту"
@@ -63,16 +63,14 @@ export function SchematicsSmartPanel({
       <ul className={styles.rules}>
         {rules.map((r, i) => (
           <li key={i}>
-            <input
-              className="input"
+            <Input
               value={r.from}
               placeholder={useAgent ? 'подсказка: что (oak)' : 'что (oak)'}
               aria-label="Что заменить"
               onChange={(e) => onRules(rules.map((x, j) => (j === i ? { ...x, from: e.target.value } : x)))}
             />
             <ArrowRight size={14} className="faint" />
-            <input
-              className="input"
+            <Input
               value={r.to}
               placeholder="на что (spruce)"
               aria-label="На что заменить"

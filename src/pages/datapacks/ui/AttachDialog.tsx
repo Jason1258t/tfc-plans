@@ -5,7 +5,7 @@ import { useTasks } from '@/entities/task';
 import { useGroups } from '@/entities/group';
 import { buildZip, zipName } from '@/lib/datapack';
 import { uploadFile } from '@/entities/file';
-import { Button, ErrorBox, Modal } from '@/shared/ui';
+import { Button, ErrorBox, Modal, Select } from '@/shared/ui';
 import type { Datapack } from '@/entities/datapack';
 
 /** Собрать zip и приложить к задаче — хост скачает его оттуда */
@@ -72,7 +72,7 @@ export function AttachDialog({ pack, onClose }: { pack: Datapack; onClose: () =>
           <label className="label" htmlFor="att-task">
             Задача
           </label>
-          <select id="att-task" className="input" value={taskId} onChange={(e) => setTaskId(e.target.value)}>
+          <Select id="att-task" value={taskId} onChange={(e) => setTaskId(e.target.value)}>
             <option value="">— выберите —</option>
             {active.map((t) => (
               <option key={t.id} value={t.id}>
@@ -80,7 +80,7 @@ export function AttachDialog({ pack, onClose }: { pack: Datapack; onClose: () =>
                 {t.title}
               </option>
             ))}
-          </select>
+          </Select>
           {error && <ErrorBox>{error}</ErrorBox>}
         </>
       )}

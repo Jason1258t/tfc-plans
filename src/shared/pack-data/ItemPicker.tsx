@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { isBlock, searchItems, useItems, type McItem } from './items';
 import { cx } from '@/shared/lib';
+import { Input } from '@/shared/ui';
 import { ItemIcon } from './ItemIcon';
 import styles from './ItemPicker.module.css';
 
@@ -59,8 +60,8 @@ export function ItemPicker({
 
   return (
     <div className={styles.picker}>
-      <input
-        className={cx('input', small && styles.smallInput)}
+      <Input
+        className={small ? styles.smallInput : undefined}
         value={q}
         placeholder={items ? placeholder : 'Загружаю предметы…'}
         autoFocus={autoFocus}

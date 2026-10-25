@@ -12,7 +12,7 @@
   height: 36px;
 }
 
-.catFilters select:global(.input) {
+.catFilters select {
   width: auto;
   max-width: 240px;
 }
@@ -133,7 +133,7 @@
   .catFilters {
     flex-direction: column;
   }
-  .catFilters select:global(.input) {
+  .catFilters select {
     max-width: none;
   }
   .catMain {
