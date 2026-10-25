@@ -53,7 +53,7 @@
   gap: 6px;
 }
 
-.siCopies :global(.input) {
+.siCopies input {
   width: 72px;
 }
 

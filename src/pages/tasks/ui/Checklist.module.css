@@ -72,7 +72,8 @@
   -webkit-appearance: none;
 }
 
-.clQty {
+/* input.clQty — чтобы ширина перебивала .input компонента поля: оба модуля без слоёв */
+input.clQty {
   width: 56px;
   flex: none;
   text-align: center;

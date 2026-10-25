@@ -11,7 +11,7 @@ import {
   worldProjection,
 } from '@/lib/geo';
 import { cx } from '@/shared/lib';
-import { Button } from '@/shared/ui';
+import { Button, Input } from '@/shared/ui';
 import type { TaskPlace } from '@/entities/task';
 import styles from './TaskDialog.module.css';
 
@@ -59,8 +59,8 @@ export function PlaceField({ value, onChange, compact }: Props) {
           <code>
             {value.x} {value.z}
           </code>
-          <input
-            className="input grow"
+          <Input
+            className="grow"
             aria-label="Подпись места"
             placeholder="Подпись: база, шахта…"
             defaultValue={value.label ?? ''}
@@ -84,8 +84,8 @@ export function PlaceField({ value, onChange, compact }: Props) {
       ) : (
         <div className={styles.tfPlaceInput}>
           {compact && <MapPin size={14} className={cx('faint', styles.tfFieldIcon)} />}
-          <input
-            className={cx('input', compact && styles.withIcon)}
+          <Input
+            className={cx(compact && styles.withIcon)}
             aria-label="Где"
             placeholder={compact ? 'Где: x z или город' : 'x z, «51.5 -0.12» или город — Enter'}
             value={text}
