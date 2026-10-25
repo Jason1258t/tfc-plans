@@ -10,7 +10,7 @@ import { removeOrphanImages } from '../lib/planImages';
 import { cx, timeAgo } from '@/shared/lib';
 import type { Artifact } from '@/entities/artifact';
 import { AgentPanel } from './AgentPanel';
-import './ArtifactPane.css';
+import styles from './ArtifactPane.module.css';
 import { ItemPicker } from '@/shared/pack-data';
 import type { LiveMarkdownHandle } from './LiveMarkdown';
 import { Markdown, itemToken, toggleTaskLine } from './Markdown';
@@ -30,13 +30,16 @@ interface Props {
   onDeleted?: () => void;
 }
 
+/** Класс варианта панели: side — справа от списка задач, full — отдельная страница */
+const VARIANT_CLASS: Record<Props['variant'], string> = { side: styles.side, full: styles.full };
+
 export function ArtifactPane(props: Props) {
   const { items: artifacts, loading } = useArtifacts();
   const artifact = artifacts.find((a) => a.id === props.artifactId);
   if (!artifact) {
     return (
-      <section className={cx('apane', props.variant)}>
-        <div className="apane-head">
+      <section className={cx(styles.apane, VARIANT_CLASS[props.variant])}>
+        <div className={styles.apaneHead}>
           <span className="grow faint">{loading ? 'Загрузка…' : 'План не найден — возможно, его удалили.'}</span>
           {props.onClose && (
             <button className="btn ghost icon" onClick={props.onClose} aria-label="Закрыть">
@@ -150,12 +153,12 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
   const selectedText = view === 'preview' ? '' : content.slice(selection[0], selection[1]);
 
   return (
-    <section className={cx('apane', variant)} aria-label="План">
-      <header className="apane-head">
-        <BookOpen size={18} className="apane-book" />
+    <section className={cx(styles.apane, VARIANT_CLASS[variant])} aria-label="План">
+      <header className={styles.apaneHead}>
+        <BookOpen size={18} className={styles.apaneBook} />
         <input
           id="apane-title"
-          className="apane-title"
+          className={styles.apaneTitle}
           value={title}
           placeholder="Название плана"
           aria-label="Название плана"
@@ -183,16 +186,16 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
         )}
       </header>
 
-      <div className="apane-sub">
+      <div className={styles.apaneSub}>
         {task ? (
-          <button className="apane-task" onClick={() => onOpenTask?.(task.id)} title="Открыть задачу">
+          <button className={styles.apaneTask} onClick={() => onOpenTask?.(task.id)} title="Открыть задачу">
             ↳ {task.title}
           </button>
         ) : (
           <span className="faint small">Без задачи</span>
         )}
         <span className="grow" />
-        <span className="faint small save-state">
+        <span className={cx('faint small', styles.saveState)}>
           {images.uploading
             ? 'Загружаю картинку…'
             : saving
@@ -203,25 +206,25 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
         </span>
       </div>
 
-      <div className="apane-toolbar">
+      <div className={styles.apaneToolbar}>
         <div className="seg" role="group" aria-label="Режим">
           <button aria-pressed={view === 'edit'} onClick={() => setView('edit')} title="Текст">
             <Pencil size={13} />
-            <span className="hide-narrow">Текст</span>
+            <span className={styles.hideNarrow}>Текст</span>
           </button>
           {variant === 'full' && (
             <button aria-pressed={view === 'split'} onClick={() => setView('split')} title="Текст и просмотр">
               <Columns2 size={13} />
-              <span className="hide-narrow">Оба</span>
+              <span className={styles.hideNarrow}>Оба</span>
             </button>
           )}
           <button aria-pressed={view === 'preview'} onClick={() => setView('preview')} title="Просмотр">
             <Eye size={13} />
-            <span className="hide-narrow">Просмотр</span>
+            <span className={styles.hideNarrow}>Просмотр</span>
           </button>
         </div>
         {view !== 'preview' && (
-          <div className="apane-insert">
+          <div className={styles.apaneInsert}>
             <ItemPicker small placeholder="Вставить предмет…" onPick={(it) => insertAt(itemToken(it.i))} />
           </div>
         )}
@@ -254,12 +257,12 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
         </button>
       </div>
 
-      <div className={cx('apane-doc', `view-${view}`)}>
+      <div className={cx(styles.apaneDoc, view === 'split' && styles.viewSplit)}>
         {view !== 'preview' && (
-          <Suspense fallback={<div className="apane-text faint">Загрузка редактора…</div>}>
+          <Suspense fallback={<div className={cx(styles.apaneText, 'faint')}>Загрузка редактора…</div>}>
             <LiveMarkdown
               ref={liveRef}
-              className="apane-text"
+              className={styles.apaneText}
               value={content}
               placeholder={PLACEHOLDER}
               onChange={change}
@@ -271,7 +274,7 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
           </Suspense>
         )}
         {view !== 'edit' && (
-          <div className="apane-preview" onDoubleClick={() => setView(variant === 'full' ? 'split' : 'edit')}>
+          <div className={styles.apanePreview} onDoubleClick={() => setView(variant === 'full' ? 'split' : 'edit')}>
             {content.trim() ? (
               <Markdown
                 source={content}
@@ -288,6 +291,7 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
       </div>
 
       <AgentPanel
+        className={variant === 'full' ? styles.agentFull : undefined}
         artifact={{ ...artifact, content }}
         task={task}
         selectedText={selectedText}
