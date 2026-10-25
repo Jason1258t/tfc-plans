@@ -26,6 +26,7 @@ import { entryRecipeId, kubejsScript, scriptFileName } from '@/lib/kubejsFix';
 import { downloadScript } from '@/lib/kubejsScripts';
 import { cx, timeAgo, uid } from '@/shared/lib';
 import type { Datapack, DatapackEntry } from '@/entities/datapack';
+import { Button } from '@/shared/ui';
 import { download } from '../model/download';
 import styles from '../DatapacksPage.module.css';
 
@@ -171,9 +172,9 @@ export function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () 
               </>
             )}
           </span>
-          <button className="btn ghost sm" onClick={() => setSaving(null)}>
+          <Button variant="ghost" size="sm" className={styles.dpSavedBtn} onClick={() => setSaving(null)}>
             Скрыть
-          </button>
+          </Button>
         </div>
       )}
 
@@ -193,9 +194,9 @@ export function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () 
           pack_format {PACK_FORMAT} (Minecraft 1.21.1) · создал {pack.author}, изменено {timeAgo(pack.updatedAt)}.
           Установка: zip в <code>world/datapacks/</code>; рецепты — <code>/reload</code>, реестры — перезапуск сервера.
         </span>
-        <button className="btn ghost sm danger" onClick={remove}>
+        <Button size="sm" className={styles.dpDanger} onClick={remove}>
           Удалить датапак
-        </button>
+        </Button>
       </footer>
 
       {catalogMode && (

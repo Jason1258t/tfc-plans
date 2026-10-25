@@ -5,7 +5,7 @@ import { useTasks } from '@/entities/task';
 import { useGroups } from '@/entities/group';
 import { buildZip, zipName } from '@/lib/datapack';
 import { uploadFile } from '@/entities/file';
-import { Modal } from '@/shared/ui';
+import { Modal, Button } from '@/shared/ui';
 import type { Datapack } from '@/entities/datapack';
 
 /** Собрать zip и приложить к задаче — хост скачает его оттуда */
@@ -44,22 +44,20 @@ export function AttachDialog({ pack, onClose }: { pack: Datapack; onClose: () =>
         done ? (
           <>
             <span className="grow" />
-            <button className="btn" onClick={onClose}>
-              Закрыть
-            </button>
-            <button className="btn primary" onClick={() => navigate(`/?task=${taskId}`)}>
+            <Button onClick={onClose}>Закрыть</Button>
+            <Button variant="primary" onClick={() => navigate(`/?task=${taskId}`)}>
               Открыть задачу
-            </button>
+            </Button>
           </>
         ) : (
           <>
             <span className="grow" />
-            <button className="btn ghost" onClick={onClose}>
+            <Button variant="ghost" onClick={onClose}>
               Отмена
-            </button>
-            <button className="btn primary" onClick={attach} disabled={!taskId || busy}>
+            </Button>
+            <Button variant="primary" onClick={attach} disabled={!taskId || busy}>
               {busy ? 'Загружаю…' : 'Приложить'}
-            </button>
+            </Button>
           </>
         )
       }

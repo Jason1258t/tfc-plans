@@ -134,7 +134,8 @@
   background: color-mix(in srgb, var(--imp-2) 12%, transparent);
 }
 
-.dp-saved :global(.btn) {
+/* Кнопка в плашке «сохранено» — прижата вправо; класс передаётся в shared/ui/Button */
+.dp-saved-btn {
   margin-left: auto;
 }
 
@@ -252,10 +253,30 @@
   }
 }
 
-.dp-kjs {
+/*
+ * Кнопка «KubeJS удалит»: красная рамка поверх .btn из shared/ui/Button. .dp-entry в селекторе нужен, чтобы правило
+ * перекрывало .btn по специфичности, а не по порядку CSS-файлов в сборке.
+ */
+.dp-entry .dp-kjs {
   flex: none;
   color: var(--danger);
   border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+
+/*
+ * Кнопка опасного действия («Удалить датапак», корзина у файла, «Удалить скрипт»): у Button нет сочетания
+ * ghost + danger, поэтому прозрачный фон, красный текст и красный ховер заданы здесь — как было у .btn.ghost.danger.
+ */
+.dp-editor .dp-danger {
+  background: transparent;
+  border-color: transparent;
+  color: var(--danger);
+}
+
+.dp-editor .dp-danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--text);
 }
 
 .dp-list-head-next {

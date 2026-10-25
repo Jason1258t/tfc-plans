@@ -6,7 +6,7 @@ import { itemName, useItems, itemRefsOf, type RecipeCatalog, ItemIcon, ItemIdSea
 import type { DatapackEntry } from '@/entities/datapack';
 import styles from './EntryEditor.module.css';
 import { HintPanel } from './HintPanel';
-import { Modal } from '@/shared/ui';
+import { Modal, Button } from '@/shared/ui';
 
 const KIND_LABEL: Record<DatapackEntry['kind'], string> = {
   add: 'Новый рецепт',
@@ -69,12 +69,12 @@ export function EntryEditor({ entry, catalog, onSave, onClose }: Props) {
               </>
             )}
           </span>
-          <button className="btn ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             Отмена
-          </button>
-          <button className="btn primary" onClick={save} disabled={!path.trim() || Boolean(error)}>
+          </Button>
+          <Button variant="primary" onClick={save} disabled={!path.trim() || Boolean(error)}>
             Сохранить
-          </button>
+          </Button>
         </>
       }
     >
@@ -101,13 +101,14 @@ export function EntryEditor({ entry, catalog, onSave, onClose }: Props) {
             </span>
             <span className="grow" />
             {isJson && (
-              <button
-                className="btn ghost sm"
+              <Button
+                variant="ghost"
+                size="sm"
                 disabled={Boolean(error)}
                 onClick={() => setContent(JSON.stringify(JSON.parse(content), null, 2))}
               >
                 <Braces size={13} /> Форматировать
-              </button>
+              </Button>
             )}
           </div>
           <textarea
