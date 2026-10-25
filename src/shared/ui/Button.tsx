@@ -1,20 +1,11 @@
 import type { ButtonHTMLAttributes } from 'react';
 import { cx } from '@/shared/lib';
 import styles from './Button.module.css';
-
-type Variant = 'primary' | 'ghost' | 'danger' | 'ai';
-
-/** Карта классов вариантов: явные ссылки, чтобы проверка CSS-модулей видела классы */
-const VARIANT: Record<Variant, string> = {
-  primary: styles.primary,
-  ghost: styles.ghost,
-  danger: styles.danger,
-  ai: styles.ai,
-};
+import { BUTTON_VARIANT, type ButtonVariant } from './buttonVariant';
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** Вид: обычная, основная, прозрачная, опасная, «с ИИ» */
-  variant?: Variant;
+  variant?: ButtonVariant;
   /** Маленькая */
   size?: 'sm';
   /** Квадратная с одной иконкой */
@@ -28,7 +19,7 @@ export function Button({ variant, size, icon, className, type = 'button', ...res
       type={type}
       className={cx(
         styles.btn,
-        variant && VARIANT[variant],
+        variant && BUTTON_VARIANT[variant],
         size === 'sm' && styles.sm,
         icon && styles.icon,
         className,

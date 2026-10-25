@@ -1,0 +1,21 @@
+/* Важность: точка и кружок. Переехали из app/theme/legacy-ui.css (`.imp-dot`, `.imp-pill`) */
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 11px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
