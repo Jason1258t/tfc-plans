@@ -1,5 +1,5 @@
 import { FilePen, FilePlus2, Search } from 'lucide-react';
-import { Segmented } from '@/shared/ui';
+import { Button, Segmented } from '@/shared/ui';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PackSection } from '@/widgets/pack-nav';
@@ -98,9 +98,9 @@ export function TagsPage() {
               (по-русски тоже). Править можно датапаком: добавить, убрать, заменить состав.
             </p>
           </div>
-          <button className="btn" onClick={() => setEditing({ kind: kind === 'all' ? 'item' : kind, id: null })}>
+          <Button onClick={() => setEditing({ kind: kind === 'all' ? 'item' : kind, id: null })}>
             <FilePlus2 size={15} /> Новый тег
-          </button>
+          </Button>
         </div>
 
         {pack && (
@@ -159,9 +159,9 @@ export function TagsPage() {
                 ))}
               </ul>
               {found.length > shown.length && (
-                <button className="btn ghost sm" onClick={() => setAll(true)}>
+                <Button variant="ghost" size="sm" onClick={() => setAll(true)}>
                   Показать все {found.length}
-                </button>
+                </Button>
               )}
             </aside>
 
@@ -234,9 +234,9 @@ function TagDetail({
             {nested.length > 0 && `, с вложенными тегами ${flat.length}`} · источников {tag.s.length + tag.ops.length}
           </p>
         </div>
-        <button className="btn primary" onClick={onEdit}>
+        <Button variant="primary" onClick={onEdit}>
           <FilePen size={15} /> {hasEntry ? 'Править файл в датапаке' : 'Править датапаком'}
-        </button>
+        </Button>
       </div>
 
       {others.length > 0 ? (
@@ -329,9 +329,9 @@ function TagDetail({
         ))}
       </ul>
       {direct.length > list.length && (
-        <button className="btn ghost sm" onClick={() => setFull(true)}>
+        <Button variant="ghost" size="sm" onClick={() => setFull(true)}>
           Показать все {direct.length}
-        </button>
+        </Button>
       )}
     </div>
   );
