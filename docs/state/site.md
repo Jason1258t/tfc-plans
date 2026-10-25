@@ -54,6 +54,13 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 `/docs` (`/files` points there): whole storage in one list — search by name, author, task and schematic, filter by
 kind, upload without a task, download, delete (schematic-library sources cannot be deleted from here).
 
+- **Service subsections** (2026-10-25, task BDoIffX3jFbb4laaIr5N): tabs «Файлы» · «Краш-репорты» · «Логи»
+  (`?section=crash|log`). Reports are `files` docs with a `report` field (`FileReport` in `entities/file`), uploaded by
+  `tfc report` through the pack server; «Файлы» no longer lists them. Row: type label, size, author, time, file count,
+  note, inner file names, task link; buttons copy-for-agent (`Отчёт «…» — tfc-report:<id> — …/docs?report=<id>`),
+  download, delete. `?report=<id>` opens the right tab, highlights and scrolls to the row. Checked on the dev server
+  (desktop and 375 px) with three real test reports uploaded via a local pack server, then deleted.
+
 ## Tasks and plans
 
 - Tasks: list, priority, Elo comparison («Что важнее?»: full ranking list, ⇅ between neighbour rows swaps their

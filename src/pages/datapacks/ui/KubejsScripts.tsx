@@ -7,6 +7,7 @@ import { SCRIPT_FILE_RE } from '@/lib/kubejsFix';
 import { downloadScript } from '@/lib/kubejsScripts';
 import { cx, timeAgo } from '@/shared/lib';
 import type { KubejsScript } from '@/entities/datapack';
+import { Button } from '@/shared/ui';
 import styles from '../DatapacksPage.module.css';
 
 /** Отметка «Ставить в мир» / «Ставить на сервер» с подсказкой */
@@ -103,11 +104,11 @@ export function ScriptEditor({
 
       <div className={styles.dpToolbar}>
         <span className="grow faint small">{dirty ? 'Есть несохранённые правки' : ''}</span>
-        <button className="btn" onClick={() => downloadScript(text, script.fileName)}>
+        <Button onClick={() => downloadScript(text, script.fileName)}>
           <Download size={15} /> Скачать .js
-        </button>
-        <button
-          className="btn primary"
+        </Button>
+        <Button
+          variant="primary"
           disabled={!dirty || text.length > 200_000}
           onClick={() => {
             setBase(text);
@@ -115,7 +116,7 @@ export function ScriptEditor({
           }}
         >
           <Save size={15} /> Сохранить
-        </button>
+        </Button>
       </div>
       {remoteChanged && (
         <div className={cx(styles.dpSaved, styles.error)}>
@@ -123,15 +124,17 @@ export function ScriptEditor({
             Скрипт изменил {script.updatedBy} {timeAgo(script.updatedAt)}
             {dirty ? ' — «Сохранить» затрёт его правку' : ''}.
           </span>
-          <button
-            className="btn ghost sm"
+          <Button
+            variant="ghost"
+            size="sm"
+            className={styles.dpSavedBtn}
             onClick={() => {
               setText(script.text);
               setBase(script.text);
             }}
           >
             Взять новую версию
-          </button>
+          </Button>
         </div>
       )}
       {text.length > 200_000 && <ErrorBox>Скрипт длиннее 200 000 знаков — разбейте на несколько.</ErrorBox>}
@@ -150,9 +153,9 @@ export function ScriptEditor({
           <FileTerminal size={12} /> создал {script.author}, изменил {script.updatedBy} {timeAgo(script.updatedAt)}.
           Установка вручную: файл в <code>kubejs/server_scripts/</code> на сервере, затем <code>/reload</code>.
         </span>
-        <button className="btn ghost sm danger" onClick={remove}>
+        <Button size="sm" className={styles.dpDanger} onClick={remove}>
           Удалить скрипт
-        </button>
+        </Button>
       </footer>
     </div>
   );

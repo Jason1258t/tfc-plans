@@ -8,6 +8,7 @@ import { typeFieldStats, type RecipeCatalog } from '@/shared/pack-data';
 import { cx, timeAgo } from '@/shared/lib';
 import { Markdown } from '@/components/Markdown';
 import { MarkdownField } from '@/components/MarkdownField';
+import { Button } from '@/shared/ui';
 import styles from './HintPanel.module.css';
 
 const SOURCE_LABEL: Record<RecipeHint['source'], string> = {
@@ -94,14 +95,16 @@ export function HintPanel({ type, catalog }: { type: string | undefined; catalog
         <Lightbulb size={15} />
         <span className={cx('grow', styles.hintTitle)}>{hint?.title ?? type}</span>
         {hint && !editing && (
-          <button
-            className="btn ghost sm icon"
+          <Button
+            variant="ghost"
+            size="sm"
+            icon
             onClick={() => (setDraft(hint.body), setEditing(true))}
             aria-label="Править подсказку"
             title="Править"
           >
             <Pencil size={13} />
-          </button>
+          </Button>
         )}
       </div>
       <code className={styles.hintType}>
@@ -116,12 +119,12 @@ export function HintPanel({ type, catalog }: { type: string | undefined; catalog
           <MarkdownField autoFocus rows={12} value={draft} onChange={setDraft} />
           <div className="row">
             <span className="grow" />
-            <button className="btn ghost sm" onClick={() => setEditing(false)}>
+            <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
               Отмена
-            </button>
-            <button className="btn primary sm" onClick={saveManual} disabled={busy || !draft.trim()}>
+            </Button>
+            <Button variant="primary" size="sm" onClick={saveManual} disabled={busy || !draft.trim()}>
               Сохранить
-            </button>
+            </Button>
           </div>
         </>
       ) : hint ? (
@@ -139,10 +142,10 @@ export function HintPanel({ type, catalog }: { type: string | undefined; catalog
       )}
 
       {geminiEnabled && !editing && hint !== undefined && count > 0 && (
-        <button className="btn ai sm" onClick={generate} disabled={busy || !catalog}>
+        <Button variant="ai" size="sm" onClick={generate} disabled={busy || !catalog}>
           {hint ? <RefreshCw size={13} /> : <Sparkles size={13} />}
           {busy ? 'Агент изучает рецепты…' : hint ? 'Обновить агентом' : 'Составить агентом'}
-        </button>
+        </Button>
       )}
       {error && <ErrorBox>{error}</ErrorBox>}
     </div>

@@ -120,7 +120,7 @@ async function addonsList(a) {
       c.unlisted ? 'скрыт из списка' : null,
     ].filter(Boolean);
     out.push(
-      `${c.id} ${c.version} — ${c.name} [${c.source}, ${c.side}, блоков ${c.blocks.length}]` +
+      `${c.id} ${c.version} — ${c.name} [${c.source}, ${c.side}${c.hostOnly ? ', для хоста' : ''}, блоков ${c.blocks.length}]` +
         `; страница ${guideId(c.id)}${g ? ` (правил ${g.updatedBy} ${dateOf(g.updatedAt)})` : ''}` +
         (marks.length ? `\n    ⚠ ${marks.join('; ')}` : ''),
     );

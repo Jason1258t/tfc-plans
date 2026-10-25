@@ -1,8 +1,8 @@
 import { AlertTriangle, Hash, ShieldAlert, Trash2 } from 'lucide-react';
 import { tagFromPath, type RecipeCatalog } from '@/shared/pack-data';
-import { cx } from '@/shared/lib';
 import type { PackIssue } from '@/lib/datapack';
 import type { Datapack, DatapackEntry } from '@/entities/datapack';
+import { Button } from '@/shared/ui';
 import { KIND_LABEL } from '../model/entryKind';
 import styles from '../DatapacksPage.module.css';
 
@@ -52,13 +52,14 @@ export function PackEntries({ pack, issues, catalog, kjsHits, onEdit, onRemove, 
                 </span>
               </button>
               {tagFromPath(e.path) && (
-                <button className="btn sm" onClick={() => onOpenTag(e)} title="Открыть в редакторе тегов">
+                <Button size="sm" onClick={() => onOpenTag(e)} title="Открыть в редакторе тегов">
                   <Hash size={13} /> Тег
-                </button>
+                </Button>
               )}
               {kjsHits.has(e.id) && (
-                <button
-                  className={cx('btn sm', styles.dpKjs)}
+                <Button
+                  size="sm"
+                  className={styles.dpKjs}
                   onClick={() => onOpenConstructor(e)}
                   title={`Удаляется KubeJS: ${kjsHits
                     .get(e.id)!
@@ -69,16 +70,18 @@ export function PackEntries({ pack, issues, catalog, kjsHits, onEdit, onRemove, 
                     .join(', ')}`}
                 >
                   <ShieldAlert size={13} /> KubeJS удалит
-                </button>
+                </Button>
               )}
-              <button
-                className="btn ghost sm icon danger"
+              <Button
+                size="sm"
+                icon
+                className={styles.dpDanger}
                 onClick={() => onRemove(e.id)}
                 aria-label={`Убрать ${e.path}`}
                 title="Убрать из датапака"
               >
                 <Trash2 size={14} />
-              </button>
+              </Button>
             </li>
           ))}
         </ul>

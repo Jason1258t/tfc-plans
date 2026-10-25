@@ -10,5 +10,6 @@ export {
   subscribeFiles,
   uploadFile,
   type FileMeta,
+  type FileReport,
 } from './files';
 export { startFiles, useFiles } from './store';
