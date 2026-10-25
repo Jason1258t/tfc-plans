@@ -11,7 +11,7 @@ import { FILE_KINDS, fileKind, type FileKind } from '../../lib/fileKinds';
 import { prepareFile, validateFiles } from '../../lib/uploads';
 import { cx, timeAgo } from '@/shared/lib';
 import type { SavedSchematic } from '@/entities/schematic';
-import { Search, Segmented, Button } from '@/shared/ui';
+import { Search, Segmented, Button, ErrorBox } from '@/shared/ui';
 import { ReportList } from './ui/ReportList';
 import styles from './FilesPage.module.css';
 
@@ -152,6 +152,12 @@ export function FilesPage() {
         }))}
       />
 
+      {uploading && (
+        <p className={cx(styles.filesUploading, 'small')}>
+          Загружаю «{uploading.name}» — {Math.round(uploading.progress * 100)}%
+        </p>
+      )}
+      {error && <ErrorBox>{error}</ErrorBox>}
       {error && <div className="error-box">{error}</div>}
 
       {section !== 'files' ? (

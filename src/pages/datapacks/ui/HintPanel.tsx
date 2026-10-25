@@ -1,4 +1,5 @@
 import { Lightbulb, Pencil, RefreshCw, Sparkles } from 'lucide-react';
+import { ErrorBox } from '@/shared/ui';
 import { useEffect, useState } from 'react';
 import { useNick } from '@/entities/user';
 import { generateRecipeHint, geminiEnabled, geminiErrorText } from '@/shared/api';
@@ -146,7 +147,7 @@ export function HintPanel({ type, catalog }: { type: string | undefined; catalog
           {busy ? 'Агент изучает рецепты…' : hint ? 'Обновить агентом' : 'Составить агентом'}
         </Button>
       )}
-      {error && <div className="error-box">{error}</div>}
+      {error && <ErrorBox>{error}</ErrorBox>}
     </div>
   );
 }

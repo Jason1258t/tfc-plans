@@ -1,4 +1,5 @@
 import { Download, FileTerminal, Save } from 'lucide-react';
+import { ErrorBox } from '@/shared/ui';
 import { useState } from 'react';
 import { useNick } from '@/entities/user';
 import { kubejsScriptsStore } from '@/entities/datapack';
@@ -136,8 +137,8 @@ export function ScriptEditor({
           </Button>
         </div>
       )}
-      {text.length > 200_000 && <div className="error-box">Скрипт длиннее 200 000 знаков — разбейте на несколько.</div>}
-      {error && <div className="error-box">Не сохранилось: {error}</div>}
+      {text.length > 200_000 && <ErrorBox>Скрипт длиннее 200 000 знаков — разбейте на несколько.</ErrorBox>}
+      {error && <ErrorBox>Не сохранилось: {error}</ErrorBox>}
 
       <textarea
         className={cx('input mono', styles.dpScriptText)}

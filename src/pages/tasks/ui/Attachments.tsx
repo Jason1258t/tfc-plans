@@ -1,4 +1,5 @@
 import { Download, Paperclip, Trash2, X } from 'lucide-react';
+import { ErrorBox } from '@/shared/ui';
 import { useRef, useState } from 'react';
 import { useFiles } from '@/entities/file';
 import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, type FileMeta } from '@/entities/file';
@@ -154,7 +155,7 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
           e.target.value = '';
         }}
       />
-      {shownError && <div className="error-box">{shownError}</div>}
+      {shownError && <ErrorBox>{shownError}</ErrorBox>}
     </div>
   );
 }

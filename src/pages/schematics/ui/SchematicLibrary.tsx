@@ -1,4 +1,5 @@
 import { Download, FileBox, ImagePlus, Library, Search, Trash2, X } from 'lucide-react';
+import { ErrorBox } from '@/shared/ui';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNick } from '@/entities/user';
@@ -107,7 +108,7 @@ export function SchematicLibrary({ openIds, onOpen, onDownload }: Props) {
           </label>
         )}
       </div>
-      {error && <div className="error-box">{error}</div>}
+      {error && <ErrorBox>{error}</ErrorBox>}
       {!list ? (
         <p className="faint small">Загружаю…</p>
       ) : list.length === 0 ? (

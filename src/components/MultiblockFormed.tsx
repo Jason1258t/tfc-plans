@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { ErrorBox } from '@/shared/ui';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
@@ -179,7 +180,7 @@ export default function MultiblockFormed({
   return (
     <div className="mb-formed" ref={wrapRef}>
       {loading && !error && <div className="mb-formed-note faint small">Загружаю модель…</div>}
-      {error && <div className="error-box mb-formed-note">{error}</div>}
+      {error && <ErrorBox className="mb-formed-note">{error}</ErrorBox>}
       <span className="mb-iso-hint faint small">ЛКМ — повернуть, ПКМ — сдвинуть, колесо — ближе</span>
     </div>
   );
