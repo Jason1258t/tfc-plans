@@ -116,6 +116,7 @@ export async function addonsIndex(
       size: bytes.length,
       sha256: sha256(bytes),
       side: a.side,
+      hostOnly: a.hostOnly === true,
       needs: a.needs,
       replaces: a.replaces ?? [],
     });
