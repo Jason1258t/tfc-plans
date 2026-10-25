@@ -72,7 +72,9 @@
   min-width: 0;
 }
 
-.filters :global(select.input) {
+/* Список фильтра — по ширине содержимого, а не во всю строку. Поля — shared/ui Select: своего класса у них нет,
+   поэтому по тегу (Field.module.css без каскадного слоя — тег с классом родителя бьёт его .input по специфичности). */
+.filters > select {
   width: auto;
   max-width: 100%;
 }

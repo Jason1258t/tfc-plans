@@ -15,6 +15,7 @@ import {
   type Setting,
 } from '@/lib/power';
 import { cx } from '@/shared/lib';
+import { Input } from '@/shared/ui';
 import { ItemIcon } from '@/shared/pack-data';
 import { IeConsumers } from '@/features/reference-tabs';
 import '../ReferenceShared.css';
@@ -120,8 +121,7 @@ function Field({
     <label className="power-field">
       <span className="faint small">{label}</span>
       <span>
-        <input
-          className="input"
+        <Input
           type="number"
           value={value}
           min={min}

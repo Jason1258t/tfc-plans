@@ -14,6 +14,7 @@ import {
 } from '@/lib/meals';
 import { NUTRIENTS, type Nutrient } from '@/lib/reference';
 import { cx } from '@/shared/lib';
+import { Select } from '@/shared/ui';
 import styles from './MealsTab.module.css';
 
 const NUTRIENT_LABEL: Record<Nutrient, string> = {
@@ -81,14 +82,14 @@ function Fields({
       {fields.map((f) => (
         <label key={f.key}>
           <span className="faint small">{f.label}</span>
-          <select className="input" value={value[f.key] ?? ''} onChange={(e) => onChange(f.key, e.target.value)}>
+          <Select value={value[f.key] ?? ''} onChange={(e) => onChange(f.key, e.target.value)}>
             <option value="">{f.required ? '— выберите —' : '— пусто —'}</option>
             {f.options.map((id) => (
               <option key={id} value={id}>
                 {label(f.options, id)}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       ))}
     </div>

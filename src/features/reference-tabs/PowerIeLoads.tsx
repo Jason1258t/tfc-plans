@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { deviceTick, machineRates, type IeDevice, type IeMachine, type PowerData, type Setting } from '@/lib/power';
 import { ItemIcon } from '@/shared/pack-data';
-import { Button } from '@/shared/ui';
+import { Button, Input, Select } from '@/shared/ui';
 
 /**
  * Потребители IE и Advanced TFC Tech: таблицы (вкладка «Сеть IE») и набор нагрузки для расчёта генератора (гайд
@@ -178,13 +178,13 @@ export function IeLoadPicker({
       <h3>Нагрузка из машин IE</h3>
       <label className="power-field">
         <span className="faint small">Как считать машины</span>
-        <select className="input" value={mode} onChange={(e) => setMode(e.target.value as Mode)}>
+        <Select value={mode} onChange={(e) => setMode(e.target.value as Mode)}>
           {MODES.map((m) => (
             <option key={m.id} value={m.id}>
               {m.label}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       <div className="power-picker">
         {rows.map((r) => (
@@ -192,8 +192,7 @@ export function IeLoadPicker({
             <ItemIcon id={r.block} size={20} />
             <span className="grow small">{r.name}</span>
             <span className="faint small">{fe(r.load)} FE/t</span>
-            <input
-              className="input"
+            <Input
               type="number"
               min={0}
               max={999}

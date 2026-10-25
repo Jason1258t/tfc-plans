@@ -1,7 +1,7 @@
 import { X } from 'lucide-react';
 import { useState } from 'react';
 import { cx } from '@/shared/lib';
-import { Button } from '@/shared/ui';
+import { Button, Input } from '@/shared/ui';
 import type { GuideKit } from './GuideBody';
 import styles from './Guides.module.css';
 
@@ -100,7 +100,7 @@ export function GuideHelp({ kit, onClose }: { kit: GuideKit; onClose: () => void
         </div>
         <div>
           <h3>Имена в формулах</h3>
-          <input className="input" placeholder="Найти…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Input placeholder="Найти…" value={q} onChange={(e) => setQ(e.target.value)} />
           <dl className={cx(styles.guideHelpNames, 'small')}>
             {names.map(([k, d]) => (
               <div key={k}>

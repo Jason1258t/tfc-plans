@@ -26,6 +26,7 @@ import { itemName, useItems, type ItemIndex, useTags, ItemIcon } from '@/shared/
 import { mealsByItem, useMeals, type MealRef } from '@/lib/meals';
 import type { Food } from '@/lib/reference';
 import { cx } from '@/shared/lib';
+import { Input, Select } from '@/shared/ui';
 import '../ReferenceShared.css';
 import shell from '../ReferenceShell.module.css';
 import styles from './BotanyTab.module.css';
@@ -155,8 +156,7 @@ export function BotanyTab({
             </label>
             <label className={styles.field}>
               <span className="faint small">Температура, °C</span>
-              <input
-                className="input"
+              <Input
                 inputMode="decimal"
                 placeholder="напр. 12"
                 value={temp}
@@ -165,24 +165,18 @@ export function BotanyTab({
             </label>
             <label className={styles.field}>
               <span className="faint small">Влажность, %</span>
-              <input
-                className="input"
+              <Input
                 inputMode="decimal"
                 placeholder="напр. 40"
                 value={hydr}
                 onChange={(e) => setHydr(e.target.value)}
               />
             </label>
-            <select
-              className="input"
-              value={sort}
-              onChange={(e) => setSort(e.target.value as Sort)}
-              aria-label="Порядок"
-            >
+            <Select value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Порядок">
               <option value="name">По названию</option>
               <option value="minT">Сначала холодостойкие</option>
               <option value="maxT">Сначала жаростойкие</option>
-            </select>
+            </Select>
           </div>
 
           <Summary meta={meta} sub={sub} config={config} shown={list.length} total={counts[sub]} items={items} />
@@ -817,14 +811,14 @@ function Greenhouse({
           <Search size={15} className="faint" />
           <input placeholder="Томат, ваниль, виноград…" value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
-        <select className="input" value={planter} onChange={(e) => setPlanter(e.target.value)} aria-label="Грядка">
+        <Select value={planter} onChange={(e) => setPlanter(e.target.value)} aria-label="Грядка">
           <option value="">Любая грядка</option>
           {planters.map((p) => (
             <option key={p} value={p}>
               {PLANTER_LABEL[p] ?? p}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       <section className={styles.summary}>
         <dl>

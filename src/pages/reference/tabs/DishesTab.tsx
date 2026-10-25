@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react';
-import { Button } from '@/shared/ui';
+import { Button, Select } from '@/shared/ui';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { itemName, type ItemIndex, hasStatus, useRecipes, type Recipe, ItemIcon } from '@/shared/pack-data';
@@ -142,8 +142,7 @@ export function DishesTab({ items, foods }: { items: ItemIndex | null; foods: Fo
             onChange={(e) => (setQuery(e.target.value), setLimit(PAGE))}
           />
         </label>
-        <select
-          className="input"
+        <Select
           value={type}
           onChange={(e) => (setType(e.target.value), setLimit(PAGE))}
           aria-label="Способ приготовления"
@@ -154,7 +153,7 @@ export function DishesTab({ items, foods }: { items: ItemIndex | null; foods: Fo
               {typeTitle(t)} · {n}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       <p className={cx('faint', 'small', shell.note)}>
         Еда с постоянной питательностью по способу приготовления — типу рецепта. Только рецепты, работающие в игре: с

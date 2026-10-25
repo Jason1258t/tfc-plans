@@ -353,11 +353,15 @@
   flex: 1 1 100%;
 }
 
-.guideFieldWide :global(.input) {
+/* Широкое поле формы — shared/ui Input и Textarea (своего класса у них нет, поэтому по тегу; тег с классом родителя
+   бьёт .input из Field.module.css, который лежит без каскадного слоя) */
+.guideFieldWide > input,
+.guideFieldWide > textarea {
   width: 100%;
 }
 
-.guideOrder {
+/* Поле «Порядок» узкое: класс родителя в селекторе — чтобы перебить .input из Field.module.css */
+.guideFields .guideOrder {
   width: 80px;
 }
 
