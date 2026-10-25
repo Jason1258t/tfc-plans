@@ -1,5 +1,5 @@
 import { Boxes, Eye, Pencil, UserRound, X } from 'lucide-react';
-import {Segmented, ErrorBox } from '@/shared/ui';
+import { Segmented, ErrorBox } from '@/shared/ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGroups } from '@/entities/group';
 import { useNick, usePeople } from '@/entities/user';

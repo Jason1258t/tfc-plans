@@ -9,7 +9,7 @@ import { ItemIcon } from '@/shared/pack-data';
 import { TaskDialog, type TaskDialogMode } from './ui/TaskDialog';
 import { TaskRow } from './ui/TaskRow';
 import { useNick } from '@/entities/user';
-import {Segmented, ErrorBox } from '@/shared/ui';
+import { Segmented, ErrorBox } from '@/shared/ui';
 import { useTasks } from '@/entities/task';
 import { useGroups } from '@/entities/group';
 import { useArtifacts } from '@/entities/artifact';

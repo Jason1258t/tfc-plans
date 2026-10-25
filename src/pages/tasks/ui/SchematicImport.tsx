@@ -4,7 +4,7 @@ import { itemName, useItems, ItemIcon } from '@/shared/pack-data';
 import { addMaterials, schematicMaterials, type SchematicMaterials } from '@/lib/materials';
 import { cx } from '@/shared/lib';
 import type { ChecklistEntry } from '@/entities/task';
-import {Modal, ErrorBox } from '@/shared/ui';
+import { Modal, ErrorBox } from '@/shared/ui';
 import styles from './SchematicImport.module.css';
 
 interface Props {
