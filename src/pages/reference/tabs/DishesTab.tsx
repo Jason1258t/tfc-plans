@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react';
+import { Button } from '@/shared/ui';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { itemName, type ItemIndex, hasStatus, useRecipes, type Recipe, ItemIcon } from '@/shared/pack-data';
@@ -232,9 +233,9 @@ export function DishesTab({ items, foods }: { items: ItemIndex | null; foods: Fo
         </div>
       )}
       {shown.length > limit && (
-        <button className="btn ghost sm" onClick={() => setLimit((n) => n + PAGE)}>
+        <Button variant="ghost" size="sm" onClick={() => setLimit((n) => n + PAGE)}>
           Показать ещё
-        </button>
+        </Button>
       )}
     </>
   );

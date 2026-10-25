@@ -2,7 +2,7 @@ import { Check, Copy, Search as SearchIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { searchItems, useItems } from './items';
 import { cx } from '@/shared/lib';
-import { Search } from '@/shared/ui';
+import { Search, Button } from '@/shared/ui';
 import { ItemIcon } from './ItemIcon';
 import { useSearchTrack } from '@/shared/api';
 import styles from './ItemIdSearch.module.css';
@@ -63,14 +63,17 @@ export function ItemIdSearch({ autoFocus, compact, limit = 40 }: Props) {
                   {it.i}
                 </code>
               </span>
-              <button
-                className={cx('btn ghost sm icon', copied === it.i && styles.copied)}
+              <Button
+                variant="ghost"
+                size="sm"
+                icon
+                className={cx(copied === it.i && styles.copied)}
                 onClick={() => copy(it.i)}
                 aria-label={`Скопировать ${it.i}`}
                 title="Скопировать id"
               >
                 {copied === it.i ? <Check size={14} /> : <Copy size={14} />}
-              </button>
+              </Button>
             </li>
           ))}
         </ul>

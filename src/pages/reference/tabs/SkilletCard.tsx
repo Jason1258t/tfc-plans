@@ -1,4 +1,5 @@
 import { Plus, X } from 'lucide-react';
+import { Button } from '@/shared/ui';
 import { useMemo, useState, type ComponentType, type ReactNode } from 'react';
 import { CONFIG_ORIGIN_LABEL, useModConfig, type ConfigOrigin, type ModConfig } from '@/entities/pack-config';
 import type { TagCatalog } from '@/shared/pack-data';
@@ -158,9 +159,9 @@ function Calc({
           </div>
         ))}
       </div>
-      <button className="btn ghost sm" onClick={() => setRows((x) => [...x, { id: '', count: 1, state: 'ok' }])}>
+      <Button variant="ghost" size="sm" onClick={() => setRows((x) => [...x, { id: '', count: 1, state: 'ok' }])}>
         <Plus size={14} /> продукт
-      </button>
+      </Button>
       {used > capacity && (
         <p className={cx('small', styles.warn)}>
           Выбрано {used} шт., а на сковороду помещается {capacity}.

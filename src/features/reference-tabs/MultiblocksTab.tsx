@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronUp, Download, FlipHorizontal2, RotateCcw } from 'lucide-react';
-import { Segmented } from '@/shared/ui';
+import { Segmented, Button } from '@/shared/ui';
 import { lazy, Suspense, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { iconUrl, itemName, useItems, type ItemIndex, sourceName, useTags, ItemIcon } from '@/shared/pack-data';
@@ -192,15 +192,16 @@ function MbViewer({
         )}
         {!showFormed && (
           <div className={styles.layerCtl}>
-            <button
-              className="btn sm icon"
+            <Button
+              size="sm"
+              icon
               aria-label="Слой ниже"
               title="Слой ниже"
               disabled={top <= 0}
               onClick={() => setLayer(top - 1)}
             >
               <ChevronDown size={16} />
-            </button>
+            </Button>
             <input
               type="range"
               min={0}
@@ -209,15 +210,16 @@ function MbViewer({
               onChange={(e) => setLayer(Number(e.target.value))}
               aria-label="Слой"
             />
-            <button
-              className="btn sm icon"
+            <Button
+              size="sm"
+              icon
               aria-label="Слой выше"
               title="Слой выше"
               disabled={top >= sy - 1}
               onClick={() => setLayer(top + 1)}
             >
               <ChevronUp size={16} />
-            </button>
+            </Button>
             <span className="small">
               слой {top + 1} из {sy}
             </span>
