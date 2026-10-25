@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { guidesEnabled, subscribeGuides } from '@/data/guides';
 import { readNick } from '@/shared/lib/nick';
 import { cx } from '@/shared/lib';
+import { Button } from '@/shared/ui';
 import type { Guide, GuideChecked } from '@/entities/guide';
 import { CHECKED } from './guideMeta';
 import { ItemIcon } from '@/shared/pack-data';
@@ -95,9 +96,9 @@ export function GuidesSection({
   if (guide)
     return (
       <>
-        <button className="btn ghost small power-back" onClick={() => onGuide(null)}>
+        <Button variant="ghost" className="small power-back" onClick={() => onGuide(null)}>
           <ArrowLeft size={14} /> Все гайды
-        </button>
+        </Button>
         {!current ? (
           error ? (
             <div className={cx(styles.guideErrors, 'small')}>Не удалось загрузить гайды: {error}</div>
@@ -125,12 +126,12 @@ export function GuidesSection({
                 </div>
               </div>
               <div className={styles.guideHeadActions}>
-                <button className="btn ghost small" onClick={() => setHistory(current)} title="Прошлые версии">
+                <Button variant="ghost" className="small" onClick={() => setHistory(current)} title="Прошлые версии">
                   <History size={14} /> История
-                </button>
-                <button className="btn small" onClick={() => startEdit(current)}>
+                </Button>
+                <Button className="small" onClick={() => startEdit(current)}>
                   <Pencil size={14} /> Править
-                </button>
+                </Button>
               </div>
             </header>
             {current.summary && (
@@ -172,9 +173,9 @@ export function GuidesSection({
           <h2 className="power-h">Гайды</h2>
           {intro && <p className="faint small">{intro}</p>}
         </div>
-        <button className="btn small" onClick={() => startEdit('new')}>
+        <Button className="small" onClick={() => startEdit('new')}>
           <Plus size={14} /> Новый гайд
-        </button>
+        </Button>
       </header>
       {error && <div className={cx(styles.guideErrors, 'small')}>Не удалось загрузить: {error}</div>}
       {visible.length === 0 && <div className="empty">Гайдов пока нет — напишите первый</div>}

@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { cx, errorText, type Scope } from '@/shared/lib';
+import { Button } from '@/shared/ui';
 import { formatValue, parseSpec } from '@/lib/guideFormat';
 import { Markdown } from '@/components/Markdown';
 import { useGuideEditing, useGuideLink } from './guideLinks';
@@ -228,13 +229,13 @@ function Calc({ spec, envs, pickers }: { spec: Spec; envs: Scope[]; pickers?: Re
                   />
                   {m.inp.unit && <span className="faint small"> {m.inp.unit}</span>}
                   {m.inp.picker && pickers?.[m.inp.picker] && (
-                    <button
-                      type="button"
-                      className={cx('btn ghost small', styles.guidePick, openPicker === m.name && styles.active)}
+                    <Button
+                      variant="ghost"
+                      className={cx('small', styles.guidePick, openPicker === m.name && styles.active)}
                       onClick={() => setOpenPicker(openPicker === m.name ? null : m.name)}
                     >
                       {pickers[m.inp.picker].label}
-                    </button>
+                    </Button>
                   )}
                 </span>
               )}

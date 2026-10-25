@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { deviceTick, machineRates, type IeDevice, type IeMachine, type PowerData, type Setting } from '@/lib/power';
 import { ItemIcon } from '@/shared/pack-data';
+import { Button } from '@/shared/ui';
 
 /**
  * Потребители IE и Advanced TFC Tech: таблицы (вкладка «Сеть IE») и набор нагрузки для расчёта генератора (гайд
@@ -215,9 +216,9 @@ export function IeLoadPicker({
         </div>
         {onApply && (
           <div className="power-out">
-            <button className="btn small" disabled={!total} onClick={() => onApply(total * rate)}>
+            <Button className="small" disabled={!total} onClick={() => onApply(total * rate)}>
               Подставить в калькулятор
-            </button>
+            </Button>
             <span className="faint small">потери в преобразователе и проводах IE не учтены</span>
           </div>
         )}
