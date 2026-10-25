@@ -5,8 +5,8 @@
 //   node scripts/ui/boundaries.mjs --json      — машинный вывод
 //   node scripts/ui/boundaries.mjs --list      — какая папка к какому слою отнесена
 //
-// Порядок слоёв (справа налево): app → pages → entities → shared. Слой может импортировать только
-// себя и то, что справа. Старые папки (components/, lib/, data/, types/) — переходные: им можно всё,
+// Порядок слоёв (справа налево): app → pages → widgets → features → entities → shared. Слой может
+// импортировать только себя и то, что справа. Старые папки (components/, lib/, data/, types/) — переходные: им можно всё,
 // но их импорты в слои FSD отмечаются в отчёте (--legacy), чтобы видеть, что осталось разобрать.
 //
 // Исключения — scripts/ui/boundaries.allow.json: { "file": "src/shared/x.ts", "target": "@/entities/task",
@@ -24,13 +24,15 @@ function layerOf(file) {
   const [first] = rel.split('/');
   if (first === 'app' || rel === 'App.tsx' || rel === 'main.tsx') return 'app';
   if (first === 'pages') return 'pages';
+  if (first === 'widgets') return 'widgets';
+  if (first === 'features') return 'features';
   if (first === 'entities') return 'entities';
   if (first === 'shared') return 'shared';
   if (['components', 'lib', 'data', 'types'].includes(first)) return 'legacy';
   return 'other';
 }
 
-const PRIO = { shared: 0, entities: 1, pages: 2, app: 3 };
+const PRIO = { shared: 0, entities: 1, features: 2, widgets: 3, pages: 4, app: 5 };
 
 const EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs']);
 /** Файлы, которые собирает Vite: обход без node_modules, dist и служебных папок */

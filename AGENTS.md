@@ -56,19 +56,27 @@ comments, commit messages, guides, MCP tool output. Keep Russian UI labels verba
 
 ## Where code goes (`src/`)
 
-Light FSD in progress (task «Переезд фронтенда на облегчённый FSD», plan doc attached): layers `app → pages → entities →
-shared`, a layer imports only from the ones to its right. Not every layer is mandatory; **when in doubt put the file next
+Light FSD in progress (task «Переезд фронтенда на облегчённый FSD», plan doc attached): layers `app → pages → widgets →
+features → entities → shared`, a layer imports only from the ones to its right (`features`/`widgets` — упрощённые слои,
+см. ниже). Not every layer is mandatory; **when in doubt put the file next
 to its main user**, not where the scheme says it "should" be. Until the move is done (`src/components`, `src/lib`,
 `src/data` still exist) put **new** code by these rules and don't mass-move old files outside the migration branches.
 
-| Code is needed by                                                           | Goes to                                                                  |
-| --------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| one page                                                                    | `pages/<x>/` (`ui/` components, `model/` logic), page file `<X>Page.tsx` |
-| two or more pages, has domain knowledge (tasks, schematics, guides, items…) | `entities/<name>/` (UI optional)                                         |
-| any page, no domain knowledge (Modal, Button, util, firebase wrapper)       | `shared/ui`, `shared/lib`, `shared/api`                                  |
-| any page, общий справочник пакета (предметы, рецепты, теги, поиск)          | `shared/pack-data`                                                       |
-| app shell, providers, theme                                                 | `app/`                                                                   |
+| Code is needed by                                                                          | Goes to                                                                  |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| one page                                                                                   | `pages/<x>/` (`ui/` components, `model/` logic), page file `<X>Page.tsx` |
+| two or more pages, has domain knowledge (tasks, schematics, guides, items…)                | `entities/<name>/` (UI optional)                                         |
+| two or more pages: user action/flow (редактор гайда, сравнение задач, загрузка датапака)   | `features/<name>/`                                                       |
+| two or more pages: composite UI block (шапка, панель агента, каталог рецептов, знакомство) | `widgets/<name>/`                                                        |
+| any page, no domain knowledge (Modal, Button, util, firebase wrapper)                      | `shared/ui`, `shared/lib`, `shared/api`                                  |
+| any page, общий справочник пакета (предметы, рецепты, теги, поиск)                         | `shared/pack-data`                                                       |
+| app shell, providers, theme                                                                | `app/`                                                                   |
 
+- Слои (справа налево): `app → pages → widgets → features → entities → shared`. Слой берёт только себя и то, что
+  справа: `features` — `features/entities/shared`, `widgets` — `widgets/features/entities/shared`, страницы —
+  `pages/widgets/features/entities/shared`, `app` — что угодно. `features` и `widgets` — по упрощённым правилам и
+  только когда код действительно нужен нескольким страницам: одну страницу оставляем в `pages/<x>/`. Если сомневаешься,
+  кладём рядом с главным потребителем, а не «по схеме». Проверка — `npm run ui:boundaries`.
 - Every module folder has an `index.ts` with only its **public** part (not `export *`); import from outside through it:
   `@/entities/schematic`, not `@/entities/schematic/lib/schematicMesh`. One component = one flat file
   (`Button.tsx` + `Button.module.css`), a folder only for multi-file ones — no `Button/Button.tsx`.
