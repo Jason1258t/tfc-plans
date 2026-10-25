@@ -11,7 +11,7 @@
  * Аддоны: карточки tools/<мод>/addon.json из той же копии репозитория + версии из Firestore addonVersions
  * (src/lib/addonVersions.ts); jar версий — блобы этого сервера по sha256 (/blobs/<sha256>).
  */
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
@@ -37,6 +37,15 @@ const FILE_ID_RE = /^[A-Za-z0-9]{1,64}$/;
 const ADDON_ID_RE = /^[a-z][a-z0-9_]{1,63}$/;
 const VERSION_RE = /^[0-9][\w.+-]{0,39}$/;
 const JAR_RE = /^[\w.+-]+\.jar$/;
+/** Отчёты tfc report: размер и кусок — как у сайта (src/lib/files.config.ts) */
+const REPORT_KINDS = ['crash', 'log'];
+const REPORT_TYPE_RE = /^[a-z][a-z0-9-]{0,39}$/;
+const REPORT_NAME_RE = /^[^/\\\0]{1,200}$/;
+const REPORT_MAX = 25 * 1024 * 1024;
+const REPORT_CHUNK = 700 * 1024;
+const ID_ABC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+/** id документа как у Firestore: 20 знаков */
+const randomId = () => [...randomBytes(20)].map((b) => ID_ABC[b % ID_ABC.length]).join('');
 
 export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
   const filesDir = path.join(dataDir, 'site-files');
@@ -332,9 +341,78 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
     return { id, created, jar };
   }
 
+  /**
+   * Отчёт из tfc report (лог, краш-репорт; пачка — zip) → хранилище файлов сайта (files/{id} + chunks, формат
+   * firestore-files): на сайте — «Документы» → «Краш-репорты»/«Логи», агенту — MCP report_get id=<id>.
+   * Пишем как клиент пакета: метаданные с complete: false, части, потом complete: true; сбой — убираем за собой.
+   */
+  async function uploadReport(bytes, meta, by) {
+    const m = meta && typeof meta === 'object' ? meta : {};
+    if (!REPORT_KINDS.includes(m.kind)) throw new HttpError(400, `kind — ${REPORT_KINDS.join(' или ')}`);
+    if (!REPORT_TYPE_RE.test(m.type ?? '')) throw new HttpError(400, 'type — вид отчёта (латиница, -)');
+    if (!REPORT_NAME_RE.test(m.name ?? '')) throw new HttpError(400, 'name — имя файла без папок');
+    if (!bytes.length) throw new HttpError(400, 'Пустой файл');
+    if (bytes.length > REPORT_MAX) throw new HttpError(413, `Файл больше ${REPORT_MAX / 1024 / 1024} МБ`);
+    if (m.taskId != null && !FILE_ID_RE.test(m.taskId)) throw new HttpError(400, 'taskId — id задачи сайта');
+    const files = (Array.isArray(m.files) ? m.files : []).slice(0, 200).map((f) => ({
+      name: String(f?.name ?? '').slice(0, 200),
+      size: Number.isInteger(f?.size) ? f.size : 0,
+      mtime: Number.isInteger(f?.mtime) ? f.mtime : 0,
+    }));
+    const fsr = await firestore();
+    const id = randomId();
+    const url = `/files/${id}`;
+    const chunks = Math.ceil(bytes.length / REPORT_CHUNK);
+    const toFields = (data) => Object.fromEntries(Object.entries(data).map(([k, v]) => [k, fsr.toValue(v)]));
+    const doc = {
+      name: m.name,
+      size: bytes.length,
+      type: m.name.endsWith('.zip') ? 'application/zip' : m.name.endsWith('.gz') ? 'application/gzip' : 'text/plain',
+      chunks,
+      complete: false,
+      createdAt: Date.now(),
+      sha256: createHash('sha256').update(bytes).digest('hex'),
+      author: String(by).slice(0, 24),
+      taskId: m.taskId ?? null,
+      report: {
+        kind: m.kind,
+        type: m.type,
+        label: String(m.label ?? '').slice(0, 80),
+        note: String(m.note ?? '').slice(0, 500),
+        files,
+        source: 'tfc',
+      },
+    };
+    await api(`${url}?currentDocument.exists=false`, {
+      method: 'PATCH',
+      body: JSON.stringify({ fields: toFields(doc) }),
+    });
+    try {
+      for (let i = 0; i < chunks; i++) {
+        const data = bytes.subarray(i * REPORT_CHUNK, (i + 1) * REPORT_CHUNK);
+        await api(`${url}/chunks/${i}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            fields: { i: { integerValue: String(i) }, data: { bytesValue: data.toString('base64') } },
+          }),
+        });
+      }
+      await api(`${url}?updateMask.fieldPaths=complete`, {
+        method: 'PATCH',
+        body: JSON.stringify({ fields: { complete: { booleanValue: true } } }),
+      });
+    } catch (e) {
+      for (let i = 0; i < chunks; i++) await api(`${url}/chunks/${i}`, { method: 'DELETE' }).catch(() => {});
+      await api(url, { method: 'DELETE' }).catch(() => {});
+      throw e;
+    }
+    return { id, name: doc.name, size: doc.size, chunks, kind: m.kind, type: m.type, author: doc.author };
+  }
+
   return {
     addons,
     registerAddonVersion,
+    uploadReport,
     datapacks,
     kubejs,
     schematics,

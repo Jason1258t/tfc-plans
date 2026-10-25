@@ -96,3 +96,8 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   .claude/worktrees/_/tools/_ — ванильные модели/исходники Minecraft теперь находятся при работе в ворктри
   (resources_check/model_render/decompile). Проверено прямым вызовом: decompile даёт исходник, resources_check
   аддона — без ошибок (36 состояний блока), addon_devserver ловит падение сервера и отдаёт ошибки из лога.
+- **2026-10-25, players' reports** (`tools/reports.mjs`, task BDoIffX3jFbb4laaIr5N): `reports_list` (kind/author/query,
+  one runQuery on `report.source`) and `report_get` (bare id, `tfc-report:<id>` or `?report=` link → cache
+  `~/.cache/tfc-plans/reports/<id>`, unzip zip/gz, `log_analyze` on the main file, `mode=text|none`, `file=`);
+  `logAnalyze` exported from `tools/logs.mjs`. Verified over stdio against three uploaded test reports: list, analysis
+  of a crash report and a log, raw text of a file inside a zip, 3-chunk file identical to the source; second call — 0 reads.

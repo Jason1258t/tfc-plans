@@ -182,6 +182,28 @@ export class Api {
     return done.size;
   }
 
+  /** Отчёт tfc report (лог, краш, zip) → хранилище сайта; meta — в заголовке X-Report */
+  async uploadReport(bytes, meta) {
+    let res;
+    try {
+      res = await fetch(`${this.server}/site/reports`, {
+        method: 'POST',
+        headers: this.headers({
+          'Content-Type': 'application/octet-stream',
+          'X-Report': encodeURIComponent(JSON.stringify(meta)),
+        }),
+        body: bytes,
+      });
+    } catch (e) {
+      throw new Error(`сервер сборки ${this.server} недоступен: ${e.cause?.code ?? e.message}`);
+    }
+    const data = await res.json().catch(() => null);
+    if (res.status === 404 && /^Нет такого адреса/.test(data?.error ?? ''))
+      throw new Error('сервер сборки ещё не умеет принимать отчёты — попросите хоста обновить его');
+    if (!res.ok) throw new Error(apiError(res.status, data));
+    return data;
+  }
+
   /** Залить файл в хранилище сервера */
   async upload(file, sha256, onBytes) {
     const size = fs.statSync(file).size;

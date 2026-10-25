@@ -204,6 +204,19 @@ deaths, join/leave, saves (at most once per 30 s), «Can't keep up» and errors 
 Client chat duplicating a server line is collapsed. Noise from LOD (Voxy/Roxy), ChunkBuilder, ByePregen, recipes,
 `ClientRecipeBook`, JEI/EMI, models and sounds removed. `query` adds own lines (e.g. `eratosthenes|portal`).
 
+#### Players' reports (`reports_list`, `report_get`)
+
+A player runs `tfc report` (cli/lib/reports.mjs): latest/N latest/named logs or crash reports from the game folder (host —
+also the server folder) go through the pack server (`POST /site/reports`) into the site file storage (`files/{id}` with a
+`report` field, chunks as firestore-files; player IPs `/1.2.3.4:5678` → `/<ip>` before upload; several files — one zip,
+a single file over 1 MB — zipped). The site shows them in «Документы» → «Краш-репорты»/«Логи» with a copy-for-agent
+button; the CLI prints the same line: `Отчёт «name» — tfc-report:<id> — …/docs?report=<id>`.
+
+| Tool                                                      | What it answers                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `reports_list(kind, author, query)`                       | uploaded reports, newest first: id, type, name, size, author, date, note, file count, task. One query (`report.source == tfc`), 1 read per report, cached 1 min                                                                                                                                                                                                                                                                          |
+| `report_get(id, file, mode, level, query, limit, offset)` | `id` — bare id, `tfc-report:<id>` or the site link. Downloads into `~/.cache/tfc-plans/reports/<id>/` (`TFC_REPORTS_CACHE`; a file id never changes — next calls read 0), unzips zip/gz, lists files, then `mode=analyze` (default) — `log_analyze` on the main file (crash report / hs_err, else the newest log) or `file=`; `mode=text` — raw lines (`query` — regex filter); `mode=none` — list only. Reads: 1 + chunks (700 KB each) |
+
 ### Mod books
 
 TFC field guide (Patchouli, with entries from 14 addons and pack KubeJS — 173 entries, 139 in Russian) and the IE
@@ -465,7 +478,8 @@ scripts/mcp/
                       config_propose, config_changes), pack, kubejs, books (+books-index), blocks (+blocks-data), site
                       (tasks, groups, plan docs with writes; datapacks, schematics, site scripts), map (+map-climate,
                       map-png — PNG read/write), resources (model_render, texture_get, resources_check), addons
-                      (addons_list, addon_check, addon_versions, addon_version_get/put), candidates (candidate_get)
+                      (addons_list, addon_check, addon_versions, addon_version_get/put), candidates (candidate_get),
+                      reports (reports_list, report_get — players' logs/crashes from the site, analysed by logs.mjs)
 ```
 
 Data merging repeats the site (`src/shared/pack-data` — `items.ts`, `recipes.ts`, `tags.ts`; `src/lib/reference.ts`,

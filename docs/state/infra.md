@@ -139,6 +139,15 @@ addons`; with names — one named site item; `tfc undo` — undo the whole pull 
   `<id>@<version>`; `install <id>@<version>…` = `tfc pull addons …`. `install --host-only` — all host addons; `tfc publish --no-host-addons` drops their jars
   (`isAddonJar`: id or jar name of any version) from the snapshot — checked on a temp folder, no upload. Checked from sources against the prod pack server
   (list, versions, errors) and a stub API for `--host-only`; `install` on a real game folder — not checked.
+- **`tfc report`** (2026-10-25, `cli/lib/reports.mjs`, task BDoIffX3jFbb4laaIr5N): logs and crash reports to the site.
+  Types: game-log (`logs/latest.log` + `*.log.gz`), crash-report, debug-log, kubejs-log, jvm-crash (`hs_err_pid*`);
+  with a profile server folder — server-log, server-crash. Interactive: type list with counts → Enter latest / N latest /
+  names; note. Non-interactive: `tfc report crash`, `log 3`, `<type> <name,…>`, `--note`, `--task`, `--dry-run`,
+  `--instance`. Player IPs `/a.b.c.d:port` masked (gz unpacked for that); several files or one > 1 MB → zip; ≤ 25 MB.
+  Pack server `POST /site/reports` (player key, meta in `X-Report`) writes firestore-files format (meta complete:false →
+  700 KB chunks → complete:true, cleanup on failure). Checked: dry-run scenarios, interactive flow via `expect`, real
+  uploads through a local pack server to prod Firestore (1 file, 2-file zip, 3-chunk 1.6 MB zip), read back by MCP
+  byte-identical, deleted. **Not checked:** Windows paths/consoles, a real game folder, the VPS server after update.
 - **`tfc init --launcher`** (2026-10-22, `cli/lib/vanilla.mjs`): official Minecraft Launcher — NeoForge from the
   snapshot `loader` via its installer (`--install-client <mcDir>`, maven sha256, cached; needs launcher_profiles.json —
   created temporarily if only the Store file exists), Java 21+ from `<mc>/runtime`, Store runtime, JAVA_HOME, PATH;
