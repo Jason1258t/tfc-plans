@@ -159,6 +159,22 @@ One mod for all miner gear.
   `falling_block`) −50 %. GeckoLib model from Mining Helmet (CysticTurtle85, MIT), own texture. 28 dev-server checks
   (with IE: station charged to full); **not in game** (model, light, key).
 
+## Host Tools (`tools/host-tools-mod`, 2026-10-25)
+
+Task «Аддон Host Tools: /host …» (group «Разработка», `T7JkNmHajlZVKrT0XAgt`). 1.0.0 released: `/host` (57016 from
+config), `/host <port>`, `/host random` (random free ports 20000–45000, up to 30, one attempt per server `TickTask`,
+progress in the action bar), `/host stop` / pause-menu button «Закрыть для сети» (kick guests, close the TCP channel
+from `ServerConnectionListener.channels`, mixin on `IntegratedServer` resets `publishedPort`/`lanPinger`), `/host
+status`, `/ping`, ping numbers in the tab (`@ModifyConstant` 13 + `@WrapOperation` around `renderPingIcon`; works with
+Watut's `@Redirect` of the same call), latency rebroadcast every 100 ticks, ShareToLanScreen port preset.
+
+- First draft attempted ports from `ServerTickEvent`: an unpublished host world on pause (menu, window unfocused)
+  doesn't tick, so `/host` waited until the menu closed — moved to server tasks, which run while paused.
+- First real-dev-client addon check: `test-client.sh` runs `runClient` with a devtest mod that creates a flat world,
+  drives commands/screens, connects raw sockets (status ping, hanging login) and saves screenshots; `HTTEST` lines.
+- Not checked: a real guest over the network, Windows (host). Host's original complaint «по 10 раз нажимать» — cause
+  not confirmed; if a port binds but friends can't connect, `random` doesn't help (network side).
+
 ## Create: Stress Fix (`tools/stress-fix-mod`, 2026-10-22)
 
 After relog water wheels stopped and the network showed millions of SU load: Create accumulates an «unloaded part»

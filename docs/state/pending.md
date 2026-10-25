@@ -88,5 +88,6 @@ mod=electroenergetics`, 2026-10-21). See how laid cable renders.
   `hot_iron_bloom` (heated) doesn't start on the EE heater, the recipe isn't the cause — check power (≳1.5 kW for
   FADING) and that the basin sits directly on it. Other `superheated` recipes (kaolin, titanium alloy, stone processing)
   still don't run on the EE heater (see `ee-overheat`).
+- Addon Host Tools 1.0.0: host installs it; check with a real guest — `/host`, `/host stop` (guest kicked), ping numbers in the tab, `/host random` on Windows.
 - Addons Miner Tools, Stress Fix — see [addons.md](addons.md).
 - `tfc` app on Windows/Linux and with the real launcher folder — see [infra.md](infra.md#tfc-app-cli-stage-3).
