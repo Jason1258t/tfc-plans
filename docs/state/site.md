@@ -27,11 +27,15 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
   (page, 8 tabs, shared parts in `ReferenceShared.css`/`PowerShared.css`; own search classes now, no dependency on the
   tasks page). Global through `:global` only where other pages use the class (`.toggle`, `.hide-sm`, `.imp-pill`);
   states (`active`, `selected`, …) local.
-- Left: **17 global CSS outside `src/app/theme`** — 12 in `src/components/` (Header, Markdown, RecipeCatalog,
-  MultiblocksTab, guides, …), shared parts of the reference, `shared/pack-data` (ItemPicker, ItemIdSearch), `PackNav`.
-  `src/shared/ui` not created yet: buttons/inputs/segmented still come from `legacy-ui.css`. The `.search` row lives in
-  `legacy-ui.css` for the three un-migrated places (header id search, recipe catalogue, «Документы») — the page modules
-  of tasks/schematics/reference have their own; it goes away with `shared/ui`.
+- 2026-10-25: `shared/ui` started — `Search` (replaces the global `.search`; used by the header id search, the recipe
+  catalogue and «Документы») and `Modal.module.css` (the window's background, card, head, body and foot left
+  `legacy-ui.css`; the onboarding looks for `[role="dialog"]`). `shared/ui` comes before page modules in the cascade
+  (`@layer ui`), so a page can still override.
+- Left: **17 global CSS outside `src/app/theme`** — `Header`, `FileBadge`, `ArtifactPane`, `AgentPanel`,
+  `KubejsConstructor`, `MultiblocksTab`, `MarkdownField`, `LiveMarkdown`, `Onboarding`, `RecipeCatalog`, `guides/*`,
+  shared parts of the reference (`ReferenceShared.css`, `PowerShared.css`), `shared/pack-data` (`ItemPicker`,
+  `ItemIdSearch`), `PackNav`. Buttons, inputs, segmented and the markdown content styles still come from
+  `legacy-ui.css`/`markdown.css` (markdown styles stay global — they style generated HTML).
 
 ## Documents (file storage)
 
