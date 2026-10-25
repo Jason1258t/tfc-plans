@@ -1,5 +1,5 @@
 import { BookOpen, Columns2, Eye, ImagePlus, Maximize2, Minimize2, Pencil, Trash2, X } from 'lucide-react';
-import { Segmented } from '@/shared/ui';
+import { Segmented, Button } from '@/shared/ui';
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { useNick } from '@/entities/user';
 import { useArtifacts } from '@/entities/artifact';
@@ -43,9 +43,9 @@ export function ArtifactPane(props: Props) {
         <div className={styles.apaneHead}>
           <span className="grow faint">{loading ? 'Загрузка…' : 'План не найден — возможно, его удалили.'}</span>
           {props.onClose && (
-            <button className="btn ghost icon" onClick={props.onClose} aria-label="Закрыть">
+            <Button variant="ghost" icon onClick={props.onClose} aria-label="Закрыть">
               <X size={18} />
-            </button>
+            </Button>
           )}
         </div>
       </section>
@@ -171,19 +171,21 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
           onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
         />
         {onToggleSize && (
-          <button
-            className="btn ghost sm icon"
+          <Button
+            variant="ghost"
+            size="sm"
+            icon
             onClick={onToggleSize}
             aria-label={variant === 'full' ? 'Свернуть в панель' : 'Открыть на всю страницу'}
             title={variant === 'full' ? 'Свернуть в панель' : 'На всю страницу'}
           >
             {variant === 'full' ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
-          </button>
+          </Button>
         )}
         {onClose && (
-          <button className="btn ghost sm icon" onClick={onClose} aria-label="Закрыть план">
+          <Button variant="ghost" size="sm" icon onClick={onClose} aria-label="Закрыть план">
             <X size={17} />
-          </button>
+          </Button>
         )}
       </header>
 
@@ -244,14 +246,16 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
         )}
         {view !== 'preview' && filesEnabled && (
           <>
-            <button
-              className="btn ghost sm icon"
+            <Button
+              variant="ghost"
+              size="sm"
+              icon
               onClick={() => fileInput.current?.click()}
               aria-label="Вставить картинку"
               title="Картинка (можно вставить из буфера или перетащить в текст)"
             >
               <ImagePlus size={15} />
-            </button>
+            </Button>
             <input
               ref={fileInput}
               type="file"
@@ -266,9 +270,17 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
           </>
         )}
         <span className="grow" />
-        <button className="btn ghost sm icon danger" onClick={remove} aria-label="Удалить план" title="Удалить">
+        <Button
+          variant="ghost"
+          size="sm"
+          icon
+          className={styles.dangerGhost}
+          onClick={remove}
+          aria-label="Удалить план"
+          title="Удалить"
+        >
           <Trash2 size={15} />
-        </button>
+        </Button>
       </div>
 
       <div className={cx(styles.apaneDoc, view === 'split' && styles.viewSplit)}>
