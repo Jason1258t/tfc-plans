@@ -9,7 +9,7 @@ import { extractResources, geminiEnabled, geminiErrorText } from '@/shared/api';
 import { mergeResources } from '@/lib/resources';
 import { removeFile } from '@/entities/file';
 import { timeAgo } from '@/shared/lib';
-import { Modal } from '@/shared/ui';
+import { Button, Modal } from '@/shared/ui';
 import { Attachments } from './Attachments';
 import { Gallery } from './Gallery';
 import { TaskFields } from './TaskFields';
@@ -98,12 +98,19 @@ export function EditTask({
           <span className="faint small grow">
             {task.author} · создано {timeAgo(task.createdAt)} · изменено {timeAgo(task.updatedAt)}
           </span>
-          <button className="btn ghost danger icon" onClick={remove} aria-label="Удалить задачу" title="Удалить">
+          <Button
+            variant="ghost"
+            icon
+            className={styles.dangerGhost}
+            onClick={remove}
+            aria-label="Удалить задачу"
+            title="Удалить"
+          >
             <Trash2 size={16} />
-          </button>
-          <button className="btn primary" onClick={onClose}>
+          </Button>
+          <Button variant="primary" onClick={onClose}>
             Готово
-          </button>
+          </Button>
         </>
       }
     >
@@ -116,10 +123,10 @@ export function EditTask({
           onPatch={update}
           checklistExtra={
             geminiEnabled && (
-              <button className="btn ai sm" onClick={aiResources} disabled={aiBusy}>
+              <Button variant="ai" size="sm" onClick={aiResources} disabled={aiBusy}>
                 <Sparkles size={14} />
                 {aiBusy ? 'Ищу…' : 'Ресурсы из текста'}
-              </button>
+              </Button>
             )
           }
           checklistError={aiError}
@@ -129,10 +136,10 @@ export function EditTask({
               <section>
                 <div className={styles.tfSectionHead}>
                   <h3>Планы</h3>
-                  <button className="btn sm" onClick={createDoc}>
+                  <Button size="sm" onClick={createDoc}>
                     <FilePlus2 size={14} />
                     Новый план
-                  </button>
+                  </Button>
                 </div>
                 {linked.length ? (
                   <ul className={styles.docLinks}>

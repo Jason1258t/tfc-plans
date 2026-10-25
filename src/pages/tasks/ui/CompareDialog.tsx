@@ -5,7 +5,7 @@ import { elo, pickPair, sortTasks, swapRatings } from '../model/tasks';
 import { PRIORITIES, type Task } from '@/entities/task';
 import styles from './CompareDialog.module.css';
 import { ItemIcon } from '@/shared/pack-data';
-import { Modal } from '@/shared/ui';
+import { Button, Modal } from '@/shared/ui';
 
 interface Props {
   /** Задачи, участвующие в сравнении (текущий фильтр, без выполненных) */
@@ -65,9 +65,9 @@ export function CompareDialog({ tasks, onClose }: Props) {
           </div>
           <div className="row">
             <span className="faint small grow">Сравнений: {count}. Выбор сразу меняет рейтинг.</span>
-            <button className="btn ghost sm" onClick={() => next(pairIds!)}>
+            <Button variant="ghost" size="sm" onClick={() => next(pairIds!)}>
               Пропустить
-            </button>
+            </Button>
           </div>
         </>
       )}

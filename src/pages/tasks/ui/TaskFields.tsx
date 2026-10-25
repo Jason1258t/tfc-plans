@@ -1,5 +1,5 @@
 import { Boxes, Eye, Pencil, UserRound, X } from 'lucide-react';
-import { Segmented, ErrorBox } from '@/shared/ui';
+import { Button, Segmented, ErrorBox } from '@/shared/ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGroups } from '@/entities/group';
 import { useNick, usePeople } from '@/entities/user';
@@ -171,15 +171,15 @@ export function TaskFields({
             />
           </div>
           {value.icon && (
-            <button
-              className="btn ghost"
+            <Button
+              variant="ghost"
               onClick={() => {
                 onPatch({ icon: null });
                 setPickingIcon(false);
               }}
             >
               <X size={14} /> Убрать
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -244,16 +244,17 @@ export function TaskFields({
             ))}
           </datalist>
           {value.assignee === nick ? (
-            <button className="btn sm" onClick={() => onPatch({ assignee: null })}>
+            <Button size="sm" className={styles.assigneeBtn} onClick={() => onPatch({ assignee: null })}>
               Отказаться
-            </button>
+            </Button>
           ) : (
-            <button
-              className="btn sm"
+            <Button
+              size="sm"
+              className={styles.assigneeBtn}
               onClick={() => onPatch({ assignee: nick, status: value.status === 'todo' ? 'doing' : value.status })}
             >
               Взять себе
-            </button>
+            </Button>
           )}
         </div>
         <PlaceField compact value={value.place} onChange={(place) => onPatch({ place })} />
@@ -320,14 +321,14 @@ export function TaskFields({
       <section>
         <div className={styles.tfSectionHead}>
           <h3>Ресурсы и чеклист</h3>
-          <button
-            className="btn sm"
+          <Button
+            size="sm"
             onClick={() => setImporting(true)}
             title="Посчитать блоки .nbt-схемы и добавить их как ресурсы"
           >
             <Boxes size={14} />
             Из схемы
-          </button>
+          </Button>
           {checklistExtra}
         </div>
         {importing && (

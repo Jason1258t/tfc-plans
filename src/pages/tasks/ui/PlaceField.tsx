@@ -11,6 +11,7 @@ import {
   worldProjection,
 } from '@/lib/geo';
 import { cx } from '@/shared/lib';
+import { Button } from '@/shared/ui';
 import type { TaskPlace } from '@/entities/task';
 import styles from './TaskDialog.module.css';
 
@@ -76,9 +77,9 @@ export function PlaceField({ value, onChange, compact }: Props) {
           >
             {compact ? <ExternalLink size={14} /> : 'На карте'}
           </Link>
-          <button className="btn ghost sm icon" aria-label="Убрать место" onClick={() => onChange(null)}>
+          <Button variant="ghost" size="sm" icon aria-label="Убрать место" onClick={() => onChange(null)}>
             <X size={14} />
-          </button>
+          </Button>
         </div>
       ) : (
         <div className={styles.tfPlaceInput}>

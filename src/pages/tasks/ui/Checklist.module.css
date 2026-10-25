@@ -103,3 +103,14 @@
     margin-left: 28px;
   }
 }
+
+/* Бывший «btn ghost sm icon danger» у удаления пункта: Button знает только один variant,
+   поэтому красный — локальным классом. Наведение красит фон и рамку, цвет текста берёт ghost. */
+.dangerGhost {
+  color: var(--danger);
+}
+
+.dangerGhost:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}

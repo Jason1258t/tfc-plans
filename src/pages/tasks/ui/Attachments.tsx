@@ -1,5 +1,5 @@
 import { Download, Paperclip, Trash2, X } from 'lucide-react';
-import { ErrorBox } from '@/shared/ui';
+import { Button, ErrorBox } from '@/shared/ui';
 import { useRef, useState } from 'react';
 import { useFiles } from '@/entities/file';
 import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, type FileMeta } from '@/entities/file';
@@ -81,24 +81,29 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
               <span className={cx('faint', 'small', styles.attachMeta)}>
                 {formatSize(f.size)} · {f.author} · {timeAgo(f.createdAt)}
               </span>
-              <button
-                className="btn ghost sm icon"
+              <Button
+                variant="ghost"
+                size="sm"
+                icon
                 onClick={() => run(f.id, () => downloadFile(f))}
                 disabled={busyId === f.id}
                 aria-label={`Скачать ${f.name}`}
                 title="Скачать"
               >
                 <Download size={15} />
-              </button>
-              <button
-                className="btn ghost sm icon danger"
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon
+                className={styles.dangerGhost}
                 onClick={() => remove(f)}
                 disabled={busyId === f.id}
                 aria-label={`Удалить ${f.name}`}
                 title="Удалить"
               >
                 <Trash2 size={15} />
-              </button>
+              </Button>
             </li>
           ))}
           {pendingFiles.map((f, i) => (
@@ -107,13 +112,15 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
               <span className={cx('faint', 'small', styles.attachMeta)}>
                 {formatSize(f.size)} · загрузится при создании
               </span>
-              <button
-                className="btn ghost sm icon"
+              <Button
+                variant="ghost"
+                size="sm"
+                icon
                 onClick={() => onRemovePending?.(f)}
                 aria-label={`Убрать ${f.name}`}
               >
                 <X size={15} />
-              </button>
+              </Button>
             </li>
           ))}
           {uploads.map((u) => (
@@ -124,9 +131,9 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
                   <span className={cx('small', styles.attachMeta)} style={{ color: 'var(--danger)' }}>
                     {u.error}
                   </span>
-                  <button className="btn ghost sm icon" onClick={() => dismissUpload(u.key)} aria-label="Скрыть">
+                  <Button variant="ghost" size="sm" icon onClick={() => dismissUpload(u.key)} aria-label="Скрыть">
                     <X size={15} />
-                  </button>
+                  </Button>
                 </>
               ) : (
                 <span className={cx(styles.attachMeta, styles.attachProgress)}>

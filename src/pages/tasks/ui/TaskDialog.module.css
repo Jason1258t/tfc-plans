@@ -275,7 +275,19 @@
   min-width: 0;
 }
 
-.tfAssignee :global(.btn) {
+/* Кнопка «Взять себе / Отказаться» рядом с полем исполнителя: flex: none, чтобы не сжималась */
+.assigneeBtn {
   flex: none;
   white-space: nowrap;
+}
+
+/* Бывший «btn ghost danger» (удаление в подвале окна): Button знает только один variant,
+   поэтому красный — локальным классом. Наведение красит фон и рамку, цвет текста берёт ghost. */
+.dangerGhost {
+  color: var(--danger);
+}
+
+.dangerGhost:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: var(--danger);
 }

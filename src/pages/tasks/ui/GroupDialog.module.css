@@ -11,3 +11,14 @@
   background: var(--surface-2);
   cursor: pointer;
 }
+
+/* Бывший «btn ghost danger» у «Удалить»: Button знает только один variant, поэтому красный —
+   локальным классом. Наведение красит фон и рамку, цвет текста берёт ghost. */
+.dangerGhost {
+  color: var(--danger);
+}
+
+.dangerGhost:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}

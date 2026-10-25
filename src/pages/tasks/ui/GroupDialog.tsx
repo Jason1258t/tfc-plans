@@ -6,7 +6,7 @@ import { groupsStore } from '@/entities/group';
 import { tasksStore } from '@/entities/task';
 import type { Group } from '@/entities/group';
 import { ItemIcon, ItemPicker } from '@/shared/pack-data';
-import { Modal } from '@/shared/ui';
+import { Button, Modal } from '@/shared/ui';
 import styles from './GroupDialog.module.css';
 
 interface Props {
@@ -49,17 +49,17 @@ export function GroupDialog({ group, onClose, onDeleted }: Props) {
       footer={
         <>
           {group && (
-            <button className="btn ghost danger" onClick={remove}>
+            <Button variant="ghost" className={styles.dangerGhost} onClick={remove}>
               Удалить
-            </button>
+            </Button>
           )}
           <span className="grow" />
-          <button className="btn ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             Отмена
-          </button>
-          <button className="btn primary" disabled={!name.trim()} onClick={save}>
+          </Button>
+          <Button variant="primary" disabled={!name.trim()} onClick={save}>
             Сохранить
-          </button>
+          </Button>
         </>
       }
     >

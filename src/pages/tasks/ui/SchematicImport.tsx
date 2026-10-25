@@ -4,7 +4,7 @@ import { itemName, useItems, ItemIcon } from '@/shared/pack-data';
 import { addMaterials, schematicMaterials, type SchematicMaterials } from '@/lib/materials';
 import { cx } from '@/shared/lib';
 import type { ChecklistEntry } from '@/entities/task';
-import { Modal, ErrorBox } from '@/shared/ui';
+import { Button, Modal, ErrorBox } from '@/shared/ui';
 import styles from './SchematicImport.module.css';
 
 interface Props {
@@ -85,12 +85,12 @@ export function SchematicImport({ checklist, onApply, onClose }: Props) {
       footer={
         <>
           <span className="faint small grow">К ресурсам, которые уже есть в чеклисте, количество прибавится</span>
-          <button className="btn ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             Отмена
-          </button>
-          <button className="btn primary" disabled={!chosen.length} onClick={apply}>
+          </Button>
+          <Button variant="primary" disabled={!chosen.length} onClick={apply}>
             Добавить {chosen.length ? `(${chosen.length})` : ''}
-          </button>
+          </Button>
         </>
       }
     >
@@ -135,20 +135,22 @@ export function SchematicImport({ checklist, onApply, onClose }: Props) {
                       {s.entities > 0 && ` · ${s.entities} сущностей не учтено`}
                     </span>
                   </span>
-                  <button
-                    className="btn ghost sm icon"
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon
                     aria-label="Убрать схему"
                     onClick={() => setSchems((list) => list.filter((_, j) => j !== i))}
                   >
                     <X size={14} />
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
             <div className={cx('row', styles.siTools)}>
-              <button className="btn sm" onClick={() => inputRef.current?.click()} disabled={busy}>
+              <Button size="sm" onClick={() => inputRef.current?.click()} disabled={busy}>
                 <FileUp size={14} /> Ещё схема
-              </button>
+              </Button>
               <label className={cx('row', 'small', styles.siCopies)}>
                 Копий
                 <input
@@ -161,12 +163,12 @@ export function SchematicImport({ checklist, onApply, onClose }: Props) {
                 />
               </label>
               <span className="grow" />
-              <button className="btn ghost sm" onClick={() => setOff(new Set())}>
+              <Button variant="ghost" size="sm" onClick={() => setOff(new Set())}>
                 Все
-              </button>
-              <button className="btn ghost sm" onClick={() => setOff(new Set(total.map((m) => m.id)))}>
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setOff(new Set(total.map((m) => m.id)))}>
                 Ничего
-              </button>
+              </Button>
             </div>
             <ul className={styles.siList}>
               {total.map((m) => (

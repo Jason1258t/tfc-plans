@@ -317,7 +317,8 @@
   .tasksTop :global(.grow) {
     display: none;
   }
-  .tasksTop :global(.btn.primary) {
+  /* Кнопка «Задача» (Button variant=primary) растягивается на всю ширину */
+  .tasksTop .newTask {
     flex: 1;
   }
   .tasksFilters select:global(.input) {
