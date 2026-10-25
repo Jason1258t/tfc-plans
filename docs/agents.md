@@ -66,10 +66,38 @@ env = { TFC_FIRESTORE_KEY = "/abs/home/.config/tfc/mcp-firestore.json", TFC_AGEN
 
 **Cursor** — `.cursor/mcp.json` or `~/.cursor/mcp.json`, same `mcpServers` shape as above (`TFC_AGENT_NICK: "Cursor"`).
 
-**OpenCode** — checked 2026-10-25 on v2.1.4: config lives in `~/.config/opencode/opencode.json` and the schema is
-`mcp.servers` (not `mcp`); the project file `opencode.json` / `.opencode.local.json` was **not** picked up (`opencode debug
-config` listed only the global folder, `opencode mcp list` said «No MCP servers configured»). The reliable route is the CLI
-from the repo root:
+**OpenCode** — checked 2026-10-25 on v2.1.4. Schema is `mcp.servers` (not `mcp` — V1 shape), substitution is
+`{env:NAME}` only (no `${VAR:-default}`, no shell expansion). Config files: global `~/.config/opencode/opencode.json(c)`
+and project `opencode.json(c)` or `.opencode/opencode.json(c)` — searched from the session directory **up to the filesystem
+root**, so a worktree inside the repo finds the main checkout's file too, and changes apply without a restart (`/reload`
+forces it). A name like `.opencode.local.json` is **not** a config file: OpenCode never reads it — the setup must go into
+one of the names above (checked: a hand-made local file stayed invisible while `opencode.json` was picked up).
+
+`opencode.json` in the repo root (committed, no machine paths) is enough — it also covers sessions in
+`.claude/worktrees/*`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "tfc-pack": {
+        "type": "local",
+        "command": ["node", "scripts/mcp/server.mjs"],
+        "environment": {
+          "TFC_FIRESTORE_KEY": "~/.config/tfc/mcp-firestore.json",
+          "TFC_AGENT_NICK": "OpenCode"
+        }
+      },
+      "tfc-plans-dev": { "type": "local", "command": ["node", "scripts/mcp-dev/server.mjs"] }
+    }
+  }
+}
+```
+
+`~` in the key path is fine — our servers expand it themselves. A relative `command` resolves from the **session
+directory**, so start OpenCode at the repo or worktree root: from a subfolder (`tools/…`) the server script is not found.
+Outside the repo tree — the global config with absolute paths (CLI keeps the rest of the file):
 
 ```bash
 opencode mcp add --global tfc-pack \
@@ -80,7 +108,8 @@ opencode mcp add --global tfc-plans-dev \
 opencode mcp list      # ✓ tfc-pack connected
 ```
 
-No `${VAR:-default}` expansion — give the absolute key path. OpenCode reads `AGENTS.md` and `.claude/skills`.
+Check: `opencode debug config` (which files were read) + `opencode mcp list`. OpenCode reads `AGENTS.md` and
+`.claude/skills`.
 
 **DeepSeek Harness (DSH)** — checked 2026-10-24: servers are added in the profile patch
 `~/.dsh/profiles/desktop/cordis.patch.yml` (outside the repo) as `insert` entries of `@deepseek-ai/dsh-mcp-client`. The

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "tfc-pack": {
+        "type": "local",
+        "command": ["node", "scripts/mcp/server.mjs"],
+        "environment": {
+          "TFC_FIRESTORE_KEY": "~/.config/tfc/mcp-firestore.json",
+          "TFC_AGENT_NICK": "OpenCode"
+        }
+      },
+      "tfc-plans-dev": {
+        "type": "local",
+        "command": ["node", "scripts/mcp-dev/server.mjs"]
+      }
+    }
+  }
+}

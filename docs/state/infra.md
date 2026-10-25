@@ -233,5 +233,11 @@ the host's real folder.
 others. MCP signs writes with `TFC_AGENT_NICK` (default `Claude`). Per-agent setup — `docs/agents.md`. Checked: Claude
 Code loads nested `@AGENTS.md` imports; MCP server starts and reads the nick from env. 2026-10-24: DeepSeek Harness
 (DSH) set up and checked — both MCP servers (`tfc-pack`, `tfc-plans-dev`) connected through the DSH profile patch, a
-Firestore read and `git_state` verified, tools appear as `mcp__tfc-pack__*` (`docs/agents.md`). Not run: Codex, Gemini
-CLI, Cursor, OpenCode configs (shapes from their docs, not tried).
+Firestore read and `git_state` verified, tools appear as `mcp__tfc-pack__*` (`docs/agents.md`). 2026-10-25: OpenCode
+v2.1.4 set up — `opencode.json` in the repo root (`mcp.servers`, relative `node scripts/mcp/server.mjs`, nick `OpenCode`)
+replaces the gitignored `.opencode.local.json`, which OpenCode never read: only `opencode.json(c)` /
+`.opencode/opencode.json(c)` count, and they are found from the session directory up to `/`. Checked: `opencode debug
+config` lists the project file from the repo root and from a worktree, `opencode mcp list` — both servers connected, the
+server starts and finds `public/` from a worktree. Known limit: a relative command resolves from the session directory, so
+a session started in a subfolder (`tools/…`) needs the global config with absolute paths. Not run: Codex, Gemini CLI,
+Cursor configs (shapes from their docs, not tried).
