@@ -1,4 +1,5 @@
 import { FilePen, FilePlus2, Search } from 'lucide-react';
+import { Segmented } from '@/shared/ui';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PackSection } from '@/widgets/pack-nav';
@@ -125,16 +126,11 @@ export function TagsPage() {
               }}
             />
           </div>
-          <span className="seg">
-            <button aria-pressed={kind === 'all'} onClick={() => set({ kind: null })}>
-              Все
-            </button>
-            {TAG_KINDS.map((k) => (
-              <button key={k} aria-pressed={kind === k} onClick={() => set({ kind: k })}>
-                {TAG_KIND_LABEL[k]}
-              </button>
-            ))}
-          </span>
+          <Segmented
+            value={kind}
+            onChange={(v) => set({ kind: v })}
+            options={[{ value: null, label: 'Все' }, ...TAG_KINDS.map((k) => ({ value: k, label: TAG_KIND_LABEL[k] }))]}
+          />
         </div>
 
         {!cat ? (

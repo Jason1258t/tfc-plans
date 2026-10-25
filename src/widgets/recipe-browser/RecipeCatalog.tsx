@@ -14,7 +14,7 @@ import {
   ItemPicker,
 } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
-import { Modal, Search } from '@/shared/ui';
+import { Modal, Search, Segmented } from '@/shared/ui';
 import { track, useSearchTrack } from '@/shared/api';
 import styles from './RecipeCatalog.module.css';
 
@@ -135,14 +135,14 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
       <div>
         {itemId ? (
           <div className="row">
-            <span className="seg">
-              <button aria-pressed={!usage} onClick={() => setUsage(false)}>
-                Что делает
-              </button>
-              <button aria-pressed={usage} onClick={() => setUsage(true)}>
-                Где используется
-              </button>
-            </span>
+            <Segmented
+              value={usage}
+              onChange={setUsage}
+              options={[
+                { value: false, label: 'Что делает' },
+                { value: true, label: 'Где используется' },
+              ]}
+            />
             <span className={styles.catItemChip}>
               <ItemIcon id={itemId} size={18} />
               {itemName(items?.byId.get(itemId), itemId)}

@@ -24,6 +24,12 @@
 }
 
 .nav {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
   align-self: flex-start;
 }
 

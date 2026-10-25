@@ -11,7 +11,7 @@ import { FILE_KINDS, fileKind, type FileKind } from '../../lib/fileKinds';
 import { prepareFile, validateFiles } from '../../lib/uploads';
 import { cx, timeAgo } from '@/shared/lib';
 import type { SavedSchematic } from '@/entities/schematic';
-import { Search } from '@/shared/ui';
+import { Search, Segmented } from '@/shared/ui';
 import styles from './FilesPage.module.css';
 
 const KINDS: { id: FileKind | 'all'; label: string }[] = [{ id: 'all', label: 'Все' }, ...FILE_KINDS];
@@ -128,20 +128,19 @@ export function FilesPage() {
             aria-label="Поиск по файлам"
           />
         </Search>
-        <span className="seg">
-          {KINDS.map((k) => {
+        <Segmented
+          className={styles.filesSeg}
+          value={kind}
+          onChange={setKind}
+          options={KINDS.flatMap((k) => {
             const count = k.id === 'all' ? rows.length : rows.filter((r) => r.kind === k.id).length;
             // Виды, которых в хранилище нет, не показываем — кроме выбранного
-            if (!count && k.id !== 'all' && k.id !== kind) return null;
-            return (
-              <button key={k.id} aria-pressed={kind === k.id} onClick={() => setKind(k.id)}>
-                {k.id !== 'all' && <FileKindDot kind={k.id} />}
-                {k.label}
-                <span className="count">{count}</span>
-              </button>
-            );
+            if (!count && k.id !== 'all' && k.id !== kind) return [];
+            return [
+              { value: k.id, label: k.label, count, icon: k.id !== 'all' ? <FileKindDot kind={k.id} /> : undefined },
+            ];
           })}
-        </span>
+        />
       </div>
 
       {uploading && (

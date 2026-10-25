@@ -12,14 +12,14 @@ import {
   type ManifestMod,
 } from './model/freshness';
 import { cx, timeAgo } from '@/shared/lib';
-import { Button, Input } from '@/shared/ui';
+import { Button, Input, Segmented } from '@/shared/ui';
 import sectionStyles from './UpdatesSection.module.css';
 import styles from './FreshnessPage.module.css';
 
 /** Переключатель «Лента / Свежесть модов» — общий для двух страниц обновлений */
 export function UpdatesNav() {
   return (
-    <nav className={cx('seg', sectionStyles.nav)}>
+    <nav className={sectionStyles.nav}>
       <NavLink to="/updates" end>
         Лента обновлений
       </NavLink>
@@ -184,20 +184,26 @@ export function FreshnessPage() {
           {report && (
             <>
               <div className={styles.bar}>
-                <div className={cx('seg', styles.filter)} role="tablist">
-                  <FilterBtn on={filter === 'outdated'} onClick={() => setFilter('outdated')} n={outdated}>
-                    Устаревшие
-                  </FilterBtn>
-                  {STATUS_ORDER.filter((s) => report.counts[s]).map((s) => (
-                    <FilterBtn key={s} on={filter === s} onClick={() => setFilter(s)} n={report.counts[s]}>
-                      <span className={cx(styles.dot, DOT_TONE[s])} />
-                      {STATUS_LABEL[s]}
-                    </FilterBtn>
-                  ))}
-                  <FilterBtn on={filter === 'all'} onClick={() => setFilter('all')} n={report.mods.length}>
-                    Все
-                  </FilterBtn>
-                </div>
+                <Segmented
+                  role="tablist"
+                  className={styles.filter}
+                  value={filter}
+                  onChange={setFilter}
+                  options={[
+                    { value: 'outdated', label: 'Устаревшие', count: outdated },
+                    ...STATUS_ORDER.filter((s) => report.counts[s]).map((s) => ({
+                      value: s,
+                      label: (
+                        <>
+                          <span className={cx(styles.dot, DOT_TONE[s])} />
+                          {STATUS_LABEL[s]}
+                        </>
+                      ),
+                      count: report.counts[s],
+                    })),
+                    { value: 'all', label: 'Все', count: report.mods.length },
+                  ]}
+                />
                 <div className={styles.search}>
                   <Search size={15} className="faint" />
                   <Input value={q} placeholder="Мод, id или jar" onChange={(e) => setQ(e.target.value)} />
@@ -217,25 +223,6 @@ export function FreshnessPage() {
         </>
       )}
     </main>
-  );
-}
-
-function FilterBtn({
-  on,
-  onClick,
-  n,
-  children,
-}: {
-  on: boolean;
-  onClick: () => void;
-  n: number;
-  children: React.ReactNode;
-}) {
-  return (
-    <button role="tab" aria-pressed={on} aria-selected={on} onClick={onClick}>
-      {children}
-      <span className="count">{n}</span>
-    </button>
   );
 }
 

@@ -1,7 +1,7 @@
 import { Copy, Check, Settings, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Modal } from '@/shared/ui';
+import { Modal, Segmented } from '@/shared/ui';
 import { WorldMap, type MapMarker } from './ui/WorldMap';
 import { useNick } from '@/entities/user';
 import { useGroups } from '@/entities/group';
@@ -203,15 +203,14 @@ function MapView({ geo, profile, world }: { geo: GeoData; profile: GeoProfile; w
       </aside>
 
       <section className={styles.main}>
-        <div className={cx('seg', styles.layers)}>
-          {LAYERS.filter((l) =>
+        <Segmented
+          className={styles.layers}
+          value={layer}
+          onChange={setLayer}
+          options={LAYERS.filter((l) =>
             l.id === 'atlas' ? profile.maps.altitude && profile.maps.continent : profile.maps[l.id],
-          ).map((l) => (
-            <button key={l.id} aria-pressed={layer === l.id} onClick={() => setLayer(l.id)}>
-              {l.label}
-            </button>
-          ))}
-        </div>
+          ).map((l) => ({ value: l.id, label: l.label }))}
+        />
         <WorldMap
           profile={profile}
           layer={layer}

@@ -13,7 +13,7 @@ import {
   type VisitEvent,
 } from '@/shared/api';
 import { cx } from '@/shared/lib';
-import { Button } from '@/shared/ui';
+import { Button, Segmented } from '@/shared/ui';
 import styles from './StatsPage.module.css';
 
 /**
@@ -338,13 +338,7 @@ export function StatsPage() {
       </div>
 
       <div className={styles.bar}>
-        <div className="seg">
-          {PERIODS.map((p) => (
-            <button key={p.days} aria-pressed={days === p.days} onClick={() => setDays(p.days)}>
-              {p.label}
-            </button>
-          ))}
-        </div>
+        <Segmented value={days} onChange={setDays} options={PERIODS.map((p) => ({ value: p.days, label: p.label }))} />
         {import.meta.env.DEV && (
           <label className={cx(styles.check, 'small')}>
             <input type="checkbox" checked={dev} onChange={(e) => setDev(e.target.checked)} /> проверочные (dev)

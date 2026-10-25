@@ -306,11 +306,11 @@
   .tasksTop {
     flex-wrap: wrap;
   }
-  .tasksTop :global(.seg) {
+  .tasksTop .tabs {
     order: 1;
     width: 100%;
   }
-  .tasksTop :global(.seg) button {
+  .tasksTop .tabs button {
     flex: 1;
     justify-content: center;
   }

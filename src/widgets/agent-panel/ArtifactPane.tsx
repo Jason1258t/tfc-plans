@@ -1,4 +1,5 @@
 import { BookOpen, Columns2, Eye, ImagePlus, Maximize2, Minimize2, Pencil, Trash2, X } from 'lucide-react';
+import { Segmented } from '@/shared/ui';
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { useNick } from '@/entities/user';
 import { useArtifacts } from '@/entities/artifact';
@@ -207,22 +208,35 @@ function Editor({ artifact, variant, onClose, onToggleSize, onOpenTask, onDelete
       </div>
 
       <div className={styles.apaneToolbar}>
-        <div className="seg" role="group" aria-label="Режим">
-          <button aria-pressed={view === 'edit'} onClick={() => setView('edit')} title="Текст">
-            <Pencil size={13} />
-            <span className={styles.hideNarrow}>Текст</span>
-          </button>
-          {variant === 'full' && (
-            <button aria-pressed={view === 'split'} onClick={() => setView('split')} title="Текст и просмотр">
-              <Columns2 size={13} />
-              <span className={styles.hideNarrow}>Оба</span>
-            </button>
-          )}
-          <button aria-pressed={view === 'preview'} onClick={() => setView('preview')} title="Просмотр">
-            <Eye size={13} />
-            <span className={styles.hideNarrow}>Просмотр</span>
-          </button>
-        </div>
+        <Segmented
+          label="Режим"
+          value={view}
+          onChange={setView}
+          options={[
+            {
+              value: 'edit',
+              icon: <Pencil size={13} />,
+              label: <span className={styles.hideNarrow}>Текст</span>,
+              title: 'Текст',
+            },
+            ...(variant === 'full'
+              ? [
+                  {
+                    value: 'split' as const,
+                    icon: <Columns2 size={13} />,
+                    label: <span className={styles.hideNarrow}>Оба</span>,
+                    title: 'Текст и просмотр',
+                  },
+                ]
+              : []),
+            {
+              value: 'preview',
+              icon: <Eye size={13} />,
+              label: <span className={styles.hideNarrow}>Просмотр</span>,
+              title: 'Просмотр',
+            },
+          ]}
+        />
         {view !== 'preview' && (
           <div className={styles.apaneInsert}>
             <ItemPicker small placeholder="Вставить предмет…" onPick={(it) => insertAt(itemToken(it.i))} />

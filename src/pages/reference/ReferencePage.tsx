@@ -1,4 +1,5 @@
 import { ArrowRight, Search } from 'lucide-react';
+import { Segmented } from '@/shared/ui';
 import { useMemo, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { BotanyTab } from './tabs/BotanyTab';
@@ -89,19 +90,14 @@ function Reference() {
           </p>
         </div>
       </div>
-      <div className={cx('seg', styles.tabs)} role="tablist">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            aria-pressed={tab === t.id}
-            aria-selected={tab === t.id}
-            onClick={() => setParams(t.id === 'ores' ? {} : { tab: t.id }, { replace: true })}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        role="tablist"
+        tabs
+        className={styles.tabs}
+        value={tab}
+        onChange={(id) => setParams(id === 'ores' ? {} : { tab: id }, { replace: true })}
+        options={TABS.map((t) => ({ value: t.id, label: t.label }))}
+      />
       {tab === 'map' ? (
         <MapPage />
       ) : tab === 'guides' ? (
