@@ -1,14 +1,18 @@
-.item-picker {
+/* Поле выбора предмета с выпадающим списком. Глобальными остались классы темы:
+   `.input` (поле) и `.grow` (растянуть колонку в списке). */
+
+.picker {
   position: relative;
   width: 100%;
 }
 
-.input.sm {
+/* Мелкое поле — вместо глобальной пары `.input sm` (правило `.input.sm` было в этом же файле) */
+.smallInput {
   height: 28px;
   font-size: 13px;
 }
 
-.item-picker-list {
+.list {
   position: absolute;
   z-index: 60;
   left: 0;
@@ -26,12 +30,12 @@
   box-shadow: var(--shadow-md);
 }
 
-.item-picker-list.up {
+.list.up {
   top: auto;
   bottom: calc(100% + 4px);
 }
 
-.item-picker-list li {
+.list li {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -40,20 +44,20 @@
   cursor: pointer;
 }
 
-.item-picker-list li.active {
+.list li.active {
   background: var(--surface-2);
 }
 
-.item-picker-list .name {
+.list .name {
   font-weight: 500;
 }
 
-.item-picker-list .en {
+.list .en {
   color: var(--text-3);
   font-size: 12px;
 }
 
-.item-picker-list .id {
+.list .id {
   display: block;
   font-size: 11px;
   font-family: var(--font-mono);
@@ -63,7 +67,7 @@
   white-space: nowrap;
 }
 
-.item-picker-list .id b {
+.list .id b {
   font-weight: 600;
   color: var(--text-2);
 }

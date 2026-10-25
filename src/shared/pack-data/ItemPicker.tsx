@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { isBlock, searchItems, useItems, type McItem } from './items';
 import { cx } from '@/shared/lib';
 import { ItemIcon } from './ItemIcon';
-import './ItemPicker.css';
+import styles from './ItemPicker.module.css';
 
 interface Props {
   onPick: (item: McItem) => void;
@@ -58,9 +58,9 @@ export function ItemPicker({
   };
 
   return (
-    <div className="item-picker">
+    <div className={styles.picker}>
       <input
-        className={cx('input', small && 'sm')}
+        className={cx('input', small && styles.smallInput)}
         value={q}
         placeholder={items ? placeholder : 'Загружаю предметы…'}
         autoFocus={autoFocus}
@@ -95,13 +95,13 @@ export function ItemPicker({
         aria-autocomplete="list"
       />
       {open && results.length > 0 && (
-        <ul className={cx('item-picker-list', dropUp && 'up')} ref={listRef} role="listbox">
+        <ul className={cx(styles.list, dropUp && styles.up)} ref={listRef} role="listbox">
           {results.map((it, i) => (
             <li
               key={it.i}
               role="option"
               aria-selected={i === active}
-              className={i === active ? 'active' : undefined}
+              className={i === active ? styles.active : undefined}
               onMouseDown={(e) => {
                 e.preventDefault();
                 pick(it);
@@ -110,10 +110,10 @@ export function ItemPicker({
             >
               <ItemIcon id={it.i} size={24} tip={false} />
               <span className="grow">
-                <span className="name">{it.r ?? it.e}</span>
-                {it.r && <span className="en"> · {it.e}</span>}
+                <span className={styles.name}>{it.r ?? it.e}</span>
+                {it.r && <span className={styles.en}> · {it.e}</span>}
                 {/* Мод жирным: «Медный люк» есть и в TFC, и в ванили — различаются только им */}
-                <span className="id">
+                <span className={styles.id}>
                   <b>{it.i.split(':')[0]}</b>:{it.i.split(':').slice(1).join(':')}
                 </span>
               </span>
