@@ -1,10 +1,15 @@
 /** Переиспользуемый UI без знаний о предметной области. Снаружи — `@/shared/ui`. */
 export { Button } from './Button';
+export type { ButtonVariant } from './buttonVariant';
+export { ButtonLink } from './ButtonLink';
 export { Input } from './Input';
 export { Select } from './Select';
 export { Textarea } from './Textarea';
 export { Modal } from './Modal';
 export { Search } from './Search';
 export { ErrorBox } from './ErrorBox';
+export { Tag } from './Tag';
+export { ImpDot, ImpPill } from './Importance';
+export { Label } from './Label';
 export { Segmented, type SegmentedOption } from './Segmented';
 export { TooltipLayer, tooltipHandlers } from './Tooltip';
