@@ -147,6 +147,7 @@ tfc addons list               # все аддоны строкой <мод>@<в�
 tfc addons list --host-only   # только аддоны для хоста (Host Tools, RW Host Fix)
 tfc addons ee_extras          # все версии аддона такими же строками — какие можно поставить
 tfc addons install ee_extras@2.3.1   # поставить и закрепить версию (= tfc pull addons ee_extras@2.3.1)
+tfc addons install --host-only       # поставить все аддоны для хоста
 ```
 
 **Сборка и сайт не спорят за файл:**
@@ -271,6 +272,9 @@ Claude предлагает их через MCP (`config_propose`), файлы �
 файлы — в копию (`tfc undo`), итог по каждому ключу уходит обратно (Claude видит его в `config_changes`). Потом —
 перезапуск сервера, `tfc publish` и `tfc admin publish --live`.
 
+- Аддоны хоста (Host Tools, RW Host Fix — `tfc addons list --host-only`) нужны только хосту: поставить все сразу —
+  `tfc addons install --host-only`, залить сборку без них — `tfc publish --no-host-addons` (их jar из `mods/` в сборку
+  не попадут; уже залитые раньше уйдут из новой сборки).
 - Версию игры `publish` берёт из папки лаунчера, иначе — из прошлой сборки на сервере, иначе спрашивает.
   Задать явно: `tfc publish --mc 1.21.1 --loader neoforge`.
 

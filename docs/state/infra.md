@@ -136,7 +136,8 @@ addons`; with names — one named site item; `tfc undo` — undo the whole pull 
 - **`tfc addons`** (2026-10-25, `cli/lib/addons.mjs`): `list` — one line per addon as `<id>@<latest released>` (+ what
   is installed/pinned here), `--host-only` — cards with `hostOnly: true` (host_tools, rw_host_fix; passed through
   `/site/addons` and `/addons/index.json`, `tfc pull` still installs by `side`); `tfc addons <id…>` — all versions as
-  `<id>@<version>`; `install <id>@<version>…` = `tfc pull addons …`. Checked from sources against the prod pack server
+  `<id>@<version>`; `install <id>@<version>…` = `tfc pull addons …`. `install --host-only` — all host addons; `tfc publish --no-host-addons` drops their jars
+  (`isAddonJar`: id or jar name of any version) from the snapshot — checked on a temp folder, no upload. Checked from sources against the prod pack server
   (list, versions, errors) and a stub API for `--host-only`; `install` on a real game folder — not checked.
 - **`tfc report`** (2026-10-25, `cli/lib/reports.mjs`, task BDoIffX3jFbb4laaIr5N): logs and crash reports to the site.
   Types: game-log (`logs/latest.log` + `*.log.gz`), crash-report, debug-log, kubejs-log, jvm-crash (`hs_err_pid*`);
