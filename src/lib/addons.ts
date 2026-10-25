@@ -42,6 +42,8 @@ export interface AddonCard {
   formerIds?: string[];
   /** sha256 текущего jar: без jar в tools/ сборка сайта берёт его с сервера сборки или с сайта */
   sha256?: string;
+  /** Нужен хосту (встроенный сервер в его игре) — фильтр `tfc addons list --host-only`; ставится по side, как все */
+  hostOnly?: boolean;
   /** Не показывать в списке (диагностика): jar на сайте есть, карточки — нет */
   unlisted?: boolean;
   blocks: AddonBlock[];
