@@ -1,0 +1,88 @@
+/* Кнопка: бывший глобальный .btn из темы. Повторяет правила один-в-один (высота, отступы, варианты). */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-2);
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.danger {
+  color: var(--danger);
+}
+
+.danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}
+
+.ai {
+  color: var(--amethyst);
+  border-color: color-mix(in srgb, var(--amethyst) 40%, var(--border));
+}
+
+.ai:hover:not(:disabled) {
+  background: var(--amethyst-soft);
+  border-color: var(--amethyst);
+}
+
+.sm {
+  height: 28px;
+  padding: 0 8px;
+  font-size: 13px;
+}
+
+.icon {
+  width: 34px;
+  padding: 0;
+}
+
+.sm.icon {
+  width: 28px;
+}

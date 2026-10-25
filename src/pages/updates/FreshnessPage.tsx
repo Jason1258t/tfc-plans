@@ -12,6 +12,7 @@ import {
   type ManifestMod,
 } from './model/freshness';
 import { cx, timeAgo } from '@/shared/lib';
+import { Button } from '@/shared/ui';
 import sectionStyles from './UpdatesSection.module.css';
 import styles from './FreshnessPage.module.css';
 
@@ -167,15 +168,15 @@ export function FreshnessPage() {
                 'Отчёт ещё не собран (npm run freshness) — можно проверить Modrinth прямо отсюда.'
               )}
             </div>
-            <button className="btn sm" onClick={() => void recheck()} disabled={busy}>
+            <Button size="sm" onClick={() => void recheck()} disabled={busy}>
               <RefreshCw size={14} className={cx(busy && styles.spin)} />
               {busy ? 'Проверяю…' : 'Перепроверить Modrinth и гит'}
-            </button>
+            </Button>
             {report && (
-              <button className="btn sm ghost" onClick={download}>
+              <Button size="sm" variant="ghost" onClick={download}>
                 <Download size={14} />
                 Скачать отчёт (JSON)
-              </button>
+              </Button>
             )}
           </div>
           {error && <div className="error small">{error}</div>}
