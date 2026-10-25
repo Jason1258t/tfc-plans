@@ -4,6 +4,7 @@ import { itemName, useItems, ItemIcon, ItemPicker } from '@/shared/pack-data';
 import { entryDone } from '../model/tasks';
 import { cx, uid } from '@/shared/lib';
 import type { ChecklistEntry } from '@/entities/task';
+import { Button } from '@/shared/ui';
 import styles from './Checklist.module.css';
 
 interface Props {
@@ -63,13 +64,15 @@ export function Checklist({ entries, onChange }: Props) {
                       {itemName(items?.byId.get(e.itemId), e.text || e.itemId)}
                     </span>
                     <span className={styles.clCounter}>
-                      <button
-                        className="btn ghost sm icon"
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon
                         aria-label="Минус один"
                         onClick={() => patch(e.id, { got: Math.max(0, (e.got ?? 0) - 1) })}
                       >
                         <Minus size={14} />
-                      </button>
+                      </Button>
                       <input
                         className={styles.clNum}
                         type="number"
@@ -87,13 +90,15 @@ export function Checklist({ entries, onChange }: Props) {
                         aria-label="Нужно"
                         onChange={(ev) => patch(e.id, { qty: Math.max(1, Number(ev.target.value) || 1) })}
                       />
-                      <button
-                        className="btn ghost sm icon"
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon
                         aria-label="Плюс один"
                         onClick={() => patch(e.id, { got: (e.got ?? 0) + 1 })}
                       >
                         <Plus size={14} />
-                      </button>
+                      </Button>
                     </span>
                   </>
                 ) : (
@@ -110,15 +115,22 @@ export function Checklist({ entries, onChange }: Props) {
                   </>
                 )}
                 <span className={styles.clActions}>
-                  <button className="btn ghost sm icon" aria-label="Выше" onClick={() => move(e.id, -1)}>
+                  <Button variant="ghost" size="sm" icon aria-label="Выше" onClick={() => move(e.id, -1)}>
                     <ChevronUp size={14} />
-                  </button>
-                  <button className="btn ghost sm icon" aria-label="Ниже" onClick={() => move(e.id, 1)}>
+                  </Button>
+                  <Button variant="ghost" size="sm" icon aria-label="Ниже" onClick={() => move(e.id, 1)}>
                     <ChevronDown size={14} />
-                  </button>
-                  <button className="btn ghost sm icon danger" aria-label="Удалить" onClick={() => remove(e.id)}>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon
+                    className={styles.dangerGhost}
+                    aria-label="Удалить"
+                    onClick={() => remove(e.id)}
+                  >
                     <X size={14} />
-                  </button>
+                  </Button>
                 </span>
               </li>
             );

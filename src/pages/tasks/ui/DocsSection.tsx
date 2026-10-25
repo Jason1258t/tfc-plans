@@ -6,6 +6,7 @@ import { useTasks } from '@/entities/task';
 import { artifactsStore } from '@/entities/artifact';
 import { useSearchTrack } from '@/shared/api';
 import { cx, timeAgo } from '@/shared/lib';
+import { Button } from '@/shared/ui';
 import styles from './DocsSection.module.css';
 
 interface Props {
@@ -49,10 +50,10 @@ export function DocsSection({ openId, onOpen }: Props) {
             aria-label="Поиск по планам"
           />
         </label>
-        <button className="btn primary" onClick={create}>
+        <Button variant="primary" className={styles.newPlan} onClick={create}>
           <Plus size={16} />
           План
-        </button>
+        </Button>
       </div>
       <p className={cx('muted', styles.docsLead)}>
         Markdown-планы для сложных задач. Обычно создаются из задачи; здесь — все сразу, включая планы без задачи.

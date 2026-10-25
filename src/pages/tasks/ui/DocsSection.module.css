@@ -34,7 +34,8 @@
   .top {
     flex-wrap: wrap;
   }
-  .top :global(.btn.primary) {
+  /* Кнопка «План» (Button variant=primary) растягивается на всю ширину */
+  .top .newPlan {
     flex: 1;
   }
 }

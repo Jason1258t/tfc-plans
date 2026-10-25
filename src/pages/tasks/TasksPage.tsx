@@ -9,7 +9,7 @@ import { ItemIcon } from '@/shared/pack-data';
 import { TaskDialog, type TaskDialogMode } from './ui/TaskDialog';
 import { TaskRow } from './ui/TaskRow';
 import { useNick } from '@/entities/user';
-import { Segmented, ErrorBox } from '@/shared/ui';
+import { Button, Segmented, ErrorBox } from '@/shared/ui';
 import { useTasks } from '@/entities/task';
 import { useGroups } from '@/entities/group';
 import { useArtifacts } from '@/entities/artifact';
@@ -205,9 +205,9 @@ export function TasksPage() {
         </ul>
         <div className={styles.groupsHead}>
           <span>Группы</span>
-          <button className="btn ghost sm icon" onClick={() => setEditingGroup('new')} aria-label="Новая группа">
+          <Button variant="ghost" size="sm" icon onClick={() => setEditingGroup('new')} aria-label="Новая группа">
             <Plus size={15} />
-          </button>
+          </Button>
         </div>
         <ul>
           {groupItems.map((g) => (
@@ -312,19 +312,23 @@ export function TasksPage() {
                 ]}
               />
               <span className="grow" />
-              <button
-                className="btn"
+              <Button
                 data-tour="tasks-compare"
                 onClick={() => setComparing(true)}
                 title="Попарно сравнить задачи по важности"
               >
                 <Scale size={15} />
                 <span className="hide-sm">Что важнее?</span>
-              </button>
-              <button className="btn primary" data-tour="tasks-new" onClick={() => setCreating(true)}>
+              </Button>
+              <Button
+                variant="primary"
+                className={styles.newTask}
+                data-tour="tasks-new"
+                onClick={() => setCreating(true)}
+              >
                 <Plus size={16} />
                 Задача
-              </button>
+              </Button>
             </div>
 
             <div className={styles.tasksFilters} role="search" aria-label="Поиск и фильтры задач">

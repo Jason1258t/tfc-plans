@@ -4,7 +4,7 @@ import { useNick } from '@/entities/user';
 import { tasksStore, type NewTask } from '@/entities/task';
 import { artifactsStore } from '@/entities/artifact';
 import { uploadFile } from '@/entities/file';
-import { Modal } from '@/shared/ui';
+import { Button, Modal } from '@/shared/ui';
 import { cx } from '@/shared/lib';
 import { Attachments } from './Attachments';
 import { Gallery } from './Gallery';
@@ -83,18 +83,18 @@ export function CreateTask({
       footer={
         <>
           <span className="faint small grow hide-sm">{uploadNote ?? 'Ctrl+Enter — создать'}</span>
-          <button className="btn ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             Отмена
-          </button>
-          <button
-            className="btn primary"
+          </Button>
+          <Button
+            variant="primary"
             disabled={!canSave}
             onClick={save}
             title={withPlan ? 'Создать задачу и открыть её план' : 'Создать задачу'}
           >
             {withPlan && <FilePlus2 size={16} />}
             {withPlan ? 'Создать с планом' : 'Создать'}
-          </button>
+          </Button>
         </>
       }
     >
@@ -119,10 +119,10 @@ export function CreateTask({
                 <div className={styles.tfSectionHead}>
                   <h3>Планы</h3>
                   {!withPlan && (
-                    <button className="btn sm" onClick={() => setWithPlan(true)} title="Создать задачу вместе с планом">
+                    <Button size="sm" onClick={() => setWithPlan(true)} title="Создать задачу вместе с планом">
                       <FilePlus2 size={14} />
                       Новый план
-                    </button>
+                    </Button>
                   )}
                 </div>
                 {withPlan ? (
@@ -132,14 +132,16 @@ export function CreateTask({
                         <BookOpen size={16} className="faint" />
                         <span className="grow">План: {draft.title.trim() || 'без названия'}</span>
                         <span className="faint small">создастся вместе с задачей</span>
-                        <button
-                          className="btn ghost sm icon"
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon
                           aria-label="Не создавать план"
                           title="Не создавать план"
                           onClick={() => setWithPlan(false)}
                         >
                           <X size={14} />
-                        </button>
+                        </Button>
                       </div>
                     </li>
                   </ul>
