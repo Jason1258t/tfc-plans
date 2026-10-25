@@ -1,0 +1,21 @@
+/* Подсказка в стиле Minecraft: тёмная плашка у курсора. Была глобальной .tooltip в теме. */
+
+.tooltip {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  max-width: 300px;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  background: #1c1b19;
+  color: #f2f1ee;
+  font-size: 12px;
+  line-height: 1.35;
+  box-shadow: var(--shadow-md);
+}
+
+.sub {
+  color: #a5a29b;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}

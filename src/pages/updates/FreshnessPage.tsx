@@ -12,7 +12,7 @@ import {
   type ManifestMod,
 } from './model/freshness';
 import { cx, timeAgo } from '@/shared/lib';
-import { Button } from '@/shared/ui';
+import { Button, Input } from '@/shared/ui';
 import sectionStyles from './UpdatesSection.module.css';
 import styles from './FreshnessPage.module.css';
 
@@ -200,12 +200,7 @@ export function FreshnessPage() {
                 </div>
                 <div className={styles.search}>
                   <Search size={15} className="faint" />
-                  <input
-                    className="input"
-                    value={q}
-                    placeholder="Мод, id или jar"
-                    onChange={(e) => setQ(e.target.value)}
-                  />
+                  <Input value={q} placeholder="Мод, id или jar" onChange={(e) => setQ(e.target.value)} />
                 </div>
               </div>
               {shown.length ? (
