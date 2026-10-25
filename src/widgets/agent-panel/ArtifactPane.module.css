@@ -163,3 +163,15 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Удаление плана — бывшее .btn.ghost.danger: прозрачная кнопка с красным текстом.
+   У Button нет сочетания ghost + danger, поэтому цвет задаём здесь; двойной класс
+   перекрывает .btn из модуля кнопки (модули без слоёв, порядок не гарантирован). */
+.apane .dangerGhost.dangerGhost {
+  color: var(--danger);
+}
+
+.apane .dangerGhost.dangerGhost:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}

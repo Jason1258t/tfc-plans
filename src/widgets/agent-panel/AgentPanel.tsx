@@ -11,6 +11,7 @@ import {
   Trash,
   WrapText,
 } from 'lucide-react';
+import { Button } from '@/shared/ui';
 import { useEffect, useRef, useState } from 'react';
 import { tasksStore } from '@/entities/task';
 import { askGemini, extractResources, geminiEnabled, geminiErrorText } from '@/shared/api';
@@ -166,22 +167,26 @@ export function AgentPanel(p: Props) {
         <span className="grow">Агент Gemini</span>
         {messages.length > 0 && (
           <>
-            <button
-              className="btn ghost sm icon"
+            <Button
+              variant="ghost"
+              size="sm"
+              icon
               onClick={() => setMessages([])}
               disabled={busy}
               aria-label="Очистить переписку"
               title="Очистить переписку"
             >
               <Trash size={14} />
-            </button>
-            <button
-              className="btn ghost sm icon"
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon
               onClick={() => setExpanded((v) => !v)}
               aria-label={expanded ? 'Свернуть переписку' : 'Развернуть переписку'}
             >
               {expanded ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
-            </button>
+            </Button>
           </>
         )}
       </div>
@@ -209,48 +214,54 @@ export function AgentPanel(p: Props) {
                 )}
                 {!m.pending && !m.error && m.text && (
                   <div className={styles.msgActions}>
-                    <button className="btn sm" onClick={() => p.onAppend(m.text)} title="Добавить в конец документа">
+                    <Button size="sm" onClick={() => p.onAppend(m.text)} title="Добавить в конец документа">
                       <WrapText size={13} /> В конец
-                    </button>
-                    <button
-                      className="btn ghost sm"
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => p.onInsert(m.text)}
                       title="Вставить в позицию курсора"
                     >
                       <TextCursorInput size={13} /> В курсор
-                    </button>
+                    </Button>
                     {m.selection && (
-                      <button
-                        className="btn ghost sm"
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => p.onReplaceSelection(m.selection!, m.text)}
                         title="Заменить выделенный фрагмент"
                       >
                         <Replace size={13} /> Заменить фрагмент
-                      </button>
+                      </Button>
                     )}
-                    <button
-                      className="btn ghost sm"
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => confirm('Заменить весь документ этим ответом?') && p.onReplaceAll(m.text)}
                     >
                       <Replace size={13} /> Заменить всё
-                    </button>
+                    </Button>
                     {p.task && (
-                      <button
-                        className="btn ghost sm"
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => toChecklist(m)}
                         title="Добавить ресурсы в чеклист задачи"
                       >
                         <ListPlus size={13} /> В чеклист
-                      </button>
+                      </Button>
                     )}
-                    <button
-                      className="btn ghost sm icon"
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon
                       onClick={() => navigator.clipboard.writeText(m.text)}
                       aria-label="Копировать"
                       title="Копировать"
                     >
                       <ClipboardCopy size={13} />
-                    </button>
+                    </Button>
                   </div>
                 )}
                 {m.note && <div className={styles.msgNote}>{m.note}</div>}
