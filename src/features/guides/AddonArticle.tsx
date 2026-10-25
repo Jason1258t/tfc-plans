@@ -6,6 +6,7 @@ import { ADDONS, ADDON_GUIDE_SECTION, addonGuideId, type Addon } from '@/lib/add
 import { BASE_DOCS, BASE_VALUES } from '@/lib/guideScope';
 import { readNick } from '@/shared/lib/nick';
 import { cx } from '@/shared/lib';
+import { Button } from '@/shared/ui';
 import type { Guide } from '@/entities/guide';
 import { AddonBlockCard } from '@/features/reference-tabs';
 import { CalcErrors } from './CalcBlock';
@@ -109,9 +110,9 @@ export default function AddonArticle({ addon }: { addon: Addon }) {
       <section className="ref-card">
         {error && <div className={cx(styles.guideErrors, 'small')}>Не удалось загрузить: {error}</div>}
         <div className="empty">Подробного описания пока нет</div>
-        <button className="btn small" onClick={() => startEdit('new')}>
+        <Button className="small" onClick={() => startEdit('new')}>
           <Plus size={14} /> Написать описание
-        </button>
+        </Button>
       </section>
     );
 
@@ -132,12 +133,12 @@ export default function AddonArticle({ addon }: { addon: Addon }) {
             </div>
           </div>
           <div className={styles.guideHeadActions}>
-            <button className="btn ghost small" onClick={() => setHistory(true)} title="Прошлые версии">
+            <Button variant="ghost" className="small" onClick={() => setHistory(true)} title="Прошлые версии">
               <History size={14} /> История
-            </button>
-            <button className="btn small" onClick={() => startEdit(guide)}>
+            </Button>
+            <Button className="small" onClick={() => startEdit(guide)}>
               <Pencil size={14} /> Править
-            </button>
+            </Button>
           </div>
         </header>
         {guide.summary && (

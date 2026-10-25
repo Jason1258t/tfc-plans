@@ -1,6 +1,7 @@
 import { X } from 'lucide-react';
 import { useState } from 'react';
 import { cx } from '@/shared/lib';
+import { Button } from '@/shared/ui';
 import type { GuideKit } from './GuideBody';
 import styles from './Guides.module.css';
 
@@ -45,9 +46,9 @@ export function GuideHelp({ kit, onClose }: { kit: GuideKit; onClose: () => void
   );
   return (
     <div className={cx(styles.guideHelp, 'ref-card')}>
-      <button className={cx('btn ghost small', styles.guideHelpClose)} onClick={onClose} title="Закрыть справку">
+      <Button variant="ghost" className={cx('small', styles.guideHelpClose)} onClick={onClose} title="Закрыть справку">
         <X size={14} />
-      </button>
+      </Button>
       <div className={styles.guideHelpCols}>
         <div>
           <h3>Вставки в тексте</h3>

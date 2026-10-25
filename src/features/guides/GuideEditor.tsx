@@ -3,6 +3,7 @@ import { useDeferredValue, useRef, useState } from 'react';
 import { saveGuide, type GuideDraft } from '@/data/guides';
 import { readNick } from '@/shared/lib/nick';
 import { cx } from '@/shared/lib';
+import { Button } from '@/shared/ui';
 import type { Guide, GuideChecked } from '@/entities/guide';
 import { ItemIcon, ItemPicker } from '@/shared/pack-data';
 import type { LiveMarkdownHandle } from '@/components/LiveMarkdown';
@@ -150,19 +151,20 @@ export function GuideEditor({
       <header className="guide-list-head">
         <h2 className="power-h">{guide ? `Правка: ${guide.title}` : 'Новый гайд'}</h2>
         <div className={styles.guideHeadActions}>
-          <button className="btn ghost small" onClick={() => setHelp(!help)}>
+          <Button variant="ghost" className="small" onClick={() => setHelp(!help)}>
             <HelpCircle size={14} /> Справка
-          </button>
-          <button
-            className="btn ghost small"
+          </Button>
+          <Button
+            variant="ghost"
+            className="small"
             onClick={() => (!changed || confirm('Выйти без сохранения?')) && onClose(null)}
             disabled={saving}
           >
             Отмена
-          </button>
-          <button className="btn small" onClick={save} disabled={saving || !changed}>
+          </Button>
+          <Button className="small" onClick={save} disabled={saving || !changed}>
             {saving ? 'Сохраняю…' : 'Сохранить'}
-          </button>
+          </Button>
         </div>
       </header>
       {restore && <div className="power-note small">Это версия из истории — сохраните, чтобы вернуть её.</div>}
@@ -190,9 +192,9 @@ export function GuideEditor({
             {icon ? (
               <>
                 <ItemIcon id={icon} size={24} />
-                <button className="btn ghost small" onClick={() => setIcon(null)} title="Убрать значок">
+                <Button variant="ghost" className="small" onClick={() => setIcon(null)} title="Убрать значок">
                   <X size={12} />
-                </button>
+                </Button>
               </>
             ) : (
               <ItemPicker small onPick={(it) => setIcon(it.i)} placeholder="Предмет…" />

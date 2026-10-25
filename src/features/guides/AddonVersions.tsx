@@ -21,7 +21,7 @@ import { cx } from '@/shared/lib';
 import type { GuideChecked } from '@/entities/guide';
 import { Markdown } from '@/components/Markdown';
 import { MarkdownField } from '@/components/MarkdownField';
-import { Modal } from '@/shared/ui';
+import { Button, Modal } from '@/shared/ui';
 import { CHECKED } from './guideMeta';
 import { CheckedBadge } from './GuidesSection';
 import guideStyles from './Guides.module.css';
@@ -75,9 +75,9 @@ export default function AddonVersions({ addon }: { addon: Addon }) {
             ))}
           </ul>
           {list.length > OPEN && (
-            <button className="btn ghost small" onClick={() => setAll(!all)}>
+            <Button variant="ghost" className="small" onClick={() => setAll(!all)}>
               {all ? 'Свернуть' : `Ещё ${list.length - OPEN}`}
-            </button>
+            </Button>
           )}
         </>
       )}
@@ -119,13 +119,15 @@ function VersionRow({ addon, v, latest }: { addon: Addon; v: AddonVersion; lates
   return (
     <li className={cx(styles.addonVersion, v.status === 'withdrawn' && styles.withdrawn)}>
       <div className={styles.addonVersionHead}>
-        <button
-          className="btn ghost small icon"
+        <Button
+          variant="ghost"
+          icon
+          className="small"
           onClick={() => setOpen(!open)}
           aria-label={open ? 'Свернуть' : 'Развернуть'}
         >
           {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        </button>
+        </Button>
         <b className={styles.addonVersionNum}>{v.version}</b>
         <span className="faint small">{dateRu(v.date)}</span>
         <StatusBadge s={v.status} />
@@ -133,12 +135,12 @@ function VersionRow({ addon, v, latest }: { addon: Addon; v: AddonVersion; lates
         <CheckedBadge c={v.checked} />
         <span className="grow" />
         {v.jar && <span className="faint small">{kb(v.jar.size)}</span>}
-        <button className="btn ghost small" onClick={() => setHistory(true)} title="Прошлые правки">
+        <Button variant="ghost" className="small" onClick={() => setHistory(true)} title="Прошлые правки">
           <History size={14} />
-        </button>
-        <button className="btn ghost small" onClick={() => startEdit()} title="Править ченджлог и статус">
+        </Button>
+        <Button variant="ghost" className="small" onClick={() => startEdit()} title="Править ченджлог и статус">
           <Pencil size={14} />
-        </button>
+        </Button>
       </div>
       {open && !editing && (
         <div className={styles.addonVersionBody}>
@@ -151,8 +153,10 @@ function VersionRow({ addon, v, latest }: { addon: Addon; v: AddonVersion; lates
           {v.jar ? (
             <p className={cx('faint small', styles.addonVersionCmd)}>
               <code>{cmd}</code>
-              <button
-                className="btn ghost small icon"
+              <Button
+                variant="ghost"
+                icon
+                className="small"
                 title="Скопировать команду"
                 onClick={() =>
                   navigator.clipboard.writeText(cmd).then(() => {
@@ -162,7 +166,7 @@ function VersionRow({ addon, v, latest }: { addon: Addon; v: AddonVersion; lates
                 }
               >
                 {copied ? <Check size={12} /> : <Copy size={12} />}
-              </button>
+              </Button>
               {v.status === 'withdrawn' && <span> — отозвана: ставьте, только если знаете зачем</span>}
             </p>
           ) : (
@@ -259,12 +263,12 @@ function VersionEditor({ v, edit, onClose }: { v: AddonVersion; edit: AddonVersi
       )}
       {error && <div className={cx(guideStyles.guideErrors, 'small')}>Не сохранилось: {error}</div>}
       <div className={styles.addonVersionActions}>
-        <button className="btn small" disabled={busy || d.changelog.length > 20000} onClick={save}>
+        <Button className="small" disabled={busy || d.changelog.length > 20000} onClick={save}>
           {busy ? 'Сохраняю…' : 'Сохранить'}
-        </button>
-        <button className="btn ghost small" disabled={busy} onClick={onClose}>
+        </Button>
+        <Button variant="ghost" className="small" disabled={busy} onClick={onClose}>
           Отмена
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -317,9 +321,9 @@ function VersionHistory({
           {r && (
             <div className={guideStyles.guideHistoryView}>
               {pick > 0 && (
-                <button className="btn small" onClick={() => onRestore(r)}>
+                <Button className="small" onClick={() => onRestore(r)}>
                   Вернуть эту версию…
-                </button>
+                </Button>
               )}
               <p className="small">
                 <StatusBadge s={r.status} /> <CheckedBadge c={r.checked} /> {dateRu(r.date)}

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { guideRevisions } from '@/data/guides';
 import { cx } from '@/shared/lib';
 import type { Guide, GuideRevision } from '@/entities/guide';
-import { Modal } from '@/shared/ui';
+import { Button, Modal } from '@/shared/ui';
 import { GuideBody, type GuideKit } from './GuideBody';
 import styles from './Guides.module.css';
 
@@ -53,9 +53,9 @@ export function GuideHistory({
           {r && (
             <div className={styles.guideHistoryView}>
               {pick > 0 && (
-                <button className="btn small" onClick={() => onRestore(r)}>
+                <Button className="small" onClick={() => onRestore(r)}>
                   Вернуть эту версию…
-                </button>
+                </Button>
               )}
               <article className={cx('power-article', styles.guideArticle)}>
                 <h2 className="power-h">{r.title}</h2>
