@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { ErrorBox } from '@/shared/ui';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { useItems } from '@/shared/pack-data';
@@ -403,7 +404,7 @@ export default function SchematicView3D({
 
   return (
     <div className={styles.view3d} ref={wrapRef}>
-      {error && <div className={cx('error-box', styles.view3dError)}>{error}</div>}
+      {error && <ErrorBox className={styles.view3dError}>{error}</ErrorBox>}
       {stats && <div className={cx(styles.view3dStats, 'faint', 'small')}>{stats}</div>}
       {rect && (
         <div

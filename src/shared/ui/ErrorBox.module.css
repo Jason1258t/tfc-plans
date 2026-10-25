@@ -1,0 +1,10 @@
+/* Плашка ошибки. Переехала из app/theme/utilities.css (`.error-box`) */
+
+.errorBox {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}

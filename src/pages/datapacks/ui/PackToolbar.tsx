@@ -1,4 +1,5 @@
 import { Download, FileCode2, FilePen, FilePlus2, FileTerminal, Hash, Paperclip, Save } from 'lucide-react';
+import { Button } from '@/shared/ui';
 import styles from '../DatapacksPage.module.css';
 
 interface Props {
@@ -38,41 +39,39 @@ export function PackToolbar({
 }: Props) {
   return (
     <div className={styles.dpToolbar}>
-      <button className="btn" onClick={onTemplate}>
+      <Button onClick={onTemplate}>
         <FilePlus2 size={15} /> Рецепт по шаблону
-      </button>
-      <button className="btn" onClick={onExisting}>
+      </Button>
+      <Button onClick={onExisting}>
         <FilePen size={15} /> Заменить / удалить рецепт
-      </button>
-      <button className="btn" onClick={onOpenTags}>
+      </Button>
+      <Button onClick={onOpenTags}>
         <Hash size={15} /> Тег
-      </button>
-      <button className="btn" onClick={onAddFile}>
+      </Button>
+      <Button onClick={onAddFile}>
         <FileCode2 size={15} /> Файл
-      </button>
+      </Button>
       <span className="grow" />
-      <button
-        className="btn"
+      <Button
         onClick={onExportScript}
         disabled={!canExportScript}
         title="Рецепты датапака как KubeJS-скрипт (event.custom): удаления KubeJS на них не действуют"
       >
         <FileTerminal size={15} /> KubeJS-скрипт
-      </button>
-      <button className="btn" onClick={onAttach} disabled={!canAttach}>
+      </Button>
+      <Button onClick={onAttach} disabled={!canAttach}>
         <Paperclip size={15} /> К задаче
-      </button>
-      <button
-        className="btn"
+      </Button>
+      <Button
         onClick={onSaveAsFile}
         disabled={!canSaveAsFile || savingBusy}
         title="Положить zip в «Документы» (общее хранилище файлов) без привязки к задаче"
       >
         <Save size={15} /> {savingBusy ? 'Сохраняю…' : 'Сохранить как файл'}
-      </button>
-      <button className="btn primary" onClick={onExportZip} disabled={!canExportZip}>
+      </Button>
+      <Button variant="primary" onClick={onExportZip} disabled={!canExportZip}>
         <Download size={15} /> Скачать .zip
-      </button>
+      </Button>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { FileTerminal, Package, Plus } from 'lucide-react';
 import { PackNav } from '@/widgets/pack-nav';
 import { cx, timeAgo } from '@/shared/lib';
 import type { Datapack, KubejsScript } from '@/entities/datapack';
+import { Button } from '@/shared/ui';
 import styles from '../DatapacksPage.module.css';
 
 interface Props {
@@ -31,18 +32,18 @@ export function DatapacksList({
       <PackNav />
       <div className={styles.dpListHead} data-tour="dp-list-head">
         <span>Датапаки</span>
-        <button className="btn ghost sm icon" onClick={onCreatePack} aria-label="Новый датапак" title="Новый датапак">
+        <Button variant="ghost" size="sm" icon onClick={onCreatePack} aria-label="Новый датапак" title="Новый датапак">
           <Plus size={15} />
-        </button>
+        </Button>
       </div>
       {!packs ? (
         <div className="faint small" style={{ padding: 8 }}>
           Загрузка…
         </div>
       ) : packs.length === 0 ? (
-        <button className="btn" onClick={onCreatePack} style={{ margin: 8 }}>
+        <Button onClick={onCreatePack} style={{ margin: 8 }}>
           <Plus size={15} /> Первый датапак
-        </button>
+        </Button>
       ) : (
         <ul>
           {packs.map((p) => (
@@ -70,15 +71,17 @@ export function DatapacksList({
       )}
       <div className={cx(styles.dpListHead, styles.dpListHeadNext)}>
         <span>Скрипты KubeJS</span>
-        <button
-          className="btn ghost sm icon"
+        <Button
+          variant="ghost"
+          size="sm"
+          icon
           onClick={onCreateScript}
           disabled={!scripts}
           aria-label="Новый скрипт KubeJS"
           title="Новый скрипт KubeJS"
         >
           <Plus size={15} />
-        </button>
+        </Button>
       </div>
       {scripts?.length === 0 && (
         <div className="faint small" style={{ padding: '0 8px' }}>

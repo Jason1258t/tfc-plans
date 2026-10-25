@@ -1,4 +1,5 @@
 import { AlertTriangle, ChevronDown, ChevronRight, Package, Pencil, Sparkles } from 'lucide-react';
+import { ErrorBox } from '@/shared/ui';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ItemIcon, useItems, type ItemIndex } from '@/shared/pack-data';
@@ -25,6 +26,7 @@ import {
   type PackUpdate,
 } from '@/entities/pack-update';
 import { cx, timeAgo } from '@/shared/lib';
+import { Button } from '@/shared/ui';
 import type { Datapack } from '@/entities/datapack';
 import sectionStyles from './UpdatesSection.module.css';
 import styles from './UpdatesPage.module.css';
@@ -151,18 +153,19 @@ function UpdateCard({
             <>
               <MarkdownField value={draft} onChange={setDraft} rows={14} autoFocus />
               <div className={cx('row', styles.notesActions)}>
-                <button className="btn ghost sm" onClick={() => setEditing(false)}>
+                <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
                   Отмена
-                </button>
-                <button
-                  className="btn primary sm"
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={async () => {
                     await saveNotes(u.id, draft, 'manual', nick);
                     setEditing(false);
                   }}
                 >
                   Сохранить
-                </button>
+                </Button>
               </div>
             </>
           ) : u.notes ? (
@@ -173,19 +176,20 @@ function UpdateCard({
                   {u.notes.source === 'agent' ? 'Патчноут от модели' : 'Патчноут поправлен вручную'} ·{' '}
                   {u.notes.updatedBy} · {timeAgo(u.notes.updatedAt)}
                 </span>
-                <button
-                  className="btn ghost sm"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     setDraft(u.notes!.body);
                     setEditing(true);
                   }}
                 >
                   <Pencil size={13} /> Править
-                </button>
+                </Button>
                 {geminiEnabled && (
-                  <button className="btn ai sm" onClick={generate} disabled={busy}>
+                  <Button variant="ai" size="sm" onClick={generate} disabled={busy}>
                     <Sparkles size={13} /> {busy ? 'Пишу…' : 'Обновить агентом'}
-                  </button>
+                  </Button>
                 )}
               </div>
             </>
@@ -193,31 +197,32 @@ function UpdateCard({
             <div className={cx('row', styles.notesEmpty)}>
               <span className="faint grow">{busy ? 'Модель пишет патчноут…' : 'Патчноута пока нет.'}</span>
               {geminiEnabled && !busy && (
-                <button className="btn ai sm" onClick={generate}>
+                <Button variant="ai" size="sm" onClick={generate}>
                   <Sparkles size={13} /> Составить агентом
-                </button>
+                </Button>
               )}
-              <button
-                className="btn ghost sm"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   setDraft('');
                   setEditing(true);
                 }}
               >
                 <Pencil size={13} /> Написать
-              </button>
+              </Button>
             </div>
           )}
-          {error && <div className="error-box">{error}</div>}
+          {error && <ErrorBox>{error}</ErrorBox>}
         </section>
       )}
 
       {risks.length > 0 && <Risks risks={risks} />}
 
-      <button className={cx('btn', 'ghost', 'sm', styles.toggle)} onClick={() => setOpen((v) => !v)}>
+      <Button variant="ghost" size="sm" className={styles.toggle} onClick={() => setOpen((v) => !v)}>
         {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         {u.baseline ? 'Состав сборки' : 'Что изменилось'}
-      </button>
+      </Button>
       {open && <Details u={full} />}
     </article>
   );

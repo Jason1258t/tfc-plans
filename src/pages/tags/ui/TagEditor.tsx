@@ -18,7 +18,7 @@ import {
   ItemIcon,
 } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
-import { Input, Modal, Segmented } from '@/shared/ui';
+import { Button, Input, Modal, Segmented } from '@/shared/ui';
 import styles from './TagEditor.module.css';
 
 interface Props {
@@ -197,16 +197,16 @@ export function TagEditor({ cat, kind, tagId, existing, onSave, onClose, saveLab
           <span className="faint small grow">
             {TAG_KIND_LABEL[kind]} · файл <code>{idOk ? tagPath(kind, id) : '—'}</code>
           </span>
-          <button className="btn ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             Отмена
-          </button>
-          <button
-            className="btn primary"
+          </Button>
+          <Button
+            variant="primary"
             disabled={!idOk || nothing}
             onClick={() => onSave({ path: tagPath(kind, id), content, kind, id })}
           >
             {saveLabel}
-          </button>
+          </Button>
         </>
       }
     >
@@ -255,14 +255,16 @@ export function TagEditor({ cat, kind, tagId, existing, onSave, onClose, saveLab
                 {base.map((m) => (
                   <li key={m} className={cx(removedSet.has(m) && styles.removed)}>
                     <Member cat={cat} kind={kind} id={m} />
-                    <button
-                      className="btn ghost sm icon"
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon
                       onClick={() => toggleRemoved(m)}
                       title={removedSet.has(m) ? 'Вернуть' : 'Убрать из тега'}
                       aria-label={removedSet.has(m) ? 'Вернуть' : 'Убрать из тега'}
                     >
                       {removedSet.has(m) ? <Undo2 size={14} /> : <X size={14} />}
-                    </button>
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -278,14 +280,16 @@ export function TagEditor({ cat, kind, tagId, existing, onSave, onClose, saveLab
               {edit.added.map((m) => (
                 <li key={m}>
                   <Member cat={cat} kind={kind} id={m} />
-                  <button
-                    className="btn ghost sm icon"
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon
                     onClick={() => setEdit((e) => ({ ...e, added: e.added.filter((x) => x !== m) }))}
                     aria-label="Не добавлять"
                     title="Не добавлять"
                   >
                     <X size={14} />
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>

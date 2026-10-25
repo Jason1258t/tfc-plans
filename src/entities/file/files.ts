@@ -15,7 +15,28 @@ import type { FileAdapter, StoredFile } from './fileStorage/types';
  * artifactId / descTaskId — картинка вставлена в текст плана / описания задачи: он ей владелец,
  * удаляется вместе с последней ссылкой (planImages)
  */
-type Meta = { taskId: string | null; author: string; artifactId?: string; descTaskId?: string };
+type Meta = {
+  taskId: string | null;
+  author: string;
+  artifactId?: string;
+  descTaskId?: string;
+  report?: FileReport;
+};
+
+/**
+ * Служебный файл от `tfc report` (cli/lib/reports.mjs → сервер сборки): лог или краш-репорт игрока. На сайте —
+ * «Документы» → «Краш-репорты»/«Логи», агенту — MCP report_get по id.
+ */
+export interface FileReport {
+  kind: 'crash' | 'log';
+  /** вид: game-log, crash-report, debug-log, kubejs-log, jvm-crash, server-log, server-crash */
+  type: string;
+  label: string;
+  note: string;
+  /** что внутри (у zip — несколько), путь от папки игры */
+  files: { name: string; size: number; mtime: number }[];
+  source: 'tfc';
+}
 export type FileMeta = StoredFile<Meta>;
 
 const serverUrl = import.meta.env.VITE_FILES_SERVER?.trim();

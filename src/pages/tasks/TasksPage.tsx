@@ -9,7 +9,7 @@ import { ItemIcon } from '@/shared/pack-data';
 import { TaskDialog, type TaskDialogMode } from './ui/TaskDialog';
 import { TaskRow } from './ui/TaskRow';
 import { useNick } from '@/entities/user';
-import { Segmented } from '@/shared/ui';
+import { Segmented, ErrorBox } from '@/shared/ui';
 import { useTasks } from '@/entities/task';
 import { useGroups } from '@/entities/group';
 import { useArtifacts } from '@/entities/artifact';
@@ -380,7 +380,7 @@ export function TasksPage() {
               )}
             </div>
 
-            {error && <div className="error-box">Ошибка базы данных: {error}</div>}
+            {error && <ErrorBox>Ошибка базы данных: {error}</ErrorBox>}
 
             {loading ? (
               <div className="empty">Загрузка…</div>

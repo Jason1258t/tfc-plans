@@ -51,15 +51,6 @@
   color: var(--text-3);
 }
 
-.error-box {
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  background: var(--danger-soft);
-  color: var(--danger);
-  font-size: 13px;
-  overflow-wrap: anywhere;
-}
-
 .sr-only {
   position: absolute;
   width: 1px;

@@ -27,6 +27,8 @@
  *   GET    /site/schematics         — схемы библиотеки (без превью)              player
  *   GET    /site/files/:id          — исходник схемы (.nbt из хранилища сайта)   player
  *   GET    /site/addons             — аддоны: карточка + версии с jar (Firestore addonVersions) player
+ *   POST   /site/reports            — отчёт tfc report (лог, краш, zip пачки): тело — байты, X-Report — JSON
+ *                                     { name, kind, type, label, note, files, taskId } → в хранилище сайта  player
  *   POST   /admin/addons            — { addon, version, file, sha256, size }: jar версии (блоб уже залит)
  *                                     → запись в addonVersions (новая — черновик)          admin
  *   GET    /admin/changes           — правки конфигов от агента (Firestore configChanges) admin
@@ -126,6 +128,20 @@ async function makeCurrent(body, by) {
 function json(res, status, body) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(body));
+}
+
+/** Тело как есть (отчёт tfc report, до 25 МБ) */
+async function readRawBody(req, max) {
+  const len = Number(req.headers['content-length']);
+  if (Number.isFinite(len) && len > max) throw new HttpError(413, 'Слишком большой файл');
+  const chunks = [];
+  let size = 0;
+  for await (const c of req) {
+    size += c.length;
+    if (size > max) throw new HttpError(413, 'Слишком большой файл');
+    chunks.push(c);
+  }
+  return Buffer.concat(chunks);
 }
 
 async function readJsonBody(req) {
@@ -413,6 +429,20 @@ async function handle(req, res) {
       .createReadStream(file)
       .on('error', () => res.destroy())
       .pipe(res);
+  }
+
+  // --- отчёты tfc report → хранилище файлов сайта
+  if (route === 'POST /site/reports' && parts.length === 2) {
+    const who = await authorize(req, 'player');
+    let meta;
+    try {
+      meta = JSON.parse(decodeURIComponent(String(req.headers['x-report'] ?? '')));
+    } catch {
+      throw new HttpError(400, 'X-Report — JSON с описанием отчёта (encodeURIComponent)');
+    }
+    const r = await site.uploadReport(await readRawBody(req, 26 * 1024 ** 2), meta, who.name);
+    console.log(`+ отчёт ${r.id} ${r.type} ${r.name} ${r.size} Б — ${who.name}`);
+    return json(res, 201, r);
   }
 
   // --- контент сайта для tfc pull (Firestore — сервисным ключом, с кешем)

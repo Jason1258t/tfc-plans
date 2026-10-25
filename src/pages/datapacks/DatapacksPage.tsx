@@ -5,6 +5,7 @@ import { freeScriptName, NEW_SCRIPT_TEXT } from '@/lib/kubejsScripts';
 import { useNick } from '@/entities/user';
 import { datapacksStore, kubejsScriptsStore } from '@/entities/datapack';
 import type { Datapack, KubejsScript } from '@/entities/datapack';
+import { Button } from '@/shared/ui';
 import { DatapacksList } from './ui/DatapacksList';
 import { PackEditor } from './ui/PackEditor';
 import { ScriptEditor } from './ui/KubejsScripts';
@@ -83,9 +84,9 @@ export function DatapacksPage() {
               Новые рецепты по шаблону из сборки, замена и удаление существующих, произвольные файлы. Экспорт в zip —
               его можно сразу приложить к задаче, чтобы хост сервера закинул в <code>world/datapacks/</code>.
             </p>
-            <button className="btn primary" data-tour="dp-new" onClick={create}>
+            <Button variant="primary" data-tour="dp-new" onClick={create}>
               <Plus size={16} /> Новый датапак
-            </button>
+            </Button>
           </div>
         )}
       </main>

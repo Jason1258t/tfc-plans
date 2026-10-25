@@ -1,15 +1,17 @@
 /**
  * Версии аддонов на сервере сборки: `tfc admin addon upload <jar…>` — залить jar версии (блоб) и записать версию
  * на сайте (Firestore addonVersions, новая — черновик; ченджлог пишут на сайте или MCP addon_version_put);
- * `tfc addons` — какие версии есть, что стоит в этой папке и что закреплено.
+ * `tfc addons list` — аддоны полными строками `мод@версия` (`--host-only` — только для хоста), `tfc addons <мод>` — его
+ * версии, `tfc addons install <мод>@<версия>` — поставить (= `tfc pull addons`, в tfc.mjs).
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { compareVersions, sortVersions, STATUS_LABEL } from '../../src/lib/addonVersions.ts';
 import { modInfoOf } from './jarid.mjs';
 import { loadState } from './plan.mjs';
+import { addonMatches } from './pull.mjs';
 import { sha256File } from './scan.mjs';
-import { bold, dim, green, red, yellow } from './ui.mjs';
+import { bold, cyan, dim, green, red, yellow } from './ui.mjs';
 
 /** Залить jar версий аддонов: id и версия — из neoforge.mods.toml jar (--id/--ver — вместо них) */
 export async function uploadAddons(api, files, { id, version } = {}) {
@@ -37,26 +39,67 @@ export async function uploadAddons(api, files, { id, version } = {}) {
   return out;
 }
 
-/** Версии аддонов: что есть на сервере, что стоит здесь, что закреплено */
-export async function listAddons(api, profile, names = []) {
+/** Полная строка аддона — то, что принимают tfc addons install и tfc pull addons */
+const full = (a, v) => `${a.id}@${v}`;
+
+/** Список с сервера сборки + что стоит в этой папке и что закреплено */
+async function addonsHere(api, profile) {
   const { addons } = await api.get('/site/addons');
   const state = profile ? loadState(profile) : {};
   const pins = state.addonPins ?? {};
   const pulled = state.pulled?.addons ?? {};
-  const want = names.map((n) => n.toLowerCase().replace(/[-_]/g, ''));
-  for (const a of addons) {
-    if (want.length && !want.includes(a.id.replace(/_/g, ''))) continue;
+  return addons.map((a) => {
     const vs = sortVersions(a.versions ?? []);
     const here = pulled[a.id];
-    const installed = here ? vs.find((v) => v.sha256 === here.sha256) : null;
-    const latest = vs.find((v) => v.status === 'released');
+    return {
+      a,
+      vs,
+      here,
+      installed: here ? vs.find((v) => v.sha256 === here.sha256) : null,
+      latest: vs.find((v) => v.status === 'released'),
+      pin: pins[a.id],
+    };
+  });
+}
+
+/** Что стоит здесь: « — стоит 1.0.0 (закреплена 1.0.0)» */
+const hereNote = ({ here, installed, pin }) =>
+  (installed ? ` — стоит ${installed.version}` : here ? ' — стоит неизвестная версия' : '') +
+  (pin ? yellow(` (закреплена ${pin})`) : '');
+
+/** tfc addons list: по строке на аддон — полная строка последней версии, название, что стоит здесь */
+export async function listAddons(api, profile, { hostOnly = false } = {}) {
+  const list = (await addonsHere(api, profile)).filter((x) => !hostOnly || x.a.hostOnly);
+  if (!list.length) return console.log(hostOnly ? 'Аддонов для хоста нет.' : 'Аддонов нет.');
+  const str = ({ a, vs, latest }) => full(a, (latest ?? vs[0])?.version ?? 'latest');
+  const width = Math.max(...list.map((x) => str(x).length));
+  for (const x of list) {
+    const { a, vs, installed, latest, pin } = x;
+    const top = latest ?? vs[0];
     console.log(
-      `${bold(a.name)} ${dim(a.id)}` +
-        (installed ? ` — стоит ${installed.version}` : here ? ' — стоит неизвестная версия' : '') +
-        (pins[a.id] ? yellow(` (закреплена ${pins[a.id]})`) : ''),
+      `${bold(str(x).padEnd(width))}  ${a.name}${a.hostOnly ? cyan(' [хосту]') : ''}${top && !latest ? yellow(` (${STATUS_LABEL[top.status]})`) : ''}${hereNote(x)}`,
     );
-    if (!vs.length) console.log(dim('    версий на сервере сборки нет — ставится последняя со страницы сайта'));
-    for (const v of vs.slice(0, names.length ? Infinity : 5)) {
+    if (installed && latest && compareVersions(installed.version, latest.version) < 0 && !pin)
+      console.log(dim(`    есть новее — tfc addons install ${full(a, latest.version)}`));
+  }
+  console.log(dim('\nВерсии аддона: tfc addons <мод>; поставить: tfc addons install <мод>@<версия>'));
+}
+
+/** tfc addons <мод…>: все версии названных аддонов полными строками */
+export async function showAddons(api, profile, names) {
+  const list = await addonsHere(api, profile);
+  const unknown = names.filter((n) => !list.some((x) => addonMatches(x.a, n)));
+  if (unknown.length)
+    throw new Error(
+      `нет аддона «${unknown.join('», «')}» — список: tfc addons list (есть: ${list.map((x) => x.a.id).join(', ')})`,
+    );
+  for (const x of list.filter((x) => names.some((n) => addonMatches(x.a, n)))) {
+    const { a, vs, installed, latest } = x;
+    console.log(`${bold(a.name)} ${dim(a.id)}${a.hostOnly ? cyan(' [хосту]') : ''}${hereNote(x)}`);
+    if (a.needs) console.log(dim(`  ${a.needs}`));
+    const width = Math.max(0, ...vs.map((v) => full(a, v.version).length));
+    if (!vs.length) console.log(dim('  версий на сервере сборки нет — ставится последняя со страницы сайта'));
+    for (const v of vs) {
       const mark = installed?.version === v.version ? green('●') : ' ';
       const st =
         v.status === 'withdrawn'
@@ -64,11 +107,10 @@ export async function listAddons(api, profile, names = []) {
           : v.status === 'draft'
             ? yellow(STATUS_LABEL[v.status])
             : STATUS_LABEL[v.status];
-      console.log(`  ${mark} ${v.version.padEnd(8)} ${dim(v.date)} ${st}${latest === v ? dim(' · последняя') : ''}`);
+      console.log(
+        `  ${mark} ${full(a, v.version).padEnd(width)} ${dim(v.date)} ${st}${latest === v ? dim(' · последняя') : ''}`,
+      );
     }
-    if (!names.length && vs.length > 5) console.log(dim(`    … ещё ${vs.length - 5} (tfc addons ${a.id})`));
-    if (installed && latest && compareVersions(installed.version, latest.version) < 0 && !pins[a.id])
-      console.log(dim(`    есть новее — tfc pull addons`));
   }
-  console.log(dim('\nПоставить версию: tfc pull addons <мод>@<версия>; вернуть последнюю — <мод>@latest'));
+  console.log(dim('\nПоставить и закрепить: tfc addons install <мод>@<версия>; вернуть последнюю — <мод>@latest'));
 }
