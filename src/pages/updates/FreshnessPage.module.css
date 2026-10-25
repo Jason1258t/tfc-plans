@@ -42,7 +42,7 @@
   min-width: 0;
 }
 
-.search :global(.input) {
+.search input {
   width: 100%;
 }
 

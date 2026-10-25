@@ -1,5 +1,5 @@
 import { FilePen, FilePlus2, Search } from 'lucide-react';
-import { Button, Segmented } from '@/shared/ui';
+import { Button, Input, Segmented } from '@/shared/ui';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PackSection } from '@/widgets/pack-nav';
@@ -115,8 +115,7 @@ export function TagsPage() {
         <div className={styles.tagsBar}>
           <div className={styles.tagsSearch} role="search" aria-label="Поиск по тегам">
             <Search size={15} className="faint" />
-            <input
-              className="input"
+            <Input
               autoFocus
               value={q}
               placeholder="Тег или что в нём: plantoil, оливковое масло, ingots/steel…"
