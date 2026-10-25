@@ -44,6 +44,7 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
   `:global(.seg)` на свои классы. Тогда же: шапка/знакомство/панели/каталог/меню разделов — в `widgets/`, гайды и
   вкладки справочника — в `features/`; `TaskDialog`, `SchematicsPage`, `SchematicLayers`, `DatapacksPage` разбиты на
   части (самый большой файл — 394 строки вместо 1206).
+- 2026-10-26 (ночь, кнопки и поля): все кнопки переведены на `Button` (`shared/ui`) — страницы задач, схем, датапаков, карты, тегов, обновлений, документов, гайды, вкладки справочника, шапка, панель плана, знакомство, общие компоненты; `.btn` остался только на ссылках (`<a>`/`<Link>`), которым нужен режим ссылки у компонента. Где было сочетание `btn ghost danger`, добавлены локальные `.dangerGhost` в модулях страниц. Появилась `ErrorBox` (бывший `.error-box`). Дальше — `.input/.label` → `Input/Select/Textarea` и `.tag`/важность.
 - Left: **2 global CSS outside `src/app/theme`** — `ReferenceShared.css`/`PowerShared.css`, общие части справочника
   (их берут мультиблоки, гайды и аддоны; переедут вместе с `entities/guide` и мультиблоками). `legacy-ui.css` пока
   держит `.btn/.input/.tag/.empty/.error-box/.imp-*` — их ещё используют страницы; каждый новый компонент `shared/ui`
