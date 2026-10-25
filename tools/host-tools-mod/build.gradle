@@ -29,6 +29,8 @@ neoForge {
         client {
             client()
             sourceSet = sourceSets.devtest
+            // У хоста пинг не мерится (соединение в памяти); в проверке — мерится, чтобы проверить ping/pong
+            systemProperty 'host_tools.probeOwner', 'true'
         }
         server {
             server()

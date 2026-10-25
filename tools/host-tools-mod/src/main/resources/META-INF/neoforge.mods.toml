@@ -4,7 +4,7 @@ license = "MIT"
 
 [[mods]]
 modId = "host_tools"
-version = "1.0.0"
+version = "1.0.1"
 displayName = "Host Tools"
 description = "Мир хоста: /host — открыть для сети на нужном порте или на случайном свободном, /host stop — закрыть без перезахода, /ping и пинг цифрами в табе."
 

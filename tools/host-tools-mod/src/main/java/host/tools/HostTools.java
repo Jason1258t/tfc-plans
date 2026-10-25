@@ -18,5 +18,6 @@ public final class HostTools {
         NeoForge.EVENT_BUS.addListener(PingCommand::register);
         NeoForge.EVENT_BUS.addListener(HostService::onServerStopping);
         NeoForge.EVENT_BUS.addListener(PingCommand::onServerTick);
+        NeoForge.EVENT_BUS.addListener(PingProbe::onServerTick);
     }
 }

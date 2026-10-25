@@ -18,6 +18,7 @@ public final class HostConfig {
     public static final ModConfigSpec.EnumValue<Mode> GAME_MODE;
     public static final ModConfigSpec.EnumValue<Cheats> ALLOW_COMMANDS;
     public static final ModConfigSpec.IntValue LATENCY_BROADCAST_TICKS;
+    public static final ModConfigSpec.IntValue PROBE_TICKS;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -35,8 +36,10 @@ public final class HostConfig {
                 .defineEnum("allowCommands", Cheats.WORLD);
         b.pop();
         b.push("ping");
+        PROBE_TICKS = b.comment("Как часто (в тиках) замерять пинг игроков своим ping/pong; 0 — только замер Minecraft (раз в 15 с, с Packet Fixer — раз в его timeout)")
+                .defineInRange("probeTicks", 40, 0, 1200);
         LATENCY_BROADCAST_TICKS = b.comment("Как часто (в тиках) рассылать пинг игроков для таба; у Minecraft — раз в 600. 0 — не рассылать чаще обычного")
-                .defineInRange("broadcastTicks", 100, 0, 1200);
+                .defineInRange("broadcastTicks", 40, 0, 1200);
         b.pop();
         SPEC = b.build();
     }

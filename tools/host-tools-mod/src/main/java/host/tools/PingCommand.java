@@ -17,10 +17,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
-/**
- * /ping [игроки] — пинг для всех. Число — то же, что рисует таб палочками: сервер замеряет его раз в 15 с
- * (keep-alive) и сглаживает (¾ старого + ¼ нового), см. ServerCommonPacketListenerImpl.handleKeepAlive.
- */
+/** /ping [игроки] — пинг для всех. Число — то же, что рисует таб палочками; замеряет {@link PingProbe}. */
 public final class PingCommand {
     public static void register(RegisterCommandsEvent event) {
         event.getDispatcher().register(Commands.literal("ping")
@@ -34,7 +31,7 @@ public final class PingCommand {
         List<ServerPlayer> sorted = new ArrayList<>(players);
         sorted.sort(Comparator.comparingInt((ServerPlayer p) -> p.connection.latency()).reversed());
         MutableComponent msg = Component.literal("Пинг игроков").withStyle(ChatFormatting.GOLD)
-                .append(Component.literal(" (сервер замеряет раз в 15 с)").withStyle(ChatFormatting.GRAY));
+                .append(Component.literal(" (замер раз в " + probeSeconds() + ")").withStyle(ChatFormatting.GRAY));
         for (ServerPlayer p : sorted) {
             msg.append("\n  ").append(p.getDisplayName().copy()).append(" — ");
             if (server.isSingleplayerOwner(p.getGameProfile())) {
@@ -46,6 +43,11 @@ public final class PingCommand {
         }
         source.sendSuccess(() -> msg, false);
         return sorted.size();
+    }
+
+    private static String probeSeconds() {
+        int ticks = HostConfig.PROBE_TICKS.get();
+        return ticks <= 0 ? "15 с и реже" : String.format(java.util.Locale.ROOT, "%.0f с", Math.max(1, ticks / 20.0));
     }
 
     /** Пороги — как у палочек таба (PlayerTabOverlay.renderPingIcon): 150 / 300 / 600 / 1000 мс. */
