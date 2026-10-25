@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { buildAtlas } from '@/lib/atlas';
 import { geoName, type GeoProfile, type MapLayer, type Waypoint } from '@/lib/geo';
 import { blockToGeo } from '@/lib/projection';
+import { Button } from '@/shared/ui';
 import styles from './WorldMap.module.css';
 
 export interface MapMarker {
@@ -321,15 +322,15 @@ export function WorldMap({ profile, layer, waypoints, cityPos, markers, renderPo
         }}
       />
       <div className={styles.zoom}>
-        <button className="btn sm icon" aria-label="Приблизить" onClick={() => zoomAt(size.w / 2, size.h / 2, 1.6)}>
+        <Button size="sm" icon aria-label="Приблизить" onClick={() => zoomAt(size.w / 2, size.h / 2, 1.6)}>
           <Plus size={15} />
-        </button>
-        <button className="btn sm icon" aria-label="Отдалить" onClick={() => zoomAt(size.w / 2, size.h / 2, 1 / 1.6)}>
+        </Button>
+        <Button size="sm" icon aria-label="Отдалить" onClick={() => zoomAt(size.w / 2, size.h / 2, 1 / 1.6)}>
           <Minus size={15} />
-        </button>
-        <button className="btn sm icon" aria-label="Весь мир" onClick={() => setView(fit(size.w, size.h))}>
+        </Button>
+        <Button size="sm" icon aria-label="Весь мир" onClick={() => setView(fit(size.w, size.h))}>
           <Maximize size={14} />
-        </button>
+        </Button>
       </div>
       {popup && view && (
         <PopupBox at={toScreen(popup.x, popup.z, view)} size={size}>

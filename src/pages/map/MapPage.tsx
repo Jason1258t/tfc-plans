@@ -1,7 +1,7 @@
 import { Copy, Check, Settings, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Modal, Segmented } from '@/shared/ui';
+import { Modal, Segmented, Button } from '@/shared/ui';
 import { WorldMap, type MapMarker } from './ui/WorldMap';
 import { useNick } from '@/entities/user';
 import { useGroups } from '@/entities/group';
@@ -136,9 +136,9 @@ function MapView({ geo, profile, world }: { geo: GeoData; profile: GeoProfile; w
       <aside className={styles.side}>
         <div className={styles.title}>
           <h2>Карта мира</h2>
-          <button className="btn ghost sm" onClick={() => setSettingsOpen(true)} title="Профиль и масштаб мира">
+          <Button variant="ghost" size="sm" onClick={() => setSettingsOpen(true)} title="Профиль и масштаб мира">
             <Settings size={14} /> {geoName(profile.name)}
-          </button>
+          </Button>
         </div>
         {world.fromConfig ? (
           <p className="faint small" style={{ margin: 0 }}>
@@ -190,9 +190,9 @@ function MapView({ geo, profile, world }: { geo: GeoData; profile: GeoProfile; w
               <ul>
                 {placedTasks.map((t) => (
                   <li key={t.id}>
-                    <button className="btn ghost sm" onClick={() => setPoint('a', t.place!)}>
+                    <Button variant="ghost" size="sm" onClick={() => setPoint('a', t.place!)}>
                       {t.place!.label || t.title}
-                    </button>
+                    </Button>
                     <span className="faint small">{groups.find((g) => g.id === t.groupId)?.name}</span>
                   </li>
                 ))}
@@ -281,9 +281,9 @@ function PointPanel({
         <span className={styles.dot} data-color={color} />
         <b className="grow">{title}</b>
         {point && (
-          <button className="btn ghost sm icon" aria-label="Сбросить точку" onClick={() => onSet(null)}>
+          <Button variant="ghost" size="sm" icon aria-label="Сбросить точку" onClick={() => onSet(null)}>
             <X size={14} />
-          </button>
+          </Button>
         )}
       </div>
       <div className={styles.inputWrap}>
@@ -338,9 +338,9 @@ function PointPanel({
                 const br = bearing(point, pos);
                 return (
                   <li key={w.id}>
-                    <button className="btn ghost sm" onClick={() => onSet(pos)}>
+                    <Button variant="ghost" size="sm" onClick={() => onSet(pos)}>
                       {geoName(w.name)}
-                    </button>
+                    </Button>
                     <span className="faint small">
                       {Math.round(br.blocks).toLocaleString('ru-RU')} бл. на {br.dir} · {Math.round(km)} км
                     </span>
@@ -378,9 +378,9 @@ function PointPopup({
         <code className="grow">
           {point.x} {point.z}
         </code>
-        <button className="btn ghost sm icon" aria-label="Закрыть" onClick={onClose}>
+        <Button variant="ghost" size="sm" icon aria-label="Закрыть" onClick={onClose}>
           <X size={14} />
-        </button>
+        </Button>
       </div>
       <div className="faint small">
         {fmtLat(point.lat)}, {fmtLon(point.lon)}
@@ -394,12 +394,12 @@ function PointPopup({
       <div className={styles.popupActions}>
         <CopyButton text={`${point.x} ${point.z}`} label="x z" />
         <CopyButton text={`/tp @s ${point.x} ~ ${point.z}`} label="/tp" />
-        <button className="btn sm" onClick={() => onSet('a')}>
+        <Button size="sm" onClick={() => onSet('a')}>
           <span className={styles.dot} data-color="a" /> A
-        </button>
-        <button className="btn sm" onClick={() => onSet('b')}>
+        </Button>
+        <Button size="sm" onClick={() => onSet('b')}>
           <span className={styles.dot} data-color="b" /> B
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -430,8 +430,8 @@ const fmtLon = (v: number) => {
 function CopyButton({ text, label }: { text: string; label: string }) {
   const [done, setDone] = useState(false);
   return (
-    <button
-      className="btn sm"
+    <Button
+      size="sm"
       title={`Копировать: ${text}`}
       onClick={() => {
         navigator.clipboard?.writeText(text).then(() => {
@@ -441,7 +441,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
       }}
     >
       {done ? <Check size={13} /> : <Copy size={13} />} {label}
-    </button>
+    </Button>
   );
 }
 
@@ -462,11 +462,11 @@ function WorldSettingsDialog({ geo, world, onClose }: { geo: GeoData; world: Wor
       narrow
       footer={
         <>
-          <button className="btn ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             Отмена
-          </button>
-          <button
-            className="btn primary"
+          </Button>
+          <Button
+            variant="primary"
             disabled={busy || !!world.fromConfig}
             onClick={async () => {
               setBusy(true);
@@ -479,7 +479,7 @@ function WorldSettingsDialog({ geo, world, onClose }: { geo: GeoData; world: Wor
             }}
           >
             Сохранить
-          </button>
+          </Button>
         </>
       }
     >
