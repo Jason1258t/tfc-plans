@@ -8,7 +8,7 @@ import { kubejsScript, liftPatch, scriptFileName, targetFromJson } from '../lib/
 import { downloadScript, freeScriptName } from '../lib/kubejsScripts';
 import type { KubejsScript } from '@/entities/datapack';
 import { cx } from '@/shared/lib';
-import { Button, Modal } from '@/shared/ui';
+import { Button, Input, Modal } from '@/shared/ui';
 import styles from './KubejsConstructor.module.css';
 
 interface Props {
@@ -166,7 +166,7 @@ export function KubejsConstructor({ recipeId, json, rules, namespace, onNewEntry
         </h3>
         <label className={styles.kjsId}>
           <span className="label">id нового рецепта</span>
-          <input className="input mono-input" value={newId} onChange={(e) => setNewId(e.target.value.trim())} />
+          <Input className="mono-input" value={newId} onChange={(e) => setNewId(e.target.value.trim())} />
         </label>
         {newHits && (
           <p className={cx(newHits.removed.length ? styles.kjsBad : styles.kjsOk, 'small')}>

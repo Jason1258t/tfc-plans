@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { sanitizeNamespace } from '@/lib/datapack';
-import { cx } from '@/shared/lib';
 import type { Datapack } from '@/entities/datapack';
 import { InstallToggle } from './KubejsScripts';
+import { Input } from '@/shared/ui';
 import styles from '../DatapacksPage.module.css';
 
 interface Props {
@@ -24,9 +24,9 @@ export function PackMeta({ pack, onUpdate }: Props) {
           <label className="label" htmlFor="dp-name">
             Название
           </label>
-          <input
+          <Input
             id="dp-name"
-            className={cx('input', styles.dpName)}
+            className={styles.dpName}
             value={name}
             onChange={(e) => setName(e.target.value)}
             onBlur={() => name.trim() && name.trim() !== pack.name && onUpdate({ name: name.trim() })}
@@ -36,9 +36,9 @@ export function PackMeta({ pack, onUpdate }: Props) {
           <label className="label" htmlFor="dp-ns" title="Папка для новых рецептов: data/<namespace>/recipe/…">
             Namespace
           </label>
-          <input
+          <Input
             id="dp-ns"
-            className="input mono-input"
+            className="mono-input"
             value={namespace}
             onChange={(e) => setNamespace(e.target.value)}
             onBlur={() => {
@@ -53,9 +53,8 @@ export function PackMeta({ pack, onUpdate }: Props) {
         <label className="label" htmlFor="dp-desc">
           Описание (в pack.mcmeta)
         </label>
-        <input
+        <Input
           id="dp-desc"
-          className="input"
           value={description}
           placeholder="Что чинит / добавляет"
           onChange={(e) => setDescription(e.target.value)}

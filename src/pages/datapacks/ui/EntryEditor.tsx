@@ -6,7 +6,7 @@ import { itemName, useItems, itemRefsOf, type RecipeCatalog, ItemIcon, ItemIdSea
 import type { DatapackEntry } from '@/entities/datapack';
 import styles from './EntryEditor.module.css';
 import { HintPanel } from './HintPanel';
-import { Button, ErrorBox, Modal } from '@/shared/ui';
+import { Button, ErrorBox, Input, Modal, Textarea } from '@/shared/ui';
 
 const KIND_LABEL: Record<DatapackEntry['kind'], string> = {
   add: 'Новый рецепт',
@@ -83,9 +83,9 @@ export function EntryEditor({ entry, catalog, onSave, onClose }: Props) {
           <label className="label" htmlFor="ee-path">
             Путь в zip
           </label>
-          <input
+          <Input
             id="ee-path"
-            className="input mono-input"
+            className="mono-input"
             value={path}
             onChange={(e) => setPath(e.target.value)}
             disabled={entry.kind === 'replace' || entry.kind === 'remove'}
@@ -111,8 +111,9 @@ export function EntryEditor({ entry, catalog, onSave, onClose }: Props) {
               </Button>
             )}
           </div>
-          <textarea
-            className={cx('input mono', styles.eeText)}
+          <Textarea
+            mono
+            className={styles.eeText}
             value={content}
             spellCheck={false}
             onChange={(e) => setContent(e.target.value)}
@@ -158,13 +159,7 @@ export function EntryEditor({ entry, catalog, onSave, onClose }: Props) {
           <label className="label" htmlFor="ee-note" style={{ marginTop: 6 }}>
             Заметка (не попадает в zip)
           </label>
-          <input
-            id="ee-note"
-            className="input"
-            value={note}
-            placeholder="Зачем этот файл"
-            onChange={(e) => setNote(e.target.value)}
-          />
+          <Input id="ee-note" value={note} placeholder="Зачем этот файл" onChange={(e) => setNote(e.target.value)} />
         </div>
         <aside className={styles.eeSide}>
           <HintPanel type={type} catalog={catalog} />

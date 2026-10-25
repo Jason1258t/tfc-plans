@@ -111,7 +111,7 @@
   min-width: 0;
 }
 
-.rules :global(.input) {
+.rules input {
   flex: 1;
   min-width: 0;
   height: 30px;
