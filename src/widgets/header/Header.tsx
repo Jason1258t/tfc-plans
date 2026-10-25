@@ -6,7 +6,7 @@ import { lastSeenUpdate, usePackUpdates } from '@/entities/pack-update';
 import styles from './Header.module.css';
 import { OnboardingMenu } from '@/widgets/onboarding';
 import { ItemIcon, ItemIdSearch } from '@/shared/pack-data';
-import { Modal, tooltipHandlers } from '@/shared/ui';
+import { Modal, tooltipHandlers, Button } from '@/shared/ui';
 import { SyncBadge } from '@/components/SyncBadge';
 
 interface Props {
@@ -67,14 +67,16 @@ export function Header({ nick, onChangeNick }: Props) {
         </span>
       )}
       <SyncBadge />
-      <button
-        className="btn ghost sm id-search-btn"
+      <Button
+        variant="ghost"
+        size="sm"
+        className="id-search-btn"
         onClick={() => setSearching(true)}
         {...tooltipHandlers('Найти id предмета', 'Ctrl/Cmd+K')}
       >
         <Search size={15} />
         <span className="hide-sm">id предмета</span>
-      </button>
+      </Button>
       {searching && (
         <Modal onClose={() => setSearching(false)} title="Поиск id предмета">
           <ItemIdSearch autoFocus />
