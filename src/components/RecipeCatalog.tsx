@@ -1,4 +1,4 @@
-import { Ban, ChevronDown, ChevronRight, Copy, FilePen, Search, ShieldAlert, Trash2 } from 'lucide-react';
+import { Ban, ChevronDown, ChevronRight, Copy, FilePen, Search as SearchIcon, ShieldAlert, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   itemName,
@@ -14,7 +14,7 @@ import {
   ItemPicker,
 } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
-import { Modal } from '@/shared/ui';
+import { Modal, Search } from '@/shared/ui';
 import { track, useSearchTrack } from '@/shared/api';
 import './KubejsConstructor.css';
 import './RecipeCatalog.css';
@@ -91,15 +91,15 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
   return (
     <div className="cat-browser">
       <div className="cat-filters">
-        <label className="search">
-          <Search size={15} className="faint" />
+        <Search className="cat-search">
+          <SearchIcon size={15} className="faint" />
           <input
             autoFocus={autoFocus}
             placeholder="Название результата, id рецепта или тип…"
             value={query}
             onChange={(e) => (setQuery(e.target.value), resetPage())}
           />
-        </label>
+        </Search>
         <select
           className="input"
           value={type}

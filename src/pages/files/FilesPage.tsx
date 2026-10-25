@@ -1,4 +1,4 @@
-import { Download, Search, Trash2, Upload } from 'lucide-react';
+import { Download, Search as SearchIcon, Trash2, Upload } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileBadge, FileKindDot } from '../../components/FileBadge';
@@ -11,6 +11,7 @@ import { FILE_KINDS, fileKind, type FileKind } from '../../lib/fileKinds';
 import { prepareFile, validateFiles } from '../../lib/uploads';
 import { cx, timeAgo } from '@/shared/lib';
 import type { SavedSchematic } from '@/entities/schematic';
+import { Search } from '@/shared/ui';
 import styles from './FilesPage.module.css';
 
 const KINDS: { id: FileKind | 'all'; label: string }[] = [{ id: 'all', label: 'Все' }, ...FILE_KINDS];
@@ -117,8 +118,8 @@ export function FilesPage() {
       </div>
 
       <div className={styles.filesBar} role="search" aria-label="Поиск и фильтр файлов">
-        <label className="search">
-          <Search size={15} className="faint" />
+        <Search className={styles.filesSearch}>
+          <SearchIcon size={15} className="faint" />
           <input
             autoFocus
             placeholder="Имя файла, автор, задача или схема"
@@ -126,7 +127,7 @@ export function FilesPage() {
             onChange={(e) => setQ(e.target.value)}
             aria-label="Поиск по файлам"
           />
-        </label>
+        </Search>
         <span className="seg">
           {KINDS.map((k) => {
             const count = k.id === 'all' ? rows.length : rows.filter((r) => r.kind === k.id).length;

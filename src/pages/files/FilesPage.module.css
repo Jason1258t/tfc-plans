@@ -34,8 +34,8 @@
   flex-wrap: wrap;
 }
 
-/* Чужие компоненты (.search, .seg, .fbadge) — глобальные, пока не переехали в shared/ui */
-.filesBar :global(.search) {
+/* Поиск (shared/ui/Search) на этой странице шире обычного */
+.filesSearch {
   flex: 1 1 260px;
 }
 

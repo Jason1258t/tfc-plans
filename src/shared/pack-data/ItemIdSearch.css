@@ -5,12 +5,12 @@
   min-width: 0;
 }
 
-.id-search .search {
+.id-search .id-search-box {
   flex: none;
   height: 36px;
 }
 
-.id-search.compact .search {
+.id-search.compact .id-search-box {
   height: 30px;
 }
 

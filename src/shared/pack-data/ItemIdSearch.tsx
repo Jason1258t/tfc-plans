@@ -1,7 +1,8 @@
-import { Check, Copy, Search } from 'lucide-react';
+import { Check, Copy, Search as SearchIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { searchItems, useItems } from './items';
 import { cx } from '@/shared/lib';
+import { Search } from '@/shared/ui';
 import { ItemIcon } from './ItemIcon';
 import { useSearchTrack } from '@/shared/api';
 import './ItemIdSearch.css';
@@ -33,8 +34,8 @@ export function ItemIdSearch({ autoFocus, compact, limit = 40 }: Props) {
 
   return (
     <div className={cx('id-search', compact && 'compact')}>
-      <label className="search">
-        <Search size={15} className="faint" />
+      <Search className="id-search-box">
+        <SearchIcon size={15} className="faint" />
         <input
           value={q}
           autoFocus={autoFocus}
@@ -45,7 +46,7 @@ export function ItemIdSearch({ autoFocus, compact, limit = 40 }: Props) {
           }}
           aria-label="Поиск предмета"
         />
-      </label>
+      </Search>
       {q.trim().length >= 2 && (
         <ul className="id-results">
           {results.length === 0 && <li className="faint small id-empty">Ничего не найдено</li>}
