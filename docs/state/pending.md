@@ -5,6 +5,10 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **Pack server code for `tfc report`** (2026-10-25): `POST /site/reports` is in `main`, the VPS still runs the old code
+  (the agent may not write over SSH). Host: `ssh tfc 'cd /opt/tfc-plans && git pull && bash
+server/pack-server/deploy/install.sh'`. Until then `tfc report` says the server can't take reports yet. Then check with
+  a real `tfc report crash` (Windows too) and delete the test report on the site.
 - **Pack translation `pack-patches/l10n/`** (2026-10-22): Chinese player-facing text in pack KubeJS scripts → lang keys
   (`Text.translatableWithFallback`, English fallback) + `kubejs/assets/kubejs/lang/{en_us,ru_ru}.json`: item cleaner
   broadcasts, 27 Create Ore Excavation vein names (ids unchanged), engine refuel, lectern/controller, obsidian, welcome,
