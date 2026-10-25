@@ -185,6 +185,12 @@ const addonKey = (s) =>
 /** Имя jar без версии: ee-extras-2.0.1.jar → ee-extras */
 const jarBase = (file) => String(file ?? '').replace(/-\d[\w.+-]*\.jar$/i, '');
 
+/** Аддон назван этим именем: id или имя jar любой его версии (с версией в имени и без) */
+export const addonMatches = (a, n) =>
+  [a.id, ...(a.versions ?? []).map((v) => v.file), ...(a.versions ?? []).map((v) => jarBase(v.file))].some(
+    (x) => addonKey(x) === addonKey(n),
+  );
+
 /** Имя из командной строки → { name, version }: ee_extras@2.3.1, rw-host-fix@latest */
 export function splitAddonName(n) {
   const i = String(n).lastIndexOf('@');
@@ -271,10 +277,7 @@ async function wantedAddons(api, names, profile) {
       }));
   if (!api && asked.some((x) => x.version && x.version !== 'latest'))
     throw new Error('другие версии аддонов раздаёт сервер сборки — нужен ключ игрока (tfc login <ключ>)');
-  const match = (a, n) =>
-    [a.id, ...(a.versions ?? []).map((v) => v.file), ...(a.versions ?? []).map((v) => jarBase(v.file))].some(
-      (x) => addonKey(x) === addonKey(n),
-    );
+  const match = addonMatches;
   const chosen = asked.length
     ? all.filter((a) => asked.some((x) => match(a, x.name)))
     : all.filter((a) => a.side === 'both' || a.side === side);

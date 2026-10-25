@@ -68,7 +68,7 @@ tools/<имя>-mod/
   art/               — генераторы текстур и моделей (Python без Pillow: art/png.py), проверки
   test-server.sh     — сервер разработки + команды через RCON
   release.sh         — сборка, проверки, jar в папку мода, иконки для сайта в icons/
-  addon.json         — карточка для сайта и программы tfc (версия, jar, sha256, side, replaces, formerIds, блоки)
+  addon.json         — карточка для сайта и программы tfc (версия, jar, sha256, side, hostOnly, replaces, formerIds, блоки)
   icons/             — картинки блоков для сайта (рисует release.sh)
   README.md          — что делает, как устроено, что проверено
 ```
@@ -221,7 +221,7 @@ tools/<имя>-mod/
    Там же `side` (куда ставит `tfc pull` без имён: `both`, `client`, `server`), `replaces` — файлы сборки, которые
    аддон заменяет (путь от папки версии; `tfc pull` уберёт их с копией и больше не будет ставить из сборки),
    `formerIds` — прежние id мода (переименование: `ee_rectifier` → `ee_extras`; по ним запись об обновлении сборки
-   находит ченджлог). `unlisted: true` — jar на сайте есть, но ни в списке на сайте, ни в `tfc pull addons` его нет
+   находит ченджлог). `hostOnly: true` — аддон нужен хосту (`tfc addons list --host-only`; `tfc pull` ставит его как обычно, по `side`). `unlisted: true` — jar на сайте есть, но ни в списке на сайте, ни в `tfc pull addons` его нет
    (диагностика). Повтор id или имя jar с пробелами сборка сайта пропускает с предупреждением `[addons]`.
 6. Страница: MCP `guide_get addon-<мод>` → дописать новые блоки (`::addon-block id=…` и текст после него), «Проверено»
    и «Не проверено» с версией → `guide_put`. Проверка всего вместе — MCP `addon_check` (карточка, jar, sha256, запись

@@ -133,6 +133,11 @@ addons`; with names — one named site item; `tfc undo` — undo the whole pull 
   Old server → small files one by one in parallel. Local test, 60 ms per request, 2259 files / 127 MB: old 156 s /
   4529 requests, new client + old server 28 s, new + new 4 s / 41 requests; resume, corrupt `.part`, second profile
   from cache, prune — checked. Not checked on the real VPS / Windows.
+- **`tfc addons`** (2026-10-25, `cli/lib/addons.mjs`): `list` — one line per addon as `<id>@<latest released>` (+ what
+  is installed/pinned here), `--host-only` — cards with `hostOnly: true` (host_tools, rw_host_fix; passed through
+  `/site/addons` and `/addons/index.json`, `tfc pull` still installs by `side`); `tfc addons <id…>` — all versions as
+  `<id>@<version>`; `install <id>@<version>…` = `tfc pull addons …`. Checked from sources against the prod pack server
+  (list, versions, errors) and a stub API for `--host-only`; `install` on a real game folder — not checked.
 - **`tfc init --launcher`** (2026-10-22, `cli/lib/vanilla.mjs`): official Minecraft Launcher — NeoForge from the
   snapshot `loader` via its installer (`--install-client <mcDir>`, maven sha256, cached; needs launcher_profiles.json —
   created temporarily if only the Store file exists), Java 21+ from `<mc>/runtime`, Store runtime, JAVA_HOME, PATH;

@@ -14,7 +14,7 @@ import { parseParts, printJobs, PUBLISH, showJob } from './lib/jobs.mjs';
 import { diffFiles, printDiff, publish } from './lib/publish.mjs';
 import { applyPull, planPull, pullChanges, recheckAddons, siteDatapackPaths, siteOwned } from './lib/pull.mjs';
 import { scanLocal } from './lib/scan.mjs';
-import { listAddons, uploadAddons } from './lib/addons.mjs';
+import { listAddons, showAddons, uploadAddons } from './lib/addons.mjs';
 import { applyChange, planChange, resultsOf } from './lib/changes.mjs';
 import { applyPlan, beginBackup, editBackup, finishBackup, undoLast } from './lib/sync.mjs';
 import {
@@ -69,7 +69,10 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
       --yes                   не спрашивать
   tfc pull datapacks|kubejs|schematics|addons <имя…>   одно названное с сайта (датапак — любой, и тестовый)
   tfc pull addons <мод>@<версия>   поставить и закрепить версию аддона (откат); <мод>@latest — снять закрепление
-  tfc addons [мод…]           версии аддонов: что есть, что стоит здесь, что закреплено
+  tfc addons list             аддоны сборки строками <мод>@<версия>: последняя, что стоит здесь, что закреплено
+                              (--host-only — только аддоны для хоста)
+  tfc addons <мод…>           все версии аддона строками <мод>@<версия> — какие можно поставить
+  tfc addons install <мод>@<версия>…   поставить и закрепить версию (= tfc pull addons …); <мод>@latest — последнюю
   tfc undo                    вернуть как было до прошлого pull
 
 Хосту (ключ администратора):
@@ -174,6 +177,7 @@ const opts = {
   publish: { type: 'string' },
   live: { type: 'boolean' },
   'allow-removals': { type: 'boolean' },
+  'host-only': { type: 'boolean' },
   snapshot: { type: 'string' },
   follow: { type: 'boolean', short: 'f' },
   'no-follow': { type: 'boolean' },
@@ -936,10 +940,21 @@ async function adminUpdates(a, v, [action, ...ids]) {
   throw new Error('tfc admin updates [pull [id…] | approve <id> | reject <id>]');
 }
 
-async function cmdAddons(v, names) {
+async function cmdAddons(v, [sub, ...names]) {
+  // install — тот же pull, только аддоны: ставит названные версии и закрепляет их
+  if (sub === 'install') {
+    if (!names.length)
+      throw new Error('tfc addons install <мод>@<версия> — строки из tfc addons list или tfc addons <мод>');
+    return cmdPull(v, ['addons', ...names]);
+  }
   const cfg = loadConfig();
   const profile = Object.keys(cfg.profiles ?? {}).length ? currentProfile(cfg, v.profile) : null;
-  await listAddons(api(cfg), profile, names);
+  if (!sub || sub === 'list') {
+    if (names.length) throw new Error('tfc addons list [--host-only] — без имён; версии аддона: tfc addons <мод>');
+    return listAddons(api(cfg), profile, { hostOnly: v['host-only'] });
+  }
+  if (v['host-only']) throw new Error('--host-only — только для tfc addons list');
+  await showAddons(api(cfg), profile, [sub, ...names]);
 }
 
 async function cmdAdmin(v, [sub, ...args]) {
