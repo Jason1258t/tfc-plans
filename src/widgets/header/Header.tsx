@@ -6,7 +6,7 @@ import { lastSeenUpdate, usePackUpdates } from '@/entities/pack-update';
 import styles from './Header.module.css';
 import { OnboardingMenu } from '@/widgets/onboarding';
 import { ItemIcon, ItemIdSearch } from '@/shared/pack-data';
-import { Modal, tooltipHandlers, Button } from '@/shared/ui';
+import { Modal, tooltipHandlers, Button, ButtonLink } from '@/shared/ui';
 import { SyncBadge } from '@/components/SyncBadge';
 
 interface Props {
@@ -83,15 +83,18 @@ export function Header({ nick, onChangeNick }: Props) {
         </Modal>
       )}
       <OnboardingMenu />
-      <NavLink
+      <ButtonLink
         to="/updates"
-        className="btn ghost sm icon updates-btn"
+        variant="ghost"
+        size="sm"
+        icon
+        className="updates-btn"
         aria-label="Обновления сборки"
         {...tooltipHandlers('Обновления сборки', fresh ? 'Есть новое обновление' : undefined)}
       >
         <Bell size={16} />
         {fresh && <span className={styles.navDot} aria-label="новое" />}
-      </NavLink>
+      </ButtonLink>
       <button className="nick" onClick={onChangeNick} {...tooltipHandlers('Сменить ник')}>
         <span className={styles.avatar} aria-hidden>
           {nick.slice(0, 1).toUpperCase()}
