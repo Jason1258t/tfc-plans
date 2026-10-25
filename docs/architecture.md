@@ -90,6 +90,10 @@ src/entities/     сущности: типы, коллекции и zustand-хр
   user/            SiteUser, useUsers/usePeople, useNick (ник заходившего), touchPresence
   file/            useFiles — список вложений (само хранилище — src/lib/files.ts)
 src/app/          каркас: App.tsx (маршруты), model/startData (подписки), theme (токены и базовые стили)
+src/features/     действия и потоки, нужные нескольким страницам (редактор гайда, сравнение задач, конструктор KubeJS):
+                  только `features/entities/shared` — без страниц и виджетов
+src/widgets/      сборные блоки для нескольких страниц (шапка, панель агента, каталог рецептов, знакомство):
+                  `widgets/features/entities/shared`
 src/pages/        TasksPage (+ docs section DocsSection), DocPage, files/FilesPage, stats/StatsPage, recipes/RecipesPage (PackPicker), SchematicsPage, AddonsPage (AddonsTab),
                   DatapacksPage/RecipesPage/TagsPage (one section, PackNav on the left), ReferencePage (tabs: «Гайды» —
                   GuidesTab, «Карта» — MapPage, «Мультиблоки» — MultiblocksTab), UpdatesPage
