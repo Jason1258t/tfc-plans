@@ -1,0 +1,16 @@
+modLoader = "javafml"
+loaderVersion = "[2,)"
+license = "MIT"
+
+[[mods]]
+modId = "host_tools_devtest"
+version = "1.0.0"
+displayName = "Host Tools devtest"
+description = "Только для клиента разработки: сам создаёт мир и проверяет /host, /ping, таб"
+
+[[dependencies.host_tools_devtest]]
+modId = "host_tools"
+type = "required"
+versionRange = "[1,)"
+ordering = "AFTER"
+side = "BOTH"
