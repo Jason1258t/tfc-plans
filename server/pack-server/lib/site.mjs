@@ -271,6 +271,7 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
         id: c.id,
         name: c.name,
         side: c.side,
+        hostOnly: c.hostOnly === true,
         needs: c.needs,
         replaces: c.replaces ?? [],
         formerIds: c.formerIds ?? [],

@@ -12,9 +12,17 @@ import { detectVersions, findInstances, findWorlds, gameDirOf, isDir, isServerDi
 import { bytesOf, changes, loadState, makePlan, PARTS, scopeOf } from './lib/plan.mjs';
 import { parseParts, printJobs, PUBLISH, showJob } from './lib/jobs.mjs';
 import { diffFiles, printDiff, publish } from './lib/publish.mjs';
-import { applyPull, planPull, pullChanges, recheckAddons, siteDatapackPaths, siteOwned } from './lib/pull.mjs';
+import {
+  applyPull,
+  isAddonJar,
+  planPull,
+  pullChanges,
+  recheckAddons,
+  siteDatapackPaths,
+  siteOwned,
+} from './lib/pull.mjs';
 import { scanLocal } from './lib/scan.mjs';
-import { listAddons, uploadAddons } from './lib/addons.mjs';
+import { listAddons, showAddons, uploadAddons } from './lib/addons.mjs';
 import { applyChange, planChange, resultsOf } from './lib/changes.mjs';
 import { applyPlan, beginBackup, editBackup, finishBackup, undoLast } from './lib/sync.mjs';
 import {
@@ -69,11 +77,16 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
       --yes                   не спрашивать
   tfc pull datapacks|kubejs|schematics|addons <имя…>   одно названное с сайта (датапак — любой, и тестовый)
   tfc pull addons <мод>@<версия>   поставить и закрепить версию аддона (откат); <мод>@latest — снять закрепление
-  tfc addons [мод…]           версии аддонов: что есть, что стоит здесь, что закреплено
+  tfc addons list             аддоны сборки строками <мод>@<версия>: последняя, что стоит здесь, что закреплено
+                              (--host-only — только аддоны для хоста)
+  tfc addons <мод…>           все версии аддона строками <мод>@<версия> — какие можно поставить
+  tfc addons install <мод>@<версия>…   поставить и закрепить версию (= tfc pull addons …); <мод>@latest — последнюю
+  tfc addons install --host-only   поставить все аддоны для хоста (последние версии)
   tfc undo                    вернуть как было до прошлого pull
 
 Хосту (ключ администратора):
   tfc publish                 залить сборку из папки игры на сервер (--note "что поменял", --yes, --force)
+                              --no-host-addons — без аддонов хоста (Host Tools и т. п.): они нужны только хосту
   tfc build [mods,kubejs,config,world]   собрать данные сайта локально в ./tfc-out — посмотреть до заливки
   tfc admin keys | invite <ник> [--admin] | revoke <id> | history | use <id> | rollback
   tfc admin updates [pull [id…] | approve <id> | reject <id>]   обновления сборки от Claude: список; pull — забрать
@@ -174,6 +187,8 @@ const opts = {
   publish: { type: 'string' },
   live: { type: 'boolean' },
   'allow-removals': { type: 'boolean' },
+  'host-only': { type: 'boolean' },
+  'no-host-addons': { type: 'boolean' },
   snapshot: { type: 'string' },
   follow: { type: 'boolean', short: 'f' },
   'no-follow': { type: 'boolean' },
@@ -639,6 +654,16 @@ async function cmdPublish(v) {
       fromSite.push(`${p.slice(16)} — «${siteDp(p)}»`);
       local.delete(p);
     }
+  // --no-host-addons: аддоны хоста (hostOnly) нужны только ему — в сборку для всех их не берём
+  const hostJars = [];
+  if (v['no-host-addons']) {
+    const host = (await a.get('/site/addons')).addons.filter((x) => x.hostOnly);
+    for (const [p, f] of local)
+      if (f.kind === 'mod' && host.some((x) => isAddonJar(x, path.basename(p)))) {
+        hostJars.push(p);
+        local.delete(p);
+      }
+  }
   if (!local.size) throw new Error(`в ${profile.instance} нечего заливать`);
   const ver = detectVersions(profile.instance);
   const { mc, loader } = await gameVersion(a, v, ver, current, profile.instance);
@@ -649,6 +674,14 @@ async function cmdPublish(v) {
     console.log(dim(`(датапаки сайта — их ставит tfc pull с сайта, в сборку не беру: ${fromSite.length})`));
     for (const x of fromSite) console.log(dim(`    ${x}`));
   }
+  if (v['no-host-addons'])
+    console.log(
+      dim(
+        hostJars.length
+          ? `(аддоны хоста в сборку не беру: ${hostJars.map((p) => path.basename(p)).join(', ')})`
+          : '(аддонов хоста в папке нет — --no-host-addons ничего не убрал)',
+      ),
+    );
   if (!profile.world) console.log(yellow('Мир не выбран — датапаки и календарь мира не попадут в сборку (tfc init).'));
   await publish({
     api: a,
@@ -936,10 +969,29 @@ async function adminUpdates(a, v, [action, ...ids]) {
   throw new Error('tfc admin updates [pull [id…] | approve <id> | reject <id>]');
 }
 
-async function cmdAddons(v, names) {
+async function cmdAddons(v, [sub, ...names]) {
+  // install — тот же pull, только аддоны: ставит названные версии и закрепляет их
+  if (sub === 'install') {
+    // --host-only — все аддоны хоста, последние версии (или закреплённые)
+    if (v['host-only']) {
+      const host = (await api(loadConfig()).get('/site/addons')).addons.filter((x) => x.hostOnly);
+      if (!host.length) return console.log('Аддонов для хоста нет.');
+      names = [...host.map((x) => x.id), ...names];
+    }
+    if (!names.length)
+      throw new Error(
+        'tfc addons install <мод>@<версия> | --host-only — строки из tfc addons list или tfc addons <мод>',
+      );
+    return cmdPull(v, ['addons', ...names]);
+  }
   const cfg = loadConfig();
   const profile = Object.keys(cfg.profiles ?? {}).length ? currentProfile(cfg, v.profile) : null;
-  await listAddons(api(cfg), profile, names);
+  if (!sub || sub === 'list') {
+    if (names.length) throw new Error('tfc addons list [--host-only] — без имён; версии аддона: tfc addons <мод>');
+    return listAddons(api(cfg), profile, { hostOnly: v['host-only'] });
+  }
+  if (v['host-only']) throw new Error('--host-only — только для tfc addons list и install');
+  await showAddons(api(cfg), profile, [sub, ...names]);
 }
 
 async function cmdAdmin(v, [sub, ...args]) {
