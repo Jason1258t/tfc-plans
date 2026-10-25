@@ -1,4 +1,5 @@
 import { ArrowRight, Ban, Search } from 'lucide-react';
+import { Button } from '@/shared/ui';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { datapacksStore } from '@/entities/datapack';
@@ -467,9 +468,9 @@ function MethodGroup({
         ))}
       </ul>
       {list.length > shown.length && (
-        <button className="btn ghost sm" onClick={() => setAll(true)}>
+        <Button variant="ghost" size="sm" onClick={() => setAll(true)}>
           Ещё {list.length - shown.length}
-        </button>
+        </Button>
       )}
     </div>
   );
