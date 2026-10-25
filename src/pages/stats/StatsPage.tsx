@@ -42,6 +42,7 @@ const SECTION_LABEL: Record<string, string> = {
   addon: 'Аддон',
   updates: 'Обновления',
   freshness: 'Свежесть модов',
+  dev: 'Разработка',
 };
 
 const REF_TAB: Record<string, string> = {

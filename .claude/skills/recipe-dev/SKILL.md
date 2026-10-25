@@ -13,7 +13,7 @@ commit) — Russian.
 
 ## 1. Task and worktree
 
-- Site task in «Разработка» (`tasks_list group=Разработка query=…` or `task_create`), status `doing`, assignee —
+- Dev task (`tfc-plans-dev` `dev_list query=…` or `dev_create`, area `pack`), status `doing`, assignee —
   your own agent name (`TFC_AGENT_NICK`; `DeepSeek` here).
 - Own worktree and branch (`feat/recipe-<short>`), never the main checkout.
 
@@ -33,11 +33,11 @@ commit) — Russian.
 
 ## 4. Route (lightest first)
 
-| Need | Route |
-| --- | --- |
+| Need                                                 | Route                              |
+| ---------------------------------------------------- | ---------------------------------- |
 | recipe / tag / removal / TFC data (heat, food, fuel) | site datapack or KubeJS — no addon |
-| pack config value | `config_get` → `config_propose` |
-| new block/item with logic | addon — skill `addon-dev` |
+| pack config value                                    | `config_get` → `config_propose`    |
+| new block/item with logic                            | addon — skill `addon-dev`          |
 
 - Site datapack: Firestore `datapacks` (`datapacks_list` / `datapack_get`), installed into the world by the tfc app.
 - Site KubeJS script: `kubejs_site_list` / `kubejs_site_get`.

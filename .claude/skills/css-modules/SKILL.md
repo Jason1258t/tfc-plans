@@ -107,7 +107,7 @@ page branch.
 
 ### 1. Task, worktree, dev server
 
-- `dev-session`: task in «Разработка» («CSS Modules: <страница>»), worktree `refactor/css-<page>`.
+- `dev-session`: dev task («CSS Modules: <страница>», kind `refactor`), worktree `refactor/css-<page>`.
 - **`npm ci` in the worktree** (a few seconds). Don't symlink `node_modules` from the main checkout: Vite then serves
   fonts via `/@fs/<main checkout>/…`, gets 403, and the shots use a fallback font instead of Inter.
 - Dev server on 5176 (`npm run dev -- --port 5176 --strictPort`, Claude: `preview_start dev-alt`). **Stop it before

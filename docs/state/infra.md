@@ -241,6 +241,16 @@ the host's real folder.
   Scan of all jars + configs for CJK: the rest is zh_cn lang/manuals, logs, config comments, two mods with hardcoded
   chat text (see pending.md).
 
+## Dev tracker (2026-10-26)
+
+Dev tasks moved from Firestore to SQLite in the pack server (`lib/dev.mjs`, `/dev/…`, `node:sqlite`, daily backup) —
+the free-tier read quota ran out on 2026-10-26. Site page «Разработка» (`/dev`, `src/pages/dev`) with edits (Firebase
+ID token checked on the server, helper moved from the file server to `pack-server/lib/firebase-auth.mjs`); MCP
+`tfc-plans-dev` `dev_*`; `scripts/dev-migrate.mjs` for the old groups. AGENTS.md and skills now log work there.
+Checked locally: API (create, Russian search, rev 409, status log, notes, docs, import idempotent, CORS, no-key 401),
+MCP tools against a local server, the page with a real site sign-in (list, filters, edit+save, checklist, log, plan,
+create, mobile). Plan and stages — `docs/plans/dev-tracker.md`.
+
 ## Multi-agent setup (2026-10-23)
 
 `AGENTS.md` (root + `scripts/`, `scripts/mcp/`, `server/`, `tools/`) is the source of truth; every `CLAUDE.md` is

@@ -35,12 +35,15 @@ comments, commit messages, guides, MCP tool output. Keep Russian UI labels verba
 - **Lint and format are mandatory** before commit: `npm run lint` (zero errors) and format your changed files
   with `npx prettier --write <files>` (or `npm run format -- <files>`). The `ship` tool (tfc-plans-dev) refuses to merge if the
   branch changed files fail `oxlint` or `prettier --check`; CI (`.github/workflows/ci.yml`) repeats `oxlint`, `tsc` and a changed-file `prettier --check` on every push to `main`.
-- **Work log on the site** for dev and fix work (groups «Разработка» and «Фиксы»): at the start find the task
-  (`tasks_list group=…`) or create one there (`task_create`), set `doing` + assignee = **your own agent name** (= `TFC_AGENT_NICK`; never `Claude` unless you are Claude —
-  `Codex`, `Gemini`, `Cursor`, `DeepSeek`…; see [docs/agents.md](docs/agents.md)); at the end — `done`
-  and a short Russian note in the description: what changed for players, what was checked, what wasn't. A task already
-  `doing` under another agent — don't take it, ask the user. Found a separate problem along the way — a new task in
-  the right group. A few Firestore reads per task — fine, don't loop.
+- **Work log — dev tracker on the pack server** (site page «Разработка» `/dev`, MCP `tfc-plans-dev` `dev_*`; not
+  Firestore — zero reads, [docs/plans/dev-tracker.md](docs/plans/dev-tracker.md)): at the start find the task
+  (`dev_list query=…`) or create one (`dev_create`, kind `fix` for fixes), set `doing` + assignee = **your own agent
+  name** (= `TFC_AGENT_NICK`; never `Claude` unless you are Claude — `Codex`, `Gemini`, `Cursor`, `DeepSeek`…; see
+  [docs/agents.md](docs/agents.md)) + `branch`; progress — `dev_note`; at the end — `dev_update status=done
+report=…`: a short Russian report — what changed for players, what was checked, what wasn't. Plan docs —
+  `dev_doc_put`. A task already `doing` under another agent — don't take it, ask the user. Found a separate problem
+  along the way — a new dev task. Players' tasks and pack plans (update/integration plans) stay on the site
+  (`tfc-pack` `task_*`).
 - Deploy only from clean `main` after the merge, never from a feature branch (use the dev server to check).
 - Commit message: `Раздел: что сделано`, one line; merge commit `Слияние feat/<short>: что сделано`. Co-author
   trailer — the one your harness uses.

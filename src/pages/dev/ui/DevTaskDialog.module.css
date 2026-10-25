@@ -1,0 +1,152 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.body h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sectionHead h3 {
+  margin: 0;
+}
+
+.muted {
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.byline {
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.checklist,
+.docs,
+.log {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.checklist li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.checklist label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checked {
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+
+.inline {
+  display: flex;
+  gap: 8px;
+}
+
+.docs li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.docs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+}
+
+.log li {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.log li.status {
+  padding: 4px 10px;
+  background: none;
+  border-style: dashed;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.log li.report {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.logHead {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 2px;
+  font-size: 12px;
+}
+
+.logKind {
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 11px;
+}
+
+.noteForm {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.noteForm textarea {
+  width: 100%;
+}

@@ -447,6 +447,25 @@ site also changes task revisions — e.g. the «Что важнее?» compariso
 There's no delete: remove temporary records from tests with a one-off script via `scripts/firestore-rest.mjs`. Repo
 plans (`docs/plans/*.md`) have no tool — they're plain files, read them directly.
 
+### Dev tracker (`tfc-plans-dev`)
+
+Development tasks and the agents' work log live on the pack server (SQLite, `/dev/…`), not in Firestore — zero reads.
+Site page — «Разработка» (`/dev`). Connection — the `tfc` key (`TFC_PACK_URL`/`TFC_PACK_TOKEN`, `.env.local` or `tfc
+login`); writes signed with `TFC_AGENT_NICK`. Plan — [plans/dev-tracker.md](plans/dev-tracker.md).
+
+| Tool                                                                                        | What it does                                                                                                        |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `dev_list(query, status, kind, area, assignee, all, limit, offset)`                         | open tasks by default (backlog/todo/doing/review), in-progress and important first; `#id`, status, branch, notes    |
+| `dev_get(id*, notes)`                                                                       | whole task: description, checklist, plan docs, last log entries, `rev`                                              |
+| `dev_create(title*, body, kind, area, status, priority, assignee, branch, checklist, note)` | **write**: new task                                                                                                 |
+| `dev_update(id*, baseRev*, …fields, note, report)`                                          | **write**: passed fields only; 409 if changed since `dev_get`; a status change logs itself; `report` — final report |
+| `dev_note(id*, text*, report)`                                                              | **write**: append a log entry (no rev)                                                                              |
+| `dev_doc_get(id*, offset, limit)` / `dev_doc_put(id, baseRev, title, content, task)`        | plan docs by lines / **write** (without `id` — new)                                                                 |
+
+Kinds `feature|fix|refactor|docs|infra|idea`, areas `site|mcp|addon|server|pack|app|agents`, statuses
+`backlog|todo|doing|review|done|dropped`. Old tasks from groups «Разработка»/«Фиксы» — `node scripts/dev-migrate.mjs`
+(dry run; `--import`, then `--delete` after the host's yes).
+
 ## Limits
 
 - Answers are capped at 20 000 chars: longer ones are cut with «сузьте запрос».
