@@ -1,5 +1,5 @@
 import { ArrowRight, Search } from 'lucide-react';
-import { Segmented } from '@/shared/ui';
+import { Segmented, Select } from '@/shared/ui';
 import { useMemo, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { BotanyTab } from './tabs/BotanyTab';
@@ -294,14 +294,14 @@ function OresTab({ ref_, items }: { ref_: Reference; items: ItemIndex | null }) 
             onChange={(e) => setQuery(e.target.value)}
           />
         </label>
-        <select className="input" value={rock} onChange={(e) => setRock(e.target.value)} aria-label="Порода">
+        <Select value={rock} onChange={(e) => setRock(e.target.value)} aria-label="Порода">
           <option value="">Любая порода</option>
           {rocks.map((r) => (
             <option key={r} value={r}>
               {itemName(items?.byId.get(r), r)}
             </option>
           ))}
-        </select>
+        </Select>
         <label className={cx('row', 'small', styles.check)}>
           <input type="checkbox" checked={showRocks} onChange={(e) => setShowRocks(e.target.checked)} />
           Дайки и гравий
@@ -634,8 +634,7 @@ function FoodTab({ foods, items, meals }: { foods: Food[]; items: ItemIndex | nu
           <Search size={15} className="faint" />
           <input placeholder="Хлеб, говядина, ягоды…" value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
-        <select
-          className="input"
+        <Select
           value={nutrient}
           onChange={(e) => setNutrient(e.target.value as Nutrient | '')}
           aria-label="Питательная группа"
@@ -646,7 +645,7 @@ function FoodTab({ foods, items, meals }: { foods: Food[]; items: ItemIndex | nu
               {NUTRIENT_LABEL[n]}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       <p className={cx('faint', 'small', shell.note)}>
         Порча — множитель скорости: больше 1 портится быстрее. {list.length} из {foods.length}.

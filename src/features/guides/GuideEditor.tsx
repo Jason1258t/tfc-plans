@@ -3,7 +3,7 @@ import { useDeferredValue, useRef, useState } from 'react';
 import { saveGuide, type GuideDraft } from '@/data/guides';
 import { readNick } from '@/shared/lib/nick';
 import { cx } from '@/shared/lib';
-import { Button } from '@/shared/ui';
+import { Button, Input, Select, Textarea } from '@/shared/ui';
 import type { Guide, GuideChecked } from '@/entities/guide';
 import { ItemIcon, ItemPicker } from '@/shared/pack-data';
 import type { LiveMarkdownHandle } from '@/components/LiveMarkdown';
@@ -174,17 +174,11 @@ export function GuideEditor({
       <div className={styles.guideFields}>
         <label className={cx(styles.guideField, styles.guideFieldWide)}>
           <span className="faint small">Заголовок</span>
-          <input className="input" value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} />
+          <Input value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} />
         </label>
         <label className={cx(styles.guideField, styles.guideFieldWide)}>
           <span className="faint small">Коротко — 1–3 предложения: в списке и плашкой наверху; можно {'{{…}}'}</span>
-          <textarea
-            className="input"
-            rows={2}
-            value={summary}
-            maxLength={1000}
-            onChange={(e) => setSummary(e.target.value)}
-          />
+          <Textarea rows={2} value={summary} maxLength={1000} onChange={(e) => setSummary(e.target.value)} />
         </label>
         <div className={styles.guideField}>
           <span className="faint small">Значок</span>
@@ -203,13 +197,7 @@ export function GuideEditor({
         </div>
         <label className={styles.guideField}>
           <span className="faint small">Группа в списке</span>
-          <input
-            className="input"
-            list="guide-groups"
-            value={group}
-            maxLength={80}
-            onChange={(e) => setGroup(e.target.value)}
-          />
+          <Input list="guide-groups" value={group} maxLength={80} onChange={(e) => setGroup(e.target.value)} />
           <datalist id="guide-groups">
             {groups.map((g) => (
               <option key={g} value={g} />
@@ -218,8 +206,8 @@ export function GuideEditor({
         </label>
         <label className={styles.guideField}>
           <span className="faint small">Порядок</span>
-          <input
-            className={cx('input', styles.guideOrder)}
+          <Input
+            className={styles.guideOrder}
             type="number"
             value={order}
             onChange={(e) => Number.isFinite(Number(e.target.value)) && setOrder(Number(e.target.value))}
@@ -227,13 +215,13 @@ export function GuideEditor({
         </label>
         <label className={styles.guideField}>
           <span className="faint small">Насколько проверено</span>
-          <select className="input" value={checked} onChange={(e) => setChecked(e.target.value as GuideChecked)}>
+          <Select value={checked} onChange={(e) => setChecked(e.target.value as GuideChecked)}>
             {Object.entries(CHECKED).map(([k, v]) => (
               <option key={k} value={k}>
                 {v.label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className={cx(styles.guideField, styles.guideCheck)}>
           <input type="checkbox" checked={hidden} onChange={(e) => setHidden(e.target.checked)} />

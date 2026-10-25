@@ -42,8 +42,10 @@
   align-items: center;
 }
 
-/* .input — ещё глобальная кнопка темы */
-.row :global(.input) {
+/* Поля строки — shared/ui Input и Select: своего класса у них нет, поэтому по тегу. Специфичность тега с классом
+   родителя важна: Field.module.css лежит без каскадного слоя и иначе спорит с ним на равных. */
+.row > input,
+.row > select {
   width: 100%;
   min-width: 0;
 }

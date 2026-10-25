@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { cx, errorText, type Scope } from '@/shared/lib';
-import { Button } from '@/shared/ui';
+import { Button, Input, Select } from '@/shared/ui';
 import { formatValue, parseSpec } from '@/lib/guideFormat';
 import { Markdown } from '@/components/Markdown';
 import { useGuideEditing, useGuideLink } from './guideLinks';
@@ -199,13 +199,13 @@ function Calc({ spec, envs, pickers }: { spec: Spec; envs: Scope[]; pickers?: Re
             <label key={m.name} className={cx('power-field', m.inp.toggle && styles.guideToggle)}>
               <span className="faint small">{tpl(m.inp.label ?? m.name)}</span>
               {m.options ? (
-                <select className="input" value={selected[m.name]} onChange={(e) => set(m.name, e.target.value)}>
+                <Select value={selected[m.name]} onChange={(e) => set(m.name, e.target.value)}>
                   {m.options.map((o) => (
                     <option key={o.id} value={o.id}>
                       {o.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               ) : m.inp.toggle ? (
                 <input
                   type="checkbox"
@@ -214,8 +214,7 @@ function Calc({ spec, envs, pickers }: { spec: Spec; envs: Scope[]; pickers?: Re
                 />
               ) : (
                 <span>
-                  <input
-                    className="input"
+                  <Input
                     type="number"
                     value={local[m.name] as number}
                     min={m.min ?? undefined}

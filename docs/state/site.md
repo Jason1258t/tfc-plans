@@ -52,6 +52,12 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
   `.foo :global(.btn)`/`:global(.input)` переводились на локальные классы или элементные селекторы. Заготовки для следующего шага влиты: `Tag`, `ImpDot`/`ImpPill`, `Label` и `ButtonLink` — ссылка, которая выглядит
   кнопкой (`to`/`href`, `download`/`target`, варианты и размеры как у `Button`); на нём уже кнопка «Обновления» в шапке
   и «На карте» в поле места. Глобальные `.btn`/`.input` пока в теме — их добирают по страницам.
+- 2026-10-26 (ночь, поля ввода): `.input` в справочнике и гайдах → `Input`/`Select`/`Textarea` (`refactor/input-reference`):
+  вкладки справочника (руды, еда и её подразделы, ботаника, электричество, набор нагрузки IE) и гайды (редактор,
+  справка, калькуляторы статей). Переопределения потребителей переехали с `:global(.input)`/`select.input` на
+  селекторы с тегом (`.filters > select`, `.row > input`, `.guideFieldWide > input`) и `.guideFields .guideOrder`:
+  `Field.module.css` лежит без каскадного слоя, поэтому на равной специфичности решал бы порядок чанков. `.input`
+  пока остался у `ItemPicker` (`shared/pack-data`) и на страницах, которые ещё не переведены.
 - Left: **2 global CSS outside `src/app/theme`** — `ReferenceShared.css`/`PowerShared.css`, общие части справочника
   (их берут мультиблоки, гайды и аддоны; переедут вместе с `entities/guide` и мультиблоками). `legacy-ui.css` пока
   держит `.btn/.input/.tag/.empty/.error-box/.imp-*` — их ещё используют страницы; каждый новый компонент `shared/ui`

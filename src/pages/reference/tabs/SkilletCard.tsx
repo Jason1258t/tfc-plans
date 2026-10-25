@@ -1,5 +1,5 @@
 import { Plus, X } from 'lucide-react';
-import { Button } from '@/shared/ui';
+import { Button, Input, Select } from '@/shared/ui';
 import { useMemo, useState, type ComponentType, type ReactNode } from 'react';
 import { CONFIG_ORIGIN_LABEL, useModConfig, type ConfigOrigin, type ModConfig } from '@/entities/pack-config';
 import type { TagCatalog } from '@/shared/pack-data';
@@ -119,16 +119,15 @@ function Calc({
       <div className={styles.rows}>
         {rows.map((row, i) => (
           <div key={i} className={styles.row}>
-            <select className="input" value={row.id} onChange={(e) => update(i, { id: e.target.value })}>
+            <Select value={row.id} onChange={(e) => update(i, { id: e.target.value })}>
               <option value="">— продукт —</option>
               {options.map((id) => (
                 <option key={id} value={id}>
                   {label(id)}
                 </option>
               ))}
-            </select>
-            <input
-              className="input"
+            </Select>
+            <Input
               type="number"
               min={1}
               max={Number.isFinite(capacity) ? capacity : undefined}
@@ -136,8 +135,7 @@ function Calc({
               title="Сколько штук"
               onChange={(e) => update(i, { count: Math.max(1, Math.min(capacity, Number(e.target.value) || 1)) })}
             />
-            <select
-              className="input"
+            <Select
               value={row.state}
               title="Как приготовлен"
               onChange={(e) => update(i, { state: e.target.value as SkilletState })}
@@ -147,7 +145,7 @@ function Calc({
                   {STATE_LABEL[st]}
                 </option>
               ))}
-            </select>
+            </Select>
             <button
               className="btn ghost sm icon"
               title="Убрать"
