@@ -1,5 +1,5 @@
 /* Глобальные классы раздела «Справочник» — пока их берут компоненты, которые ещё не переехали на модули:
-   components/MultiblocksTab, components/PowerIeLoads, components/AddonsTab, components/guides/*.
+   features/reference-tabs (мультиблоки, аддоны, загрузки IE) и features/guides/*.
    В модулях эти имена станут хэшами, и чужие className="ref-card" перестанут находить правила,
    поэтому до переезда тех компонентов держим здесь обычным (не модульным) CSS. */
 

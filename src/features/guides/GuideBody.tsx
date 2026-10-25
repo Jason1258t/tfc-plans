@@ -1,9 +1,9 @@
 import { useMemo, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { cx, errorText, evalExpr, exprPath, type Scope } from '@/shared/lib';
-import { formatValue, parseSpec, splitSpec } from '../../lib/guideFormat';
-import type { GuideScope } from '../../lib/guideScope';
-import { Markdown } from '../Markdown';
+import { formatValue, parseSpec, splitSpec } from '@/lib/guideFormat';
+import type { GuideScope } from '@/lib/guideScope';
+import { Markdown } from '@/components/Markdown';
 import { BlockBoundary } from './BlockBoundary';
 import { CalcBlock, CalcErrors, type Picker } from './CalcBlock';
 import { GuideLinkContext, useGuideEditing } from './guideLinks';

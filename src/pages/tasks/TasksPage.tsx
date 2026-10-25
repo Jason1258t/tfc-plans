@@ -1,7 +1,7 @@
 import { BookOpen, ListChecks, Plus, Scale, Search, Users, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArtifactPane } from '@/components/ArtifactPane';
+import { ArtifactPane } from '@/widgets/agent-panel';
 import { CompareDialog } from './ui/CompareDialog';
 import { DocsSection } from './ui/DocsSection';
 import { GroupDialog } from './ui/GroupDialog';

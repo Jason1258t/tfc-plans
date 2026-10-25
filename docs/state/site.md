@@ -391,7 +391,7 @@ fertiliser blocks, calendar with month labels. `.class` parsing — `scripts/mod
 ## Onboarding hints (2026-10-19)
 
 First visit — «Знакомство с сайтом» (header), then on first entry into each section 1–4 steps with highlighted
-elements (`lib/onboarding.ts` — texts and selectors, `components/Onboarding.tsx`). Skippable (Esc, «Пропустить»),
+elements (`lib/onboarding.ts` — texts and selectors, `widgets/onboarding/Onboarding.tsx`). Skippable (Esc, «Пропустить»),
 «Больше не показывать подсказки» disables all; «?» in the header — show again, toggle, reset. Shown state — Firestore
 `onboarding/{uid}` (anonymous uid, i.e. per browser) + localStorage copy. If a step's target isn't found in 2.5 s —
 the step is centred.

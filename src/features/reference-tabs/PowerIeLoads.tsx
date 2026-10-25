@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { deviceTick, machineRates, type IeDevice, type IeMachine, type PowerData, type Setting } from '../lib/power';
+import { deviceTick, machineRates, type IeDevice, type IeMachine, type PowerData, type Setting } from '@/lib/power';
 import { ItemIcon } from '@/shared/pack-data';
 
 /**

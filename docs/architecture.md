@@ -74,8 +74,7 @@ src/shared/       общее для всего сайта; снаружи — ч
                    localStorage), sync (состояние синхронизации), analytics (свой лог посещений), gemini (запросы к
                    Gemini: цепочки моделей с запасными, таймаут 90 с; предметы — из shared/pack-data)
   ui/              Modal (окно с заголовком и подвалом, стили — Modal.module.css), Tooltip (одна подсказка на
-                   страницу в стиле Minecraft), Search (строка поиска), PackNav/PackSection (выбор вкладки общего
-                   раздела: датапаки, рецепты, теги)
+                   страницу в стиле Minecraft), Search (строка поиска), Button/Input/Select/Textarea
   pack-data/       данные пакета, нужные почти всем страницам: items (useItems, itemName, searchItems, иконки),
                    recipes (каталог, статусы KubeJS, поиск), recipeFilter/recipeRefs (фильтры и входы/выходы рецепта),
                    tags (слияние источников и KubeJS), fuzzy (fuse.js — только подсказки замен в схемах),
@@ -89,16 +88,24 @@ src/entities/     сущности: типы, коллекции и zustand-хр
   schematic/       SavedSchematic, ReplaceFavorite, schematicsStore/replaceFavoritesStore
   user/            SiteUser, useUsers/usePeople, useNick (ник заходившего), touchPresence
   file/            useFiles — список вложений (само хранилище — src/lib/files.ts)
+  pack-update/     PackUpdate, лента обновлений сборки (usePackUpdates), ченджлоги аддонов, отметка «просмотрено»
 src/app/          каркас: App.tsx (маршруты), model/startData (подписки), theme (токены и базовые стили)
-src/features/     действия и потоки, нужные нескольким страницам (редактор гайда, сравнение задач, конструктор KubeJS):
-                  только `features/entities/shared` — без страниц и виджетов
-src/widgets/      сборные блоки для нескольких страниц (шапка, панель агента, каталог рецептов, знакомство):
-                  `widgets/features/entities/shared`
-src/pages/        TasksPage (+ docs section DocsSection), DocPage, files/FilesPage, stats/StatsPage, recipes/RecipesPage (PackPicker), SchematicsPage, AddonsPage (AddonsTab),
+src/features/     действия и потоки, нужные нескольким страницам: только `features/entities/shared`
+  guides/          GuidesSection, GuideEditor/History/Help, AddonArticle, AddonVersions, CalcBlock (```calc),
+                   GuideBody (Markdown + {{…}} + «::name»), powerWidgets; формат — docs/plans/guides.md
+  reference-tabs/  содержимое вкладок справочника: AddonsTab (+ AddonHead/AddonInstall для страницы аддона),
+                   MultiblocksTab (+ MultiblockEmbed), PowerIeLoads, их общий PowerShared.css
+src/widgets/      сборные блоки для нескольких страниц: `widgets/features/entities/shared`
+  header/          шапка: меню разделов, поиск по id, значки обновлений, «?» знакомства
+  onboarding/      знакомство (тексты — lib/onboarding.ts) и меню «?»
+  agent-panel/     ArtifactPane (панель плана) и AgentPanel (ИИ)
+  recipe-browser/  RecipeCatalog (RecipeBrowser) — страница рецептов и редактор датапаков
+  pack-nav/        PackNav/PackSection — вкладки «Датапаки/Рецепты/Теги»
+src/pages/        TasksPage (+ docs section DocsSection), DocPage, files/FilesPage, stats/StatsPage, recipes/RecipesPage (PackPicker), SchematicsPage, AddonsPage,
                   DatapacksPage/RecipesPage/TagsPage (one section, PackNav on the left), ReferencePage (tabs: «Гайды» —
                   GuidesTab, «Карта» — MapPage, «Мультиблоки» — MultiblocksTab), UpdatesPage
-src/components/   Onboarding (texts — lib/onboarding.ts), FileBadge (kinds — lib/fileKinds.ts),
-                  RecipeCatalog (RecipeBrowser), KubejsConstructor, SchematicLibrary, WorldMap, …
+src/components/   FileBadge (kinds — lib/fileKinds.ts), KubejsConstructor, SchematicLibrary, WorldMap,
+                  Markdown/MarkdownField/LiveMarkdown, …
 src/lib/
   kubejsFix.ts                 KubeJS-removal workaround builder (item library, recipes, tags — shared/pack-data)
   datapack.ts datapackFiles.ts datapack records, zip, checks; datapack files (shared with Node)
@@ -118,7 +125,7 @@ src/lib/
   projection.ts geo.ts atlas.ts config.ts   TFC Real World map, world settings from server config
   packUpdates.ts               pack updates (Gemini requests — shared/api/gemini.ts)
   files.ts files.config.ts     attachments: wrapper over fileStorage/ (Firestore or own server — VITE_FILES_SERVER)
-src/components/guides/  GuidesSection, GuideEditor/History/Help, CalcBlock (```calc), GuideBody (Markdown + {{…}} +
+src/features/guides/  GuidesSection, GuideEditor/History/Help, CalcBlock (```calc), GuideBody (Markdown + {{…}} +
                   «::name» widgets), powerWidgets; format — docs/plans/guides.md
 server/file-server/  file server for Ubuntu (Node, no deps); migration — scripts/files-migrate.mjs
 server/pack-server/  pack server (snapshots, keys); on the VPS — docs/pack-server.md
