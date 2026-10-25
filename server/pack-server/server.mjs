@@ -33,6 +33,9 @@
  *                                     → запись в addonVersions (новая — черновик)          admin
  *   GET    /admin/changes           — правки конфигов от агента (Firestore configChanges) admin
  *   POST   /admin/changes/:id       — { status: applied|rejected, results, updateTime } admin
+ *   /dev/…                           — задачи разработки (SQLite, lib/dev.mjs): ключ любой роли или вход сайта
+ *     GET|POST /dev/tasks, GET|PATCH|DELETE /dev/tasks/:id, POST /dev/tasks/:id/notes,
+ *     GET|POST /dev/docs, GET|PATCH|DELETE /dev/docs/:id, GET /dev/meta, POST /dev/import (admin)
  */
 import fs from 'node:fs';
 import http from 'node:http';
@@ -40,6 +43,8 @@ import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
+import { openDev } from './lib/dev.mjs';
+import { verifyAppCheck, verifyIdToken } from './lib/firebase-auth.mjs';
 import { openJobs, PUBLISH } from './lib/jobs.mjs';
 import { openKeys } from './lib/keys.mjs';
 import { openSite } from './lib/site.mjs';
@@ -61,6 +66,20 @@ const config = {
 const store = await openStore(config.dataDir, config);
 const keys = openKeys(config.dataDir);
 const updates = await openUpdates(config.dataDir, store);
+const dev = openDev(config.dataDir);
+/** Страница «Разработка» сайта: откуда пускать (CORS) и чей вход принимать */
+const devSite = {
+  origins: (
+    env.DEV_ORIGINS ??
+    'https://tfc-plans-fd2c.web.app,https://tfc-plans-fd2c.firebaseapp.com,http://localhost:5173,http://localhost:5176,http://localhost:5177'
+  )
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean),
+  projectId: env.FIREBASE_PROJECT_ID ?? 'tfc-plans-fd2c',
+  /** номер проекта — задан, тогда со входом сайта обязателен и токен App Check */
+  appCheckProject: env.APP_CHECK_PROJECT_NUMBER ?? '',
+};
 
 /**
  * Код разборщиков. Сервер запущен из репозитория (npm run dev) — берём его же, git pull не делаем (это рабочая
@@ -99,6 +118,35 @@ async function authorize(req, role) {
   if (!who) throw new HttpError(401, 'Нужен ключ: Authorization: Bearer <ключ>');
   if (role === 'admin' && who.role !== 'admin') throw new HttpError(403, 'Нужен ключ администратора');
   return who;
+}
+
+/**
+ * Задачи разработки: ключ сервера сборки любой роли или ID-токен входа сайта (+ App Check) — как правила Firestore.
+ * JWT отличаем по виду: три части через точку.
+ */
+async function authorizeDev(req) {
+  const m = /^Bearer (.+)$/.exec(req.headers.authorization ?? '');
+  if (m && m[1].split('.').length === 3) {
+    let uid;
+    try {
+      uid = await verifyIdToken(m[1], devSite.projectId);
+      if (devSite.appCheckProject) await verifyAppCheck(req.headers['x-firebase-appcheck'], devSite.appCheckProject);
+    } catch (e) {
+      throw new HttpError(401, `Вход сайта не принят: ${e.message}`);
+    }
+    return { id: uid, name: 'сайт', role: 'site', via: 'site' };
+  }
+  return { ...(await authorize(req, 'player')), via: 'key' };
+}
+
+function devCors(req, res) {
+  const origin = req.headers.origin;
+  if (!origin || !devSite.origins.includes(origin)) return;
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Vary', 'Origin');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Firebase-AppCheck');
+  res.setHeader('Access-Control-Max-Age', '86400');
 }
 
 /** Сделать снимок текущим ({ id } или { rollback: true }) и поставить сборку данных сайта */
@@ -243,6 +291,21 @@ async function handle(req, res) {
   if (req.method === 'GET' && url.pathname === '/health') {
     const s = store.stats();
     return json(res, 200, { ok: true, current: s.current, snapshots: s.snapshots, blobs: s.blobs, bytes: s.bytes });
+  }
+
+  // --- задачи разработки
+  if (parts[0] === 'dev') {
+    devCors(req, res);
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      return res.end();
+    }
+    const who = await authorizeDev(req);
+    const body = req.method === 'POST' || req.method === 'PATCH' ? await readJsonBody(req) : null;
+    const [status, out] = dev.route(req.method, parts.slice(1).map(decodeURIComponent), url.searchParams, body, who);
+    if (req.method !== 'GET' && status < 300 && out?.task)
+      console.log(`✎ dev #${out.task.id} ${req.method} ${out.task.status} — ${body?.by ?? who.name} (${who.name})`);
+    return json(res, status, out);
   }
 
   // --- блобы

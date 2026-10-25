@@ -32,6 +32,7 @@ chmod 750 "$DATA"
 echo "→ Копирую сервер в $APP"
 rm -rf "$APP/lib"
 cp -r "$SRC/server.mjs" "$SRC/lib" "$SRC/package.json" "$APP/"
+cp "$SRC/../pack-server/lib/firebase-auth.mjs" "$APP/lib/auth.mjs"
 
 # Настройки — только при первой установке
 if [ ! -f "$ENV_FILE" ]; then

@@ -11,8 +11,8 @@ Details live in [docs/addons.md](../../../docs/addons.md) (environment, versions
 
 ## 1. Task and worktree
 
-- Site task in group «Разработка» (`tasks_list group=Разработка query=…`, else `task_create`), status `doing`,
-  assignee `Claude`. Bigger features — a plan doc on the task (`artifact_put`), or skill `integration-plan` first
+- Dev task (`tfc-plans-dev` `dev_list query=…`, else `dev_create`, area `addon`), status `doing`, assignee — your
+  agent name. Bigger features — a plan doc on the task (`dev_doc_put`), or skill `integration-plan` first
   when the idea is "borrow X from mod Y".
 - Own worktree and branch (`feat/<addon>-<short>`), never the main checkout. Another session may be editing the same
   addon — check `git -C /Users/ivan/vscodeProjects/tfc-taskmanager branch` / `worktree list`; don't touch its folder.
@@ -21,12 +21,12 @@ Details live in [docs/addons.md](../../../docs/addons.md) (environment, versions
 
 Pick the lightest route (docs/addons.md «Когда нужен аддон»):
 
-| Need | Route |
-| --- | --- |
-| recipe, tag, removal, TFC data (heat, food, fuel) | site datapack or KubeJS — no addon |
-| pack config value | `config_get` → `config_propose` |
-| change a number/condition in someone's code | mixin addon (`ee-overheat`, `stress-fix`, `rw-host-fix`) — breaks on target-mod updates |
-| new block/item with logic | full addon (`ee-extras`, `small-diesel`, `miner-tools`) — server **and** every player |
+| Need                                              | Route                                                                                   |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| recipe, tag, removal, TFC data (heat, food, fuel) | site datapack or KubeJS — no addon                                                      |
+| pack config value                                 | `config_get` → `config_propose`                                                         |
+| change a number/condition in someone's code       | mixin addon (`ee-overheat`, `stress-fix`, `rw-host-fix`) — breaks on target-mod updates |
+| new block/item with logic                         | full addon (`ee-extras`, `small-diesel`, `miner-tools`) — server **and** every player   |
 
 Before a mixin, look for a public hook of the target mod — an event, registry, capability or static helper (e.g. TFC
 `HeatCapability.provideHeatTo(Level, BlockPos, Direction, float)` heats a block below without touching TFC code). A

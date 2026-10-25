@@ -7,6 +7,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { DEV_TOOLS } from './devtasks.mjs';
 
 const HERE = path.resolve(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -282,6 +283,7 @@ export const TOOLS = [
     inputSchema: { type: 'object', properties: { worktree: str('worktree short name') }, required: ['worktree'] },
     handler: worktreeRemove,
   },
+  ...DEV_TOOLS,
 ];
 
-export const INSTRUCTIONS = `Git/workflow for the «TFC Планы» repo (main checkout auto-detected via git common dir; TFC_PLANS_REPO overrides). Use instead of hand-running git for the session workflow: git_state (branch/dirty/worktrees/ahead-behind), worktree_add (create .claude/worktrees/<name> + branch feat|refactor|fix/<name> from a clean main), commit (stage+commit in a worktree, refuses on main), ship (merge --no-ff into main → push origin/main → remove worktree+branch; runs oxlint + prettier --check on the branch changed files and refuses on failure; dry-run unless confirm=true), worktree_remove (remove a worktree; branch deleted only if merged). No --force; refuses on a dirty/non-main main. Site task log (work log) is in the other server, tfc-pack. Tool output in Russian.`;
+export const INSTRUCTIONS = `Git/workflow for the «TFC Планы» repo (main checkout auto-detected via git common dir; TFC_PLANS_REPO overrides). Use instead of hand-running git for the session workflow: git_state (branch/dirty/worktrees/ahead-behind), worktree_add (create .claude/worktrees/<name> + branch feat|refactor|fix/<name> from a clean main), commit (stage+commit in a worktree, refuses on main), ship (merge --no-ff into main → push origin/main → remove worktree+branch; runs oxlint + prettier --check on the branch changed files and refuses on failure; dry-run unless confirm=true), worktree_remove (remove a worktree; branch deleted only if merged). No --force; refuses on a dirty/non-main main. Dev tasks and the work log (pack server SQLite, zero Firestore reads): dev_list, dev_get → dev_update with baseRev (status, assignee, branch, report), dev_create, dev_note, dev_doc_get/dev_doc_put (plan docs). Players' site tasks stay in tfc-pack. Tool output in Russian.`;

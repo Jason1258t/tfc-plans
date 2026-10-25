@@ -18,6 +18,7 @@ import { ReferencePage } from '@/pages/reference';
 import { FreshnessPage, UpdatesPage } from '@/pages/updates';
 import { SchematicsPage } from '@/pages/schematics';
 import { StatsPage } from '@/pages/stats';
+import { DevPage } from '@/pages/dev';
 import { TasksPage } from '@/pages/tasks';
 
 /** Старые ссылки на карту (в том числе с точками в адресе) ведут во вкладку справочника */
@@ -70,6 +71,7 @@ export default function App() {
           <Route path="/freshness" element={<FreshnessPage />} />
           {/* Статистика — только по прямой ссылке, в меню её нет */}
           <Route path="/stats" element={<StatsPage />} />
+          <Route path="/dev" element={<DevPage />} />
           <Route path="/map" element={<MapRedirect />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
