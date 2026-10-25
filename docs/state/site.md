@@ -35,9 +35,13 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
   `css-components-a`), гайды, markdown-поле, LiveMarkdown и знакомство (`css-components-b`), выбор предмета, меню
   разделов и мультиблоки (`css-components-c`), поиск по id предмета (`css-item-id-search`). Динамические варианты
   (`guide-badge-*`, `nut-*`) переведены на `data-*`.
-- Left: **4 global CSS outside `src/app/theme`** — `KubejsConstructor.css`, `RecipeCatalog.css` и общие части
-  справочника `ReferenceShared.css`/`PowerShared.css` (их берут мультиблоки, гайды и аддоны). Buttons, inputs,
-  segmented и стили markdown-контента (`markdown.css`) остаются глобальными: markdown-стили одевают готовый HTML.
+- 2026-10-25 (третья волна): конструктор KubeJS и каталог рецептов (`css-kubejs-catalog`); `shared/ui` пополнился
+  `Button`, `Input`, `Select`, `Textarea`, `Tooltip` (модули), первые потребители — модалка, «Статистика»,
+  «Свежесть», редактор тегов.
+- Left: **2 global CSS outside `src/app/theme`** — `ReferenceShared.css`/`PowerShared.css`, общие части справочника
+  (их берут мультиблоки, гайды и аддоны; переедут вместе с `entities/guide` и мультиблоками). `legacy-ui.css` пока
+  держит `.btn/.input/.seg/.tag/.empty/.error-box` — их ещё используют страницы; каждый новый компонент `shared/ui`
+  уменьшает этот набор.
 
 ## Documents (file storage)
 
