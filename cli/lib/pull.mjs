@@ -191,6 +191,9 @@ export const addonMatches = (a, n) =>
     (x) => addonKey(x) === addonKey(n),
   );
 
+/** jar в mods/ — какая-то версия этого аддона (по имени файла, и неизвестной версии тоже) */
+export const isAddonJar = (a, file) => addonMatches(a, file) || addonMatches(a, jarBase(file));
+
 /** Имя из командной строки → { name, version }: ee_extras@2.3.1, rw-host-fix@latest */
 export function splitAddonName(n) {
   const i = String(n).lastIndexOf('@');
