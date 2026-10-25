@@ -25,7 +25,9 @@
   min-width: 0;
 }
 
-.cmd :global(.btn) {
+/* кнопка «Копировать» — это Button из shared/ui, глобального .btn у неё больше нет;
+   правило то же, что раньше давало `.cmd :global(.btn)` */
+.cmdBtn {
   margin-top: 6px;
   flex-shrink: 0;
 }
