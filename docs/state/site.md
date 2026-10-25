@@ -38,9 +38,15 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 - 2026-10-25 (третья волна): конструктор KubeJS и каталог рецептов (`css-kubejs-catalog`); `shared/ui` пополнился
   `Button`, `Input`, `Select`, `Textarea`, `Tooltip` (модули), первые потребители — модалка, «Статистика»,
   «Свежесть», редактор тегов.
+- 2026-10-25 (четвёртая волна): `Segmented` в `shared/ui` (значения строка/число/булево/null, значки, счётчики,
+  режим вкладок) заменил глобальный `.seg` в 15 местах — задачи, файлы, статистика, рецепты, теги, карта, вкладки
+  справочника, мультиблоки, каталог рецептов, панель плана, «Свежесть»; переопределения потребителей переехали с
+  `:global(.seg)` на свои классы. Тогда же: шапка/знакомство/панели/каталог/меню разделов — в `widgets/`, гайды и
+  вкладки справочника — в `features/`; `TaskDialog`, `SchematicsPage`, `SchematicLayers`, `DatapacksPage` разбиты на
+  части (самый большой файл — 394 строки вместо 1206).
 - Left: **2 global CSS outside `src/app/theme`** — `ReferenceShared.css`/`PowerShared.css`, общие части справочника
   (их берут мультиблоки, гайды и аддоны; переедут вместе с `entities/guide` и мультиблоками). `legacy-ui.css` пока
-  держит `.btn/.input/.seg/.tag/.empty/.error-box` — их ещё используют страницы; каждый новый компонент `shared/ui`
+  держит `.btn/.input/.tag/.empty/.error-box/.imp-*` — их ещё используют страницы; каждый новый компонент `shared/ui`
   уменьшает этот набор.
 
 ## Documents (file storage)
