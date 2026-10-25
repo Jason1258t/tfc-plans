@@ -56,7 +56,7 @@
   margin-bottom: 6px;
 }
 
-.tourHead :global(.btn) {
+.tourClose {
   margin: -4px -6px -4px 0;
 }
 
@@ -98,7 +98,7 @@
   flex: none;
 }
 
-.tourMenuWrap > :global(.btn) {
+.tourMenuBtn {
   color: var(--text-2);
 }
 

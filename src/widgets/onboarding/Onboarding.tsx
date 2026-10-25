@@ -1,4 +1,5 @@
 import { HelpCircle, X } from 'lucide-react';
+import { Button } from '@/shared/ui';
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
@@ -206,9 +207,16 @@ function TourView({ tour, onClose }: { tour: Tour; onClose: (off: boolean) => vo
               {i + 1} / {tour.steps.length}
             </span>
           )}
-          <button className="btn ghost sm icon" onClick={() => onClose(false)} aria-label="Закрыть подсказки">
+          <Button
+            variant="ghost"
+            size="sm"
+            icon
+            className={styles.tourClose}
+            onClick={() => onClose(false)}
+            aria-label="Закрыть подсказки"
+          >
             <X size={15} />
-          </button>
+          </Button>
         </div>
         <p className={styles.tourBody}>{step.body}</p>
         {last && tour.guide && (
@@ -222,18 +230,18 @@ function TourView({ tour, onClose }: { tour: Tour; onClose: (off: boolean) => vo
         <div className={styles.tourFoot}>
           <span className="grow" />
           {!last && (
-            <button className="btn ghost sm" onClick={() => onClose(false)}>
+            <Button variant="ghost" size="sm" onClick={() => onClose(false)}>
               Пропустить
-            </button>
+            </Button>
           )}
           {i > 0 && (
-            <button className="btn sm" onClick={() => setI(i - 1)}>
+            <Button size="sm" onClick={() => setI(i - 1)}>
               Назад
-            </button>
+            </Button>
           )}
-          <button className="btn primary sm" autoFocus onClick={() => (last ? onClose(false) : setI(i + 1))}>
+          <Button variant="primary" size="sm" autoFocus onClick={() => (last ? onClose(false) : setI(i + 1))}>
             {last ? 'Понятно' : 'Далее'}
-          </button>
+          </Button>
         </div>
         <button className={cx(styles.tourOff, 'small faint')} onClick={() => onClose(true)}>
           Больше не показывать подсказки
@@ -266,15 +274,18 @@ export function OnboardingMenu() {
 
   return (
     <div className={styles.tourMenuWrap} ref={ref}>
-      <button
-        className="btn ghost sm icon"
+      <Button
+        variant="ghost"
+        size="sm"
+        icon
+        className={styles.tourMenuBtn}
         data-tour="help"
         aria-label="Подсказки"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
         <HelpCircle size={16} />
-      </button>
+      </Button>
       {open && (
         <div className={styles.tourMenu} role="menu">
           {current && (
