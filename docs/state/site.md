@@ -31,11 +31,13 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
   catalogue and «Документы») and `Modal.module.css` (the window's background, card, head, body and foot left
   `legacy-ui.css`; the onboarding looks for `[role="dialog"]`). `shared/ui` comes before page modules in the cascade
   (`@layer ui`), so a page can still override.
-- Left: **17 global CSS outside `src/app/theme`** — `Header`, `FileBadge`, `ArtifactPane`, `AgentPanel`,
-  `KubejsConstructor`, `MultiblocksTab`, `MarkdownField`, `LiveMarkdown`, `Onboarding`, `RecipeCatalog`, `guides/*`,
-  shared parts of the reference (`ReferenceShared.css`, `PowerShared.css`), `shared/pack-data` (`ItemPicker`,
-  `ItemIdSearch`), `PackNav`. Buttons, inputs, segmented and the markdown content styles still come from
-  `legacy-ui.css`/`markdown.css` (markdown styles stay global — they style generated HTML).
+- 2026-10-25 (вторая волна): компоненты без страницы — шапка, значок файла, панель плана и панель агента (ветка
+  `css-components-a`), гайды, markdown-поле, LiveMarkdown и знакомство (`css-components-b`), выбор предмета, меню
+  разделов и мультиблоки (`css-components-c`), поиск по id предмета (`css-item-id-search`). Динамические варианты
+  (`guide-badge-*`, `nut-*`) переведены на `data-*`.
+- Left: **4 global CSS outside `src/app/theme`** — `KubejsConstructor.css`, `RecipeCatalog.css` и общие части
+  справочника `ReferenceShared.css`/`PowerShared.css` (их берут мультиблоки, гайды и аддоны). Buttons, inputs,
+  segmented и стили markdown-контента (`markdown.css`) остаются глобальными: markdown-стили одевают готовый HTML.
 
 ## Documents (file storage)
 
@@ -105,7 +107,7 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
     without React, `cm-live-markdown/react` wrapper, `@codemirror/*` as peers, 29 node checks of the commands on CM
     states, demo (`npm run demo`), Russian README. Site side — `src/components/LiveMarkdown.tsx` only passes options:
     item token `[[id|4]]` (redrawn by `refreshLivePreview` after `loadItems`), images `file:`/`uploading:` via
-    `imageSrc`, tables via our `Markdown`, Russian phrases; colours/fonts — `--lmd-*` variables in `LiveMarkdown.css`.
+    `imageSrc`, tables via our `Markdown`, Russian phrases; colours/fonts — `--lmd-*` variables in `markdown.css`.
     From the npm registry `^0.1.2` (published 2026-10-23; the account has 2FA — `npm publish --otp=…` is the user's
     step, and npm stages the release until it is approved on npmjs.com, leaving a `0.0.0-stage` placeholder version).
     New release: bump in the package, tag, push, user publishes, then `npm i cm-live-markdown@^x` here. Fixed on the way (0.1.2): the image widget replaced its own root on «not found», CM read it as typing and
