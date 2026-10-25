@@ -6,7 +6,7 @@ import { useArtifacts } from '@/entities/artifact';
 import { useFiles } from '@/entities/file';
 import { useTasks } from '@/entities/task';
 import { artifactsStore } from '@/entities/artifact';
-import { filesEnabled } from '@/lib/files';
+import { filesEnabled } from '@/entities/file';
 import { removeOrphanImages } from '@/lib/planImages';
 import { cx, timeAgo } from '@/shared/lib';
 import type { Artifact } from '@/entities/artifact';

@@ -8,7 +8,7 @@ import { ItemIcon, ItemPicker } from '@/shared/pack-data';
 import { Markdown, itemToken, toggleTaskLine } from '@/components/Markdown';
 import { MarkdownField } from '@/components/MarkdownField';
 import { useTextImages } from '@/components/useTextImages';
-import { filesEnabled } from '@/lib/files';
+import { filesEnabled } from '@/entities/file';
 import { cx } from '@/shared/lib';
 import { Checklist } from './Checklist';
 import { PlaceField } from './PlaceField';

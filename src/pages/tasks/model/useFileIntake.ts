@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { filesEnabled } from '@/lib/files';
+import { filesEnabled } from '@/entities/file';
 import { isImage, prepareFile, startUpload, validateFiles } from '@/lib/uploads';
 
 /**

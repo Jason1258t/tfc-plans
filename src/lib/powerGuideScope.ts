@@ -1,4 +1,4 @@
-import { CONFIG_ORIGIN_LABEL } from './config';
+import { CONFIG_ORIGIN_LABEL } from '@/entities/pack-config';
 import type { Scope } from '@/shared/lib';
 import { BASE_DOCS, BASE_VALUES, type GuideScope, type ScopeDoc } from './guideScope';
 import {

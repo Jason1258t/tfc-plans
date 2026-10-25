@@ -6,7 +6,7 @@ import { useNick } from '@/entities/user';
 import { useFiles } from '@/entities/file';
 import { useTasks } from '@/entities/task';
 import { schematicsStore } from '@/entities/schematic';
-import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, uploadFile } from '../../lib/files';
+import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, uploadFile } from '@/entities/file';
 import { FILE_KINDS, fileKind, type FileKind } from '../../lib/fileKinds';
 import { prepareFile, validateFiles } from '../../lib/uploads';
 import { cx, timeAgo } from '@/shared/lib';

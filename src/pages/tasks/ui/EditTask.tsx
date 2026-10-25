@@ -7,7 +7,7 @@ import { useFiles } from '@/entities/file';
 import { useItems } from '@/shared/pack-data';
 import { extractResources, geminiEnabled, geminiErrorText } from '@/shared/api';
 import { mergeResources } from '@/lib/resources';
-import { removeFile } from '@/lib/files';
+import { removeFile } from '@/entities/file';
 import { timeAgo } from '@/shared/lib';
 import { Modal } from '@/shared/ui';
 import { Attachments } from './Attachments';

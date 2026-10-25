@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { formatSize, MAX_FILE_SIZE, uploadFile } from './files';
+import { formatSize, MAX_FILE_SIZE, uploadFile } from '@/entities/file';
 
 export const isImage = (f: { type: string; name: string }) =>
   f.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(f.name);

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { subscribeFiles, type FileMeta } from '@/lib/files';
+import { subscribeFiles, type FileMeta } from '@/entities/file';
 
 interface FileList {
   items: FileMeta[];

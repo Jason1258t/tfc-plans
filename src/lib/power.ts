@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useModConfig, type ConfigOrigin, type ModConfig } from './config';
+import { useModConfig, type ConfigOrigin, type ModConfig } from '@/entities/pack-config';
 
 /**
  * Электричество: Create Electro Energetics (В, А, Вт), Immersive Engineering (FE/t) и стык с кинетикой Create (SU).

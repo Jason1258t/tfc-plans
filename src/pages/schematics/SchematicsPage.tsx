@@ -6,7 +6,7 @@ import { useFavorites } from './model/replaceFavorites';
 import { SchematicLayers } from './ui/SchematicLayers';
 import { SchematicLibrary } from './ui/SchematicLibrary';
 import { useNick } from '@/entities/user';
-import { filesEnabled } from '@/lib/files';
+import { filesEnabled } from '@/entities/file';
 import { geminiEnabled } from '@/shared/api';
 import { agentReplace, applyRules, loadSchematic, REMOVE, type Rule, type Schematic } from '@/lib/schematic';
 import { aggregateBlocks, visibleBlocks } from './model/visibleBlocks';

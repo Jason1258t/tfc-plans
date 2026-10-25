@@ -1,7 +1,7 @@
 import { BookmarkPlus, Box, Check, ChevronDown, Download, FileBox, Ruler, X } from 'lucide-react';
 import { ItemIcon, ItemPicker, itemName, type ItemIndex } from '@/shared/pack-data';
 import { changesIn, shapedSize, type Schematic } from '@/lib/schematic';
-import { filesEnabled, formatSize } from '@/lib/files';
+import { filesEnabled, formatSize } from '@/entities/file';
 import { cx } from '@/shared/lib';
 import { clampPad, outName, replaceSig, shapeSummary } from '../model/schematicFormat';
 import section from '../SchematicsSection.module.css';
