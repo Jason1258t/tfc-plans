@@ -1,15 +1,19 @@
-.kjs-section {
+/* Конструктор обхода удалений KubeJS. Свои классы локальные: .kjs-section → styles.kjsSection.
+   Значков статуса (.kjs-badge) здесь больше нет — они в RecipeCatalog.module.css: каталог ставит их сам,
+   а ещё их ставит справочник (ReferencePage.tsx, таблица металлов), поэтому имя осталось глобальным. */
+
+.kjsSection {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.kjs-section + .kjs-section {
+.kjsSection + .kjsSection {
   padding-top: 12px;
   border-top: 1px solid var(--border);
 }
 
-.kjs-section h3 {
+.kjsSection h3 {
   margin: 0;
   display: flex;
   align-items: center;
@@ -17,11 +21,11 @@
   font-size: 15px;
 }
 
-.kjs-section p {
+.kjsSection p {
   margin: 0;
 }
 
-.kjs-rules {
+.kjsRules {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -30,7 +34,7 @@
   gap: 6px;
 }
 
-.kjs-rules li {
+.kjsRules li {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -41,32 +45,32 @@
   min-width: 0;
 }
 
-.kjs-rules li.kjs-maybe {
+.kjsRules li.kjsMaybe {
   border-left-color: var(--imp-2);
 }
 
-.kjs-loc {
+.kjsLoc {
   font-size: 12px;
   color: var(--text-2);
 }
 
-.kjs-code,
-.kjs-diff,
-.kjs-script {
+.kjsCode,
+.kjsDiff,
+.kjsScript {
   font-family: var(--font-mono);
   font-size: 12px;
   overflow-wrap: anywhere;
 }
 
-.kjs-patch {
+.kjsPatch {
   display: flex;
   flex-direction: column;
   gap: 4px;
   align-items: flex-start;
 }
 
-.kjs-diff,
-.kjs-script {
+.kjsDiff,
+.kjsScript {
   margin: 0;
   width: 100%;
   padding: 8px 10px;
@@ -76,62 +80,36 @@
   box-sizing: border-box;
 }
 
-.kjs-script {
+.kjsScript {
   max-height: 240px;
   overflow: auto;
 }
 
-.kjs-diff .del {
+.kjsDiff .del {
   color: var(--danger);
 }
 
-.kjs-diff .add {
+.kjsDiff .add {
   color: var(--accent);
 }
 
-.kjs-id {
+.kjsId {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.kjs-ok {
+.kjsOk {
   color: var(--accent);
 }
 
-.kjs-bad {
+.kjsBad {
   color: var(--danger);
 }
 
-.kjs-way {
+.kjsWay {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-}
-
-/* ---------------------------------------------------------------- значки статуса в каталоге */
-
-.kjs-badge {
-  flex: none;
-  font-size: 11px;
-  padding: 1px 6px;
-  border-radius: 9px;
-  border: 1px solid var(--border);
-  white-space: nowrap;
-}
-
-.kjs-badge.removed {
-  color: var(--danger);
-  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
-}
-
-.kjs-badge.changed {
-  color: var(--imp-2);
-  border-color: color-mix(in srgb, var(--imp-2) 45%, var(--border));
-}
-
-.kjs-badge.added {
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
 }

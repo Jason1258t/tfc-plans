@@ -7,8 +7,9 @@ import { filterToJs, kubejsHits, ruleIsIdOnly, type KjsRule } from '@/shared/pac
 import { kubejsScript, liftPatch, scriptFileName, targetFromJson } from '../lib/kubejsFix';
 import { downloadScript, freeScriptName } from '../lib/kubejsScripts';
 import type { KubejsScript } from '@/entities/datapack';
+import { cx } from '@/shared/lib';
 import { Modal } from '@/shared/ui';
-import './KubejsConstructor.css';
+import styles from './KubejsConstructor.module.css';
 
 interface Props {
   /** Рецепт, который режет KubeJS: id, JSON и все правила сборки */
@@ -90,33 +91,33 @@ export function KubejsConstructor({ recipeId, json, rules, namespace, onNewEntry
 
   return (
     <Modal onClose={onClose} title="Рецепт режет KubeJS" wide>
-      <section className="kjs-section">
+      <section className={styles.kjsSection}>
         <p className="faint small">
           <code>{recipeId}</code> удаляется скриптами сборки — в игре его не будет, даже если положить в датапак.
         </p>
-        <ul className="kjs-rules">
+        <ul className={styles.kjsRules}>
           {removing.map((r, i) => (
             <li key={i}>
-              <code className="kjs-loc">
+              <code className={styles.kjsLoc}>
                 {r.file}:{r.line}
               </code>
-              <code className="kjs-code">{r.code}</code>
+              <code className={styles.kjsCode}>{r.code}</code>
               <span className="faint small">фильтр: {filterToJs(r.filter)}</span>
             </li>
           ))}
           {maybe.map((r, i) => (
-            <li key={`m${i}`} className="kjs-maybe">
-              <code className="kjs-loc">
+            <li key={`m${i}`} className={styles.kjsMaybe}>
+              <code className={styles.kjsLoc}>
                 {r.file}:{r.line}
               </code>
-              <code className="kjs-code">{r.code}</code>
+              <code className={styles.kjsCode}>{r.code}</code>
               <span className="faint small">фильтр не разобрать без игры — может задевать</span>
             </li>
           ))}
         </ul>
       </section>
 
-      <section className="kjs-section">
+      <section className={styles.kjsSection}>
         <h3>
           <ShieldOff size={16} /> Снять ограничение
         </h3>
@@ -127,14 +128,14 @@ export function KubejsConstructor({ recipeId, json, rules, namespace, onNewEntry
         {removing.map((r, i) => {
           const p = liftPatch(r, recipeId);
           return (
-            <div key={i} className="kjs-patch">
+            <div key={i} className={styles.kjsPatch}>
               {p.kind === 'delete-line' ? (
                 <>
                   <div className="small">
                     Удалить строку <b>{p.line}</b> в <code>{p.file}</code>:
                   </div>
-                  <pre className="kjs-diff">
-                    <span className="del">- {p.code}</span>
+                  <pre className={styles.kjsDiff}>
+                    <span className={styles.del}>- {p.code}</span>
                   </pre>
                 </>
               ) : (
@@ -145,10 +146,10 @@ export function KubejsConstructor({ recipeId, json, rules, namespace, onNewEntry
                       ' — фильтр собирается в коде (цикл, переменные), вставьте not: { id } туда, где он строится'}
                     :
                   </div>
-                  <pre className="kjs-diff">
-                    <span className="del">- {p.before}</span>
+                  <pre className={styles.kjsDiff}>
+                    <span className={styles.del}>- {p.before}</span>
                     {'\n'}
-                    <span className="add">+ {p.after}</span>
+                    <span className={styles.add}>+ {p.after}</span>
                   </pre>
                   <CopyButton text={p.after} />
                 </>
@@ -158,23 +159,23 @@ export function KubejsConstructor({ recipeId, json, rules, namespace, onNewEntry
         })}
       </section>
 
-      <section className="kjs-section">
+      <section className={styles.kjsSection}>
         <h3>
           <Wand2 size={16} /> Новый рецепт на его основе
         </h3>
-        <label className="kjs-id">
+        <label className={styles.kjsId}>
           <span className="label">id нового рецепта</span>
           <input className="input mono-input" value={newId} onChange={(e) => setNewId(e.target.value.trim())} />
         </label>
         {newHits && (
-          <p className={newHits.removed.length ? 'kjs-bad small' : 'kjs-ok small'}>
+          <p className={cx(newHits.removed.length ? styles.kjsBad : styles.kjsOk, 'small')}>
             {newHits.removed.length
               ? `С этим id рецепт тоже удалится: ${newHits.removed.map((n) => `${rules[n].file}:${rules[n].line}`).join(', ')} — как датапак не подойдёт, только KubeJS-скрипт ниже.`
               : 'С этим id ни одно удаление KubeJS рецепт не задевает.'}
           </p>
         )}
 
-        <div className="kjs-way">
+        <div className={styles.kjsWay}>
           <div className="grow">
             <b>Датапак, другой id</b>
             <p className="faint small">
@@ -194,7 +195,7 @@ export function KubejsConstructor({ recipeId, json, rules, namespace, onNewEntry
           )}
         </div>
 
-        <div className="kjs-way">
+        <div className={styles.kjsWay}>
           <div className="grow">
             <b>KubeJS-скрипт</b>
             <p className="faint small">
@@ -216,13 +217,13 @@ export function KubejsConstructor({ recipeId, json, rules, namespace, onNewEntry
           </button>
         </div>
         {saved && (
-          <p className="kjs-ok small">
+          <p className={cx(styles.kjsOk, 'small')}>
             Сохранён как <code>{saved.fileName}</code> —{' '}
             <Link to={`/datapacks?script=${saved.id}`}>открыть в «Скриптах KubeJS»</Link>. Чтобы программа tfc поставила
             его на сервер, отметьте там «Ставить на сервер».
           </p>
         )}
-        <pre className="kjs-script">{script}</pre>
+        <pre className={styles.kjsScript}>{script}</pre>
       </section>
     </Modal>
   );
