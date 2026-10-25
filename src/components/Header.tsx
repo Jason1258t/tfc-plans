@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { firebaseEnabled } from '@/shared/api';
 import { lastSeenUpdate, usePackUpdates } from '@/pages/updates/model/packUpdates';
-import './Header.css';
+import styles from './Header.module.css';
 import { OnboardingMenu } from './Onboarding';
 import { ItemIcon, ItemIdSearch } from '@/shared/pack-data';
 import { Modal, tooltipHandlers } from '@/shared/ui';
@@ -41,9 +41,9 @@ export function Header({ nick, onChangeNick }: Props) {
 
   return (
     <header className="app-header">
-      <NavLink to="/" className="brand">
+      <NavLink to="/" className={styles.brand}>
         <ItemIcon id="tfc:metal/ingot/copper" size={22} tip={false} />
-        <span className="brand-name">TFC Планы</span>
+        <span className={styles.brandName}>TFC Планы</span>
       </NavLink>
       <nav className="nav">
         <NavLink to="/" end>
@@ -60,7 +60,7 @@ export function Header({ nick, onChangeNick }: Props) {
       <span className="grow" />
       {!firebaseEnabled && (
         <span
-          className="offline"
+          className={styles.offline}
           {...tooltipHandlers('Локальный режим', 'Firebase не настроен — данные только в этом браузере')}
         >
           локально
@@ -88,13 +88,13 @@ export function Header({ nick, onChangeNick }: Props) {
         {...tooltipHandlers('Обновления сборки', fresh ? 'Есть новое обновление' : undefined)}
       >
         <Bell size={16} />
-        {fresh && <span className="nav-dot" aria-label="новое" />}
+        {fresh && <span className={styles.navDot} aria-label="новое" />}
       </NavLink>
       <button className="nick" onClick={onChangeNick} {...tooltipHandlers('Сменить ник')}>
-        <span className="avatar" aria-hidden>
+        <span className={styles.avatar} aria-hidden>
           {nick.slice(0, 1).toUpperCase()}
         </span>
-        <span className="nick-name">{nick}</span>
+        <span className={styles.nickName}>{nick}</span>
       </button>
     </header>
   );

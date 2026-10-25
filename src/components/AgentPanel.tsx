@@ -20,7 +20,7 @@ import { mergeResources } from '../lib/resources';
 import { cx } from '@/shared/lib';
 import type { Artifact } from '@/entities/artifact';
 import type { Task } from '@/entities/task';
-import './AgentPanel.css';
+import styles from './AgentPanel.module.css';
 import { Markdown } from './Markdown';
 
 interface Msg {
@@ -42,6 +42,8 @@ interface Props {
   onAppend: (text: string) => void;
   onReplaceSelection: (original: string, text: string) => void;
   onReplaceAll: (text: string) => void;
+  /** Внешний класс: широкий вариант панели на отдельной странице плана */
+  className?: string;
 }
 
 const SUGGESTIONS = [
@@ -145,8 +147,8 @@ export function AgentPanel(p: Props) {
 
   if (!geminiEnabled) {
     return (
-      <div className="agent disabled">
-        <div className="agent-head">
+      <div className={cx(styles.agent, styles.disabled, p.className)}>
+        <div className={styles.agentHead}>
           <Sparkles size={15} />
           <span className="grow">Агент Gemini</span>
         </div>
@@ -158,8 +160,8 @@ export function AgentPanel(p: Props) {
   }
 
   return (
-    <div className={cx('agent', expanded && messages.length > 0 && 'expanded')}>
-      <div className="agent-head">
+    <div className={cx(styles.agent, expanded && messages.length > 0 && styles.expanded, p.className)}>
+      <div className={styles.agentHead}>
         <Sparkles size={15} />
         <span className="grow">Агент Gemini</span>
         {messages.length > 0 && (
@@ -185,17 +187,17 @@ export function AgentPanel(p: Props) {
       </div>
 
       {expanded && messages.length > 0 && (
-        <div className="agent-thread" ref={threadRef} aria-live="polite">
+        <div className={styles.agentThread} ref={threadRef} aria-live="polite">
           {messages.map((m) =>
             m.role === 'user' ? (
-              <div key={m.id} className="msg user">
-                {m.selection && <div className="msg-sel">Выделение: «{clip(m.selection, 80)}»</div>}
+              <div key={m.id} className={cx(styles.msg, styles.user)}>
+                {m.selection && <div className={styles.msgSel}>Выделение: «{clip(m.selection, 80)}»</div>}
                 {m.text}
               </div>
             ) : (
-              <div key={m.id} className={cx('msg model', m.error && 'error')}>
+              <div key={m.id} className={cx(styles.msg, styles.model, m.error && styles.error)}>
                 {m.pending && !m.text ? (
-                  <div className="typing">
+                  <div className={styles.typing}>
                     <span />
                     <span />
                     <span />
@@ -206,7 +208,7 @@ export function AgentPanel(p: Props) {
                   <Markdown source={m.text} />
                 )}
                 {!m.pending && !m.error && m.text && (
-                  <div className="msg-actions">
+                  <div className={styles.msgActions}>
                     <button className="btn sm" onClick={() => p.onAppend(m.text)} title="Добавить в конец документа">
                       <WrapText size={13} /> В конец
                     </button>
@@ -251,7 +253,7 @@ export function AgentPanel(p: Props) {
                     </button>
                   </div>
                 )}
-                {m.note && <div className="msg-note">{m.note}</div>}
+                {m.note && <div className={styles.msgNote}>{m.note}</div>}
               </div>
             ),
           )}
@@ -259,9 +261,9 @@ export function AgentPanel(p: Props) {
       )}
 
       {messages.length === 0 && (
-        <div className="agent-suggest">
+        <div className={styles.agentSuggest}>
           {SUGGESTIONS.map((s) => (
-            <button key={s.label} className="chip" onClick={() => send(s.prompt)} disabled={busy}>
+            <button key={s.label} className={styles.chip} onClick={() => send(s.prompt)} disabled={busy}>
               {s.label}
             </button>
           ))}
@@ -269,7 +271,7 @@ export function AgentPanel(p: Props) {
       )}
 
       <form
-        className="composer"
+        className={styles.composer}
         onSubmit={(e) => {
           e.preventDefault();
           send(input);
@@ -277,15 +279,15 @@ export function AgentPanel(p: Props) {
         onClick={() => inputRef.current?.focus()}
       >
         {hasSelection && (
-          <label className={cx('ctx-chip', withSelection && 'on')} onClick={(e) => e.stopPropagation()}>
+          <label className={cx(styles.ctxChip, withSelection && styles.on)} onClick={(e) => e.stopPropagation()}>
             <input type="checkbox" checked={withSelection} onChange={(e) => setUseSelection(e.target.checked)} />
             Только выделенное · {p.selectedText.length} симв.
           </label>
         )}
-        <div className="composer-row">
+        <div className={styles.composerRow}>
           <textarea
             ref={inputRef}
-            className="composer-input"
+            className={styles.composerInput}
             rows={1}
             value={input}
             placeholder={p.task ? `Спросите агента про «${clip(p.task.title, 40)}»…` : 'Спросите агента про этот план…'}
@@ -299,16 +301,21 @@ export function AgentPanel(p: Props) {
             aria-label="Сообщение агенту"
           />
           {busy ? (
-            <button type="button" className="send stop" onClick={() => abort.current?.abort()} aria-label="Остановить">
+            <button
+              type="button"
+              className={cx(styles.send, styles.stop)}
+              onClick={() => abort.current?.abort()}
+              aria-label="Остановить"
+            >
               <Square size={12} fill="currentColor" />
             </button>
           ) : (
-            <button className="send" disabled={!input.trim()} aria-label="Отправить">
+            <button className={styles.send} disabled={!input.trim()} aria-label="Отправить">
               <ArrowUp size={16} strokeWidth={2.5} />
             </button>
           )}
         </div>
-        <div className="composer-hint faint">
+        <div className={cx(styles.composerHint, 'faint')}>
           Агент видит документ{p.task ? ' и задачу' : ''}. Enter — отправить, Shift+Enter — новая строка.
         </div>
       </form>

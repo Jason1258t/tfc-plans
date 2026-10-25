@@ -2,7 +2,7 @@ import { File as FileIcon, FileArchive, FileBox, FileCode, FileText, Image, Pack
 import type { ReactNode } from 'react';
 import { fileKind, type FileKind } from '../lib/fileKinds';
 import { cx } from '@/shared/lib';
-import './FileBadge.css';
+import styles from './FileBadge.module.css';
 
 const ICONS = {
   image: Image,
@@ -16,7 +16,7 @@ const ICONS = {
 
 /** Цветная точка вида файла — для фильтров и легенд */
 export function FileKindDot({ kind }: { kind: FileKind }) {
-  return <span className={`fkind-dot ${kind}`} aria-hidden />;
+  return <span className={styles.fkindDot} data-kind={kind} aria-hidden />;
 }
 
 interface Props {
@@ -37,19 +37,19 @@ export function FileBadge({ name, type, onOpen, disabled, compact, children }: P
   const kind = fileKind({ name, type });
   const Icon = ICONS[kind];
   return (
-    <span className={cx('fbadge', compact && 'compact')}>
-      <span className={`fkind ${kind}`}>
+    <span className={cx('fbadge', compact && styles.compact)}>
+      <span className={styles.fkind} data-kind={kind}>
         <Icon size={compact ? 16 : 18} />
       </span>
-      <span className="fbadge-text">
+      <span className={styles.fbadgeText}>
         {onOpen ? (
-          <button type="button" className="fbadge-name" onClick={onOpen} disabled={disabled} title="Скачать">
+          <button type="button" className={styles.fbadgeName} onClick={onOpen} disabled={disabled} title="Скачать">
             {name}
           </button>
         ) : (
-          <span className="fbadge-name">{name}</span>
+          <span className={styles.fbadgeName}>{name}</span>
         )}
-        {children && <span className="fbadge-meta">{children}</span>}
+        {children && <span className={styles.fbadgeMeta}>{children}</span>}
       </span>
     </span>
   );

@@ -130,7 +130,9 @@
   padding: 14px 18px;
 }
 
-.apane.full .agent {
+/* Широкий вариант: панель агента была потомком .apane.full (`.apane.full .agent`), теперь
+   ArtifactPane передаёт этот класс в AgentPanel через className — модуль агента им не владеет. */
+.agent-full {
   width: 100%;
   max-width: 860px;
   margin: 0 auto;
