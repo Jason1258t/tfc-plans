@@ -14,7 +14,7 @@ import {
   ItemPicker,
 } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
-import { Modal, Search, Segmented } from '@/shared/ui';
+import { Modal, Search, Segmented, Button } from '@/shared/ui';
 import { track, useSearchTrack } from '@/shared/api';
 import styles from './RecipeCatalog.module.css';
 
@@ -146,9 +146,9 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
             <span className={styles.catItemChip}>
               <ItemIcon id={itemId} size={18} />
               {itemName(items?.byId.get(itemId), itemId)}
-              <button className="btn ghost sm icon" onClick={() => setItemId(null)} aria-label="Сбросить предмет">
+              <Button variant="ghost" size="sm" icon onClick={() => setItemId(null)} aria-label="Сбросить предмет">
                 ×
-              </button>
+              </Button>
             </span>
           </div>
         ) : (
@@ -182,13 +182,15 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
               return (
                 <li key={r.i} className={cx(styles.catRow, (r.removed || r.kjsRemoved.length > 0) && styles.removed)}>
                   <div className={styles.catMain}>
-                    <button
-                      className="btn ghost sm icon"
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon
                       onClick={() => setOpen(expanded ? null : r.i)}
                       aria-label={expanded ? 'Свернуть JSON' : 'Показать JSON'}
                     >
                       {expanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-                    </button>
+                    </Button>
                     <span className={styles.catIcons}>
                       {r.outputs
                         .filter((o) => !o.startsWith('#'))
@@ -210,13 +212,13 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
                     </span>
                     <span className={styles.catActions}>
                       {onConstructor && r.kjsRemoved.length > 0 && (
-                        <button
-                          className="btn sm"
+                        <Button
+                          size="sm"
                           onClick={() => onConstructor(r)}
                           title="Снять ограничение или сделать рецепт на основе"
                         >
                           <ShieldAlert size={13} /> Конструктор
-                        </button>
+                        </Button>
                       )}
                       {actions(r)}
                     </span>
@@ -261,9 +263,9 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
             })}
             {results.length > limit && (
               <li className={styles.catMore}>
-                <button className="btn sm" onClick={() => setLimit((l) => l + PAGE)}>
+                <Button size="sm" onClick={() => setLimit((l) => l + PAGE)}>
                   Показать ещё {Math.min(PAGE, results.length - limit)} из {results.length - limit}
-                </button>
+                </Button>
               </li>
             )}
           </ul>
@@ -286,22 +288,23 @@ interface Props {
 export function recipeActions(mode: 'template' | 'existing', onPick: Props['onPick']) {
   return (r: Recipe) =>
     mode === 'template' ? (
-      <button className="btn sm" onClick={() => onPick('add', r)} disabled={r.removed}>
+      <Button size="sm" onClick={() => onPick('add', r)} disabled={r.removed}>
         <Copy size={13} /> Шаблон
-      </button>
+      </Button>
     ) : (
       <>
-        <button className="btn sm" onClick={() => onPick('replace', r)} disabled={r.removed}>
+        <Button size="sm" onClick={() => onPick('replace', r)} disabled={r.removed}>
           <FilePen size={13} /> Заменить
-        </button>
-        <button
-          className="btn sm danger"
+        </Button>
+        <Button
+          variant="danger"
+          size="sm"
           onClick={() => onPick('remove', r)}
           disabled={r.removed || r.kjsRemoved.length > 0}
           title={r.kjsRemoved.length ? 'Уже удалён KubeJS' : undefined}
         >
           {r.removed ? <Ban size={13} /> : <Trash2 size={13} />} Удалить
-        </button>
+        </Button>
       </>
     );
 }
