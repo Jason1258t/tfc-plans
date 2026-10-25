@@ -81,3 +81,21 @@
     flex-wrap: wrap;
   }
 }
+
+/* Отчёт по ссылке ?report=<id> */
+.filesRow.filesFocus {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* Описание и состав отчёта — отдельными строками под мета-строкой */
+.reportNote,
+.reportFiles {
+  display: block;
+}
+
+.reportFiles {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -517,7 +517,7 @@ const normMsg = (s) =>
 const IMPORTANT_WARN =
   /mixin|Mixin|missing|Missing|not found|failed|Failed|Couldn't|Unknown|Exception|Error|requires|incompatible|refused|Correcting/;
 
-function logAnalyze(a) {
+export function logAnalyze(a) {
   const input = readInput(a);
   const text = input.text;
   const out = [`Файл: ${input.name} — ${text.split('\n').length} строк`];

@@ -15,6 +15,7 @@ import { diffFiles, printDiff, publish } from './lib/publish.mjs';
 import { applyPull, planPull, pullChanges, recheckAddons, siteDatapackPaths, siteOwned } from './lib/pull.mjs';
 import { scanLocal } from './lib/scan.mjs';
 import { listAddons, showAddons, uploadAddons } from './lib/addons.mjs';
+import { cmdReport as reportUpload } from './lib/reports.mjs';
 import { applyChange, planChange, resultsOf } from './lib/changes.mjs';
 import { applyPlan, beginBackup, editBackup, finishBackup, undoLast } from './lib/sync.mjs';
 import {
@@ -74,6 +75,11 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
   tfc addons <мод…>           все версии аддона строками <мод>@<версия> — какие можно поставить
   tfc addons install <мод>@<версия>…   поставить и закрепить версию (= tfc pull addons …); <мод>@latest — последнюю
   tfc undo                    вернуть как было до прошлого pull
+  tfc report                  загрузить на сайт лог или краш-репорт (спросит вид и какие файлы) — для агента
+                              и хоста; в конце — строка «Для агента» с id tfc-report:…
+  tfc report <вид> [N | имя]  без вопросов: вид — log, crash, debug, kubejs, jvm (хосту ещё server, server-crash);
+                              без N — последний, N — столько последних (одним zip), имя — конкретный файл
+      --note "что случилось"  --task <id задачи> — приложить к задаче   --dry-run — только показать
 
 Хосту (ключ администратора):
   tfc publish                 залить сборку из папки игры на сервер (--note "что поменял", --yes, --force)
@@ -178,6 +184,7 @@ const opts = {
   live: { type: 'boolean' },
   'allow-removals': { type: 'boolean' },
   'host-only': { type: 'boolean' },
+  task: { type: 'string' },
   snapshot: { type: 'string' },
   follow: { type: 'boolean', short: 'f' },
   'no-follow': { type: 'boolean' },
@@ -957,6 +964,19 @@ async function cmdAddons(v, [sub, ...names]) {
   await showAddons(api(cfg), profile, [sub, ...names]);
 }
 
+async function cmdReport(v, args) {
+  const cfg = loadConfig();
+  const profile = v.instance ? null : currentProfile(cfg, v.profile);
+  const roots = { game: v.instance ? path.resolve(v.instance) : profile.instance, server: profile?.serverDir ?? null };
+  if (profile) console.log(dim(`Профиль ${profile.name}: ${roots.game}`));
+  await reportUpload(v['dry-run'] ? null : api(cfg), roots, args, {
+    note: v.note,
+    task: v.task,
+    yes: v.yes,
+    dryRun: v['dry-run'],
+  });
+}
+
 async function cmdAdmin(v, [sub, ...args]) {
   const arg = args[0];
   const a = api(loadConfig());
@@ -1058,6 +1078,7 @@ const COMMANDS = {
   build: cmdBuild,
   admin: cmdAdmin,
   addons: cmdAddons,
+  report: cmdReport,
 };
 
 async function main(argv) {
