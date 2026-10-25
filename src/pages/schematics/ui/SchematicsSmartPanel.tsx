@@ -1,6 +1,7 @@
 import { ArrowRight, Plus, Sparkles, X } from 'lucide-react';
 import type { Rule } from '@/lib/schematic';
 import { cx } from '@/shared/lib';
+import { Button } from '@/shared/ui';
 import type { SmartResult } from '../model/schematicFormat';
 import type { AgentPrefs } from '../model/schematicPrefs';
 import section from '../SchematicsSection.module.css';
@@ -77,20 +78,22 @@ export function SchematicsSmartPanel({
               aria-label="На что заменить"
               onChange={(e) => onRules(rules.map((x, j) => (j === i ? { ...x, to: e.target.value } : x)))}
             />
-            <button
-              className="btn ghost sm icon"
+            <Button
+              variant="ghost"
+              size="sm"
+              icon
               onClick={() => onRules(rules.filter((_, j) => j !== i))}
               aria-label="Удалить правило"
             >
               <X size={14} />
-            </button>
+            </Button>
           </li>
         ))}
         <li>
-          <button className="btn ghost sm" onClick={() => onRules([...rules, { from: '', to: '' }])}>
+          <Button variant="ghost" size="sm" onClick={() => onRules([...rules, { from: '', to: '' }])}>
             <Plus size={14} />
             Правило
-          </button>
+          </Button>
         </li>
       </ul>
       <label className={cx('toggle', section.smToggle)} style={{ alignSelf: 'flex-start' }}>

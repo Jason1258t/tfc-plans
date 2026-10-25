@@ -1,5 +1,6 @@
 import { Box, ChevronDown, ChevronUp, Layers, Maximize, Minus, Plus } from 'lucide-react';
 import { cx } from '@/shared/lib';
+import { Button } from '@/shared/ui';
 import section from '../SchematicsSection.module.css';
 import styles from './SchematicLayers.module.css';
 
@@ -44,35 +45,38 @@ export function SchematicLayersToolbar({
   return (
     <div className={styles.toolbar}>
       <div className={styles.mode} role="tablist" aria-label="Вид">
-        <button
+        <Button
           role="tab"
           aria-selected={mode === '2d'}
-          className={cx('btn sm', mode === '2d' && styles.on)}
+          size="sm"
+          className={cx(mode === '2d' && styles.on)}
           onClick={onMode2d}
         >
           <Layers size={14} />
           Слой
-        </button>
-        <button
+        </Button>
+        <Button
           role="tab"
           aria-selected={mode === '3d'}
-          className={cx('btn sm', mode === '3d' && styles.on)}
+          size="sm"
+          className={cx(mode === '3d' && styles.on)}
           onClick={onMode3d}
         >
           <Box size={14} />
           3D
-        </button>
+        </Button>
       </div>
       <span className={styles.step}>
-        <button
-          className="btn sm icon"
+        <Button
+          size="sm"
+          icon
           onClick={() => onStep(-1)}
           disabled={layerY <= 0}
           aria-label="Слой ниже"
           title="Слой ниже"
         >
           <ChevronDown size={16} />
-        </button>
+        </Button>
         <input
           type="range"
           className={styles.range}
@@ -82,15 +86,16 @@ export function SchematicLayersToolbar({
           onChange={(e) => onLayerChange(Number(e.target.value))}
           aria-label="Слой"
         />
-        <button
-          className="btn sm icon"
+        <Button
+          size="sm"
+          icon
           onClick={() => onStep(1)}
           disabled={layerY >= sy - 1}
           aria-label="Слой выше"
           title="Слой выше"
         >
           <ChevronUp size={16} />
-        </button>
+        </Button>
       </span>
       <span className={styles.y}>
         Слой <b>{layerY + 1}</b> из {sy}
@@ -106,16 +111,16 @@ export function SchematicLayersToolbar({
             Слой ниже
           </label>
           <span className="grow" />
-          <button className="btn ghost sm icon" onClick={() => onZoom(1 / 1.4)} aria-label="Мельче">
+          <Button variant="ghost" size="sm" icon onClick={() => onZoom(1 / 1.4)} aria-label="Мельче">
             <Minus size={15} />
-          </button>
-          <button className="btn ghost sm icon" onClick={() => onZoom(1.4)} aria-label="Крупнее">
+          </Button>
+          <Button variant="ghost" size="sm" icon onClick={() => onZoom(1.4)} aria-label="Крупнее">
             <Plus size={15} />
-          </button>
-          <button className="btn ghost sm" onClick={onFit} title="Вписать схему в окно">
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onFit} title="Вписать схему в окно">
             <Maximize size={14} />
             Вписать
-          </button>
+          </Button>
         </>
       ) : (
         <>

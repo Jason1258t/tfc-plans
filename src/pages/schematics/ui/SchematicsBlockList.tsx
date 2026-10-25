@@ -3,6 +3,7 @@ import { ItemIcon, ItemPicker, blockEntry, isBlock, itemName, type ItemIndex } f
 import { REMOVE } from '@/lib/schematic';
 import type { ReplaceFavorite } from '@/entities/schematic';
 import { cx } from '@/shared/lib';
+import { Button } from '@/shared/ui';
 import section from '../SchematicsSection.module.css';
 import styles from '../SchematicsPage.module.css';
 
@@ -74,9 +75,9 @@ export function SchematicsBlockList({
                       }}
                     />
                   </div>
-                  <button className="btn ghost sm icon" onClick={() => onPick(null)} aria-label="Отмена">
+                  <Button variant="ghost" size="sm" icon onClick={() => onPick(null)} aria-label="Отмена">
                     <X size={15} />
-                  </button>
+                  </Button>
                 </div>
               ) : to === REMOVE ? (
                 <>
@@ -87,14 +88,16 @@ export function SchematicsBlockList({
                       <span className="faint small">принтер не будет ставить этот блок</span>
                     </span>
                   </span>
-                  <button
-                    className="btn ghost sm icon"
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon
                     onClick={() => onTarget(id, null)}
                     aria-label="Вернуть блок"
                     title="Вернуть блок"
                   >
                     <X size={15} />
-                  </button>
+                  </Button>
                 </>
               ) : to ? (
                 <>
@@ -116,24 +119,28 @@ export function SchematicsBlockList({
                   {(() => {
                     const fav = favorites?.find((f) => f.from === id && f.to === to);
                     return (
-                      <button
-                        className="btn ghost sm icon"
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon
                         onClick={() => onToggleFavorite(id, to)}
                         aria-label={fav ? 'Убрать из избранного' : 'В избранное'}
                         title={fav ? 'В избранном — нажмите, чтобы убрать' : 'В избранное (с умным дополнением)'}
                       >
                         <Star size={15} className={cx(styles.favStar, fav && styles.on)} />
-                      </button>
+                      </Button>
                     );
                   })()}
-                  <button
-                    className="btn ghost sm icon"
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon
                     onClick={() => onTarget(id, null)}
                     aria-label="Отменить замену"
                     title="Отменить замену"
                   >
                     <X size={15} />
-                  </button>
+                  </Button>
                   {(alts.get(id)?.length ?? 0) > 0 && (
                     <div className={styles.alts}>
                       <span className="faint small">ещё:</span>
@@ -174,17 +181,19 @@ export function SchematicsBlockList({
                       </span>
                     ) : null;
                   })()}
-                  <button className={cx('btn', 'ghost', 'sm', styles.choose)} onClick={() => onPick(id)}>
+                  <Button variant="ghost" size="sm" className={styles.choose} onClick={() => onPick(id)}>
                     Выбрать замену…
-                  </button>
-                  <button
-                    className="btn ghost sm icon"
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon
                     onClick={() => onTarget(id, REMOVE)}
                     aria-label="Убрать блок из схемы"
                     title="Убрать блок из схемы"
                   >
                     <Trash2 size={15} />
-                  </button>
+                  </Button>
                 </>
               )}
             </div>

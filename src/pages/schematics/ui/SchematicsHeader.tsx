@@ -1,4 +1,5 @@
 import { Upload } from 'lucide-react';
+import { Button } from '@/shared/ui';
 import styles from '../SchematicsPage.module.css';
 
 interface Props {
@@ -17,10 +18,10 @@ export function SchematicsHeader({ inputRef, onFiles }: Props) {
           никуда не загружаются.
         </p>
       </div>
-      <button className="btn primary" data-tour="schem-open" onClick={() => inputRef.current?.click()}>
+      <Button variant="primary" data-tour="schem-open" onClick={() => inputRef.current?.click()}>
         <Upload size={16} />
         Открыть .nbt
-      </button>
+      </Button>
       <input
         ref={inputRef}
         type="file"

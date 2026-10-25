@@ -185,18 +185,18 @@
   display: inline-flex;
 }
 
-.toolSplit > :global(.btn):first-child:not(:last-child) {
+.toolSplit > *:first-child:not(:last-child) {
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
 }
 
-.toolSplit > :global(.btn) + :global(.btn) {
+.toolSplit > * + * {
   margin-left: -1px;
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
 }
 
-.page :global(.btn).active {
+.page .active {
   border-color: var(--accent);
   background: var(--accent-soft);
 }

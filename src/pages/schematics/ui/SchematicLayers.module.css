@@ -200,12 +200,13 @@
   background: var(--surface-2);
 }
 
-.mode :global(.btn) {
+/* Кнопки вида — Button из shared/ui: у них больше нет глобального .btn, поэтому берём по месту */
+.mode > * {
   border-color: transparent;
   background: transparent;
 }
 
-.mode :global(.btn).on {
+.mode > .on {
   background: var(--surface);
   border-color: var(--border);
 }

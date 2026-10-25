@@ -4,7 +4,7 @@ import { replaceFavoritesStore } from '@/entities/schematic';
 import { deriveVariants } from '../model/replaceFavorites';
 import { blockEntry, isBlock, itemName, type ItemIndex, ItemIcon } from '@/shared/pack-data';
 import type { ReplaceFavorite } from '@/entities/schematic';
-import { Modal } from '@/shared/ui';
+import { Button, Modal } from '@/shared/ui';
 import { cx } from '@/shared/lib';
 import section from '../SchematicsSection.module.css';
 import styles from './SchematicFavorites.module.css';
@@ -55,14 +55,16 @@ export function FavoritesPanel({ favorites, items }: { favorites: ReplaceFavorit
                   не блок
                 </span>
               )}
-              <button
-                className="btn ghost sm icon"
+              <Button
+                variant="ghost"
+                size="sm"
+                icon
                 aria-label="Убрать из избранного"
                 title="Убрать из избранного"
                 onClick={() => replaceFavoritesStore.remove(f.id)}
               >
                 <Trash2 size={15} />
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
@@ -124,12 +126,12 @@ export function SmartAddDialog({
       footer={
         <>
           <span className="faint small grow">Отмеченные замены будут добавлены в избранное и применены к схемам</span>
-          <button className="btn ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             Отмена
-          </button>
-          <button className="btn primary" onClick={save}>
+          </Button>
+          <Button variant="primary" onClick={save}>
             Добавить
-          </button>
+          </Button>
         </>
       }
     >
@@ -198,11 +200,11 @@ export function ApplyFavoritesDialog({
               ? `У ${multi} блоков несколько вариантов — выберите нужный`
               : 'Снимите галочку, чтобы пропустить блок'}
           </span>
-          <button className="btn ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             Отмена
-          </button>
-          <button
-            className="btn primary"
+          </Button>
+          <Button
+            variant="primary"
             disabled={picked.length === 0}
             onClick={() => {
               onApply(picked.map((r) => ({ from: r.from, to: choice.get(r.from)! })));
@@ -210,7 +212,7 @@ export function ApplyFavoritesDialog({
             }}
           >
             Подставить ({picked.length})
-          </button>
+          </Button>
         </>
       }
     >

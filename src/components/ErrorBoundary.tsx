@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react';
+import { Button } from '@/shared/ui';
 
 interface State {
   error: Error | null;
@@ -26,9 +27,9 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
           Обычно помогает перезагрузка — например, если сайт обновился, пока вкладка была открыта.
         </p>
         <pre>{error.message}</pre>
-        <button className="btn primary" onClick={() => location.reload()}>
+        <Button variant="primary" onClick={() => location.reload()}>
           Перезагрузить
-        </button>
+        </Button>
       </div>
     );
   }
