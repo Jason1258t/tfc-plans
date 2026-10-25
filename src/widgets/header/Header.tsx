@@ -2,12 +2,12 @@ import { Bell, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { firebaseEnabled } from '@/shared/api';
-import { lastSeenUpdate, usePackUpdates } from '@/pages/updates/model/packUpdates';
+import { lastSeenUpdate, usePackUpdates } from '@/entities/pack-update';
 import styles from './Header.module.css';
-import { OnboardingMenu } from './Onboarding';
+import { OnboardingMenu } from '@/widgets/onboarding';
 import { ItemIcon, ItemIdSearch } from '@/shared/pack-data';
 import { Modal, tooltipHandlers } from '@/shared/ui';
-import { SyncBadge } from './SyncBadge';
+import { SyncBadge } from '@/components/SyncBadge';
 
 interface Props {
   nick: string;

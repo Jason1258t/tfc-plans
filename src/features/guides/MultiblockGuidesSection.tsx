@@ -1,5 +1,5 @@
-import { BASE_DOCS, BASE_VALUES } from '../../lib/guideScope';
-import { MultiblockEmbed } from '../MultiblocksTab';
+import { BASE_DOCS, BASE_VALUES } from '@/lib/guideScope';
+import { MultiblockEmbed } from '@/features/reference-tabs';
 import type { GuideKit } from './GuideBody';
 import { GuidesSection } from './GuidesSection';
 

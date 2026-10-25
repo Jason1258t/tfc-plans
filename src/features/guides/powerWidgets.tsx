@@ -1,5 +1,5 @@
-import { alternatorLoad } from '../../lib/power';
-import { num } from '../../lib/guideFormat';
+import { alternatorLoad } from '@/lib/power';
+import { num } from '@/lib/guideFormat';
 import type { Widget } from './GuideBody';
 
 /**

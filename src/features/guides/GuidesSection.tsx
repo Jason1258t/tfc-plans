@@ -1,6 +1,6 @@
 import { ArrowLeft, BookOpen, Eye, EyeOff, History, Pencil, Plus } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { guidesEnabled, subscribeGuides } from '../../data/guides';
+import { guidesEnabled, subscribeGuides } from '@/data/guides';
 import { readNick } from '@/shared/lib/nick';
 import { cx } from '@/shared/lib';
 import type { Guide, GuideChecked } from '@/entities/guide';

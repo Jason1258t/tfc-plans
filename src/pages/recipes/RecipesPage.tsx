@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { KubejsConstructor } from '@/components/KubejsConstructor';
-import { Modal, PackSection } from '@/shared/ui';
-import { recipeActions, RecipeBrowser } from '@/components/RecipeCatalog';
+import { Modal } from '@/shared/ui';
+import { PackSection } from '@/widgets/pack-nav';
+import { recipeActions, RecipeBrowser } from '@/widgets/recipe-browser';
 import { useNick } from '@/entities/user';
 import { datapacksStore } from '@/entities/datapack';
 import { entryFromRecipe, entryWithId } from '@/lib/datapack';

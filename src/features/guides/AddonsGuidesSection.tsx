@@ -1,4 +1,4 @@
-import { BASE_DOCS, BASE_VALUES } from '../../lib/guideScope';
+import { BASE_DOCS, BASE_VALUES } from '@/lib/guideScope';
 import type { GuideKit } from './GuideBody';
 import { GuidesSection } from './GuidesSection';
 

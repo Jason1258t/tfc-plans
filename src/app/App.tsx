@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
-import { Header } from '@/components/Header';
-import { Onboarding } from '@/components/Onboarding';
+import { Header } from '@/widgets/header';
+import { Onboarding } from '@/widgets/onboarding';
 import { NickDialog } from '@/components/NickDialog';
 import { TooltipLayer } from '@/shared/ui';
 import { useStartData } from '@/app';

@@ -23,7 +23,7 @@ import {
   type DatapackRisk,
   type ModRef,
   type PackUpdate,
-} from './model/packUpdates';
+} from '@/entities/pack-update';
 import { cx, timeAgo } from '@/shared/lib';
 import type { Datapack } from '@/entities/datapack';
 import sectionStyles from './UpdatesSection.module.css';

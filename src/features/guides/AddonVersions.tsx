@@ -6,8 +6,8 @@ import {
   saveAddonVersion,
   subscribeAddonVersions,
   type AddonVersionEdit,
-} from '../../data/addonVersions';
-import type { Addon } from '../../lib/addons';
+} from '@/data/addonVersions';
+import type { Addon } from '@/lib/addons';
 import {
   STATUS_LABEL,
   STATUS_TITLE,
@@ -15,12 +15,12 @@ import {
   type AddonVersion,
   type AddonVersionRevision,
   type AddonVersionStatus,
-} from '../../lib/addonVersions';
+} from '@/lib/addonVersions';
 import { readNick } from '@/shared/lib/nick';
 import { cx } from '@/shared/lib';
 import type { GuideChecked } from '@/entities/guide';
-import { Markdown } from '../Markdown';
-import { MarkdownField } from '../MarkdownField';
+import { Markdown } from '@/components/Markdown';
+import { MarkdownField } from '@/components/MarkdownField';
 import { Modal } from '@/shared/ui';
 import { CHECKED } from './guideMeta';
 import { CheckedBadge } from './GuidesSection';

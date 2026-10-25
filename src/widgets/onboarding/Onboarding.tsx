@@ -9,8 +9,8 @@ import {
   resetOnboarding,
   setOnboardingOff,
   subscribeOnboarding,
-} from '../data/onboarding';
-import { requestTour, tourFor, tourRequests, WELCOME, type Tour, type TourStep } from '../lib/onboarding';
+} from '@/data/onboarding';
+import { requestTour, tourFor, tourRequests, WELCOME, type Tour, type TourStep } from '@/lib/onboarding';
 import { cx } from '@/shared/lib';
 import styles from './Onboarding.module.css';
 

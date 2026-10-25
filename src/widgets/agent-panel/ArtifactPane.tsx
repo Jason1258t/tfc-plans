@@ -5,18 +5,18 @@ import { useArtifacts } from '@/entities/artifact';
 import { useFiles } from '@/entities/file';
 import { useTasks } from '@/entities/task';
 import { artifactsStore } from '@/entities/artifact';
-import { filesEnabled } from '../lib/files';
-import { removeOrphanImages } from '../lib/planImages';
+import { filesEnabled } from '@/lib/files';
+import { removeOrphanImages } from '@/lib/planImages';
 import { cx, timeAgo } from '@/shared/lib';
 import type { Artifact } from '@/entities/artifact';
 import { AgentPanel } from './AgentPanel';
 import styles from './ArtifactPane.module.css';
 import { ItemPicker } from '@/shared/pack-data';
-import type { LiveMarkdownHandle } from './LiveMarkdown';
-import { Markdown, itemToken, toggleTaskLine } from './Markdown';
-import { useTextImages } from './useTextImages';
+import type { LiveMarkdownHandle } from '@/components/LiveMarkdown';
+import { Markdown, itemToken, toggleTaskLine } from '@/components/Markdown';
+import { useTextImages } from '@/components/useTextImages';
 
-const LiveMarkdown = lazy(() => import('./LiveMarkdown'));
+const LiveMarkdown = lazy(() => import('@/components/LiveMarkdown'));
 
 type View = 'edit' | 'split' | 'preview';
 
