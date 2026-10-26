@@ -1,0 +1,7 @@
+/* Пустой блок. Переехал из app/theme/utilities.css (`.empty`) */
+
+.empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text-3);
+}

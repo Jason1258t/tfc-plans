@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { guideRevisions } from '@/data/guides';
 import { cx } from '@/shared/lib';
 import type { Guide, GuideRevision } from '@/entities/guide';
-import { Button, Modal } from '@/shared/ui';
+import { Button, EmptyState, Modal } from '@/shared/ui';
 import { GuideBody, type GuideKit } from './GuideBody';
 import styles from './Guides.module.css';
 
@@ -32,9 +32,9 @@ export function GuideHistory({
       {error ? (
         <div className={cx(styles.guideErrors, 'small')}>{error}</div>
       ) : !list ? (
-        <div className="empty">Загружаю…</div>
+        <EmptyState>Загружаю…</EmptyState>
       ) : !list.length ? (
-        <div className="empty">Версий нет — статья сохранена до того, как появилась история</div>
+        <EmptyState>Версий нет — статья сохранена до того, как появилась история</EmptyState>
       ) : (
         <div className={styles.guideHistory}>
           <ul className={styles.guideHistoryList}>

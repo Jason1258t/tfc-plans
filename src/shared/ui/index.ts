@@ -7,6 +7,7 @@ export { Select } from './Select';
 export { Textarea } from './Textarea';
 export { Modal } from './Modal';
 export { Search } from './Search';
+export { EmptyState } from './EmptyState';
 export { ErrorBox } from './ErrorBox';
 export { Tag } from './Tag';
 export { ImpDot, ImpPill } from './Importance';
