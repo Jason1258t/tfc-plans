@@ -89,7 +89,11 @@ one of the names above (checked: a hand-made local file stayed invisible while `
           "TFC_AGENT_NICK": "OpenCode"
         }
       },
-      "tfc-plans-dev": { "type": "local", "command": ["node", "scripts/mcp-dev/server.mjs"] }
+      "tfc-plans-dev": {
+        "type": "local",
+        "command": ["node", "scripts/mcp-dev/server.mjs"],
+        "environment": { "TFC_AGENT_NICK": "OpenCode" }
+      }
     }
   }
 }
@@ -103,7 +107,7 @@ Outside the repo tree — the global config with absolute paths (CLI keeps the r
 opencode mcp add --global tfc-pack \
   --env TFC_FIRESTORE_KEY=/abs/home/.config/tfc/mcp-firestore.json --env TFC_AGENT_NICK=OpenCode \
   -- node /abs/path/to/tfc-taskmanager/scripts/mcp/server.mjs
-opencode mcp add --global tfc-plans-dev \
+opencode mcp add --global tfc-plans-dev --env TFC_AGENT_NICK=OpenCode \
   -- node /abs/path/to/tfc-taskmanager/scripts/mcp-dev/server.mjs
 opencode mcp list      # ✓ tfc-pack connected
 ```
@@ -131,16 +135,18 @@ running app picks the patch up in place (no restart) and the tools appear as `mc
           TFC_AGENT_NICK: DeepSeek
 ```
 
-A second entry with `serverName: tfc-plans-dev` and `scripts/mcp-dev/server.mjs` adds the git tools. Checked: both
+A second entry with `serverName: tfc-plans-dev`, `scripts/mcp-dev/server.mjs` and the same `env` (`TFC_AGENT_NICK:
+DeepSeek`) adds the git tools and the dev log. Checked: both
 servers connected, Firestore read through `groups_list`, `git_state` lists the worktrees. Skills: DSH loads
 `.claude/skills` by name.
 
 **Others** — any harness with stdio MCP: same command, args and env; skills load if it scans `.claude/skills` or
 `.agents/skills`, otherwise AGENTS.md tells it to open `SKILL.md` by hand.
 
-**`tfc-plans-dev`** (git/workflow) — a second stdio server `node <repo>/scripts/mcp-dev/server.mjs`, no env needed (it
-finds the main checkout via `git rev-parse --git-common-dir`; `TFC_PLANS_REPO` overrides). Add it as a second `mcpServers`
-entry next to `tfc-pack`. Tools: `git_state`, `worktree_add`, `commit`, `ship`, `worktree_remove` — see [mcp-dev.md](mcp-dev.md).
+**`tfc-plans-dev`** (git/workflow + dev work log) — a second stdio server `node <repo>/scripts/mcp-dev/server.mjs`. It
+finds the main checkout via `git rev-parse --git-common-dir` (`TFC_PLANS_REPO` overrides). **Set `TFC_AGENT_NICK` here
+too** — the dev log (`dev_*`) signs every write with it, and without it the server falls back to `Claude`. Add it as a
+second `mcpServers` entry next to `tfc-pack`, with the same `env` (`TFC_AGENT_NICK: "<your name>"`). Tools: `git_state`, `worktree_add`, `commit`, `ship`, `worktree_remove` — see [mcp-dev.md](mcp-dev.md).
 
 Personal configs (absolute paths, keys) stay out of git; commit a shared one only when it has no machine paths.
 
