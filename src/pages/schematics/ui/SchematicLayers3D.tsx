@@ -21,7 +21,7 @@ interface Props {
 /** 3D-вид схемы (three.js отдельным куском) и подсказка управления; пока грузится — надпись */
 export function SchematicLayers3D({ schematic, replace, maxY, textured, selected, onPick, onHover, onFrame }: Props) {
   return (
-    <Suspense fallback={<div className={cx(styles.view3d, 'faint', 'small')}>Загружаю 3D…</div>}>
+    <Suspense fallback={<div className={cx(styles.view3D, 'faint', 'small')}>Загружаю 3D…</div>}>
       <SchematicView3D
         schematic={schematic}
         replace={replace}

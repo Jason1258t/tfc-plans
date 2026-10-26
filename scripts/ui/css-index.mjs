@@ -339,7 +339,10 @@ export function buildIndex(root) {
 }
 
 /** Ключ класса в объекте CSS-модуля: vite css.modules.localsConvention = 'camelCaseOnly' */
-export const moduleKey = (name) => name.replace(/[-_]+([a-zA-Z0-9])/g, (_, c) => c.toUpperCase());
+export const moduleKey = (name) =>
+  name
+    .replace(/[-_]+([a-zA-Z0-9])/g, (_, c) => c.toUpperCase())
+    .replace(/([0-9])([a-z])/g, (_, n, c) => n + c.toUpperCase());
 
 /**
  * Проверка CSS-модулей: styles.x, которого нет в .module.css (опечатка → пустой класс без ошибки),
