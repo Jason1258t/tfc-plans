@@ -146,14 +146,16 @@ function Calc({
                 </option>
               ))}
             </Select>
-            <button
-              className="btn ghost sm icon"
+            <Button
+              variant="ghost"
+              size="sm"
+              icon
               title="Убрать"
               disabled={rows.length === 1}
               onClick={() => setRows((x) => x.filter((_, k) => k !== i))}
             >
               <X size={14} />
-            </button>
+            </Button>
           </div>
         ))}
       </div>

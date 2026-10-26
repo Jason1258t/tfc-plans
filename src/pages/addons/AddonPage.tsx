@@ -1,8 +1,9 @@
 import { ArrowLeft } from 'lucide-react';
 import { lazy, Suspense } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { AddonHead, AddonInstall } from '@/features/reference-tabs';
 import { addonById } from '@/lib/addons';
+import { ButtonLink } from '@/shared/ui';
 import '@/pages/reference/ReferenceShared.css';
 import '@/features/reference-tabs/PowerShared.css';
 import shell from '@/pages/reference/ReferenceShell.module.css';
@@ -16,9 +17,9 @@ export function AddonPage() {
   const a = addonById(id);
   return (
     <main className={shell.page}>
-      <Link className="btn ghost small power-back" to="/addons">
+      <ButtonLink variant="ghost" size="sm" className="power-back" to="/addons">
         <ArrowLeft size={14} /> Все аддоны
-      </Link>
+      </ButtonLink>
       {!a ? (
         <div className="empty">Аддона «{id}» нет — возможно, ссылка устарела</div>
       ) : (

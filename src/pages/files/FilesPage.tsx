@@ -158,7 +158,7 @@ export function FilesPage() {
         </p>
       )}
       {error && <ErrorBox>{error}</ErrorBox>}
-      {error && <div className="error-box">{error}</div>}
+      {error && <ErrorBox>{error}</ErrorBox>}
 
       {section !== 'files' ? (
         loading ? (

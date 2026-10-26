@@ -15,6 +15,7 @@ import { itemName, useItems, ItemIcon } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
 // Стили справочника временно берём из его будущей общей папки — AddonsTab переедет в entities/addon
 import './PowerShared.css';
+import { ButtonLink } from '@/shared/ui';
 
 const AddonsGuidesSection = lazy(() => import('@/features/guides/AddonsGuidesSection'));
 
@@ -78,9 +79,9 @@ function AddonList({ onGuides }: { onGuides: () => void }) {
           <AddonPreview a={a} />
           <p>{a.summary}</p>
           <AddonInstall a={a} />
-          <Link className="btn ghost small" to={`/addons/${a.id}`}>
+          <ButtonLink variant="ghost" size="sm" to={`/addons/${a.id}`}>
             Подробнее: блоки, рецепты, что проверено <ChevronRight size={14} />
-          </Link>
+          </ButtonLink>
         </section>
       ))}
     </>
@@ -100,9 +101,9 @@ export function AddonHead({ a, title }: { a: Addon; title: ReactNode }) {
           </a>
         </span>
       </div>
-      <a className="btn small" href={a.file} download>
+      <ButtonLink size="sm" href={a.file} download>
         <Download size={14} /> Скачать jar
-      </a>
+      </ButtonLink>
     </div>
   );
 }
