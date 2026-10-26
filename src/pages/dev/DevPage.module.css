@@ -66,8 +66,23 @@
   border-top: 1px solid var(--border);
 }
 
+.item {
+  display: flex;
+  align-items: center;
+}
+
+.item:hover {
+  background: var(--surface-2);
+}
+
+.copy {
+  flex: none;
+  margin-right: 8px;
+}
+
 .row {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   display: grid;
   grid-template-columns: 44px 84px minmax(0, 1fr) auto;
   align-items: center;
@@ -79,10 +94,6 @@
   font: inherit;
   text-align: left;
   cursor: pointer;
-}
-
-.row:hover {
-  background: var(--surface-2);
 }
 
 .closed .title {

@@ -16,6 +16,7 @@ import {
   type DevTaskFull,
   type TaskPatch,
 } from '../model/api';
+import { CopyRef } from './CopyRef';
 import { DevDocDialog } from './DevDocDialog';
 import styles from './DevTaskDialog.module.css';
 
@@ -160,6 +161,7 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
       wide
       onClose={() => (!dirty || confirm('Закрыть без сохранения изменений?')) && onClose()}
       title={title}
+      actions={t && <CopyRef task={t} label />}
       footer={
         <>
           {t && (

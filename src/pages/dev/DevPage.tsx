@@ -6,6 +6,7 @@ import { cx, timeAgo } from '@/shared/lib';
 import { Button, ErrorBox, Search, Segmented, Select, Tag } from '@/shared/ui';
 import { AREAS, KINDS, label, STATUSES, type DevStatus, type DevTask } from './model/api';
 import { useDevTasks } from './model/useDevTasks';
+import { CopyRef } from './ui/CopyRef';
 import { DevTaskDialog } from './ui/DevTaskDialog';
 import styles from './DevPage.module.css';
 
@@ -165,7 +166,7 @@ export function DevPage() {
 function DevRow({ task: t, onOpen }: { task: DevTask; onOpen: () => void }) {
   const done = t.checklist.filter((c) => c.done).length;
   return (
-    <li>
+    <li className={styles.item}>
       <button
         className={cx(styles.row, (t.status === 'done' || t.status === 'dropped') && styles.closed)}
         onClick={onOpen}
@@ -198,6 +199,8 @@ function DevRow({ task: t, onOpen }: { task: DevTask; onOpen: () => void }) {
           <span className={styles.when}>{timeAgo(t.updatedAt)}</span>
         </span>
       </button>
+      {/* Рядом с кнопкой строки, а не внутри: кнопка в кнопке недопустима */}
+      <CopyRef task={t} className={styles.copy} />
     </li>
   );
 }
