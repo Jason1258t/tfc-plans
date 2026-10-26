@@ -3,7 +3,7 @@ import { ItemIcon, ItemPicker, blockEntry, isBlock, itemName, type ItemIndex } f
 import { REMOVE } from '@/lib/schematic';
 import type { ReplaceFavorite } from '@/entities/schematic';
 import { cx } from '@/shared/lib';
-import { Button } from '@/shared/ui';
+import { Button, Tag } from '@/shared/ui';
 import section from '../SchematicsSection.module.css';
 import styles from '../SchematicsPage.module.css';
 
@@ -56,7 +56,7 @@ export function SchematicsBlockList({
                 </span>
                 <code className={section.id}>{id}</code>
               </span>
-              {!known && <span className="tag">нет в сборке</span>}
+              {!known && <Tag>нет в сборке</Tag>}
               <span className={styles.count}>×{count}</span>
             </div>
             <ArrowRight size={16} className={cx(section.arrow, to && section.arrowAccent)} />
