@@ -227,7 +227,7 @@ function MbViewer({
         )}
       </div>
       {showFormed ? (
-        <Suspense fallback={<div className="mb-formed empty">Загружаю просмотр…</div>}>
+        <Suspense fallback={<div className={cx(styles.formedFallback, 'empty')}>Загружаю просмотр…</div>}>
           <MultiblockFormed formed={formed} size={m.size} mirrored={mirrored} />
           <p className={cx('faint', 'small', styles.formedFoot)}>
             Модель собранной машины из jar мода, поставлена на место постройки
@@ -395,7 +395,7 @@ function Iso({
       >
         <RotateCcw size={14} />
       </Button>
-      <span className="mb-iso-hint faint small">тяните, чтобы повернуть</span>
+      <span className={cx(styles.isoHint, 'faint', 'small')}>тяните, чтобы повернуть</span>
     </div>
   );
 }

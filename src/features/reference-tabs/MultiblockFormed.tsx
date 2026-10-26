@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { ErrorBox } from '@/shared/ui';
+import { cx } from '@/shared/lib';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import type { MbFormed } from '../../lib/multiblocks';
 import { newRenderer } from '../../lib/schematicRender';
+import styles from './MultiblockFormed.module.css';
 
 /**
  * Итоговый вид мультиблока: модель собранной машины из jar (OBJ + текстуры, scripts/mods/multiblock-models.mjs),
@@ -178,10 +180,10 @@ export default function MultiblockFormed({
   }, [mirrored, size]);
 
   return (
-    <div className="mb-formed" ref={wrapRef}>
-      {loading && !error && <div className="mb-formed-note faint small">Загружаю модель…</div>}
-      {error && <ErrorBox className="mb-formed-note">{error}</ErrorBox>}
-      <span className="mb-iso-hint faint small">ЛКМ — повернуть, ПКМ — сдвинуть, колесо — ближе</span>
+    <div className={styles.formed} ref={wrapRef}>
+      {loading && !error && <div className={cx(styles.formedNote, 'faint', 'small')}>Загружаю модель…</div>}
+      {error && <ErrorBox className={styles.formedNote}>{error}</ErrorBox>}
+      <span className={cx(styles.isoHint, 'faint', 'small')}>ЛКМ — повернуть, ПКМ — сдвинуть, колесо — ближе</span>
     </div>
   );
 }

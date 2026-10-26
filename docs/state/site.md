@@ -78,11 +78,11 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 - 2026-10-26: бейдж мода в списке замен схем переведён на `Tag`; открытая схема с заменами — desktop/mobile 0,000%. Разметка `.tag` нулевая, глобальное правило удалено; статус `в работе` переведён на локальный селектор, `:global(.tag)` не осталось. Одноимённые `.tag` в MealsTab остаются локальными CSS Modules.
 - 2026-10-26: CSS-аудит страницы «Разработка» исправлен: удалён несуществующий `styles.when`, динамические классы статуса и записей журнала перечислены явно. `ui:classes --check` теперь проходит. Снимки dev/окна задачи/журнала — без визуальных изменений; небольшая разница только в обновившейся подписи «N мин. назад».
 - Left: **2 global CSS outside `src/app/theme`** — `ReferenceShared.css`/`PowerShared.css`, общие части справочника
-  (их берут мультиблоки, гайды и аддоны; переедут вместе с `entities/guide` и мультиблоками). `legacy-ui.css` пока
-  держит `.btn/.input/.tag/.empty/.error-box/.imp-*` — их ещё используют страницы; каждый новый компонент `shared/ui`
-  уменьшает этот набор.
+  (их берут мультиблоки, гайды и аддоны; переедут вместе с потребителями). В `legacy-ui.css` остались общие стили
+  прогресса, иконки предмета и анимация появления; `.empty` — утилита в `utilities.css`.
 - 2026-10-26: `MultiblockFormed` перемещён из `components` в `features/reference-tabs`. Стили пока остаются в
-  `MultiblocksTab.module.css` через `:global`; следующий отдельный шаг — CSS Module компонента, затем перенос
+  `MultiblockFormed.module.css`; стили 3D-контейнера, состояния загрузки и подсказки локальны. Снимки итогового вида
+  `reference.multiblocks.formed` desktop/mobile — 0,000%; `classes.mjs --check` проходит. Следующий шаг — перенос
   `schematicRender` в `entities/schematic`.
 
 ## Documents (file storage)
