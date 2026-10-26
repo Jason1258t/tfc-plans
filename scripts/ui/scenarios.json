@@ -129,6 +129,21 @@
       "path": "/schematics"
     },
     {
+      "name": "schematics.block-replacements",
+      "path": "/schematics",
+      "waitFor": "section[data-tour=\"schem-library\"] ul li",
+      "actions": [
+        {
+          "eval": "(() => { const row = [...document.querySelectorAll('section[data-tour=\"schem-library\"] ul li')].find((li) => /замен [1-9]/.test(li.textContent)); const button = row?.querySelector('button[title^=\"Открыть\"]'); button?.click(); return Boolean(button); })()"
+        },
+        {
+          "wait": "input[placeholder='Фильтр блоков']"
+        }
+      ],
+      "fullPage": false,
+      "note": "схема с заменами блоков из библиотеки"
+    },
+    {
       "name": "datapacks",
       "path": "/datapacks"
     },
