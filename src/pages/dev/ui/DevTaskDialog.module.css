@@ -52,6 +52,11 @@
   font-size: 12px;
 }
 
+.footerSpacer {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .checklist,
 .docs,
 .log {
