@@ -48,9 +48,7 @@ export function FavoritesPanel({ favorites, items }: { favorites: ReplaceFavorit
               <ArrowRight size={15} className={section.arrow} />
               <Block id={f.to} items={items} />
               {items && !isBlock(items, f.to) && (
-                <Tag title="Это предмет, а не блок: в схеме он стал бы пустотой. Замена не подставляется">
-                  не блок
-                </Tag>
+                <Tag title="Это предмет, а не блок: в схеме он стал бы пустотой. Замена не подставляется">не блок</Tag>
               )}
               <Button
                 variant="ghost"
