@@ -14,7 +14,7 @@ import {
   ItemPicker,
 } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
-import { Modal, Search, Segmented, Button, Select } from '@/shared/ui';
+import { Modal, Search, Segmented, Button, Select, Tag } from '@/shared/ui';
 import { track, useSearchTrack } from '@/shared/api';
 import styles from './RecipeCatalog.module.css';
 
@@ -200,7 +200,7 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
                       <code className={styles.catId}>{r.i}</code>
                     </span>
                     <StatusBadges r={r} />
-                    {r.t && <span className="tag">{r.t}</span>}
+                    {r.t && <Tag className={styles.recipeType}>{r.t}</Tag>}
                     <span className={cx('faint', 'small', styles.catSrc)} title={r.s}>
                       {r.s.split(/[-_](?=\d)/)[0]}
                     </span>
