@@ -180,6 +180,14 @@
       "note": "тайлы карты догружаются — сравнивать по рамке, не по карте"
     },
     {
+      "name": "reference.map.settings",
+      "path": "/reference?tab=map",
+      "waitFor": "main [role=tablist]",
+      "actions": [{ "click": "button[title=\"Профиль и масштаб мира\"]" }, { "wait": "[role=dialog]" }],
+      "fullPage": false,
+      "note": "настройки профиля и масштабов мира"
+    },
+    {
       "name": "addons",
       "path": "/addons"
     },

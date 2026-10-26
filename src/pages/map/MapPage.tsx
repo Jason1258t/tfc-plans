@@ -1,7 +1,7 @@
 import { Copy, Check, Settings, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Modal, Segmented, Button, Input, Select } from '@/shared/ui';
+import { Modal, Segmented, Button, Input, Label, Select } from '@/shared/ui';
 import { WorldMap, type MapMarker } from './ui/WorldMap';
 import { useNick } from '@/entities/user';
 import { useGroups } from '@/entities/group';
@@ -496,7 +496,7 @@ function WorldSettingsDialog({ geo, world, onClose }: { geo: GeoData; world: Wor
       )}
       <fieldset className={styles.fieldset} disabled={!!world.fromConfig}>
         <label className={styles.formRow}>
-          <span className="label">Профиль</span>
+          <Label>Профиль</Label>
           <Select value={draft.profile} onChange={(e) => setDraft({ ...draft, profile: e.target.value })}>
             {profiles.map((p) => (
               <option key={p.id} value={p.id}>
@@ -507,7 +507,7 @@ function WorldSettingsDialog({ geo, world, onClose }: { geo: GeoData; world: Wor
         </label>
         <div className={styles.formGrid}>
           <label className={styles.formRow}>
-            <span className="label">horizontal_scale</span>
+            <Label>horizontal_scale</Label>
             <Input
               inputMode="numeric"
               placeholder={String(base?.horizontalScale ?? '')}
@@ -516,7 +516,7 @@ function WorldSettingsDialog({ geo, world, onClose }: { geo: GeoData; world: Wor
             />
           </label>
           <label className={styles.formRow}>
-            <span className="label">vertical_scale</span>
+            <Label>vertical_scale</Label>
             <Input
               inputMode="numeric"
               placeholder={String(base?.verticalScale ?? '')}
