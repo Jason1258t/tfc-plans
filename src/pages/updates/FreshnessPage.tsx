@@ -301,7 +301,14 @@ function ModRow({ mod: m }: { mod: FreshMod }) {
         {m.note && <div className="faint small">{m.note}</div>}
       </div>
       {m.project?.url && m.source && m.source !== 'own' && (
-        <ButtonLink variant="ghost" size="sm" className={styles.src} href={m.project.url} target="_blank" rel="noreferrer">
+        <ButtonLink
+          variant="ghost"
+          size="sm"
+          className={styles.src}
+          href={m.project.url}
+          target="_blank"
+          rel="noreferrer"
+        >
           {SOURCE_LABEL[m.source]}
           <ExternalLink size={12} />
         </ButtonLink>
