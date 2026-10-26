@@ -18,7 +18,7 @@ import {
   ItemIcon,
 } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
-import { Button, Input, Modal, Segmented } from '@/shared/ui';
+import { Button, Input, Label, Modal, Segmented } from '@/shared/ui';
 import styles from './TagEditor.module.css';
 
 interface Props {
@@ -213,9 +213,7 @@ export function TagEditor({ cat, kind, tagId, existing, onSave, onClose, saveLab
       <div className={styles.tagEditor}>
         {!tagId && (
           <div>
-            <label className="label" htmlFor="te-id">
-              Id нового тега
-            </label>
+            <Label htmlFor="te-id">Id нового тега</Label>
             <Input
               id="te-id"
               className="mono-input"
