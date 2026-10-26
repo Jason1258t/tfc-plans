@@ -11,10 +11,10 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 
 ## Styles (CSS Modules migration, started 2026-10-24)
 
-**Где остановились (26 октября, передача смены).** `.btn`, `.input`, `.imp-dot`, `.imp-pill` — 0 и в разметке, и в теме;
-всё на `Button`/`ButtonLink`/`Input`/`Select`/`Textarea`/`Tag`/`ImpDot`/`ImpPill`/`Label`/`ErrorBox`. Остаток и правила
-работы — [docs/plans/handoff-2026-10-26.md](plans/handoff-2026-10-26.md): `.label` (0 в разметке), `.tag` (0 в разметке и удалён из темы), мёртвые
-правила в `pages/dev`, хвост `lib/schematic*` (отложен осознанно).
+**Где остановились (26 октября).** `.btn`, `.input`, `.imp-dot`, `.imp-pill`, `.label`, `.tag` и `.error-box` удалены из
+глобальной темы; разметка использует `Button`/`ButtonLink`/`Input`/`Select`/`Textarea`/`Tag`/`ImpDot`/`ImpPill`/`Label`/
+`ErrorBox`. `ui:classes --check` чистый. Остаток и правила работы —
+[docs/plans/handoff-2026-10-26.md](plans/handoff-2026-10-26.md): только осознанно отложенный хвост `lib/schematic*`.
 
 - Plan and rules — skill `css-modules`: tokens/base in `src/app/theme`, repeated UI in `src/shared/ui`, page styles in
   `X.module.css` (`localsConvention: 'camelCaseOnly'` in `vite.config.ts`). Tools: `scripts/ui/classes.mjs` (class
