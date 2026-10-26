@@ -212,6 +212,13 @@
       "waitFor": "main [role=tablist]"
     },
     {
+      "name": "reference.multiblocks.formed",
+      "path": "/reference?tab=multiblocks",
+      "waitFor": "main [role=tablist]",
+      "actions": [{ "clickText": "Итог" }, { "wait": "canvas" }],
+      "note": "итоговый вид мультиблока"
+    },
+    {
       "name": "reference.guides",
       "path": "/reference?tab=guides",
       "waitFor": "main [role=tablist]"

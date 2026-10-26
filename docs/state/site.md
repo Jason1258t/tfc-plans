@@ -81,6 +81,9 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
   (их берут мультиблоки, гайды и аддоны; переедут вместе с `entities/guide` и мультиблоками). `legacy-ui.css` пока
   держит `.btn/.input/.tag/.empty/.error-box/.imp-*` — их ещё используют страницы; каждый новый компонент `shared/ui`
   уменьшает этот набор.
+- 2026-10-26: `MultiblockFormed` перемещён из `components` в `features/reference-tabs`. Стили пока остаются в
+  `MultiblocksTab.module.css` через `:global`; следующий отдельный шаг — CSS Module компонента, затем перенос
+  `schematicRender` в `entities/schematic`.
 
 ## Documents (file storage)
 
