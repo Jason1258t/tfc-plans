@@ -1,21 +1,5 @@
 /* Сегментированный переключатель переехал в shared/ui/Segmented.module.css */
 
-/* ------------------------------------------------------------------ прогресс */
-
-.progress {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--surface-3);
-  overflow: hidden;
-}
-
-.progress > span {
-  display: block;
-  height: 100%;
-  background: var(--accent);
-  border-radius: 2px;
-}
-
 /* ------------------------------------------------------------------ иконка предмета */
 
 .item-icon {

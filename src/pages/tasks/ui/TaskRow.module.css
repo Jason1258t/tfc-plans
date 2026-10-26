@@ -131,7 +131,7 @@
   width: 64px;
 }
 
-.metaProgress :global(.progress) {
+.metaProgressBar {
   width: 100%;
 }
 

@@ -11,7 +11,7 @@ import { checklistProgress, entryDone } from '../model/tasks';
 import { cx, timeAgo } from '@/shared/lib';
 import { PRIORITIES, type Task } from '@/entities/task';
 import { ItemIcon } from '@/shared/pack-data';
-import { ImpPill, Tag, tooltipHandlers } from '@/shared/ui';
+import { ImpPill, Progress, Tag, tooltipHandlers } from '@/shared/ui';
 import styles from './TaskRow.module.css';
 
 interface Props {
@@ -125,9 +125,7 @@ export function TaskRow({ task, selected, onOpen, onOpenDoc }: Props) {
           )}
           {!done && progress !== null && (
             <span className={styles.metaProgress} {...tooltipHandlers(`Чеклист: ${Math.round(progress * 100)}%`)}>
-              <span className="progress">
-                <span style={{ width: `${progress * 100}%` }} />
-              </span>
+              <Progress className={styles.metaProgressBar} value={progress * 100} />
             </span>
           )}
         </div>
