@@ -5,7 +5,7 @@ import { elo, pickPair, sortTasks, swapRatings } from '../model/tasks';
 import { PRIORITIES, type Task } from '@/entities/task';
 import styles from './CompareDialog.module.css';
 import { ItemIcon } from '@/shared/pack-data';
-import { Button, Modal } from '@/shared/ui';
+import { Button, ImpDot, ImpPill, Modal } from '@/shared/ui';
 
 interface Props {
   /** Задачи, участвующие в сравнении (текущий фильтр, без выполненных) */
@@ -57,9 +57,7 @@ export function CompareDialog({ tasks, onClose }: Props) {
               <button key={t.id} className={styles.cmpOption} onClick={() => choose(t, i === 0 ? b : a)}>
                 {t.icon && <ItemIcon id={t.icon} size={32} tip={false} />}
                 <span className={styles.cmpTitle}>{t.title}</span>
-                <span className="imp-pill" style={{ color: PRIORITIES[t.priority].color }}>
-                  {PRIORITIES[t.priority].label}
-                </span>
+                <ImpPill color={PRIORITIES[t.priority].color}>{PRIORITIES[t.priority].label}</ImpPill>
               </button>
             ))}
           </div>
@@ -78,7 +76,7 @@ export function CompareDialog({ tasks, onClose }: Props) {
           <ol className={styles.cmpRank}>
             {ranking.map((t, i) => (
               <li key={t.id}>
-                <span className="imp-dot" style={{ background: PRIORITIES[t.priority].color }} />
+                <ImpDot color={PRIORITIES[t.priority].color} />
                 <span className="grow">{t.title}</span>
                 <span className="faint">{t.rating}</span>
                 {i < ranking.length - 1 && (

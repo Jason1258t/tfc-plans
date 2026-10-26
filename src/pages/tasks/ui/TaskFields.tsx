@@ -1,5 +1,5 @@
 import { Boxes, Eye, Pencil, UserRound, X } from 'lucide-react';
-import { Button, Segmented, Input, Select, ErrorBox } from '@/shared/ui';
+import { Button, Segmented, Input, Select, ErrorBox, ImpDot } from '@/shared/ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGroups } from '@/entities/group';
 import { useNick, usePeople } from '@/entities/user';
@@ -193,7 +193,7 @@ export function TaskFields({
           options={PRIORITIES.map((p) => ({
             value: p.value,
             title: p.label,
-            icon: <span className="imp-dot" style={{ background: p.color }} />,
+            icon: <ImpDot color={p.color} />,
             label: p.label,
           }))}
         />

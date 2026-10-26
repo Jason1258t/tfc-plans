@@ -9,7 +9,7 @@ interface DotProps {
 
 /** Точка важности (цвет — из данных) */
 export function ImpDot({ color, className }: DotProps) {
-  return <span className={cx(styles.dot, className)} style={{ background: color }} />;
+  return <span className={cx(styles.dot, className)} style={{ background: color }} data-imp-dot />;
 }
 
 interface PillProps extends DotProps {
@@ -20,7 +20,7 @@ interface PillProps extends DotProps {
 /** Кружок важности с подписью и цветом из данных задачи */
 export function ImpPill({ color, className, children, title }: PillProps) {
   return (
-    <span className={cx(styles.pill, className)} style={{ color }} title={title}>
+    <span className={cx(styles.pill, className)} style={{ color }} title={title} data-imp-pill>
       {children}
     </span>
   );

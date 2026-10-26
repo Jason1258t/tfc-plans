@@ -11,7 +11,7 @@ import { checklistProgress, entryDone } from '../model/tasks';
 import { cx, timeAgo } from '@/shared/lib';
 import { PRIORITIES, type Task } from '@/entities/task';
 import { ItemIcon } from '@/shared/pack-data';
-import { tooltipHandlers } from '@/shared/ui';
+import { ImpPill, Tag, tooltipHandlers } from '@/shared/ui';
 import styles from './TaskRow.module.css';
 
 interface Props {
@@ -78,7 +78,7 @@ export function TaskRow({ task, selected, onOpen, onOpenDoc }: Props) {
         <div className={styles.taskLine}>
           {task.icon && <ItemIcon id={task.icon} size={20} />}
           <span className={styles.taskTitle}>{task.title}</span>
-          {task.status === 'doing' && <span className={cx('tag', styles.doing)}>в работе</span>}
+          {task.status === 'doing' && <Tag className={styles.doing}>в работе</Tag>}
           {pending && (
             <span
               className={styles.taskPending}
@@ -166,9 +166,9 @@ export function TaskRow({ task, selected, onOpen, onOpenDoc }: Props) {
           {copied ? <Check size={13} /> : <Copy size={13} />}
         </button>
         {!done && (
-          <span className="imp-pill" style={{ color: imp.color }} title={`Важность: ${imp.label}`}>
+          <ImpPill color={imp.color} title={`Важность: ${imp.label}`}>
             {imp.label}
-          </span>
+          </ImpPill>
         )}
       </div>
     </li>

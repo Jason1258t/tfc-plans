@@ -4,7 +4,7 @@ import { replaceFavoritesStore } from '@/entities/schematic';
 import { deriveVariants } from '../model/replaceFavorites';
 import { blockEntry, isBlock, itemName, type ItemIndex, ItemIcon } from '@/shared/pack-data';
 import type { ReplaceFavorite } from '@/entities/schematic';
-import { Button, Modal } from '@/shared/ui';
+import { Button, Modal, Tag } from '@/shared/ui';
 import { cx } from '@/shared/lib';
 import section from '../SchematicsSection.module.css';
 import styles from './SchematicFavorites.module.css';
@@ -48,12 +48,7 @@ export function FavoritesPanel({ favorites, items }: { favorites: ReplaceFavorit
               <ArrowRight size={15} className={section.arrow} />
               <Block id={f.to} items={items} />
               {items && !isBlock(items, f.to) && (
-                <span
-                  className="tag"
-                  title="Это предмет, а не блок: в схеме он стал бы пустотой. Замена не подставляется"
-                >
-                  не блок
-                </span>
+                <Tag title="Это предмет, а не блок: в схеме он стал бы пустотой. Замена не подставляется">не блок</Tag>
               )}
               <Button
                 variant="ghost"
