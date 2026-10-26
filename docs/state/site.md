@@ -71,7 +71,7 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 - 2026-10-26: `.label` → `Label` в настройках профиля и масштаба карты. Снимки до/после — 0,000% после повторного
   baseline на одинаковых данных; исходный diff поймал обновление настроек мира из Firestore. Осталось 3 разметки.
 - 2026-10-26: `.label` → `Label` в редакторе нового тега; desktop/mobile — 0,000%. Остались 2 общих компонента.
-- 2026-10-26: `.label` → `Label` в NickDialog и KubejsConstructor; три состояния (новый тег, смена ника, KubeJS) desktop/mobile — 0,000%. В разметке `.label` больше нет; правило темы ещё не удалено.
+- 2026-10-26: `.label` → `Label` в NickDialog и KubejsConstructor; три состояния (новый тег, смена ника, KubeJS) desktop/mobile — 0,000%. В разметке `.label` больше нет, правило удалено; снимки всех затронутых состояний desktop/mobile — 0,000%, `:global(.label)` не найден.
 - Left: **2 global CSS outside `src/app/theme`** — `ReferenceShared.css`/`PowerShared.css`, общие части справочника
   (их берут мультиблоки, гайды и аддоны; переедут вместе с `entities/guide` и мультиблоками). `legacy-ui.css` пока
   держит `.btn/.input/.tag/.empty/.error-box/.imp-*` — их ещё используют страницы; каждый новый компонент `shared/ui`
