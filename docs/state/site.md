@@ -13,7 +13,7 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 
 **Где остановились (26 октября, передача смены).** `.btn`, `.input`, `.imp-dot`, `.imp-pill` — 0 и в разметке, и в теме;
 всё на `Button`/`ButtonLink`/`Input`/`Select`/`Textarea`/`Tag`/`ImpDot`/`ImpPill`/`Label`/`ErrorBox`. Остаток и правила
-работы — [docs/plans/handoff-2026-10-26.md](plans/handoff-2026-10-26.md): `.label` (0 в разметке), `.tag` (3), мёртвые
+работы — [docs/plans/handoff-2026-10-26.md](plans/handoff-2026-10-26.md): `.label` (0 в разметке), `.tag` (2), мёртвые
 правила в `pages/dev`, хвост `lib/schematic*` (отложен осознанно).
 
 - Plan and rules — skill `css-modules`: tokens/base in `src/app/theme`, repeated UI in `src/shared/ui`, page styles in
@@ -73,6 +73,7 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 - 2026-10-26: `.label` → `Label` в редакторе нового тега; desktop/mobile — 0,000%. Остались 2 общих компонента.
 - 2026-10-26: `.label` → `Label` в NickDialog и KubejsConstructor; три состояния (новый тег, смена ника, KubeJS) desktop/mobile — 0,000%. В разметке `.label` больше нет, правило удалено; снимки всех затронутых состояний desktop/mobile — 0,000%, `:global(.label)` не найден.
 - 2026-10-26: бейджи ленты обновлений переведены на `Tag`, включая ссылку на аддон; `updates` desktop/mobile — 0,000%. Остаются три глобальных употребления: Freshness, каталог рецептов, список схем.
+- 2026-10-26: бейдж типа версии на странице «Свежесть» переведён на `Tag`, глобальное переопределение снято; `freshness` desktop/mobile — 0,000%. Осталось 2 прямых употребления `.tag`.
 - Left: **2 global CSS outside `src/app/theme`** — `ReferenceShared.css`/`PowerShared.css`, общие части справочника
   (их берут мультиблоки, гайды и аддоны; переедут вместе с `entities/guide` и мультиблоками). `legacy-ui.css` пока
   держит `.btn/.input/.tag/.empty/.error-box/.imp-*` — их ещё используют страницы; каждый новый компонент `shared/ui`

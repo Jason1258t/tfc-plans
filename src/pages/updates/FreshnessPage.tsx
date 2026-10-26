@@ -12,7 +12,7 @@ import {
   type ManifestMod,
 } from './model/freshness';
 import { cx, timeAgo } from '@/shared/lib';
-import { Button, ButtonLink, Input, Segmented } from '@/shared/ui';
+import { Button, ButtonLink, Input, Segmented, Tag } from '@/shared/ui';
 import sectionStyles from './UpdatesSection.module.css';
 import styles from './FreshnessPage.module.css';
 
@@ -250,7 +250,7 @@ function ModRow({ mod: m }: { mod: FreshMod }) {
               ) : (
                 <span>{m.latest.version}</span>
               )}
-              {m.latest.type && m.latest.type !== 'release' && <span className="tag">{m.latest.type}</span>}
+              {m.latest.type && m.latest.type !== 'release' && <Tag className={styles.versionTag}>{m.latest.type}</Tag>}
             </>
           )}
           {m.beta && (
