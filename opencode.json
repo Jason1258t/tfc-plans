@@ -12,7 +12,10 @@
       },
       "tfc-plans-dev": {
         "type": "local",
-        "command": ["node", "scripts/mcp-dev/server.mjs"]
+        "command": ["node", "scripts/mcp-dev/server.mjs"],
+        "environment": {
+          "TFC_AGENT_NICK": "OpenCode"
+        }
       }
     }
   }
