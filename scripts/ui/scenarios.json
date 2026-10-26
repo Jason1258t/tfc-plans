@@ -207,6 +207,12 @@
       "waitFor": "main [role=tablist]"
     },
     {
+      "name": "reference.power.ie",
+      "path": "/reference?tab=power",
+      "waitFor": "main [role=tablist]",
+      "actions": [{ "clickText": "Сеть IE" }]
+    },
+    {
       "name": "reference.multiblocks",
       "path": "/reference?tab=multiblocks",
       "waitFor": "main [role=tablist]"
@@ -222,6 +228,19 @@
       "name": "reference.guides",
       "path": "/reference?tab=guides",
       "waitFor": "main [role=tablist]"
+    },
+    {
+      "name": "reference.guides.ie-load-picker",
+      "path": "/reference?tab=guides&g=optimal",
+      "waitFor": "main [role=tablist]",
+      "actions": [
+        { "clickText": "из машин IE…" },
+        { "wait": 500 },
+        {
+          "eval": "(async () => { const hasPicker = () => document.body.innerText.includes('Как считать машины'); if (!hasPicker()) { const button = [...document.querySelectorAll('main button')].find((el) => el.textContent.includes('из машин IE…')); if (!button) throw new Error('Кнопка набора нагрузки IE не найдена'); button.click(); } for (let i = 0; i < 50 && !hasPicker(); i++) await new Promise((resolve) => setTimeout(resolve, 100)); if (!hasPicker()) throw new Error('Набор нагрузки IE не открылся'); })()"
+        }
+      ],
+      "note": "калькулятор генератора с набором нагрузки IE"
     },
     {
       "name": "reference.map",
