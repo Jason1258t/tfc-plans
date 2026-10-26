@@ -10,7 +10,7 @@ import {
   worldProjection,
 } from '@/lib/geo';
 import { cx } from '@/shared/lib';
-import { Button, ButtonLink, Input } from '@/shared/ui';
+import { Button, ButtonLink, Input, Label } from '@/shared/ui';
 import type { TaskPlace } from '@/entities/task';
 import styles from './TaskDialog.module.css';
 
@@ -51,7 +51,7 @@ export function PlaceField({ value, onChange, compact }: Props) {
 
   return (
     <div className={cx(styles.tfPlace, compact && styles.compact)}>
-      {!compact && <span className="label">Где</span>}
+      {!compact && <Label>Где</Label>}
       {value ? (
         <div className={cx('row', styles.tfPlaceSet)}>
           <MapPin size={14} className="faint" />
