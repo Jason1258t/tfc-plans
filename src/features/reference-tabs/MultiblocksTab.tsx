@@ -29,7 +29,7 @@ import styles from './MultiblocksTab.module.css';
 
 const HAMMER = 'immersiveengineering:hammer';
 
-const MultiblockFormed = lazy(() => import('@/components/MultiblockFormed'));
+const MultiblockFormed = lazy(() => import('./MultiblockFormed'));
 
 /** Иконка машины; у блоков с объёмной моделью (верстак, молниетвод) её нет — тогда самый частый блок структуры */
 function mbIcon(m: Multiblock, items: ItemIndex | null): string | null {
