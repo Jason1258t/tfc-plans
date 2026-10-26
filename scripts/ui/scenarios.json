@@ -248,6 +248,26 @@
       "path": "/stats"
     },
     {
+      "name": "dev",
+      "path": "/dev",
+      "waitFor": "main"
+    },
+    {
+      "name": "dev.dialog",
+      "path": "/dev",
+      "waitFor": "main",
+      "actions": [{ "click": "main ul li button" }, { "wait": "[role=dialog]" }],
+      "fullPage": false,
+      "note": "окно задачи разработки"
+    },
+    {
+      "name": "dev.task-log",
+      "path": "/dev?task=94",
+      "waitFor": "[role=dialog]",
+      "fullPage": false,
+      "note": "журнал разработки со статусом и отчётом"
+    },
+    {
       "name": "datapacks.editor",
       "path": "/datapacks",
       "actions": [
