@@ -111,9 +111,7 @@ export function SchematicsBlockList({
                       <span className={section.name}>{itemName(blockEntry(items, to), to)}</span>
                       <code className={section.id}>{to}</code>
                     </span>
-                    <span className={cx('tag', styles.modTag, modOf(to) !== modOf(id) && styles.modChanged)}>
-                      {modOf(to)}
-                    </span>
+                    <Tag className={cx(styles.modTag, modOf(to) !== modOf(id) && styles.modChanged)}>{modOf(to)}</Tag>
                     {reasons.get(id) && <Sparkles size={13} className="ai-ico" aria-label="Выбрано агентом" />}
                   </button>
                   {(() => {

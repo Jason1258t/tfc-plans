@@ -13,7 +13,7 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 
 **Где остановились (26 октября, передача смены).** `.btn`, `.input`, `.imp-dot`, `.imp-pill` — 0 и в разметке, и в теме;
 всё на `Button`/`ButtonLink`/`Input`/`Select`/`Textarea`/`Tag`/`ImpDot`/`ImpPill`/`Label`/`ErrorBox`. Остаток и правила
-работы — [docs/plans/handoff-2026-10-26.md](plans/handoff-2026-10-26.md): `.label` (0 в разметке), `.tag` (1), мёртвые
+работы — [docs/plans/handoff-2026-10-26.md](plans/handoff-2026-10-26.md): `.label` (0 в разметке), `.tag` (0 в разметке; правило в теме ещё есть), мёртвые
 правила в `pages/dev`, хвост `lib/schematic*` (отложен осознанно).
 
 - Plan and rules — skill `css-modules`: tokens/base in `src/app/theme`, repeated UI in `src/shared/ui`, page styles in
@@ -75,6 +75,7 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 - 2026-10-26: бейджи ленты обновлений переведены на `Tag`, включая ссылку на аддон; `updates` desktop/mobile — 0,000%. Остаются три глобальных употребления: Freshness, каталог рецептов, список схем.
 - 2026-10-26: бейдж типа версии на странице «Свежесть» переведён на `Tag`, глобальное переопределение снято; `freshness` desktop/mobile — 0,000%. Осталось 2 прямых употребления `.tag`.
 - 2026-10-26: метка типа рецепта в каталоге переведена на `Tag`, responsive-правило стало локальным; desktop/mobile — 0,000%. Остался один `.tag` в списке блоков схем.
+- 2026-10-26: бейдж мода в списке замен схем переведён на `Tag`; открытая схема с заменами — desktop/mobile 0,000%. Разметка `.tag` теперь нулевая; правило темы и один старый global override ещё требуют очистки.
 - Left: **2 global CSS outside `src/app/theme`** — `ReferenceShared.css`/`PowerShared.css`, общие части справочника
   (их берут мультиблоки, гайды и аддоны; переедут вместе с `entities/guide` и мультиблоками). `legacy-ui.css` пока
   держит `.btn/.input/.tag/.empty/.error-box/.imp-*` — их ещё используют страницы; каждый новый компонент `shared/ui`
