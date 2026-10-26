@@ -30,7 +30,6 @@ import { CONFIG_ORIGIN_LABEL, useModConfig, type ConfigOrigin } from '@/entities
 import { ComputedCalc, DynamicCalc, FamilyCalc, type FoodLookup } from './MealCalc';
 import { SkilletCard } from './SkilletCard';
 import { cx } from '@/shared/lib';
-import '../ReferenceShared.css';
 import shell from '../ReferenceShell.module.css';
 import styles from './MealsTab.module.css';
 
@@ -98,7 +97,7 @@ function SlotRow({ slot, cat, items }: { slot: MealSlot; cat: TagCatalog | null;
   return (
     <li>
       <b className={styles.count}>×{range(slot.min, slot.max)}</b>
-      <div className="grow">
+      <div className={styles.grow}>
         {alt && <span className="faint small">любое из: </span>}
         {slot.items.length > 0 && <ItemChips ids={slot.items} items={items} />}
         {slot.tags.map((t) => (
@@ -326,7 +325,7 @@ function ComputedCard({
                 ? range(Math.min(...counts) - fixed.length, Math.max(...counts) - fixed.length)
                 : `1–${c.slots ?? '?'}`}
             </b>
-            <div className="grow">
+            <div className={styles.grow}>
               {tags.map((t) => (
                 <TagMembers key={t} tag={t} cat={cat} items={items} />
               ))}
@@ -337,7 +336,7 @@ function ComputedCard({
           <ul className={styles.slots}>
             <li>
               <b className={styles.count}>×{fixed.length}</b>
-              <div className="grow">
+              <div className={styles.grow}>
                 <span className="faint small">обязательно: </span>
                 <ItemChips ids={fixed} items={items} />
               </div>
@@ -348,7 +347,7 @@ function ComputedCard({
           <ul className={styles.slots}>
             <li>
               <b className={styles.count}>посуда</b>
-              <div className="grow">
+              <div className={styles.grow}>
                 {bowls.map((t) => (
                   <TagMembers key={t} tag={t} cat={cat} items={items} />
                 ))}
@@ -441,7 +440,7 @@ function DynamicCard({
           {d.ingredientTag && (
             <li>
               <b className={styles.count}>×1–{d.slots ?? '?'}</b>
-              <div className="grow">
+              <div className={styles.grow}>
                 <TagMembers tag={d.ingredientTag} cat={cat} items={items} />
               </div>
             </li>
@@ -608,7 +607,7 @@ export function MealsTab({
   return (
     <>
       <div className={cx(shell.filters, shell.filtersEnd)}>
-        <label className={cx(shell.search, 'grow')}>
+        <label className={cx(shell.search, styles.grow)}>
           <Search size={15} className="faint" />
           <input
             placeholder="Блюдо или продукт: сэндвич, сыр, томат…"

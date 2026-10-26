@@ -77,10 +77,12 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 - 2026-10-26: метка типа рецепта в каталоге переведена на `Tag`, responsive-правило стало локальным; desktop/mobile — 0,000%. Остался один `.tag` в списке блоков схем.
 - 2026-10-26: бейдж мода в списке замен схем переведён на `Tag`; открытая схема с заменами — desktop/mobile 0,000%. Разметка `.tag` нулевая, глобальное правило удалено; статус `в работе` переведён на локальный селектор, `:global(.tag)` не осталось. Одноимённые `.tag` в MealsTab остаются локальными CSS Modules.
 - 2026-10-26: CSS-аудит страницы «Разработка» исправлен: удалён несуществующий `styles.when`, динамические классы статуса и записей журнала перечислены явно. `ui:classes --check` теперь проходит. Снимки dev/окна задачи/журнала — без визуальных изменений; небольшая разница только в обновившейся подписи «N мин. назад».
+- 2026-10-26: flex-spacer в подвале окна задачи разработки перенесён с глобального `.grow` в локальный `DevTaskDialog.module.css`; общее правило остаётся для остальных потребителей.
 - 2026-10-26: общий индикатор `.progress` переехал в `shared/ui/Progress`; его используют строка задачи и загрузка вложений. Глобальное правило удалено из темы.
+- 2026-10-26: значок предмета получил `ItemIcon.module.css`; стили React-компонента и Markdown-чипов локальны, глобальные `.item-icon/.smooth/.missing` удалены.
 - Left: **2 global CSS outside `src/app/theme`** — `ReferenceShared.css`/`PowerShared.css`, общие части справочника
-  (их берут мультиблоки, гайды и аддоны; переедут вместе с потребителями). В `legacy-ui.css` остаются стили иконки
-  предмета и анимация появления; `.empty` — утилита в `utilities.css`.
+  (их берут мультиблоки, гайды и аддоны; переедут вместе с потребителями). В `legacy-ui.css` осталась анимация
+  появления всплывающих блоков; `.empty` — утилита в `utilities.css`.
 - 2026-10-26: `MultiblockFormed` перемещён в `features/reference-tabs`, его CSS — в `MultiblockFormed.module.css`;
   затем renderer и его зависимая цепочка перемещаются в `entities/schematic` отдельной FSD-веткой.
 
@@ -350,7 +352,8 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
 - Fuel is one tab with sub-sections: solid (no wood) and liquid with oil (`?tab=fuel&sub=liquid`; old `tab=liquid`
   redirects).
 - Food section closed (`docs/plans/food.md`): products, composite meals with calculators, cooked meals by method.
-  Leftovers listed in the plan («Сознательно не сделано»).
+  Leftovers listed in the plan («Сознательно не сделано»). CSS вкладки `MealsTab` переведён на локальные классы
+  `MealsTab.module.css`; остаточных зависимостей от `ReferenceShared.css` и `:global` в ней нет (2026-10-26).
 
 ### Botany
 
@@ -390,6 +393,7 @@ fertiliser blocks, calendar with month labels. `.class` parsing — `scripts/mod
 ### Electricity (started 2026-10-14, plan — `docs/plans/electricity.md`)
 
 - CSS Modules (2026-10-26): `PowerIeLoads` (таблицы «Сеть IE» и набор нагрузки для калькулятора гайда) использует `PowerIeLoads.module.css`; правила `PowerShared.css` остаются для остальных потребителей.
+- CSS Modules (2026-10-26): каркас `PowerTab` (`.power` и отступы его абзацев) локален в `PowerTab.module.css`; общие `.power-*` остаются в `PowerShared.css`, поскольку нужны гайдам, аддонам и загрузкам IE.
 - How Create (SU), Electro Energetics (V/A/W) and IE (FE/t) relate: conversion rates and calculators for generator,
   motor, W ↔ FE; EE loads under voltage and device limits; IE wires and generators. Formulas and defaults from bytecode
   (`scripts/mods/power.mjs` → `public/power.json`), settings from server config («сервер» badge on changed ones).

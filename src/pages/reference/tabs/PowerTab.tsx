@@ -59,7 +59,7 @@ export function PowerTab({ sub, onSub }: { sub: PowerSub; onSub: (s: PowerSub) =
           </button>
         ))}
       </nav>
-      <div className="botany-main power">
+      <div className={cx('botany-main', styles.power)}>
         {data === undefined ? (
           <div className="empty">Загружаю…</div>
         ) : data === null ? (

@@ -138,7 +138,7 @@ export function TaskFields({
           {value.icon ? (
             <ItemIcon id={value.icon} size={28} />
           ) : (
-            <ItemIcon texture="minecraft/item/paper" size={22} tip={false} />
+            <ItemIcon texture="minecraft/item/paper" size={22} tip={false} className={styles.noIconItem} />
           )}
         </button>
         <textarea

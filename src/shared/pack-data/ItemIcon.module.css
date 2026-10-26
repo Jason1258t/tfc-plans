@@ -1,0 +1,18 @@
+.icon {
+  display: inline-block;
+  flex: none;
+  background-repeat: no-repeat;
+  background-size: 100% auto;
+  background-position: top center;
+  image-rendering: pixelated;
+  vertical-align: middle;
+}
+
+.smooth {
+  image-rendering: auto;
+}
+
+.missing {
+  border-radius: 3px;
+  background: var(--surface-3);
+}

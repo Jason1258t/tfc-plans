@@ -175,7 +175,7 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
               <Trash2 size={14} /> Удалить
             </Button>
           )}
-          <span className="grow" />
+          <span className={styles.footerSpacer} />
           {t && (
             <span className={styles.byline}>
               {t.author} · создана {timeAgo(t.createdAt)} · rev {t.rev}

@@ -117,9 +117,10 @@ function MultiblockCard({ m, data }: { m: Multiblock; data: MultiblockData }) {
           </li>
           {triggerState && trigger && (
             <li>
-              Встаньте <b>со стороны лицевой грани</b> (на схеме — снизу) и ударьте <ItemIcon id={HAMMER} size={18} />{' '}
-              молотом инженера по блоку <b>{itemName(items?.byId.get(triggerState.id), triggerState.id)}</b> — слой{' '}
-              {trigger[1] + 1}, подсвечен рамкой. Конструкция повернётся к вам той стороной, по которой ударили.
+              Встаньте <b>со стороны лицевой грани</b> (на схеме — снизу) и ударьте
+              <ItemIcon id={HAMMER} size={18} className={styles.stepIcon} /> молотом инженера по блоку{' '}
+              <b>{itemName(items?.byId.get(triggerState.id), triggerState.id)}</b> — слой {trigger[1] + 1}, подсвечен
+              рамкой. Конструкция повернётся к вам той стороной, по которой ударили.
             </li>
           )}
           <li>
