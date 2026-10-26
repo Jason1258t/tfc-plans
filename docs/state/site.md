@@ -13,7 +13,7 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 
 **Где остановились (26 октября, передача смены).** `.btn`, `.input`, `.imp-dot`, `.imp-pill` — 0 и в разметке, и в теме;
 всё на `Button`/`ButtonLink`/`Input`/`Select`/`Textarea`/`Tag`/`ImpDot`/`ImpPill`/`Label`/`ErrorBox`. Остаток и правила
-работы — [docs/plans/handoff-2026-10-26.md](plans/handoff-2026-10-26.md): `.label` (2 места), `.tag` (16), мёртвые
+работы — [docs/plans/handoff-2026-10-26.md](plans/handoff-2026-10-26.md): `.label` (0 в разметке), `.tag` (16), мёртвые
 правила в `pages/dev`, хвост `lib/schematic*` (отложен осознанно).
 
 - Plan and rules — skill `css-modules`: tokens/base in `src/app/theme`, repeated UI in `src/shared/ui`, page styles in
@@ -71,6 +71,7 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 - 2026-10-26: `.label` → `Label` в настройках профиля и масштаба карты. Снимки до/после — 0,000% после повторного
   baseline на одинаковых данных; исходный diff поймал обновление настроек мира из Firestore. Осталось 3 разметки.
 - 2026-10-26: `.label` → `Label` в редакторе нового тега; desktop/mobile — 0,000%. Остались 2 общих компонента.
+- 2026-10-26: `.label` → `Label` в NickDialog и KubejsConstructor; три состояния (новый тег, смена ника, KubeJS) desktop/mobile — 0,000%. В разметке `.label` больше нет; правило темы ещё не удалено.
 - Left: **2 global CSS outside `src/app/theme`** — `ReferenceShared.css`/`PowerShared.css`, общие части справочника
   (их берут мультиблоки, гайды и аддоны; переедут вместе с `entities/guide` и мультиблоками). `legacy-ui.css` пока
   держит `.btn/.input/.tag/.empty/.error-box/.imp-*` — их ещё используют страницы; каждый новый компонент `shared/ui`

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { validateNick } from '@/shared/lib/nick';
-import { Button, Input, Modal } from '@/shared/ui';
+import { Button, Input, Label, Modal } from '@/shared/ui';
 
 interface Props {
   initial?: string;
@@ -46,9 +46,7 @@ export function NickDialog({ initial = '', onSave, onCancel }: Props) {
           submit();
         }}
       >
-        <label className="label" htmlFor="nick">
-          Ник
-        </label>
+        <Label htmlFor="nick">Ник</Label>
         <Input
           id="nick"
           value={nick}
