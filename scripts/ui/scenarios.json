@@ -133,6 +133,13 @@
       "path": "/tags"
     },
     {
+      "name": "tags.editor",
+      "path": "/tags",
+      "actions": [{ "clickText": "Новый тег" }, { "wait": "[role=dialog]" }],
+      "fullPage": false,
+      "note": "редактор нового тега"
+    },
+    {
       "name": "reference",
       "path": "/reference",
       "waitFor": "main [role=tablist]"
