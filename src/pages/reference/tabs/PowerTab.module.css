@@ -1,6 +1,15 @@
-/* Вкладка «Электричество»: только её собственные блоки. Всё остальное — общее:
-   .power, .power-h, .power-note, .power-form, .power-out(s) и блоки аддонов — в PowerShared.css
+/* Вкладка «Электричество»: свои блоки и каркас. Общие .power-* остаются в PowerShared.css
    (их берут гайды, загрузки IE и карточки аддонов), таблицы и карточки — в ../ReferenceShared.css. */
+
+.power {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.power p {
+  margin: 0;
+}
 
 .chain {
   display: flex;

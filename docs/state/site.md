@@ -388,6 +388,7 @@ fertiliser blocks, calendar with month labels. `.class` parsing — `scripts/mod
 
 ### Electricity (started 2026-10-14, plan — `docs/plans/electricity.md`)
 
+- CSS Modules (2026-10-26): каркас `PowerTab` (`.power` и отступы его абзацев) локален в `PowerTab.module.css`; общие `.power-*` остаются в `PowerShared.css`, поскольку нужны гайдам, аддонам и загрузкам IE.
 - How Create (SU), Electro Energetics (V/A/W) and IE (FE/t) relate: conversion rates and calculators for generator,
   motor, W ↔ FE; EE loads under voltage and device limits; IE wires and generators. Formulas and defaults from bytecode
   (`scripts/mods/power.mjs` → `public/power.json`), settings from server config («сервер» badge on changed ones).
