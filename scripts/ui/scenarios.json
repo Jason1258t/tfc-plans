@@ -71,6 +71,14 @@
       "theme": "dark"
     },
     {
+      "name": "tasks.nick-dialog",
+      "path": "/",
+      "waitFor": "main",
+      "actions": [{ "click": "header > button" }, { "wait": "[role=dialog]" }],
+      "fullPage": false,
+      "note": "окно смены ника"
+    },
+    {
       "name": "docs",
       "path": "/docs"
     },
@@ -127,6 +135,14 @@
     {
       "name": "recipes",
       "path": "/recipes"
+    },
+    {
+      "name": "recipes.kubejs-constructor",
+      "path": "/recipes?q=aeronautics%3Acrushing%2Fend_stone_powder",
+      "waitFor": "main",
+      "actions": [{ "clickText": "Конструктор", "within": "main" }, { "wait": "[role=dialog]" }],
+      "fullPage": false,
+      "note": "конструктор удалённого рецепта KubeJS"
     },
     {
       "name": "tags",
