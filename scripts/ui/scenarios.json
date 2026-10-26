@@ -207,6 +207,12 @@
       "waitFor": "main [role=tablist]"
     },
     {
+      "name": "reference.power.ie",
+      "path": "/reference?tab=power",
+      "waitFor": "main [role=tablist]",
+      "actions": [{ "clickText": "Сеть IE" }]
+    },
+    {
       "name": "reference.multiblocks",
       "path": "/reference?tab=multiblocks",
       "waitFor": "main [role=tablist]"
@@ -222,6 +228,13 @@
       "name": "reference.guides",
       "path": "/reference?tab=guides",
       "waitFor": "main [role=tablist]"
+    },
+    {
+      "name": "reference.guides.ie-load-picker",
+      "path": "/reference?tab=guides&g=optimal",
+      "waitFor": "main [role=tablist]",
+      "actions": [{ "clickText": "из машин IE…" }, { "wait": 500 }],
+      "note": "калькулятор генератора с набором нагрузки IE"
     },
     {
       "name": "reference.map",

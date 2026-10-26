@@ -1,0 +1,66 @@
+/* Стили IeConsumers и IeLoadPicker; общие правила для других компонентов остаются в PowerShared.css. */
+
+.loadCalc {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.loadCalc h3 {
+  margin: 0;
+}
+
+.loadField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.loadName {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.outputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px;
+}
+
+.output {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.output b {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 4px 12px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.pickerRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pickerRow input {
+  width: 56px;
+}

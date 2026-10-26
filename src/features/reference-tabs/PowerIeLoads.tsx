@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { deviceTick, machineRates, type IeDevice, type IeMachine, type PowerData, type Setting } from '@/lib/power';
 import { ItemIcon } from '@/shared/pack-data';
 import { Button, Input, Select } from '@/shared/ui';
+import styles from './PowerIeLoads.module.css';
 
 /**
  * Потребители IE и Advanced TFC Tech: таблицы (вкладка «Сеть IE») и набор нагрузки для расчёта генератора (гайд
@@ -53,7 +54,7 @@ export function IeConsumers({ data, ie, att, rate }: { data: PowerData; ie: Get;
                 return (
                   <tr key={m.id}>
                     <td>
-                      <span className="power-name">
+                      <span className={styles.loadName}>
                         <ItemIcon id={m.block} size={20} />
                         {m.name}
                       </span>{' '}
@@ -103,7 +104,7 @@ export function IeConsumers({ data, ie, att, rate }: { data: PowerData; ie: Get;
                 return (
                   <tr key={d.id}>
                     <td>
-                      <span className="power-name">
+                      <span className={styles.loadName}>
                         <ItemIcon id={d.block} size={20} />
                         {d.name}
                       </span>
@@ -174,9 +175,9 @@ export function IeLoadPicker({
   ];
   const total = rows.reduce((a, r) => a + r.load * (counts[r.id] ?? 0), 0);
   return (
-    <section className="power-calc">
+    <section className={styles.loadCalc}>
       <h3>Нагрузка из машин IE</h3>
-      <label className="power-field">
+      <label className={styles.loadField}>
         <span className="faint small">Как считать машины</span>
         <Select value={mode} onChange={(e) => setMode(e.target.value as Mode)}>
           {MODES.map((m) => (
@@ -186,9 +187,9 @@ export function IeLoadPicker({
           ))}
         </Select>
       </label>
-      <div className="power-picker">
+      <div className={styles.picker}>
         {rows.map((r) => (
-          <label key={r.id} className="power-picker-row">
+          <label key={r.id} className={styles.pickerRow}>
             <ItemIcon id={r.block} size={20} />
             <span className="grow small">{r.name}</span>
             <span className="faint small">{fe(r.load)} FE/t</span>
@@ -205,8 +206,8 @@ export function IeLoadPicker({
           </label>
         ))}
       </div>
-      <div className="power-outs">
-        <div className="power-out">
+      <div className={styles.outputs}>
+        <div className={styles.output}>
           <span className="faint small">Всего</span>
           <b>{num(total)} FE/t</b>
           <span className="faint small">
@@ -214,7 +215,7 @@ export function IeLoadPicker({
           </span>
         </div>
         {onApply && (
-          <div className="power-out">
+          <div className={styles.output}>
             <Button className="small" disabled={!total} onClick={() => onApply(total * rate)}>
               Подставить в калькулятор
             </Button>
