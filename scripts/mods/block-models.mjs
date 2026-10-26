@@ -21,7 +21,7 @@
  * Модель OBJ (neoforge:obj, ie_obj) — элементы-треугольники { o: [x, y, z, u, v] × 3 (пиксели модели, uv 0–16 от
  * верха текстуры), s }. Загрузчик-обёртка (листва и растения TFC, полки Firmalife) — его базовая модель.
  * m = -1 — модель без элементов: рисует код (BlockEntityRenderer: сундуки, ремень Create) или загрузчик, которого
- * здесь нет (части машин IE, теплицы Firmalife), — тогда сайт берёт запасную форму по имени (src/lib/schematicMesh.ts).
+ * здесь нет (части машин IE, теплицы Firmalife), — тогда сайт берёт запасную форму по имени (src/entities/schematic/schematicMesh.ts).
  * Вариант со списком моделей (случайный выбор с весами) — первая, как и в превью модели (scripts/mcp/render.mjs).
  * Не переносится: окраска кодом (tintindex сайт красит сам по типу блока), ambient occlusion, анимация, эмиссия.
  */
@@ -36,7 +36,7 @@ export const BLOCK_MODELS_VERSION = 1;
 /**
  * Моды, у которых блоки дорисовываются частями из своих моделей (Flywheel-визуалы и BlockEntityRenderer Create):
  * им в файл добавляются все модели models/block/** по пути (у Create 6.0.10 на 444 из 1901 не ссылаются blockstates).
- * Как части ставятся к блоку — src/lib/createParts.ts.
+ * Как части ставятся к блоку — src/entities/schematic/createParts.ts.
  */
 export const PARTIAL_NAMESPACES = new Set(['create']);
 

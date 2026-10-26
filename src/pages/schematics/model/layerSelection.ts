@@ -1,6 +1,14 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { connectedGroup, editCells, posOfIndex, stateOf, type Grid } from '@/lib/schematicEdit';
-import { REMOVE, type Schematic, type Vec } from '@/lib/schematic';
+import {
+  connectedGroup,
+  editCells,
+  posOfIndex,
+  stateOf,
+  REMOVE,
+  type Grid,
+  type Schematic,
+  type Vec,
+} from '@/entities/schematic';
 import type { ItemIndex } from '@/shared/pack-data';
 import { isBlock } from '@/shared/pack-data';
 import type { ReplaceFavorite } from '@/entities/schematic';

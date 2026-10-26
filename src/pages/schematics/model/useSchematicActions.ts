@@ -1,4 +1,4 @@
-import { exportSchematic, invalidTargets, type Schematic } from '@/lib/schematic';
+import { exportSchematic, invalidTargets, type Schematic } from '@/entities/schematic';
 import { isBlock, type ItemIndex } from '@/shared/pack-data';
 import { makePreview, saveToLibrary } from './schematicLibrary';
 import { outName, replaceSig } from './schematicFormat';

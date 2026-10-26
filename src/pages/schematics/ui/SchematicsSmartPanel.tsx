@@ -1,5 +1,5 @@
 import { ArrowRight, Plus, Sparkles, X } from 'lucide-react';
-import type { Rule } from '@/lib/schematic';
+import type { Rule } from '@/entities/schematic';
 import { cx } from '@/shared/lib';
 import { Button, Input } from '@/shared/ui';
 import type { SmartResult } from '../model/schematicFormat';

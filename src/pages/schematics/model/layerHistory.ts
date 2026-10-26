@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
-import { canRedo, canUndo, redoEdit, undoEdit } from '@/lib/schematicEdit';
-import type { Schematic } from '@/lib/schematic';
+import { canRedo, canUndo, redoEdit, undoEdit, type Schematic } from '@/entities/schematic';
 
 /**
  * Действие редактора для отмены/повтора: правка клеток (снимки — в schematicEdit) или общая замена

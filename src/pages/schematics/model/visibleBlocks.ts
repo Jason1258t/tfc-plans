@@ -1,6 +1,5 @@
-import { EMPTY_BLOCKS, REMOVE } from '@/lib/schematic';
+import { EMPTY_BLOCKS, REMOVE, type Schematic } from '@/entities/schematic';
 import { blockEntry, inPack, itemName, type ItemIndex } from '@/shared/pack-data';
-import type { Schematic } from '@/lib/schematic';
 
 /** Все блоки всех загруженных схем: id → сколько раз встречается, по убыванию */
 export function aggregateBlocks(schematics: Schematic[]) {

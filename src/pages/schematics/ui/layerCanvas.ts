@@ -1,8 +1,13 @@
 import { blockEntry, blockIcon, type ItemIndex } from '@/shared/pack-data';
-import { blockTopView } from '@/lib/blockModels';
-import { drawnByCode, isFullCube } from '@/lib/schematicMesh';
-import { EMPTY_BLOCKS, REMOVE, type Schematic } from '@/lib/schematic';
-import { stateOf } from '@/lib/schematicEdit';
+import {
+  blockTopView,
+  drawnByCode,
+  EMPTY_BLOCKS,
+  isFullCube,
+  REMOVE,
+  stateOf,
+  type Schematic,
+} from '@/entities/schematic';
 
 /** Масштаб — пикселей на блок */
 export const MIN_ZOOM = 2;

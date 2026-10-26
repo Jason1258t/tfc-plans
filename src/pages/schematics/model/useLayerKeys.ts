@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { REMOVE, type Schematic } from '@/lib/schematic';
-import { editCells } from '@/lib/schematicEdit';
+import { editCells, REMOVE, type Schematic } from '@/entities/schematic';
 import type { Menu } from './useLayerPointer';
 
 interface Args {

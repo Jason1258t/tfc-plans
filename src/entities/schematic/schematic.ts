@@ -1,4 +1,4 @@
-import { readNbt, writeNbt, type ParsedNbt } from './nbt';
+import { readNbt, writeNbt, type ParsedNbt } from '../../lib/nbt';
 import {
   applyEdits,
   countBlocks,
@@ -9,7 +9,7 @@ import {
   sizeOf,
   type Shape,
   type Vec,
-} from './schematicFile';
+} from '../../lib/schematicFile';
 import { fuzzyCandidates, blockEntry, isBlock, type ItemIndex } from '@/shared/pack-data';
 import {
   geminiErrorText,
@@ -31,7 +31,7 @@ export {
   REMOVE,
   type Shape,
   type Vec,
-} from './schematicFile';
+} from '../../lib/schematicFile';
 
 /**
  * Схема Create / структура ванили (.nbt): palette — список блоков { Name, Properties },

@@ -1,5 +1,4 @@
-import type { Schematic } from '@/lib/schematic';
-import type { AgentResult, RuleResult } from '@/lib/schematic';
+import type { AgentResult, RuleResult, Schematic } from '@/entities/schematic';
 
 /** Итог умной замены: правила или агент — общая часть для панели и кнопки в панели инструментов */
 export type SmartResult = ({ kind: 'rules' } & RuleResult) | ({ kind: 'agent' } & AgentResult);

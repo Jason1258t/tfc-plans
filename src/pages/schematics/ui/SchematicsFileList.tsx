@@ -1,6 +1,6 @@
 import { BookmarkPlus, Box, Check, ChevronDown, Download, FileBox, Ruler, X } from 'lucide-react';
 import { ItemIcon, ItemPicker, itemName, type ItemIndex } from '@/shared/pack-data';
-import { changesIn, shapedSize, type Schematic } from '@/lib/schematic';
+import { changesIn, shapedSize, type Schematic } from '@/entities/schematic';
 import { filesEnabled, formatSize } from '@/entities/file';
 import { cx } from '@/shared/lib';
 import { Button } from '@/shared/ui';

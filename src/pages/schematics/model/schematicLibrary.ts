@@ -2,7 +2,7 @@ import { schematicsStore } from '@/entities/schematic';
 import type { SavedSchematic } from '@/entities/schematic';
 import { fileBlob, removeFile, uploadFile } from '@/entities/file';
 import type { ItemIndex } from '@/shared/pack-data';
-import { editedSource, loadSchematic, type Schematic } from '@/lib/schematic';
+import { editedSource, loadSchematic, type Schematic } from '@/entities/schematic';
 import { savedEdits } from '@/lib/schematicFile';
 
 /**
@@ -105,7 +105,7 @@ const MAX_PREVIEW = 280_000;
  */
 export async function makePreview(s: Schematic, replace: Map<string, string>, items: ItemIndex) {
   try {
-    const { renderPreview } = await import('@/lib/schematicRender');
+    const { renderPreview } = await import('@/entities/schematic');
     const url = await renderPreview(s, replace, items);
     return url.length <= MAX_PREVIEW ? url : null;
   } catch (e) {

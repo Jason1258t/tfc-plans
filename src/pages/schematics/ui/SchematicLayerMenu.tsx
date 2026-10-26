@@ -1,6 +1,6 @@
 import { SquareDashedMousePointer, Trash2, X } from 'lucide-react';
 import { ItemIcon, ItemPicker } from '@/shared/pack-data';
-import type { CellInfo } from '@/lib/schematicEdit';
+import type { CellInfo } from '@/entities/schematic';
 import { cx } from '@/shared/lib';
 import { Button } from '@/shared/ui';
 import styles from './SchematicLayers.module.css';

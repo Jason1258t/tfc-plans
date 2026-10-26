@@ -9,7 +9,7 @@ import { SchematicLibrary } from './ui/SchematicLibrary';
 import { useNick } from '@/entities/user';
 import { filesEnabled } from '@/entities/file';
 import { geminiEnabled } from '@/shared/api';
-import { agentReplace, applyRules, loadSchematic, REMOVE, type Rule, type Schematic } from '@/lib/schematic';
+import { agentReplace, applyRules, loadSchematic, REMOVE, type Rule, type Schematic } from '@/entities/schematic';
 import { aggregateBlocks, visibleBlocks } from './model/visibleBlocks';
 import { replaceSig, type SmartResult } from './model/schematicFormat';
 import { useSchematicActions } from './model/useSchematicActions';

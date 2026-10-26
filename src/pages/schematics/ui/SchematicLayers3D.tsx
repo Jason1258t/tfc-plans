@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import type { Schematic, Vec } from '@/lib/schematic';
+import type { Schematic, Vec } from '@/entities/schematic';
 import { cx } from '@/shared/lib';
 import styles from './SchematicLayers.module.css';
 

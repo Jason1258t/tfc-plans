@@ -1,6 +1,6 @@
 import { ArrowRight, Sparkles, Star, Trash2, X } from 'lucide-react';
 import { ItemIcon, ItemPicker, blockEntry, isBlock, itemName, type ItemIndex } from '@/shared/pack-data';
-import { REMOVE } from '@/lib/schematic';
+import { REMOVE } from '@/entities/schematic';
 import type { ReplaceFavorite } from '@/entities/schematic';
 import { cx } from '@/shared/lib';
 import { Button, Tag } from '@/shared/ui';

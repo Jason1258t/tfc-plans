@@ -1,4 +1,4 @@
-import { T, type Compound } from './nbt';
+import { T, type Compound } from '../../lib/nbt';
 
 /**
  * Копикаты (заполняемые блоки Create и Create: Copycats+): модель в jar пустая (minecraft:block/air), игра вырезает
