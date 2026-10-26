@@ -249,7 +249,9 @@ ID token checked on the server, helper moved from the file server to `pack-serve
 `tfc-plans-dev` `dev_*`; `scripts/dev-migrate.mjs` for the old groups. AGENTS.md and skills now log work there.
 Checked locally: API (create, Russian search, rev 409, status log, notes, docs, import idempotent, CORS, no-key 401),
 MCP tools against a local server, the page with a real site sign-in (list, filters, edit+save, checklist, log, plan,
-create, mobile). Plan and stages — `docs/plans/dev-tracker.md`.
+create, mobile). Plan and stages — `docs/plans/dev-tracker.md`. Migrated the same day with the host's yes: 81 tasks
+and 15 plans imported (checked on the server), 89 Firestore docs and the group «Разработка» deleted; 7 tasks with
+attachments stay in Firestore group «Фиксы» (their copies on the server note where the files are).
 
 ## Multi-agent setup (2026-10-23)
 

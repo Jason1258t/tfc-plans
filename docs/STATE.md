@@ -18,9 +18,6 @@ When finishing work: update the topic file, and this index only if a line below 
 
 ## In progress / waiting (details — [pending.md](state/pending.md))
 
-- Dev tracker on the pack server (`/dev`, MCP `dev_*`, `docs/plans/dev-tracker.md`): old tasks of «Разработка» and
-  «Фиксы» — `node scripts/dev-migrate.mjs --import` when the Firestore quota allows, `--delete` only after the host's yes.
-
 - Host: pack update `u20261022-150945-83a0` (Chinese KubeJS messages → ru/en): `tfc admin updates pull`, check in game,
   `tfc admin updates approve`.
 - Host: install **EE Extras 2.3** (2.2 + compact generator), **Small Diesel 1.0.0**, **IE Extras 1.0.0** and **Create Aeronautics Extra 1.0.0** + `tfc publish`; warn players
