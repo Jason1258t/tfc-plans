@@ -14,7 +14,7 @@ import { EMPTY_BLOCKS, REMOVE, type Schematic } from './schematic';
 import { blockNbtOf, buildGrid, namesByState, propsByState, stateOf } from './schematicEdit';
 
 /**
- * Геометрия схемы для 3D: блок — грани его модели из jar (src/lib/blockModels.ts), а нет модели (рисует код:
+ * Геометрия схемы для 3D: блок — грани его модели из jar (entities/schematic/blockModels.ts), а нет модели (рисует код:
  * сундук, ремень Create; OBJ) — один или несколько параллелепипедов по грубой форме (shapeOf: плита, ступенька,
  * люк, забор, вал Create…). Невидимые грани между сплошными блоками не строятся (cullface модели).
  * Без three.js — только массивы; рисуют их SchematicView3D и превью библиотеки.
@@ -168,7 +168,7 @@ const INVISIBLE = /(^|:)(fake_light|barrier|light|structure_void)$/;
 
 const copycatBaked = new Map<string, Quad[]>();
 /**
- * Грани копиката: коробки формы (lib/copycats.ts), на каждой стороне — текстура материала части с той же стороны,
+ * Грани копиката: коробки формы (entities/schematic/copycats.ts), на каждой стороне — текстура материала части с той же стороны,
  * uv по положению грани (как вырезает игра). Материал заменён по заменам схемы.
  */
 function copycatQuads(

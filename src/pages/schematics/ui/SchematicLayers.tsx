@@ -1,8 +1,18 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { blockEntry, isBlock, itemName, useItems } from '@/shared/pack-data';
-import { EMPTY_BLOCKS, REMOVE, type Schematic } from '@/lib/schematic';
-import { buildGrid, cellInfo, editCells, namesByState, propsByState, revertEdits, stateOf } from '@/lib/schematicEdit';
+import {
+  buildGrid,
+  cellInfo,
+  editCells,
+  EMPTY_BLOCKS,
+  namesByState,
+  propsByState,
+  REMOVE,
+  revertEdits,
+  stateOf,
+  type Schematic,
+} from '@/entities/schematic';
 import type { ReplaceFavorite } from '@/entities/schematic';
 import { cx } from '@/shared/lib';
 import type { Menu } from '../model/useLayerPointer';

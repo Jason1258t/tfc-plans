@@ -1,4 +1,4 @@
-import type { Rule } from '@/lib/schematic';
+import type { Rule } from '@/entities/schematic';
 
 /** Настройки умной замены и открытой панели — в localStorage, как и раньше */
 export const RULES_KEY = 'tfc-tm:schematic-rules';

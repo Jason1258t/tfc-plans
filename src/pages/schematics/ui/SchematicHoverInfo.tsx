@@ -1,4 +1,4 @@
-import type { CellInfo } from '@/lib/schematicEdit';
+import type { CellInfo } from '@/entities/schematic';
 import { cx } from '@/shared/lib';
 import styles from './SchematicLayers.module.css';
 

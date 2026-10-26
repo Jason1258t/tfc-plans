@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import type { MbFormed } from '../../lib/multiblocks';
-import { newRenderer } from '../../lib/schematicRender';
+import { newRenderer } from '@/entities/schematic';
 import styles from './MultiblockFormed.module.css';
 
 /**

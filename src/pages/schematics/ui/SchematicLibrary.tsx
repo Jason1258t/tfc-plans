@@ -7,7 +7,7 @@ import { schematicsStore } from '@/entities/schematic';
 import { useSearchTrack } from '@/shared/api';
 import { formatSize } from '@/entities/file';
 import { useItems } from '@/shared/pack-data';
-import { REMOVE, type Schematic } from '@/lib/schematic';
+import { REMOVE, type Schematic } from '@/entities/schematic';
 import { openFromLibrary, refreshPreview, removeFromLibrary } from '../model/schematicLibrary';
 import { cx, timeAgo } from '@/shared/lib';
 import section from '../SchematicsSection.module.css';

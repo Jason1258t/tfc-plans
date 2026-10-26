@@ -1,6 +1,14 @@
 import { useRef, useState } from 'react';
-import { EMPTY_BLOCKS, REMOVE, type Schematic, type Vec } from '@/lib/schematic';
-import { editCells, frameObject, stateOf, type Grid } from '@/lib/schematicEdit';
+import {
+  editCells,
+  frameObject,
+  stateOf,
+  EMPTY_BLOCKS,
+  REMOVE,
+  type Grid,
+  type Schematic,
+  type Vec,
+} from '@/entities/schematic';
 
 export interface Menu {
   x: number;

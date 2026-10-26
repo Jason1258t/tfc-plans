@@ -1,6 +1,6 @@
 import { Trash2 } from 'lucide-react';
 import { ItemIcon } from '@/shared/pack-data';
-import { REMOVE } from '@/lib/schematic';
+import { REMOVE } from '@/entities/schematic';
 import { cx } from '@/shared/lib';
 import styles from './SchematicLayers.module.css';
 

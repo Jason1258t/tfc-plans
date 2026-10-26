@@ -14,7 +14,7 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 **Где остановились (26 октября).** `.btn`, `.input`, `.imp-dot`, `.imp-pill`, `.label`, `.tag` и `.error-box` удалены из
 глобальной темы; разметка использует `Button`/`ButtonLink`/`Input`/`Select`/`Textarea`/`Tag`/`ImpDot`/`ImpPill`/`Label`/
 `ErrorBox`. `ui:classes --check` чистый. Остаток и правила работы —
-[docs/plans/handoff-2026-10-26.md](plans/handoff-2026-10-26.md): только осознанно отложенный хвост `lib/schematic*`.
+[docs/plans/handoff-2026-10-26.md](plans/handoff-2026-10-26.md): перенос движка схем `lib/schematic*` в `entities/schematic`.
 
 - Plan and rules — skill `css-modules`: tokens/base in `src/app/theme`, repeated UI in `src/shared/ui`, page styles in
   `X.module.css` (`localsConvention: 'camelCaseOnly'` in `vite.config.ts`). Tools: `scripts/ui/classes.mjs` (class
@@ -80,10 +80,8 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 - Left: **2 global CSS outside `src/app/theme`** — `ReferenceShared.css`/`PowerShared.css`, общие части справочника
   (их берут мультиблоки, гайды и аддоны; переедут вместе с потребителями). В `legacy-ui.css` остались общие стили
   прогресса, иконки предмета и анимация появления; `.empty` — утилита в `utilities.css`.
-- 2026-10-26: `MultiblockFormed` перемещён из `components` в `features/reference-tabs`. Стили пока остаются в
-  `MultiblockFormed.module.css`; стили 3D-контейнера, состояния загрузки и подсказки локальны. Снимки итогового вида
-  `reference.multiblocks.formed` desktop/mobile — 0,000%; `classes.mjs --check` проходит. Следующий шаг — перенос
-  `schematicRender` в `entities/schematic`.
+- 2026-10-26: `MultiblockFormed` перемещён в `features/reference-tabs`, его CSS — в `MultiblockFormed.module.css`;
+  затем renderer и его зависимая цепочка перемещаются в `entities/schematic` отдельной FSD-веткой.
 
 ## Documents (file storage)
 
@@ -201,13 +199,13 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
 - **Favourite replacements** (`replaceFavorites`, shared): ★ on a replacement, smart completion — stairs/slabs/fences
   by name `<base>_<kind>` (`lib/replaceFavorites.ts`), batch apply with a choice when a block has several variants.
   Not checked in game.
-- **Layer editor** («Слои», 2026-10-19, `components/SchematicLayers.tsx`, `lib/schematicEdit.ts`): top view of one
+- **Layer editor** («Слои», 2026-10-19, `pages/schematics/ui/SchematicLayers.tsx`, `entities/schematic/schematicEdit.ts`): top view of one
   layer with icons and facing arrows, wheel zoom, drag pan, ↑↓ layers, layer below shown pale; LMB — replace (this
   block / same on layer / global), RMB drag — remove; Ctrl+Z undo, Ctrl+Shift+Z / Ctrl+Y redo (physical key, works in
   Russian layout; global replacements from the dialog are undoable too). **Selection** (2026-10-22, item 1 of task
   «Улучшения редактора схем крупные»): a set of block indices shared by the layer view and 3D, dropped on any
   schematic edit; entry points so far — «Выделить» / «Выделить группу» in the cell dialog (group = edge-connected
-  blocks of the same effective id on the layer, `connectedGroup` in `lib/schematicEdit.ts`, can also search in 3D);
+  blocks of the same effective id on the layer, `connectedGroup` in `entities/schematic/schematicEdit.ts`, can also search in 3D);
   panel «Выбрано N блоков» (top right): replace / «Убрать» as one undoable edit, «Сбросить», Esc clears. 3D shows
   selected blocks as translucent accent cubes (respects the slice). Browser-tested on a library schematic (group of 36,
   remove, replace, undo, 3D highlight on the slice); nothing saved to the library. Layer view clicks (item 2):
@@ -225,7 +223,7 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   remove (7250→3346 blocks) and undo. Delete / Backspace removes the selection (one undoable
   edit; ignored while typing in a field) — browser-tested in 3D: 3904 removed, Ctrl+Z restored. **3D object by frame** (2026-10-23, task «Вторая волна доработок редактора», rules from Jason's plan doc):
   Alt+drag in 3D draws a frame (captured before OrbitControls; Shift+Alt toggles); `frameObject` in
-  `lib/schematicEdit.ts` takes every block whose centre projects into the frame at any depth (respects the slice) minus
+  `entities/schematic/schematicEdit.ts` takes every block whose centre projects into the frame at any depth (respects the slice) minus
   background: air, schematic edges and planes. A plane = the frame-crossing blocks (in frame with a neighbour outside)
   assigned to their most-populated axis plane, spread 2D, ≥70 % made of 1–2 materials, and continuing outside the frame
   in ≥2 in-plane directions (a chimney wall continues only down); background = those materials flood-filled in that
@@ -240,7 +238,7 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   (the browser tool can't hold Shift while dragging): +80, −11, +50 → replace 119 with stone, undo. Next: picking in 3D. Cell edits change the source itself:
   «В библиотеку» uploads a new file and deletes the old one (saving edits to the library not browser-tested — shared
   collection). Adding blocks into empty cells is not supported.
-- **3D** («Слой / 3D», 2026-10-19, three.js as a separate chunk): simplified block shapes (`lib/schematicMesh.ts` —
+- **3D** («Слой / 3D», 2026-10-19, three.js as a separate chunk): simplified block shapes (`entities/schematic/schematicMesh.ts` —
   slabs, stairs, trapdoors, doors, fences, walls, panes, Create shafts and cogs, small stuff as cubes), hidden faces
   skipped, textures from an `/icons` atlas (block texture by id path, else item icon) or average colour; slice at the
   current layer. **Camera** (2026-10-23): middle-drag (or Alt+LMB for trackpads) orbits around the point under the
@@ -266,7 +264,7 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   and plants, Firmalife shelves) → their base model; `composite` children. Face textures are copied into `icons/`
   (paletted TFC textures drawn by the engine). Size: 11.3k blocks, ~11 MB raw / ~1.06 MB gzip in all, TFC file
   190 KB gz, Create 80 KB; +4.3k textures (~4 MB) in `icons/`; build ~36 s with a warm cache. Site
-  `lib/blockModels.ts` loads only the namespaces of the schematic's blocks and bakes faces like `FaceBakery`
+  `entities/schematic/blockModels.ts` loads only the namespaces of the schematic's blocks and bakes faces like `FaceBakery`
   (variant x/y, element rotation + rescale, face uv rotation, uvlock approximated as world-aligned default uv,
   cullface after rotation); `schematicMesh.ts` uses them and falls back to `shapeOf` when a block has no model
   (BE-rendered: chests, Create belt; IE machine parts, Firmalife greenhouse panels) or the model is known to be
@@ -279,14 +277,14 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   by block name (code decides in game), no AO/emissive/animation, weighted random variants take the first.
 - **Create fluid pipe in 3D** (2026-10-24, task «Все еще порблемы с отрисовкой»): the jar core walls (multipart) plus
   the parts the game adds in code — `fluid_pipe/{connection,rim_connector,rim,drain}/north.json` copied into
-  `schematicMesh.ts` (`PIPE_PARTS`), turned to each connected side; which part by the neighbour as in
+  `entities/schematic/schematicMesh.ts` (`PIPE_PARTS`), turned to each connected side; which part by the neighbour as in
   `StandardPipeFluidTransportBehaviour.getRenderedRimAttachment` (Create 6.0.10, decompiled): straight pipe → pipe
   = connection, bend → rim_connector, empty/glass/encased/non-connecting pipe → rim, pump facing it → nothing, other
   pipes/valves/pumps → rim_connector, anything else → drain (fluid capability assumed). Layer view unchanged (icon).
   Browser-checked on cargoairshipforsamb1y with only pipes/tanks/pumps left: solid pipes with flanges instead of
   loose plates; not compared with the game side by side.
 - **Copycats in 3D** (2026-10-24, task «Отрисовка create»): copycat blockstates point at `block/air`, the game cuts
-  the shape out of the material's model. `lib/copycats.ts` — registry of shapes by block id from mod code (Create
+  the shape out of the material's model. `entities/schematic/copycats.ts` — registry of shapes by block id from mod code (Create
   6.0.10 `AllShapes` STEP_BOTTOM/TOP, CASING_3PX; Copycats+ 3.0.8 `CCShapes`: slab, byte, byte panel, half panel,
   layer, slice, corner/vertical slice, vertical step, beam, board, slope as an 8-step staircase, stairs) and materials
   from the schematic block nbt (`Material`, or `material_data.<part>.material` for multi-part Copycats+); the
@@ -297,7 +295,7 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
 - **Create parts drawn by code** (2026-10-24, task «Отрисовка create»): builder `block-models.mjs` adds `pm` (path →
   model) with every `models/block/**` of mods in `PARTIAL_NAMESPACES` (Create: 1887 incl. 444 never referenced by
   blockstates; create.json ~140 → ~230 KB gz). Site `partialQuads(ref, turns)` (blockModels.ts) bakes one with turns
-  around the centre; `lib/createParts.ts` — registry by block id from Create 6.0.10 visuals/renderers: belt
+  around the centre; `entities/schematic/createParts.ts` — registry by block id from Create 6.0.10 visuals/renderers: belt
   (BeltRenderer: start/middle/end + bottom, diagonal, pulley), gearbox halves, encased shafts/chain drive/adjustable
   gearshift/speed controller/pistons (shaft), clutch/gearshift/sequenced (split halves), creative motor, cuckoo
   clock, encased fan (half + propeller), drill head, pump cog, millstone inner, crushing wheel, powered shaft,
@@ -313,7 +311,7 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   (render.mjs) → `icons3d.blockCode` → `writeBlockModels({ codeBlock })` turns the quads into OBJ triangles and
   writes variants `facing=…,type=…` (south = y 0, ChestRenderer −facing.toYRot). 75 blocks; entity chest textures
   copied into `icons/`. Browser-checked on ore2dust_compact (21 chests, doubles join); not compared with the game.
-- **Library preview** (`lib/schematicRender.ts`): on save the browser draws a 480×320 webp (~15–20 KB) with
+- **Library preview** (`entities/schematic/schematicRender.ts`): on save the browser draws a 480×320 webp (~15–20 KB) with
   replacements into the `preview` field (rule: ≤300k chars); old records have a «нарисовать превью» button. Tested in
   the browser on two library schematics (8.6k blocks → 27k faces, 80 ms); saving with preview via the button not
   tested. Both library schematics got previews on 2026-10-19.
