@@ -3,7 +3,8 @@ import { ErrorBox } from '@/shared/ui';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { useItems } from '@/shared/pack-data';
-import { buildMesh, disposeMesh, meshObject, newRenderer, type Schematic, type Vec } from '@/entities/schematic';
+import type { Schematic, Vec } from '@/entities/schematic';
+import { buildMesh, disposeMesh, meshObject, newRenderer } from '@/entities/schematic/render';
 import { cx } from '@/shared/lib';
 // классы .view3d* живут в модуле слоёв: 3D показывается внутри того же оверлея
 import styles from './SchematicLayers.module.css';

@@ -39,6 +39,4 @@ export {
 } from './schematicEdit';
 export type { CellInfo, Grid } from './schematicEdit';
 export { blockTopView } from './blockModels';
-export { buildMesh, drawnByCode, isFullCube } from './schematicMesh';
-export type { Atlas, MeshData } from './schematicMesh';
-export { disposeMesh, isoCamera, meshObject, newRenderer, renderPreview } from './schematicRender';
+export { drawnByCode, isFullCube } from './schematicShape';
