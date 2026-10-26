@@ -402,12 +402,12 @@ export default function SchematicView3D({
   }, [selected, maxY]);
 
   return (
-    <div className={styles.view3d} ref={wrapRef}>
-      {error && <ErrorBox className={styles.view3dError}>{error}</ErrorBox>}
-      {stats && <div className={cx(styles.view3dStats, 'faint', 'small')}>{stats}</div>}
+    <div className={styles.view3D} ref={wrapRef}>
+      {error && <ErrorBox className={styles.view3DError}>{error}</ErrorBox>}
+      {stats && <div className={cx(styles.view3DStats, 'faint', 'small')}>{stats}</div>}
       {rect && (
         <div
-          className={styles.view3dFrame}
+          className={styles.view3DFrame}
           style={{
             left: Math.min(rect.x0, rect.x1),
             top: Math.min(rect.y0, rect.y1),

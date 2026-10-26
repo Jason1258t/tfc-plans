@@ -250,6 +250,7 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   plain LMB — click picks, drag frames (Alt no longer needed); RMB pan and wheel zoom stay in OrbitControls
   (`zoomToCursor`, `zoomSpeed` 2.5). Tested with synthetic pointer/wheel events and a real click; not tried with a
   real middle button or trackpad.
+- **3D view restored** (2026-10-27, task Uv5OpDxSyWdxEAiGGAzc): CSS Modules `camelCaseOnly` exports `.view3d`/`.view3dStats` as `view3D`/`view3DStats`; the old lowercase property accesses returned `undefined`, leaving the WebGL canvas only 17 px tall over the still-visible layer canvas. Updated the lazy view and loading fallback to use the exported keys. Reproduced on the live site with `ore2dust_compact`; checked after fix on the local production build.
 - **Block shapes and icons** (2026-10-23, task «в отрисовке схем и по слоям и в 3д проблемы с текстурами»): 3D —
   stairs with inner/outer corners (`shape`), ladders as a 1 px plate on the wall behind (`facing` — where it looks;
   IE scaffolding ladders stay cubes), Create funnels (wall/vertical — on the face they're attached to, belt funnel —
