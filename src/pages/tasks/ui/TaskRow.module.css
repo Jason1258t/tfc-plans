@@ -80,8 +80,8 @@
   text-decoration: line-through;
 }
 
-/* Ярлык «в работе»: .tag — общий ярлык из legacy-ui, здесь только его цвет */
-:global(.tag).doing {
+/* Ярлык «в работе» */
+.doing {
   color: var(--diamond);
   background: color-mix(in srgb, var(--diamond) 12%, transparent);
 }
