@@ -26,7 +26,7 @@ import {
   type PackUpdate,
 } from '@/entities/pack-update';
 import { cx, timeAgo } from '@/shared/lib';
-import { Button } from '@/shared/ui';
+import { Button, Tag } from '@/shared/ui';
 import type { Datapack } from '@/entities/datapack';
 import sectionStyles from './UpdatesSection.module.css';
 import styles from './UpdatesPage.module.css';
@@ -135,13 +135,13 @@ function UpdateCard({
         </div>
         {!u.baseline && (
           <div className={styles.badges}>
-            {m.added.length > 0 && <span className={cx('tag', styles.kAdd)}>+{m.added.length} мод.</span>}
-            {m.updated.length > 0 && <span className={cx('tag', styles.kUpd)}>~{m.updated.length}</span>}
-            {m.removed.length > 0 && <span className={cx('tag', styles.kDel)}>−{m.removed.length}</span>}
+            {m.added.length > 0 && <Tag className={styles.kAdd}>+{m.added.length} мод.</Tag>}
+            {m.updated.length > 0 && <Tag className={styles.kUpd}>~{m.updated.length}</Tag>}
+            {m.removed.length > 0 && <Tag className={styles.kDel}>−{m.removed.length}</Tag>}
             {risks.length > 0 && (
-              <span className={cx('tag', styles.kWarn)}>
+              <Tag className={styles.kWarn}>
                 <AlertTriangle size={12} /> датапаки
-              </span>
+              </Tag>
             )}
           </div>
         )}
@@ -291,13 +291,14 @@ const ModLine = ({ m }: { m: ModRef }) => (
   <span>
     <b>{m.name}</b>{' '}
     {addonById(m.id) && (
-      <Link
-        className={cx('tag', styles.addon)}
+      <Tag
+        as={Link}
+        className={styles.addon}
         to={`/addons/${m.id}`}
         title="Аддон группы — версии и описание на его странице"
       >
         наш аддон
-      </Link>
+      </Tag>
     )}{' '}
     <span className="faint small">
       {m.from ? `${m.from} → ${m.version}` : m.version} · <code>{m.id}</code>
