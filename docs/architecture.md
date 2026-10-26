@@ -113,7 +113,7 @@ src/components/   FileBadge (kinds — lib/fileKinds.ts), KubejsConstructor, Sch
 src/lib/
   kubejsFix.ts                 KubeJS-removal workaround builder (item library, recipes, tags — shared/pack-data)
   datapack.ts datapackFiles.ts datapack records, zip, checks; datapack files (shared with Node)
-  kubejsScripts.ts             site KubeJS scripts (collection kubejsScripts, UI — components/KubejsScripts)
+  kubejsScripts.ts             site KubeJS scripts (collection kubejsScripts, UI — pages/datapacks/ui/KubejsScripts)
    nbt.ts materials.ts           NBT parser (shared with Node) and schematic material helpers
    schematicFile.ts             schematic file with replacements and shape (shared with Node; suggestions — entities/schematic)
   reference.ts meals.ts        reference (ores, fuel, liquid fuel, food, metals); composite meals and calculators
@@ -131,7 +131,7 @@ server/pack-server/  pack server (snapshots, keys); on the VPS — docs/pack-ser
 cli/              `tfc` PC app (npm run tfc -- …): sync/publish; docs/tfc-app.md, cli/README.md
 tools/            pack addons — docs/addons.md; card tools/<mod>/addon.json + jar + icons/ → public/addons/ and
                   /addons/index.json for tfc (scripts/addons-index.mjs, pre dev/build); site — lib/addons.ts (glob of
-                  cards), AddonsTab (list), pages/AddonPage + guides/AddonArticle (/addons/<mod>, Firestore guide
+                  cards), AddonsTab (list), pages/addons/AddonPage + features/guides/AddonArticle (/addons/<mod>, Firestore guide
                   addon-<mod>, section addon, widget ::addon-block)
 scripts/mcp/      agent MCP (stdio) — docs/mcp.md
 scripts/mods/visibility/  hidden items (not visible in game): per-mod rule from mod code (field h in items.json)
