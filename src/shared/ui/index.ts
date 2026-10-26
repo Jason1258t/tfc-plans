@@ -11,5 +11,6 @@ export { ErrorBox } from './ErrorBox';
 export { Tag } from './Tag';
 export { ImpDot, ImpPill } from './Importance';
 export { Label } from './Label';
+export { Progress, type ProgressProps } from './Progress';
 export { Segmented, type SegmentedOption } from './Segmented';
 export { TooltipLayer, tooltipHandlers } from './Tooltip';

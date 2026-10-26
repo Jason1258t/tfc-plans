@@ -1,5 +1,5 @@
 import { Download, Paperclip, Trash2, X } from 'lucide-react';
-import { Button, ErrorBox } from '@/shared/ui';
+import { Button, ErrorBox, Progress } from '@/shared/ui';
 import { useRef, useState } from 'react';
 import { useFiles } from '@/entities/file';
 import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, type FileMeta } from '@/entities/file';
@@ -137,9 +137,7 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
                 </>
               ) : (
                 <span className={cx(styles.attachMeta, styles.attachProgress)}>
-                  <span className="progress">
-                    <span style={{ width: `${Math.max(4, u.progress * 100)}%` }} />
-                  </span>
+                  <Progress className={styles.attachProgressBar} value={Math.max(4, u.progress * 100)} />
                   <span className="faint small">{Math.round(u.progress * 100)}%</span>
                 </span>
               )}

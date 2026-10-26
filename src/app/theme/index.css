@@ -7,7 +7,7 @@
 @import '@fontsource-variable/inter';
 @import './tokens.css' layer(theme);
 @import './base.css' layer(theme);
-/* .btn, .input, .seg, .modal… — пока ими пользуются страницы; уходят по мере переноса в shared/ui */
+/* Остаток общих стилей: иконка предмета и анимация появления. */
 @import './legacy-ui.css' layer(theme);
 @import './markdown.css' layer(theme);
 @import './utilities.css' layer(theme);
