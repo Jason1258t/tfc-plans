@@ -6,7 +6,7 @@ import { itemName, useItems, itemRefsOf, type RecipeCatalog, ItemIcon, ItemIdSea
 import type { DatapackEntry } from '@/entities/datapack';
 import styles from './EntryEditor.module.css';
 import { HintPanel } from './HintPanel';
-import { Button, ErrorBox, Input, Modal, Textarea } from '@/shared/ui';
+import { Button, ErrorBox, Input, Label, Modal, Textarea } from '@/shared/ui';
 
 const KIND_LABEL: Record<DatapackEntry['kind'], string> = {
   add: 'Новый рецепт',
@@ -80,9 +80,7 @@ export function EntryEditor({ entry, catalog, onSave, onClose }: Props) {
     >
       <div className={styles.eeLayout}>
         <div className={styles.eeMain}>
-          <label className="label" htmlFor="ee-path">
-            Путь в zip
-          </label>
+          <Label htmlFor="ee-path">Путь в zip</Label>
           <Input
             id="ee-path"
             className="mono-input"
@@ -96,9 +94,7 @@ export function EntryEditor({ entry, catalog, onSave, onClose }: Props) {
             }
           />
           <div className={styles.eeEditorHead}>
-            <span className="label" style={{ margin: 0 }}>
-              Содержимое
-            </span>
+            <Label style={{ margin: 0 }}>Содержимое</Label>
             <span className="grow" />
             {isJson && (
               <Button
@@ -156,15 +152,15 @@ export function EntryEditor({ entry, catalog, onSave, onClose }: Props) {
               предмета или служебный id — проверьте.
             </div>
           )}
-          <label className="label" htmlFor="ee-note" style={{ marginTop: 6 }}>
+          <Label htmlFor="ee-note" style={{ marginTop: 6 }}>
             Заметка (не попадает в zip)
-          </label>
+          </Label>
           <Input id="ee-note" value={note} placeholder="Зачем этот файл" onChange={(e) => setNote(e.target.value)} />
         </div>
         <aside className={styles.eeSide}>
           <HintPanel type={type} catalog={catalog} />
           <div>
-            <div className="label">Найти id предмета</div>
+            <Label>Найти id предмета</Label>
             <ItemIdSearch compact limit={25} />
           </div>
         </aside>

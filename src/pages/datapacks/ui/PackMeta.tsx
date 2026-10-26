@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { sanitizeNamespace } from '@/lib/datapack';
 import type { Datapack } from '@/entities/datapack';
 import { InstallToggle } from './KubejsScripts';
-import { Input } from '@/shared/ui';
+import { Input, Label } from '@/shared/ui';
 import styles from '../DatapacksPage.module.css';
 
 interface Props {
@@ -21,9 +21,7 @@ export function PackMeta({ pack, onUpdate }: Props) {
     <section className={styles.dpMeta}>
       <div className={styles.dpMetaRow}>
         <div className="grow">
-          <label className="label" htmlFor="dp-name">
-            Название
-          </label>
+          <Label htmlFor="dp-name">Название</Label>
           <Input
             id="dp-name"
             className={styles.dpName}
@@ -33,9 +31,9 @@ export function PackMeta({ pack, onUpdate }: Props) {
           />
         </div>
         <div style={{ width: 200 }}>
-          <label className="label" htmlFor="dp-ns" title="Папка для новых рецептов: data/<namespace>/recipe/…">
+          <Label htmlFor="dp-ns" title="Папка для новых рецептов: data/<namespace>/recipe/…">
             Namespace
-          </label>
+          </Label>
           <Input
             id="dp-ns"
             className="mono-input"
@@ -50,9 +48,7 @@ export function PackMeta({ pack, onUpdate }: Props) {
         </div>
       </div>
       <div>
-        <label className="label" htmlFor="dp-desc">
-          Описание (в pack.mcmeta)
-        </label>
+        <Label htmlFor="dp-desc">Описание (в pack.mcmeta)</Label>
         <Input
           id="dp-desc"
           value={description}

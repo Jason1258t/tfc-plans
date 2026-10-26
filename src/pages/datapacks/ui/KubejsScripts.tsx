@@ -7,7 +7,7 @@ import { SCRIPT_FILE_RE } from '@/lib/kubejsFix';
 import { downloadScript } from '@/lib/kubejsScripts';
 import { cx, timeAgo } from '@/shared/lib';
 import type { KubejsScript } from '@/entities/datapack';
-import { Button, Input, Textarea } from '@/shared/ui';
+import { Button, Input, Label, Textarea } from '@/shared/ui';
 import styles from '../DatapacksPage.module.css';
 
 /** Отметка «Ставить в мир» / «Ставить на сервер» с подсказкой */
@@ -75,9 +75,9 @@ export function ScriptEditor({
     <div className={styles.dpEditor}>
       <section className={styles.dpMeta}>
         <div>
-          <label className="label" htmlFor="kjs-name">
+          <Label htmlFor="kjs-name">
             Файл в <code>kubejs/server_scripts/</code>
-          </label>
+          </Label>
           <Input
             id="kjs-name"
             className="mono-input"
