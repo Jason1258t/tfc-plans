@@ -1,0 +1,31 @@
+.copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-3);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.copy:hover,
+.copy:focus-visible {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.withLabel {
+  border-color: var(--border);
+  padding: 0 10px;
+}
+
+.on {
+  color: var(--accent);
+}
