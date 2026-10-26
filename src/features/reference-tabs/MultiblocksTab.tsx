@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronUp, Download, FlipHorizontal2, RotateCcw } from 'lucide-react';
-import { Segmented, Button } from '@/shared/ui';
+import { Segmented, Button, ButtonLink } from '@/shared/ui';
 import { lazy, Suspense, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { iconUrl, itemName, useItems, type ItemIndex, sourceName, useTags, ItemIcon } from '@/shared/pack-data';
@@ -100,9 +100,9 @@ function MultiblockCard({ m, data }: { m: Multiblock; data: MultiblockData }) {
               {MOD_LABEL[m.ns] ?? m.ns} · {sx}×{sy}×{sz} (ширина × высота × глубина) · блоков {count}
             </div>
           </div>
-          <a className="btn ghost" href={`${import.meta.env.BASE_URL}multiblocks/${shape.nbt}`} download>
+          <ButtonLink variant="ghost" href={`${import.meta.env.BASE_URL}multiblocks/${shape.nbt}`} download>
             <Download size={15} /> Схема .nbt
-          </a>
+          </ButtonLink>
         </div>
         {m.replaces && (
           <p className={styles.note}>
@@ -186,9 +186,9 @@ function MbViewer({
           />
         )}
         {m.mirror && (
-          <button className={cx('btn ghost', mirrored && styles.on)} onClick={() => setMirrored((v) => !v)}>
+          <Button variant="ghost" className={cx(mirrored && styles.on)} onClick={() => setMirrored((v) => !v)}>
             <FlipHorizontal2 size={15} /> {mirrored ? 'Зеркально' : 'Как в книге'}
-          </button>
+          </Button>
         )}
         {!showFormed && (
           <div className={styles.layerCtl}>
@@ -385,14 +385,16 @@ function Iso({
           );
         })}
       </div>
-      <button
-        className={cx('btn ghost icon', styles.isoReset)}
+      <Button
+        variant="ghost"
+        icon
+        className={styles.isoReset}
         aria-label="Вернуть вид"
         onClick={() => setRot({ yaw: -35, pitch: -28 })}
         onPointerDown={(e) => e.stopPropagation()}
       >
         <RotateCcw size={14} />
-      </button>
+      </Button>
       <span className="mb-iso-hint faint small">тяните, чтобы повернуть</span>
     </div>
   );

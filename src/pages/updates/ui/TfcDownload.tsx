@@ -1,6 +1,6 @@
 import { Check, Copy, Download, Terminal } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Button } from '@/shared/ui';
+import { Button, ButtonLink } from '@/shared/ui';
 import sectionStyles from '../UpdatesSection.module.css';
 import styles from './TfcDownload.module.css';
 
@@ -132,9 +132,9 @@ export function TfcDownload() {
             <li>
               Скачайте и распакуйте:{' '}
               {targets.map((t) => (
-                <a key={t.id} className="btn" href={`/tfc/${info.files[t.id].file}`} download>
+                <ButtonLink key={t.id} href={`/tfc/${info.files[t.id].file}`} download>
                   <Download size={14} /> {t.title} <span className="faint">· {mb(info.files[t.id].size)}</span>
-                </a>
+                </ButtonLink>
               ))}
             </li>
             {os === 'win' ? (

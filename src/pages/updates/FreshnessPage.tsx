@@ -12,7 +12,7 @@ import {
   type ManifestMod,
 } from './model/freshness';
 import { cx, timeAgo } from '@/shared/lib';
-import { Button, Input, Segmented } from '@/shared/ui';
+import { Button, ButtonLink, Input, Segmented } from '@/shared/ui';
 import sectionStyles from './UpdatesSection.module.css';
 import styles from './FreshnessPage.module.css';
 
@@ -301,10 +301,17 @@ function ModRow({ mod: m }: { mod: FreshMod }) {
         {m.note && <div className="faint small">{m.note}</div>}
       </div>
       {m.project?.url && m.source && m.source !== 'own' && (
-        <a className={cx('btn', 'ghost', 'sm', styles.src)} href={m.project.url} target="_blank" rel="noreferrer">
+        <ButtonLink
+          variant="ghost"
+          size="sm"
+          className={styles.src}
+          href={m.project.url}
+          target="_blank"
+          rel="noreferrer"
+        >
           {SOURCE_LABEL[m.source]}
           <ExternalLink size={12} />
-        </a>
+        </ButtonLink>
       )}
     </li>
   );

@@ -40,7 +40,7 @@
   gap: 10px;
 }
 
-.steps li > :global(.btn) {
+.steps li > a {
   margin: 4px 6px 0 0;
   display: inline-flex;
   align-items: center;
