@@ -169,8 +169,8 @@
   word-break: break-all;
 }
 
-/* .grow — общая утилита из темы, тут нужен лишь min-width */
-.slots li > :global(.grow) {
+.grow {
+  flex: 1 1 auto;
   min-width: 0;
 }
 

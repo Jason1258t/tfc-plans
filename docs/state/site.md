@@ -352,7 +352,8 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
 - Fuel is one tab with sub-sections: solid (no wood) and liquid with oil (`?tab=fuel&sub=liquid`; old `tab=liquid`
   redirects).
 - Food section closed (`docs/plans/food.md`): products, composite meals with calculators, cooked meals by method.
-  Leftovers listed in the plan («Сознательно не сделано»).
+  Leftovers listed in the plan («Сознательно не сделано»). CSS вкладки `MealsTab` переведён на локальные классы
+  `MealsTab.module.css`; остаточных зависимостей от `ReferenceShared.css` и `:global` в ней нет (2026-10-26).
 
 ### Botany
 
