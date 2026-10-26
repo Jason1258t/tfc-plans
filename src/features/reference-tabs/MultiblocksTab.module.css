@@ -1,7 +1,7 @@
 /* Справочник → «Мультиблоки»: только собственные классы вкладки.
    Глобальными остались:
    — каркас справочника `.botany / .botany-nav / .botany-main / .ref-card / .ref-table*` (pages/reference/ReferenceShared.css),
-   — классы темы `.empty / .faint / .small / .grow / .item-icon`; `.empty` на пустой клетке слоя задаёт отступы и её размер. */
+   — классы темы `.empty / .faint / .small / .grow`; `.empty` на пустой клетке слоя задаёт отступы и её размер. */
 
 .navGroup {
   display: flex;
@@ -76,7 +76,7 @@
   gap: 4px;
 }
 
-.steps :global(.item-icon) {
+.stepIcon {
   vertical-align: -4px;
 }
 

@@ -122,7 +122,8 @@ export function LiquidFuelTab({ families, items }: { families: LiquidFamily[]; i
 // ---------------------------------------------------------------- нефть
 
 function OilCard({ items }: { items: ItemIndex | null }) {
-  const icon = (id: string) => (items?.byId.has(id) ? <ItemIcon id={id} size={20} /> : null);
+  const icon = (id: string, className?: string) =>
+    items?.byId.has(id) ? <ItemIcon id={id} size={20} className={className} /> : null;
   return (
     <section className="ref-card">
       <header className="ref-card-head">
@@ -146,12 +147,12 @@ function OilCard({ items }: { items: ItemIndex | null }) {
           под морем.
         </li>
         <li>
-          Найти: {icon('createdieselgenerators:oil_scanner')}{' '}
+          Найти: {icon('createdieselgenerators:oil_scanner', styles.factIcon)}{' '}
           <b>{itemName(items?.byId.get('createdieselgenerators:oil_scanner'), 'детектор нефти')}</b> показывает запас
-          чанка. Добыть: <b>станок-качалка</b> {icon('createdieselgenerators:pumpjack_crank')}
-          {icon('createdieselgenerators:pumpjack_bearing')}
-          {icon('createdieselgenerators:pumpjack_head')}
-          {icon('createdieselgenerators:pumpjack_hole')} над чанком с нефтью.
+          чанка. Добыть: <b>станок-качалка</b> {icon('createdieselgenerators:pumpjack_crank', styles.factIcon)}
+          {icon('createdieselgenerators:pumpjack_bearing', styles.factIcon)}
+          {icon('createdieselgenerators:pumpjack_head', styles.factIcon)}
+          {icon('createdieselgenerators:pumpjack_hole', styles.factIcon)} над чанком с нефтью.
         </li>
         <li>
           Сырую нефть сразу не сжечь — её перегоняют в <b>дистилляционной колонне</b> на бензин и дизель (ниже).
