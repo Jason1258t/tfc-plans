@@ -13,7 +13,7 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 
 **Где остановились (26 октября, передача смены).** `.btn`, `.input`, `.imp-dot`, `.imp-pill` — 0 и в разметке, и в теме;
 всё на `Button`/`ButtonLink`/`Input`/`Select`/`Textarea`/`Tag`/`ImpDot`/`ImpPill`/`Label`/`ErrorBox`. Остаток и правила
-работы — [docs/plans/handoff-2026-10-26.md](plans/handoff-2026-10-26.md): `.label` (19 мест), `.tag` (16), мёртвые
+работы — [docs/plans/handoff-2026-10-26.md](plans/handoff-2026-10-26.md): `.label` (15 мест), `.tag` (16), мёртвые
 правила в `pages/dev`, хвост `lib/schematic*` (отложен осознанно).
 
 - Plan and rules — skill `css-modules`: tokens/base in `src/app/theme`, repeated UI in `src/shared/ui`, page styles in
@@ -63,6 +63,8 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
   селекторы с тегом (`.filters > select`, `.row > input`, `.guideFieldWide > input`) и `.guideFields .guideOrder`:
   `Field.module.css` лежит без каскадного слоя, поэтому на равной специфичности решал бы порядок чанков. `.input`
   пока остался у `ItemPicker` (`shared/pack-data`) и на страницах, которые ещё не переведены.
+- 2026-10-26: `.label` → `Label` в трёх компонентах страницы задач (группа, место, сравнение); снимки до/после — без
+  визуальных отличий на desktop/mobile. Осталось 15 разметок.
 - Left: **2 global CSS outside `src/app/theme`** — `ReferenceShared.css`/`PowerShared.css`, общие части справочника
   (их берут мультиблоки, гайды и аддоны; переедут вместе с `entities/guide` и мультиблоками). `legacy-ui.css` пока
   держит `.btn/.input/.tag/.empty/.error-box/.imp-*` — их ещё используют страницы; каждый новый компонент `shared/ui`

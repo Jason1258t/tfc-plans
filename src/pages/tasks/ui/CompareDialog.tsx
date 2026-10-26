@@ -5,7 +5,7 @@ import { elo, pickPair, sortTasks, swapRatings } from '../model/tasks';
 import { PRIORITIES, type Task } from '@/entities/task';
 import styles from './CompareDialog.module.css';
 import { ItemIcon } from '@/shared/pack-data';
-import { Button, ImpDot, ImpPill, Modal } from '@/shared/ui';
+import { Button, ImpDot, ImpPill, Label, Modal } from '@/shared/ui';
 
 interface Props {
   /** Задачи, участвующие в сравнении (текущий фильтр, без выполненных) */
@@ -71,7 +71,7 @@ export function CompareDialog({ tasks, onClose }: Props) {
       )}
       {ranking.length > 0 && (
         <div>
-          <div className="label">Рейтинг</div>
+          <Label>Рейтинг</Label>
           <div className="faint small">Наведите между строками и нажмите ⇅, чтобы поменять две задачи местами.</div>
           <ol className={styles.cmpRank}>
             {ranking.map((t, i) => (

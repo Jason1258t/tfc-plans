@@ -34,6 +34,22 @@
       "note": "окно новой задачи"
     },
     {
+      "name": "tasks.group-dialog",
+      "path": "/",
+      "waitFor": "main",
+      "actions": [{ "click": "button[aria-label=\"Новая группа\"]" }, { "wait": "[role=dialog]" }],
+      "fullPage": false,
+      "note": "окно новой группы"
+    },
+    {
+      "name": "tasks.compare",
+      "path": "/",
+      "waitFor": "main",
+      "actions": [{ "click": "button[title=\"Попарно сравнить задачи по важности\"]" }, { "wait": "[role=dialog]" }],
+      "fullPage": false,
+      "note": "окно сравнения задач"
+    },
+    {
       "name": "tasks.dark",
       "path": "/",
       "waitFor": "main",

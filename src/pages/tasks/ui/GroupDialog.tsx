@@ -6,7 +6,7 @@ import { groupsStore } from '@/entities/group';
 import { tasksStore } from '@/entities/task';
 import type { Group } from '@/entities/group';
 import { ItemIcon, ItemPicker } from '@/shared/pack-data';
-import { Button, Input, Modal } from '@/shared/ui';
+import { Button, Input, Label, Modal } from '@/shared/ui';
 import styles from './GroupDialog.module.css';
 
 interface Props {
@@ -69,9 +69,7 @@ export function GroupDialog({ group, onClose, onDeleted }: Props) {
           save();
         }}
       >
-        <label className="label" htmlFor="g-name">
-          Название
-        </label>
+        <Label htmlFor="g-name">Название</Label>
         <Input
           id="g-name"
           value={name}
@@ -82,7 +80,7 @@ export function GroupDialog({ group, onClose, onDeleted }: Props) {
         />
       </form>
       <div>
-        <span className="label">Иконка</span>
+        <Label>Иконка</Label>
         <div className="row">
           <span className={styles.tfIcon} style={{ cursor: 'default' }}>
             {icon ? <ItemIcon id={icon} size={24} /> : null}
