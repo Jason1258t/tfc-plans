@@ -1,5 +1,5 @@
 import { ArrowRight, Search } from 'lucide-react';
-import { Segmented, Select } from '@/shared/ui';
+import { SectionShell, Segmented, Select } from '@/shared/ui';
 import { useMemo, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { BotanyTab } from './tabs/BotanyTab';
@@ -134,21 +134,25 @@ function Reference() {
       ) : tab === 'ores' ? (
         <OresTab ref_={ref} items={items} />
       ) : tab === 'fuel' ? (
-        <div className="botany">
-          <nav className="botany-nav" aria-label="Разделы топлива">
-            <button className={cx(!liquid && 'active')} onClick={() => setParams({ tab: 'fuel' }, { replace: true })}>
-              <span>Твёрдое</span>
-              <span className="faint small">{ref.fuels.length}</span>
-            </button>
-            <button
-              className={cx(liquid && 'active')}
-              onClick={() => setParams({ tab: 'fuel', sub: 'liquid' }, { replace: true })}
-            >
-              <span>Жидкое</span>
-              <span className="faint small">{ref.liquid?.families.length ?? ''}</span>
-            </button>
-          </nav>
-          <div className={cx('botany-main', shell.fuelMain)}>
+        <SectionShell
+          navLabel="Разделы топлива"
+          nav={
+            <>
+              <button className={cx(!liquid && 'active')} onClick={() => setParams({ tab: 'fuel' }, { replace: true })}>
+                <span>Твёрдое</span>
+                <span className="faint small">{ref.fuels.length}</span>
+              </button>
+              <button
+                className={cx(liquid && 'active')}
+                onClick={() => setParams({ tab: 'fuel', sub: 'liquid' }, { replace: true })}
+              >
+                <span>Жидкое</span>
+                <span className="faint small">{ref.liquid?.families.length ?? ''}</span>
+              </button>
+            </>
+          }
+        >
+          <div className={shell.fuelMain}>
             {!liquid ? (
               <FuelTab fuels={ref.fuels} items={items} />
             ) : ref.liquid ? (
@@ -157,32 +161,36 @@ function Reference() {
               <div className="empty">Справочник собран старой версией — выполните npm run mods</div>
             )}
           </div>
-        </div>
+        </SectionShell>
       ) : tab === 'food' ? (
-        <div className="botany">
-          <nav className="botany-nav" aria-label="Разделы еды">
-            <button
-              className={cx(params.get('sub') !== 'meals' && params.get('sub') !== 'dishes' && 'active')}
-              onClick={() => setParams({ tab: 'food' }, { replace: true })}
-            >
-              <span>Продукты</span>
-              <span className="faint small">{ref.foods.length}</span>
-            </button>
-            <button
-              className={cx(params.get('sub') === 'meals' && 'active')}
-              onClick={() => setParams({ tab: 'food', sub: 'meals' }, { replace: true })}
-            >
-              <span>Сборные блюда</span>
-              <span className="faint small">{mealCount || ''}</span>
-            </button>
-            <button
-              className={cx(params.get('sub') === 'dishes' && 'active')}
-              onClick={() => setParams({ tab: 'food', sub: 'dishes' }, { replace: true })}
-            >
-              <span>Готовые блюда</span>
-            </button>
-          </nav>
-          <div className={cx('botany-main', shell.fuelMain)}>
+        <SectionShell
+          navLabel="Разделы еды"
+          nav={
+            <>
+              <button
+                className={cx(params.get('sub') !== 'meals' && params.get('sub') !== 'dishes' && 'active')}
+                onClick={() => setParams({ tab: 'food' }, { replace: true })}
+              >
+                <span>Продукты</span>
+                <span className="faint small">{ref.foods.length}</span>
+              </button>
+              <button
+                className={cx(params.get('sub') === 'meals' && 'active')}
+                onClick={() => setParams({ tab: 'food', sub: 'meals' }, { replace: true })}
+              >
+                <span>Сборные блюда</span>
+                <span className="faint small">{mealCount || ''}</span>
+              </button>
+              <button
+                className={cx(params.get('sub') === 'dishes' && 'active')}
+                onClick={() => setParams({ tab: 'food', sub: 'dishes' }, { replace: true })}
+              >
+                <span>Готовые блюда</span>
+              </button>
+            </>
+          }
+        >
+          <div className={shell.fuelMain}>
             {params.get('sub') === 'meals' ? (
               <MealsTab items={items} foods={ref.foods} initialQuery={params.get('q') ?? ''} />
             ) : params.get('sub') === 'dishes' ? (
@@ -191,7 +199,7 @@ function Reference() {
               <FoodTab foods={ref.foods} items={items} meals={meals ?? null} />
             )}
           </div>
-        </div>
+        </SectionShell>
       ) : tab === 'botany' ? (
         <BotanyTab
           foods={ref.foods}

@@ -26,7 +26,7 @@ import { itemName, useItems, type ItemIndex, useTags, ItemIcon } from '@/shared/
 import { mealsByItem, useMeals, type MealRef } from '@/lib/meals';
 import type { Food } from '@/lib/reference';
 import { cx } from '@/shared/lib';
-import { Input, Select } from '@/shared/ui';
+import { Input, Select, SectionShell } from '@/shared/ui';
 import '../ReferenceShared.css';
 import shell from '../ReferenceShell.module.css';
 import styles from './BotanyTab.module.css';
@@ -114,22 +114,25 @@ export function BotanyTab({
   if (plants === null) return <div className="empty">Данных о растениях нет — выполните npm run mods</div>;
 
   return (
-    <div className="botany">
-      <nav className="botany-nav" aria-label="Разделы ботаники">
-        {SUBTABS.filter((k) => k !== 'plant' || counts.plant > 0).map((k) => (
-          <button key={k} className={cx(subtab === k && 'active')} onClick={() => onSub(k)}>
-            <span>{PLANT_KIND_LABEL[k]}</span>
-            <span className="faint small">{counts[k]}</span>
-          </button>
-        ))}
-        {(botany?.greenhouse.length ?? 0) > 0 && (
-          <button className={cx(subtab === 'greenhouse' && 'active')} onClick={() => onSub('greenhouse')}>
-            <span>Теплица</span>
-            <span className="faint small">{botany!.greenhouse.length}</span>
-          </button>
-        )}
-      </nav>
-
+    <SectionShell
+      navLabel="Разделы ботаники"
+      nav={
+        <>
+          {SUBTABS.filter((k) => k !== 'plant' || counts.plant > 0).map((k) => (
+            <button key={k} className={cx(subtab === k && 'active')} onClick={() => onSub(k)}>
+              <span>{PLANT_KIND_LABEL[k]}</span>
+              <span className="faint small">{counts[k]}</span>
+            </button>
+          ))}
+          {(botany?.greenhouse.length ?? 0) > 0 && (
+            <button className={cx(subtab === 'greenhouse' && 'active')} onClick={() => onSub('greenhouse')}>
+              <span>Теплица</span>
+              <span className="faint small">{botany!.greenhouse.length}</span>
+            </button>
+          )}
+        </>
+      }
+    >
       {subtab === 'greenhouse' ? (
         <Greenhouse
           list={botany?.greenhouse ?? []}
@@ -142,7 +145,7 @@ export function BotanyTab({
           water={meta.greenhouseWater}
         />
       ) : (
-        <div className="botany-main">
+        <div>
           <div className={cx(shell.filters, shell.filtersEnd)}>
             <label className={cx(shell.search, 'grow')}>
               <Search size={15} className="faint" />
@@ -202,7 +205,7 @@ export function BotanyTab({
           )}
         </div>
       )}
-    </div>
+    </SectionShell>
   );
 }
 
@@ -805,7 +808,7 @@ function Greenhouse({
   }
 
   return (
-    <div className="botany-main">
+    <div>
       <div className={cx(shell.filters, shell.filtersEnd)}>
         <label className={cx(shell.search, 'grow')}>
           <Search size={15} className="faint" />

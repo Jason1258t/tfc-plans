@@ -1,0 +1,63 @@
+/* Каркас подраздела с боковым меню. Переехал из pages/reference/ReferenceShared.css (`.botany*`) */
+
+.shell {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.shell > * {
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  position: sticky;
+  top: calc(var(--header-h) + 12px);
+}
+
+@media (max-width: 760px) {
+  .nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    position: static;
+  }
+}
+
+.nav button {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.nav button:hover {
+  background: var(--surface-2);
+}
+
+/* Активный пункт задаёт вызывающий код глобальным классом `active` */
+.nav button:global(.active) {
+  background: var(--accent-soft);
+  font-weight: 600;
+}

@@ -1,6 +1,6 @@
 /* Справочник → «Мультиблоки»: только собственные классы вкладки.
    Глобальными остались:
-   — каркас справочника `.botany / .botany-nav / .botany-main / .ref-card / .ref-table*` (pages/reference/ReferenceShared.css),
+   — `.ref-card / .ref-table*` (pages/reference/ReferenceShared.css),
    — классы темы `.empty / .faint / .small / .grow`; `.empty` на пустой клетке слоя задаёт отступы и её размер. */
 
 .navGroup {
