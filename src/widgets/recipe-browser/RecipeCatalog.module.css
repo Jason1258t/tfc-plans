@@ -140,7 +140,7 @@
     flex-wrap: wrap;
   }
   .catSrc,
-  .catMain :global(.tag) {
+  .catMain .recipeType {
     display: none;
   }
   .catActions {

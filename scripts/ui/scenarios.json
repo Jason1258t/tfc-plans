@@ -137,6 +137,12 @@
       "path": "/recipes"
     },
     {
+      "name": "recipes.tag",
+      "path": "/recipes?q=aeronautics%3Acrushing%2Fend_stone_powder",
+      "waitFor": "main input",
+      "note": "строка рецепта с меткой типа"
+    },
+    {
       "name": "recipes.kubejs-constructor",
       "path": "/recipes?q=aeronautics%3Acrushing%2Fend_stone_powder",
       "waitFor": "main",
