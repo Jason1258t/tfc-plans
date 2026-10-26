@@ -105,7 +105,7 @@ const MAX_PREVIEW = 280_000;
  */
 export async function makePreview(s: Schematic, replace: Map<string, string>, items: ItemIndex) {
   try {
-    const { renderPreview } = await import('@/entities/schematic');
+    const { renderPreview } = await import('@/entities/schematic/render');
     const url = await renderPreview(s, replace, items);
     return url.length <= MAX_PREVIEW ? url : null;
   } catch (e) {

@@ -85,8 +85,9 @@ src/entities/     сущности: типы, коллекции и zustand-хр
   artifact/        Artifact, artifactsStore, useArtifacts
   guide/           Guide, GuideRevision
   datapack/        Datapack, DatapackEntry, KubejsScript, datapacksStore/kubejsScriptsStore
-  schematic/       SavedSchematic, ReplaceFavorite, schematicsStore/replaceFavoritesStore; модель схемы, редактор,
-                   модели блоков, геометрия и three.js-рендер (используют страница схем и MultiblockFormed)
+  schematic/       SavedSchematic, ReplaceFavorite, schematicsStore/replaceFavoritesStore; модель схемы и редактор
+                   schematic/render/ — публичный API моделей, геометрии и three.js-рендера; отдельный импорт
+                   сохраняет разбиение по чанкам для страницы схем и MultiblockFormed
   user/            SiteUser, useUsers/usePeople, useNick (ник заходившего), touchPresence
   file/            useFiles, файловый API (upload/download/remove) и адаптеры хранилища — entities/file/fileStorage;
                    конфиг хранилища остался в src/lib/files.config.ts (путь зашит в npm run rules:files и скрипты)
