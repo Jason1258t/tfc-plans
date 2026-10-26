@@ -1,0 +1,32 @@
+.formed {
+  position: relative;
+  height: 420px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  overflow: hidden;
+  touch-action: none;
+}
+
+.formed canvas {
+  display: block;
+}
+
+.formed .formedNote {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.isoHint {
+  position: absolute;
+  left: 8px;
+  bottom: 6px;
+}
+
+@media (max-width: 720px) {
+  .formed {
+    height: 340px;
+  }
+}

@@ -1,10 +1,7 @@
 /* Справочник → «Мультиблоки»: только собственные классы вкладки.
    Глобальными остались:
    — каркас справочника `.botany / .botany-nav / .botany-main / .ref-card / .ref-table*` (pages/reference/ReferenceShared.css),
-   — классы темы `.btn / .seg / .empty / .faint / .small / .grow / .item-icon`,
-   — `.mb-formed`, `.mb-formed-note`, `.mb-iso-hint`: их ставит отдельный компонент MultiblockFormed.tsx,
-     его модуль — отдельная задача; пока держим имена глобальными (см. :global ниже),
-   — `.empty` на пустой клетке слоя: глобальный `.empty` задаёт ей отступы и участвует в размере клетки. */
+   — классы темы `.empty / .faint / .small / .grow / .item-icon`; `.empty` на пустой клетке слоя задаёт отступы и её размер. */
 
 .navGroup {
   display: flex;
@@ -200,8 +197,7 @@
   top: 6px;
 }
 
-/* подпись подсказки ставит в том числе MultiblockFormed.tsx — имя остаётся глобальным */
-:global(.mb-iso-hint) {
+.isoHint {
   position: absolute;
   left: 8px;
   bottom: 6px;
@@ -315,8 +311,7 @@
   border: 0;
 }
 
-/* итоговый вид — three.js; разметку рисует MultiblockFormed.tsx, поэтому имена классов общие */
-:global(.mb-formed) {
+.formedFallback {
   position: relative;
   height: 420px;
   border: 1px solid var(--border);
@@ -326,23 +321,12 @@
   touch-action: none;
 }
 
-:global(.mb-formed) canvas {
-  display: block;
-}
-
-:global(.mb-formed-note) {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-}
-
 .formedFoot {
   margin: 6px 0 0;
 }
 
 @media (max-width: 720px) {
-  :global(.mb-formed) {
+  .formedFallback {
     height: 340px;
   }
 }
