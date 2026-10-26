@@ -23,6 +23,14 @@ const VIEWS: Record<View, DevStatus[] | null> = {
   all: null,
 };
 const RANK: Record<DevStatus, number> = { doing: 0, review: 1, todo: 2, backlog: 3, done: 4, dropped: 5 };
+const STATUS_CLASS: Record<DevStatus, string | undefined> = {
+  backlog: undefined,
+  todo: undefined,
+  doing: styles.doing,
+  review: styles.review,
+  done: styles.done,
+  dropped: styles.dropped,
+};
 
 export function DevPage() {
   const { tasks, error, reload, put, drop } = useDevTasks();
@@ -172,7 +180,7 @@ function DevRow({ task: t, onOpen }: { task: DevTask; onOpen: () => void }) {
         onClick={onOpen}
       >
         <span className={styles.num}>#{t.id}</span>
-        <span className={cx(styles.status, styles[t.status])}>{label(STATUSES, t.status)}</span>
+        <span className={cx(styles.status, STATUS_CLASS[t.status])}>{label(STATUSES, t.status)}</span>
         <span className={styles.title}>
           {t.priority >= 2 && <span className={styles.prio}>{t.priority === 3 ? '‼' : '!'}</span>}
           {t.title}
@@ -196,7 +204,7 @@ function DevRow({ task: t, onOpen }: { task: DevTask; onOpen: () => void }) {
             </span>
           )}
           {t.assignee && <span className={styles.who}>{t.assignee}</span>}
-          <span className={styles.when}>{timeAgo(t.updatedAt)}</span>
+          <span>{timeAgo(t.updatedAt)}</span>
         </span>
       </button>
       {/* Рядом с кнопкой строки, а не внутри: кнопка в кнопке недопустима */}

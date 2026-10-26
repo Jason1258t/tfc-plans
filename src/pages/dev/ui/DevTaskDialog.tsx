@@ -12,6 +12,7 @@ import {
   PRIORITY_LABEL,
   STATUSES,
   type DevCheck,
+  type DevNote,
   type DevTask,
   type DevTaskFull,
   type TaskPatch,
@@ -63,6 +64,11 @@ function diff(a: Draft, b: Draft): TaskPatch {
 }
 
 const NOTE_KIND = { note: '', status: 'статус', report: 'отчёт' } as const;
+const NOTE_CLASS: Record<DevNote['kind'], string | undefined> = {
+  note: undefined,
+  status: styles.status,
+  report: styles.report,
+};
 
 export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
   const nick = useNick();
@@ -376,7 +382,7 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
                 </h3>
                 <ol className={styles.log}>
                   {full.notes.map((n) => (
-                    <li key={n.id} className={cx(styles[n.kind])}>
+                    <li key={n.id} className={NOTE_CLASS[n.kind]}>
                       <div className={styles.logHead}>
                         <b>{n.author}</b>
                         {NOTE_KIND[n.kind] && <span className={styles.logKind}>{NOTE_KIND[n.kind]}</span>}
