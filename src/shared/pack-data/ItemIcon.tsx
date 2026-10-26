@@ -1,4 +1,5 @@
 import { blockEntry, guiIcon, itemName, textureUrl, useItems } from './items';
+import { itemIconClasses } from './itemIconClasses';
 import { cx } from '@/shared/lib';
 import { tooltipHandlers } from '@/shared/ui';
 
@@ -21,7 +22,12 @@ export function ItemIcon({ id, texture, size = 32, tip = true, className }: Prop
   const handlers = tip && id ? tooltipHandlers(itemName(item, id), id) : {};
   return (
     <span
-      className={cx('item-icon', icon?.smooth && 'smooth', !url && items && 'missing', className)}
+      className={cx(
+        itemIconClasses.root,
+        icon?.smooth && itemIconClasses.smooth,
+        !url && items && itemIconClasses.missing,
+        className,
+      )}
       style={{ width: size, height: size, backgroundImage: url ? `url(${url})` : undefined }}
       role="img"
       aria-label={id ? itemName(item, id) : undefined}

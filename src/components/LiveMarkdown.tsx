@@ -3,7 +3,7 @@ import { refreshLivePreview, type InlineToken, type LiveMarkdownOptions } from '
 import { LiveMarkdown as Editor, type LiveMarkdownHandle, type LiveMarkdownProps } from 'cm-live-markdown/react';
 import { forwardRef } from 'react';
 import { createRoot } from 'react-dom/client';
-import { guiIcon, itemName, loadItems, type ItemIndex } from '@/shared/pack-data';
+import { guiIcon, itemIconClasses, itemName, loadItems, type ItemIndex } from '@/shared/pack-data';
 import { imageSrc, UPLOADING_SCHEME } from '../lib/planImages';
 import { isImage } from '../lib/uploads';
 import { cx } from '@/shared/lib';
@@ -29,7 +29,11 @@ function itemChip(id: string, qty: string | undefined) {
   const it = items?.byId.get(id);
   const icon = document.createElement('span');
   const gui = guiIcon(it);
-  icon.className = 'item-icon' + (gui?.smooth ? ' smooth' : '') + (!gui?.url && items ? ' missing' : '');
+  icon.className = cx(
+    itemIconClasses.root,
+    gui?.smooth && itemIconClasses.smooth,
+    !gui?.url && items && itemIconClasses.missing,
+  );
   if (gui?.url) icon.style.backgroundImage = `url(${gui.url})`;
   if (qty === 'icon') {
     icon.style.width = icon.style.height = '20px';

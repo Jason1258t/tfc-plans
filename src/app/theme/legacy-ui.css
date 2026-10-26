@@ -1,27 +1,5 @@
 /* Сегментированный переключатель переехал в shared/ui/Segmented.module.css */
 
-/* ------------------------------------------------------------------ иконка предмета */
-
-.item-icon {
-  display: inline-block;
-  flex: none;
-  background-repeat: no-repeat;
-  background-size: 100% auto; /* анимированные текстуры — первый кадр */
-  background-position: top center;
-  image-rendering: pixelated;
-  vertical-align: middle;
-}
-
-/* Нарисованная модель (icons/…/render/) — уже сглажена: уменьшать гладко, pixelated выбросит пиксели */
-.item-icon.smooth {
-  image-rendering: auto;
-}
-
-.item-icon.missing {
-  border-radius: 3px;
-  background: var(--surface-3);
-}
-
 /* ------------------------------------------------------------------ модалки */
 
 /* Окна переехали в shared/ui/Modal.module.css; здесь остаётся только общая анимация появления —

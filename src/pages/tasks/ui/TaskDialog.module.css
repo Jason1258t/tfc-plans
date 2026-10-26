@@ -23,7 +23,7 @@
   cursor: pointer;
 }
 
-.tfIcon.noIcon :global(.item-icon) {
+.tfIcon.noIcon .noIconItem {
   opacity: 0.45;
 }
 

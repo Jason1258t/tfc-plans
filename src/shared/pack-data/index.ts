@@ -4,6 +4,7 @@
  * слой общий, а не сущность (см. план FSD, раздел «Места, где нужно решение»).
  */
 export type { ItemIndex, McBlock, McItem } from './items';
+export { itemIconClasses } from './itemIconClasses';
 export {
   blockEntry,
   blockIcon,
