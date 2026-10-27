@@ -262,6 +262,35 @@
       "path": "/addons"
     },
     {
+      "name": "addons.versions",
+      "path": "/addons/ee_extras",
+      "fullPage": false,
+      "waitFor": "main",
+      "actions": [
+        {
+          "wait": 7000
+        },
+        {
+          "eval": "if (![...document.querySelectorAll('main h2')].some(h => h.textContent.includes('Версии'))) throw new Error('Блок версий не загрузился');"
+        }
+      ]
+    },
+    {
+      "name": "addons.versions.dark",
+      "path": "/addons/ee_extras",
+      "fullPage": false,
+      "waitFor": "main",
+      "actions": [
+        {
+          "wait": 7000
+        },
+        {
+          "eval": "if (![...document.querySelectorAll('main h2')].some(h => h.textContent.includes('Версии'))) throw new Error('Блок версий не загрузился');"
+        }
+      ],
+      "theme": "dark"
+    },
+    {
       "name": "updates",
       "path": "/updates"
     },

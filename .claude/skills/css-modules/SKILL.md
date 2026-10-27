@@ -97,11 +97,24 @@ page branch.
    order, `layer(theme)`; all 50 shot pairs (desktop + mobile, light + dark) unchanged. Layering lowered globals
    below page CSS and nothing relied on the old order. New global rules go into the matching theme file, not into
    page CSS.
-2. **shared/ui core** (one branch each or together): `Button`, `Input`, `Segmented`, `Modal`, `Stack` — components
+2. **shared/ui core** (one branch each or together): `Button`, `Input`, `Segmented`, `Modal` — components
    plus migrating 1–2 small users each to prove them.
 3. **Pages/components, smallest first** (`wc -l src/**/*.css`), one per branch. Components whose styles live in a
    page CSS (e.g. `TaskRow` styled from `TasksPage.css`) get their own module in the same branch.
 4. **Cleanup**: legacy globals with no users, `classes.mjs --unused`, empty utilities.
+
+## Current migration status (2026-10-27)
+
+- Main pages and components use CSS Modules. `shared/ui` includes Button/ButtonLink, Input/Select/Textarea,
+  Label, Segmented, Tag/Importance, Modal/Tooltip, Search, Progress, Card/CardHead, Table/TableWrap,
+  SectionShell, EmptyState and ErrorBox.
+- Legacy button/input/segmented/tag/importance/error rules have been removed. Do not recreate them.
+- The remaining shared reference rules live in `features/reference-tabs/PowerShared.css`. Move each rule with
+  its remaining consumers; do not treat the earlier partial cleanup as full migration.
+- Stack/Row are not required: plan 2 on dev task #7 retains layout utilities instead. Extract a layout component
+  only when current consumers justify its API. Card and SectionShell already cover the repeated containers.
+- Keep generated Markdown and third-party classes global where required. A global utility still used by several
+  owners is not dead CSS. Check `docs/state/site.md` and dev tasks #7/#41 for the current remaining work.
 
 ## One page — step by step
 

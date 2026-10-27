@@ -1,8 +1,5 @@
-/* Карточка справочника. Переехала из pages/reference/ReferenceShared.css (.ref-card, .ref-card-head).
-   Глобальный .ref-card оставлен как алиас — им пока пользуется features/guides/AddonVersions.tsx,
-   который правит другая ветка (#98); после его переезда алиас можно удалить. */
-.card,
-:global(.ref-card) {
+/* Карточка и её шапка; оформление принадлежит компонентам Card и CardHead. */
+.card {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
@@ -13,16 +10,14 @@
   min-width: 0;
 }
 
-.head,
-:global(.ref-card-head) {
+.head {
   display: flex;
   align-items: flex-start;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.head h2,
-:global(.ref-card-head) h2 {
+.head h2 {
   margin: 0 0 4px;
   font-size: 16px;
   font-weight: 600;

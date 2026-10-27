@@ -33,7 +33,6 @@ import {
 } from '@/lib/reference';
 import { cx } from '@/shared/lib';
 import { useSearchTrack } from '@/shared/api';
-import './ReferenceShared.css';
 import shell from './ReferenceShell.module.css';
 import styles from './ReferencePage.module.css';
 

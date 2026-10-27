@@ -5,7 +5,6 @@ import { Link } from 'react-router-dom';
 import { itemName, type ItemIndex, hasStatus, useRecipes, type Recipe, ItemIcon } from '@/shared/pack-data';
 import { NUTRIENTS, type Food, type Nutrient } from '@/lib/reference';
 import { cx } from '@/shared/lib';
-import '../ReferenceShared.css';
 import shell from '../ReferenceShell.module.css';
 import styles from './DishesTab.module.css';
 

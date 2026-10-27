@@ -1,4 +1,4 @@
-/* Вкладка «Жидкое топливо». Таблицы (.ref-table) и карточки (.ref-card) — в ../ReferenceShared.css,
+/* Вкладка «Жидкое топливо». Таблицы и карточки — shared/ui/Table и Card,
    строка фильтров и ячейка «из чего» — в ../ReferenceShell.module.css. */
 
 .facts {
