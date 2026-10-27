@@ -15,7 +15,7 @@ import {
   type Setting,
 } from '@/lib/power';
 import { cx } from '@/shared/lib';
-import { Input, Card, Table, TableWrap } from '@/shared/ui';
+import { Input, SectionShell, Card, Table, TableWrap } from '@/shared/ui';
 import { ItemIcon } from '@/shared/pack-data';
 import { IeConsumers } from '@/features/reference-tabs';
 import '../ReferenceShared.css';
@@ -51,15 +51,19 @@ const EE_BLOCK = {
 export function PowerTab({ sub, onSub }: { sub: PowerSub; onSub: (s: PowerSub) => void }) {
   const data = usePower();
   return (
-    <div className="botany">
-      <nav className="botany-nav" aria-label="Разделы электричества">
-        {POWER_SUBS.map((s) => (
-          <button key={s.id} className={cx(sub === s.id && 'active')} onClick={() => onSub(s.id)}>
-            <span>{s.label}</span>
-          </button>
-        ))}
-      </nav>
-      <div className={cx('botany-main', styles.power)}>
+    <SectionShell
+      navLabel="Разделы электричества"
+      nav={
+        <>
+          {POWER_SUBS.map((s) => (
+            <button key={s.id} className={cx(sub === s.id && 'active')} onClick={() => onSub(s.id)}>
+              <span>{s.label}</span>
+            </button>
+          ))}
+        </>
+      }
+    >
+      <div className={styles.power}>
         {data === undefined ? (
           <div className="empty">Загружаю…</div>
         ) : data === null ? (
@@ -68,7 +72,7 @@ export function PowerTab({ sub, onSub }: { sub: PowerSub; onSub: (s: PowerSub) =
           <Body data={data} sub={sub} />
         )}
       </div>
-    </div>
+    </SectionShell>
   );
 }
 

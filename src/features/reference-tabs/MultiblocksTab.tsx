@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronUp, Download, FlipHorizontal2, RotateCcw } from 'lucide-react';
-import { Segmented, Button, ButtonLink, Card, Table, TableWrap } from '@/shared/ui';
+import { Segmented, Button, ButtonLink, Card, SectionShell, Table, TableWrap } from '@/shared/ui';
 import { lazy, Suspense, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { iconUrl, itemName, useItems, type ItemIndex, sourceName, useTags, ItemIcon } from '@/shared/pack-data';
@@ -46,32 +46,36 @@ export function MultiblocksTab({ slug, onSlug }: { slug: string | null; onSlug: 
     data.list.find((m) => mbSlug(m, data.list) === slug) ?? data.list.find((m) => m.id === slug) ?? data.list[0];
   const groups = [...new Set(data.list.map((m) => m.ns))];
   return (
-    <div className="botany">
-      <nav className="botany-nav" aria-label="Мультиблоки">
-        {groups.map((ns) => (
-          <div key={ns} className={styles.navGroup}>
-            <div className={cx(styles.navMod, 'faint', 'small')}>{MOD_LABEL[ns] ?? ns}</div>
-            {data.list
-              .filter((m) => m.ns === ns)
-              .map((m) => (
-                <button
-                  key={m.id}
-                  className={cx(m === current && 'active')}
-                  onClick={() => onSlug(m === data.list[0] ? null : mbSlug(m, data.list))}
-                >
-                  <span className={styles.navItem}>
-                    <ItemIcon id={mbIcon(m, items) ?? undefined} size={18} tip={false} />
-                    {mbName(m)}
-                  </span>
-                </button>
-              ))}
-          </div>
-        ))}
-      </nav>
-      <div className="botany-main">
+    <SectionShell
+      navLabel="Мультиблоки"
+      nav={
+        <>
+          {groups.map((ns) => (
+            <div key={ns} className={styles.navGroup}>
+              <div className={cx(styles.navMod, 'faint', 'small')}>{MOD_LABEL[ns] ?? ns}</div>
+              {data.list
+                .filter((m) => m.ns === ns)
+                .map((m) => (
+                  <button
+                    key={m.id}
+                    className={cx(m === current && 'active')}
+                    onClick={() => onSlug(m === data.list[0] ? null : mbSlug(m, data.list))}
+                  >
+                    <span className={styles.navItem}>
+                      <ItemIcon id={mbIcon(m, items) ?? undefined} size={18} tip={false} />
+                      {mbName(m)}
+                    </span>
+                  </button>
+                ))}
+            </div>
+          ))}
+        </>
+      }
+    >
+      <div>
         <MultiblockCard key={current.id} m={current} data={data} />
       </div>
-    </div>
+    </SectionShell>
   );
 }
 

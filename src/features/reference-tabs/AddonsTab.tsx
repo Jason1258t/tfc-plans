@@ -16,7 +16,7 @@ import { cx } from '@/shared/lib';
 // Стили справочника временно берём из его будущей общей папки — AddonsTab переедет в entities/addon
 import './PowerShared.css';
 import styles from './AddonsTab.module.css';
-import { ButtonLink, Card, CardHead } from '@/shared/ui';
+import { ButtonLink, Card, CardHead, SectionShell } from '@/shared/ui';
 
 const AddonsGuidesSection = lazy(() => import('@/features/guides/AddonsGuidesSection'));
 
@@ -33,15 +33,19 @@ export function AddonsTab({
   onGuide: (id: string | null) => void;
 }) {
   return (
-    <div className="botany">
-      <nav className="botany-nav" aria-label="Разделы аддонов">
-        {ADDONS_SUBS.map((s) => (
-          <button key={s.id} className={cx(sub === s.id && 'active')} onClick={() => onSub(s.id)}>
-            <span>{s.label}</span>
-          </button>
-        ))}
-      </nav>
-      <div className="botany-main power">
+    <SectionShell
+      navLabel="Разделы аддонов"
+      nav={
+        <>
+          {ADDONS_SUBS.map((s) => (
+            <button key={s.id} className={cx(sub === s.id && 'active')} onClick={() => onSub(s.id)}>
+              <span>{s.label}</span>
+            </button>
+          ))}
+        </>
+      }
+    >
+      <div className="power">
         {sub === 'guides' ? (
           <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>
             <AddonsGuidesSection guide={guide} onGuide={onGuide} />
@@ -50,7 +54,7 @@ export function AddonsTab({
           <AddonList onGuides={() => onSub('guides')} />
         )}
       </div>
-    </div>
+    </SectionShell>
   );
 }
 

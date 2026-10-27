@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { usePower, useSettings, type PowerData } from '@/lib/power';
 import { cx } from '@/shared/lib';
+import { SectionShell } from '@/shared/ui';
 import { GUIDES_SUBS, type GuidesSub } from '@/features/guides';
 import '../ReferenceShared.css';
 import '@/features/reference-tabs/PowerShared.css';
@@ -23,15 +24,19 @@ export function GuidesTab({
   onGuide: (id: string | null) => void;
 }) {
   return (
-    <div className="botany">
-      <nav className="botany-nav" aria-label="Разделы гайдов">
-        {GUIDES_SUBS.map((s) => (
-          <button key={s.id} className={cx(sub === s.id && 'active')} onClick={() => onSub(s.id)}>
-            <span>{s.label}</span>
-          </button>
-        ))}
-      </nav>
-      <div className="botany-main power">
+    <SectionShell
+      navLabel="Разделы гайдов"
+      nav={
+        <>
+          {GUIDES_SUBS.map((s) => (
+            <button key={s.id} className={cx(sub === s.id && 'active')} onClick={() => onSub(s.id)}>
+              <span>{s.label}</span>
+            </button>
+          ))}
+        </>
+      }
+    >
+      <div className="power">
         {sub === 'addons' ? (
           <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>
             <AddonsGuidesSection guide={guide} onGuide={onGuide} />
@@ -48,7 +53,7 @@ export function GuidesTab({
           <PowerGuidesTab guide={guide} onGuide={onGuide} />
         )}
       </div>
-    </div>
+    </SectionShell>
   );
 }
 
