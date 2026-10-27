@@ -80,6 +80,7 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 - 2026-10-26: flex-spacer в подвале окна задачи разработки перенесён с глобального `.grow` в локальный `DevTaskDialog.module.css`; общее правило остаётся для остальных потребителей.
 - 2026-10-26: общий индикатор `.progress` переехал в `shared/ui/Progress`; его используют строка задачи и загрузка вложений. Глобальное правило удалено из темы.
 - 2026-10-26: значок предмета получил `ItemIcon.module.css`; стили React-компонента и Markdown-чипов локальны, глобальные `.item-icon/.smooth/.missing` удалены.
+- 2026-10-27: `PowerShared.css` разобран: правила одного владельца переехали в `PowerTab.module.css`, новый `AddonsTab.module.css`, `Guides.module.css` и новый `powerWidgets.module.css`; общие `.power-*` остались глобальными. Снимки `reference.power*`, `reference.guides.*` и `addons` desktop/mobile — 0,000%.
 - Left: **2 global CSS outside `src/app/theme`** — `ReferenceShared.css`/`PowerShared.css`, общие части справочника
   (их берут мультиблоки, гайды и аддоны; переедут вместе с потребителями). В `legacy-ui.css` осталась анимация
   появления всплывающих блоков; `.empty` — утилита в `utilities.css`.
