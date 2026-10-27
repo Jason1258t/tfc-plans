@@ -1,5 +1,5 @@
 import { strToU8, zipSync } from 'fflate';
-import { datapackFiles } from './datapackFiles';
+import { datapackFiles, datapackPathError } from './datapackFiles';
 import type { Datapack, DatapackEntry } from '@/entities/datapack';
 import { recipeHash, uid } from '@/shared/lib';
 import type { ItemIndex } from '@/shared/pack-data';
@@ -122,8 +122,8 @@ export function validatePack(pack: Datapack): PackIssue[] {
   const issues: PackIssue[] = [];
   const seen = new Set<string>();
   for (const e of pack.entries) {
-    if (!/^data\/[a-z0-9_.-]+\/[a-z0-9_./-]+\.[a-z0-9]+$/.test(e.path))
-      issues.push({ path: e.path, message: 'путь должен быть вида data/<ns>/…, только a-z 0-9 _ . - /' });
+    const pathError = datapackPathError(e.path);
+    if (pathError) issues.push({ path: e.path, message: pathError });
     if (seen.has(e.path)) issues.push({ path: e.path, message: 'этот путь встречается дважды — победит последний' });
     seen.add(e.path);
     if (e.path.endsWith('.json')) {

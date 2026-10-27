@@ -24,6 +24,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import AdmZip from 'adm-zip';
+import { createWashingRecipes, vanillaConcretePairs } from './mods/runtime-recipes.mjs';
 import { writeManifest } from './mods/manifest.mjs';
 import { writeGeo } from './mods/geo.mjs';
 import { buildReference } from './mods/reference.mjs';
@@ -111,7 +112,8 @@ async function prepareVanilla() {
   const dir = path.join(CACHE, `minecraft-${MC_VERSION}`);
   // .done-v5 — кеш с рецептами и тегами предметов/жидкостей/блоков (v1 — только ассеты, v2 — без тегов, v3 — только item),
   // v5 — плюс blockstates и loot-таблицы блоков (блоки без предмета, scripts/mods/blocks.mjs)
-  const done = path.join(dir, '.done-v5');
+  // v6 — связи цемент → бетон из кода Minecraft для runtime-рецептов Create.
+  const done = path.join(dir, '.done-v6');
   if (fs.existsSync(done) && !fresh) return dir;
   fs.rmSync(dir, { recursive: true, force: true });
   log(`vanilla ${MC_VERSION}: читаю манифест версий`);
@@ -130,6 +132,9 @@ async function prepareVanilla() {
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, entry.getData());
   }
+
+  const mappings = (await fetchBuffer(meta.downloads.client_mappings.url)).toString('utf8');
+  fs.writeFileSync(path.join(dir, 'concrete-pairs.json'), JSON.stringify(vanillaConcretePairs(zip, mappings)));
 
   log('vanilla: качаю ru_ru.json');
   const index = await fetchJson(meta.assetIndex.url);
@@ -537,6 +542,7 @@ function writeRecipes(recipes, OUT_RECIPES) {
     t: typeof r.json.type === 'string' ? r.json.type : '',
     s: r.source,
     j: r.json,
+    ...(r.runtime ? { runtime: true } : {}),
   }));
   fs.writeFileSync(OUT_RECIPES, JSON.stringify(list));
   log(
@@ -786,6 +792,14 @@ export async function buildMods({
     `блоки без предмета: ${blocks.count}, из них с предметом из добычи ${blocks.withDrop} — blocks.json ${blocks.kb}KB`,
   );
   fs.writeFileSync(OUT_JSON, JSON.stringify(items));
+  const runtime = createWashingRecipes(
+    units,
+    JSON.parse(fs.readFileSync(path.join(vanillaDir, 'concrete-pairs.json'), 'utf8')),
+    items.map((it) => it.i),
+    log,
+  );
+  for (const [id, recipe] of runtime) if (!recipes.has(id)) recipes.set(id, recipe);
+  log(`рецепты промывки Create, создаваемые при запуске: ${runtime.size}`);
   writeRecipes(recipes, OUT_RECIPES);
   const ref = buildReference(dataDirs, recipes, parseLooseJson, fluidNames);
   fs.writeFileSync(OUT_REFERENCE, JSON.stringify(ref));

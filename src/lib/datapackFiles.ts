@@ -36,3 +36,13 @@ export const zipName = (pack: { name: string }) =>
       .replace(/[\\/:*?"<>|]+/g, '_')
       .replace(/\s+/g, '_') || 'datapack'
   }.zip`;
+
+/** Ошибка пути, из-за которой Minecraft не прочитает файл датапака. */
+export function datapackPathError(path: string): string | null {
+  if (/^data\/[^/]+\/recipes\//.test(path)) return 'В Minecraft 1.21.1 рецепты лежат в recipe/, без s.';
+  if (/^data\/[^/]+\/recipe(?:\/|$)/.test(path) && !path.endsWith('.json'))
+    return 'Файл рецепта должен заканчиваться на .json — иначе Minecraft его не загрузит.';
+  if (!/^data\/[a-z0-9_.-]+\/[a-z0-9_./-]+\.[a-z0-9]+$/.test(path))
+    return 'Путь должен быть вида data/<ns>/…, только a-z 0-9 _ . - / и расширение файла.';
+  return null;
+}
