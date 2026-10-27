@@ -413,7 +413,7 @@ function MineralCard({
               <th>Высота Y</th>
               <th>Редкость</th>
               <th>Состав</th>
-              <th className="hide-sm">Размер</th>
+              <th>Размер</th>
               <th>Породы</th>
             </tr>
           </thead>
@@ -441,7 +441,7 @@ function MineralCard({
                 <td>
                   <Shares items={v.minerals.find((m) => m.mineral === group.mineral)?.items ?? []} />
                 </td>
-                <td className="hide-sm">
+                <td>
                   {v.size ?? v.radius ?? '—'}
                   {v.density != null && <span className="faint small"> · {Math.round(v.density * 100)}%</span>}
                 </td>
@@ -656,13 +656,11 @@ function FoodTab({ foods, items, meals }: { foods: Food[]; items: ItemIndex | nu
             <tr>
               {th('name', 'Еда')}
               {th('hunger', 'Сытость')}
-              {th('saturation', 'Насыщ.', 'hide-sm')}
-              {th('water', 'Вода', 'hide-sm')}
+              {th('saturation', 'Насыщ.')}
+              {th('water', 'Вода')}
               {NUTRIENTS.map((n) => th(n, NUTRIENT_LABEL[n], `nut nut-${n}`))}
               {th('decay', 'Порча')}
-              <th className="hide-sm" title="В какие сборные блюда годится продукт">
-                В блюда
-              </th>
+              <th title="В какие сборные блюда годится продукт">В блюда</th>
             </tr>
           </thead>
           <tbody>
@@ -672,15 +670,15 @@ function FoodTab({ foods, items, meals }: { foods: Food[]; items: ItemIndex | nu
                   <IngredientCell ids={f.items} label={f.ingredient} items={items} />
                 </td>
                 <td className="num">{f.hunger || '—'}</td>
-                <td className="num hide-sm">{f.saturation || '—'}</td>
-                <td className="num hide-sm">{f.water || '—'}</td>
+                <td className="num">{f.saturation || '—'}</td>
+                <td className="num">{f.water || '—'}</td>
                 {NUTRIENTS.map((n) => (
                   <td key={n} className={cx('num nut', `nut-${n}`, !f.nutrients[n] && 'zero')}>
                     {f.nutrients[n] ?? '·'}
                   </td>
                 ))}
                 <td className={cx('num', f.decay > 1.5 && 'warn')}>×{f.decay}</td>
-                <td className="num hide-sm">
+                <td className="num">
                   {mealsOf(f).length > 0 ? (
                     <Link
                       to={`/reference?tab=food&sub=meals&q=${encodeURIComponent(name(f))}`}
@@ -730,7 +728,7 @@ function MetalsTab({ ref_, items }: { ref_: Reference; items: ItemIndex | null }
             <tr>
               {th('name', 'Металл')}
               {th('melt', 'Плавится при')}
-              <th className="hide-sm">Жидкость</th>
+              <th>Жидкость</th>
             </tr>
           </thead>
           <tbody>
@@ -755,7 +753,7 @@ function MetalsTab({ ref_, items }: { ref_: Reference; items: ItemIndex | null }
                   </div>
                 </td>
                 <td className="num">{m.melt != null ? `${Math.round(m.melt)} °C` : '—'}</td>
-                <td className="hide-sm">
+                <td>
                   <code className="faint small">{m.fluid}</code>
                 </td>
               </tr>

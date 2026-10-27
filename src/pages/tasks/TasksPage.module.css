@@ -201,32 +201,8 @@
   background: transparent;
 }
 
-/* Переключатель-галочка: класс общий — им же пользуются переключатели схем (.toggle.sm-toggle) */
-:global(.toggle) {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  cursor: pointer;
-  user-select: none;
-  color: var(--text-2);
-}
-
-:global(.toggle):has(input:checked) {
-  border-color: var(--accent);
-  color: var(--text);
-  background: var(--accent-soft);
-}
-
-:global(.toggle input) {
-  margin: 0;
-  accent-color: var(--accent);
-}
-
+/* Переключатель-галочка: базовые правила переехали в src/app/theme/utilities.css (.toggle);
+   здесь остаётся только :global-хук для совместимости со схемами (.toggle.sm-toggle). */
 .linkBtn {
   border: 0;
   background: none;
