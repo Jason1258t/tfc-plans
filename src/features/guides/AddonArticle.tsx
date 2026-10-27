@@ -6,7 +6,7 @@ import { ADDONS, ADDON_GUIDE_SECTION, addonGuideId, type Addon } from '@/lib/add
 import { BASE_DOCS, BASE_VALUES } from '@/lib/guideScope';
 import { readNick } from '@/shared/lib/nick';
 import { cx } from '@/shared/lib';
-import { Button, Card } from '@/shared/ui';
+import { Button, Card, contentStyles as content } from '@/shared/ui';
 import type { Guide } from '@/entities/guide';
 import { AddonBlockCard } from '@/features/reference-tabs';
 import { CalcErrors } from './CalcBlock';
@@ -118,13 +118,13 @@ export default function AddonArticle({ addon }: { addon: Addon }) {
 
   return (
     <>
-      <Card as="article" className={cx('power-article', styles.guideArticle)}>
+      <Card as="article" className={styles.guideArticle}>
         <header className={styles.guideHead}>
           <span className={styles.guideHeadIcon}>
             <BookOpen size={24} />
           </span>
           <div className="grow">
-            <h2 className="power-h">Подробно</h2>
+            <h2 className={content.heading}>Подробно</h2>
             <div className={cx('faint small', styles.guideMeta)}>
               <CheckedBadge c={guide.checked} />
               <span>
@@ -142,7 +142,7 @@ export default function AddonArticle({ addon }: { addon: Addon }) {
           </div>
         </header>
         {guide.summary && (
-          <div className={cx('power-note', styles.guideSummary)}>
+          <div className={cx(content.note, styles.guideSummary)}>
             <GuideBody source={`**Коротко.** ${guide.summary}`} kit={KIT} onGuide={onGuide} />
           </div>
         )}

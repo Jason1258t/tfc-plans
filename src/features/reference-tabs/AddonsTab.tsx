@@ -13,10 +13,8 @@ import {
 } from '@/lib/addons';
 import { itemName, useItems, ItemIcon } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
-// Стили справочника временно берём из его будущей общей папки — AddonsTab переедет в entities/addon
-import './PowerShared.css';
 import styles from './AddonsTab.module.css';
-import { ButtonLink, Card, CardHead, SectionShell } from '@/shared/ui';
+import { ButtonLink, Card, CardHead, SectionShell, contentStyles as content } from '@/shared/ui';
 
 const AddonsGuidesSection = lazy(() => import('@/features/guides/AddonsGuidesSection'));
 
@@ -45,7 +43,7 @@ export function AddonsTab({
         </>
       }
     >
-      <div className="power">
+      <div className={content.stack}>
         {sub === 'guides' ? (
           <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>
             <AddonsGuidesSection guide={guide} onGuide={onGuide} />
@@ -63,12 +61,12 @@ function AddonList({ onGuides }: { onGuides: () => void }) {
   return (
     <>
       <Card>
-        <h2 className="power-h">Аддоны сборки</h2>
+        <h2 className={content.heading}>Аддоны сборки</h2>
         <p className="small">
           Маленькие моды, которые группа сделала сама под эту сборку. Каждый ставится в папку <code>mods</code> —{' '}
           <b>на сервер и всем игрокам</b>, если добавляет блоки (иначе клиент не войдёт на сервер). Исходники и сборка —
           в репозитории сайта. Как сделать свой —{' '}
-          <button type="button" className="power-link" onClick={onGuides}>
+          <button type="button" className={content.link} onClick={onGuides}>
             гайды
           </button>{' '}
           (с нуля) и{' '}
@@ -98,7 +96,7 @@ export function AddonHead({ a, title }: { a: Addon; title: ReactNode }) {
   return (
     <CardHead as="div">
       <div className="grow">
-        <h2 className="power-h">{title}</h2>
+        <h2 className={content.heading}>{title}</h2>
         <span className="faint small">
           {a.id} · версия {a.version} ·{' '}
           <a href={REPO_TREE + a.source} target="_blank" rel="noreferrer">
@@ -140,7 +138,8 @@ function AddonPreview({ a }: { a: Addon }) {
           title={b.name}
           width={48}
           height={48}
-          className="power-pixel"
+          className={styles.pixel}
+          data-addon-block-image
         />
       ))}
     </div>
@@ -152,7 +151,14 @@ export function AddonBlockCard({ a, b }: { a: Addon; b: AddonBlock }) {
   const items = useItems();
   return (
     <div className={cx(styles.addonRow, styles.addonBlock)}>
-      {b.image && <img src={addonImage(a, b.image)} alt={`${b.name}, вид сверху`} className="power-pixel" />}
+      {b.image && (
+        <img
+          src={addonImage(a, b.image)}
+          alt={`${b.name}, вид сверху`}
+          className={styles.pixel}
+          data-addon-block-image
+        />
+      )}
       <div className="grow">
         <b>{b.name}</b> <span className="faint small">{b.id}</span>
       </div>
@@ -173,7 +179,8 @@ export function AddonBlockCard({ a, b }: { a: Addon; b: AddonBlock }) {
                       alt={k.name ?? k.item}
                       width={28}
                       height={28}
-                      className="power-pixel"
+                      className={styles.pixel}
+                      data-addon-block-image
                     />
                   ) : (
                     k && <ItemIcon id={k.item} size={28} tip={false} />

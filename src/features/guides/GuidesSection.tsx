@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { guidesEnabled, subscribeGuides } from '@/data/guides';
 import { readNick } from '@/shared/lib/nick';
 import { cx } from '@/shared/lib';
-import { Button, Card } from '@/shared/ui';
+import { Button, Card, contentStyles as content } from '@/shared/ui';
 import type { Guide, GuideChecked } from '@/entities/guide';
 import { CHECKED } from './guideMeta';
 import { ItemIcon } from '@/shared/pack-data';
@@ -96,7 +96,7 @@ export function GuidesSection({
   if (guide)
     return (
       <>
-        <Button variant="ghost" className="small power-back" onClick={() => onGuide(null)}>
+        <Button variant="ghost" className={cx('small', content.back)} onClick={() => onGuide(null)}>
           <ArrowLeft size={14} /> Все гайды
         </Button>
         {!current ? (
@@ -106,13 +106,13 @@ export function GuidesSection({
             <div className="empty">Гайд не найден — возможно, ссылка устарела</div>
           )
         ) : (
-          <Card as="article" className={cx('power-article', styles.guideArticle)}>
+          <Card as="article" className={styles.guideArticle}>
             <header className={styles.guideHead}>
               <span className={styles.guideHeadIcon}>
                 {current.icon ? <ItemIcon id={current.icon} size={32} /> : <BookOpen size={24} />}
               </span>
               <div className="grow">
-                <h2 className="power-h">{current.title}</h2>
+                <h2 className={content.heading}>{current.title}</h2>
                 <div className={cx('faint small', styles.guideMeta)}>
                   {checks && <CheckedBadge c={current.checked} />}
                   {current.hidden && (
@@ -135,7 +135,7 @@ export function GuidesSection({
               </div>
             </header>
             {current.summary && (
-              <div className={cx('power-note', styles.guideSummary)}>
+              <div className={cx(content.note, styles.guideSummary)}>
                 <GuideBody source={`**Коротко.** ${current.summary}`} kit={kit} onGuide={onGuide} />
               </div>
             )}
@@ -170,7 +170,7 @@ export function GuidesSection({
     <section className={styles.guideList}>
       <header className="guide-list-head">
         <div>
-          <h2 className="power-h">Гайды</h2>
+          <h2 className={content.heading}>Гайды</h2>
           {intro && <p className="faint small">{intro}</p>}
         </div>
         <Button className="small" onClick={() => startEdit('new')}>

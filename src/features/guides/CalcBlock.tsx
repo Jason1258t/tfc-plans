@@ -1,6 +1,7 @@
+import pw from './powerWidgets.module.css';
 import { useMemo, useState, type ReactNode } from 'react';
 import { cx, errorText, type Scope } from '@/shared/lib';
-import { Button, Input, Select, Table, TableWrap } from '@/shared/ui';
+import { Button, Input, Select, Table, TableWrap, contentStyles as content } from '@/shared/ui';
 import { formatValue, parseSpec } from '@/lib/guideFormat';
 import { Markdown } from '@/components/Markdown';
 import { useGuideEditing, useGuideLink } from './guideLinks';
@@ -194,9 +195,9 @@ function Calc({ spec, envs, pickers }: { spec: Spec; envs: Scope[]; pickers?: Re
     <>
       {spec.title && <h3>{tpl(spec.title)}</h3>}
       {meta.length > 0 && (
-        <div className="power-form">
+        <div className={content.form}>
           {meta.map((m) => (
-            <label key={m.name} className={cx('power-field', m.inp.toggle && styles.guideToggle)}>
+            <label key={m.name} className={cx(content.field, m.inp.toggle && styles.guideToggle)}>
               <span className="faint small">{tpl(m.inp.label ?? m.name)}</span>
               {m.options ? (
                 <Select value={selected[m.name]} onChange={(e) => set(m.name, e.target.value)}>
@@ -248,7 +249,7 @@ function Calc({ spec, envs, pickers }: { spec: Spec; envs: Scope[]; pickers?: Re
           set(picker.name, Math.min(picker.max ?? Infinity, Math.max(picker.min ?? -Infinity, v)));
         })}
       {outs.length > 0 && (
-        <div className="power-outs">
+        <div className={content.outputs}>
           {outs.map((o, i) => {
             const where = `outputs[${i}]`;
             const bad = check(`${where}.bad`, o.bad);
@@ -262,7 +263,7 @@ function Calc({ spec, envs, pickers }: { spec: Spec; envs: Scope[]; pickers?: Re
                   );
             const hint = o.hint ? tpl(o.hint).trim() : '';
             return (
-              <div key={i} className={cx('power-out', bad && styles.guideOutBad, warn && styles.guideOutWarn)}>
+              <div key={i} className={cx(content.output, bad && styles.guideOutBad, warn && styles.guideOutWarn)}>
                 {o.label && <span className="faint small">{tpl(o.label)}</span>}
                 <b className={cx(bad && styles.powerBad)}>
                   <Md source={main} inline />
@@ -356,9 +357,9 @@ function BarChart({
   const h = 90;
   const bw = w / nums.length;
   return (
-    <figure className="power-figure">
+    <figure className={pw.figure}>
       <svg viewBox={`0 0 ${w} ${h + 16}`} role="img" aria-label={tpl(spec.title ?? 'График')}>
-        <line x1={0} y1={h} x2={w} y2={h} className="power-axis" />
+        <line x1={0} y1={h} x2={w} y2={h} className={pw.axis} />
         {nums.map((s, i) => {
           const bh = max > 0 ? (Math.max(0, Math.min(s, max)) / max) * h : 0;
           return (
@@ -377,12 +378,12 @@ function BarChart({
           );
         })}
         {spec.left && (
-          <text x={0} y={h + 13} className="power-svg-text">
+          <text x={0} y={h + 13} className={pw.svgText}>
             {tpl(spec.left)}
           </text>
         )}
         {spec.right && (
-          <text x={w} y={h + 13} textAnchor="end" className="power-svg-text">
+          <text x={w} y={h + 13} textAnchor="end" className={pw.svgText}>
             {tpl(spec.right)}
           </text>
         )}
@@ -485,7 +486,7 @@ export function CalcErrors({ list }: { list: string[] }) {
         {stale ? (
           <>
             Часть расчётов не показана — похоже, сайт обновился, пока вкладка была открыта.{' '}
-            <button type="button" className="power-link" onClick={() => location.reload()}>
+            <button type="button" className={content.link} onClick={() => location.reload()}>
               Обновить страницу
             </button>
           </>

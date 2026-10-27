@@ -1,9 +1,8 @@
 import { lazy, Suspense } from 'react';
 import { usePower, useSettings, type PowerData } from '@/lib/power';
 import { cx } from '@/shared/lib';
-import { SectionShell } from '@/shared/ui';
+import { SectionShell, contentStyles as content } from '@/shared/ui';
 import { GUIDES_SUBS, type GuidesSub } from '@/features/guides';
-import '@/features/reference-tabs/PowerShared.css';
 
 const PowerGuidesSection = lazy(() => import('@/features/guides/PowerGuidesSection'));
 const AddonsGuidesSection = lazy(() => import('@/features/guides/AddonsGuidesSection'));
@@ -35,7 +34,7 @@ export function GuidesTab({
         </>
       }
     >
-      <div className="power">
+      <div className={content.stack}>
         {sub === 'addons' ? (
           <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>
             <AddonsGuidesSection guide={guide} onGuide={onGuide} />

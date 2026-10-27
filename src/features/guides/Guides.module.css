@@ -1,3 +1,22 @@
+/* Базовая разметка статьи; частные правила гайда ниже сохраняют прежний приоритет. */
+.guideArticle h3 {
+  margin: 8px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.guideArticle p,
+.guideArticle ul,
+.guideArticle ol {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.guideArticle ul,
+.guideArticle ol {
+  padding-left: 20px;
+}
+
 /* Гайды справочника: список карточками, статья, редактор, справка, история.
    Классы берут все компоненты папки guides — модуль один на раздел, как и прежний Guides.css. */
 
@@ -241,8 +260,8 @@
   max-width: 100%;
 }
 
-/* Картинки аддонов, вставленные в текст; у виджета ::addon-block (.power-pixel) размеры свои — и в клетках рецепта */
-.guideBody img[src^='/addons/']:not(:global(.power-pixel)) {
+/* Картинки аддонов, вставленные в текст; у виджета ::addon-block (изображения блоков аддона) размеры свои — и в клетках рецепта */
+.guideBody img[src^='/addons/']:not([data-addon-block-image]) {
   width: 96px;
   height: 96px;
   image-rendering: pixelated;
