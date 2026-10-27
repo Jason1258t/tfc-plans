@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { deviceTick, machineRates, type IeDevice, type IeMachine, type PowerData, type Setting } from '@/lib/power';
 import { ItemIcon } from '@/shared/pack-data';
-import { Button, Input, Select, Card, Table, TableWrap } from '@/shared/ui';
+import { Button, Input, Select, Card, Table, TableWrap, contentStyles as content } from '@/shared/ui';
 import styles from './PowerIeLoads.module.css';
 
 /**
@@ -33,7 +33,7 @@ export function IeConsumers({ data, ie, att, rate }: { data: PowerData; ie: Get;
   return (
     <>
       <Card>
-        <h2 className="power-h">Потребители: машины с рецептами</h2>
+        <h2 className={content.heading}>Потребители: машины с рецептами</h2>
         <TableWrap>
           <Table>
             <thead>
@@ -87,7 +87,7 @@ export function IeConsumers({ data, ie, att, rate }: { data: PowerData; ie: Get;
         </p>
       </Card>
       <Card>
-        <h2 className="power-h">Потребители: приборы и мультиблоки без рецептов</h2>
+        <h2 className={content.heading}>Потребители: приборы и мультиблоки без рецептов</h2>
         <TableWrap>
           <Table>
             <thead>

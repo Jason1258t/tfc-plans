@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { guideRevisions } from '@/data/guides';
 import { cx } from '@/shared/lib';
 import type { Guide, GuideRevision } from '@/entities/guide';
-import { Button, EmptyState, Modal } from '@/shared/ui';
+import { Button, EmptyState, Modal, contentStyles as content } from '@/shared/ui';
 import { GuideBody, type GuideKit } from './GuideBody';
 import styles from './Guides.module.css';
 
@@ -57,10 +57,10 @@ export function GuideHistory({
                   Вернуть эту версию…
                 </Button>
               )}
-              <article className={cx('power-article', styles.guideArticle)}>
-                <h2 className="power-h">{r.title}</h2>
+              <article className={styles.guideArticle}>
+                <h2 className={content.heading}>{r.title}</h2>
                 {r.summary && (
-                  <div className="power-note">
+                  <div className={content.note}>
                     <GuideBody source={`**Коротко.** ${r.summary}`} kit={kit} onGuide={() => {}} />
                   </div>
                 )}

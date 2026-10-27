@@ -1,3 +1,4 @@
+import { contentStyles as content } from '@/shared/ui';
 import { useMemo, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { cx, errorText, evalExpr, exprPath, type Scope } from '@/shared/lib';
@@ -28,7 +29,7 @@ export function GuideBody({ source, kit, onGuide }: { source: string; kit: Guide
     if (href.startsWith('gv:')) return <LiveValue src={decodeURIComponent(href.slice(3))} envs={envs} kit={kit} />;
     if (href.startsWith('guide:'))
       return (
-        <button type="button" className="power-link" onClick={() => onGuide(href.slice(6))}>
+        <button type="button" className={content.link} onClick={() => onGuide(href.slice(6))}>
           {children}
         </button>
       );
@@ -96,7 +97,7 @@ function LiveValue({ src, envs, kit }: { src: string; envs: Scope[]; kit: GuideK
   if (!st) return <span className={styles.guideVal}>{text}</span>;
   return (
     <span
-      className={cx('power-cfg', st.changed && 'changed')}
+      className={cx(content.value, st.changed && content.changed)}
       title={st.origin + (st.changed && st.default !== null ? `; в моде по умолчанию ${formatValue(st.default)}` : '')}
     >
       {text}

@@ -15,10 +15,9 @@ import {
   type Setting,
 } from '@/lib/power';
 import { cx } from '@/shared/lib';
-import { Input, SectionShell, Card, Table, TableWrap } from '@/shared/ui';
+import { Input, SectionShell, Card, Table, TableWrap, contentStyles as content } from '@/shared/ui';
 import { ItemIcon } from '@/shared/pack-data';
 import { IeConsumers } from '@/features/reference-tabs';
-import '@/features/reference-tabs/PowerShared.css';
 import styles from './PowerTab.module.css';
 
 /**
@@ -93,7 +92,7 @@ function Cfg({ s, unit, digits = 0 }: { s: Setting | null; unit?: string; digits
   const changed = s.origin !== 'default' && s.default !== null && s.default !== s.value;
   return (
     <span
-      className={cx('power-cfg', changed && 'changed')}
+      className={cx(content.value, changed && content.changed)}
       title={CONFIG_ORIGIN_LABEL[s.origin] + (changed ? `; в моде по умолчанию ${num(s.default!, 4)}` : '')}
     >
       {num(s.value, digits)}
@@ -121,7 +120,7 @@ function Field({
   unit?: string;
 }) {
   return (
-    <label className="power-field">
+    <label className={content.field}>
       <span className="faint small">{label}</span>
       <span>
         <Input
@@ -143,7 +142,7 @@ function Field({
 
 function Out({ label, children, note }: { label: string; children: ReactNode; note?: ReactNode }) {
   return (
-    <div className="power-out">
+    <div className={content.output}>
       <span className="faint small">{label}</span>
       <b>{children}</b>
       {note && <span className="faint small">{note}</span>}
@@ -173,7 +172,7 @@ function Link_({ data, ee, ie }: { data: PowerData; ee: Get; ie: Get }) {
   return (
     <>
       <Card>
-        <h2 className="power-h">Три вида энергии</h2>
+        <h2 className={content.heading}>Три вида энергии</h2>
         <TableWrap>
           <Table>
             <thead>
@@ -225,7 +224,7 @@ function Link_({ data, ee, ie }: { data: PowerData; ee: Get; ie: Get }) {
       </Card>
 
       <Card>
-        <h2 className="power-h">Переходы и курсы</h2>
+        <h2 className={content.heading}>Переходы и курсы</h2>
         <div className={styles.chain}>
           <ChainStep icons={[EE_BLOCK.rotor, EE_BLOCK.stator, EE_BLOCK.brushes]} title="Вал Create → электричество">
             Генератор: роторы, вокруг каждого до {rotor?.sides ?? 4} статоров, на конце щёточный узел (собирает до{' '}
@@ -259,7 +258,7 @@ function Link_({ data, ee, ie }: { data: PowerData; ee: Get; ie: Get }) {
           </ChainStep>
         </div>
         {wPerSuGen && wPerSuMotor && (
-          <p className="power-note">
+          <p className={content.note}>
             Генератор даёт около {num(wPerSuGen, 2)} Вт с 1 SU, а двигатель берёт {num(wPerSuMotor, 2)} Вт за 1 SU —
             цепочка «вал → генератор → двигатель → вал» возвращает не больше {num((wPerSuGen / wPerSuMotor) * 100)} %
             SU, вечного двигателя нет. Электричество выгодно для передачи на расстояние и в IE, а не для умножения
@@ -330,13 +329,13 @@ function GeneratorCalc({
   const motorSu = motorR ? (g.emf * g.emf) / motorR : null;
   return (
     <Card>
-      <h2 className="power-h">Калькулятор генератора</h2>
-      <div className="power-form">
+      <h2 className={content.heading}>Калькулятор генератора</h2>
+      <div className={content.form}>
         <Field label="Статоров всего (по всем роторам)" value={stators} onChange={setStators} min={1} max={400} />
         <Field label="Роторов" value={rotors} onChange={setRotors} min={1} max={400} />
         <Field label="Скорость вала" value={rpm} onChange={setRpm} min={1} max={maxRpm} unit="об/мин" />
       </div>
-      <div className="power-outs">
+      <div className={content.outputs}>
         <Out label="Выработка">{watts(g.power)}</Out>
         <Out label="Напряжение без нагрузки">{num(g.emf, 1)} В</Out>
         <Out label="Нагрузка на вал">{num(g.stress)} SU</Out>
@@ -366,20 +365,20 @@ function MotorCalc({ p }: { p: Parameters<typeof motor>[2] }) {
   const r = motor(volts, load / 100, p);
   return (
     <Card>
-      <h2 className="power-h">Калькулятор двигателя</h2>
-      <div className="power-form">
+      <h2 className={content.heading}>Калькулятор двигателя</h2>
+      <div className={content.form}>
         <Field label="Напряжение на двигателе" value={volts} onChange={setVolts} min={0} max={50000} unit="В" />
         <Field label="Нагрузка (доля выданных SU)" value={load} onChange={setLoad} min={0} max={100} unit="%" />
       </div>
       {r.running ? (
-        <div className="power-outs">
+        <div className={content.outputs}>
           <Out label="Отдаёт в сеть Create">{num(r.capacity)} SU</Out>
           <Out label="Потребляет">{watts(r.power)}</Out>
           <Out label="Ток">{num(r.current, 1)} А</Out>
           <Out label="Сопротивление сейчас">{num(r.resistance, 1)} Ом</Out>
         </div>
       ) : (
-        <p className="power-note">Напряжение не выше {p.minVoltage} В — двигатель стоит.</p>
+        <p className={content.note}>Напряжение не выше {p.minVoltage} В — двигатель стоит.</p>
       )}
       <p className="faint small">
         Обычно скорость вала выставляется на самом двигателе, а от напряжения зависит только запас SU. В режиме
@@ -398,11 +397,11 @@ function ConverterCalc({ data, ee, ie }: { data: PowerData; ee: Get; ie: Get }) 
   if (!rate) return null;
   return (
     <Card>
-      <h2 className="power-h">Ватты ↔ FE</h2>
-      <div className="power-form">
+      <h2 className={content.heading}>Ватты ↔ FE</h2>
+      <div className={content.form}>
         <Field label="Энергия IE" value={fe} onChange={setFe} min={0} max={1_000_000} unit="FE/t" />
       </div>
-      <div className="power-outs">
+      <div className={content.outputs}>
         <Out label="Это в ваттах">{watts(fe * rate.value)}</Out>
         {convKw && <Out label="Предел одного преобразователя">{num((convKw.value * 1000) / rate.value)} FE/t</Out>}
         {data.ie?.wires.map((w) => {
@@ -438,8 +437,8 @@ function EeLoads({ data, s }: { data: PowerData; s: Get }) {
   return (
     <>
       <Card>
-        <h2 className="power-h">Потребители при напряжении</h2>
-        <div className="power-form">
+        <h2 className={content.heading}>Потребители при напряжении</h2>
+        <div className={content.form}>
           <Field label="Напряжение" value={volts} onChange={setVolts} min={0} max={50000} unit="В" />
         </div>
         <TableWrap>
@@ -502,8 +501,8 @@ function EeLoads({ data, s }: { data: PowerData; s: Get }) {
         </p>
       </Card>
       <Card>
-        <h2 className="power-h">Пределы</h2>
-        <div className="power-outs">
+        <h2 className={content.heading}>Пределы</h2>
+        <div className={content.outputs}>
           <Out label="Вариак, не больше">
             <Cfg s={s('Ratings.variacMaxPower')} unit="Вт" />
           </Out>
@@ -548,7 +547,7 @@ function IeNet({ data, s, ee, att }: { data: PowerData; s: Get; ee: Get; att: Ge
   return (
     <>
       <Card>
-        <h2 className="power-h">Провода и коннекторы IE</h2>
+        <h2 className={content.heading}>Провода и коннекторы IE</h2>
         <TableWrap>
           <Table>
             <thead>
@@ -600,8 +599,8 @@ function IeNet({ data, s, ee, att }: { data: PowerData; s: Get; ee: Get; att: Ge
         </p>
       </Card>
       <Card>
-        <h2 className="power-h">Генераторы IE</h2>
-        <div className="power-outs">
+        <h2 className={content.heading}>Генераторы IE</h2>
+        <div className={content.outputs}>
           <Out label="Дизельный генератор">
             <Cfg s={s('machines.dieselGen_output')} unit="FE/t" />
           </Out>

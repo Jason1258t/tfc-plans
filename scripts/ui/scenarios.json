@@ -291,6 +291,203 @@
       "theme": "dark"
     },
     {
+      "name": "power-final.overview",
+      "path": "/reference?tab=power",
+      "waitFor": "main",
+      "actions": [
+        {
+          "wait": 4000
+        }
+      ],
+      "fullPage": false,
+      "maxWaitMs": 3000
+    },
+    {
+      "name": "power-final.overview-dark",
+      "path": "/reference?tab=power",
+      "waitFor": "main",
+      "actions": [
+        {
+          "wait": 4000
+        }
+      ],
+      "fullPage": false,
+      "maxWaitMs": 3000,
+      "theme": "dark"
+    },
+    {
+      "name": "power-final.generator",
+      "path": "/reference?tab=power",
+      "waitFor": "main",
+      "actions": [
+        {
+          "wait": 4000
+        },
+        {
+          "eval": "(() => { const h = [...document.querySelectorAll('main h2, main h3')].find(el => el.textContent.includes(\"Калькулятор генератора\")); if (!h) throw new Error('Заголовок не найден'); h.scrollIntoView({block:'start'}); })()"
+        }
+      ],
+      "fullPage": false,
+      "maxWaitMs": 3000
+    },
+    {
+      "name": "power-final.ee",
+      "path": "/reference?tab=power",
+      "waitFor": "main",
+      "actions": [
+        {
+          "wait": 4000
+        },
+        {
+          "clickText": "Нагрузки EE"
+        }
+      ],
+      "fullPage": false,
+      "maxWaitMs": 3000
+    },
+    {
+      "name": "power-final.ie",
+      "path": "/reference?tab=power",
+      "waitFor": "main",
+      "actions": [
+        {
+          "wait": 4000
+        },
+        {
+          "clickText": "Сеть IE"
+        }
+      ],
+      "fullPage": false,
+      "maxWaitMs": 3000
+    },
+    {
+      "name": "power-final.guides",
+      "path": "/reference?tab=guides",
+      "waitFor": "main",
+      "actions": [
+        {
+          "wait": 4000
+        }
+      ],
+      "fullPage": false,
+      "maxWaitMs": 3000
+    },
+    {
+      "name": "power-final.guide-chart",
+      "path": "/reference?tab=guides&g=optimal",
+      "waitFor": "main",
+      "actions": [
+        {
+          "wait": 4000
+        },
+        {
+          "wait": "main figure"
+        },
+        {
+          "eval": "document.querySelector('main figure').scrollIntoView({block:'start'})"
+        }
+      ],
+      "fullPage": false,
+      "maxWaitMs": 3000
+    },
+    {
+      "name": "power-final.guide-bridge",
+      "path": "/reference?tab=guides&g=rectify",
+      "waitFor": "main",
+      "actions": [
+        {
+          "wait": 4000
+        },
+        {
+          "wait": "main figure"
+        },
+        {
+          "eval": "document.querySelector('main figure').scrollIntoView({block:'start'})"
+        }
+      ],
+      "fullPage": false,
+      "maxWaitMs": 3000
+    },
+    {
+      "name": "power-final.guide-editor",
+      "path": "/reference?tab=guides",
+      "waitFor": "main",
+      "actions": [
+        {
+          "wait": 4000
+        },
+        {
+          "clickText": "Новый гайд"
+        },
+        {
+          "wait": "main textarea"
+        }
+      ],
+      "fullPage": false,
+      "maxWaitMs": 3000
+    },
+    {
+      "name": "power-final.addons",
+      "path": "/addons",
+      "waitFor": "main",
+      "actions": [
+        {
+          "wait": 4000
+        }
+      ],
+      "fullPage": false,
+      "maxWaitMs": 3000
+    },
+    {
+      "name": "power-final.addon-blocks",
+      "path": "/addons/ee_extras",
+      "waitFor": "main",
+      "actions": [
+        {
+          "wait": 4000
+        },
+        {
+          "wait": 3000
+        },
+        {
+          "eval": "(() => { const h = [...document.querySelectorAll('main h2, main h3')].find(el => el.textContent.includes(\"Подробно\")); if (!h) throw new Error('Заголовок не найден'); h.scrollIntoView({block:'start'}); })()"
+        }
+      ],
+      "fullPage": false,
+      "maxWaitMs": 3000
+    },
+    {
+      "name": "power-final.addons.versions",
+      "path": "/addons/ee_extras",
+      "fullPage": false,
+      "waitFor": "main",
+      "actions": [
+        {
+          "wait": 7000
+        },
+        {
+          "eval": "if (![...document.querySelectorAll('main h2')].some(h => h.textContent.includes('Версии'))) throw new Error('Блок версий не загрузился');"
+        }
+      ],
+      "maxWaitMs": 3000
+    },
+    {
+      "name": "power-final.addons.versions.dark",
+      "path": "/addons/ee_extras",
+      "fullPage": false,
+      "waitFor": "main",
+      "actions": [
+        {
+          "wait": 7000
+        },
+        {
+          "eval": "if (![...document.querySelectorAll('main h2')].some(h => h.textContent.includes('Версии'))) throw new Error('Блок версий не загрузился');"
+        }
+      ],
+      "theme": "dark",
+      "maxWaitMs": 3000
+    },
+    {
       "name": "updates",
       "path": "/updates"
     },

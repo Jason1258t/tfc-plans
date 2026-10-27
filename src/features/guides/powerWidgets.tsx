@@ -25,7 +25,7 @@ function BridgeDiagram({ legs, cap = false }: { legs: 3 | 1; cap?: boolean }) {
     </g>
   );
   return (
-    <figure className="power-figure">
+    <figure className={pw.figure}>
       <svg
         viewBox={`0 0 ${width} 220`}
         role="img"
@@ -33,10 +33,10 @@ function BridgeDiagram({ legs, cap = false }: { legs: 3 | 1; cap?: boolean }) {
       >
         <line x1={cols[0]} y1={top} x2={pumpX} y2={top} className={pw.powerWire} />
         <line x1={cols[0]} y1={bottom} x2={pumpX} y2={bottom} className={pw.powerWire} />
-        <text x={pumpX + 8} y={top + 4} className="power-svg-text">
+        <text x={pumpX + 8} y={top + 4} className={pw.svgText}>
           +
         </text>
-        <text x={pumpX + 8} y={bottom + 4} className="power-svg-text">
+        <text x={pumpX + 8} y={bottom + 4} className={pw.svgText}>
           −
         </text>
         {cols.map((x, i) => (
@@ -47,7 +47,7 @@ function BridgeDiagram({ legs, cap = false }: { legs: 3 | 1; cap?: boolean }) {
             <line x1={x - 28} y1={mid} x2={x} y2={mid} className={pw.powerWire} />
             <circle cx={x} cy={mid} r={3} className={pw.powerDot} />
             <circle cx={x - 28} cy={mid} r={3} className={pw.powerTerm} />
-            <text x={x - 34} y={mid + 4} textAnchor="end" className="power-svg-text">
+            <text x={x - 34} y={mid + 4} textAnchor="end" className={pw.svgText}>
               {inputs[i]}
             </text>
           </g>
@@ -58,7 +58,7 @@ function BridgeDiagram({ legs, cap = false }: { legs: 3 | 1; cap?: boolean }) {
             <line x1={right} y1={mid + 5} x2={right} y2={bottom} className={pw.powerWire} />
             <line x1={right - 14} y1={mid - 5} x2={right + 14} y2={mid - 5} />
             <line x1={right - 14} y1={mid + 5} x2={right + 14} y2={mid + 5} />
-            <text x={right + 18} y={mid + 4} className="power-svg-text">
+            <text x={right + 18} y={mid + 4} className={pw.svgText}>
               C
             </text>
           </g>
@@ -66,7 +66,7 @@ function BridgeDiagram({ legs, cap = false }: { legs: 3 | 1; cap?: boolean }) {
         <line x1={pumpX} y1={top} x2={pumpX} y2={mid - 18} className={pw.powerWire} />
         <line x1={pumpX} y1={mid + 18} x2={pumpX} y2={bottom} className={pw.powerWire} />
         <rect x={pumpX - 32} y={mid - 18} width={64} height={36} rx={4} className={pw.powerLoad} />
-        <text x={pumpX} y={mid + 4} textAnchor="middle" className="power-svg-text">
+        <text x={pumpX} y={mid + 4} textAnchor="middle" className={pw.svgText}>
           нагрузка
         </text>
       </svg>
@@ -83,18 +83,18 @@ function LineDiagram() {
   const box = (x: number, label: string, sub?: string) => (
     <g>
       <rect x={x} y={30} width={96} height={40} rx={5} className={pw.powerLoad} />
-      <text x={x + 48} y={sub ? 47 : 54} textAnchor="middle" className="power-svg-text">
+      <text x={x + 48} y={sub ? 47 : 54} textAnchor="middle" className={pw.svgText}>
         {label}
       </text>
       {sub && (
-        <text x={x + 48} y={62} textAnchor="middle" className={cx('power-svg-text', pw.powerSvgSub)}>
+        <text x={x + 48} y={62} textAnchor="middle" className={cx(pw.svgText, pw.powerSvgSub)}>
           {sub}
         </text>
       )}
     </g>
   );
   return (
-    <figure className={cx('power-figure', pw.powerFigureWide)}>
+    <figure className={cx(pw.figure, pw.powerFigureWide)}>
       <svg
         viewBox="0 0 640 100"
         role="img"
@@ -105,10 +105,10 @@ function LineDiagram() {
         <line x1={500} y1={50} x2={544} y2={50} className={pw.powerWire} />
         {box(0, 'генератор', '300 В')}
         {box(140, 'повышающий', '1:10')}
-        <text x={320} y={42} textAnchor="middle" className="power-svg-text">
+        <text x={320} y={42} textAnchor="middle" className={pw.svgText}>
           линия, 3000 В, ток ÷10
         </text>
-        <text x={320} y={68} textAnchor="middle" className={cx('power-svg-text', pw.powerSvgSub)}>
+        <text x={320} y={68} textAnchor="middle" className={cx(pw.svgText, pw.powerSvgSub)}>
           потери ÷100
         </text>
         {box(404, 'понижающий', '10:1')}
@@ -124,10 +124,10 @@ function GeneratorDiagram() {
   const y = 50;
   const rotors = [1, 2, 3];
   return (
-    <figure className="power-figure">
+    <figure className={pw.figure}>
       <svg viewBox="0 0 420 130" role="img" aria-label="Схема генератора сбоку">
         <line x1={10} y1={y + cell / 2} x2={80} y2={y + cell / 2} className={pw.powerWire} />
-        <text x={10} y={y + cell / 2 - 8} className="power-svg-text">
+        <text x={10} y={y + cell / 2 - 8} className={pw.svgText}>
           вал Create
         </text>
         {rotors.map((i) => {
@@ -149,25 +149,25 @@ function GeneratorDiagram() {
                 height={cell - 4}
                 className={cx(pw.powerBox, pw.powerBoxSoft)}
               />
-              <text x={x + cell / 2 - 1} y={y + cell / 2 + 4} textAnchor="middle" className="power-svg-text">
+              <text x={x + cell / 2 - 1} y={y + cell / 2 + 4} textAnchor="middle" className={pw.svgText}>
                 Р
               </text>
-              <text x={x + cell / 2 - 1} y={y - cell / 2 + 2} textAnchor="middle" className="power-svg-text">
+              <text x={x + cell / 2 - 1} y={y - cell / 2 + 2} textAnchor="middle" className={pw.svgText}>
                 С
               </text>
-              <text x={x + cell / 2 - 1} y={y + cell * 1.5 + 2} textAnchor="middle" className="power-svg-text">
+              <text x={x + cell / 2 - 1} y={y + cell * 1.5 + 2} textAnchor="middle" className={pw.svgText}>
                 С
               </text>
             </g>
           );
         })}
         <rect x={40 + 4 * cell} y={y} width={cell - 2} height={cell - 2} className={pw.powerBox} />
-        <text x={40 + 4.5 * cell - 1} y={y + cell / 2 + 4} textAnchor="middle" className="power-svg-text">
+        <text x={40 + 4.5 * cell - 1} y={y + cell / 2 + 4} textAnchor="middle" className={pw.svgText}>
           Щ
         </text>
         <line x1={40 + 5 * cell} y1={y + 10} x2={400} y2={y + 10} className={pw.powerWire} />
         <line x1={40 + 5 * cell} y1={y + 28} x2={400} y2={y + 28} className={pw.powerWire} />
-        <text x={400} y={y + 4} textAnchor="end" className="power-svg-text">
+        <text x={400} y={y + 4} textAnchor="end" className={pw.svgText}>
           к потребителям
         </text>
       </svg>
@@ -196,23 +196,23 @@ function LoadChart({ buffer, fullLoad }: { buffer: number; fullLoad: number }) {
   const path = (k: 'out' | 'v') =>
     pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.d).toFixed(1)},${y(p[k]).toFixed(1)}`).join(' ');
   return (
-    <figure className="power-figure">
+    <figure className={pw.figure}>
       <svg viewBox={`0 0 ${w} ${h + 18}`} role="img" aria-label="Отдача и напряжение генератора от нагрузки">
         <rect x={x(4)} y={10} width={x(maxD) - x(4)} height={h - 30} className={pw.powerZoneBad} />
-        <line x1={46} y1={y(1)} x2={w - 26} y2={y(1)} className="power-axis" />
-        <line x1={46} y1={h - 20} x2={w - 26} y2={h - 20} className="power-axis" />
-        <line x1={x(1)} y1={10} x2={x(1)} y2={h - 20} className="power-axis" strokeDasharray="3 3" />
+        <line x1={46} y1={y(1)} x2={w - 26} y2={y(1)} className={pw.axis} />
+        <line x1={46} y1={h - 20} x2={w - 26} y2={h - 20} className={pw.axis} />
+        <line x1={x(1)} y1={10} x2={x(1)} y2={h - 20} className={pw.axis} strokeDasharray="3 3" />
         <path d={path('out')} className={pw.powerLine} />
         <path d={path('v')} className={cx(pw.powerLine, pw.powerLine2)} />
-        <text x={42} y={y(1) + 4} textAnchor="end" className="power-svg-text">
+        <text x={42} y={y(1) + 4} textAnchor="end" className={pw.svgText}>
           100 %
         </text>
         {[0, 1, 2, 3, 4, 5].map((d) => (
-          <text key={d} x={x(d)} y={h - 6} textAnchor="middle" className="power-svg-text">
+          <text key={d} x={x(d)} y={h - 6} textAnchor="middle" className={pw.svgText}>
             {d * 100} %
           </text>
         ))}
-        <text x={x(4.5)} y={y(0.15)} textAnchor="middle" className="power-svg-text">
+        <text x={x(4.5)} y={y(0.15)} textAnchor="middle" className={pw.svgText}>
           вне модели
         </text>
       </svg>

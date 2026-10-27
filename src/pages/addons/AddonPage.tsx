@@ -3,8 +3,7 @@ import { lazy, Suspense } from 'react';
 import { useParams } from 'react-router-dom';
 import { AddonHead, AddonInstall } from '@/features/reference-tabs';
 import { addonById } from '@/lib/addons';
-import { ButtonLink, Card } from '@/shared/ui';
-import '@/features/reference-tabs/PowerShared.css';
+import { ButtonLink, Card, contentStyles as content } from '@/shared/ui';
 import shell from '@/pages/reference/ReferenceShell.module.css';
 
 const AddonArticle = lazy(() => import('@/features/guides/AddonArticle'));
@@ -16,13 +15,13 @@ export function AddonPage() {
   const a = addonById(id);
   return (
     <main className={shell.page}>
-      <ButtonLink variant="ghost" size="sm" className="power-back" to="/addons">
+      <ButtonLink variant="ghost" size="sm" className={content.back} to="/addons">
         <ArrowLeft size={14} /> Все аддоны
       </ButtonLink>
       {!a ? (
         <div className="empty">Аддона «{id}» нет — возможно, ссылка устарела</div>
       ) : (
-        <div className="power">
+        <div className={content.stack}>
           <Card>
             <AddonHead a={a} title={a.name} />
             <p>{a.summary}</p>

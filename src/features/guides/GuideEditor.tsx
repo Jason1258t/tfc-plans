@@ -3,7 +3,7 @@ import { useDeferredValue, useRef, useState } from 'react';
 import { saveGuide, type GuideDraft } from '@/data/guides';
 import { readNick } from '@/shared/lib/nick';
 import { cx } from '@/shared/lib';
-import { Button, Input, Select, Textarea, Card } from '@/shared/ui';
+import { Button, Input, Select, Textarea, Card, contentStyles as content } from '@/shared/ui';
 import type { Guide, GuideChecked } from '@/entities/guide';
 import { ItemIcon, ItemPicker } from '@/shared/pack-data';
 import type { LiveMarkdownHandle } from '@/components/LiveMarkdown';
@@ -149,7 +149,7 @@ export function GuideEditor({
   return (
     <section className={styles.guideEditor}>
       <header className="guide-list-head">
-        <h2 className="power-h">{guide ? `Правка: ${guide.title}` : 'Новый гайд'}</h2>
+        <h2 className={content.heading}>{guide ? `Правка: ${guide.title}` : 'Новый гайд'}</h2>
         <div className={styles.guideHeadActions}>
           <Button variant="ghost" className="small" onClick={() => setHelp(!help)}>
             <HelpCircle size={14} /> Справка
@@ -167,7 +167,7 @@ export function GuideEditor({
           </Button>
         </div>
       </header>
-      {restore && <div className="power-note small">Это версия из истории — сохраните, чтобы вернуть её.</div>}
+      {restore && <div className={cx(content.note, 'small')}>Это версия из истории — сохраните, чтобы вернуть её.</div>}
       {error && <div className={cx(styles.guideErrors, 'small')}>{error}</div>}
       {help && <GuideHelp kit={kit} onClose={() => setHelp(false)} />}
 
@@ -248,10 +248,10 @@ export function GuideEditor({
         <GuideEditingContext.Provider value>
           <div className={styles.guidePreview}>
             <span className="faint small">Предпросмотр — калькуляторы работают</span>
-            <Card as="article" className={cx('power-article', styles.guideArticle)}>
-              <h2 className="power-h">{title || 'Без заголовка'}</h2>
+            <Card as="article" className={styles.guideArticle}>
+              <h2 className={content.heading}>{title || 'Без заголовка'}</h2>
               {previewSummary && (
-                <div className={cx('power-note', styles.guideSummary)}>
+                <div className={cx(content.note, styles.guideSummary)}>
                   <GuideBody source={`**Коротко.** ${previewSummary}`} kit={kit} onGuide={onGuide} />
                 </div>
               )}

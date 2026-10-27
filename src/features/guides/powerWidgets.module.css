@@ -1,4 +1,30 @@
-/* Классы SVG-схем электричества, переехавшие из features/reference-tabs/PowerShared.css. */
+/* SVG-схемы и графики гайдов. */
+.figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.figure svg {
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+  color: var(--text);
+}
+
+.axis {
+  stroke: currentColor;
+  stroke-width: 1.5;
+  fill: none;
+  opacity: 0.4;
+}
+
+.svg-text {
+  fill: currentColor;
+  font-size: 12px;
+}
+
 .powerBox {
   fill: var(--surface-2);
   stroke: currentColor;

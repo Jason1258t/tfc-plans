@@ -1,4 +1,13 @@
-/* Классы карточек аддонов, переехавшие из PowerShared.css. */
+/* Изображения блоков и карточки аддонов. */
+.pixel {
+  /* Иконки аддонов уже нарисованы со сглаживанием (scripts/mcp/render.mjs, 192 px = 96 × 2): уменьшать гладко,
+     pixelated при уменьшении выбрасывает пиксели и рвёт края */
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
 .addonPreview {
   display: flex;
   flex-wrap: wrap;
@@ -6,7 +15,7 @@
   margin: 8px 0;
 }
 
-.addonPreview :global(.power-pixel) {
+.addonPreview .pixel {
   width: 48px;
   height: 48px;
 }
@@ -49,7 +58,7 @@
   border-radius: 3px;
 }
 
-.recipeCell :global(.power-pixel) {
+.recipeCell .pixel {
   width: 28px;
   height: 28px;
   border: 0;
