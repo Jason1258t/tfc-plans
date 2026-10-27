@@ -12,4 +12,4 @@ export {
   type FileMeta,
   type FileReport,
 } from './files';
-export { startFiles, useFiles } from './store';
+export { useFiles } from './store';

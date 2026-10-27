@@ -1,25 +1,5 @@
-import { create } from 'zustand';
-import { subscribeFiles, type FileMeta } from '@/entities/file';
+import { createLiveList } from '@/shared/api';
+import { subscribeFiles, type FileMeta } from './files';
 
-interface FileList {
-  items: FileMeta[];
-  error: string | null;
-}
-
-/** Вложения задач и исходники схем: список из хранилища файлов (Firestore или свой сервер) */
-export const useFiles = create<FileList>(() => ({ items: [], error: null }));
-
-let stop: (() => void) | null = null;
-
-export function startFiles(): () => void {
-  if (stop) return stop;
-  const unsub = subscribeFiles(
-    (files) => useFiles.setState({ items: files, error: null }),
-    (e) => useFiles.setState({ error: e.message }),
-  );
-  stop = () => {
-    unsub();
-    stop = null;
-  };
-  return stop;
-}
+/** Вложения задач и исходники схем: одна подписка, пока список нужен компонентам. */
+export const useFiles = createLiveList<FileMeta>((onItems, onError) => subscribeFiles(onItems, onError));
