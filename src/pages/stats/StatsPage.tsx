@@ -425,7 +425,11 @@ export function StatsPage() {
             <Table
               head={['Ник', 'Последний раз', 'Заходов', 'Событий', 'Время', 'Чаще всего']}
               rows={s.persons.map((p) => [
-                <button key="nick" className="link-btn" onClick={() => setPerson(p.nick === person ? null : p.nick)}>
+                <button
+                  key="nick"
+                  className={styles.linkBtn}
+                  onClick={() => setPerson(p.nick === person ? null : p.nick)}
+                >
                   {p.nick}
                 </button>,
                 fmtDateTime(p.last),
@@ -459,8 +463,8 @@ export function StatsPage() {
                         {[...v.events]
                           .sort((a, b) => a.t - b.t)
                           .map((e) => (
-                            <li key={e.i} className={`k-${e.k}`}>
-                              <span className="faint mono">{fmtTime(e.t)}</span> {eventText(e)}
+                            <li key={e.i} data-kind={e.k}>
+                              <span className={cx('faint', styles.mono)}>{fmtTime(e.t)}</span> {eventText(e)}
                               {(e.k === 'view' || e.k === 'act') && <span className="faint small"> {e.p}</span>}
                             </li>
                           ))}
@@ -494,7 +498,7 @@ function Table({ head, rows, selected = -1 }: { head: string[]; rows: ReactNode[
         <thead>
           <tr>
             {head.map((h, i) => (
-              <th key={i} className={i ? 'num' : undefined}>
+              <th key={i} className={i ? styles.num : undefined}>
                 {h}
               </th>
             ))}
@@ -504,7 +508,7 @@ function Table({ head, rows, selected = -1 }: { head: string[]; rows: ReactNode[
           {rows.map((r, i) => (
             <tr key={i} className={cx(i === selected && styles.sel)}>
               {r.map((c, j) => (
-                <td key={j} className={j && typeof c === 'number' ? 'num' : undefined}>
+                <td key={j} className={j && typeof c === 'number' ? styles.num : undefined}>
                   {c}
                 </td>
               ))}
