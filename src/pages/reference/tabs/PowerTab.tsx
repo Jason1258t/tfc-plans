@@ -455,7 +455,7 @@ function EeLoads({ data, s }: { data: PowerData; s: Get }) {
                 return (
                   <tr key={x.id}>
                     <td>
-                      <span className="power-name">
+                      <span className={styles.powerName}>
                         <ItemIcon id={x.id} size={20} />
                         {x.name}
                       </span>
@@ -471,7 +471,7 @@ function EeLoads({ data, s }: { data: PowerData; s: Get }) {
               {m && motorR && (
                 <tr>
                   <td>
-                    <span className="power-name">
+                    <span className={styles.powerName}>
                       <ItemIcon id={EE_BLOCK.motor} size={20} />
                       Электродвигатель, полная нагрузка
                     </span>
@@ -568,7 +568,7 @@ function IeNet({ data, s, ee, att }: { data: PowerData; s: Get; ee: Get; att: Ge
                 return (
                   <tr key={w.name}>
                     <td>
-                      <span className="power-name">
+                      <span className={styles.powerName}>
                         {meta && <ItemIcon id={meta.coil} size={20} />}
                         {meta && <ItemIcon id={meta.connector} size={20} />}
                         {meta?.short ?? w.name}

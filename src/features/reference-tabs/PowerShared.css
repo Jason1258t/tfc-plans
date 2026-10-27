@@ -64,12 +64,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.power-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
 .power-cfg {
   white-space: nowrap;
 }
@@ -107,20 +101,6 @@
   padding-left: 20px;
 }
 
-.power-calc {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-2);
-}
-
-.power-calc h3 {
-  margin: 0;
-}
-
 .power-figure {
   margin: 0;
   display: flex;
@@ -135,7 +115,6 @@
   color: var(--text);
 }
 
-.power-wire,
 .power-axis {
   stroke: currentColor;
   stroke-width: 1.5;
@@ -146,80 +125,9 @@
   opacity: 0.4;
 }
 
-.power-diode polygon {
-  fill: var(--accent);
-  stroke: var(--accent);
-}
-
-.power-diode line,
-.power-cap line {
-  stroke: currentColor;
-  stroke-width: 2.5;
-}
-
-.power-dot {
-  fill: currentColor;
-}
-
-.power-term {
-  fill: var(--surface);
-  stroke: currentColor;
-  stroke-width: 1.5;
-}
-
-.power-load {
-  fill: var(--surface);
-  stroke: currentColor;
-  stroke-width: 1.5;
-}
-
-.power-box {
-  fill: var(--surface-2);
-  stroke: currentColor;
-  stroke-width: 1.5;
-}
-
-.power-box-soft {
-  fill: var(--accent-soft);
-  stroke: var(--accent);
-}
-
-.power-line {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 2;
-}
-
-.power-line-2 {
-  stroke: currentColor;
-  stroke-dasharray: 5 4;
-}
-
-.power-zone-bad {
-  fill: var(--danger);
-  opacity: 0.12;
-}
-
-.power-key {
-  color: var(--accent);
-  font-weight: 600;
-}
-
-.power-key-2 {
-  color: inherit;
-}
-
-.power-bar {
-  fill: var(--accent);
-}
-
 .power-svg-text {
   fill: currentColor;
   font-size: 12px;
-}
-
-.power-bad {
-  color: var(--danger);
 }
 
 .power-link {
@@ -236,32 +144,7 @@
   text-decoration: underline;
 }
 
-.power-hv {
-  stroke: var(--accent);
-  stroke-width: 3;
-}
-
-.power-svg-sub {
-  font-size: 10px;
-  opacity: 0.7;
-}
-
-.power-figure-wide svg {
-  max-width: 100%;
-}
-
 /* ---------------------------------------------------------------- карточки аддонов */
-
-.power-addon-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: flex-start;
-}
-
-.power-addon-row p {
-  flex: 1 1 280px;
-}
 
 .power-pixel {
   /* Иконки аддонов уже нарисованы со сглаживанием (scripts/mcp/render.mjs, 192 px = 96 × 2): уменьшать гладко,
@@ -272,49 +155,4 @@
   border: 1px solid var(--border);
 }
 
-.power-addon-block {
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-.addon-preview {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 8px 0;
-}
-
-.addon-preview .power-pixel {
-  width: 48px;
-  height: 48px;
-}
-
-.power-recipe {
-  display: grid;
-  grid-template-columns: repeat(3, 34px);
-  gap: 2px;
-}
-
-.power-recipe-cell {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-}
-
 /* Предмет аддона в клетке рецепта: без размера и рамки большой картинки (иначе 32×96 и вылезает из клетки) */
-.power-recipe-cell .power-pixel {
-  width: 28px;
-  height: 28px;
-  border: 0;
-  border-radius: 0;
-}
-
-.power-addon-block > .grow {
-  flex: 1 1 260px;
-  min-width: 0;
-}

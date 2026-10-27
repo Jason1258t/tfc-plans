@@ -15,6 +15,7 @@ import { itemName, useItems, ItemIcon } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
 // Стили справочника временно берём из его будущей общей папки — AddonsTab переедет в entities/addon
 import './PowerShared.css';
+import styles from './AddonsTab.module.css';
 import { ButtonLink, Card, CardHead } from '@/shared/ui';
 
 const AddonsGuidesSection = lazy(() => import('@/features/guides/AddonsGuidesSection'));
@@ -126,7 +127,7 @@ function AddonPreview({ a }: { a: Addon }) {
   const pics = a.blocks.filter((b) => b.image);
   if (!pics.length) return null;
   return (
-    <div className="addon-preview">
+    <div className={styles.addonPreview}>
       {pics.map((b) => (
         <img
           key={b.id}
@@ -146,20 +147,20 @@ function AddonPreview({ a }: { a: Addon }) {
 export function AddonBlockCard({ a, b }: { a: Addon; b: AddonBlock }) {
   const items = useItems();
   return (
-    <div className="power-addon-row power-addon-block">
+    <div className={cx(styles.addonRow, styles.addonBlock)}>
       {b.image && <img src={addonImage(a, b.image)} alt={`${b.name}, вид сверху`} className="power-pixel" />}
       <div className="grow">
         <b>{b.name}</b> <span className="faint small">{b.id}</span>
       </div>
       {b.recipe && (
-        <div className="power-recipe" aria-label={`Рецепт: ${b.name}`}>
+        <div className={styles.recipe} aria-label={`Рецепт: ${b.name}`}>
           {b.recipe.pattern.flatMap((row, y) =>
             [...row.padEnd(3)].map((ch, x) => {
               const k = b.recipe!.key[ch];
               return (
                 <span
                   key={`${x}-${y}`}
-                  className="power-recipe-cell"
+                  className={styles.recipeCell}
                   title={k ? (k.tag ? `#${k.tag}` : (k.name ?? itemName(items?.byId.get(k.item), k.item))) : ''}
                 >
                   {k?.image ? (
