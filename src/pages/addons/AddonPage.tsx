@@ -4,7 +4,6 @@ import { useParams } from 'react-router-dom';
 import { AddonHead, AddonInstall } from '@/features/reference-tabs';
 import { addonById } from '@/lib/addons';
 import { ButtonLink, Card } from '@/shared/ui';
-import '@/pages/reference/ReferenceShared.css';
 import '@/features/reference-tabs/PowerShared.css';
 import shell from '@/pages/reference/ReferenceShell.module.css';
 

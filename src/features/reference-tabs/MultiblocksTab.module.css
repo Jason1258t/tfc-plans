@@ -1,6 +1,5 @@
 /* Справочник → «Мультиблоки»: только собственные классы вкладки.
    Глобальными остались:
-   — `.ref-card / .ref-table*` (pages/reference/ReferenceShared.css),
    — классы темы `.empty / .faint / .small / .grow`; `.empty` на пустой клетке слоя задаёт отступы и её размер. */
 
 .navGroup {

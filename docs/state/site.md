@@ -11,10 +11,12 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 
 ## Styles (CSS Modules migration, started 2026-10-24)
 
-**Где остановились (26 октября).** `.btn`, `.input`, `.imp-dot`, `.imp-pill`, `.label`, `.tag` и `.error-box` удалены из
-глобальной темы; разметка использует `Button`/`ButtonLink`/`Input`/`Select`/`Textarea`/`Tag`/`ImpDot`/`ImpPill`/`Label`/
-`ErrorBox`. `ui:classes --check` чистый. Остаток и правила работы —
-[docs/plans/handoff-2026-10-26.md](plans/handoff-2026-10-26.md): перенос движка схем `lib/schematic*` в `entities/schematic`.
+**Где остановились (27 октября).** Основные страницы и компоненты используют CSS Modules; общие элементы —
+`shared/ui`, включая `Card`/`Table`/`SectionShell`, `EmptyState` и `ErrorBox`. Движок схем уже в
+`entities/schematic` (тяжёлый рендер — отдельный публичный `entities/schematic/render`, чтобы сохранить ленивую загрузку).
+`nbt.ts`, `schematicFile.ts` и `files.config.ts` остаются в `lib` намеренно: их напрямую используют Node-скрипты.
+Следующий CSS-хвост — общие `.power-*` в `PowerShared.css`. По FSD остаются запуск подписок сущностей по потребности
+вместо общего старта приложения и перенос `DocPage` в свой слайс (задача №75).
 
 - Plan and rules — skill `css-modules`: tokens/base in `src/app/theme`, repeated UI in `src/shared/ui`, page styles in
   `X.module.css` (`localsConvention: 'camelCaseOnly'` in `vite.config.ts`). Tools: `scripts/ui/classes.mjs` (class
@@ -83,11 +85,16 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 - 2026-10-27: `shared/ui` пополнился `Card`/`CardHead` и `Table`/`TableWrap` (бывшие `.ref-card`/`.ref-card-head` и `.ref-table-wrap`/`.ref-table` из `ReferenceShared.css`); мигрированы все вкладки справочника, мультиблоки, IE-нагрузки, аддоны и гайды; снимки `reference.*` и `addons` desktop/mobile — 0,000%. `.ref-card` оставлен глобальным алиасом в `Card.module.css` до переезда `AddonVersions.tsx` (#98).
 - 2026-10-27: `PowerShared.css` разобран: правила одного владельца переехали в `PowerTab.module.css`, новый `AddonsTab.module.css`, `Guides.module.css` и новый `powerWidgets.module.css`; общие `.power-*` остались глобальными. Снимки `reference.power*`, `reference.guides.*` и `addons` desktop/mobile — 0,000%.
 - 2026-10-27: остатки глобальных классов разобраны: `.toggle` переехал в `utilities.css`, `.hide-sm` удалён из разметки справочника, где для него не было CSS, `.imp-pill` уже жил в `shared/ui/Importance`. Снимки задач, схем, обновлений и справочника desktop/mobile — 0,000% (schematics.dark — 0,009% из-за живых данных).
-- Left: **2 global CSS outside `src/app/theme`** — `ReferenceShared.css`/`PowerShared.css`, общие части справочника
-  (их берут мультиблоки, гайды и аддоны; переедут вместе с потребителями). В `legacy-ui.css` осталась анимация
-  появления всплывающих блоков; `.empty` — утилита в `utilities.css`.
+- 2026-10-27: последний глобальный `.ref-card` у версий аддонов заменён на `shared/ui/Card`; алиасы
+  `.ref-card`/`.ref-card-head` удалены. Пустой `ReferenceShared.css` и все его импорты удалены. До/после: 18 пар снимков аддонов, версий
+  (светлая/тёмная тема) и шести разделов справочника desktop/mobile — 0,000%; длинные разделы проверены в пределах
+  видимой области. TypeScript, lint (без ошибок), CSS-классы, границы FSD и production build прошли.
+- Left: **1 global CSS outside `src/app/theme`** — `features/reference-tabs/PowerShared.css`, общие части
+  электричества, гайдов и аддонов. В `legacy-ui.css` осталась анимация появления всплывающих блоков;
+  `.empty` и общие помощники компоновки остаются утилитами в `utilities.css`.
 - 2026-10-26: `MultiblockFormed` перемещён в `features/reference-tabs`, его CSS — в `MultiblockFormed.module.css`;
-  затем renderer и его зависимая цепочка перемещаются в `entities/schematic` отдельной FSD-веткой.
+  renderer и зависимая цепочка уже перенесены в `entities/schematic`; рендер загружается отдельно через
+  `entities/schematic/render`.
 
 ## Documents (file storage)
 

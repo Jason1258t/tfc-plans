@@ -3,7 +3,6 @@ import { usePower, useSettings, type PowerData } from '@/lib/power';
 import { cx } from '@/shared/lib';
 import { SectionShell } from '@/shared/ui';
 import { GUIDES_SUBS, type GuidesSub } from '@/features/guides';
-import '../ReferenceShared.css';
 import '@/features/reference-tabs/PowerShared.css';
 
 const PowerGuidesSection = lazy(() => import('@/features/guides/PowerGuidesSection'));
