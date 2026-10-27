@@ -3,7 +3,7 @@ import { lazy, Suspense } from 'react';
 import { useParams } from 'react-router-dom';
 import { AddonHead, AddonInstall } from '@/features/reference-tabs';
 import { addonById } from '@/lib/addons';
-import { ButtonLink } from '@/shared/ui';
+import { ButtonLink, Card } from '@/shared/ui';
 import '@/pages/reference/ReferenceShared.css';
 import '@/features/reference-tabs/PowerShared.css';
 import shell from '@/pages/reference/ReferenceShell.module.css';
@@ -24,11 +24,11 @@ export function AddonPage() {
         <div className="empty">Аддона «{id}» нет — возможно, ссылка устарела</div>
       ) : (
         <div className="power">
-          <section className="ref-card">
+          <Card>
             <AddonHead a={a} title={a.name} />
             <p>{a.summary}</p>
             <AddonInstall a={a} />
-          </section>
+          </Card>
           <Suspense fallback={<div className="empty">Загружаю описание…</div>}>
             <AddonVersions key={a.id} addon={a} />
             <AddonArticle addon={a} />

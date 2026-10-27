@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { guidesEnabled, subscribeGuides } from '@/data/guides';
 import { readNick } from '@/shared/lib/nick';
 import { cx } from '@/shared/lib';
-import { Button } from '@/shared/ui';
+import { Button, Card } from '@/shared/ui';
 import type { Guide, GuideChecked } from '@/entities/guide';
 import { CHECKED } from './guideMeta';
 import { ItemIcon } from '@/shared/pack-data';
@@ -106,7 +106,7 @@ export function GuidesSection({
             <div className="empty">Гайд не найден — возможно, ссылка устарела</div>
           )
         ) : (
-          <article className={cx('ref-card power-article', styles.guideArticle)}>
+          <Card as="article" className={cx('power-article', styles.guideArticle)}>
             <header className={styles.guideHead}>
               <span className={styles.guideHeadIcon}>
                 {current.icon ? <ItemIcon id={current.icon} size={32} /> : <BookOpen size={24} />}
@@ -140,7 +140,7 @@ export function GuidesSection({
               </div>
             )}
             <GuideBody source={current.body} kit={kit} onGuide={onGuide} />
-          </article>
+          </Card>
         )}
         {history && (
           <GuideHistory

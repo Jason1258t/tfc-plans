@@ -6,7 +6,7 @@ import { ADDONS, ADDON_GUIDE_SECTION, addonGuideId, type Addon } from '@/lib/add
 import { BASE_DOCS, BASE_VALUES } from '@/lib/guideScope';
 import { readNick } from '@/shared/lib/nick';
 import { cx } from '@/shared/lib';
-import { Button } from '@/shared/ui';
+import { Button, Card } from '@/shared/ui';
 import type { Guide } from '@/entities/guide';
 import { AddonBlockCard } from '@/features/reference-tabs';
 import { CalcErrors } from './CalcBlock';
@@ -107,18 +107,18 @@ export default function AddonArticle({ addon }: { addon: Addon }) {
 
   if (!guide)
     return (
-      <section className="ref-card">
+      <Card>
         {error && <div className={cx(styles.guideErrors, 'small')}>Не удалось загрузить: {error}</div>}
         <div className="empty">Подробного описания пока нет</div>
         <Button className="small" onClick={() => startEdit('new')}>
           <Plus size={14} /> Написать описание
         </Button>
-      </section>
+      </Card>
     );
 
   return (
     <>
-      <article className={cx('ref-card power-article', styles.guideArticle)}>
+      <Card as="article" className={cx('power-article', styles.guideArticle)}>
         <header className={styles.guideHead}>
           <span className={styles.guideHeadIcon}>
             <BookOpen size={24} />
@@ -147,7 +147,7 @@ export default function AddonArticle({ addon }: { addon: Addon }) {
           </div>
         )}
         <GuideBody source={guide.body} kit={KIT} onGuide={onGuide} />
-      </article>
+      </Card>
       {history && (
         <GuideHistory
           guide={guide}

@@ -1,5 +1,5 @@
 import { ArrowRight, Ban, Search } from 'lucide-react';
-import { Button } from '@/shared/ui';
+import { Button, Card, CardHead, Table, TableWrap } from '@/shared/ui';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { datapacksStore } from '@/entities/datapack';
@@ -125,8 +125,8 @@ function OilCard({ items }: { items: ItemIndex | null }) {
   const icon = (id: string, className?: string) =>
     items?.byId.has(id) ? <ItemIcon id={id} size={20} className={className} /> : null;
   return (
-    <section className="ref-card">
-      <header className="ref-card-head">
+    <Card>
+      <CardHead>
         {icon('createdieselgenerators:crude_oil_bucket')}
         <div className="grow">
           <h2>Где взять нефть</h2>
@@ -134,7 +134,7 @@ function OilCard({ items }: { items: ItemIndex | null }) {
             Create: Diesel Generators — по коду мода 1.3.8, значения конфига по умолчанию
           </div>
         </div>
-      </header>
+      </CardHead>
       <ul className={styles.facts}>
         <li>
           Нефть лежит <b>под чанками</b>, а не жилами: у каждого чанка свой запас, он считается по сиду мира шумом —
@@ -162,7 +162,7 @@ function OilCard({ items }: { items: ItemIndex | null }) {
         Пороги и множители задаются в конфиге CDG на сервере, а запас чанка может переопределить KubeJS — если на
         сервере что-то меняли, реальность может отличаться.
       </p>
-    </section>
+    </Card>
   );
 }
 
@@ -180,8 +180,8 @@ const fmtEngine = (e: EngineStats | null) =>
 function BurnTable({ families, items }: { families: LiquidFamily[]; items: ItemIndex | null }) {
   const rate = families.find((f) => f.engines?.normal)?.engines?.normal?.burnRate;
   return (
-    <section className="ref-card">
-      <header className="ref-card-head">
+    <Card>
+      <CardHead>
         <div className="grow">
           <h2>Где сжигать</h2>
           <div className="faint small">
@@ -190,9 +190,9 @@ function BurnTable({ families, items }: { families: LiquidFamily[]; items: ItemI
             горелке Create. Генератор IE — время горения из рецепта топлива (больше — экономнее).
           </div>
         </div>
-      </header>
-      <div className="ref-table-wrap">
-        <table className={cx('ref-table', styles.burn)}>
+      </CardHead>
+      <TableWrap>
+        <Table className={cx(styles.burn)}>
           <thead>
             <tr>
               <th>Топливо</th>
@@ -232,9 +232,9 @@ function BurnTable({ families, items }: { families: LiquidFamily[]; items: ItemI
               );
             })}
           </tbody>
-        </table>
-      </div>
-    </section>
+        </Table>
+      </TableWrap>
+    </Card>
   );
 }
 
@@ -359,8 +359,8 @@ function FamilyCard({
     return [...m];
   }, [fam]);
   return (
-    <section className="ref-card">
-      <header className="ref-card-head">
+    <Card>
+      <CardHead>
         {icon ? <ItemIcon id={icon} size={32} /> : null}
         <div className="grow">
           <h2>{familyName(fam, items)}</h2>
@@ -375,7 +375,7 @@ function FamilyCard({
             )}
           </div>
         </div>
-      </header>
+      </CardHead>
       {fam.tag === 'c:crude_oil' && <PumpjackMethod items={items} />}
       {fam.tag !== 'c:crude_oil' && groups.length === 0 && (
         <p className="faint small" style={{ margin: 0 }}>
@@ -395,7 +395,7 @@ function FamilyCard({
           ))}
         </details>
       )}
-    </section>
+    </Card>
   );
 }
 

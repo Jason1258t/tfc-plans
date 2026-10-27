@@ -306,7 +306,7 @@
   background: var(--surface);
 }
 
-.embed :global(.ref-card) {
+.embed > section {
   padding: 0;
   border: 0;
 }

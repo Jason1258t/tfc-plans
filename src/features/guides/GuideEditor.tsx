@@ -3,7 +3,7 @@ import { useDeferredValue, useRef, useState } from 'react';
 import { saveGuide, type GuideDraft } from '@/data/guides';
 import { readNick } from '@/shared/lib/nick';
 import { cx } from '@/shared/lib';
-import { Button, Input, Select, Textarea } from '@/shared/ui';
+import { Button, Input, Select, Textarea, Card } from '@/shared/ui';
 import type { Guide, GuideChecked } from '@/entities/guide';
 import { ItemIcon, ItemPicker } from '@/shared/pack-data';
 import type { LiveMarkdownHandle } from '@/components/LiveMarkdown';
@@ -248,7 +248,7 @@ export function GuideEditor({
         <GuideEditingContext.Provider value>
           <div className={styles.guidePreview}>
             <span className="faint small">Предпросмотр — калькуляторы работают</span>
-            <article className={cx('ref-card power-article', styles.guideArticle)}>
+            <Card as="article" className={cx('power-article', styles.guideArticle)}>
               <h2 className="power-h">{title || 'Без заголовка'}</h2>
               {previewSummary && (
                 <div className={cx('power-note', styles.guideSummary)}>
@@ -256,7 +256,7 @@ export function GuideEditor({
                 </div>
               )}
               <GuideBody source={preview} kit={kit} onGuide={onGuide} />
-            </article>
+            </Card>
           </div>
         </GuideEditingContext.Provider>
       </div>

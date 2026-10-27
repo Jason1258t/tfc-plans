@@ -1,5 +1,5 @@
 import { ArrowRight, Search } from 'lucide-react';
-import { Segmented, Select } from '@/shared/ui';
+import { Segmented, Select, Card, CardHead, Table, TableWrap } from '@/shared/ui';
 import { useMemo, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { BotanyTab } from './tabs/BotanyTab';
@@ -346,8 +346,8 @@ function MineralCard({
   const direct = chain ? [] : grades.filter((i) => ref_.smelt[i.item]);
 
   return (
-    <section className="ref-card">
-      <header className="ref-card-head">
+    <Card>
+      <CardHead>
         <ItemIcon id={group.main} size={32} />
         <div className="grow">
           <h2>{itemName(items?.byId.get(group.main), group.main)}</h2>
@@ -369,7 +369,7 @@ function MineralCard({
             </div>
           </div>
         )}
-      </header>
+      </CardHead>
 
       {(chain || (smelt && direct.length > 0)) && (
         <div className={styles.chain} aria-label="Путь до металла">
@@ -459,7 +459,7 @@ function MineralCard({
           </tbody>
         </table>
       </div>
-    </section>
+    </Card>
   );
 }
 
@@ -564,8 +564,8 @@ function FuelTab({ fuels, items }: { fuels: Fuel[]; items: ItemIndex | null }) {
         Для горна, костра и печей TFC (дерево и деревянные изделия не показываются). Чистота влияет на то, насколько
         топливо годится для горна (меньше — больше дыма и ниже эффективность).
       </p>
-      <div className="ref-table-wrap">
-        <table className="ref-table">
+      <TableWrap>
+        <Table>
           <thead>
             <tr>
               {th('name', 'Топливо')}
@@ -586,8 +586,8 @@ function FuelTab({ fuels, items }: { fuels: Fuel[]; items: ItemIndex | null }) {
               </tr>
             ))}
           </tbody>
-        </table>
-      </div>
+        </Table>
+      </TableWrap>
     </>
   );
 }
@@ -650,8 +650,8 @@ function FoodTab({ foods, items, meals }: { foods: Food[]; items: ItemIndex | nu
       <p className={cx('faint', 'small', shell.note)}>
         Порча — множитель скорости: больше 1 портится быстрее. {list.length} из {foods.length}.
       </p>
-      <div className="ref-table-wrap">
-        <table className="ref-table">
+      <TableWrap>
+        <Table>
           <thead>
             <tr>
               {th('name', 'Еда')}
@@ -695,8 +695,8 @@ function FoodTab({ foods, items, meals }: { foods: Food[]; items: ItemIndex | nu
               </tr>
             ))}
           </tbody>
-        </table>
-      </div>
+        </Table>
+      </TableWrap>
     </>
   );
 }
@@ -724,8 +724,8 @@ function MetalsTab({ ref_, items }: { ref_: Reference; items: ItemIndex | null }
           <input placeholder="Медь, бронза, сталь…" value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
       </div>
-      <div className="ref-table-wrap">
-        <table className="ref-table">
+      <TableWrap>
+        <Table>
           <thead>
             <tr>
               {th('name', 'Металл')}
@@ -761,8 +761,8 @@ function MetalsTab({ ref_, items }: { ref_: Reference; items: ItemIndex | null }
               </tr>
             ))}
           </tbody>
-        </table>
-      </div>
+        </Table>
+      </TableWrap>
     </>
   );
 }

@@ -1,7 +1,7 @@
 import { X } from 'lucide-react';
 import { useState } from 'react';
 import { cx } from '@/shared/lib';
-import { Button, Input } from '@/shared/ui';
+import { Button, Input, Card } from '@/shared/ui';
 import type { GuideKit } from './GuideBody';
 import styles from './Guides.module.css';
 
@@ -45,7 +45,7 @@ export function GuideHelp({ kit, onClose }: { kit: GuideKit; onClose: () => void
     ([k, d]) => !q || k.toLowerCase().includes(q.toLowerCase()) || d.doc.toLowerCase().includes(q.toLowerCase()),
   );
   return (
-    <div className={cx(styles.guideHelp, 'ref-card')}>
+    <Card as="div" className={styles.guideHelp}>
       <Button variant="ghost" className={cx('small', styles.guideHelpClose)} onClick={onClose} title="Закрыть справку">
         <X size={14} />
       </Button>
@@ -134,6 +134,6 @@ export function GuideHelp({ kit, onClose }: { kit: GuideKit; onClose: () => void
           </dl>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

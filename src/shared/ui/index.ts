@@ -9,6 +9,8 @@ export { Modal } from './Modal';
 export { Search } from './Search';
 export { ErrorBox } from './ErrorBox';
 export { Tag } from './Tag';
+export { Card, CardHead } from './Card';
+export { Table, TableWrap } from './Table';
 export { ImpDot, ImpPill } from './Importance';
 export { Label } from './Label';
 export { Progress, type ProgressProps } from './Progress';

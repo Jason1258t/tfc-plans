@@ -1,0 +1,85 @@
+/* Таблица справочника. Переехала из pages/reference/ReferenceShared.css (.ref-table-wrap, .ref-table). */
+.wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-3);
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.table th:global(.sortable) {
+  cursor: pointer;
+  user-select: none;
+}
+
+.table th:global(.sortable):hover {
+  color: var(--text);
+}
+
+.table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table :global(.num) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.table th:global(.nut) {
+  text-align: right;
+}
+
+.table td:global(.zero) {
+  color: var(--text-3);
+}
+
+.table td:global(.warn) {
+  color: var(--imp-3);
+}
+
+.table :global(.nut-grain:not(.zero)) {
+  color: #d9a441;
+}
+
+.table :global(.nut-fruit:not(.zero)) {
+  color: #e2626b;
+}
+
+.table :global(.nut-vegetables:not(.zero)) {
+  color: var(--accent);
+}
+
+.table :global(.nut-protein:not(.zero)) {
+  color: #c7764c;
+}
+
+.table :global(.nut-dairy:not(.zero)) {
+  color: var(--diamond);
+}
+
+@media (max-width: 640px) {
+  .table :global(.nut) {
+    display: none;
+  }
+}

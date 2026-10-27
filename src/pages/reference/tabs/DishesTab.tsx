@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react';
-import { Button, Select } from '@/shared/ui';
+import { Button, Select, Table, TableWrap } from '@/shared/ui';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { itemName, type ItemIndex, hasStatus, useRecipes, type Recipe, ItemIcon } from '@/shared/pack-data';
@@ -164,8 +164,8 @@ export function DishesTab({ items, foods }: { items: ItemIndex | null; foods: Fo
       {shown.length === 0 ? (
         <div className="empty">Ничего не подходит.</div>
       ) : (
-        <div className="ref-table-wrap">
-          <table className="ref-table">
+        <TableWrap>
+          <Table>
             <thead>
               <tr>
                 <th>Блюдо</th>
@@ -228,8 +228,8 @@ export function DishesTab({ items, foods }: { items: ItemIndex | null; foods: Fo
                 );
               })}
             </tbody>
-          </table>
-        </div>
+          </Table>
+        </TableWrap>
       )}
       {shown.length > limit && (
         <Button variant="ghost" size="sm" onClick={() => setLimit((n) => n + PAGE)}>
