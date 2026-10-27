@@ -104,7 +104,7 @@
   min-width: 0;
 }
 
-/* малый переключатель (глобальный .toggle из TasksPage.css + свой размер) */
+/* малый переключатель (глобальный .toggle из utilities.css + свой размер) */
 .smToggle {
   height: 28px;
   font-size: 13px;

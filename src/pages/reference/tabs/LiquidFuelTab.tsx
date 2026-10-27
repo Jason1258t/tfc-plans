@@ -197,8 +197,8 @@ function BurnTable({ families, items }: { families: LiquidFamily[]; items: ItemI
             <tr>
               <th>Топливо</th>
               <th>Дизельный генератор</th>
-              <th className="hide-sm">Модульный</th>
-              <th className="hide-sm">Огромный</th>
+              <th>Модульный</th>
+              <th>Огромный</th>
               <th>Горелка</th>
               <th>Генератор IE</th>
             </tr>
@@ -215,8 +215,8 @@ function BurnTable({ families, items }: { families: LiquidFamily[]; items: ItemI
                     </div>
                   </td>
                   <td>{fmtEngine(f.engines?.normal ?? null)}</td>
-                  <td className="hide-sm">{fmtEngine(f.engines?.modular ?? null)}</td>
-                  <td className="hide-sm">{fmtEngine(f.engines?.huge ?? null)}</td>
+                  <td>{fmtEngine(f.engines?.modular ?? null)}</td>
+                  <td>{fmtEngine(f.engines?.huge ?? null)}</td>
                   <td className="num">
                     {f.burner != null ? `×${f.burner}` : ''}
                     {f.blazeBurner && (

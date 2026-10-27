@@ -76,3 +76,29 @@
   font-family: var(--font-mono);
   font-size: 13px;
 }
+
+/* Переключатель-галочка: общий класс, используется задачами и схемами (раньше жил в TasksPage.module.css). */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  user-select: none;
+  color: var(--text-2);
+}
+
+.toggle:has(input:checked) {
+  border-color: var(--accent);
+  color: var(--text);
+  background: var(--accent-soft);
+}
+
+.toggle input {
+  margin: 0;
+  accent-color: var(--accent);
+}
