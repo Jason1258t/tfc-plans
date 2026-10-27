@@ -21,7 +21,7 @@ import { cx } from '@/shared/lib';
 import type { GuideChecked } from '@/entities/guide';
 import { Markdown } from '@/components/Markdown';
 import { MarkdownField } from '@/components/MarkdownField';
-import { Button, EmptyState, Modal } from '@/shared/ui';
+import { Button, Card, EmptyState, Modal } from '@/shared/ui';
 import { CHECKED } from './guideMeta';
 import { CheckedBadge } from './GuidesSection';
 import guideStyles from './Guides.module.css';
@@ -52,7 +52,7 @@ export default function AddonVersions({ addon }: { addon: Addon }) {
   const latest = list ? latestReleased(list) : null;
   const shown = list && !all ? list.slice(0, OPEN) : list;
   return (
-    <section className={cx('ref-card', styles.addonVersions)}>
+    <Card className={styles.addonVersions}>
       <h2 className="power-h">
         <Tag size={18} /> Версии
       </h2>
@@ -81,7 +81,7 @@ export default function AddonVersions({ addon }: { addon: Addon }) {
           )}
         </>
       )}
-    </section>
+    </Card>
   );
 }
 

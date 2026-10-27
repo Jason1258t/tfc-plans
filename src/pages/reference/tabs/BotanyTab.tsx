@@ -27,7 +27,6 @@ import { mealsByItem, useMeals, type MealRef } from '@/lib/meals';
 import type { Food } from '@/lib/reference';
 import { cx } from '@/shared/lib';
 import { Input, Select, SectionShell } from '@/shared/ui';
-import '../ReferenceShared.css';
 import shell from '../ReferenceShell.module.css';
 import styles from './BotanyTab.module.css';
 

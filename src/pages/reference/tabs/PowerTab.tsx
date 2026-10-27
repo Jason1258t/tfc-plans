@@ -18,7 +18,6 @@ import { cx } from '@/shared/lib';
 import { Input, SectionShell, Card, Table, TableWrap } from '@/shared/ui';
 import { ItemIcon } from '@/shared/pack-data';
 import { IeConsumers } from '@/features/reference-tabs';
-import '../ReferenceShared.css';
 import '@/features/reference-tabs/PowerShared.css';
 import styles from './PowerTab.module.css';
 
