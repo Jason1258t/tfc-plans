@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { collection, doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
-import { create } from 'zustand';
-import { auth, authReady, db } from '@/shared/api';
+import { auth, authReady, createLiveList, db } from '@/shared/api';
 import { useArtifacts } from '@/entities/artifact';
 import { useGroups } from '@/entities/group';
 import { useTasks } from '@/entities/task';
@@ -13,27 +12,8 @@ import type { SiteUser } from './types';
  * конкретному человеку, а не только «взять себе».
  */
 
-interface UserList {
-  items: SiteUser[];
-  error: string | null;
-}
-
-export const useUsers = create<UserList>(() => ({ items: [], error: null }));
-
-let stop: (() => void) | null = null;
-
-export function startUsers(): () => void {
-  if (stop) return stop;
-  const unsub = subscribeUsers(
-    (users) => useUsers.setState({ items: users, error: null }),
-    (e) => useUsers.setState({ error: e.message }),
-  );
-  stop = () => {
-    unsub();
-    stop = null;
-  };
-  return stop;
-}
+/** Справочник участников загружается, пока у списка есть потребители. */
+export const useUsers = createLiveList<SiteUser>((onItems, onError) => subscribeUsers(onItems, onError));
 
 /**
  * «Люди» — не только заходившие браузером: агенты и игроки, назначенные на задачи, тоже видны
@@ -69,11 +49,24 @@ export function subscribeUsers(cb: (users: SiteUser[]) => void, onError?: (e: Er
     cb([]);
     return () => {};
   }
-  return onSnapshot(
-    collection(db, 'users'),
-    (snap) => cb(snap.docs.map((d) => ({ ...(d.data() as Omit<SiteUser, 'id'>), id: d.id }) as SiteUser)),
-    (e) => onError?.(e),
-  );
+  let cancelled = false;
+  let unsubscribe = () => {};
+  void authReady
+    .then(() => {
+      if (cancelled) return;
+      unsubscribe = onSnapshot(
+        collection(db!, 'users'),
+        (snap) => cb(snap.docs.map((d) => ({ ...(d.data() as Omit<SiteUser, 'id'>), id: d.id }) as SiteUser)),
+        (e) => onError?.(e),
+      );
+    })
+    .catch((e: Error) => {
+      if (!cancelled) onError?.(e);
+    });
+  return () => {
+    cancelled = true;
+    unsubscribe();
+  };
 }
 
 /** Отметить, что под этим ником зашёл человек: lastSeen/uid обновляются, firstSeen — один раз при первом заходе */
