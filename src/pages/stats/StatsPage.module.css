@@ -161,8 +161,7 @@
   border-bottom: 0;
 }
 
-/* .num — общая утилита (ещё в ReferencePage.css), пока глобальная */
-.table :global(.num) {
+.table .num {
   text-align: right;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -172,8 +171,7 @@
   background: var(--accent-soft);
 }
 
-/* .link-btn — чужой класс из TasksPage.css, пока глобальный (до переноса в shared/ui) */
-.table :global(.link-btn) {
+.table .link-btn {
   border: 0;
   background: none;
   padding: 0;
@@ -183,7 +181,7 @@
   cursor: pointer;
 }
 
-.table :global(.link-btn):hover {
+.table .link-btn:hover {
   text-decoration: underline;
 }
 
@@ -232,18 +230,17 @@
   overflow-wrap: anywhere;
 }
 
-/* k-view/k-hide/k-show собираются в коде из строки (k-${e.k}) — поэтому глобальные */
-.timeline :global(.k-view) {
+/* Вид события задаётся атрибутом, чтобы не создавать динамические глобальные классы. */
+.timeline [data-kind='view'] {
   font-weight: 500;
 }
 
-.timeline :global(.k-hide),
-.timeline :global(.k-show) {
+.timeline [data-kind='hide'],
+.timeline [data-kind='show'] {
   color: var(--text-3);
 }
 
-/* .mono — общая утилита (app/theme/legacy-ui.css), пока глобальная */
-.timeline :global(.mono) {
+.timeline .mono {
   font-family: var(--font-mono);
   font-size: 12px;
 }
