@@ -9,7 +9,7 @@ import { useNick, useSaveNick } from '@/entities/user';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { VisitTracker } from '@/components/VisitTracker';
 import { AddonPage, AddonsPage } from '@/pages/addons';
-import { DocPage } from '@/pages/DocPage';
+import { DocPage } from '@/pages/doc';
 import { DatapacksPage } from '@/pages/datapacks';
 import { RecipesPage } from '@/pages/recipes';
 import { TagsPage } from '@/pages/tags';
