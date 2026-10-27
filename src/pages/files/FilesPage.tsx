@@ -221,6 +221,7 @@ export function FilesPage() {
               {shown.map(({ file: f, task, schematic }) => (
                 <li key={f.id} className={styles.filesRow}>
                   <FileBadge
+                    className={styles.fileBadge}
                     name={f.name}
                     type={f.type}
                     onOpen={() => run(f.id, () => downloadFile(f))}

@@ -86,7 +86,13 @@ export function ReportList({ kind, files, taskById, focusId, busyId, onDownload,
                 ref={f.id === focusId ? focusRef : undefined}
                 className={cx(styles.filesRow, f.id === focusId && styles.filesFocus)}
               >
-                <FileBadge name={f.name} type={f.type} onOpen={() => onDownload(f)} disabled={busyId === f.id}>
+                <FileBadge
+                  className={styles.fileBadge}
+                  name={f.name}
+                  type={f.type}
+                  onOpen={() => onDownload(f)}
+                  disabled={busyId === f.id}
+                >
                   {r.label} · {formatSize(f.size)} · {f.author}, {timeAgo(f.createdAt)}
                   {r.files.length > 1 && ` · файлов: ${r.files.length}`}
                   {task && (
