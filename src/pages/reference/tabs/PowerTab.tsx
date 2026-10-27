@@ -15,7 +15,7 @@ import {
   type Setting,
 } from '@/lib/power';
 import { cx } from '@/shared/lib';
-import { Input } from '@/shared/ui';
+import { Input, Card, Table, TableWrap } from '@/shared/ui';
 import { ItemIcon } from '@/shared/pack-data';
 import { IeConsumers } from '@/features/reference-tabs';
 import '../ReferenceShared.css';
@@ -169,10 +169,10 @@ function Link_({ data, ee, ie }: { data: PowerData; ee: Get; ie: Get }) {
 
   return (
     <>
-      <section className="ref-card">
+      <Card>
         <h2 className="power-h">Три вида энергии</h2>
-        <div className="ref-table-wrap">
-          <table className="ref-table">
+        <TableWrap>
+          <Table>
             <thead>
               <tr>
                 <th>Система</th>
@@ -212,16 +212,16 @@ function Link_({ data, ee, ie }: { data: PowerData; ee: Get; ie: Get }) {
                 </td>
               </tr>
             </tbody>
-          </table>
-        </div>
+          </Table>
+        </TableWrap>
         <p className="faint small">
           Других мостов между системами в сборке нет: Create и IE напрямую не соединяются, только через электричество
           EE. Вращение TFC (его ветряки, водяные колёса, жернова) — отдельная система: из Create в неё переводит
           преобразователь c2tfc; в этот раздел пока не входит.
         </p>
-      </section>
+      </Card>
 
-      <section className="ref-card">
+      <Card>
         <h2 className="power-h">Переходы и курсы</h2>
         <div className={styles.chain}>
           <ChainStep icons={[EE_BLOCK.rotor, EE_BLOCK.stator, EE_BLOCK.brushes]} title="Вал Create → электричество">
@@ -263,7 +263,7 @@ function Link_({ data, ee, ie }: { data: PowerData; ee: Get; ie: Get }) {
             вращения. Проверено на тестовом сервере (генератор) и по коду (двигатель); в игре не проверялось.
           </p>
         )}
-      </section>
+      </Card>
 
       {rotor && powerMult && stressMult && fullLoad && (
         <GeneratorCalc
@@ -326,7 +326,7 @@ function GeneratorCalc({
   // Двигатель прямо на генераторе: U = ЭДС, пока его потребление не превышает выработку
   const motorSu = motorR ? (g.emf * g.emf) / motorR : null;
   return (
-    <section className="ref-card">
+    <Card>
       <h2 className="power-h">Калькулятор генератора</h2>
       <div className="power-form">
         <Field label="Статоров всего (по всем роторам)" value={stators} onChange={setStators} min={1} max={400} />
@@ -353,7 +353,7 @@ function GeneratorCalc({
         одинаково, сколько бы ни потребляли. На один щёточный узел — до {maxRotors ?? '—'} роторов подряд, больше —
         второй генератор. Поднять напряжение без потери мощности — трансформатором.
       </p>
-    </section>
+    </Card>
   );
 }
 
@@ -362,7 +362,7 @@ function MotorCalc({ p }: { p: Parameters<typeof motor>[2] }) {
   const [load, setLoad] = useState(100);
   const r = motor(volts, load / 100, p);
   return (
-    <section className="ref-card">
+    <Card>
       <h2 className="power-h">Калькулятор двигателя</h2>
       <div className="power-form">
         <Field label="Напряжение на двигателе" value={volts} onChange={setVolts} min={0} max={50000} unit="В" />
@@ -383,7 +383,7 @@ function MotorCalc({ p }: { p: Parameters<typeof motor>[2] }) {
         «плавающей» скорости обороты = запас SU / число на шкале, то есть растут с напряжением (по коду, в игре не
         проверялось).
       </p>
-    </section>
+    </Card>
   );
 }
 
@@ -394,7 +394,7 @@ function ConverterCalc({ data, ee, ie }: { data: PowerData; ee: Get; ie: Get }) 
   const div = data.ie?.connectorDivisor;
   if (!rate) return null;
   return (
-    <section className="ref-card">
+    <Card>
       <h2 className="power-h">Ватты ↔ FE</h2>
       <div className="power-form">
         <Field label="Энергия IE" value={fe} onChange={setFe} min={0} max={1_000_000} unit="FE/t" />
@@ -415,7 +415,7 @@ function ConverterCalc({ data, ee, ie }: { data: PowerData; ee: Get; ie: Get }) 
         Коннектор IE принимает от соседнего блока (в том числе от преобразователя) не больше своего ввода за тик — для
         преобразователя это обычно узкое место.
       </p>
-    </section>
+    </Card>
   );
 }
 
@@ -434,13 +434,13 @@ function EeLoads({ data, s }: { data: PowerData; s: Get }) {
   const motorMinV = s('Voltages.motorMinVoltage');
   return (
     <>
-      <section className="ref-card">
+      <Card>
         <h2 className="power-h">Потребители при напряжении</h2>
         <div className="power-form">
           <Field label="Напряжение" value={volts} onChange={setVolts} min={0} max={50000} unit="В" />
         </div>
-        <div className="ref-table-wrap">
-          <table className="ref-table">
+        <TableWrap>
+          <Table>
             <thead>
               <tr>
                 <th>Устройство</th>
@@ -491,14 +491,14 @@ function EeLoads({ data, s }: { data: PowerData; s: Get }) {
                 </tr>
               )}
             </tbody>
-          </table>
-        </div>
+          </Table>
+        </TableWrap>
         <p className="faint small">
           Нагреватель, помпа и лампы — постоянное сопротивление: мощность растёт как квадрат напряжения (вдвое больше
           вольт — вчетверо больше ватт). Значок «сервер» — значение изменено в конфиге сервера относительно мода.
         </p>
-      </section>
-      <section className="ref-card">
+      </Card>
+      <Card>
         <h2 className="power-h">Пределы</h2>
         <div className="power-outs">
           <Out label="Вариак, не больше">
@@ -532,7 +532,7 @@ function EeLoads({ data, s }: { data: PowerData; s: Get }) {
           Что бывает при превышении (перегорание, порча) — пока не разобрано по коду; провода EE (нагрев, пробой
           изоляции) — следующий шаг раздела.
         </p>
-      </section>
+      </Card>
     </>
   );
 }
@@ -544,10 +544,10 @@ function IeNet({ data, s, ee, att }: { data: PowerData; s: Get; ee: Get; att: Ge
   const div = data.ie?.connectorDivisor;
   return (
     <>
-      <section className="ref-card">
+      <Card>
         <h2 className="power-h">Провода и коннекторы IE</h2>
-        <div className="ref-table-wrap">
-          <table className="ref-table">
+        <TableWrap>
+          <Table>
             <thead>
               <tr>
                 <th>Провод</th>
@@ -588,15 +588,15 @@ function IeNet({ data, s, ee, att }: { data: PowerData; s: Get; ee: Get; att: Ge
                 );
               })}
             </tbody>
-          </table>
-        </div>
+          </Table>
+        </TableWrap>
         <p className="faint small">
           Потери по коду IE: доля = потери провода × длина пролёта / наибольшая длина, по пути суммируются. Ввод
           коннектора — сколько он берёт от соседнего блока за тик (по коду: пропускная способность / {div ?? '—'}).
           Перегруженный провод IE сгорает (в коде есть, порог не разбирали).
         </p>
-      </section>
-      <section className="ref-card">
+      </Card>
+      <Card>
         <h2 className="power-h">Генераторы IE</h2>
         <div className="power-outs">
           <Out label="Дизельный генератор">
@@ -619,7 +619,7 @@ function IeNet({ data, s, ee, att }: { data: PowerData; s: Get; ee: Get; att: Ge
           шаг раздела. В сборке к источникам тепла для термоэлектрического генератора добавлена магма TFC (1300 K,
           датапак сборки).
         </p>
-      </section>
+      </Card>
       <IeConsumers data={data} ie={s} att={att} rate={rate?.value ?? null} />
     </>
   );

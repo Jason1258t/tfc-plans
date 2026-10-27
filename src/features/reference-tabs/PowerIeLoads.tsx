@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { deviceTick, machineRates, type IeDevice, type IeMachine, type PowerData, type Setting } from '@/lib/power';
 import { ItemIcon } from '@/shared/pack-data';
-import { Button, Input, Select } from '@/shared/ui';
+import { Button, Input, Select, Card, Table, TableWrap } from '@/shared/ui';
 import styles from './PowerIeLoads.module.css';
 
 /**
@@ -32,10 +32,10 @@ export function IeConsumers({ data, ie, att, rate }: { data: PowerData; ie: Get;
     (hvWire && data.ie?.connectorDivisor ? hvWire.transferRate / data.ie.connectorDivisor : null);
   return (
     <>
-      <section className="ref-card">
+      <Card>
         <h2 className="power-h">Потребители: машины с рецептами</h2>
-        <div className="ref-table-wrap">
-          <table className="ref-table">
+        <TableWrap>
+          <Table>
             <thead>
               <tr>
                 <th>Машина</th>
@@ -75,8 +75,8 @@ export function IeConsumers({ data, ie, att, rate }: { data: PowerData; ie: Get;
                 );
               })}
             </tbody>
-          </table>
-        </div>
+          </Table>
+        </TableWrap>
         <p className="faint small">
           Расход операции по коду IE — энергия рецепта / его время, каждый тик, пока операция идёт; если в машине идут
           сразу несколько операций, расход складывается. Числа — по рецептам модов сборки (удаления и замены KubeJS не
@@ -85,11 +85,11 @@ export function IeConsumers({ data, ie, att, rate }: { data: PowerData; ie: Get;
           тяжёлым. Один коннектор IE пропускает не больше своего предела (HV — {hv ? num(hv) : '—'} FE/t), поэтому
           дуговой печи на пике одного ввода не хватит.
         </p>
-      </section>
-      <section className="ref-card">
+      </Card>
+      <Card>
         <h2 className="power-h">Потребители: приборы и мультиблоки без рецептов</h2>
-        <div className="ref-table-wrap">
-          <table className="ref-table">
+        <TableWrap>
+          <Table>
             <thead>
               <tr>
                 <th>Прибор</th>
@@ -124,14 +124,14 @@ export function IeConsumers({ data, ie, att, rate }: { data: PowerData; ie: Get;
                 );
               })}
             </tbody>
-          </table>
-        </div>
+          </Table>
+        </TableWrap>
         <p className="faint small">
           «В работе» — всё, что прибор берёт каждый тик, сложенное (у нагревателя — поддержание и ускорение, у турели —
           наблюдение и стрельба, у зарядной станции — наибольшая скорость зарядки). Расход «за действие» (насос, разряд
           катушки, предмет сборщика) в эту сумму не входит. Значения — конфиг сервера поверх кода IE.
         </p>
-      </section>
+      </Card>
     </>
   );
 }

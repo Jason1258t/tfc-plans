@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronUp, Download, FlipHorizontal2, RotateCcw } from 'lucide-react';
-import { Segmented, Button, ButtonLink } from '@/shared/ui';
+import { Segmented, Button, ButtonLink, Card, Table, TableWrap } from '@/shared/ui';
 import { lazy, Suspense, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { iconUrl, itemName, useItems, type ItemIndex, sourceName, useTags, ItemIcon } from '@/shared/pack-data';
@@ -90,7 +90,7 @@ function MultiblockCard({ m, data }: { m: Multiblock; data: MultiblockData }) {
 
   return (
     <div className={styles.card}>
-      <section className="ref-card">
+      <Card>
         <div className={styles.head}>
           <ItemIcon id={mbIcon(m, items) ?? undefined} size={40} />
           <div className="grow">
@@ -141,7 +141,7 @@ function MultiblockCard({ m, data }: { m: Multiblock; data: MultiblockData }) {
           />
         )}
         <MbViewer key={String(full)} m={m} shape={shape} trigger={trigger} formedOk={!full} />
-      </section>
+      </Card>
       <Materials m={m} shape={shape} data={data} />
       <MachineInfo m={m} />
       {m.manual.map((e) => (
@@ -506,10 +506,10 @@ function Materials({ m, shape, data }: { m: Multiblock; shape: MbShape; data: Mu
   const [open, setOpen] = useState<string | null>(null);
   const list = materials(shape);
   return (
-    <section className="ref-card">
+    <Card>
       <h3 className={styles.h}>Материалы</h3>
-      <div className="ref-table-wrap">
-        <table className="ref-table">
+      <TableWrap>
+        <Table>
           <thead>
             <tr>
               <th>Блок</th>
@@ -557,8 +557,8 @@ function Materials({ m, shape, data }: { m: Multiblock; shape: MbShape; data: Mu
               );
             })}
           </tbody>
-        </table>
-      </div>
+        </Table>
+      </TableWrap>
       <p className="faint small">
         Замены — по коду IE: блок из тега-заменителя (хранилища и листовой металл по металлам, стальные и алюминиевые
         леса и заборы, обработанное дерево) подходит вместо любого блока того же тега; состав тегов — с правками KubeJS
@@ -566,7 +566,7 @@ function Materials({ m, shape, data }: { m: Multiblock; shape: MbShape; data: Mu
         формате структуры Minecraft: его можно положить в папку schematics и строить схематичной пушкой Create (в игре
         не проверялось).
       </p>
-    </section>
+    </Card>
   );
 }
 
@@ -591,7 +591,7 @@ function MachineInfo({ m }: { m: Multiblock }) {
   if (!machine && !device && !m.recipes.length) return null;
   const r = machine ? machineRates(machine, machine.mod === 'att' ? cfg.att : cfg.ie) : null;
   return (
-    <section className="ref-card">
+    <Card>
       <h3 className={styles.h}>Работа</h3>
       {machine && r && (
         <p>
@@ -633,7 +633,7 @@ function MachineInfo({ m }: { m: Multiblock }) {
           <span className="faint small">— число по модам; что убрал KubeJS, видно в каталоге.</span>
         </p>
       )}
-    </section>
+    </Card>
   );
 }
 
@@ -656,7 +656,7 @@ function ManualEntry({ e, m }: { e: MbManual; m: Multiblock }) {
   };
   const text = showEn && e.en ? e.en : e.text;
   return (
-    <section className={cx('ref-card', fromOther && styles.other)}>
+    <Card className={cx(fromOther && styles.other)}>
       <div className={styles.manualHead}>
         <h3 className={styles.h}>
           {fromOther ? `Изменение: ${sourceName(e.jar)}` : 'Из книги инженера'} — {e.title}
@@ -687,6 +687,6 @@ function ManualEntry({ e, m }: { e: MbManual; m: Multiblock }) {
           </p>
         ))}
       </div>
-    </section>
+    </Card>
   );
 }

@@ -15,7 +15,7 @@ import { itemName, useItems, ItemIcon } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
 // Стили справочника временно берём из его будущей общей папки — AddonsTab переедет в entities/addon
 import './PowerShared.css';
-import { ButtonLink } from '@/shared/ui';
+import { ButtonLink, Card, CardHead } from '@/shared/ui';
 
 const AddonsGuidesSection = lazy(() => import('@/features/guides/AddonsGuidesSection'));
 
@@ -57,7 +57,7 @@ export function AddonsTab({
 function AddonList({ onGuides }: { onGuides: () => void }) {
   return (
     <>
-      <section className="ref-card">
+      <Card>
         <h2 className="power-h">Аддоны сборки</h2>
         <p className="small">
           Маленькие моды, которые группа сделала сама под эту сборку. Каждый ставится в папку <code>mods</code> —{' '}
@@ -72,9 +72,9 @@ function AddonList({ onGuides }: { onGuides: () => void }) {
           </a>{' '}
           (сборка, проверка на сервере разработки).
         </p>
-      </section>
+      </Card>
       {ADDONS.map((a) => (
-        <section key={a.id} className="ref-card">
+        <Card key={a.id}>
           <AddonHead a={a} title={<Link to={`/addons/${a.id}`}>{a.name}</Link>} />
           <AddonPreview a={a} />
           <p>{a.summary}</p>
@@ -82,7 +82,7 @@ function AddonList({ onGuides }: { onGuides: () => void }) {
           <ButtonLink variant="ghost" size="sm" to={`/addons/${a.id}`}>
             Подробнее: блоки, рецепты, что проверено <ChevronRight size={14} />
           </ButtonLink>
-        </section>
+        </Card>
       ))}
     </>
   );
@@ -91,7 +91,7 @@ function AddonList({ onGuides }: { onGuides: () => void }) {
 /** Заголовок карточки аддона: название, версия, исходники, скачать */
 export function AddonHead({ a, title }: { a: Addon; title: ReactNode }) {
   return (
-    <div className="ref-card-head">
+    <CardHead as="div">
       <div className="grow">
         <h2 className="power-h">{title}</h2>
         <span className="faint small">
@@ -104,7 +104,7 @@ export function AddonHead({ a, title }: { a: Addon; title: ReactNode }) {
       <ButtonLink size="sm" href={a.file} download>
         <Download size={14} /> Скачать jar
       </ButtonLink>
-    </div>
+    </CardHead>
   );
 }
 

@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { cx, errorText, type Scope } from '@/shared/lib';
-import { Button, Input, Select } from '@/shared/ui';
+import { Button, Input, Select, Table, TableWrap } from '@/shared/ui';
 import { formatValue, parseSpec } from '@/lib/guideFormat';
 import { Markdown } from '@/components/Markdown';
 import { useGuideEditing, useGuideLink } from './guideLinks';
@@ -410,8 +410,8 @@ function DataTable({
   if (!Array.isArray(rows) || !cols.length) return null;
   return (
     <>
-      <div className="ref-table-wrap">
-        <table className="ref-table">
+      <TableWrap>
+        <Table>
           <thead>
             <tr>
               {cols.map((c, j) => (
@@ -446,8 +446,8 @@ function DataTable({
               );
             })}
           </tbody>
-        </table>
-      </div>
+        </Table>
+      </TableWrap>
       {spec.caption && <Md source={tpl(spec.caption)} className="faint small" />}
     </>
   );
