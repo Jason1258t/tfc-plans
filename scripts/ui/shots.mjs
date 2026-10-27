@@ -382,10 +382,10 @@ export async function capture(chrome, { baseUrl, scenario, viewport, setup }) {
         `for (const el of document.querySelectorAll(${JSON.stringify(mask.join(','))})) { el.style.background = '#f0f'; el.style.color = 'transparent'; el.style.backgroundImage = 'none'; for (const c of el.children) c.style.visibility = 'hidden'; }`,
       );
     const fullPage = scenario.fullPage ?? true;
+    // Без clip Chrome снимает текущую видимую область с учётом прокрутки; y=0 после scroll давал пустой кадр.
     const { data } = await page.send('Page.captureScreenshot', {
       format: 'png',
       captureBeyondViewport: fullPage,
-      ...(fullPage ? {} : { clip: { x: 0, y: 0, width: vp.width, height: vp.height, scale: 1 } }),
     });
     return { png: Buffer.from(data, 'base64'), settled };
   } finally {
