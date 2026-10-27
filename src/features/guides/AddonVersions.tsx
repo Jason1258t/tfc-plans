@@ -21,7 +21,7 @@ import { cx } from '@/shared/lib';
 import type { GuideChecked } from '@/entities/guide';
 import { Markdown } from '@/components/Markdown';
 import { MarkdownField } from '@/components/MarkdownField';
-import { Button, Modal } from '@/shared/ui';
+import { Button, EmptyState, Modal } from '@/shared/ui';
 import { CHECKED } from './guideMeta';
 import { CheckedBadge } from './GuidesSection';
 import guideStyles from './Guides.module.css';
@@ -59,9 +59,9 @@ export default function AddonVersions({ addon }: { addon: Addon }) {
       {error ? (
         <div className={cx(guideStyles.guideErrors, 'small')}>Не удалось загрузить версии: {error}</div>
       ) : !list ? (
-        <div className="empty">Загружаю версии…</div>
+        <EmptyState>Загружаю версии…</EmptyState>
       ) : !list.length ? (
-        <div className="empty">Версий пока нет — они появляются при выпуске аддона</div>
+        <EmptyState>Версий пока нет — они появляются при выпуске аддона</EmptyState>
       ) : (
         <>
           <p className="faint small">
@@ -297,9 +297,9 @@ function VersionHistory({
       {error ? (
         <div className={cx(guideStyles.guideErrors, 'small')}>{error}</div>
       ) : !list ? (
-        <div className="empty">Загружаю…</div>
+        <EmptyState>Загружаю…</EmptyState>
       ) : !list.length ? (
-        <div className="empty">Правок с сайта ещё не было</div>
+        <EmptyState>Правок с сайта ещё не было</EmptyState>
       ) : (
         <div className={guideStyles.guideHistory}>
           <ul className={guideStyles.guideHistoryList}>
