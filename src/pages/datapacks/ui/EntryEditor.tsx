@@ -1,6 +1,7 @@
 import { AlertTriangle, Braces, CheckCircle2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { cx } from '@/shared/lib';
+import { datapackPathError } from '@/lib/datapackFiles';
 import { typeOfContent } from '@/lib/datapack';
 import { itemName, useItems, itemRefsOf, type RecipeCatalog, ItemIcon, ItemIdSearch } from '@/shared/pack-data';
 import type { DatapackEntry } from '@/entities/datapack';
@@ -42,7 +43,8 @@ export function EntryEditor({ entry, catalog, onSave, onClose }: Props) {
   const [path, setPath] = useState(entry.path);
   const [content, setContent] = useState(entry.content);
   const [note, setNote] = useState(entry.note ?? '');
-  const isJson = path.endsWith('.json') || path.endsWith('.mcmeta');
+  const pathError = datapackPathError(path.trim());
+  const isJson = path.endsWith('.json') || path.endsWith('.mcmeta') || /^data\/[^/]+\/recipes?\//.test(path);
   const error = isJson ? jsonError(content) : null;
   const type = isJson && !error ? typeOfContent(content) : entry.recipeType;
 
@@ -72,7 +74,7 @@ export function EntryEditor({ entry, catalog, onSave, onClose }: Props) {
           <Button variant="ghost" onClick={onClose}>
             Отмена
           </Button>
-          <Button variant="primary" onClick={save} disabled={!path.trim() || Boolean(error)}>
+          <Button variant="primary" onClick={save} disabled={Boolean(pathError) || Boolean(error)}>
             Сохранить
           </Button>
         </>
@@ -93,6 +95,7 @@ export function EntryEditor({ entry, catalog, onSave, onClose }: Props) {
                 : undefined
             }
           />
+          {pathError && <ErrorBox>{pathError}</ErrorBox>}
           <div className={styles.eeEditorHead}>
             <Label style={{ margin: 0 }}>Содержимое</Label>
             <span className="grow" />

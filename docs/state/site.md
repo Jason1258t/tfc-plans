@@ -2,6 +2,20 @@
 
 Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quoted in Russian as they appear in the code.
 
+## Concrete washing templates (2026-10-27)
+
+- The recipe catalogue includes Create's 16 runtime-generated vanilla concrete washing recipes. The builder reads
+  the powder → hardened block relations from the current Minecraft client bytecode using official class mappings,
+  checks Create's runtime generator, and preserves its recipe ids. No colour list is hardcoded. They are searchable
+  by concrete name/id and `create:splashing`, usable as datapack templates, and labelled «создаётся при запуске».
+- Only vanilla concrete washing is reconstructed so far; other runtime recipes (including Create wood cutting and
+  modded concrete powder registrations) are not reconstructed. Ordinary JSON recipes retain priority over the
+  generated layer; the existing KubeJS merge/filter logic applies to it.
+- The file editor validates paths before saving: recipes require `.json` and the 1.21.1 `recipe/` directory.
+  Existing invalid paths also get a specific warning in the pack's file list.
+- Verified against Minecraft 1.21.1 and Create 6.0.10 jars, the real catalogue search (all 16 active templates),
+  lint and TypeScript. Browser access was denied by the permission gate; not checked in game.
+
 ## Structure (reworked 2026-10-13)
 
 - Header: Задачи · Документы (file storage) · Схемы · Датапаки · Справочник; on the right — pack-update bell.

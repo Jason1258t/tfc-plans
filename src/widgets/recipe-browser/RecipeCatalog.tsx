@@ -41,6 +41,7 @@ interface BrowserProps {
 function StatusBadges({ r }: { r: Recipe }) {
   return (
     <>
+      {r.runtime && <span className="kjs-badge added">создаётся при запуске</span>}
       {r.kjsRemoved.length > 0 && <span className="kjs-badge removed">удалён KubeJS</span>}
       {r.kjsRemoved.length === 0 && r.kjsMaybe.length > 0 && (
         <span className="kjs-badge changed" title="Фильтр не разобрать без игры">
@@ -220,6 +221,12 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
                   {expanded && (
                     <div className={styles.catDetail}>
                       <code className="faint small">{recipePath(r.i)}</code>
+                      {r.runtime && (
+                        <div className="faint small">
+                          Мод создаёт этот рецепт при запуске игры. JSON восстановлен из кода для использования как
+                          шаблон.
+                        </div>
+                      )}
                       {r.k && (
                         <div className={cx(styles.catKjs, 'small')}>
                           Добавлен скриптом:{' '}

@@ -17,6 +17,8 @@ export interface RawRecipe {
   j: Record<string, unknown>;
   /** Рецепт добавлен скриптом KubeJS: где */
   k?: { file: string; line: number; code: string; explicitId: boolean };
+  /** Мод создаёт рецепт при запуске; JSON восстановлен сборщиком из кода. */
+  runtime?: boolean;
 }
 
 /** Правило KubeJS из public/kubejs.json (scripts/kubejs.mjs) */
