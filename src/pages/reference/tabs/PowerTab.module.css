@@ -40,3 +40,10 @@
   flex: none;
   min-width: 28px;
 }
+
+/* Переехало из features/reference-tabs/PowerShared.css (.power-name) */
+.powerName {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

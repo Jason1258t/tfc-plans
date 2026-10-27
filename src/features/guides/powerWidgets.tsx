@@ -1,6 +1,8 @@
 import { alternatorLoad } from '@/lib/power';
 import { num } from '@/lib/guideFormat';
 import type { Widget } from './GuideBody';
+import pw from './powerWidgets.module.css';
+import { cx } from '@/shared/lib';
 
 /**
  * Виджеты гайдов «Электричества» — рисунки, которые разметкой не описать. В статье: строка «::имя параметры».
@@ -17,7 +19,7 @@ function BridgeDiagram({ legs, cap = false }: { legs: 3 | 1; cap?: boolean }) {
   const pumpX = right + (cap ? 70 : 0);
   const width = pumpX + 76;
   const diode = (x: number, y: number) => (
-    <g className="power-diode">
+    <g className={pw.powerDiode}>
       <polygon points={`${x - 8},${y + 7} ${x + 8},${y + 7} ${x},${y - 7}`} />
       <line x1={x - 9} y1={y - 7} x2={x + 9} y2={y - 7} />
     </g>
@@ -29,8 +31,8 @@ function BridgeDiagram({ legs, cap = false }: { legs: 3 | 1; cap?: boolean }) {
         role="img"
         aria-label={legs === 3 ? 'Схема трёхфазного моста' : 'Схема однофазного моста с конденсатором'}
       >
-        <line x1={cols[0]} y1={top} x2={pumpX} y2={top} className="power-wire" />
-        <line x1={cols[0]} y1={bottom} x2={pumpX} y2={bottom} className="power-wire" />
+        <line x1={cols[0]} y1={top} x2={pumpX} y2={top} className={pw.powerWire} />
+        <line x1={cols[0]} y1={bottom} x2={pumpX} y2={bottom} className={pw.powerWire} />
         <text x={pumpX + 8} y={top + 4} className="power-svg-text">
           +
         </text>
@@ -39,21 +41,21 @@ function BridgeDiagram({ legs, cap = false }: { legs: 3 | 1; cap?: boolean }) {
         </text>
         {cols.map((x, i) => (
           <g key={x}>
-            <line x1={x} y1={top} x2={x} y2={bottom} className="power-wire" />
+            <line x1={x} y1={top} x2={x} y2={bottom} className={pw.powerWire} />
             {diode(x, (top + mid) / 2)}
             {diode(x, (mid + bottom) / 2)}
-            <line x1={x - 28} y1={mid} x2={x} y2={mid} className="power-wire" />
-            <circle cx={x} cy={mid} r={3} className="power-dot" />
-            <circle cx={x - 28} cy={mid} r={3} className="power-term" />
+            <line x1={x - 28} y1={mid} x2={x} y2={mid} className={pw.powerWire} />
+            <circle cx={x} cy={mid} r={3} className={pw.powerDot} />
+            <circle cx={x - 28} cy={mid} r={3} className={pw.powerTerm} />
             <text x={x - 34} y={mid + 4} textAnchor="end" className="power-svg-text">
               {inputs[i]}
             </text>
           </g>
         ))}
         {cap && (
-          <g className="power-cap">
-            <line x1={right} y1={top} x2={right} y2={mid - 5} className="power-wire" />
-            <line x1={right} y1={mid + 5} x2={right} y2={bottom} className="power-wire" />
+          <g className={pw.powerCap}>
+            <line x1={right} y1={top} x2={right} y2={mid - 5} className={pw.powerWire} />
+            <line x1={right} y1={mid + 5} x2={right} y2={bottom} className={pw.powerWire} />
             <line x1={right - 14} y1={mid - 5} x2={right + 14} y2={mid - 5} />
             <line x1={right - 14} y1={mid + 5} x2={right + 14} y2={mid + 5} />
             <text x={right + 18} y={mid + 4} className="power-svg-text">
@@ -61,9 +63,9 @@ function BridgeDiagram({ legs, cap = false }: { legs: 3 | 1; cap?: boolean }) {
             </text>
           </g>
         )}
-        <line x1={pumpX} y1={top} x2={pumpX} y2={mid - 18} className="power-wire" />
-        <line x1={pumpX} y1={mid + 18} x2={pumpX} y2={bottom} className="power-wire" />
-        <rect x={pumpX - 32} y={mid - 18} width={64} height={36} rx={4} className="power-load" />
+        <line x1={pumpX} y1={top} x2={pumpX} y2={mid - 18} className={pw.powerWire} />
+        <line x1={pumpX} y1={mid + 18} x2={pumpX} y2={bottom} className={pw.powerWire} />
+        <rect x={pumpX - 32} y={mid - 18} width={64} height={36} rx={4} className={pw.powerLoad} />
         <text x={pumpX} y={mid + 4} textAnchor="middle" className="power-svg-text">
           нагрузка
         </text>
@@ -80,33 +82,33 @@ function BridgeDiagram({ legs, cap = false }: { legs: 3 | 1; cap?: boolean }) {
 function LineDiagram() {
   const box = (x: number, label: string, sub?: string) => (
     <g>
-      <rect x={x} y={30} width={96} height={40} rx={5} className="power-load" />
+      <rect x={x} y={30} width={96} height={40} rx={5} className={pw.powerLoad} />
       <text x={x + 48} y={sub ? 47 : 54} textAnchor="middle" className="power-svg-text">
         {label}
       </text>
       {sub && (
-        <text x={x + 48} y={62} textAnchor="middle" className="power-svg-text power-svg-sub">
+        <text x={x + 48} y={62} textAnchor="middle" className={cx('power-svg-text', pw.powerSvgSub)}>
           {sub}
         </text>
       )}
     </g>
   );
   return (
-    <figure className="power-figure power-figure-wide">
+    <figure className={cx('power-figure', pw.powerFigureWide)}>
       <svg
         viewBox="0 0 640 100"
         role="img"
         aria-label="Схема линии: генератор, повышающий трансформатор, линия, понижающий трансформатор, потребители"
       >
-        <line x1={96} y1={50} x2={140} y2={50} className="power-wire" />
-        <line x1={236} y1={50} x2={404} y2={50} className="power-wire power-hv" />
-        <line x1={500} y1={50} x2={544} y2={50} className="power-wire" />
+        <line x1={96} y1={50} x2={140} y2={50} className={pw.powerWire} />
+        <line x1={236} y1={50} x2={404} y2={50} className={cx(pw.powerWire, pw.powerHv)} />
+        <line x1={500} y1={50} x2={544} y2={50} className={pw.powerWire} />
         {box(0, 'генератор', '300 В')}
         {box(140, 'повышающий', '1:10')}
         <text x={320} y={42} textAnchor="middle" className="power-svg-text">
           линия, 3000 В, ток ÷10
         </text>
-        <text x={320} y={68} textAnchor="middle" className="power-svg-text power-svg-sub">
+        <text x={320} y={68} textAnchor="middle" className={cx('power-svg-text', pw.powerSvgSub)}>
           потери ÷100
         </text>
         {box(404, 'понижающий', '10:1')}
@@ -124,7 +126,7 @@ function GeneratorDiagram() {
   return (
     <figure className="power-figure">
       <svg viewBox="0 0 420 130" role="img" aria-label="Схема генератора сбоку">
-        <line x1={10} y1={y + cell / 2} x2={80} y2={y + cell / 2} className="power-wire" />
+        <line x1={10} y1={y + cell / 2} x2={80} y2={y + cell / 2} className={pw.powerWire} />
         <text x={10} y={y + cell / 2 - 8} className="power-svg-text">
           вал Create
         </text>
@@ -132,9 +134,21 @@ function GeneratorDiagram() {
           const x = 40 + i * cell;
           return (
             <g key={i}>
-              <rect x={x} y={y - cell} width={cell - 2} height={cell - 4} className="power-box power-box-soft" />
-              <rect x={x} y={y} width={cell - 2} height={cell - 2} className="power-box" />
-              <rect x={x} y={y + cell + 2} width={cell - 2} height={cell - 4} className="power-box power-box-soft" />
+              <rect
+                x={x}
+                y={y - cell}
+                width={cell - 2}
+                height={cell - 4}
+                className={cx(pw.powerBox, pw.powerBoxSoft)}
+              />
+              <rect x={x} y={y} width={cell - 2} height={cell - 2} className={pw.powerBox} />
+              <rect
+                x={x}
+                y={y + cell + 2}
+                width={cell - 2}
+                height={cell - 4}
+                className={cx(pw.powerBox, pw.powerBoxSoft)}
+              />
               <text x={x + cell / 2 - 1} y={y + cell / 2 + 4} textAnchor="middle" className="power-svg-text">
                 Р
               </text>
@@ -147,12 +161,12 @@ function GeneratorDiagram() {
             </g>
           );
         })}
-        <rect x={40 + 4 * cell} y={y} width={cell - 2} height={cell - 2} className="power-box" />
+        <rect x={40 + 4 * cell} y={y} width={cell - 2} height={cell - 2} className={pw.powerBox} />
         <text x={40 + 4.5 * cell - 1} y={y + cell / 2 + 4} textAnchor="middle" className="power-svg-text">
           Щ
         </text>
-        <line x1={40 + 5 * cell} y1={y + 10} x2={400} y2={y + 10} className="power-wire" />
-        <line x1={40 + 5 * cell} y1={y + 28} x2={400} y2={y + 28} className="power-wire" />
+        <line x1={40 + 5 * cell} y1={y + 10} x2={400} y2={y + 10} className={pw.powerWire} />
+        <line x1={40 + 5 * cell} y1={y + 28} x2={400} y2={y + 28} className={pw.powerWire} />
         <text x={400} y={y + 4} textAnchor="end" className="power-svg-text">
           к потребителям
         </text>
@@ -184,12 +198,12 @@ function LoadChart({ buffer, fullLoad }: { buffer: number; fullLoad: number }) {
   return (
     <figure className="power-figure">
       <svg viewBox={`0 0 ${w} ${h + 18}`} role="img" aria-label="Отдача и напряжение генератора от нагрузки">
-        <rect x={x(4)} y={10} width={x(maxD) - x(4)} height={h - 30} className="power-zone-bad" />
+        <rect x={x(4)} y={10} width={x(maxD) - x(4)} height={h - 30} className={pw.powerZoneBad} />
         <line x1={46} y1={y(1)} x2={w - 26} y2={y(1)} className="power-axis" />
         <line x1={46} y1={h - 20} x2={w - 26} y2={h - 20} className="power-axis" />
         <line x1={x(1)} y1={10} x2={x(1)} y2={h - 20} className="power-axis" strokeDasharray="3 3" />
-        <path d={path('out')} className="power-line" />
-        <path d={path('v')} className="power-line power-line-2" />
+        <path d={path('out')} className={pw.powerLine} />
+        <path d={path('v')} className={cx(pw.powerLine, pw.powerLine2)} />
         <text x={42} y={y(1) + 4} textAnchor="end" className="power-svg-text">
           100 %
         </text>
@@ -204,9 +218,9 @@ function LoadChart({ buffer, fullLoad }: { buffer: number; fullLoad: number }) {
       </svg>
       <figcaption className="faint small">
         По горизонтали — сколько взяли бы потребители при полном напряжении, в % выработки (100 % — ток {num(fullLoad)}{' '}
-        А). <span className="power-key">Сплошная</span> — сколько генератор реально отдаёт, в % выработки;{' '}
-        <span className="power-key power-key-2">пунктир</span> — напряжение, в % ЭДС. Лучшая точка — у 100 %: отдаёт
-        всё, напряжение около 97 %. Левее — SU впустую, правее — просадка напряжения.
+        А). <span className={pw.powerKey}>Сплошная</span> — сколько генератор реально отдаёт, в % выработки;{' '}
+        <span className={cx(pw.powerKey, pw.powerKey2)}>пунктир</span> — напряжение, в % ЭДС. Лучшая точка — у 100 %:
+        отдаёт всё, напряжение около 97 %. Левее — SU впустую, правее — просадка напряжения.
       </figcaption>
     </figure>
   );

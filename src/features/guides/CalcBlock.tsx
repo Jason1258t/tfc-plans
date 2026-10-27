@@ -264,11 +264,11 @@ function Calc({ spec, envs, pickers }: { spec: Spec; envs: Scope[]; pickers?: Re
             return (
               <div key={i} className={cx('power-out', bad && styles.guideOutBad, warn && styles.guideOutWarn)}>
                 {o.label && <span className="faint small">{tpl(o.label)}</span>}
-                <b className={cx(bad && 'power-bad')}>
+                <b className={cx(bad && styles.powerBad)}>
                   <Md source={main} inline />
                 </b>
                 {hint && (
-                  <span className={cx('small', bad ? 'power-bad' : warn ? styles.guideWarn : 'faint')}>
+                  <span className={cx('small', bad ? styles.powerBad : warn ? styles.guideWarn : 'faint')}>
                     <Md source={hint} inline />
                   </span>
                 )}
@@ -282,7 +282,7 @@ function Calc({ spec, envs, pickers }: { spec: Spec; envs: Scope[]; pickers?: Re
         const text = tpl(n.text).trim();
         if (!text) return null;
         return (
-          <div key={i} className={cx('small', bad ? 'power-bad' : 'faint')}>
+          <div key={i} className={cx('small', bad ? styles.powerBad : 'faint')}>
             <Md source={text} inline />
           </div>
         );
@@ -297,7 +297,11 @@ function Calc({ spec, envs, pickers }: { spec: Spec; envs: Scope[]; pickers?: Re
       {errors.length > 0 && <CalcErrors list={errors} />}
     </>
   );
-  return boxed ? <section className="power-calc">{body}</section> : <div className={styles.guidePlain}>{body}</div>;
+  return boxed ? (
+    <section className={styles.powerCalc}>{body}</section>
+  ) : (
+    <div className={styles.guidePlain}>{body}</div>
+  );
 }
 
 const optionId = (v: unknown): string =>
@@ -364,7 +368,7 @@ function BarChart({
               y={h - bh}
               width={Math.max(1, bw - 2)}
               height={Math.max(bh, 0.5)}
-              className="power-bar"
+              className={styles.powerBar}
             >
               <title>
                 {i + 1}: {formatValue(s, parseSpec(spec.unit))}
@@ -437,7 +441,7 @@ function DataTable({
                             parseSpec(c.fmt),
                           );
                     return (
-                      <td key={j} className={cx(c.num && 'num', bad && 'power-bad')}>
+                      <td key={j} className={cx(c.num && 'num', bad && styles.powerBad)}>
                         <Md source={cell} inline />
                       </td>
                     );
