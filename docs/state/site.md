@@ -233,6 +233,12 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
     step, and npm stages the release until it is approved on npmjs.com, leaving a `0.0.0-stage` placeholder version).
     New release: bump in the package, tag, push, user publishes, then `npm i cm-live-markdown@^x` here. Fixed on the way (0.1.2): the image widget replaced its own root on «not found», CM read it as typing and
     wrote «Картинка не найдена: …» into the text instead of `![…](file:…)`.
+  - Live formatting (2026-10-28, dev #130): prepared cm-live-markdown 0.1.5 — a standalone line
+    `--- Label ---` renders a labeled divider; a standalone `--` renders an em dash outside the cursor.
+    Source stays unchanged; code, links, tables and custom tokens are excluded from dash replacement.
+    Browser demo checked: divider with/without surrounding blank lines, click to reveal source, dash, code/link
+    exclusions, existing horizontal rule. Package build/typecheck, 33 existing checks, oxlint and formatting passed.
+    Pending: npm publication (npm authentication returns 401), then update the site's dependency and deploy.
   - Nested list markers (2026-10-23): ordered items show outline numbers «3.1.», «3.2.1.», bullets repeat the dot per
     level «• •» — in `Markdown` (CSS counters, `ol start` → `counter-reset` in the component; applies to every Markdown
     view on the site) and in `LiveMarkdown` (widget from the syntax tree). Source stays plain `1.` / `-`.
