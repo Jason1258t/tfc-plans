@@ -1,6 +1,6 @@
 ---
 name: addon-dev
-description: Develop a pack addon (NeoForge mod in tools/<mod>) — decide addon vs KubeJS/datapack/mixin, research the target mod's API by bytecode via MCP, scaffold from the closest existing addon, write code and resources (ru_ru, models, loot, recipe), verify on the dev server with a devtest mod, then hand off to addon-release. Use for «сделай аддон», «новый блок в аддон», «добавь в аддон», «миксин для мода X», a new addon or a new block/mechanic in an existing one.
+description: Develop a pack addon (NeoForge mod under tools/) — decide addon vs KubeJS/datapack/mixin, research the target mod's API by bytecode via MCP, scaffold from the closest existing addon, write code and resources (ru_ru, models, loot, recipe), verify on the dev server with a devtest mod, then hand off to addon-release. Use for «сделай аддон», «новый блок в аддон», «добавь в аддон», «миксин для мода X», a new addon, a new block/mechanic in an existing one, or item textures for a pack addon.
 ---
 
 # Addon development: task → route → API by bytecode → scaffold → resources → dev server → release
@@ -67,8 +67,10 @@ and command, jar names in `release.sh`.
 - Lang: every key in `en_us` **and** `ru_ru` (players see Russian); keys from code need `./gradlew compileJava` before
   checking.
 - Models/textures in the target mod's style: look at its similar blocks (`model_render`, `texture_get`), reuse its
-  textures by reference (`"texture": "<mod>:block/…"`) where they fit, draw the rest with `art/gen_assets.py` in its
-  palette. Blockstates cover every property combination/orientation.
+  textures by reference (`"texture": "<mod>:block/…"`) where they fit. For new item textures, follow
+  [Item textures](references/item-textures.md): use available image generation with pack references, then prepare
+  and inspect the game asset. `art/gen_assets.py` is for deterministic assembly, technical patterns and conversion,
+  not the default way to invent item artwork. Blockstates cover every property combination/orientation.
 - `data/<mod>/loot_table/blocks/*.json`, `minecraft:mineable/<tool>` tag (+ TFC/needs-tool tags if relevant),
   recipe from pack items only — check ids and that the inputs are obtainable (`items_search`, `recipes_for`,
   `tag_members`; KubeJS removals are applied in their answers).

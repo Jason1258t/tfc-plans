@@ -225,3 +225,11 @@ only the jar on the site (`/addons/tp-trace-1.0.0.jar`), not in the addon list. 
   `FuelType.CODEC`, NeoForge 21.1.251 fluid/bucket API. Dedicated-server checks passed: recipes, briquette SPECIAL, heat=2.0, 84/100 mB after 8 s, actual pipes/pump
   (64 rpm imposed by the test fixture), empty shutdown, bucket transfers and 1900 mB retained across restart. Client rendering, complete factory automation and full-pack compatibility: not checked in game.
 - Separate pre-existing CDG/IE recipe parse errors found during testing: dev #118.
+
+## Item texture workflow (dev #132, 2026-10-28)
+
+`addon-dev` now routes new item artwork through image generation with inspected pack references, a detailed source,
+transparent output and a separately prepared runtime PNG. Instructions live in
+`.claude/skills/addon-dev/references/item-textures.md`; procedural asset scripts remain for technical patterns and
+assembly. Native-size and inventory previews are required; no fixed 16×16 limit. This updates agent instructions
+only; existing addon textures and in-game appearance were not changed or tested.
