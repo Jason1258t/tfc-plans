@@ -26,6 +26,7 @@
  * public/: оттуда же читаются данные модов (recipes.json, reference.json, tags.json, meals.json, icons/).
  */
 import fs from 'node:fs';
+import { readBlazeFuel } from '../src/shared/pack-data/liquidFuel.ts';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
@@ -631,6 +632,7 @@ function dataFilesOf(layer, sub) {
 }
 
 function dataOverrides(layers) {
+  const blazeFuels = [];
   const foods = [];
   const metals = [];
   const entries = [];
@@ -638,6 +640,10 @@ function dataOverrides(layers) {
   const notes = [];
   for (const layer of layers) {
     const source = `kubejs/${layer}/data`;
+    for (const { ns, rel, json } of dataFilesOf(layer, 'compat')) {
+      const fuel = readBlazeFuel(`${ns}:${rel.replace(/\.json$/, '')}`, source, json);
+      if (fuel) blazeFuels.push(fuel);
+    }
     for (const { ns, rel, json } of dataFilesOf(layer, 'tfc/food')) {
       const ing = ingredientOf(json.ingredient);
       if (ing.tags.length) notes.push(`${source}: еда ${ns}:${rel} задана тегом — состав тега на сайте не раскрыт`);
@@ -685,7 +691,7 @@ function dataOverrides(layers) {
         });
       }
   }
-  return { data: { foods, metals, skillet: { entries, cooked } }, notes };
+  return { data: { blazeFuels, foods, metals, skillet: { entries, cooked } }, notes };
 }
 
 /**
@@ -753,7 +759,6 @@ const MOD_ONLY_DATA = [
   ['firmalife/plantable', 'растения теплицы'],
   ['firmalife/greenhouse', 'уровни теплицы'],
   ['createdieselgenerators/fuel_type', 'жидкое топливо'],
-  ['createliquidfuel/compat', 'жидкое топливо'],
   ['structure/multiblocks', 'шаблоны мультиблоков IE'],
 ];
 function unhandledData(layer) {

@@ -73,3 +73,6 @@ export { ItemIcon } from './ItemIcon';
 export { ItemIdSearch } from './ItemIdSearch';
 export { ItemPicker } from './ItemPicker';
 export { RecipeStatusBadge } from './RecipeStatusBadge';
+
+export { burnerHeat, burnerMode, burnerRate, mergeLiquidFuels } from './liquidFuel';
+export type { BlazeFuel, LiquidFuels, LiquidFamily, LiquidStack, FuelRecipe, EngineStats } from './liquidFuel';

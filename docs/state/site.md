@@ -400,6 +400,14 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   (`metal_temperature.aluminum` in `const/tfc.js`).
 - Fuel is one tab with sub-sections: solid (no wood) and liquid with oil (`?tab=fuel&sub=liquid`; old `tab=liquid`
   redirects).
+- 2026-10-28 (#126): liquid fuel separates CDG burner and the ordinary blaze burner (Create Liquid Fuel).
+  The comparison lists concrete fluid IDs, modes, consumption and time per bucket, with a simulated CDG valve.
+  CLF `compat` resources from any namespace are merged with KubeJS by resource ID in shared `liquidFuel.ts`,
+  used by both the site and MCP; a shared tag never extends CLF compatibility to other fluids. Source is preserved.
+  CDG heat uses Java float arithmetic (ethanol 0.9 does not reach the double 1.8 threshold); consumption counts
+  drain events over its 40000-tick cycle. CLF consumption is the long-term average; initial buffering is explained.
+  TFC/Wooden Cog temperature is explicitly outside the comparison. Checked: one-off merge/default/float checks,
+  real KubeJS compat records, MCP merge, desktop and 390 px browser, search and closed valve. Not checked in game.
 - Food section closed (`docs/plans/food.md`): products, composite meals with calculators, cooked meals by method.
   Leftovers listed in the plan («Сознательно не сделано»). CSS вкладки `MealsTab` переведён на локальные классы
   `MealsTab.module.css`; остаточных зависимостей от `ReferenceShared.css` и `:global` в ней нет (2026-10-26).

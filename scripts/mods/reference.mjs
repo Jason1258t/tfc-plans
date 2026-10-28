@@ -5,6 +5,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { readBlazeFuel, mergeLiquidFuels } from '../../src/shared/pack-data/liquidFuel.ts';
 
 /** Все файлы data/<ns>/<sub>/**.json → Map("ns:path", { json, source }) с перекрытием поздними */
 function collect(dataDirs, sub, parse, filter = () => true) {
@@ -484,16 +485,11 @@ function buildLiquidFuels(dataDirs, recipes, parse, itemTagMap, fluidNames) {
     fam.engines = { normal: eng(json.normal), modular: eng(json.modular), huge: eng(json.huge) };
     fam.burner = json.burner_multiplier ?? null;
   }
-  // Горелки Create Liquid Fuel
-  for (const [, { json }] of collect(dataDirs, 'createliquidfuel/compat', parse)) {
-    if (typeof json.fluid !== 'string' || !present.has(json.fluid.split(':')[0])) continue;
-    const fam = ensure(json.fluid);
-    fam.blazeBurner = {
-      burnTime: json.burnTime ?? null,
-      superHeat: Boolean(json.superHeat),
-      perTick: json.amountConsumedPerTick ?? 1,
-    };
-  }
+  // CLF читает data/<любой namespace>/compat, а не только собственный namespace.
+  const blazeFuels = [...collect(dataDirs, 'compat', parse)]
+    .map(([id, { json, source }]) => readBlazeFuel(id, source, json))
+    .filter(Boolean);
+  for (const fuel of blazeFuels) if (present.has(fuel.fluid.split(':')[0])) ensure(fuel.fluid);
   // Дизельный генератор IE
   for (const [, r] of recipes) {
     const j = r.json;
@@ -544,5 +540,5 @@ function buildLiquidFuels(dataDirs, recipes, parse, itemTagMap, fluidNames) {
         bucket: `${id.split(':')[0]}:${id.split(':')[1]}_bucket`,
       })),
     }));
-  return { families: out };
+  return mergeLiquidFuels({ families: out, blazeFuels, namespaces: [...present] });
 }
