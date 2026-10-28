@@ -72,6 +72,7 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
           {attached.map((f) => (
             <li key={f.id} className={styles.attachRow}>
               <FileBadge
+                className={styles.fileBadge}
                 compact
                 name={f.name}
                 type={f.type}
@@ -108,7 +109,7 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
           ))}
           {pendingFiles.map((f, i) => (
             <li key={`${f.name}-${i}`} className={styles.attachRow}>
-              <FileBadge compact name={f.name} type={f.type} />
+              <FileBadge className={styles.fileBadge} compact name={f.name} type={f.type} />
               <span className={cx('faint', 'small', styles.attachMeta)}>
                 {formatSize(f.size)} · загрузится при создании
               </span>
@@ -125,7 +126,7 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
           ))}
           {uploads.map((u) => (
             <li key={u.key} className={styles.attachRow}>
-              <FileBadge compact name={u.name} />
+              <FileBadge className={styles.fileBadge} compact name={u.name} />
               {u.error ? (
                 <>
                   <span className={cx('small', styles.attachMeta)} style={{ color: 'var(--danger)' }}>

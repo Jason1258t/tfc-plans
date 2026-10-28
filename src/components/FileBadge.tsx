@@ -21,6 +21,8 @@ export function FileKindDot({ kind }: { kind: FileKind }) {
 
 interface Props {
   name: string;
+  /** Локальное оформление контейнера: например, ширина внутри списка */
+  className?: string;
   /** MIME-тип, если известен: по нему узнаются картинки без расширения */
   type?: string;
   /** Клик по имени (обычно — скачать); без него имя — просто текст */
@@ -33,11 +35,11 @@ interface Props {
 }
 
 /** Файл в списке: значок вида на цветной подложке и имя. Один вид везде, где сайт показывает файл */
-export function FileBadge({ name, type, onOpen, disabled, compact, children }: Props) {
+export function FileBadge({ name, type, onOpen, disabled, compact, children, className }: Props) {
   const kind = fileKind({ name, type });
   const Icon = ICONS[kind];
   return (
-    <span className={cx('fbadge', compact && styles.compact)}>
+    <span className={cx(styles.badge, compact && styles.compact, className)}>
       <span className={styles.fkind} data-kind={kind}>
         <Icon size={compact ? 16 : 18} />
       </span>

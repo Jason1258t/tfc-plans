@@ -32,7 +32,7 @@
   border-top: 1px solid var(--border);
 }
 
-.attachRow :global(.fbadge) {
+.file-badge {
   flex: 0 1 auto;
 }
 
