@@ -276,8 +276,15 @@ function reshape(root: Compound, box: { min: Vec; size: Vec }, shape: Shape) {
           if (!occupied.has(cellKey(x, y, z))) kept.push(newBlock(x, y, z, air));
         }
   }
-  if (blocks?.type === T.List) blocks.value = kept;
-  else root.set('blocks', { type: T.List, elemType: T.Compound, value: kept });
+  if (blocks?.type === T.List) {
+    blocks.value = kept;
+    blocks.elemType = T.Compound;
+  } else root.set('blocks', { type: T.List, elemType: T.Compound, value: kept });
+
+  // Нормализация пустого списка сущностей: elemType 0 (End) некоторые читатели
+  // (в т.ч. проверяющий мод) трактуют как «список повреждён».
+  const entList = root.get('entities');
+  if (entList?.type === T.List && entList.elemType === 0) entList.elemType = T.Compound;
 
   root.set('size', intList(size));
 
