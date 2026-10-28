@@ -1,0 +1,18 @@
+{
+  "item.pyrofuel.pyrocoke_mix": "Пирококсовая смесь",
+  "item.pyrofuel.pyrocoke_mix.tooltip": "Коксовая пыль с незераковым порошком. Основа твёрдого и жидкого пиротоплива.",
+  "item.pyrofuel.soaked_pyromass": "Пропитанная пиромасса",
+  "item.pyrofuel.soaked_pyromass.tooltip": "Креозот связывает частицы нижнего огня. Требует прессования.",
+  "item.pyrofuel.raw_pyrocoke_briquette": "Сырой пирококсовый брикет",
+  "item.pyrofuel.raw_pyrocoke_briquette.tooltip": "Спрессованный заряд. Прокалите в чаше при обычном нагреве.",
+  "item.pyrofuel.pyrocoke_briquette": "Пирококсовый брикет",
+  "item.pyrofuel.pyrocoke_briquette.tooltip": "Включения нижнего огня вызывают перегрев горелки всполоха на 160 секунд.",
+  "item.pyrofuel.stabilizing_additive": "Стабилизирующая присадка",
+  "item.pyrofuel.stabilizing_additive.tooltip": "Минеральная присадка удерживает огненный порошок в топливной взвеси.",
+  "fluid.pyrofuel.raw_pyrogel": "Сырой пирогель",
+  "item.pyrofuel.raw_pyrogel_bucket": "Ведро: сырой пирогель",
+  "fluid.pyrofuel.pyrogel": "Пирогель",
+  "item.pyrofuel.pyrogel_bucket": "Ведро: пирогель",
+  "item.pyrofuel.raw_pyrogel_bucket.tooltip": "Сырая взвесь. Стабилизируйте нагревом. Хранится в баках; разлив в мир запрещён.",
+  "item.pyrofuel.pyrogel_bucket.tooltip": "Топливо для жидкостной горелки CDG. Перегрев при клапане выше 80%. Для двигателей непригодно."
+}

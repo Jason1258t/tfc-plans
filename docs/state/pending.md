@@ -5,6 +5,11 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **TFC Pyrofuel 1.0.0** (2026-10-27, dev #104): install with `tfc pull addons` on server and all players, then
+  `tfc publish` to rebuild the item/recipe library. In game: item/fluid textures in tanks, JEI/EMI chains, manual bucket
+  transfer, real production lines and fluid trains. Ordinary blaze burner takes briquettes; liquid pyrogel uses the
+  separate CDG burner. New cake production is disabled; old cakes can be converted 1:1. Details: [addons.md](addons.md).
+
 - **Pack translation `pack-patches/l10n/`** (2026-10-22): Chinese player-facing text in pack KubeJS scripts → lang keys
   (`Text.translatableWithFallback`, English fallback) + `kubejs/assets/kubejs/lang/{en_us,ru_ru}.json`: item cleaner
   broadcasts, 27 Create Ore Excavation vein names (ids unchanged), engine refuel, lectern/controller, obsidian, welcome,

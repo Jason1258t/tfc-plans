@@ -1,0 +1,19 @@
+{
+  "type": "create:mixing",
+  "ingredients": [
+    {
+      "item": "immersiveengineering:dust_coke"
+    },
+    {
+      "item": "immersiveengineering:dust_coke"
+    },
+    {
+      "item": "create:cinder_flour"
+    }
+  ],
+  "results": [
+    {
+      "id": "pyrofuel:pyrocoke_mix"
+    }
+  ]
+}

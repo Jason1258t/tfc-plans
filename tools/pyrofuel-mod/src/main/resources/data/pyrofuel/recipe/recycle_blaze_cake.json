@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "create:blaze_cake"
+    }
+  ],
+  "result": {
+    "id": "pyrofuel:pyrocoke_briquette"
+  }
+}

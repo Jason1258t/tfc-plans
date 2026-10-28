@@ -1,0 +1,6 @@
+/.gradle/
+/build/
+/run/
+/libs/
+/*.jar
+/art/__pycache__/

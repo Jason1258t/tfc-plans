@@ -1,0 +1,13 @@
+{
+  "type": "create:compacting",
+  "ingredients": [
+    {
+      "item": "pyrofuel:soaked_pyromass"
+    }
+  ],
+  "results": [
+    {
+      "id": "pyrofuel:raw_pyrocoke_briquette"
+    }
+  ]
+}

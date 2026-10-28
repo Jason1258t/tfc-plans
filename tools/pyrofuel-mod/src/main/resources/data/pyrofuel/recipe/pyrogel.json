@@ -1,0 +1,17 @@
+{
+  "type": "create:mixing",
+  "ingredients": [
+    {
+      "type": "fluid_stack",
+      "fluid": "pyrofuel:raw_pyrogel",
+      "amount": 250
+    }
+  ],
+  "results": [
+    {
+      "id": "pyrofuel:pyrogel",
+      "amount": 250
+    }
+  ],
+  "heat_requirement": "heated"
+}
