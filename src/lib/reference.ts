@@ -107,7 +107,7 @@ export interface KubejsDataFile {
 
 let kubejsData: Promise<KubejsDataFile | null> | null = null;
 export function loadKubejsData(): Promise<KubejsDataFile | null> {
-  kubejsData ??= fetch(`${import.meta.env.BASE_URL}kubejs-data.json`)
+  kubejsData ??= fetch(`${import.meta.env.BASE_URL}kubejs-data.json`, { cache: 'no-cache' })
     .then((r) => (r.ok ? (r.json() as Promise<KubejsDataFile>) : null))
     .catch(() => null);
   return kubejsData;
@@ -118,7 +118,7 @@ let loaded: Reference | null = null;
 
 export function loadReference(): Promise<Reference | null> {
   promise ??= Promise.all([
-    fetch(`${import.meta.env.BASE_URL}reference.json`)
+    fetch(`${import.meta.env.BASE_URL}reference.json`, { cache: 'no-cache' })
       .then((r) => (r.ok ? (r.json() as Promise<Reference>) : null))
       .catch(() => null),
     loadKubejsData(),
