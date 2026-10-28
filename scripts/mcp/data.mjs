@@ -10,6 +10,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { mergeLiquidFuels } from '../../src/shared/pack-data/liquidFuel.ts';
 import { matchFilter } from '../../src/shared/pack-data/recipeFilter.ts';
 import { collectRefs } from '../../src/shared/pack-data/recipeRefs.ts';
 import { PACK_MODS } from '../pack-cache.mjs';
@@ -342,6 +343,7 @@ export const reference = () =>
   memo('reference', ['reference.json', 'kubejs-data.json'], (ref, kjs) => {
     if (!ref) return null;
     const out = { ...ref };
+    if (ref.liquid) out.liquid = mergeLiquidFuels(ref.liquid, kjs?.blazeFuels);
     if (kjs?.foods?.length) {
       const own = new Set(kjs.foods.map((f) => f.id));
       out.foods = [...kjs.foods, ...ref.foods.filter((f) => !own.has(f.id))];

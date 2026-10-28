@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { mergeLiquidFuels, type BlazeFuel, type LiquidFuels } from '@/shared/pack-data';
+export type { LiquidFamily, LiquidStack, FuelRecipe, EngineStats } from '@/shared/pack-data';
 import type { ItemIndex } from '@/shared/pack-data';
 
 /** Справочник сборки: public/reference.json, собирается scripts/mods/reference.mjs вместе с библиотекой предметов */
@@ -77,58 +79,8 @@ export interface Metal {
   modMelt?: number | null;
 }
 
-/** Вход/выход рецепта: жидкость (amount в mB), тег жидкости, предмет или тег предметов */
-export interface LiquidStack {
-  kind: 'fluid' | 'fluidTag' | 'item' | 'tag';
-  id: string;
-  amount?: number;
-  count?: number;
-  chance?: number;
-  /** Для тегов предметов — первые предметы (иконка) */
-  items?: string[];
-}
-
-export interface FuelRecipe {
-  id: string;
-  type: string;
-  inputs: LiquidStack[];
-  outputs: LiquidStack[];
-  meta: { heat?: string; time?: number; energy?: number; catalyst?: LiquidStack | null };
-}
-
-export interface EngineStats {
-  /** об/мин */
-  speed: number;
-  /** SU */
-  strength: number;
-  /** mB за тик */
-  burnRate: number;
-}
-
-/** Семейство жидкого топлива (по общему тегу c:*) */
-export interface LiquidFamily {
-  tag: string;
-  fluids: { id: string; name: GeoLikeName | null; bucket: string }[];
-  /** Двигатели Create: Diesel Generators */
-  engines: { normal: EngineStats | null; modular: EngineStats | null; huge: EngineStats | null } | null;
-  /** Множитель времени горения в горелке Create (CDG) */
-  burner: number | null;
-  /** Дизельный генератор IE */
-  ieGenerator: { burnTime: number | null } | null;
-  /** Горелка Create Liquid Fuel */
-  blazeBurner: { burnTime: number | null; superHeat: boolean; perTick: number } | null;
-  produce: FuelRecipe[];
-  /** Где используется: жидкость на входе */
-  use?: FuelRecipe[];
-}
-
-interface GeoLikeName {
-  en: string | null;
-  ru: string | null;
-}
-
 export interface Reference {
-  liquid?: { families: LiquidFamily[] };
+  liquid?: LiquidFuels;
   veins: Vein[];
   smelt: Record<string, Smelt>;
   chains: Record<string, ChainStep[]>;
@@ -142,6 +94,7 @@ export interface Reference {
  * поверх модов. Записи того же вида, что в reference.json и meals.json.
  */
 export interface KubejsDataFile {
+  blazeFuels?: BlazeFuel[];
   foods?: Food[];
   metals?: Metal[];
   /** Плавка руд и цепочки, пересчитанные по рецептам сборки (моды + kubejs/data − удалённое + скрипты) */
@@ -189,6 +142,7 @@ export function loadReference(): Promise<Reference | null> {
       ref.smelt = kjs.ores.smelt;
       ref.chains = kjs.ores.chains;
     }
+    if (ref?.liquid) ref.liquid = mergeLiquidFuels(ref.liquid, kjs?.blazeFuels);
     return (loaded = ref);
   });
   return promise;

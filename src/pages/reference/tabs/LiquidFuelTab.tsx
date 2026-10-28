@@ -9,6 +9,7 @@ import { cx } from '@/shared/lib';
 import type { Datapack } from '@/entities/datapack';
 import shell from '../ReferenceShell.module.css';
 import styles from './LiquidFuelTab.module.css';
+import { BurnerComparison } from './BurnerComparison';
 
 /**
  * Жидкое топливо: нефть и её переработка, бензин, дизель, этанол, растительное масло, биодизель.
@@ -90,7 +91,7 @@ export function LiquidFuelTab({ families, items }: { families: LiquidFamily[]; i
       f.tag.includes(q) ||
       f.fluids.some((x) => x.id.includes(q) || fluidName(x, items).toLowerCase().includes(q)),
   );
-  const burnable = sorted.filter((f) => f.engines || f.ieGenerator || f.blazeBurner || f.burner);
+  const burnable = sorted.filter((f) => f.engines || f.ieGenerator);
 
   return (
     <>
@@ -104,6 +105,8 @@ export function LiquidFuelTab({ families, items }: { families: LiquidFamily[]; i
           />
         </label>
       </div>
+
+      <BurnerComparison families={visible} nameOf={(fluid) => fluidName(fluid, items)} />
 
       <OilCard items={items} />
 
@@ -185,8 +188,8 @@ function BurnTable({ families, items }: { families: LiquidFamily[]; items: ItemI
           <h2>Где сжигать</h2>
           <div className="faint small">
             Дизельные генераторы Create: Diesel Generators — скорость и сила (SU), расход{' '}
-            {rate ? `${+(rate * 20).toFixed(2)} mB/с` : '—'} у всех видов топлива. Горелка — множитель времени горения в
-            горелке Create. Генератор IE — время горения из рецепта топлива (больше — экономнее).
+            {rate ? `${+(rate * 20).toFixed(2)} mB/с` : '—'} у всех видов топлива. Генератор IE — время горения из
+            рецепта топлива (больше — экономнее). Горелки сравниваются отдельно выше.
           </div>
         </div>
       </CardHead>
@@ -198,7 +201,6 @@ function BurnTable({ families, items }: { families: LiquidFamily[]; items: ItemI
               <th>Дизельный генератор</th>
               <th>Модульный</th>
               <th>Огромный</th>
-              <th>Горелка</th>
               <th>Генератор IE</th>
             </tr>
           </thead>
@@ -216,16 +218,6 @@ function BurnTable({ families, items }: { families: LiquidFamily[]; items: ItemI
                   <td>{fmtEngine(f.engines?.normal ?? null)}</td>
                   <td>{fmtEngine(f.engines?.modular ?? null)}</td>
                   <td>{fmtEngine(f.engines?.huge ?? null)}</td>
-                  <td className={tableStyles.numeric}>
-                    {f.burner != null ? `×${f.burner}` : ''}
-                    {f.blazeBurner && (
-                      <span className="faint small">
-                        {f.burner != null ? ' · ' : ''}
-                        {f.blazeBurner.superHeat ? 'перегрев' : 'нагрев'}
-                      </span>
-                    )}
-                    {f.burner == null && !f.blazeBurner && <span className="faint">—</span>}
-                  </td>
                   <td className={tableStyles.numeric}>{f.ieGenerator?.burnTime ?? <span className="faint">—</span>}</td>
                 </tr>
               );
