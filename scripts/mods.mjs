@@ -224,7 +224,8 @@ function prepareJar(file) {
   const dir = path.join(CACHE, 'jars', key);
   // v20 — плюс данные и классы сковороды Cuisine Delight; v19 — плюс классы тегов модов; v18 — плюс помощники и конфиги блюд аддонов; v17 — плюс классы сборных блюд; v16 — плюс классы полива теплицы; v15 — плюс классы грядок теплицы; v14 — плюс перечисление черт еды; v13 — плюс уровни теплицы; v12 — плюс растения теплицы Firmalife и классы конфигов аддонов; v11 — плюс loot-таблицы растений и их размещение в мире; v10 — плюс классы календаря; v9 — плюс классы конфигов; v8 — плюс классы растений (classes/) для ботаники; v7 — плюс климатические диапазоны растений TFC; v6 — плюс теги, жилы, данные TFC для справочника, география TFC Real World и жидкое топливо; теги блоков и сущностей
   // v21 — ещё .obj/.mtl моделей, v22 — и .obj.ie IE, и .png.mcmeta (объёмные иконки), v23 — blockstates и все loot-таблицы блоков
-  const done = path.join(dir, '.done-v23');
+  // v24 — действительный data/<ns>/compat для Create Liquid Fuel.
+  const done = path.join(dir, '.done-v24');
   if (!fs.existsSync(done) || fresh) {
     fs.rmSync(dir, { recursive: true, force: true });
     let zip;
@@ -237,7 +238,7 @@ function prepareJar(file) {
     // Рецепты — только папка recipe/ (1.21); recipes/ в некоторых jar — остатки 1.20, игра их не читает.
     // Для справочника: теги предметов, конфиги жил, данные TFC (топливо, еда, нагрев).
     const wanted =
-      /^(assets\/[a-z0-9_.-]+\/(models\/.+\.(json|obj|obj\.ie|mtl)|blockstates\/.+\.json|textures\/.+\.png(\.mcmeta)?|lang\/(en_us|ru_ru)\.json)|data\/[a-z0-9_.-]+\/(recipe\/.+|tags\/(item|fluid|block|entity_type)\/.+|createdieselgenerators\/fuel_type\/.+|createliquidfuel\/compat\/.+|worldgen\/configured_feature\/(vein\/.+|[^/]*vein[^/]*)|tfc\/(fuel|food|fluid_heat|climate_range)\/.+|cuisinedelight_config\/ingredient\/.+|cuisinetfc\/cooked_food\/.+|firmalife\/(plantable|greenhouse)\/.+|loot_table\/blocks\/.+|worldgen\/placed_feature\/plant\/.+|geography\/.+|profiles\/.+\/settings)\.json|data\/[a-z0-9_.-]+\/profiles\/.+\/maps\/(continent|altitude|koppen|temperature|rainfall)\.png)$/;
+      /^(assets\/[a-z0-9_.-]+\/(models\/.+\.(json|obj|obj\.ie|mtl)|blockstates\/.+\.json|textures\/.+\.png(\.mcmeta)?|lang\/(en_us|ru_ru)\.json)|data\/[a-z0-9_.-]+\/(recipe\/.+|tags\/(item|fluid|block|entity_type)\/.+|createdieselgenerators\/fuel_type\/.+|compat\/.+|worldgen\/configured_feature\/(vein\/.+|[^/]*vein[^/]*)|tfc\/(fuel|food|fluid_heat|climate_range)\/.+|cuisinedelight_config\/ingredient\/.+|cuisinetfc\/cooked_food\/.+|firmalife\/(plantable|greenhouse)\/.+|loot_table\/blocks\/.+|worldgen\/placed_feature\/plant\/.+|geography\/.+|profiles\/.+\/settings)\.json|data\/[a-z0-9_.-]+\/profiles\/.+\/maps\/(continent|altitude|koppen|temperature|rainfall)\.png)$/;
     const entries = zip.getEntries();
     for (const entry of entries) {
       if (entry.isDirectory || !wanted.test(entry.entryName)) continue;
