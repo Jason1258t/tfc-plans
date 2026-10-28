@@ -56,8 +56,8 @@
   background: var(--surface-2);
 }
 
-/* Активный пункт задаёт вызывающий код глобальным классом `active` */
-.nav button:global(.active) {
+/* Состояние кнопки задаёт потребитель; локальный селектор не зависит от имён его классов. */
+.nav button[aria-pressed='true'] {
   background: var(--accent-soft);
   font-weight: 600;
 }

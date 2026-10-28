@@ -148,7 +148,7 @@ export function GuideEditor({
 
   return (
     <section className={styles.guideEditor}>
-      <header className="guide-list-head">
+      <header className={styles.guideListHead} aria-label="Редактор гайда">
         <h2 className={content.heading}>{guide ? `Правка: ${guide.title}` : 'Новый гайд'}</h2>
         <div className={styles.guideHeadActions}>
           <Button variant="ghost" className="small" onClick={() => setHelp(!help)}>
@@ -162,7 +162,7 @@ export function GuideEditor({
           >
             Отмена
           </Button>
-          <Button className="small" onClick={save} disabled={saving || !changed}>
+          <Button className="small" aria-label="Сохранить гайд" onClick={save} disabled={saving || !changed}>
             {saving ? 'Сохраняю…' : 'Сохранить'}
           </Button>
         </div>

@@ -11,10 +11,9 @@ const SECTIONS = [
 ];
 
 /** Выбор вкладки общего раздела «Датапаки»: сами датапаки, каталог рецептов, теги */
-export function PackNav() {
+export function PackNav({ className }: { className?: string }) {
   return (
-    // глобальное имя `pack-nav` на <nav> — точка поиска онбординга и подсветки в списке датапаков
-    <nav className={cx(styles.nav, 'pack-nav')} aria-label="Раздел">
+    <nav className={cx(styles.nav, className)} aria-label="Раздел">
       {SECTIONS.map((s) => (
         <NavLink key={s.to} to={s.to} className={({ isActive }) => cx(styles.link, isActive && styles.active)}>
           <s.icon size={16} />

@@ -58,7 +58,7 @@ export function MultiblocksTab({ slug, onSlug }: { slug: string | null; onSlug: 
                 .map((m) => (
                   <button
                     key={m.id}
-                    className={cx(m === current && 'active')}
+                    aria-pressed={m === current}
                     onClick={() => onSlug(m === data.list[0] ? null : mbSlug(m, data.list))}
                   >
                     <span className={styles.navItem}>

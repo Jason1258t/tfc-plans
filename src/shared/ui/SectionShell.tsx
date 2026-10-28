@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { cx } from '@/shared/lib';
 import styles from './SectionShell.module.css';
 
 interface Props {
@@ -15,8 +14,7 @@ interface Props {
 export function SectionShell({ nav, navLabel, children }: Props) {
   return (
     <div className={styles.shell}>
-      {/* botany-nav — цель шагов знакомства (lib/onboarding.ts), не стиль */}
-      <nav className={cx(styles.nav, 'botany-nav')} aria-label={navLabel}>
+      <nav className={styles.nav} aria-label={navLabel}>
         {nav}
       </nav>
       {children}
