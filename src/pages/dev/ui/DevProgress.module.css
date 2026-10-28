@@ -1,0 +1,36 @@
+.progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  vertical-align: middle;
+  font-size: 12px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ring {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  transform: rotate(-90deg);
+}
+.ring circle {
+  fill: none;
+  stroke-width: 3;
+}
+.track {
+  stroke: var(--border);
+}
+.fill {
+  stroke: var(--accent);
+}
+.numbers {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--text-3);
+}
+.numbers strong {
+  color: var(--text);
+  font-weight: 600;
+}
