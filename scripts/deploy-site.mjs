@@ -22,6 +22,8 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
+import { deployLock } from './deploy-lock.mjs';
 import { ROOT } from './firestore-rest.mjs';
 import { isDataPath } from './data-roots.mjs';
 import { createVersion, currentRelease, hostingConfig, hostingFile, release, versionFiles } from './hosting-rest.mjs';
@@ -29,7 +31,7 @@ import { createVersion, currentRelease, hostingConfig, hostingFile, release, ver
 const log = (...a) => console.log('[deploy-site]', ...a);
 const argv = process.argv.slice(2);
 const dryRun = argv.includes('--dry-run');
-const DIST = path.join(ROOT, 'dist');
+let DIST;
 
 /** Файлы dist/ как у firebase CLI: без firebase.json и скрытых (ignore в firebase.json) */
 function distFiles() {
@@ -60,20 +62,36 @@ const canon = (v) =>
       : v;
 
 async function main() {
+  const unlock = await deployLock(ROOT, log);
+  const staging = fs.mkdtempSync(path.join(os.tmpdir(), 'tfc-site-'));
+  DIST = path.join(staging, 'dist');
+  try {
+    await deploy();
+  } finally {
+    fs.rmSync(staging, { recursive: true, force: true });
+    unlock();
+  }
+}
+
+async function deploy() {
   const firebase = JSON.parse(fs.readFileSync(path.join(ROOT, 'firebase.json'), 'utf8'));
   const config = hostingConfig(firebase.hosting);
 
   if (!argv.includes('--no-build')) {
     log('собираю сайт (без данных сборки)…');
     // На Windows npm — это npm.cmd: без shell execFile его не находит
-    execFileSync('npm', ['run', 'build'], {
+    execFileSync('npm', ['run', 'build', '--', '--outDir', DIST], {
       cwd: ROOT,
       stdio: 'inherit',
       env: { ...process.env, TFC_SITE_ONLY: '1' },
       shell: process.platform === 'win32',
     });
   }
-  execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'predeploy-check.mjs')], { stdio: 'inherit' });
+  if (argv.includes('--no-build')) fs.cpSync(path.join(ROOT, 'dist'), DIST, { recursive: true });
+  execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'predeploy-check.mjs')], {
+    stdio: 'inherit',
+    env: { ...process.env, TFC_DEPLOY_DIST: DIST },
+  });
   if (!fs.existsSync(path.join(DIST, 'index.html'))) throw new Error('в dist/ нет index.html — сайт не собран');
 
   const cur = await currentRelease();

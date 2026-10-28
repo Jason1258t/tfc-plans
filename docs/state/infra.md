@@ -268,3 +268,8 @@ config` lists the project file from the repo root and from a worktree, `opencode
 server starts and finds `public/` from a worktree. Known limit: a relative command resolves from the session directory, so
 a session started in a subfolder (`tools/…`) needs the global config with absolute paths. Not run: Codex, Gemini CLI,
 Cursor configs (shapes from their docs, not tried).
+
+- Dev #127 (2026-10-28): site deployments serialize build → Hosting upload through a lock in the shared git
+  directory and use a private temporary dist. Pack-server shutdown drains accepted jobs and rejects new ones;
+  systemd uses KillMode=mixed/TimeoutStopSec=infinity. Installer serializes updates and stops before replacing code.
+  The deployment lock covers worktrees on one machine, not independent hosts. Forced termination is still interrupting.

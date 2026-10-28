@@ -561,8 +561,16 @@ server.listen(config.port, config.host, async () => {
     );
 });
 
+let stopping = false;
 for (const sig of ['SIGINT', 'SIGTERM'])
-  process.on(sig, () => {
-    server.close(() => process.exit(0));
-    setTimeout(() => process.exit(0), 3000).unref();
+  process.on(sig, async () => {
+    if (stopping) return;
+    stopping = true;
+    console.log('Остановка: ожидаю завершения очереди заданий', jobs.busy());
+    const drained = jobs.drain();
+    const closed = new Promise((resolve) => server.close(resolve));
+    await drained;
+    console.log('Все задания завершены; останавливаю сервер');
+    await closed;
+    process.exit(0);
   });

@@ -12,6 +12,9 @@ WorkingDirectory=/opt/tfc-pack
 ExecStart=/usr/bin/node /opt/tfc-pack/server.mjs
 Restart=on-failure
 RestartSec=3
+# SIGTERM получает только сервер: он завершает очередь до выхода.
+KillMode=mixed
+TimeoutStopSec=infinity
 
 # Песочница: писать можно только в папку данных
 NoNewPrivileges=true
