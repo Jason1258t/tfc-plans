@@ -324,14 +324,14 @@
   min-height: 360px;
 }
 
-.dp-item-name:global(.mono) {
+.dp-item-name.mono {
   font-family: var(--font-mono);
   font-size: 12.5px;
 }
 
 /* Подсветка навигации раздела внутри списка — правило переехало из PackNav.css */
 @media (max-width: 900px) {
-  .dp-list :global(.pack-nav) {
+  .dp-list .section-nav {
     margin-bottom: 12px;
   }
 }

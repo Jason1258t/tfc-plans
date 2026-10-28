@@ -118,13 +118,13 @@ export function BotanyTab({
       nav={
         <>
           {SUBTABS.filter((k) => k !== 'plant' || counts.plant > 0).map((k) => (
-            <button key={k} className={cx(subtab === k && 'active')} onClick={() => onSub(k)}>
+            <button key={k} aria-pressed={subtab === k} onClick={() => onSub(k)}>
               <span>{PLANT_KIND_LABEL[k]}</span>
               <span className="faint small">{counts[k]}</span>
             </button>
           ))}
           {(botany?.greenhouse.length ?? 0) > 0 && (
-            <button className={cx(subtab === 'greenhouse' && 'active')} onClick={() => onSub('greenhouse')}>
+            <button aria-pressed={subtab === 'greenhouse'} onClick={() => onSub('greenhouse')}>
               <span>Теплица</span>
               <span className="faint small">{botany!.greenhouse.length}</span>
             </button>

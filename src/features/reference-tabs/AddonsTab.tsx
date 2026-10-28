@@ -36,7 +36,7 @@ export function AddonsTab({
       nav={
         <>
           {ADDONS_SUBS.map((s) => (
-            <button key={s.id} className={cx(sub === s.id && 'active')} onClick={() => onSub(s.id)}>
+            <button key={s.id} aria-pressed={sub === s.id} onClick={() => onSub(s.id)}>
               <span>{s.label}</span>
             </button>
           ))}

@@ -258,6 +258,37 @@
       "note": "настройки профиля и масштабов мира"
     },
     {
+      "name": "reference.guides.new-editor",
+      "path": "/reference?tab=guides&sub=site",
+      "waitFor": "main button[aria-label=\"Новый гайд\"]",
+      "actions": [
+        {
+          "click": "main button[aria-label=\"Новый гайд\"]"
+        },
+        {
+          "wait": "main textarea"
+        }
+      ],
+      "fullPage": false,
+      "note": "редактор нового гайда без сохранения"
+    },
+    {
+      "name": "reference.guides.new-editor.dark",
+      "path": "/reference?tab=guides&sub=site",
+      "waitFor": "main button[aria-label=\"Новый гайд\"]",
+      "actions": [
+        {
+          "click": "main button[aria-label=\"Новый гайд\"]"
+        },
+        {
+          "wait": "main textarea"
+        }
+      ],
+      "fullPage": false,
+      "note": "редактор нового гайда без сохранения",
+      "theme": "dark"
+    },
+    {
       "name": "addons",
       "path": "/addons"
     },

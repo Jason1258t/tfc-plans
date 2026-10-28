@@ -129,7 +129,7 @@ export function GuidesSection({
                 <Button variant="ghost" className="small" onClick={() => setHistory(current)} title="Прошлые версии">
                   <History size={14} /> История
                 </Button>
-                <Button className="small" onClick={() => startEdit(current)}>
+                <Button className="small" aria-label="Править гайд" onClick={() => startEdit(current)}>
                   <Pencil size={14} /> Править
                 </Button>
               </div>
@@ -168,12 +168,12 @@ export function GuidesSection({
 
   return (
     <section className={styles.guideList}>
-      <header className="guide-list-head">
+      <header className={styles.guideListHead} aria-label="Список гайдов">
         <div>
           <h2 className={content.heading}>Гайды</h2>
           {intro && <p className="faint small">{intro}</p>}
         </div>
-        <Button className="small" onClick={() => startEdit('new')}>
+        <Button className="small" aria-label="Новый гайд" onClick={() => startEdit('new')}>
           <Plus size={14} /> Новый гайд
         </Button>
       </header>

@@ -29,7 +29,7 @@ export function DatapacksList({
 }: Props) {
   return (
     <aside className={styles.dpList}>
-      <PackNav />
+      <PackNav className={styles.sectionNav} />
       <div className={styles.dpListHead} data-tour="dp-list-head">
         <span>Датапаки</span>
         <Button variant="ghost" size="sm" icon onClick={onCreatePack} aria-label="Новый датапак" title="Новый датапак">
@@ -98,7 +98,7 @@ export function DatapacksList({
               >
                 <FileTerminal size={15} className="faint" />
                 <span className="grow">
-                  <span className={cx(styles.dpItemName, 'mono')}>{s.fileName}</span>
+                  <span className={cx(styles.dpItemName, styles.mono)}>{s.fileName}</span>
                   <span className="faint small">
                     {s.updatedBy}, {timeAgo(s.updatedAt)}
                   </span>

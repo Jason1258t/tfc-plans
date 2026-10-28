@@ -49,8 +49,8 @@
   color: var(--text);
 }
 
-/* .active ставит сам NavLink — класс чужой, поэтому :global */
-.nav a:global(.active) {
+/* NavLink отмечает текущую страницу стандартным aria-current. */
+.nav a[aria-current='page'] {
   background: var(--surface);
   color: var(--text);
   box-shadow: var(--shadow-sm);

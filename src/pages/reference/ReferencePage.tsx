@@ -137,12 +137,12 @@ function Reference() {
           navLabel="Разделы топлива"
           nav={
             <>
-              <button className={cx(!liquid && 'active')} onClick={() => setParams({ tab: 'fuel' }, { replace: true })}>
+              <button aria-pressed={!liquid} onClick={() => setParams({ tab: 'fuel' }, { replace: true })}>
                 <span>Твёрдое</span>
                 <span className="faint small">{ref.fuels.length}</span>
               </button>
               <button
-                className={cx(liquid && 'active')}
+                aria-pressed={liquid}
                 onClick={() => setParams({ tab: 'fuel', sub: 'liquid' }, { replace: true })}
               >
                 <span>Жидкое</span>
@@ -167,21 +167,21 @@ function Reference() {
           nav={
             <>
               <button
-                className={cx(params.get('sub') !== 'meals' && params.get('sub') !== 'dishes' && 'active')}
+                aria-pressed={params.get('sub') !== 'meals' && params.get('sub') !== 'dishes'}
                 onClick={() => setParams({ tab: 'food' }, { replace: true })}
               >
                 <span>Продукты</span>
                 <span className="faint small">{ref.foods.length}</span>
               </button>
               <button
-                className={cx(params.get('sub') === 'meals' && 'active')}
+                aria-pressed={params.get('sub') === 'meals'}
                 onClick={() => setParams({ tab: 'food', sub: 'meals' }, { replace: true })}
               >
                 <span>Сборные блюда</span>
                 <span className="faint small">{mealCount || ''}</span>
               </button>
               <button
-                className={cx(params.get('sub') === 'dishes' && 'active')}
+                aria-pressed={params.get('sub') === 'dishes'}
                 onClick={() => setParams({ tab: 'food', sub: 'dishes' }, { replace: true })}
               >
                 <span>Готовые блюда</span>

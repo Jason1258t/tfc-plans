@@ -1,6 +1,5 @@
 import { lazy, Suspense } from 'react';
 import { usePower, useSettings, type PowerData } from '@/lib/power';
-import { cx } from '@/shared/lib';
 import { SectionShell, contentStyles as content } from '@/shared/ui';
 import { GUIDES_SUBS, type GuidesSub } from '@/features/guides';
 
@@ -27,7 +26,7 @@ export function GuidesTab({
       nav={
         <>
           {GUIDES_SUBS.map((s) => (
-            <button key={s.id} className={cx(sub === s.id && 'active')} onClick={() => onSub(s.id)}>
+            <button key={s.id} aria-pressed={sub === s.id} onClick={() => onSub(s.id)}>
               <span>{s.label}</span>
             </button>
           ))}
