@@ -1,6 +1,4 @@
-/* Конструктор обхода удалений KubeJS. Свои классы локальные: .kjs-section → styles.kjsSection.
-   Значков статуса (.kjs-badge) здесь больше нет — они в RecipeCatalog.module.css: каталог ставит их сам,
-   а ещё их ставит справочник (ReferencePage.tsx, таблица металлов), поэтому имя осталось глобальным. */
+/* Конструктор обхода удалений KubeJS. Собственные стили локальны; статусы рецептов — RecipeStatusBadge. */
 
 .kjsSection {
   display: flex;

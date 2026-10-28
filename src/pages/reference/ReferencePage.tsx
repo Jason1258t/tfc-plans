@@ -6,7 +6,7 @@ import { BotanyTab } from './tabs/BotanyTab';
 import { DishesTab } from './tabs/DishesTab';
 import { MealsTab } from './tabs/MealsTab';
 import { mealsByItem, useMeals, type Meals } from '@/lib/meals';
-import { useTags, ItemIcon, itemName, useItems, type ItemIndex } from '@/shared/pack-data';
+import { RecipeStatusBadge, useTags, ItemIcon, itemName, useItems, type ItemIndex } from '@/shared/pack-data';
 import { LiquidFuelTab } from './tabs/LiquidFuelTab';
 import { MapPage } from '@/pages/map';
 import { MultiblocksTab } from '@/features/reference-tabs';
@@ -746,8 +746,8 @@ function MetalsTab({ ref_, items }: { ref_: Reference; items: ItemIndex | null }
                     {m.ingot ? <ItemIcon id={m.ingot} size={24} /> : <span className={shell.ingBlank} />}
                     <span>{m.name}</span>
                     {m.source.startsWith('kubejs/') && (
-                      <span
-                        className="kjs-badge added"
+                      <RecipeStatusBadge
+                        kind="added"
                         title={
                           m.modMelt != null
                             ? `Изменено датапаком сборки (${m.source}); в моде — ${Math.round(m.modMelt)} °C`
@@ -755,7 +755,7 @@ function MetalsTab({ ref_, items }: { ref_: Reference; items: ItemIndex | null }
                         }
                       >
                         kubejs/data
-                      </span>
+                      </RecipeStatusBadge>
                     )}
                   </div>
                 </td>
