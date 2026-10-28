@@ -1,0 +1,24 @@
+/* Статус рецепта: размеры и цвета сохранены из прежнего kjs-badge. */
+.badge {
+  flex: none;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.badge[data-kind='removed'] {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+
+.badge[data-kind='changed'] {
+  color: var(--imp-2);
+  border-color: color-mix(in srgb, var(--imp-2) 45%, var(--border));
+}
+
+.badge[data-kind='added'] {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}

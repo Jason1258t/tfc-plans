@@ -12,6 +12,7 @@ import {
   type RecipeStatus,
   ItemIcon,
   ItemPicker,
+  RecipeStatusBadge,
 } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
 import { Modal, Search, Segmented, Button, Select, Tag } from '@/shared/ui';
@@ -33,24 +34,20 @@ interface BrowserProps {
   initial?: { query?: string; type?: string; itemId?: string; usage?: boolean };
 }
 
-/**
- * Значки: удалён / изменён / добавлен KubeJS, из kubejs/data.
- * Имена классов глобальные (стили — в RecipeCatalog.module.css через :global): тот же значок
- * ставит справочник, ReferencePage.tsx — таблица металлов.
- */
+/** Значки: удалён / изменён / добавлен KubeJS, из kubejs/data. */
 function StatusBadges({ r }: { r: Recipe }) {
   return (
     <>
-      {r.runtime && <span className="kjs-badge added">создаётся при запуске</span>}
-      {r.kjsRemoved.length > 0 && <span className="kjs-badge removed">удалён KubeJS</span>}
+      {r.runtime && <RecipeStatusBadge kind="added">создаётся при запуске</RecipeStatusBadge>}
+      {r.kjsRemoved.length > 0 && <RecipeStatusBadge kind="removed">удалён KubeJS</RecipeStatusBadge>}
       {r.kjsRemoved.length === 0 && r.kjsMaybe.length > 0 && (
-        <span className="kjs-badge changed" title="Фильтр не разобрать без игры">
+        <RecipeStatusBadge kind="changed" title="Фильтр не разобрать без игры">
           возможно удалён
-        </span>
+        </RecipeStatusBadge>
       )}
-      {r.kjsChanged.length > 0 && <span className="kjs-badge changed">изменён KubeJS</span>}
-      {r.origin === 'kubejs-script' && <span className="kjs-badge added">скрипт KubeJS</span>}
-      {r.origin === 'kubejs-data' && <span className="kjs-badge added">kubejs/data</span>}
+      {r.kjsChanged.length > 0 && <RecipeStatusBadge kind="changed">изменён KubeJS</RecipeStatusBadge>}
+      {r.origin === 'kubejs-script' && <RecipeStatusBadge kind="added">скрипт KubeJS</RecipeStatusBadge>}
+      {r.origin === 'kubejs-data' && <RecipeStatusBadge kind="added">kubejs/data</RecipeStatusBadge>}
     </>
   );
 }

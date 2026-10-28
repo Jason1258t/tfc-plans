@@ -72,3 +72,4 @@ export {
 export { ItemIcon } from './ItemIcon';
 export { ItemIdSearch } from './ItemIdSearch';
 export { ItemPicker } from './ItemPicker';
+export { RecipeStatusBadge } from './RecipeStatusBadge';
