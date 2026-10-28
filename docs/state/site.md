@@ -23,14 +23,29 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 - Datapacks, recipes and tags are one section with a tab chooser on the left (`/datapacks`, `/recipes`, `/tags` unchanged).
 - Map is a reference tab (`/reference?tab=map`). Full-page doc — `/doc/{id}` (old `/docs/{id}` and `/map?x=…` redirect).
 
-## Styles (CSS Modules migration, started 2026-10-24)
+## Styles (CSS Modules migration completed 2026-10-28)
 
-**Где остановились (27 октября).** Основные страницы и компоненты используют CSS Modules; общие элементы —
-`shared/ui`, включая `Card`/`Table`/`SectionShell`, `EmptyState` и `ErrorBox`. Движок схем уже в
-`entities/schematic` (тяжёлый рендер — отдельный публичный `entities/schematic/render`, чтобы сохранить ленивую загрузку).
-`nbt.ts`, `schematicFile.ts` и `files.config.ts` остаются в `lib` намеренно: их напрямую используют Node-скрипты.
-Следующий CSS-хвост — общие `.power-*` в `PowerShared.css`. По FSD остаются запуск подписок сущностей по потребности
-вместо общего старта приложения и перенос `DocPage` в свой слайс (задача №75).
+**Migration status (28 October 2026).** The FSD and CSS Modules migration is complete: every page, including
+`pages/doc`, has a public slice API; component styles are local. `ReferenceShared.css` and `PowerShared.css` are
+removed. Header/sync, file and recipe-status badges, tables, nutrition cells, section menus and guide headers no
+longer publish transitional component classes. Theme utilities, generated Markdown and third-party markup remain
+global intentionally. `contentStyles` and `tableStyles` share neutral local patterns without extra DOM wrappers.
+
+The five entity lists subscribe on demand through `shared/api/liveList.ts`, share one source between consumers,
+and unsubscribe after the last consumer; StrictMode handoffs preserve the connection. The app hook only updates
+presence. The schematic engine is already in `entities/schematic`, with the heavy renderer separately imported
+from `entities/schematic/render`. `nbt.ts`, `schematicFile.ts` and `files.config.ts` deliberately retain their
+Node-compatible locations/imports.
+
+Closeout checks: TypeScript, lint (no errors), CSS module keys, FSD boundaries, changed-file formatting and production
+build. Before/after matrices covered desktop/mobile and light/dark: electricity/guides/addons (26 pairs), header
+and sync states (34), file badges (16), tables/nutrition (22), menus/tour targets (24), recipe statuses (8), statistics
+(12), responsive thresholds (14) and the document route (2). Deterministic layouts matched; the table suite had seven
+changed icon pixels in one frame and file-badge fixtures at most 0.001%. Entity-list page snapshots additionally
+reflected live task updates; differences were inspected instead of treated as style changes. Lifecycle checks covered
+first/last consumers, StrictMode, stale callbacks, errors and route handoffs. Large matrices used local fixtures/Firebase-off
+rather than shared test records. Safari/Firefox, full-height long-page captures and real offline/auth-UID changes were not
+exhaustively checked.
 
 - Plan and rules — skill `css-modules`: tokens/base in `src/app/theme`, repeated UI in `src/shared/ui`, page styles in
   `X.module.css` (`localsConvention: 'camelCaseOnly'` in `vite.config.ts`). Tools: `scripts/ui/classes.mjs` (class
@@ -103,9 +118,10 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
   `.ref-card`/`.ref-card-head` удалены. Пустой `ReferenceShared.css` и все его импорты удалены. До/после: 18 пар снимков аддонов, версий
   (светлая/тёмная тема) и шести разделов справочника desktop/mobile — 0,000%; длинные разделы проверены в пределах
   видимой области. TypeScript, lint (без ошибок), CSS-классы, границы FSD и production build прошли.
-- Left: **1 global CSS outside `src/app/theme`** — `features/reference-tabs/PowerShared.css`, общие части
-  электричества, гайдов и аддонов. В `legacy-ui.css` осталась анимация появления всплывающих блоков;
-  `.empty` и общие помощники компоновки остаются утилитами в `utilities.css`.
+- 2026-10-28 closeout: no global CSS files remain outside `app/theme`. Shared helpers (`.empty`, `.row`, `.grow`,
+  `.hide-sm` and text helpers) remain in utilities; `legacy-ui.css` only owns the shared `fade-in` animation.
+  Mobile label hiding keeps its effective 600 px threshold; importance pills keep 560 px. Onboarding selectors
+  use tags/ARIA and selected menu state uses semantic attributes rather than global component classes.
 - 2026-10-26: `MultiblockFormed` перемещён в `features/reference-tabs`, его CSS — в `MultiblockFormed.module.css`;
   renderer и зависимая цепочка уже перенесены в `entities/schematic`; рендер загружается отдельно через
   `entities/schematic/render`.

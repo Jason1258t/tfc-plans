@@ -19,13 +19,12 @@ src/app/theme/          global, loaded once from main.tsx
   index.css             `@layer theme, ui;` + `@import './x.css' layer(theme)` for each file below (done 2026-10-24)
   tokens.css            :root variables (colors, radii, shadows, fonts, --header-h), dark theme
   base.css              reset, html/body, form font inherit, links, focus ring, selection
-  legacy-ui.css         old global .btn .input .seg .imp-* .tag .progress .tooltip .item-icon .modal — shrinks as
-                        pages move to shared/ui, deleted when empty
+  legacy-ui.css         shared fade-in animation; component classes have already moved to modules
   markdown.css          .md content (rendered by react-markdown — tag selectors, must stay global)
-  utilities.css         .item-chip .row .grow .muted .faint .small .empty .error-box .sr-only .crash — legacy helpers
+  utilities.css         generated item chips, layout/text helpers, .empty, .sr-only, .crash and .hide-sm
 src/shared/ui/          reusable UI, no business logic, no Firestore, no page knowledge
   Button.tsx  Button.module.css          flat: one component = one .tsx + its .module.css
-  Input.tsx  Input.module.css  Modal.tsx  Modal.module.css  Tag.tsx …  Stack.tsx …
+  Input.tsx  Field.module.css  Modal.tsx  Modal.module.css  Tag.tsx …  Stack.tsx …
   Segmented/            a folder only for a multi-file component:
     Segmented.tsx  SegmentedItem.tsx  Segmented.module.css  index.ts   ← exports only Segmented
   index.ts              re-exports ONLY the public API: import { Button, Input } from '../shared/ui'
@@ -47,15 +46,16 @@ src/pages/<x>/          FSD-style page slice (when the page is moved — see FSD
 
 Rules that keep it predictable:
 
-- **Cascade layers.** `app/theme/index.css` starts with `@layer theme, ui;` and imports theme files with
-  `layer(theme)` (no wrapping inside the files); every `shared/ui/*.module.css` wraps its rules in `@layer ui { … }`. Page/component modules are **unlayered**
-  → a page tweak passed through `className` always beats the shared component, regardless of chunk load order. Never
-  fight specificity with `!important` or doubled selectors.
+- **Cascade layers.** `app/theme/index.css` declares `@layer theme, ui` and imports the theme with `layer(theme)`.
+  Existing shared UI and page/component modules are **unlayered**: preserve that cascade during a mechanical
+  migration. A passed `className` does not automatically win; match the existing specificity and prove the result
+  with screenshots. Moving shared UI into a separate layer is a distinct change requiring its own visual baseline;
+  do not combine it with class renaming or add `!important` to hide a regression.
 - **Tokens only.** Colors, radii, shadows, fonts — `var(--…)` from `tokens.css`. A new hex/rgb literal in a module is
   a smell; add a token if it is reused.
 - **Class names.** kebab-case in CSS, camelCase in code: `.task-row` → `styles.taskRow`
   (`vite.config.ts`: `css.modules.localsConvention = 'camelCaseOnly'`; `styles['task-row']` is `undefined`).
-  Import as `import styles from './X.module.css'`; combine with `cx` from `src/lib/util.ts`.
+  Import as `import styles from './X.module.css'`; combine with `cx` from `@/shared/lib`.
 - **State and variants** — prefer attributes over extra classes: `aria-pressed`, `aria-selected`, `aria-expanded`,
   `disabled`, `data-variant="primary"`, `data-kind={kind}` → selectors `.tab[aria-selected='true']`,
   `.badge[data-kind='add']`. Template classes like `` `k-${kind}` `` don't survive modules — replace with a
@@ -103,26 +103,36 @@ page branch.
    page CSS (e.g. `TaskRow` styled from `TasksPage.css`) get their own module in the same branch.
 4. **Cleanup**: legacy globals with no users, `classes.mjs --unused`, empty utilities.
 
-## Current migration status (2026-10-27)
+## Current migration status (2026-10-28)
 
-- Main pages and components use CSS Modules. `shared/ui` includes Button/ButtonLink, Input/Select/Textarea,
-  Label, Segmented, Tag/Importance, Modal/Tooltip, Search, Progress, Card/CardHead, Table/TableWrap,
-  SectionShell, EmptyState and ErrorBox.
-- Legacy button/input/segmented/tag/importance/error rules have been removed. Do not recreate them.
-- The remaining shared reference rules live in `features/reference-tabs/PowerShared.css`. Move each rule with
-  its remaining consumers; do not treat the earlier partial cleanup as full migration.
-- Stack/Row are not required: plan 2 on dev task #7 retains layout utilities instead. Extract a layout component
-  only when current consumers justify its API. Card and SectionShell already cover the repeated containers.
-- Keep generated Markdown and third-party classes global where required. A global utility still used by several
-  owners is not dead CSS. Check `docs/state/site.md` and dev tasks #7/#41 for the current remaining work.
+- Migration is complete. Every page/component owns its CSS Module; there are no global CSS files outside
+  `src/app/theme`. `ReferenceShared.css`, `PowerShared.css` and transitional global component aliases are gone.
+- `shared/ui` includes Button/ButtonLink, Input/Select/Textarea, Label, Segmented, Tag/Importance, Modal/Tooltip,
+  Search, Progress, Card/CardHead, Table/TableWrap, SectionShell, EmptyState and ErrorBox. Neutral `contentStyles`
+  and `tableStyles` expose explicit local class maps where an extra DOM wrapper would be unnecessary.
+- Recipe status is a domain badge in `shared/pack-data`; nutrition cell styling belongs to the reference page,
+  not the generic shared table. Do not reintroduce domain CSS into `shared/ui`.
+- Global theme utilities, generated Markdown and third-party classes are intentional. Stack/Row wrappers are not
+  required: the approved plan retains layout utilities. `hide-sm` keeps its effective 600 px threshold; importance
+  pills are hidden at 560 px in their own module. Test actual breakpoints, not just desktop/390 px screenshots.
+- Onboarding uses tags/ARIA instead of hashed classes. Do not restore old `.botany-nav`, `.pack-nav`, `.btn` or
+  `.guide-list-head` targets. Check the tour's target geometry after changing markup or labels.
+- `shots.mjs` captures the actual viewport after scrolling without a fixed document-origin clip. Open baseline
+  images before accepting a zero diff: an empty image proves nothing.
+- Historical steps below remain the procedure for new refactors, not a request to redo completed dev tasks #7/#41/#75.
 
 ## One page — step by step
 
 ### 1. Task, worktree, dev server
 
 - `dev-session`: dev task («CSS Modules: <страница>», kind `refactor`), worktree `refactor/css-<page>`.
-- **`npm ci` in the worktree** (a few seconds). Don't symlink `node_modules` from the main checkout: Vite then serves
+- **`npm ci` in the worktree**. Don't symlink `node_modules` from the main checkout: Vite then serves
   fonts via `/@fs/<main checkout>/…`, gets 403, and the shots use a fallback font instead of Inter.
+- Copy generated pack data with source `public/.` into the worktree's `public/`, not `cp -R public public`: the
+  latter can create an unignored `public/public` tree that `git add -A` would include. Inspect `git status` before commit.
+- For temporary React fixtures, use a root HTML entry so Vite injects the React Refresh preamble; raw HTML served
+  from `public/` does not receive it. Remove fixture files before commit. Prefer local data/fixtures for large
+  screenshot matrices to conserve Firestore reads; do not create shared test records.
 - Dev server on 5176 (`npm run dev -- --port 5176 --strictPort`, Claude: `preview_start dev-alt`). **Stop it before
   `ship`** — otherwise Vite recreates `node_modules/.vite` and `git worktree remove` fails with «Directory not empty».
 
