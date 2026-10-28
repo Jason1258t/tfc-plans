@@ -10,10 +10,8 @@ import { mergeResources } from '@/lib/resources';
 import { removeFile } from '@/entities/file';
 import { timeAgo } from '@/shared/lib';
 import { Button, Modal } from '@/shared/ui';
-import { Attachments } from './Attachments';
-import { Gallery } from './Gallery';
+import { Attachments, Gallery, useFileIntake } from '@/features/task-files';
 import { TaskFields } from './TaskFields';
-import { useFileIntake } from '../model/useFileIntake';
 import styles from './TaskDialog.module.css';
 
 export function EditTask({

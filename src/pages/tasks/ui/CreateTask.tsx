@@ -6,10 +6,8 @@ import { artifactsStore } from '@/entities/artifact';
 import { uploadFile } from '@/entities/file';
 import { Button, Modal } from '@/shared/ui';
 import { cx } from '@/shared/lib';
-import { Attachments } from './Attachments';
-import { Gallery } from './Gallery';
+import { Attachments, Gallery, useFileIntake } from '@/features/task-files';
 import { TaskFields } from './TaskFields';
-import { useFileIntake } from '../model/useFileIntake';
 import styles from './TaskDialog.module.css';
 
 export function CreateTask({

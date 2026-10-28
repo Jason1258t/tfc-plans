@@ -1,6 +1,10 @@
 import { FileText, Plus, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { Markdown } from '@/components/Markdown';
+import { Markdown, toggleTaskLine } from '@/components/Markdown';
+import { MarkdownField } from '@/components/MarkdownField';
+import { Attachments, Gallery, useFileIntake } from '@/features/task-files';
+import { filesEnabled, removeFile, useFiles } from '@/entities/file';
+import { startUpload, useUploads } from '@/lib/uploads';
 import { useNick } from '@/entities/user';
 import { cx, timeAgo } from '@/shared/lib';
 import { Button, ErrorBox, Input, Modal, Select, Textarea } from '@/shared/ui';
@@ -80,6 +84,17 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
   const [newItem, setNewItem] = useState('');
+  const [pending, setPending] = useState<File[]>([]);
+  // Числовые id dev-задач отделены от id задач игроков в общем хранилище файлов.
+  const fileTaskId = id === null ? undefined : `dev:${id}`;
+  const files = useFiles();
+  const uploads = useUploads(fileTaskId);
+  const intake = useFileIntake(
+    fileTaskId
+      ? { taskId: fileTaskId, author: nick }
+      : { addPending: (list) => setPending((cur) => [...cur, ...list]) },
+  );
+  const removePending = (file: File) => setPending((cur) => cur.filter((f) => f !== file));
   const [doc, setDoc] = useState<number | null>(null);
 
   const load = useCallback(async () => {
@@ -97,7 +112,7 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
   useEffect(() => void load(), [load]);
 
   const changes = full ? diff(pick(full.task), draft) : null;
-  const dirty = id === null ? draft.title.trim().length > 0 : Object.keys(changes ?? {}).length > 0;
+  const dirty = Object.keys(id === null ? diff(EMPTY, draft) : (changes ?? {})).length > 0;
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((d) => ({ ...d, [k]: v }));
 
   const run = async (fn: () => Promise<void>) => {
@@ -117,6 +132,11 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
     run(async () => {
       if (id === null) {
         const f = await devApi.create({ ...draft, title: draft.title.trim() }, nick);
+        setFull(f);
+        setDraft(pick(f.task));
+        setEditBody(false);
+        pending.forEach((file) => startUpload(file, `dev:${f.task.id}`, nick));
+        setPending([]);
         onSaved(f.task, true);
         return;
       }
@@ -141,6 +161,9 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
   const remove = () =>
     run(async () => {
       if (!full || !confirm(`Удалить задачу #${full.task.id} вместе с журналом? Это не отменить.`)) return;
+      if (files.loading || files.error || uploads.length)
+        throw new Error('Дождитесь загрузки списка файлов и завершения отправки вложений перед удалением.');
+      for (const file of files.items.filter((f) => f.taskId === fileTaskId)) await removeFile(file);
       await devApi.remove(full.task.id, full.task.rev);
       onDeleted(full.task.id);
     });
@@ -165,7 +188,11 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
   return (
     <Modal
       wide
-      onClose={() => (!dirty || confirm('Закрыть без сохранения изменений?')) && onClose()}
+      onClose={() =>
+        !busy &&
+        (!(dirty || pending.length || note.trim()) || confirm('Закрыть без сохранения изменений?')) &&
+        onClose()
+      }
       title={title}
       actions={t && <CopyRef task={t} label />}
       footer={
@@ -181,7 +208,11 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
               {t.author} · создана {timeAgo(t.createdAt)} · rev {t.rev}
             </span>
           )}
-          <Button variant="primary" onClick={save} disabled={busy || !dirty || stale}>
+          <Button
+            variant="primary"
+            onClick={save}
+            disabled={busy || !dirty || stale || !draft.title.trim() || draft.checklist.some((c) => !c.text.trim())}
+          >
             {id === null ? 'Создать' : 'Сохранить'}
           </Button>
         </>
@@ -275,37 +306,111 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
           </div>
 
           <section>
+            {!draft.body && (
+              <div className={styles.templates}>
+                <span className={styles.muted}>Заготовка описания:</span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    set('kind', 'fix');
+                    set(
+                      'body',
+                      '## Что произошло\n\n\n## Как повторить\n\n1. \n\n## Ожидаемое поведение\n\n\n## Версия сборки и условия\n\n\n## Как проверить исправление\n\n',
+                    );
+                    setEditBody(true);
+                  }}
+                >
+                  Баг
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    set('area', 'addon');
+                    set(
+                      'body',
+                      '## Назначение аддона\n\n\n## Что добавить\n\n\n## Совместимость с модами сборки\n\n\n## Как проверить\n\n',
+                    );
+                    setEditBody(true);
+                  }}
+                >
+                  Аддон
+                </Button>
+              </div>
+            )}
             <div className={styles.sectionHead}>
               <h3>Описание</h3>
-              {!editBody && (
-                <Button size="sm" variant="ghost" onClick={() => setEditBody(true)}>
-                  Изменить
-                </Button>
-              )}
+              <Button size="sm" variant="ghost" onClick={() => setEditBody(!editBody)}>
+                {editBody ? 'Просмотр' : 'Изменить'}
+              </Button>
             </div>
             {editBody ? (
-              <Textarea
+              <MarkdownField
                 value={draft.body}
-                onChange={(e) => set('body', e.target.value)}
+                onChange={(value) => set('body', value)}
                 rows={8}
                 placeholder="Markdown: зачем, что сделать, как проверить"
               />
             ) : draft.body ? (
-              <Markdown source={draft.body} />
+              <Markdown
+                source={draft.body}
+                onToggleTask={(line) => {
+                  const next = toggleTaskLine(draft.body, line);
+                  if (next !== null) set('body', next);
+                }}
+              />
             ) : (
               <p className={styles.muted}>Без описания.</p>
             )}
           </section>
 
           <section>
-            <h3>Чек-лист</h3>
+            <h3>Вложения и скриншоты</h3>
+            <Gallery taskId={fileTaskId} pending={pending} onRemovePending={removePending} onAdd={intake.add} />
+            <Attachments
+              taskId={fileTaskId}
+              pending={pending}
+              onRemovePending={removePending}
+              onAdd={intake.add}
+              error={intake.error}
+            />
+            {files.error && <ErrorBox>{files.error}</ErrorBox>}
+            {filesEnabled && (
+              <p className={styles.muted}>
+                Скриншот можно вставить через Ctrl+V.{' '}
+                {id === null ? 'Файлы загрузятся после создания задачи.' : 'Вложения сохраняются сразу.'}
+              </p>
+            )}
+          </section>
+
+          <section>
+            <h3>
+              Чек-лист · {draft.checklist.filter((c) => c.done).length}/{draft.checklist.length}
+            </h3>
             <ul className={styles.checklist}>
               {draft.checklist.map((c, i) => (
                 <li key={i}>
                   <label className={cx(c.done && styles.checked)}>
-                    <input type="checkbox" checked={c.done} onChange={() => toggle(i)} />
-                    {c.text}
+                    <input
+                      type="checkbox"
+                      aria-label={`Выполнен пункт ${i + 1}`}
+                      checked={c.done}
+                      onChange={() => toggle(i)}
+                    />
                   </label>
+                  <Input
+                    aria-label={`Пункт ${i + 1}`}
+                    className={cx(styles.checkText, c.done && styles.checked)}
+                    value={c.text}
+                    maxLength={500}
+                    onChange={(e) =>
+                      set(
+                        'checklist',
+                        draft.checklist.map((item, j) => (j === i ? { ...item, text: e.target.value } : item)),
+                      )
+                    }
+                  />
                   <Button
                     size="sm"
                     variant="ghost"
