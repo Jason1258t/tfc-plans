@@ -415,6 +415,7 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   The comparison lists concrete fluid IDs, modes, consumption and time per bucket, with a simulated CDG valve.
   CLF `compat` resources from any namespace are merged with KubeJS by resource ID in shared `liquidFuel.ts`,
   used by both the site and MCP; a shared tag never extends CLF compatibility to other fluids. Source is preserved.
+  Fuel namespaces are checked against installed jar mod IDs; compatibility folders do not imply an installed mod.
   Jar extraction includes `data/<ns>/compat`; cache marker v24 invalidates the old incomplete extraction.
   Reference and KubeJS JSON requests revalidate the browser cache, so a data publication is visible on reload.
   CDG heat uses Java float arithmetic (ethanol 0.9 does not reach the double 1.8 threshold); consumption counts

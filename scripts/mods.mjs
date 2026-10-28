@@ -25,7 +25,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import AdmZip from 'adm-zip';
 import { createWashingRecipes, vanillaConcretePairs } from './mods/runtime-recipes.mjs';
-import { writeManifest } from './mods/manifest.mjs';
+import { modInfo, writeManifest } from './mods/manifest.mjs';
 import { writeGeo } from './mods/geo.mjs';
 import { buildReference } from './mods/reference.mjs';
 import { writeTags } from './mods/tags.mjs';
@@ -802,7 +802,10 @@ export async function buildMods({
   for (const [id, recipe] of runtime) if (!recipes.has(id)) recipes.set(id, recipe);
   log(`рецепты промывки Create, создаваемые при запуске: ${runtime.size}`);
   writeRecipes(recipes, OUT_RECIPES);
-  const ref = buildReference(dataDirs, recipes, parseLooseJson, fluidNames);
+  const ref = buildReference(dataDirs, recipes, parseLooseJson, fluidNames, [
+    'minecraft',
+    ...units.map((file) => modInfo(file).id),
+  ]);
   fs.writeFileSync(OUT_REFERENCE, JSON.stringify(ref));
   log(
     `справочник: ${ref.veins.length} жил, ${ref.fuels.length} топлива, ${ref.foods.length} еды, ${ref.metals.length} металлов, ${ref.tagCount} тегов — ${Math.round(fs.statSync(OUT_REFERENCE).size / 1024)}KB`,

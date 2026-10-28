@@ -292,7 +292,7 @@ export function oreChains(veins, recipes, tags) {
   return { smelt: smeltUsed, chains };
 }
 
-export function buildReference(dataDirs, recipes, parse, fluidNames = new Map()) {
+export function buildReference(dataDirs, recipes, parse, fluidNames = new Map(), installedMods = null) {
   const tags = itemTags(dataDirs, parse);
 
   const veins = [
@@ -343,7 +343,7 @@ export function buildReference(dataDirs, recipes, parse, fluidNames = new Map())
     nutrients: Object.fromEntries(NUTRIENTS.filter((n) => json[n]).map((n) => [n, json[n]])),
   }));
 
-  const liquid = buildLiquidFuels(dataDirs, recipes, parse, tags, fluidNames);
+  const liquid = buildLiquidFuels(dataDirs, recipes, parse, tags, fluidNames, installedMods);
 
   return { veins, smelt: smeltUsed, chains, metals, fuels, foods, liquid, tagCount: tags.size };
 }
@@ -416,11 +416,12 @@ function recipeIO(json) {
   return { inputs, outputs, meta };
 }
 
-function buildLiquidFuels(dataDirs, recipes, parse, itemTagMap, fluidNames) {
+function buildLiquidFuels(dataDirs, recipes, parse, itemTagMap, fluidNames, installedMods) {
   const ftags = itemTags(dataDirs, parse, 'fluid');
-  // Модовые неймспейсы в сборке — чтобы не показывать топливо модов, которых нет (createliquidfuel ссылается на createaddition)
-  const present = new Set();
-  for (const { dir } of dataDirs) if (fs.existsSync(dir)) for (const ns of fs.readdirSync(dir)) present.add(ns);
+  // Чужие датапаки могут создавать data/<namespace> отсутствующего мода: это не признак установки.
+  const present = new Set(installedMods ?? []);
+  if (!installedMods)
+    for (const { dir } of dataDirs) if (fs.existsSync(dir)) for (const ns of fs.readdirSync(dir)) present.add(ns);
   const flowing = (id) => /:flowing_/.test(id);
 
   const families = new Map();
