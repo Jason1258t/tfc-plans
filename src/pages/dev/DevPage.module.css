@@ -145,12 +145,6 @@
   white-space: nowrap;
 }
 
-.prio {
-  margin-right: 6px;
-  color: var(--danger);
-  font-weight: 700;
-}
-
 .meta {
   display: flex;
   align-items: center;
@@ -197,4 +191,8 @@
     grid-column: 1 / -1;
     flex-wrap: wrap;
   }
+}
+
+.title > [data-priority] {
+  margin-right: 8px;
 }

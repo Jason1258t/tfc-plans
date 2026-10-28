@@ -10,6 +10,8 @@ import { useDevTasks } from './model/useDevTasks';
 import { DevReports } from './ui/DevReports';
 import { CopyRef } from './ui/CopyRef';
 import { DevTaskDialog } from './ui/DevTaskDialog';
+import { DevPriority } from './ui/DevPriority';
+import { DevProgress } from './ui/DevProgress';
 import styles from './DevPage.module.css';
 
 /**
@@ -218,17 +220,13 @@ function DevRow({ task: t, onOpen }: { task: DevTask; onOpen: () => void }) {
         <span className={styles.num}>#{t.id}</span>
         <span className={cx(styles.status, STATUS_CLASS[t.status])}>{label(STATUSES, t.status)}</span>
         <span className={styles.title}>
-          {t.priority >= 2 && <span className={styles.prio}>{t.priority === 3 ? '‼' : '!'}</span>}
+          <DevPriority value={t.priority} />
           {t.title}
         </span>
         <span className={styles.meta}>
           <Tag>{label(KINDS, t.kind)}</Tag>
           {t.area && <Tag>{label(AREAS, t.area)}</Tag>}
-          {t.checklist.length > 0 && (
-            <span>
-              {done}/{t.checklist.length}
-            </span>
-          )}
+          <DevProgress done={done} total={t.checklist.length} />
           {!!t.notes && (
             <span>
               <MessageSquare size={12} /> {t.notes}

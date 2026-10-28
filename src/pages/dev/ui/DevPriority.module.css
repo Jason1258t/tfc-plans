@@ -1,0 +1,18 @@
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 50%;
+  background: #4285d4;
+  box-shadow: 0 0 0 1px var(--border);
+}
+.dot[data-priority='1'] {
+  background: var(--accent);
+}
+.dot[data-priority='2'] {
+  background: #e5b52d;
+}
+.dot[data-priority='3'] {
+  background: var(--danger);
+}

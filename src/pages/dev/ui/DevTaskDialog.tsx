@@ -21,6 +21,8 @@ import {
   type DevTaskFull,
   type TaskPatch,
 } from '../model/api';
+import { DevPriority } from './DevPriority';
+import { DevProgress } from './DevProgress';
 import { CopyRef } from './CopyRef';
 import { DevDocDialog } from './DevDocDialog';
 import styles from './DevTaskDialog.module.css';
@@ -325,7 +327,7 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
               </Select>
             </label>
             <label>
-              Важность
+              Важность <DevPriority value={draft.priority} />
               <Select value={draft.priority} onChange={(e) => set('priority', Number(e.target.value))}>
                 {PRIORITY_LABEL.map((p, i) => (
                   <option key={p} value={i}>
@@ -444,7 +446,8 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
 
           <details open>
             <summary>
-              Чек-лист · {draft.checklist.filter((c) => c.done).length}/{draft.checklist.length}
+              Чек-лист{' '}
+              <DevProgress done={draft.checklist.filter((c) => c.done).length} total={draft.checklist.length} />
             </summary>
             {draft.checklist.filter((c) => c.done).length > 5 && (
               <Button size="sm" variant="ghost" onClick={() => setShowCompleted(!showCompleted)}>
