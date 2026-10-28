@@ -1,19 +1,34 @@
 import { useCallback, useEffect, useState } from 'react';
 import { devApi, type DevTask } from './api';
 
-/** Раз в минуту, пока вкладка открыта, и при возврате на неё — список дешёвый, это один запрос к серверу сборки */
-const POLL_MS = 60_000;
+/** Кеш переживает переходы между страницами; фоновое обновление не скрывает список. */
+let cached: DevTask[] | null = null;
+let pending: Promise<DevTask[]> | null = null;
+let generation = 0;
+const POLL_MS = 10_000;
 
 export function useDevTasks() {
-  const [tasks, setTasks] = useState<DevTask[] | null>(null);
+  const [tasks, setTasks] = useState<DevTask[] | null>(cached);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const reload = useCallback(async () => {
+    const started = generation;
+    setRefreshing(true);
     try {
-      setTasks(await devApi.list());
+      pending ??= devApi.list().finally(() => {
+        pending = null;
+      });
+      const next = await pending;
+      if (started === generation) {
+        cached = next;
+        setTasks(next);
+      }
       setError(null);
     } catch (e) {
       setError((e as Error).message);
+    } finally {
+      setRefreshing(false);
     }
   }, []);
 
@@ -22,25 +37,34 @@ export function useDevTasks() {
     const tick = () => document.visibilityState === 'visible' && void reload();
     const timer = setInterval(tick, POLL_MS);
     document.addEventListener('visibilitychange', tick);
+    window.addEventListener('focus', tick);
     return () => {
       clearInterval(timer);
       document.removeEventListener('visibilitychange', tick);
+      window.removeEventListener('focus', tick);
     };
   }, [reload]);
 
-  /** Подменить задачу в списке после правки, не дожидаясь перечитывания */
   const put = useCallback(
     (t: DevTask) =>
       setTasks((list) => {
-        if (!list) return list;
-        const i = list.findIndex((x) => x.id === t.id);
-        const old = i >= 0 ? list[i] : {};
-        const next = { ...old, ...t };
-        return i >= 0 ? list.map((x, j) => (j === i ? next : x)) : [next, ...list];
+        generation++;
+        const current = list ?? [];
+        const old = current.find((x) => x.id === t.id);
+        cached = old ? current.map((x) => (x.id === t.id ? { ...x, ...t } : x)) : [t, ...current];
+        return cached;
       }),
     [],
   );
-  const drop = useCallback((id: number) => setTasks((list) => list?.filter((x) => x.id !== id) ?? list), []);
+  const drop = useCallback(
+    (id: number) =>
+      setTasks((list) => {
+        generation++;
+        cached = list?.filter((x) => x.id !== id) ?? null;
+        return cached;
+      }),
+    [],
+  );
 
-  return { tasks, error, reload, put, drop };
+  return { tasks, error, refreshing, reload, put, drop };
 }

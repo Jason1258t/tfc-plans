@@ -1,5 +1,5 @@
 import { FileText, Plus, Trash2 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Markdown, toggleTaskLine } from '@/components/Markdown';
 import { MarkdownField } from '@/components/MarkdownField';
 import { Attachments, Gallery, useFileIntake } from '@/features/task-files';
@@ -7,7 +7,7 @@ import { filesEnabled, removeFile, useFiles } from '@/entities/file';
 import { startUpload, useUploads } from '@/lib/uploads';
 import { useNick } from '@/entities/user';
 import { cx, timeAgo } from '@/shared/lib';
-import { Button, ErrorBox, Input, Modal, Select, Textarea } from '@/shared/ui';
+import { Button, ErrorBox, Input, Modal, Select } from '@/shared/ui';
 import {
   AREAS,
   DevError,
@@ -67,6 +67,8 @@ function diff(a: Draft, b: Draft): TaskPatch {
   return out as TaskPatch;
 }
 
+const BODY_LIMIT = 2400;
+
 const NOTE_KIND = { note: '', status: 'статус', report: 'отчёт' } as const;
 const NOTE_CLASS: Record<DevNote['kind'], string | undefined> = {
   note: undefined,
@@ -76,14 +78,18 @@ const NOTE_CLASS: Record<DevNote['kind'], string | undefined> = {
 
 export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
   const nick = useNick();
-  const [full, setFull] = useState<DevTaskFull | null>(null);
-  const [draft, setDraft] = useState<Draft>(EMPTY);
+  const [full, setFull] = useState<DevTaskFull | null>(() => (id === null ? null : devApi.cached(id)));
+  const [draft, setDraft] = useState<Draft>(() => {
+    const cached = id === null ? null : devApi.cached(id);
+    return cached ? pick(cached.task) : EMPTY;
+  });
   const [editBody, setEditBody] = useState(id === null);
   const [error, setError] = useState<string | null>(null);
   const [stale, setStale] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
   const [newItem, setNewItem] = useState('');
+  const [showCompleted, setShowCompleted] = useState(false);
   const [pending, setPending] = useState<File[]>([]);
   // Числовые id dev-задач отделены от id задач игроков в общем хранилище файлов.
   const fileTaskId = id === null ? undefined : `dev:${id}`;
@@ -97,10 +103,12 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
   const removePending = (file: File) => setPending((cur) => cur.filter((f) => f !== file));
   const [doc, setDoc] = useState<number | null>(null);
 
+  const editing = useRef(false);
   const load = useCallback(async () => {
     if (id === null) return;
     try {
       const f = await devApi.get(id);
+      if (editing.current) return;
       setFull(f);
       setDraft(pick(f.task));
       setStale(false);
@@ -111,8 +119,34 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
   }, [id]);
   useEffect(() => void load(), [load]);
 
+  useEffect(() => {
+    if (id === null) return;
+    let active = true;
+    const refresh = async () => {
+      if (document.visibilityState !== 'visible' || editing.current) return;
+      try {
+        const next = await devApi.get(id);
+        if (!active || editing.current) return;
+        setFull(next);
+        setDraft(pick(next.task));
+        setError(null);
+        setStale(false);
+      } catch (e) {
+        if (active) setError((e as Error).message);
+      }
+    };
+    const timer = setInterval(() => void refresh(), 10_000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [id]);
+
   const changes = full ? diff(pick(full.task), draft) : null;
   const dirty = Object.keys(id === null ? diff(EMPTY, draft) : (changes ?? {})).length > 0;
+  useEffect(() => {
+    editing.current = dirty || busy || editBody || !!note.trim();
+  }, [dirty, busy, editBody, note]);
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((d) => ({ ...d, [k]: v }));
 
   const run = async (fn: () => Promise<void>) => {
@@ -172,7 +206,8 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
     run(async () => {
       if (!full) return;
       const d = await devApi.createDoc(full.task.id, `План: ${full.task.title}`.slice(0, 300), nick);
-      await load();
+      const next = await devApi.get(full.task.id);
+      setFull((cur) => (cur ? { ...next, task: cur.task } : next));
       setDoc(d.id);
     });
 
@@ -211,9 +246,16 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
           <Button
             variant="primary"
             onClick={save}
-            disabled={busy || !dirty || stale || !draft.title.trim() || draft.checklist.some((c) => !c.text.trim())}
+            disabled={
+              busy ||
+              !dirty ||
+              stale ||
+              !draft.title.trim() ||
+              (id === null && draft.body.length > BODY_LIMIT) ||
+              draft.checklist.some((c) => !c.text.trim())
+            }
           >
-            {id === null ? 'Создать' : 'Сохранить'}
+            {busy ? 'Отправляю…' : id === null ? 'Создать' : 'Сохранить'}
           </Button>
         </>
       }
@@ -224,7 +266,14 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
           {stale && (
             <>
               {' '}
-              <Button size="sm" variant="ghost" onClick={() => void load()}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  editing.current = false;
+                  void load();
+                }}
+              >
                 Перечитать (ваши правки пропадут)
               </Button>
             </>
@@ -306,6 +355,12 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
           </div>
 
           <section>
+            {id === null && (
+              <p className={styles.muted}>
+                Кратко: цель и результат, примерно один экран (до {BODY_LIMIT} символов). Подробный план прикрепите
+                документом после создания задачи. {draft.body.length}/{BODY_LIMIT}
+              </p>
+            )}
             {!draft.body && (
               <div className={styles.templates}>
                 <span className={styles.muted}>Заготовка описания:</span>
@@ -350,6 +405,7 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
                 value={draft.body}
                 onChange={(value) => set('body', value)}
                 rows={8}
+                maxRows={16}
                 placeholder="Markdown: зачем, что сделать, как проверить"
               />
             ) : draft.body ? (
@@ -384,49 +440,58 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
             )}
           </section>
 
-          <section>
-            <h3>
+          <details open>
+            <summary>
               Чек-лист · {draft.checklist.filter((c) => c.done).length}/{draft.checklist.length}
-            </h3>
+            </summary>
+            {draft.checklist.filter((c) => c.done).length > 5 && (
+              <Button size="sm" variant="ghost" onClick={() => setShowCompleted(!showCompleted)}>
+                {showCompleted ? 'Скрыть старые выполненные' : 'Показать все выполненные'}
+              </Button>
+            )}
             <ul className={styles.checklist}>
-              {draft.checklist.map((c, i) => (
-                <li key={i}>
-                  <label className={cx(c.done && styles.checked)}>
-                    <input
-                      type="checkbox"
-                      aria-label={`Выполнен пункт ${i + 1}`}
-                      checked={c.done}
-                      onChange={() => toggle(i)}
+              {draft.checklist.map((c, i) =>
+                !showCompleted &&
+                c.done &&
+                draft.checklist.slice(i + 1).filter((item) => item.done).length >= 5 ? null : (
+                  <li key={i}>
+                    <label className={cx(c.done && styles.checked)}>
+                      <input
+                        type="checkbox"
+                        aria-label={`Выполнен пункт ${i + 1}`}
+                        checked={c.done}
+                        onChange={() => toggle(i)}
+                      />
+                    </label>
+                    <Input
+                      aria-label={`Пункт ${i + 1}`}
+                      className={cx(styles.checkText, c.done && styles.checked)}
+                      value={c.text}
+                      maxLength={500}
+                      onChange={(e) =>
+                        set(
+                          'checklist',
+                          draft.checklist.map((item, j) => (j === i ? { ...item, text: e.target.value } : item)),
+                        )
+                      }
                     />
-                  </label>
-                  <Input
-                    aria-label={`Пункт ${i + 1}`}
-                    className={cx(styles.checkText, c.done && styles.checked)}
-                    value={c.text}
-                    maxLength={500}
-                    onChange={(e) =>
-                      set(
-                        'checklist',
-                        draft.checklist.map((item, j) => (j === i ? { ...item, text: e.target.value } : item)),
-                      )
-                    }
-                  />
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    icon
-                    aria-label="Убрать пункт"
-                    onClick={() =>
-                      set(
-                        'checklist',
-                        draft.checklist.filter((_, j) => j !== i),
-                      )
-                    }
-                  >
-                    ×
-                  </Button>
-                </li>
-              ))}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      icon
+                      aria-label="Убрать пункт"
+                      onClick={() =>
+                        set(
+                          'checklist',
+                          draft.checklist.filter((_, j) => j !== i),
+                        )
+                      }
+                    >
+                      ×
+                    </Button>
+                  </li>
+                ),
+              )}
             </ul>
             <form
               className={styles.inline}
@@ -447,7 +512,7 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
                 <Plus size={14} /> Пункт
               </Button>
             </form>
-          </section>
+          </details>
 
           {full && (
             <>
@@ -476,16 +541,16 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
                 )}
               </section>
 
-              <section>
-                <h3>
+              <details open>
+                <summary>
                   Журнал{' '}
                   {full.noteCount > full.notes.length && (
                     <span className={styles.muted}>
                       (последние {full.notes.length} из {full.noteCount})
                     </span>
                   )}
-                </h3>
-                <ol className={styles.log}>
+                </summary>
+                <ol className={styles.log} tabIndex={0} aria-label="Журнал задачи">
                   {full.notes.map((n) => (
                     <li key={n.id} className={NOTE_CLASS[n.kind]}>
                       <div className={styles.logHead}>
@@ -498,17 +563,18 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
                   ))}
                 </ol>
                 <div className={styles.noteForm}>
-                  <Textarea
+                  <MarkdownField
                     value={note}
-                    onChange={(e) => setNote(e.target.value)}
+                    onChange={setNote}
+                    maxRows={10}
                     rows={2}
                     placeholder="Запись в журнал: что сделано, что проверено"
                   />
                   <Button size="sm" onClick={addNote} disabled={busy || !note.trim()}>
-                    Добавить запись
+                    {busy ? 'Отправляю…' : 'Добавить запись'}
                   </Button>
                 </div>
-              </section>
+              </details>
             </>
           )}
         </div>
@@ -518,7 +584,7 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
           id={doc}
           onClose={() => {
             setDoc(null);
-            void load();
+            if (!dirty) void load();
           }}
         />
       )}

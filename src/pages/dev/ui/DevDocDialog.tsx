@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
+import { MarkdownField } from '@/components/MarkdownField';
 import { Markdown } from '@/components/Markdown';
 import { useNick } from '@/entities/user';
 import { timeAgo } from '@/shared/lib';
-import { Button, ErrorBox, Input, Modal, Textarea } from '@/shared/ui';
+import { Button, ErrorBox, Input, Modal } from '@/shared/ui';
 import { DevError, devApi, type DevDoc } from '../model/api';
 import styles from './DevTaskDialog.module.css';
 
@@ -70,7 +71,7 @@ export function DevDocDialog({ id, onClose }: { id: number; onClose: () => void 
                   Отмена
                 </Button>
                 <Button variant="primary" onClick={save} disabled={busy || !dirty || !edit.title.trim()}>
-                  Сохранить
+                  {busy ? 'Сохраняю…' : 'Сохранить'}
                 </Button>
               </>
             )}
@@ -88,11 +89,10 @@ export function DevDocDialog({ id, onClose }: { id: number; onClose: () => void 
             maxLength={300}
             aria-label="Название плана"
           />
-          <Textarea
-            mono
+          <MarkdownField
             rows={22}
             value={edit.content}
-            onChange={(e) => setEdit({ ...edit, content: e.target.value })}
+            onChange={(content) => setEdit({ ...edit, content })}
             placeholder="Markdown"
           />
         </div>

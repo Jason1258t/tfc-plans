@@ -6,7 +6,7 @@ import { formatSize, type FileMeta } from '@/entities/file';
 import type { Task } from '@/entities/task';
 import { cx, timeAgo } from '@/shared/lib';
 import { Button, Search } from '@/shared/ui';
-import styles from '../FilesPage.module.css';
+import styles from './ReportList.module.css';
 
 interface Props {
   kind: 'crash' | 'log';
@@ -20,9 +20,9 @@ interface Props {
 }
 
 /** Строка для агента: по ней MCP report_get находит отчёт (её же печатает tfc report) */
-const agentLine = (f: FileMeta) => `Отчёт «${f.name}» — tfc-report:${f.id} — ${location.origin}/docs?report=${f.id}`;
+const agentLine = (f: FileMeta) => `Отчёт «${f.name}» — tfc-report:${f.id} — ${location.origin}/dev?report=${f.id}`;
 
-/** Служебный подраздел «Документов»: логи или краш-репорты, загруженные из игры командой tfc report */
+/** Служебный подраздел «Разработки»: логи или краш-репорты, загруженные из игры командой tfc report */
 export function ReportList({ kind, files, taskById, focusId, busyId, onDownload, onRemove }: Props) {
   const [q, setQ] = useState('');
   const [copied, setCopied] = useState<string | null>(null);

@@ -1,11 +1,13 @@
 import { GitBranch, MessageSquare, Plus, Search as SearchIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useFiles } from '@/entities/file';
 import { firebaseEnabled, useSearchTrack } from '@/shared/api';
 import { cx, timeAgo } from '@/shared/lib';
 import { Button, ErrorBox, Search, Segmented, Select, Tag } from '@/shared/ui';
 import { AREAS, KINDS, label, STATUSES, type DevStatus, type DevTask } from './model/api';
 import { useDevTasks } from './model/useDevTasks';
+import { DevReports } from './ui/DevReports';
 import { CopyRef } from './ui/CopyRef';
 import { DevTaskDialog } from './ui/DevTaskDialog';
 import styles from './DevPage.module.css';
@@ -33,13 +35,22 @@ const STATUS_CLASS: Record<DevStatus, string | undefined> = {
 };
 
 export function DevPage() {
-  const { tasks, error, reload, put, drop } = useDevTasks();
+  const { tasks, error, refreshing, reload, put, drop } = useDevTasks();
   const [params, setParams] = useSearchParams();
   const [view, setView] = useState<View>('open');
   const [kind, setKind] = useState('');
   const [area, setArea] = useState('');
   const [query, setQuery] = useState('');
 
+  const { items: reportFiles } = useFiles();
+  const reportKind = reportFiles.find((f) => f.id === params.get('report'))?.report?.kind;
+  const section =
+    reportKind ??
+    (params.get('section') === 'log'
+      ? 'log'
+      : params.get('section') === 'crash' || params.has('report')
+        ? 'crash'
+        : 'tasks');
   const open = params.get('task');
   const setOpen = (id: number | 'new' | null) =>
     setParams(
@@ -96,65 +107,90 @@ export function DevPage() {
         </Button>
       </div>
 
-      <div className={styles.filters}>
-        <Segmented
-          className={styles.views}
-          label="Какие задачи"
-          value={view}
-          onChange={setView}
-          options={[
-            { value: 'open', label: 'Открытые', count: counts.open },
-            { value: 'doing', label: 'В работе', count: counts.doing },
-            { value: 'closed', label: 'Закрытые', count: counts.closed },
-            { value: 'all', label: 'Все', count: counts.all },
-          ]}
-        />
-        <Select className={styles.filter} value={kind} onChange={(e) => setKind(e.target.value)} aria-label="Вид">
-          <option value="">Любой вид</option>
-          {KINDS.map((k) => (
-            <option key={k.value} value={k.value}>
-              {k.label}
-            </option>
-          ))}
-        </Select>
-        <Select className={styles.filter} value={area} onChange={(e) => setArea(e.target.value)} aria-label="Область">
-          <option value="">Любая область</option>
-          {AREAS.map((a) => (
-            <option key={a.value} value={a.value}>
-              {a.label}
-            </option>
-          ))}
-        </Select>
-        <Search className={styles.search}>
-          <SearchIcon size={15} />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Поиск: слова, #номер, ветка"
-            aria-label="Поиск задач разработки"
-          />
-        </Search>
-      </div>
+      <Segmented
+        tabs
+        label="Подраздел разработки"
+        value={section}
+        onChange={(value) => setParams(value === 'tasks' ? {} : { section: value })}
+        options={[
+          { value: 'tasks', label: 'Задачи' },
+          { value: 'crash', label: 'Краш-репорты' },
+          { value: 'log', label: 'Логи' },
+        ]}
+      />
+      {section !== 'tasks' ? (
+        <DevReports kind={section} focusId={params.get('report')} />
+      ) : (
+        <>
+          <p className={styles.hint} role="status">
+            {refreshing ? 'Обновляю…' : error ? 'Не удалось обновить данные' : 'Автообновление каждые 10 секунд'}
+          </p>
+          <div className={styles.filters}>
+            <Segmented
+              className={styles.views}
+              label="Какие задачи"
+              value={view}
+              onChange={setView}
+              options={[
+                { value: 'open', label: 'Открытые', count: counts.open },
+                { value: 'doing', label: 'В работе', count: counts.doing },
+                { value: 'closed', label: 'Закрытые', count: counts.closed },
+                { value: 'all', label: 'Все', count: counts.all },
+              ]}
+            />
+            <Select className={styles.filter} value={kind} onChange={(e) => setKind(e.target.value)} aria-label="Вид">
+              <option value="">Любой вид</option>
+              {KINDS.map((k) => (
+                <option key={k.value} value={k.value}>
+                  {k.label}
+                </option>
+              ))}
+            </Select>
+            <Select
+              className={styles.filter}
+              value={area}
+              onChange={(e) => setArea(e.target.value)}
+              aria-label="Область"
+            >
+              <option value="">Любая область</option>
+              {AREAS.map((a) => (
+                <option key={a.value} value={a.value}>
+                  {a.label}
+                </option>
+              ))}
+            </Select>
+            <Search className={styles.search}>
+              <SearchIcon size={15} />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Поиск: слова, #номер, ветка"
+                aria-label="Поиск задач разработки"
+              />
+            </Search>
+          </div>
 
-      {error && (
-        <ErrorBox>
-          {error}{' '}
-          <Button size="sm" variant="ghost" onClick={() => void reload()}>
-            Повторить
-          </Button>
-        </ErrorBox>
+          {error && (
+            <ErrorBox>
+              {error}{' '}
+              <Button size="sm" variant="ghost" onClick={() => void reload()}>
+                Повторить
+              </Button>
+            </ErrorBox>
+          )}
+          {!tasks && !error && <p className={styles.empty}>Загружаю…</p>}
+          {tasks && !list.length && <p className={styles.empty}>Задач не найдено.</p>}
+
+          <ul className={styles.list}>
+            {list.map((t) => (
+              <DevRow key={t.id} task={t} onOpen={() => setOpen(t.id)} />
+            ))}
+          </ul>
+        </>
       )}
-      {!tasks && !error && <p className={styles.empty}>Загружаю…</p>}
-      {tasks && !list.length && <p className={styles.empty}>Задач не найдено.</p>}
-
-      <ul className={styles.list}>
-        {list.map((t) => (
-          <DevRow key={t.id} task={t} onOpen={() => setOpen(t.id)} />
-        ))}
-      </ul>
-
       {open && (
         <DevTaskDialog
+          key={open}
           id={open === 'new' ? null : Number(open)}
           onClose={() => setOpen(null)}
           onSaved={(t, created) => {

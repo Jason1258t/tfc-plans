@@ -66,7 +66,7 @@ async function reportsList(a) {
   return `${page(list, a, (d) => [line(d)])}\nСкачать и разобрать: report_get id=<id>.`;
 }
 
-/** id из «tfc-report:<id>», ссылки …/docs?report=<id> или голого id */
+/** id из «tfc-report:<id>», ссылки …/dev?report=<id> или голого id */
 function reportId(key) {
   const k = String(key ?? '').trim();
   const m = k.match(/(?:tfc-report:|[?&]report=)([A-Za-z0-9]{20})\b/) ?? k.match(/^([A-Za-z0-9]{20})$/);
@@ -156,14 +156,14 @@ const mainFile = (files) => files.find((f) => /crash-.*\.txt$|hs_err_pid/.test(f
 
 async function reportGet(a) {
   const id = reportId(a.id);
-  if (!id) return 'Укажите id отчёта: «tfc-report:<id>», ссылку …/docs?report=<id> или 20-значный id (reports_list).';
+  if (!id) return 'Укажите id отчёта: «tfc-report:<id>», ссылку …/dev?report=<id> или 20-значный id (reports_list).';
   const { dir, meta, files } = await fetchReport(id);
   const r = meta.report ?? {};
   const head = [
     `Отчёт ${id}: ${KIND[r.kind] ?? 'файл'} · ${r.label || r.type || '—'} · «${meta.name}» ${kb(meta.size)} · ${meta.author}, ${dateOf(meta.createdAt)}`,
     ...(r.note ? [`Описание: «${r.note}»`] : []),
     ...(meta.taskId ? [`Задача: ${meta.taskId} (task_get)`] : []),
-    `На сайте: ${SITE}/docs?report=${id}; локально: ${path.join(dir, 'files')}/<файл>`,
+    `На сайте: ${SITE}/dev?report=${id}; локально: ${path.join(dir, 'files')}/<файл>`,
     `Файлы (${files.length}):`,
     ...files.map((f) => `  ${f.rel} — ${kb(f.size)}`),
   ];
@@ -208,7 +208,7 @@ export const TOOLS = [
   {
     name: 'reports_list',
     description:
-      'Logs and crash reports players uploaded to the site with `tfc report` (site «Документы» → «Краш-репорты»/«Логи»): id, type, files, author, note. Newest first; cached 1 min.',
+      'Logs and crash reports players uploaded to the site with `tfc report` (site «Разработка» → «Краш-репорты»/«Логи»): id, type, files, author, note. Newest first; cached 1 min.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -223,7 +223,7 @@ export const TOOLS = [
   {
     name: 'report_get',
     description:
-      'Fetch an uploaded report (id, «tfc-report:<id>» or …/docs?report=<id> link) into a local cache, unzip, list files with local paths and analyse the main file (crash report / hs_err, else the newest log) like log_analyze. file= — another file of the archive; mode=text — raw lines (offset/limit, query = regex filter); mode=none — only the list.',
+      'Fetch an uploaded report (id, «tfc-report:<id>» or …/dev?report=<id> link) into a local cache, unzip, list files with local paths and analyse the main file (crash report / hs_err, else the newest log) like log_analyze. file= — another file of the archive; mode=text — raw lines (offset/limit, query = regex filter); mode=none — only the list.',
     inputSchema: {
       type: 'object',
       properties: {
