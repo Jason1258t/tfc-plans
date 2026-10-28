@@ -48,6 +48,8 @@ export function openJobs(dataDir, { repoDir, managedRepo, repoUrl, repoBranch, h
 
   const queue = [];
   let running = null;
+  let draining = false;
+  let accepting = 0;
 
   const save = (j) => writeJsonAtomic(file(j.id, '.json'), j);
   const appendLog = (j, text) => fs.appendFileSync(file(j.id, '.log'), text);
@@ -166,6 +168,7 @@ export function openJobs(dataDir, { repoDir, managedRepo, repoUrl, repoBranch, h
   return {
     /** Поставить задание в очередь; повтор такого же, ещё не начатого, не дублируется */
     async enqueue({ kind, snapshot, parts = [], pull = false, publish = 'none', allowRemovals = false, by }) {
+      if (draining) throw new HttpError(503, 'Сервер ожидает завершения заданий перед остановкой');
       if (!['build', 'publish'].includes(kind)) throw new HttpError(400, 'kind — build или publish');
       if (!Array.isArray(parts) || parts.some((p) => !PARTS.includes(p)))
         throw new HttpError(400, `parts — из ${PARTS.join(', ')}`);
@@ -193,8 +196,13 @@ export function openJobs(dataDir, { repoDir, managedRepo, repoUrl, repoBranch, h
         createdAt: new Date().toISOString(),
       };
       jobs.set(j.id, j);
-      await save(j);
-      queue.push(j);
+      accepting++;
+      try {
+        await save(j);
+        queue.push(j);
+      } finally {
+        accepting--;
+      }
       setImmediate(pump);
       return j;
     },
@@ -227,6 +235,13 @@ export function openJobs(dataDir, { repoDir, managedRepo, repoUrl, repoBranch, h
         if (e.code !== 'ENOENT') throw e;
       }
       return { ...j, result: j.result ?? null, log, logSize: size };
+    },
+
+    async drain() {
+      draining = true;
+      while (running || queue.length || accepting) {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
     },
 
     busy: () => ({ running: running?.id ?? null, queued: queue.map((q) => q.id) }),

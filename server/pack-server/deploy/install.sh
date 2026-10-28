@@ -48,6 +48,33 @@ mkdir -p "$APP" "$DATA"
 chown tfcpack:tfcpack "$DATA"
 chmod 750 "$DATA"
 
+# Обновления сервера выполняются последовательно. Останавливаем до замены файлов:
+# сервер завершит задания, а systemd оставит дочерние процессы работать до его выхода.
+exec 9>/run/lock/tfc-pack-install.lock
+flock 9
+sed "s|/var/lib/tfc-pack|$DATA|" "$SRC/deploy/tfc-pack.service" > /etc/systemd/system/tfc-pack.service
+systemctl daemon-reload
+if systemctl is-active --quiet tfc-pack; then
+  echo "→ Останавливаю сервер после завершения заданий"
+  # Нужно и для первого обновления: старый процесс ещё не умеет ждать очередь при SIGTERM.
+  node --input-type=module - "$DATA" <<'JS'
+import fs from 'node:fs';
+import path from 'node:path';
+import { setTimeout } from 'node:timers/promises';
+const dir = path.join(process.argv[2], 'jobs');
+for (;;) {
+  const busy = fs.existsSync(dir) ? fs.readdirSync(dir)
+    .filter((n) => /^j.*\.json$/.test(n) && !/\.(spec|result)\.json$/.test(n))
+    .map((n) => JSON.parse(fs.readFileSync(path.join(dir, n), 'utf8')))
+    .filter((j) => ['running', 'queued'].includes(j.state)) : [];
+  if (!busy.length) break;
+  console.log('→ Жду задания:', busy.map((j) => j.id).join(', '));
+  await setTimeout(5000);
+}
+JS
+  systemctl stop tfc-pack
+fi
+
 # Код
 echo "→ Копирую сервер в $APP"
 rm -rf "$APP/lib"

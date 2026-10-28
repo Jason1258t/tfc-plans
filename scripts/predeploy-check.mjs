@@ -23,7 +23,7 @@ if (process.argv.includes('--full')) {
   process.exit(0);
 }
 
-const assets = path.join(ROOT, 'dist', 'assets');
+const assets = path.join(process.env.TFC_DEPLOY_DIST || path.join(ROOT, 'dist'), 'assets');
 const files = fs.existsSync(assets) ? fs.readdirSync(assets).filter((f) => f.endsWith('.js')) : [];
 const ok = files.some((f) => fs.readFileSync(path.join(assets, f), 'utf8').includes(PROJECT));
 if (!ok) {
