@@ -18,6 +18,7 @@ When finishing work: update the topic file, and this index only if a line below 
 
 ## In progress / waiting (details — [pending.md](state/pending.md))
 
+- Host: CDG ↔ IE recipe fixes `u20261028-203009-ce84` (dev #118): pull, restart, check four recipes, approve.
 - Host: concrete lime mix update `u20261028-155634-36f7` (dev #124): `tfc admin updates pull`, restart, check recipes
   and concrete production in game, then `tfc admin updates approve`.
 - Host: pack update `u20261022-150945-83a0` (Chinese KubeJS messages → ru/en): `tfc admin updates pull`, check in game,
