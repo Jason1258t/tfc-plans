@@ -530,7 +530,12 @@ function buildLiquidFuels(dataDirs, recipes, parse, itemTagMap, fluidNames) {
     // Нефть оставляем всегда: её не делают рецептами, а добывают качалкой
     .filter(
       (f) =>
-        f.fluids.length && (f.tag === 'c:crude_oil' || f.engines || f.ieGenerator || f.blazeBurner || f.produce.length),
+        f.fluids.length &&
+        (f.tag === 'c:crude_oil' ||
+          f.engines ||
+          f.ieGenerator ||
+          blazeFuels.some((fuel) => f.fluids.includes(fuel.fluid)) ||
+          f.produce.length),
     )
     .map((f) => ({
       ...f,
