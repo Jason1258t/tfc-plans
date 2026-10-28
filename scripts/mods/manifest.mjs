@@ -34,7 +34,7 @@ function versionFromName(file) {
   return parts.filter((p) => p !== '1.21.1' && p !== '1.21').at(-1) ?? null;
 }
 
-function modInfo(file) {
+export function modInfo(file) {
   let toml = null;
   let implVersion = null;
   try {
