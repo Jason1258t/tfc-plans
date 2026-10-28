@@ -152,7 +152,7 @@
   gap: 6px;
 }
 
-.noteForm textarea {
+.noteForm > div {
   width: 100%;
 }
 
@@ -167,4 +167,17 @@
   align-items: center;
   gap: 6px;
   margin-bottom: 8px;
+}
+
+.body summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.log {
+  max-height: 360px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }

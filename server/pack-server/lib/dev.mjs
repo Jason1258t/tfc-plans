@@ -241,6 +241,8 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
   }
 
   function createTask(b, by, { now = Date.now(), legacy = null, createdAt, updatedAt, doneAt } = {}) {
+    if (!legacy && typeof b.body === 'string' && b.body.length > 2400)
+      throw bad('Описание — до 2400 символов (примерно один экран). Подробный план прикрепите документом к задаче.');
     const f = { kind: 'feature', status: 'todo', priority: 1, ...taskFields(b, true) };
     const note = text(b.note, 'note', LIMITS.note);
     return tx(() => {

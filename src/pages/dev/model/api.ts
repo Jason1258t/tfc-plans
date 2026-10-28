@@ -122,6 +122,7 @@ async function call<T>(method: string, path: string, body?: object): Promise<T> 
   try {
     res = await fetch(`${BASE}/dev/${path}`, {
       method,
+      signal: AbortSignal.timeout(20_000),
       headers: await headers(),
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -138,13 +139,27 @@ export type TaskPatch = Partial<
   Pick<DevTask, 'title' | 'body' | 'kind' | 'area' | 'status' | 'priority' | 'assignee' | 'branch' | 'checklist'>
 >;
 
+const taskCache = new Map<number, DevTaskFull>();
+const cacheTask = (full: DevTaskFull) => {
+  taskCache.delete(full.task.id);
+  taskCache.set(full.task.id, full);
+  if (taskCache.size > 40) taskCache.delete(taskCache.keys().next().value!);
+  return full;
+};
+
 export const devApi = {
+  cached: (id: number) => taskCache.get(id) ?? null,
   list: () => call<{ tasks: DevTask[] }>('GET', 'tasks').then((r) => r.tasks),
-  get: (id: number) => call<DevTaskFull>('GET', `tasks/${id}?notes=200`),
-  create: (t: TaskPatch & { title: string }, by: string) => call<DevTaskFull>('POST', 'tasks', { ...t, by }),
+  get: (id: number) => call<DevTaskFull>('GET', `tasks/${id}?notes=200`).then(cacheTask),
+  create: (t: TaskPatch & { title: string }, by: string) =>
+    call<DevTaskFull>('POST', 'tasks', { ...t, by }).then(cacheTask),
   update: (id: number, baseRev: number, patch: TaskPatch, by: string) =>
-    call<DevTaskFull>('PATCH', `tasks/${id}`, { ...patch, baseRev, by }),
-  remove: (id: number, baseRev: number) => call('DELETE', `tasks/${id}?baseRev=${baseRev}`),
+    call<DevTaskFull>('PATCH', `tasks/${id}`, { ...patch, baseRev, by }).then(cacheTask),
+  remove: (id: number, baseRev: number) =>
+    call('DELETE', `tasks/${id}?baseRev=${baseRev}`).then((result) => {
+      taskCache.delete(id);
+      return result;
+    }),
   note: (id: number, text: string, by: string) => call<DevTaskFull>('POST', `tasks/${id}/notes`, { text, by }),
   doc: (id: number) => call<{ doc: DevDoc }>('GET', `docs/${id}`).then((r) => r.doc),
   createDoc: (task: number, title: string, by: string) =>

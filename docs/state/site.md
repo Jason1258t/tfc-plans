@@ -16,6 +16,17 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 - Verified against Minecraft 1.21.1 and Create 6.0.10 jars, the real catalogue search (all 16 active templates),
   lint and TypeScript. Browser access was denied by the permission gate; not checked in game.
 
+## Dev section improvements (2026-10-28, #114)
+
+- Game reports (`tfc report`): «Краш-репорты» and «Логи» moved from Documents into `/dev`; old report links redirect.
+  Stored files and report ids are unchanged. CLI/MCP generate `/dev?report=…` links.
+- Task list keeps an in-memory cache across navigation and refreshes every 10 seconds while visible. Open tasks
+  refresh without replacing unsaved edits. Sending operations show progress; errors retain the draft.
+- Description uses the shared live Markdown editor with bounded height. New descriptions have a 2400-character
+  limit on client and server; detailed plans go into attached documents. Existing long tasks and imports still work.
+- Checklist and journal collapse; only the last five completed checklist entries are shown initially, with a toggle
+  for the rest. Journal has its own scroll area, keeping the form manageable.
+
 ## Structure (reworked 2026-10-13)
 
 - Header: Задачи · Документы (file storage) · Схемы · Датапаки · Справочник; on the right — pack-update bell.
@@ -139,10 +150,10 @@ exhaustively checked.
 `/docs` (`/files` points there): whole storage in one list — search by name, author, task and schematic, filter by
 kind, upload without a task, download, delete (schematic-library sources cannot be deleted from here).
 
-- **Service subsections** (2026-10-25, task BDoIffX3jFbb4laaIr5N): tabs «Файлы» · «Краш-репорты» · «Логи»
+- **Service reports** (2026-10-25, moved to `/dev` on 2026-10-28, #114): tabs «Краш-репорты» · «Логи»
   (`?section=crash|log`). Reports are `files` docs with a `report` field (`FileReport` in `entities/file`), uploaded by
   `tfc report` through the pack server; «Файлы» no longer lists them. Row: type label, size, author, time, file count,
-  note, inner file names, task link; buttons copy-for-agent (`Отчёт «…» — tfc-report:<id> — …/docs?report=<id>`),
+  note, inner file names, task link; buttons copy-for-agent (`Отчёт «…» — tfc-report:<id> — …/dev?report=<id>`),
   download, delete. `?report=<id>` opens the right tab, highlights and scrolls to the row. Checked on the dev server
   (desktop and 375 px) with three real test reports uploaded via a local pack server, then deleted.
 

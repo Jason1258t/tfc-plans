@@ -1,5 +1,5 @@
 /**
- * tfc report — логи и краш-репорты из папки игры (и сервера хоста) на сайт: «Документы» → «Краш-репорты» / «Логи».
+ * tfc report — логи и краш-репорты из папки игры (и сервера хоста) на сайт: «Разработка» → «Краш-репорты» / «Логи».
  * Один файл — как есть (больше 1 МБ — в zip), несколько — одним zip. Адреса игроков (/1.2.3.4:5678) вырезаются
  * до загрузки: файлы на сайте видны всем. После загрузки — id для агента: tfc-report:<id> → MCP report_get.
  */
@@ -178,7 +178,7 @@ function printFiles(files, limit = 10) {
 }
 
 /** Строка для агента: её же копирует кнопка на сайте */
-export const agentLine = (r) => `Отчёт «${r.name}» — tfc-report:${r.id} — ${SITE}/docs?report=${r.id}`;
+export const agentLine = (r) => `Отчёт «${r.name}» — tfc-report:${r.id} — ${SITE}/dev?report=${r.id}`;
 
 /**
  * tfc report [вид] [выбор]: без вида — список видов с числом файлов; без выбора — список файлов и вопрос
@@ -250,7 +250,7 @@ export async function cmdReport(api, roots, args, { note, task, yes, dryRun }) {
       files: picked.map((f) => ({ name: f.rel, size: f.size, mtime: Math.round(f.mtime) })),
     }),
   );
-  console.log(`${green('Загружено')} — «Документы» → ${type.kind === 'crash' ? '«Краш-репорты»' : '«Логи»'}.`);
+  console.log(`${green('Загружено')} — «Разработка» → ${type.kind === 'crash' ? '«Краш-репорты»' : '«Логи»'}.`);
   console.log(dim('Адреса игроков в тексте заменены на /<ip>.'));
   console.log(`\nДля агента (скопируйте в чат):\n  ${bold(agentLine(r))}`);
 }
