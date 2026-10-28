@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronUp, Download, FlipHorizontal2, RotateCcw } from 'lucide-react';
-import { Segmented, Button, ButtonLink, Card, SectionShell, Table, TableWrap } from '@/shared/ui';
+import { Segmented, Button, ButtonLink, Card, SectionShell, Table, TableWrap, tableStyles } from '@/shared/ui';
 import { lazy, Suspense, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { iconUrl, itemName, useItems, type ItemIndex, sourceName, useTags, ItemIcon } from '@/shared/pack-data';
@@ -517,7 +517,7 @@ function Materials({ m, shape, data }: { m: Multiblock; shape: MbShape; data: Mu
           <thead>
             <tr>
               <th>Блок</th>
-              <th className="num">Штук</th>
+              <th className={tableStyles.numeric}>Штук</th>
               <th>Чем можно заменить</th>
             </tr>
           </thead>
@@ -535,7 +535,7 @@ function Materials({ m, shape, data }: { m: Multiblock; shape: MbShape; data: Mu
                       </span>
                     </span>
                   </td>
-                  <td className="num">{count}</td>
+                  <td className={tableStyles.numeric}>{count}</td>
                   <td>
                     {alt ? (
                       <>

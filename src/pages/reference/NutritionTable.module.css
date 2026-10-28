@@ -1,0 +1,30 @@
+/* Питательность относится к справочнику еды, а не к общей таблице. */
+.table th.nutrient {
+  text-align: right;
+}
+
+.table .nutrient[data-nutrient='grain']:not([data-empty]) {
+  color: var(--nutrient-grain);
+}
+
+.table .nutrient[data-nutrient='fruit']:not([data-empty]) {
+  color: var(--nutrient-fruit);
+}
+
+.table .nutrient[data-nutrient='vegetables']:not([data-empty]) {
+  color: var(--accent);
+}
+
+.table .nutrient[data-nutrient='protein']:not([data-empty]) {
+  color: var(--nutrient-protein);
+}
+
+.table .nutrient[data-nutrient='dairy']:not([data-empty]) {
+  color: var(--diamond);
+}
+
+@media (max-width: 640px) {
+  .table .nutrient {
+    display: none;
+  }
+}

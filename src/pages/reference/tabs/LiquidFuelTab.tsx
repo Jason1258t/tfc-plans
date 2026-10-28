@@ -1,5 +1,5 @@
 import { ArrowRight, Ban, Search } from 'lucide-react';
-import { Button, Card, CardHead, Table, TableWrap } from '@/shared/ui';
+import { Button, Card, CardHead, Table, TableWrap, tableStyles } from '@/shared/ui';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { datapacksStore } from '@/entities/datapack';
@@ -216,7 +216,7 @@ function BurnTable({ families, items }: { families: LiquidFamily[]; items: ItemI
                   <td>{fmtEngine(f.engines?.normal ?? null)}</td>
                   <td>{fmtEngine(f.engines?.modular ?? null)}</td>
                   <td>{fmtEngine(f.engines?.huge ?? null)}</td>
-                  <td className="num">
+                  <td className={tableStyles.numeric}>
                     {f.burner != null ? `×${f.burner}` : ''}
                     {f.blazeBurner && (
                       <span className="faint small">
@@ -226,7 +226,7 @@ function BurnTable({ families, items }: { families: LiquidFamily[]; items: ItemI
                     )}
                     {f.burner == null && !f.blazeBurner && <span className="faint">—</span>}
                   </td>
-                  <td className="num">{f.ieGenerator?.burnTime ?? <span className="faint">—</span>}</td>
+                  <td className={tableStyles.numeric}>{f.ieGenerator?.burnTime ?? <span className="faint">—</span>}</td>
                 </tr>
               );
             })}

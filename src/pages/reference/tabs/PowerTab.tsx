@@ -15,7 +15,7 @@ import {
   type Setting,
 } from '@/lib/power';
 import { cx } from '@/shared/lib';
-import { Input, SectionShell, Card, Table, TableWrap, contentStyles as content } from '@/shared/ui';
+import { Input, SectionShell, Card, Table, TableWrap, contentStyles as content, tableStyles } from '@/shared/ui';
 import { ItemIcon } from '@/shared/pack-data';
 import { IeConsumers } from '@/features/reference-tabs';
 import styles from './PowerTab.module.css';
@@ -446,9 +446,9 @@ function EeLoads({ data, s }: { data: PowerData; s: Get }) {
             <thead>
               <tr>
                 <th>Устройство</th>
-                <th className="num">Сопротивление</th>
-                <th className="num">Ток</th>
-                <th className="num">Мощность</th>
+                <th className={tableStyles.numeric}>Сопротивление</th>
+                <th className={tableStyles.numeric}>Ток</th>
+                <th className={tableStyles.numeric}>Мощность</th>
               </tr>
             </thead>
             <tbody>
@@ -462,11 +462,11 @@ function EeLoads({ data, s }: { data: PowerData; s: Get }) {
                         {x.name}
                       </span>
                     </td>
-                    <td className="num">
+                    <td className={tableStyles.numeric}>
                       <Cfg s={x.r} unit="Ом" digits={1} />
                     </td>
-                    <td className="num">{r ? `${num(r.current, 2)} А` : '—'}</td>
-                    <td className="num">{r ? watts(r.power) : '—'}</td>
+                    <td className={tableStyles.numeric}>{r ? `${num(r.current, 2)} А` : '—'}</td>
+                    <td className={tableStyles.numeric}>{r ? watts(r.power) : '—'}</td>
                   </tr>
                 );
               })}
@@ -478,14 +478,14 @@ function EeLoads({ data, s }: { data: PowerData; s: Get }) {
                       Электродвигатель, полная нагрузка
                     </span>
                   </td>
-                  <td className="num">
+                  <td className={tableStyles.numeric}>
                     {num(m.loadedFactor * motorR.value, 1)} Ом{' '}
                     <span className="faint small">
                       ({num(m.loadedFactor, 2)} × <Cfg s={motorR} />)
                     </span>
                   </td>
-                  <td className="num">{num(volts / (m.loadedFactor * motorR.value), 2)} А</td>
-                  <td className="num">
+                  <td className={tableStyles.numeric}>{num(volts / (m.loadedFactor * motorR.value), 2)} А</td>
+                  <td className={tableStyles.numeric}>
                     {motorMinV && volts <= motorMinV.value
                       ? 'стоит'
                       : watts((volts * volts) / (m.loadedFactor * motorR.value))}
@@ -553,10 +553,10 @@ function IeNet({ data, s, ee, att }: { data: PowerData; s: Get; ee: Get; att: Ge
             <thead>
               <tr>
                 <th>Провод</th>
-                <th className="num">Пропускает</th>
-                <th className="num">Ввод коннектора</th>
-                <th className="num">Пролёт до</th>
-                <th className="num">Потери на полном пролёте</th>
+                <th className={tableStyles.numeric}>Пропускает</th>
+                <th className={tableStyles.numeric}>Ввод коннектора</th>
+                <th className={tableStyles.numeric}>Пролёт до</th>
+                <th className={tableStyles.numeric}>Потери на полном пролёте</th>
               </tr>
             </thead>
             <tbody>
@@ -576,16 +576,16 @@ function IeNet({ data, s, ee, att }: { data: PowerData; s: Get; ee: Get; att: Ge
                         {meta?.short ?? w.name}
                       </span>
                     </td>
-                    <td className="num">
+                    <td className={tableStyles.numeric}>
                       <Cfg s={rateS} unit="FE/t" />
                     </td>
-                    <td className="num">
+                    <td className={tableStyles.numeric}>
                       {input ? <Cfg s={input} unit="FE/t" /> : div && rateS ? `${num(rateS.value / div)} FE/t` : '—'}
                     </td>
-                    <td className="num">
+                    <td className={tableStyles.numeric}>
                       <Cfg s={len} unit="бл." />
                     </td>
-                    <td className="num">{loss ? `${num(loss.value * 100, 2)} %` : '—'}</td>
+                    <td className={tableStyles.numeric}>{loss ? `${num(loss.value * 100, 2)} %` : '—'}</td>
                   </tr>
                 );
               })}

@@ -1,7 +1,7 @@
 import pw from './powerWidgets.module.css';
 import { useMemo, useState, type ReactNode } from 'react';
 import { cx, errorText, type Scope } from '@/shared/lib';
-import { Button, Input, Select, Table, TableWrap, contentStyles as content } from '@/shared/ui';
+import { Button, Input, Select, Table, TableWrap, contentStyles as content, tableStyles } from '@/shared/ui';
 import { formatValue, parseSpec } from '@/lib/guideFormat';
 import { Markdown } from '@/components/Markdown';
 import { useGuideEditing, useGuideLink } from './guideLinks';
@@ -420,7 +420,7 @@ function DataTable({
           <thead>
             <tr>
               {cols.map((c, j) => (
-                <th key={j} className={cx(c.num && 'num')}>
+                <th key={j} className={cx(c.num && tableStyles.numeric)}>
                   {tpl(c.title ?? '')}
                 </th>
               ))}
@@ -442,7 +442,7 @@ function DataTable({
                             parseSpec(c.fmt),
                           );
                     return (
-                      <td key={j} className={cx(c.num && 'num', bad && styles.powerBad)}>
+                      <td key={j} className={cx(c.num && tableStyles.numeric, bad && styles.powerBad)}>
                         <Md source={cell} inline />
                       </td>
                     );

@@ -19,3 +19,4 @@ export { Progress, type ProgressProps } from './Progress';
 export { Segmented, type SegmentedOption } from './Segmented';
 export { TooltipLayer, tooltipHandlers } from './Tooltip';
 export { contentStyles } from './contentStyles';
+export { tableStyles } from './tableStyles';
