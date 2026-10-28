@@ -5,6 +5,14 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **Бетонные смеси с известью** (2026-10-28, dev #124): обновление `u20261028-155634-36f7`, исходник и проверки —
+  [pack-patches/concrete-lime](../../pack-patches/concrete-lime/README.md). Общая основа: 3 песка + 3 гравия + 2 извести
+  → 8 смеси; цветные варианты с красителем, IE и RnR используют ту же смесь. Переход датапака «Бетон» TFC → IE
+  сохранён; возврат 25% порошка Diesel Generators убран. Хост: `tfc admin updates pull u20261028-155634-36f7`,
+  перезапуск, проверка рецептов/бочек/смесителя/дорог/цветных жидкостей и журнала KubeJS, затем
+  `tfc admin updates approve u20261028-155634-36f7`. Проверены 52 рецепта и 36 удалений, конфликты MCP, код IE/RnR/CDG;
+  в игре не проверялось. Распространение жидкого бетона по миру остаётся штатным, расход на площадь не унифицирован.
+
 - **TFC Pyrofuel 1.0.0** (2026-10-27, dev #104): install with `tfc pull addons` on server and all players, then
   `tfc publish` to rebuild the item/recipe library. In game: item/fluid textures in tanks, JEI/EMI chains, manual bucket
   transfer, real production lines and fluid trains. Ordinary blaze burner takes briquettes; liquid pyrogel uses the
