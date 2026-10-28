@@ -102,3 +102,10 @@
   margin: 0;
   accent-color: var(--accent);
 }
+
+/* Общие короткие подсказки: прежний эффективный порог задавался модулем окна задачи. */
+@media (max-width: 600px) {
+  .hide-sm {
+    display: none;
+  }
+}

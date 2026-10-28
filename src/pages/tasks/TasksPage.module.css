@@ -276,10 +276,6 @@
 }
 
 @media (max-width: 560px) {
-  /* Утилита общая: ею прячут подписи шапка, сверка, справочник и подсказка галереи */
-  :global(.hide-sm) {
-    display: none;
-  }
   .tasksTop {
     flex-wrap: wrap;
   }
@@ -300,10 +296,6 @@
   }
   .tasksFilters select {
     flex: 1;
-  }
-  /* Ярлык важности — в строке задачи и в окне сравнения (компонент ImpPill ставит data-imp-pill) */
-  :global([data-imp-pill]) {
-    display: none;
   }
 }
 
