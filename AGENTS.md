@@ -59,11 +59,16 @@ report=…`: a short Russian report — what changed for players, what was check
 
 ## Where code goes (`src/`)
 
-Light FSD in progress (task «Переезд фронтенда на облегчённый FSD», plan doc attached): layers `app → pages → widgets →
-features → entities → shared`, a layer imports only from the ones to its right (`features`/`widgets` — упрощённые слои,
-см. ниже). Not every layer is mandatory; **when in doubt put the file next
-to its main user**, not where the scheme says it "should" be. Until the move is done (`src/components`, `src/lib`,
-`src/data` still exist) put **new** code by these rules and don't mass-move old files outside the migration branches.
+Light FSD is established (dev task #75): layers `app → pages → widgets → features → entities → shared`.
+A layer imports only from itself and those to its right (`features`/`widgets` use the simplified rules below).
+Not every layer is mandatory; **when in doubt put the file next to its main user**, not where the scheme says it
+"should" be. `src/components`, `src/lib` and `src/data` retain shared UI, adapters and intentional Node entry points;
+their existence is not a request for another mass move. Put new code by the rules below and migrate existing code
+only when its owner actually changes. All page slices, including `pages/doc`, expose a public `index.ts`.
+
+Page/component styles use CSS Modules. Global CSS stays in `app/theme` for tokens, base styles, generated Markdown,
+third-party markup and shared utilities. Keep our component classes local; use semantic attributes or explicit
+public styles when several consumers share a pattern. Onboarding targets use tags/ARIA rather than hashed classes.
 
 | Code is needed by                                                                          | Goes to                                                                  |
 | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |

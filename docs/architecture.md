@@ -41,7 +41,7 @@ The site is a static SPA. All "pack knowledge" is built locally by scripts and d
 | world save (`<world>/data/`)                                                                          | `world.mjs`                                                                                                                            | Firestore `config/world__{file}` — TFC calendar (month length set by command)                                                                                                                                                                                                                                                                                                                                                                                                          |
 | server config zip/folder                                                                              | `serverconfig.mjs`                                                                                                                     | Firestore `config/{scope}__{path}`                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | manifest diff at publish                                                                              | `pack-release.mjs` (from `publish-data.mjs` on the pack server)                                                                        | Firestore `packUpdates/{id}`                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| manifest + Modrinth/CurseForge                                                                        | `freshness.mjs` (prebuild) + `src/lib/freshness.ts`                                                                                    | `public/pack-freshness.json`                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| manifest + Modrinth/CurseForge                                                                        | `freshness.mjs` (prebuild) + `src/pages/updates/model/freshness.ts`                                                                    | `public/pack-freshness.json`                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
 - Scripts write Firestore via REST as `firebase login` or a service key (`GOOGLE_APPLICATION_CREDENTIALS`)
   (`scripts/firestore-rest.mjs`); rules don't apply. Same way is handy to read the DB from node.
@@ -59,9 +59,13 @@ Collections: `tasks`, `groups`, `artifacts`, `files` (+`chunks`, package `firest
 - Shared CRUD — `src/shared/api/store.ts` (`createCollectionStore<T, N>('collection')`), with a localStorage fallback
   without Firebase. It knows nothing about entities: the collections themselves are created by their entity
   (`src/entities/<x>/store.ts`).
-- Состояние для страниц — zustand-хранилища сущностей (`useTasks()`, `useGroups()`, `useFiles()`…), по одному на
-  коллекцию. Подписки на них и отметку присутствия запускает `src/app/model/startData.ts` (один раз, после выбора
-  ника); ник — `entities/user/nick.ts`. Провайдера данных больше нет.
+- Page state lives in entity Zustand stores (`useTasks()`, `useGroups()`, `useArtifacts()`, `useFiles()`,
+  `useUsers()`). `shared/api/liveList.ts` starts one source on the first hook/imperative subscriber and stops it
+  after the last one. A microtask grace period avoids reconnecting during StrictMode or a same-commit handoff;
+  stale callbacks are ignored. Selectors and `getState` retain their usual behavior; reading the cache does not
+  subscribe. The last snapshot remains cached between visits, with per-list `loading` and `error`.
+- `src/app/model/startData.ts` only records presence after choosing/changing a nick. The nick lives in
+  `entities/user/nick.ts`; there is no data provider and no eager app-wide start of the five collections.
 
 ## Code map
 
@@ -71,14 +75,16 @@ src/shared/       общее для всего сайта; снаружи — ч
   lib/             util (uid, timeAgo, cx), hash (fnv1a, recipeHash — тот же отпечаток, что в сборке пакета),
                    calcExpr (формулы гайдов: свой разборщик, без eval; проверяется и из Node)
   api/             firebase (приложение, Firestore, вход, App Check), store (фабрика CRUD по коллекциям, без Firebase —
-                   localStorage), sync (состояние синхронизации), analytics (свой лог посещений), gemini (запросы к
+                   localStorage), liveList (пул подписок Zustand), sync (состояние синхронизации), analytics (свой лог посещений), gemini (запросы к
                    Gemini: цепочки моделей с запасными, таймаут 90 с; предметы — из shared/pack-data)
   ui/              Modal (окно с заголовком и подвалом, стили — Modal.module.css), Tooltip (одна подсказка на
-                   страницу в стиле Minecraft), Search (строка поиска), Button/Input/Select/Textarea
+                   страницу в стиле Minecraft), Search, Button/ButtonLink, Input/Select/Textarea, Label, Segmented,
+                   Tag/Importance, ErrorBox/EmptyState, Card/Table/SectionShell, Progress; contentStyles/tableStyles
+                   экспортируют явные карты общих локальных классов без изменения нативной разметки
   pack-data/       данные пакета, нужные почти всем страницам: items (useItems, itemName, searchItems, иконки),
                    recipes (каталог, статусы KubeJS, поиск), recipeFilter/recipeRefs (фильтры и входы/выходы рецепта),
                    tags (слияние источников и KubeJS), fuzzy (fuse.js — только подсказки замен в схемах),
-                   ItemIcon/ItemPicker/ItemIdSearch
+                   ItemIcon/ItemPicker/ItemIdSearch, RecipeStatusBadge
 src/entities/     сущности: типы, коллекции и zustand-хранилища для страниц
   task/            Task, ChecklistEntry, PRIORITIES/STATUSES, tasksStore, useTasks, describeTask
   group/           Group, groupsStore, useGroups
@@ -93,36 +99,35 @@ src/entities/     сущности: типы, коллекции и zustand-хр
                    конфиг хранилища остался в src/lib/files.config.ts (путь зашит в npm run rules:files и скрипты)
   pack-update/     PackUpdate, лента обновлений сборки (usePackUpdates), ченджлоги аддонов, отметка «просмотрено»
   pack-config/     настройки сборки/мира: useModConfig, configValue, слои конфига (коллекция config)
-src/app/          каркас: App.tsx (маршруты), model/startData (подписки), theme (токены и базовые стили)
+src/app/          каркас: App.tsx (маршруты), model/startData (присутствие), theme (токены и базовые стили)
 src/features/     действия и потоки, нужные нескольким страницам: только `features/entities/shared`
   guides/          GuidesSection, GuideEditor/History/Help, AddonArticle, AddonVersions, CalcBlock (```calc),
                    GuideBody (Markdown + {{…}} + «::name»), powerWidgets; формат — docs/plans/guides.md
   reference-tabs/  содержимое вкладок справочника: AddonsTab (+ AddonHead/AddonInstall для страницы аддона),
-                   MultiblocksTab (+ MultiblockEmbed), PowerIeLoads, их общий PowerShared.css
+                   MultiblocksTab (+ MultiblockEmbed), PowerIeLoads; стили локальны, PowerShared.css удалён
 src/widgets/      сборные блоки для нескольких страниц: `widgets/features/entities/shared`
   header/          шапка: меню разделов, поиск по id, значки обновлений, «?» знакомства
   onboarding/      знакомство (тексты — lib/onboarding.ts) и меню «?»
   agent-panel/     ArtifactPane (панель плана) и AgentPanel (ИИ)
   recipe-browser/  RecipeCatalog (RecipeBrowser) — страница рецептов и редактор датапаков
   pack-nav/        PackNav/PackSection — вкладки «Датапаки/Рецепты/Теги»
-src/pages/        TasksPage (+ docs section DocsSection), DocPage, files/FilesPage, stats/StatsPage, recipes/RecipesPage (PackPicker), SchematicsPage, AddonsPage,
-                  DatapacksPage/RecipesPage/TagsPage (one section, PackNav on the left), ReferencePage (tabs: «Гайды» —
-                  GuidesTab, «Карта» — MapPage, «Мультиблоки» — MultiblocksTab), UpdatesPage
-src/components/   FileBadge (kinds — lib/fileKinds.ts), KubejsConstructor, SchematicLibrary, WorldMap,
-                  Markdown/MarkdownField/LiveMarkdown, …
+src/pages/        tasks, doc, files, schematics, datapacks, recipes, tags, reference, addons, map, updates,
+                  stats, dev — каждый раздел в своём слайсе с index.ts; приватные ui/model рядом с владельцем
+src/components/   оставшиеся общие ErrorBoundary, FileBadge, KubejsConstructor, Markdown/MarkdownField/LiveMarkdown,
+                  NickDialog, SyncBadge (со своим CSS Module), VisitTracker, useTextImages
+src/data/         адаптеры addonVersions, guides, onboarding; не возвращать сюда состояние страниц
 src/lib/
   kubejsFix.ts                 KubeJS-removal workaround builder (item library, recipes, tags — shared/pack-data)
   datapack.ts datapackFiles.ts datapack records, zip, checks; datapack files (shared with Node)
   kubejsScripts.ts             site KubeJS scripts (collection kubejsScripts, UI — pages/datapacks/ui/KubejsScripts)
-   nbt.ts materials.ts           NBT parser (shared with Node) and schematic material helpers
-   schematicFile.ts             schematic file with replacements and shape (shared with Node; suggestions — entities/schematic)
+  nbt.ts materials.ts           NBT parser (shared with Node) and schematic material helpers
+  schematicFile.ts             schematic file with replacements and shape (shared with Node; suggestions — entities/schematic)
   reference.ts meals.ts        reference (ores, fuel, liquid fuel, food, metals); composite meals and calculators
   multiblocks.ts               IE multiblocks: templates, tag substitutes (UI — MultiblocksTab, CSS 3D)
   power.ts                     electricity: Create SU ↔ EE (V/A/W) ↔ IE FE/t, formulas from code (UI — PowerTab)
   guideFormat.ts               guide number format {{x | 1 В}} (formulas — shared/lib/calcExpr.ts)
   guideScope.ts powerGuideScope.ts   names for formulas: shared functions + section (settings, power.json, power.ts)
   projection.ts geo.ts atlas.ts   TFC Real World map, world settings from server config (чтение конфига — entities/pack-config)
-  packUpdates.ts               pack updates (Gemini requests — shared/api/gemini.ts)
   files.config.ts              attachments config; Firestore or own server (VITE_FILES_SERVER) — место зашито в правила и скрипты
 src/features/guides/  GuidesSection, GuideEditor/History/Help, CalcBlock (```calc), GuideBody (Markdown + {{…}} +
                   «::name» widgets), powerWidgets; format — docs/plans/guides.md
