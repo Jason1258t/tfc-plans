@@ -115,7 +115,11 @@ export async function openUpdates(dataDir, store) {
     /** Одобрить: новый снимок = текущий + файлы − remove. Возвращает { update, snapshot } (снимок ещё не текущий) */
     async approve(id, who, { force = false } = {}) {
       const u = await pending(id);
-      if (u.author === who) throw new HttpError(403, 'Одобрить должен другой администратор, не автор обновления');
+      if (u.author === who)
+        throw new HttpError(
+          403,
+          `Сервер распознал ключ «${who}» — это автор обновления. Войдите ключом другого администратора: tfc login <ключ>`,
+        );
       const current = await store.getCurrent();
       if (!current) throw new HttpError(409, 'Текущего снимка нет');
       const conflicts = await conflictsOf(u, current);

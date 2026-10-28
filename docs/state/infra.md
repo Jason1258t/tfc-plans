@@ -273,3 +273,10 @@ Cursor configs (shapes from their docs, not tried).
   directory and use a private temporary dist. Pack-server shutdown drains accepted jobs and rejects new ones;
   systemd uses KillMode=mixed/TimeoutStopSec=infinity. Installer serializes updates and stops before replacing code.
   The deployment lock covers worktrees on one machine, not independent hosts. Forced termination is still interrupting.
+
+- Dev #134 (2026-10-28): `tfc whoami` shows the server-recognized key name/role and local config path; login and
+  self-approval errors identify the key without printing its token. CLI error/auto-upgrade completion uses natural
+  process shutdown instead of forced exit (Windows libuv assertion mitigation). Local HTTP + CLI checks cover
+  author refusal, host approval, player/no-key refusal and changing the saved key. The reported Windows credential
+  selection was resolved by logging in again: the user approved both updates afterward. The Windows libuv crash
+  mitigation still needs verification there; host/Jason keys are distinct admins on VPS.

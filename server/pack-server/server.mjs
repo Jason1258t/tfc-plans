@@ -14,6 +14,7 @@
  *   PUT    /blobs/:sha256           — залить файл, тело — содержимое         admin
  *   POST   /pack/snapshots          — создать снимок                         admin
  *   POST   /pack/current            — { id } или { rollback: true }          admin
+ *   GET    /auth/me                 — имя, id и роль текущего ключа         player
  *   GET    /admin/keys              — ключи (без самих ключей)               admin
  *   POST   /admin/keys              — { name, role } → { key, ... }          admin
  *   DELETE /admin/keys/:id          — отозвать ключ                          admin
@@ -291,6 +292,10 @@ async function handle(req, res) {
   if (req.method === 'GET' && url.pathname === '/health') {
     const s = store.stats();
     return json(res, 200, { ok: true, current: s.current, snapshots: s.snapshots, blobs: s.blobs, bytes: s.bytes });
+  }
+
+  if (req.method === 'GET' && url.pathname === '/auth/me') {
+    return json(res, 200, await authorize(req, 'player'));
   }
 
   // --- задачи разработки
