@@ -68,6 +68,7 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
                               и профиль лаунчера, потом скачать сборку (--memory 6 — ГБ памяти игре, --name <папка>,
                               --mc-dir <папка лаунчера>, если она не стандартная)
   tfc login <ключ>            ключ от хоста сборки (--server <адрес>, если сервер другой)
+  tfc whoami                  имя и права текущего ключа на сервере, путь к настройкам (сам ключ не выводится)
   tfc profiles                профили; tfc use <профиль> — сделать текущим
 
 Игрокам:
@@ -353,10 +354,26 @@ async function cmdLogin(v, [key]) {
     throw new Error('ключ выглядит не так — скопируйте его целиком, он начинается с tfc_');
   const cfg = loadConfig();
   const server = v.server || cfg.server || DEFAULT_SERVER;
-  const role = await new Api(server, key).role();
+  const a = new Api(server, key);
+  const role = await a.role();
+  const who = await a.get('/auth/me').catch((e) => {
+    if (e.status === 404) return null; // Совместимость с сервером до появления диагностики ключа.
+    throw e;
+  });
   Object.assign(cfg, { server, token: key, role });
   saveConfig(cfg);
-  console.log(`${green('Ключ подошёл')} — ${role === 'admin' ? 'администратор сборки' : 'игрок'}, сервер ${server}`);
+  console.log(
+    `${green('Ключ подошёл')}${who ? `: ${who.name}` : ''} — ${role === 'admin' ? 'администратор сборки' : 'игрок'}, сервер ${server}`,
+  );
+  console.log(`Настройки: ${configFile()}`);
+}
+
+async function cmdWhoami() {
+  const cfg = loadConfig();
+  const who = await api(cfg).get('/auth/me');
+  console.log(`Ключ: ${who.name} (${who.role === 'admin' ? 'администратор сборки' : 'игрок'})`);
+  console.log(`Сервер: ${cfg.server}`);
+  console.log(`Настройки: ${configFile()}`);
 }
 
 function cmdProfiles() {
@@ -962,6 +979,8 @@ async function adminUpdates(a, v, [action, ...ids]) {
       return console.log('Отклонено. Если забирали его к себе — вернуть файлы: tfc undo');
     }
     const r = await a.post(`/admin/updates/${u.id}/approve`, { force: !!v.force }).catch((e) => {
+      if (e.status === 403)
+        throw new Error(`${e.message}\nНастройки: ${configFile()}. Проверить текущий ключ: tfc whoami`);
       if (e.data?.conflicts)
         throw new Error(`${e.message}:\n${e.data.conflicts.map((p) => `  ! ${p}`).join('\n')}\nПоверх них — с --force`);
       throw e;
@@ -1103,6 +1122,7 @@ async function cmdAdmin(v, [sub, ...args]) {
 const COMMANDS = {
   init: cmdInit,
   login: cmdLogin,
+  whoami: cmdWhoami,
   profiles: cmdProfiles,
   use: cmdUse,
   status: cmdStatus,
@@ -1145,7 +1165,10 @@ async function main(argv) {
   if (!fn) throw new Error(`нет команды «${cmd}» — tfc help`);
   // Сначала — новая версия программы, если вышла (раз за сеанс терминала); команду выполнит уже она
   const code = await autoUpgrade(argv);
-  if (code !== null) process.exit(code);
+  if (code !== null) {
+    process.exitCode = code;
+    return;
+  }
   // Проверка новой версии идёт параллельно с командой, подсказка — в конце (и после ошибки)
   const update = checkUpdate();
   try {
@@ -1158,5 +1181,6 @@ async function main(argv) {
 
 main(process.argv.slice(2)).catch((e) => {
   console.error(red(`Ошибка: ${e.message ?? e}`));
-  process.exit(1);
+  // Даём сетевым и консольным дескрипторам закрыться: принудительный exit может обрушить libuv на Windows.
+  process.exitCode = 1;
 });
