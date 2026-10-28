@@ -5,6 +5,14 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **CDG ↔ IE recipes** (2026-10-28, dev #118): proposed update `u20261028-203009-ce84`, source and checks —
+  [pack-patches/cdg-ie-recipes](../../pack-patches/cdg-ie-recipes/README.md). Four same-id overrides in `kubejs/data`:
+  silver/uranium hammering results, phenolic-resin casting and herbicide fluid ingredients; herbicide time corrected
+  to 400 ticks. Host: `tfc admin updates pull u20261028-203009-ce84`, restart, check JEI/EMI and machines, then
+  `tfc admin updates approve u20261028-203009-ce84`. All four recipes passed RecipeManager checks on a reduced
+  NeoForge server. Full KubeJS scripts loaded, but the full server stopped on unrelated dedicated-side class loading;
+  test-environment follow-up: dev #133. Full-pack runtime and in-game machines: not checked.
+
 - **Бетонные смеси с известью** (2026-10-28, dev #124): обновление `u20261028-155634-36f7`, исходник и проверки —
   [pack-patches/concrete-lime](../../pack-patches/concrete-lime/README.md). Общая основа: 3 песка + 3 гравия + 2 извести
   → 8 смеси; цветные варианты с красителем, IE и RnR используют ту же смесь. Переход датапака «Бетон» TFC → IE
