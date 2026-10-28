@@ -10,9 +10,11 @@ import {
 import { codeParts, hasCodeParts } from './createParts';
 import { COPYCAT_BASE, copycatMaterials, copycatParts, isCopycat, type Material } from './copycats';
 import { placedBy, textureUrl, type ItemIndex } from '@/shared/pack-data';
-import { EMPTY_BLOCKS, REMOVE, type Schematic } from './schematic';
+import { EMPTY_BLOCKS, REMOVE, exportSchematic, type Schematic } from './schematic';
 import { blockNbtOf, buildGrid, namesByState, propsByState, stateOf } from './schematicEdit';
 import { drawnByCode, FULL, shapeOf, type Box } from './schematicShape';
+import { readNbt } from '../../lib/nbt';
+import { sizeOf, DEFAULT_SHAPE } from '../../lib/schematicFile';
 
 /**
  * Геометрия схемы для 3D: блок — грани его модели из jar (entities/schematic/blockModels.ts), а нет модели (рисует код:
@@ -462,6 +464,27 @@ export async function buildMesh(
   items: ItemIndex,
   opts: { maxY?: number } = {},
 ): Promise<MeshData> {
+  // 3D показывает итоговый файл (с заменами и формой), а не исходник: иначе площадка
+  // и другие элементы формы не видны. Форма применяется через общий applyEdits.
+  const sh = s.shape;
+  const shapeChanged =
+    !!sh && (sh.crop || sh.clearAir || sh.platform || sh.sides !== 0 || sh.bottom !== 0 || sh.top !== 1);
+  if (shapeChanged) {
+    try {
+      const bytes = await exportSchematic(s, replace);
+      const parsed = await readNbt(bytes);
+      s = {
+        ...s,
+        parsed,
+        size: sizeOf(parsed.root.value) ?? s.size,
+        shape: { ...DEFAULT_SHAPE },
+      };
+      // replace не меняем: имена блоков уже заменены в parsed, но replace всё ещё нужен
+      // для подстановки материалов копикатов (их id лежат в nbt клетки, а не в палитре)
+    } catch {
+      // оставляем исходник
+    }
+  }
   const grid = buildGrid(s);
   const [sx, sy, sz] = grid.size;
   if (sx * sy * sz > MAX_CELLS) throw new Error(`Схема ${sx}×${sy}×${sz} слишком большая для 3D`);
