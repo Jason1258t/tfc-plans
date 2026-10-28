@@ -107,6 +107,14 @@ exhaustively checked.
 - 2026-10-26: бейдж типа версии на странице «Свежесть» переведён на `Tag`, глобальное переопределение снято; `freshness` desktop/mobile — 0,000%. Осталось 2 прямых употребления `.tag`.
 - 2026-10-26: метка типа рецепта в каталоге переведена на `Tag`, responsive-правило стало локальным; desktop/mobile — 0,000%. Остался один `.tag` в списке блоков схем.
 - 2026-10-26: бейдж мода в списке замен схем переведён на `Tag`; открытая схема с заменами — desktop/mobile 0,000%. Разметка `.tag` нулевая, глобальное правило удалено; статус `в работе` переведён на локальный селектор, `:global(.tag)` не осталось. Одноимённые `.tag` в MealsTab остаются локальными CSS Modules.
+- 2026-10-28 (#112): dev tasks now share attachments and screenshot galleries with player tasks via
+  `features/task-files` (picker, drop, clipboard paste, compression, progress/errors, download/delete, 25 MiB limit).
+  Dev file ownership uses `taskId = dev:<id>` in the existing site file store (currently Firestore; tracker data stays
+  in SQLite). New-task files upload after creation; deleting a task removes its files first, with file-list/upload
+  readiness checks. Added live Markdown with preview and inline task toggles, bug/addon description templates,
+  editable checklist text and progress count, close protection for pending files and unsent notes.
+  Checked: TypeScript, lint, FSD boundaries, desktop/mobile browser; real file upload/read/reload/delete on #112
+  (test file removed), draft attachment and screenshot paste, size rejection, create failure preserves draft.
 - 2026-10-26: CSS-аудит страницы «Разработка» исправлен: удалён несуществующий `styles.when`, динамические классы статуса и записей журнала перечислены явно. `ui:classes --check` теперь проходит. Снимки dev/окна задачи/журнала — без визуальных изменений; небольшая разница только в обновившейся подписи «N мин. назад».
 - 2026-10-26: flex-spacer в подвале окна задачи разработки перенесён с глобального `.grow` в локальный `DevTaskDialog.module.css`; общее правило остаётся для остальных потребителей.
 - 2026-10-26: общий индикатор `.progress` переехал в `shared/ui/Progress`; его используют строка задачи и загрузка вложений. Глобальное правило удалено из темы.

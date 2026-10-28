@@ -155,3 +155,16 @@
 .noteForm textarea {
   width: 100%;
 }
+
+.checkText {
+  flex: 1;
+  min-width: 0;
+}
+
+.templates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
