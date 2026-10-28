@@ -40,18 +40,18 @@ export function Header({ nick, onChangeNick }: Props) {
   }, []);
 
   return (
-    <header className="app-header">
+    <header className={styles.appHeader}>
       <NavLink to="/" className={styles.brand}>
         <ItemIcon id="tfc:metal/ingot/copper" size={22} tip={false} />
         <span className={styles.brandName}>TFC Планы</span>
       </NavLink>
-      <nav className="nav">
+      <nav className={styles.nav} aria-label="Основные разделы">
         <NavLink to="/" end>
           Задачи
         </NavLink>
         <NavLink to="/docs">Документы</NavLink>
         <NavLink to="/schematics">Схемы</NavLink>
-        <NavLink to="/datapacks" className={inPacks ? 'active' : undefined}>
+        <NavLink to="/datapacks" data-active={inPacks || undefined}>
           Датапаки
         </NavLink>
         <NavLink to="/reference">Справочник</NavLink>
@@ -71,12 +71,13 @@ export function Header({ nick, onChangeNick }: Props) {
       <Button
         variant="ghost"
         size="sm"
-        className="id-search-btn"
+        className={styles.idSearchBtn}
+        aria-label="Найти id предмета"
         onClick={() => setSearching(true)}
         {...tooltipHandlers('Найти id предмета', 'Ctrl/Cmd+K')}
       >
         <Search size={15} />
-        <span className="hide-sm">id предмета</span>
+        <span className={styles.searchLabel}>id предмета</span>
       </Button>
       {searching && (
         <Modal onClose={() => setSearching(false)} title="Поиск id предмета">
@@ -89,14 +90,19 @@ export function Header({ nick, onChangeNick }: Props) {
         variant="ghost"
         size="sm"
         icon
-        className="updates-btn"
+        className={styles.updatesBtn}
         aria-label="Обновления сборки"
         {...tooltipHandlers('Обновления сборки', fresh ? 'Есть новое обновление' : undefined)}
       >
         <Bell size={16} />
         {fresh && <span className={styles.navDot} aria-label="новое" />}
       </ButtonLink>
-      <button className="nick" onClick={onChangeNick} {...tooltipHandlers('Сменить ник')}>
+      <button
+        className={styles.nick}
+        aria-label="Сменить ник"
+        onClick={onChangeNick}
+        {...tooltipHandlers('Сменить ник')}
+      >
         <span className={styles.avatar} aria-hidden>
           {nick.slice(0, 1).toUpperCase()}
         </span>

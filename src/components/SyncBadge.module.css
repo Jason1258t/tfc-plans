@@ -1,0 +1,39 @@
+/* Состояние синхронизации: оформление значка и его подписи принадлежит компоненту. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+  color: var(--text-2);
+  background: var(--surface-2);
+  cursor: default;
+}
+
+.badge[data-state='error'],
+.badge[data-state='offline'] {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.count {
+  font-weight: 600;
+}
+
+.close {
+  display: inline-flex;
+  padding: 0;
+  margin-left: 2px;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .label {
+    display: none;
+  }
+}

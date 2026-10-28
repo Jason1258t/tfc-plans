@@ -1,11 +1,5 @@
-/* Шапка сайта. Часть имён остаётся глобальной — их ищут вне этого файла:
-   — .app-header, .nav, .nick, .id-search-btn, .updates-btn — цели подсветки тура знакомства
-     (src/lib/onboarding.ts: «Разделы», «Поиск предмета», «Обновления сборки», «Ваш ник»);
-   — .active — состояние ссылки, его ставит NavLink из react-router, а не наш код;
-   — .hide-sm — общая утилита, её пишут строкой и другие компоненты;
-   — .sync-badge, .bad, .sync-count, .sync-close — разметка SyncBadge.tsx, он рисуется в этой шапке.
-   Когда тур переведут на теги и роли, а значок получит свой модуль, эти правила можно захешировать. */
-:global(.app-header) {
+/* Шапка сайта: собственные стили; активная навигация определяется атрибутами ссылок. */
+.app-header {
   position: sticky;
   top: 0;
   z-index: 30;
@@ -30,7 +24,7 @@
   white-space: nowrap;
 }
 
-:global(.nav) {
+.nav {
   display: flex;
   gap: 2px;
   min-width: 0;
@@ -38,7 +32,7 @@
   scrollbar-width: none;
 }
 
-:global(.nav) a {
+.nav a {
   white-space: nowrap;
   padding: 6px 10px;
   border-radius: var(--radius-sm);
@@ -47,12 +41,13 @@
   font-weight: 500;
 }
 
-:global(.nav) a:hover {
+.nav a:hover {
   color: var(--text);
   background: var(--surface-2);
 }
 
-:global(.nav a.active) {
+.nav a[aria-current='page'],
+.nav a[data-active='true'] {
   color: var(--text);
   background: var(--surface-3);
 }
@@ -65,39 +60,7 @@
   background: var(--danger-soft);
 }
 
-:global(.sync-badge) {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  white-space: nowrap;
-  color: var(--text-2);
-  background: var(--surface-2);
-  cursor: default;
-}
-
-:global(.sync-badge.bad) {
-  color: var(--danger);
-  background: var(--danger-soft);
-}
-
-:global(.sync-count) {
-  font-weight: 600;
-}
-
-:global(.sync-close) {
-  display: inline-flex;
-  padding: 0;
-  margin-left: 2px;
-  border: 0;
-  background: none;
-  color: inherit;
-  cursor: pointer;
-}
-
-:global(.nick) {
+.nick {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -109,7 +72,7 @@
   font-weight: 500;
 }
 
-:global(.nick):hover {
+.nick:hover {
   border-color: var(--border-strong);
 }
 
@@ -127,13 +90,13 @@
 }
 
 @media (max-width: 760px) {
-  :global(.id-search-btn .hide-sm) {
+  .id-search-btn .search-label {
     display: none;
   }
 }
 
 @media (max-width: 560px) {
-  :global(.app-header) {
+  .app-header {
     gap: 10px;
     padding: 0 12px;
   }
@@ -141,22 +104,17 @@
   .nick-name {
     display: none;
   }
-  :global(.nick) {
+  .nick {
     padding: 3px;
   }
 }
 
-:global(.updates-btn) {
+.updates-btn {
   position: relative;
   flex: none;
   margin: 0 -12px;
   color: var(--text-2);
   text-decoration: none;
-}
-
-:global(.updates-btn.active) {
-  color: var(--text);
-  background: var(--surface-3);
 }
 
 .nav-dot {

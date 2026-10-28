@@ -2,6 +2,7 @@ import { CloudOff, Clock, TriangleAlert, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { firebaseEnabled, clearSyncError, useSyncStatus } from '@/shared/api';
 import { tooltipHandlers } from '@/shared/ui';
+import styles from './SyncBadge.module.css';
 
 /** Короткая отправка (доли секунды) не показывается — значок только если ждём дольше */
 const SENDING_DELAY_MS = 1500;
@@ -31,10 +32,15 @@ export function SyncBadge() {
 
   if (state === 'error')
     return (
-      <span className="sync-badge bad" role="status" {...tooltipHandlers('Сервер не принял изменения', error)}>
+      <span
+        className={styles.badge}
+        data-state={state}
+        role="status"
+        {...tooltipHandlers('Сервер не принял изменения', error)}
+      >
         <TriangleAlert size={14} />
-        <span className="hide-sm">ошибка сохранения</span>
-        <button className="sync-close" onClick={clearSyncError} aria-label="Скрыть">
+        <span className={styles.label}>ошибка сохранения</span>
+        <button className={styles.close} onClick={clearSyncError} aria-label="Скрыть">
           <X size={12} />
         </button>
       </span>
@@ -42,7 +48,8 @@ export function SyncBadge() {
   if (state === 'offline')
     return (
       <span
-        className="sync-badge bad"
+        className={styles.badge}
+        data-state={state}
         role="status"
         {...tooltipHandlers(
           'Нет связи с базой',
@@ -50,14 +57,14 @@ export function SyncBadge() {
         )}
       >
         <CloudOff size={14} />
-        <span className="hide-sm">нет связи</span>
-        {pendingCount > 0 && <span className="sync-count">{pendingCount}</span>}
+        <span className={styles.label}>нет связи</span>
+        {pendingCount > 0 && <span className={styles.count}>{pendingCount}</span>}
       </span>
     );
   return (
-    <span className="sync-badge" role="status" {...tooltipHandlers('Отправка изменений…', unsent)}>
+    <span className={styles.badge} data-state={state} role="status" {...tooltipHandlers('Отправка изменений…', unsent)}>
       <Clock size={14} />
-      <span className="hide-sm">отправка</span>
+      <span className={styles.label}>отправка</span>
     </span>
   );
 }
