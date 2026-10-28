@@ -278,4 +278,5 @@ Cursor configs (shapes from their docs, not tried).
   self-approval errors identify the key without printing its token. CLI error/auto-upgrade completion uses natural
   process shutdown instead of forced exit (Windows libuv assertion mitigation). Local HTTP + CLI checks cover
   author refusal, host approval, player/no-key refusal and changing the saved key. The reported Windows credential
-  selection and libuv crash still require confirmation on the host PC; host/Jason keys are distinct admins on VPS.
+  selection was resolved by logging in again: the user approved both updates afterward. The Windows libuv crash
+  mitigation still needs verification there; host/Jason keys are distinct admins on VPS.
