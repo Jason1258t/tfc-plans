@@ -187,7 +187,7 @@ function Calc({
           <span>насыщение {ru(r.saturation)}</span>
           <span>вода {ru(r.water)}</span>
           {NUTRIENTS.filter((n) => r.nutrients[n]).map((n) => (
-            <span key={n} className={`nut nut-${n}`}>
+            <span key={n}>
               {NUTRIENT_LABEL[n]} {ru(r.nutrients[n] ?? 0)}
             </span>
           ))}

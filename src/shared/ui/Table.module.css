@@ -22,12 +22,12 @@
   white-space: nowrap;
 }
 
-.table th:global(.sortable) {
+.table th.sortable {
   cursor: pointer;
   user-select: none;
 }
 
-.table th:global(.sortable):hover {
+.table th.sortable:hover {
   color: var(--text);
 }
 
@@ -40,46 +40,16 @@
   border-bottom: none;
 }
 
-.table :global(.num) {
+.table .numeric {
   text-align: right;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.table th:global(.nut) {
-  text-align: right;
-}
-
-.table td:global(.zero) {
+.table td.muted {
   color: var(--text-3);
 }
 
-.table td:global(.warn) {
+.table td.warning {
   color: var(--imp-3);
-}
-
-.table :global(.nut-grain:not(.zero)) {
-  color: #d9a441;
-}
-
-.table :global(.nut-fruit:not(.zero)) {
-  color: #e2626b;
-}
-
-.table :global(.nut-vegetables:not(.zero)) {
-  color: var(--accent);
-}
-
-.table :global(.nut-protein:not(.zero)) {
-  color: #c7764c;
-}
-
-.table :global(.nut-dairy:not(.zero)) {
-  color: var(--diamond);
-}
-
-@media (max-width: 640px) {
-  .table :global(.nut) {
-    display: none;
-  }
 }

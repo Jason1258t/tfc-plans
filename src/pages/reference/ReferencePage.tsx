@@ -1,5 +1,5 @@
 import { ArrowRight, Search } from 'lucide-react';
-import { SectionShell, Segmented, Select, Card, CardHead, Table, TableWrap } from '@/shared/ui';
+import { SectionShell, Segmented, Select, Card, CardHead, Table, TableWrap, tableStyles } from '@/shared/ui';
 import { useMemo, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { BotanyTab } from './tabs/BotanyTab';
@@ -35,6 +35,7 @@ import { cx } from '@/shared/lib';
 import { useSearchTrack } from '@/shared/api';
 import shell from './ReferenceShell.module.css';
 import styles from './ReferencePage.module.css';
+import nutrition from './NutritionTable.module.css';
 
 type Tab = 'ores' | 'fuel' | 'metals' | 'food' | 'botany' | 'power' | 'multiblocks' | 'guides' | 'map';
 const TABS: { id: Tab; label: string }[] = [
@@ -525,10 +526,11 @@ type SortDir = { key: string; desc: boolean };
 function useSort(initial: SortDir) {
   const [sort, setSort] = useState(initial);
   const toggle = (key: string) => setSort((s) => (s.key === key ? { key, desc: !s.desc } : { key, desc: true }));
-  const th = (key: string, label: string, className?: string) => (
+  const th = (key: string, label: string, className?: string, nutrient?: Nutrient) => (
     <th
       key={key}
-      className={cx('sortable', className)}
+      className={cx(tableStyles.sortable, className)}
+      data-nutrient={nutrient}
       onClick={() => toggle(key)}
       aria-sort={sort.key === key ? (sort.desc ? 'descending' : 'ascending') : undefined}
     >
@@ -587,9 +589,9 @@ function FuelTab({ fuels, items }: { fuels: Fuel[]; items: ItemIndex | null }) {
                 <td>
                   <IngredientCell ids={f.items} label={f.ingredient} items={items} />
                 </td>
-                <td className="num">{f.temp != null ? `${Math.round(f.temp)} °C` : '—'}</td>
-                <td className="num">{formatTicks(f.duration)}</td>
-                <td className="num">{f.purity != null ? `${Math.round(f.purity * 100)}%` : '100%'}</td>
+                <td className={tableStyles.numeric}>{f.temp != null ? `${Math.round(f.temp)} °C` : '—'}</td>
+                <td className={tableStyles.numeric}>{formatTicks(f.duration)}</td>
+                <td className={tableStyles.numeric}>{f.purity != null ? `${Math.round(f.purity * 100)}%` : '100%'}</td>
               </tr>
             ))}
           </tbody>
@@ -658,14 +660,14 @@ function FoodTab({ foods, items, meals }: { foods: Food[]; items: ItemIndex | nu
         Порча — множитель скорости: больше 1 портится быстрее. {list.length} из {foods.length}.
       </p>
       <TableWrap>
-        <Table>
+        <Table className={nutrition.table}>
           <thead>
             <tr>
               {th('name', 'Еда')}
               {th('hunger', 'Сытость')}
               {th('saturation', 'Насыщ.')}
               {th('water', 'Вода')}
-              {NUTRIENTS.map((n) => th(n, NUTRIENT_LABEL[n], `nut nut-${n}`))}
+              {NUTRIENTS.map((n) => th(n, NUTRIENT_LABEL[n], nutrition.nutrient, n))}
               {th('decay', 'Порча')}
               <th title="В какие сборные блюда годится продукт">В блюда</th>
             </tr>
@@ -676,16 +678,21 @@ function FoodTab({ foods, items, meals }: { foods: Food[]; items: ItemIndex | nu
                 <td>
                   <IngredientCell ids={f.items} label={f.ingredient} items={items} />
                 </td>
-                <td className="num">{f.hunger || '—'}</td>
-                <td className="num">{f.saturation || '—'}</td>
-                <td className="num">{f.water || '—'}</td>
+                <td className={tableStyles.numeric}>{f.hunger || '—'}</td>
+                <td className={tableStyles.numeric}>{f.saturation || '—'}</td>
+                <td className={tableStyles.numeric}>{f.water || '—'}</td>
                 {NUTRIENTS.map((n) => (
-                  <td key={n} className={cx('num nut', `nut-${n}`, !f.nutrients[n] && 'zero')}>
+                  <td
+                    key={n}
+                    className={cx(tableStyles.numeric, nutrition.nutrient, !f.nutrients[n] && tableStyles.muted)}
+                    data-nutrient={n}
+                    data-empty={!f.nutrients[n] || undefined}
+                  >
                     {f.nutrients[n] ?? '·'}
                   </td>
                 ))}
-                <td className={cx('num', f.decay > 1.5 && 'warn')}>×{f.decay}</td>
-                <td className="num">
+                <td className={cx(tableStyles.numeric, f.decay > 1.5 && tableStyles.warning)}>×{f.decay}</td>
+                <td className={tableStyles.numeric}>
                   {mealsOf(f).length > 0 ? (
                     <Link
                       to={`/reference?tab=food&sub=meals&q=${encodeURIComponent(name(f))}`}
@@ -694,7 +701,7 @@ function FoodTab({ foods, items, meals }: { foods: Food[]; items: ItemIndex | nu
                       {mealsOf(f).length}
                     </Link>
                   ) : (
-                    <span className="zero">·</span>
+                    <span>·</span>
                   )}
                 </td>
               </tr>
@@ -759,7 +766,7 @@ function MetalsTab({ ref_, items }: { ref_: Reference; items: ItemIndex | null }
                     )}
                   </div>
                 </td>
-                <td className="num">{m.melt != null ? `${Math.round(m.melt)} °C` : '—'}</td>
+                <td className={tableStyles.numeric}>{m.melt != null ? `${Math.round(m.melt)} °C` : '—'}</td>
                 <td>
                   <code className="faint small">{m.fluid}</code>
                 </td>

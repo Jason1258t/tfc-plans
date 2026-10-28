@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react';
-import { Button, Select, Table, TableWrap } from '@/shared/ui';
+import { Button, Select, Table, TableWrap, tableStyles } from '@/shared/ui';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { itemName, type ItemIndex, hasStatus, useRecipes, type Recipe, ItemIcon } from '@/shared/pack-data';
@@ -7,6 +7,7 @@ import { NUTRIENTS, type Food, type Nutrient } from '@/lib/reference';
 import { cx } from '@/shared/lib';
 import shell from '../ReferenceShell.module.css';
 import styles from './DishesTab.module.css';
+import nutrition from '../NutritionTable.module.css';
 
 const NUTRIENT_LABEL: Record<Nutrient, string> = {
   grain: 'Зерн.',
@@ -164,14 +165,14 @@ export function DishesTab({ items, foods }: { items: ItemIndex | null; foods: Fo
         <div className="empty">Ничего не подходит.</div>
       ) : (
         <TableWrap>
-          <Table>
+          <Table className={nutrition.table}>
             <thead>
               <tr>
                 <th>Блюдо</th>
                 <th>Способ</th>
                 <th>Сытость</th>
                 {NUTRIENTS.map((n) => (
-                  <th key={n} className={`nut nut-${n}`}>
+                  <th key={n} className={nutrition.nutrient} data-nutrient={n}>
                     {NUTRIENT_LABEL[n]}
                   </th>
                 ))}
@@ -198,13 +199,24 @@ export function DishesTab({ items, foods }: { items: ItemIndex | null; foods: Fo
                       {items?.byId.has(r.type) && <span>{name(r.type)}</span>}
                       <code className="faint">{r.type}</code>
                     </td>
-                    <td className="num">{r.food.hunger || '—'}</td>
+                    <td className={tableStyles.numeric}>{r.food.hunger || '—'}</td>
                     {NUTRIENTS.map((n) => (
-                      <td key={n} className={cx('num nut', `nut-${n}`, !r.food.nutrients[n] && 'zero')}>
+                      <td
+                        key={n}
+                        className={cx(
+                          tableStyles.numeric,
+                          nutrition.nutrient,
+                          !r.food.nutrients[n] && tableStyles.muted,
+                        )}
+                        data-nutrient={n}
+                        data-empty={!r.food.nutrients[n] || undefined}
+                      >
                         {r.food.nutrients[n] ?? '·'}
                       </td>
                     ))}
-                    <td className={cx('num', r.food.decay > 1.5 && 'warn')}>×{r.food.decay}</td>
+                    <td className={cx(tableStyles.numeric, r.food.decay > 1.5 && tableStyles.warning)}>
+                      ×{r.food.decay}
+                    </td>
                     <td className={cx('small', styles.inputs)}>
                       {inputs.slice(0, 6).map((i) =>
                         i.startsWith('#') ? (

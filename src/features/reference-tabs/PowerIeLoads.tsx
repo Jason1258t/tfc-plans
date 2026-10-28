@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { deviceTick, machineRates, type IeDevice, type IeMachine, type PowerData, type Setting } from '@/lib/power';
 import { ItemIcon } from '@/shared/pack-data';
-import { Button, Input, Select, Card, Table, TableWrap, contentStyles as content } from '@/shared/ui';
+import { Button, Input, Select, Card, Table, TableWrap, contentStyles as content, tableStyles } from '@/shared/ui';
 import styles from './PowerIeLoads.module.css';
 
 /**
@@ -39,11 +39,11 @@ export function IeConsumers({ data, ie, att, rate }: { data: PowerData; ie: Get;
             <thead>
               <tr>
                 <th>Машина</th>
-                <th className="num">Одна операция, FE/t</th>
-                <th className="num">Одновременно</th>
-                <th className="num">Обычно, FE/t</th>
-                <th className="num">Пик, FE/t</th>
-                {rate && <th className="num">Пик в ваттах EE</th>}
+                <th className={tableStyles.numeric}>Одна операция, FE/t</th>
+                <th className={tableStyles.numeric}>Одновременно</th>
+                <th className={tableStyles.numeric}>Обычно, FE/t</th>
+                <th className={tableStyles.numeric}>Пик, FE/t</th>
+                {rate && <th className={tableStyles.numeric}>Пик в ваттах EE</th>}
               </tr>
             </thead>
             <tbody>
@@ -63,14 +63,14 @@ export function IeConsumers({ data, ie, att, rate }: { data: PowerData; ie: Get;
                         {m.single ? ', один блок' : ''} · рецептов {m.recipes}
                       </span>
                     </td>
-                    <td className="num">
+                    <td className={tableStyles.numeric}>
                       {r.min === r.max ? fe(r.min) : `${fe(r.min)}–${fe(r.max)}`}
                       {r.min !== r.max && <span className="faint small"> (обычно {fe(r.median)})</span>}
                     </td>
-                    <td className="num">{m.parallel ?? '?'}</td>
-                    <td className="num">{usual !== null ? fe(usual) : '—'}</td>
-                    <td className="num">{peak !== null ? fe(peak) : '—'}</td>
-                    {rate && <td className="num">{peak !== null ? watts(peak * rate) : '—'}</td>}
+                    <td className={tableStyles.numeric}>{m.parallel ?? '?'}</td>
+                    <td className={tableStyles.numeric}>{usual !== null ? fe(usual) : '—'}</td>
+                    <td className={tableStyles.numeric}>{peak !== null ? fe(peak) : '—'}</td>
+                    {rate && <td className={tableStyles.numeric}>{peak !== null ? watts(peak * rate) : '—'}</td>}
                   </tr>
                 );
               })}
@@ -94,8 +94,8 @@ export function IeConsumers({ data, ie, att, rate }: { data: PowerData; ie: Get;
               <tr>
                 <th>Прибор</th>
                 <th>Потребление</th>
-                <th className="num">В работе, FE/t</th>
-                {rate && <th className="num">В ваттах EE</th>}
+                <th className={tableStyles.numeric}>В работе, FE/t</th>
+                {rate && <th className={tableStyles.numeric}>В ваттах EE</th>}
               </tr>
             </thead>
             <tbody>
@@ -118,8 +118,8 @@ export function IeConsumers({ data, ie, att, rate }: { data: PowerData; ie: Get;
                         </div>
                       ))}
                     </td>
-                    <td className="num">{t ? fe(t) : '—'}</td>
-                    {rate && <td className="num">{t ? watts(t * rate) : '—'}</td>}
+                    <td className={tableStyles.numeric}>{t ? fe(t) : '—'}</td>
+                    {rate && <td className={tableStyles.numeric}>{t ? watts(t * rate) : '—'}</td>}
                   </tr>
                 );
               })}
