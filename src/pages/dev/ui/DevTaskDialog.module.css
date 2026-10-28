@@ -47,6 +47,18 @@
   font-weight: 400;
 }
 
+/* Галерея скриншотов и вложения — столбцом с зазором, иначе кнопки
+   «Добавить изображения» и «Прикрепить файл» слипаются вплотную */
+.files {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.files p {
+  margin: 0;
+}
+
 .byline {
   color: var(--text-3);
   font-size: 12px;

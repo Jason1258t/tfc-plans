@@ -423,21 +423,23 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
 
           <section>
             <h3>Вложения и скриншоты</h3>
-            <Gallery taskId={fileTaskId} pending={pending} onRemovePending={removePending} onAdd={intake.add} />
-            <Attachments
-              taskId={fileTaskId}
-              pending={pending}
-              onRemovePending={removePending}
-              onAdd={intake.add}
-              error={intake.error}
-            />
-            {files.error && <ErrorBox>{files.error}</ErrorBox>}
-            {filesEnabled && (
-              <p className={styles.muted}>
-                Скриншот можно вставить через Ctrl+V.{' '}
-                {id === null ? 'Файлы загрузятся после создания задачи.' : 'Вложения сохраняются сразу.'}
-              </p>
-            )}
+            <div className={styles.files}>
+              <Gallery taskId={fileTaskId} pending={pending} onRemovePending={removePending} onAdd={intake.add} />
+              <Attachments
+                taskId={fileTaskId}
+                pending={pending}
+                onRemovePending={removePending}
+                onAdd={intake.add}
+                error={intake.error}
+              />
+              {files.error && <ErrorBox>{files.error}</ErrorBox>}
+              {filesEnabled && (
+                <p className={styles.muted}>
+                  Скриншот можно вставить через Ctrl+V.{' '}
+                  {id === null ? 'Файлы загрузятся после создания задачи.' : 'Вложения сохраняются сразу.'}
+                </p>
+              )}
+            </div>
           </section>
 
           <details open>
