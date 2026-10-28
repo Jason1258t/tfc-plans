@@ -1,0 +1,45 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+version = mod_version
+group = 'tfc.pyrofuel'
+base { archivesName = 'pyrofuel' }
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+// Проверочный мод (только для runServer): команда /pyrotest — топливо, жидкостная горелка, баки и сохранение. В jar не попадает.
+sourceSets {
+    devtest {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+configurations {
+    devtestCompileOnly.extendsFrom compileOnly
+}
+
+neoForge {
+    version = project.neo_version
+    mods {
+        pyrofuel { sourceSet sourceSets.main }
+        pyrofuel_devtest { sourceSet sourceSets.devtest }
+    }
+    addModdingDependenciesTo(sourceSets.devtest)
+    // Проверочный сервер: ./gradlew runServer. Create, CDG, TFC и IE кладёт в run/mods скрипт test-server.sh
+    runs {
+        server {
+            server()
+            programArgument '--nogui'
+            sourceSet = sourceSets.devtest
+        }
+    }
+}
+
+dependencies {
+    // Create, Create Diesel Generators, TFC, Immersive Engineering и их вложенные библиотеки — только для компиляции (libs.sh)
+    compileOnly fileTree(dir: 'libs', include: '*.jar')
+}
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }

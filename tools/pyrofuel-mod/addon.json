@@ -1,0 +1,48 @@
+{
+  "id": "pyrofuel",
+  "name": "TFC Pyrofuel — промышленное пиротопливо",
+  "version": "1.0.0",
+  "jar": "pyrofuel-1.0.0.jar",
+  "sha256": "05b002508be3e6e90f7cd4f101ca61bcb64cac0fe6ff4ecdeee8a53c87bccea2",
+  "order": 110,
+  "side": "both",
+  "summary": "Пирококсовые брикеты для перегрева горелки всполоха и жидкий пирогель для горелки Create Diesel Generators. Производственные линии на коксе, креозоте и дизеле; баки, насосы и трубы для непрерывной подачи жидкого топлива.",
+  "needs": "Сервер и все игроки. NeoForge 21.1.251+, Create 6.0.10, Create Diesel Generators 1.3.8, TerraFirmaCraft и Immersive Engineering.",
+  "blocks": [
+    {
+      "id": "pyrofuel:pyrocoke_mix",
+      "name": "Пирококсовая смесь",
+      "image": "pyrocoke_mix.png"
+    },
+    {
+      "id": "pyrofuel:soaked_pyromass",
+      "name": "Пропитанная пиромасса",
+      "image": "soaked_pyromass.png"
+    },
+    {
+      "id": "pyrofuel:raw_pyrocoke_briquette",
+      "name": "Сырой пирококсовый брикет",
+      "image": "raw_pyrocoke_briquette.png"
+    },
+    {
+      "id": "pyrofuel:pyrocoke_briquette",
+      "name": "Пирококсовый брикет",
+      "image": "pyrocoke_briquette.png"
+    },
+    {
+      "id": "pyrofuel:stabilizing_additive",
+      "name": "Стабилизирующая присадка",
+      "image": "stabilizing_additive.png"
+    },
+    {
+      "id": "pyrofuel:raw_pyrogel_bucket",
+      "name": "Ведро: сырой пирогель",
+      "image": "raw_pyrogel_bucket.png"
+    },
+    {
+      "id": "pyrofuel:pyrogel_bucket",
+      "name": "Ведро: пирогель",
+      "image": "pyrogel_bucket.png"
+    }
+  ]
+}

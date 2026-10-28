@@ -210,3 +210,18 @@ Create recipes run on the EE heater. Built against stubs (`./build.sh`, JDK only
 Diagnostics, not for the pack: logs player position jumps and teleports with a stack trace. Verified on the dev server;
 only the jar on the site (`/addons/tp-trace-1.0.0.jar`), not in the addon list. Found the World Border nether limit (see
 [pending.md](pending.md)).
+
+## TFC Pyrofuel (`tools/pyrofuel-mod`)
+
+- **1.0.0** (2026-10-27, dev #104): five materials (pyrocoke mix, soaked pyromass, raw/finished briquette,
+  stabilizing additive), raw and finished pyrogel fluids with buckets. Recipes use IE coke/creosote, Create cinder
+  flour, CDG diesel, TFC graphite/flux; normal heat bootstraps both branches. Briquette = 3200 ticks superheat;
+  CDG liquid burner uses pyrogel, multiplier 1, superheat above 80% valve opening, full-open consumption 1 mB/10 ticks.
+  Standard fluid capabilities; no world placement, sediment, spontaneous ignition or tank explosions.
+- Old cake recipes disabled; existing cakes stay usable and convert 1:1 to briquettes. Cinder flour Russian name
+  becomes «Незераковый порошок». CDG engine parameters provide zero useful stress capacity; finite dummy speed avoids
+  CDG division by zero (fuel is intended for burners, not engines).
+- API verified by MCP: Create 6.0.10 `BlazeBurnerBlockEntity.tryUpdateFuel`, CDG 1.3.8 `BurnerBlockEntity` and
+  `FuelType.CODEC`, NeoForge 21.1.251 fluid/bucket API. Dedicated-server checks passed: recipes, briquette SPECIAL, heat=2.0, 84/100 mB after 8 s, actual pipes/pump
+  (64 rpm imposed by the test fixture), empty shutdown, bucket transfers and 1900 mB retained across restart. Client rendering, complete factory automation and full-pack compatibility: not checked in game.
+- Separate pre-existing CDG/IE recipe parse errors found during testing: dev #118.

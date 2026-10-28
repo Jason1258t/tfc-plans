@@ -27,6 +27,7 @@ When finishing work: update the topic file, and this index only if a line below 
 - Host: apply crop growth config change `MjQFPQkIf9SHOdEjopy4` (`tfc admin changes pull`).
 - Host: apply Carry On change `P3E9AOli90hZrXpIgFBR` — IE crates/barrels, TFC barrels, FD cabinets, Firmalife wine/jar shelves can be carried (`tfc admin changes pull`).
 - Host: `arc-furnace-matadora` resource pack in `server.properties`; `ee-overheat` into `mods/`.
+- Host: install **TFC Pyrofuel 1.0.0** (server and players), then `tfc publish`; check pyrogel/briquette production and client textures.
 - In game: two-core cable shell model, datapacks `electroenergetics_missing` and `pellet_arc_furnace`, map scale,
   pumpjack, steel on EE heater, all addons (Miner Tools, Stress Fix, EE Extras 2.x, Small Diesel, IE Extras, Create Aeronautics Extra).
 - `tfc` app: Windows/Linux binaries, real launcher folder, real upload — not run.

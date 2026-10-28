@@ -1,0 +1,18 @@
+{
+  "type": "create:mixing",
+  "ingredients": [
+    {
+      "item": "pyrofuel:pyrocoke_mix"
+    },
+    {
+      "type": "fluid_stack",
+      "fluid": "immersiveengineering:creosote",
+      "amount": 250
+    }
+  ],
+  "results": [
+    {
+      "id": "pyrofuel:soaked_pyromass"
+    }
+  ]
+}
