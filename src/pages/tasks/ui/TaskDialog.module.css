@@ -162,10 +162,6 @@
   .tfInsert {
     width: 150px;
   }
-  /* Утилита общая (шапка, справочник, галерея) — прячем как раньше */
-  :global(.hide-sm) {
-    display: none;
-  }
 }
 
 .tfGallery {

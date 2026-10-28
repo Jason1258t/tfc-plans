@@ -19,3 +19,10 @@
   white-space: nowrap;
   background: color-mix(in srgb, currentColor 12%, transparent);
 }
+
+/* На узком экране в строках задач и сравнении остаётся компактная точка важности. */
+@media (max-width: 560px) {
+  .pill {
+    display: none;
+  }
+}
