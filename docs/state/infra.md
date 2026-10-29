@@ -337,11 +337,11 @@ Cursor configs (shapes from their docs, not tried).
   including no-world legacy ZIP pull, deleted source card, unrelated file preservation, fresh draft, SHA256 failure,
   MCP stdio inventory/exact ZIP read and prior promotion/undo/old-CLI scenarios. Game not checked.
 
+  Live checks after merge with @tfc/core: inventory and exact AirpresureFix.zip pack.mcmeta through MCP; compiled
+  macOS CLI pulls that confirmed legacy filename with no world in dry-run without creating files. Four distribution
+  SHA256s, npm startup and Linux native startup verified. Release: 2026.10.29-7a2edd56. Snapshot/game files unchanged.
+
 - Dev #150 (2026-10-29): Euphoria Patcher startup popup traced to missing Complementary r5.8.1.
   Proposed update `u20261029-193554-dd27` changes only `display.doPopUpLogging=false`, preserving logs and
   all other config bytes. Verified installed jar code through MCP and source SHA256 against the current snapshot;
   config absent from Firestore, so submitted through `tfc admin propose`. Client launch still awaits host check.
-
-  Live checks after merge with @tfc/core: inventory and exact AirpresureFix.zip pack.mcmeta through MCP; compiled
-  macOS CLI pulls that confirmed legacy filename with no world in dry-run without creating files. Four distribution
-  SHA256s, npm startup and Linux native startup verified. Release: 2026.10.29-7a2edd56. Snapshot/game files unchanged.
