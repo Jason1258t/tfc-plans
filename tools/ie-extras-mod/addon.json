@@ -1,13 +1,13 @@
 {
   "id": "ie_extras",
   "name": "IE Extras — блоки к Immersive Engineering",
-  "version": "1.0.0",
-  "jar": "ie-extras-1.0.0.jar",
-  "sha256": "b9cd85d9a11e3f0347c5a75bc7384398bddf24e0d261ea00582f1fcb1dd2d368",
+  "version": "1.1.0",
+  "jar": "ie-extras-1.1.0.jar",
+  "sha256": "ee8a2371e1516adbca9cb07c3a28e92dcf18c9d5112e13b3028a276d619e70b0",
   "order": 70,
   "side": "both",
-  "summary": "Блоки и функции к Immersive Engineering для TFC. Первый — аналоговый нагреватель: электрический (FE) нагреватель для тигля и других тепловых устройств TFC, температура которого задаётся силой сигнала красного камня — аналоговым рычагом Create или компаратором: 0–15 → 0–1600 °C, шаг около 107 °C.",
-  "needs": "Сервер и все игроки (новый блок). NeoForge 21.1.234+, TerraFirmaCraft 4.2.9, Immersive Engineering 12.4.2.",
+  "summary": "Блоки и функции к Immersive Engineering для TFC. Первый — аналоговый нагреватель: электрический (FE) нагреватель для тигля и других тепловых устройств TFC, температура которого задаётся силой сигнала красного камня — аналоговым рычагом Create или компаратором: 0–15 → 0–1600 °C, шаг около 107 °C. С 1.1.0 чаша Create (WoodenCog) греется от внешнего нагревателя IE (2000 °C, перегрев), нагревателя Electro Energetics и аналогового нагревателя.",
+  "needs": "Сервер и все игроки (новый блок). NeoForge 21.1.234+, TerraFirmaCraft 4.2.9, Immersive Engineering 12.4.2; нагрев чаши — при Create 6.0.10 и WoodenCog 1.2.18.",
   "blocks": [
     {
       "id": "ie_extras:analog_heater",

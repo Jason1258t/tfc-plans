@@ -26,7 +26,7 @@ When finishing work: update the topic file, and this index only if a line below 
   and concrete production in game, then `tfc admin updates approve`.
 - Host: pack update `u20261022-150945-83a0` (Chinese KubeJS messages → ru/en): `tfc admin updates pull`, check in game,
   `tfc admin updates approve`.
-- Host: install **EE Extras 2.3** (2.2 + compact generator), **Small Diesel 1.0.0**, **IE Extras 1.0.0** and **Create Aeronautics Extra 1.0.1** + `tfc publish`; warn players
+- Host: install **EE Extras 2.3** (2.2 + compact generator), **Small Diesel 1.0.0**, **IE Extras 1.1.0** (basin heating, dev #113) and **Create Aeronautics Extra 1.0.1** + `tfc publish`; warn players
   that rectifiers over 6 kW will burn.
 - Host: **`rw-host-fix`** + delete `eratosthenes_portal_clamp.js`; delete corrupted chunks Z ≈ −22 000…−18 400.
 - Host: **World Border** nether limit (`worldborder.json5`) → disable or widen; remove `tp-trace`.

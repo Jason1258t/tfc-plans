@@ -1,5 +1,7 @@
 package ie.extras;
 
+import ie.extras.basin.BasinHeaters;
+import ie.extras.mixin.IeExtrasMixinPlugin;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.registries.Registries;
@@ -31,7 +33,8 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 /**
  * IE Extras — блоки и функции к Immersive Engineering для сборки TFC Планы. Первый блок — аналоговый нагреватель:
  * электрический (FE) нагреватель для тигля и других тепловых устройств TFC, температура задаётся силой сигнала
- * красного камня (аналоговый рычаг Create, компаратор).
+ * красного камня (аналоговый рычаг Create, компаратор). С 1.1.0 — нагрев чаши Create (WoodenCog) внешним нагревателем
+ * IE, аналоговым нагревателем и нагревателем EE.
  */
 @Mod(IeExtras.MOD_ID)
 public class IeExtras {
@@ -66,6 +69,8 @@ public class IeExtras {
         // Энергия — с любой грани, кроме греющей (лицевой)
         modBus.addListener((RegisterCapabilitiesEvent e) -> e.registerBlockEntity(Capabilities.EnergyStorage.BLOCK,
                 ANALOG_HEATER_BE.get(), (be, side) -> side == be.facing() ? null : be.energy));
+        // Чаша Create: внешний нагреватель IE как источник тепла (с WoodenCog — BasinHeaters)
+        if (IeExtrasMixinPlugin.basinHeat()) modBus.addListener(BasinHeaters::registerCapabilities);
         modBus.addListener((BuildCreativeModeTabContentsEvent e) -> {
             if (e.getTabKey().equals(IE_TAB)) e.accept(ANALOG_HEATER_ITEM.get());
         });
