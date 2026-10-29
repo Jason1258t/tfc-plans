@@ -487,7 +487,7 @@ async function prepareSteps(v, args, sp) {
       force: v.force,
       hasWorld: !!profile.world,
       skip: owned.skip,
-      datapacksOnly: parts.length === 1 && parts[0] === 'datapacks',
+      datapacksOnly: parts.includes('datapacks') && !parts.includes('kubejs'),
     });
     plan.extra = plan.extra.filter((f) => !pulled.has(f.path));
   }

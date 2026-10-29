@@ -300,3 +300,17 @@ Cursor configs (shapes from their docs, not tried).
   preserving the URL, body and revision preconditions. Concurrent requests share token acquisition; a late 401
   cannot invalidate a newer token. Local stub checks covered recovery, repeated 401, 403, revision conflict,
   network/token failures and parallel requests. Actual token expiry/revocation was not induced on production.
+
+- Dev #125 (2026-10-29): `tfc datapacks list/files/install/confirm/unconfirm` manages world testing and pinned
+  pack-wide ZIPs in `kubejs/data/` through the installed KubeJS. Current snapshot `datapacks` metadata owns hashes,
+  source revision, confirmer and known world copies; source cards/opt-in remain separate. Admin confirmation creates
+  a snapshot and switches it with a base-snapshot check, validates ZIP/source content and blocks conflicting resource
+  paths. Site cards and ZIPs already in the snapshot are supported, including filename selection without a card.
+  Old CLI still receives archives as ordinary `kubejs`; old publish cannot lose or replace pinned files. Modified
+  world/pack ZIPs stay, managed copies have backups; undo is local and refuses a different selected world.
+  Builder parses ZIPs in KubeJS order (direct data last), publishes deployment metadata with `kubejs.json`; MCP keeps
+  later live-card recipes out of the active pinned layer. Checked: 57 local HTTP/CLI scenarios, original CLI full
+  pull, concurrent 409, resource overlap, ZIP priority and builder output; separate combined-scope check and MCP
+  list/get/recipe-layer checks. Browser: real cards, confirmed-state fixture desktop/375 px without overflow.
+  TypeScript/lint/format passed. Real host world, old/new game-world loading and priorities remain untested;
+  no production datapacks were promoted. Instructions/inventory: [datapacks-pack.md](../plans/datapacks-pack.md).

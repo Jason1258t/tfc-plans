@@ -134,7 +134,7 @@ export function makePlan(
   { force = false, hasWorld = true, skip = new Set(), datapacksOnly = false } = {},
 ) {
   const inScope = (kind, file) =>
-    kinds.includes(kind) && (!datapacksOnly || kind === 'world-datapack' || isPackDatapackPath(file));
+    kinds.includes(kind) && (!datapacksOnly || kind !== 'kubejs' || isPackDatapackPath(file));
   const plan = {
     add: [],
     update: [],

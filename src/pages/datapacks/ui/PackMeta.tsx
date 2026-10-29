@@ -59,7 +59,7 @@ export function PackMeta({ pack, deployment, onUpdate }: Props) {
         />
       </div>
       {deployment && (
-        <div className="small" role="status">
+        <div className={styles.dpDeployment} role="status">
           <strong>В сборке</strong> · по опубликованному снимку. Подтвердил {deployment.confirmedBy}, версия{' '}
           <code>{deployment.contentHash.slice(0, 12)}</code>.
           <div>

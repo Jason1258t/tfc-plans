@@ -616,3 +616,9 @@ the step is centred.
 - Checked: TypeScript, lint, format; one-off checks for shared consumers, recovery, cancellation and a simulated
   five-minute idle. Production `/schematics` loaded all nine library records in the same previously failing IAB
   tab after deploying the fix, with no new permission errors. Actual hours-long browser suspension is not yet verified.
+
+- Dev #125 (2026-10-29): datapack cards distinguish world-test opt-in from pinned pack deployment. Published
+  `kubejs.json.datapacks` supplies path/hash/confirmer without Firestore reads; a later card edit leaves the pinned
+  version active and the UI explains retesting through `tfc datapacks unconfirm`. Labels follow the published
+  snapshot and can lag the server's build queue. Checked existing live source cards plus a separate local confirmed
+  fixture on desktop/375 px; no shared source records were modified.

@@ -101,3 +101,8 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   `~/.cache/tfc-plans/reports/<id>`, unzip zip/gz, `log_analyze` on the main file, `mode=text|none`, `file=`);
   `logAnalyze` exported from `tools/logs.mjs`. Verified over stdio against three uploaded test reports: list, analysis
   of a crash report and a log, raw text of a file inside a zip, 3-chunk file identical to the source; second call — 0 reads.
+
+- Dev #125 (2026-10-29): datapack list/get show pinned pack deployment from published `kubejs.json.datapacks`,
+  including snapshot ZIPs without a source card. Recipe tools exclude the entire pinned card from the live-site
+  layer (later new recipe ids remain unconfirmed); ZIP recipes/data and loot respect KubeJS order. Verified via
+  stdio list/get and a static pinned recipe fixture against read-only live source cards, with no Firestore writes.

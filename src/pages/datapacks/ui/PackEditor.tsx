@@ -200,7 +200,8 @@ export function PackEditor({
       <footer className={cx(styles.dpFoot, 'faint', 'small')}>
         <span className="grow">
           pack_format {PACK_FORMAT} (Minecraft 1.21.1) · создал {pack.author}, изменено {timeAgo(pack.updatedAt)}.
-          Установка: zip в <code>world/datapacks/</code>; рецепты — <code>/reload</code>, реестры — перезапуск сервера.
+          Проверка: zip в <code>world/datapacks/</code>; подтверждённые фиксы — в <code>kubejs/data/</code>. После
+          переноса перезапустите игру и сервер.
         </span>
         <Button size="sm" className={styles.dpDanger} onClick={remove}>
           Удалить датапак
