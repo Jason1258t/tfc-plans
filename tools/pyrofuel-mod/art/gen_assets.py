@@ -13,8 +13,8 @@ ITEMS = [
 # Авторские PNG хранятся в ресурсах. Выпуск не должен возвращать старые процедурные значки.
 for name in ITEMS:
     image = read(TEXTURES / 'item' / (name + '.png'))
-    if len(image) != 16 or any(len(row) != 16 for row in image):
-        raise ValueError(f'Ожидается готовая текстура 16×16: {name}')
+    if len(image) not in (16, 32, 64) or any(len(row) != len(image) for row in image):
+        raise ValueError(f'Ожидается готовая квадратная текстура 16/32/64: {name}')
 
 for name in ('raw_pyrogel', 'pyrogel'):
     tile = read(ART / 'tiles' / (name + '.png'))
@@ -35,15 +35,15 @@ for name in ('raw_pyrogel', 'pyrogel'):
             json.dumps({'animation': {'frametime': 4, 'interpolate': False}}) + '\n'
         )
 
-# Увеличение без сглаживания — только технический просмотр готовых предметов.
-canvas = [[(28, 30, 34, 255)] * (len(ITEMS) * 80) for _ in range(80)]
+# Просмотр целого PNG: размер картинки не должен обрезать более крупные текстуры.
+canvas = [[(28, 30, 34, 255)] * (len(ITEMS) * 144) for _ in range(144)]
 for i, name in enumerate(ITEMS):
     image = read(TEXTURES / 'item' / (name + '.png'))
-    for y in range(16):
-        for x in range(16):
-            if image[y][x][3]:
-                for dy in range(4):
-                    for dx in range(4):
-                        canvas[8 + y * 4 + dy][i * 80 + 8 + x * 4 + dx] = image[y][x]
+    size = len(image)
+    for y in range(128):
+        for x in range(128):
+            pixel = image[y * size // 128][x * size // 128]
+            if pixel[3]:
+                canvas[8 + y][i * 144 + 8 + x] = pixel
 write(ART / 'preview.png', canvas)
 print('Готово: анимации пирогеля и просмотр; предметные PNG сохранены.')

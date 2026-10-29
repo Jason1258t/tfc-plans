@@ -17,21 +17,26 @@
 
 ## Подготовка
 
-Выбранные исходники ImageGen сохранены в `sources/`. Готовые предметные PNG — 16×16 RGBA,
-в `../src/main/resources/assets/pyrofuel/textures/item/`. Палитры указаны в `palettes.json`.
-Механическая подготовка через Sharp: границы объекта определены по альфе ≥128, пустые поля
-удалены; рисунок вписан в 14×14 (`nearest`, `contain`) без изменения пропорций, добавлено по
-1 прозрачному пикселю со всех сторон. Ближайший цвет палитры по RGB, без дизеринга,
-альфа 0/255 с порогом 128. 5–11 цветов с прозрачностью в зависимости от предмета.
+Выбранные исходники ImageGen сохранены в `sources/`. Пользователь выбрал исходный готовый
+брикет с тремя оранжевыми включениями (приложение 2026-10-29); вариант с двумя крупными
+включениями отклонён. Перегенерация рисунка не выполнялась.
 
-Первый готовый брикет потерял оранжевые включения после уменьшения. Исходник уточнён:
-два более крупных простых включения на передней грани, без добавления свечения и деталей.
+Готовые предметные PNG — 32×32 RGBA, выбранный готовый брикет — 64×64 RGBA, в
+`../src/main/resources/assets/pyrofuel/textures/item/`. Метаданные размеров и границ исходников —
+`item-preparation.json`. Ранее уменьшение до 16×16 и фиксированных 5–11 цветов теряло контур,
+грани и небольшие включения. Маски в моделях нет: один layer0, родитель item/generated.
+
+Механическая подготовка: границы объекта по альфе ≥128, удаление только пустых полей;
+вписать без изменения пропорций в (размер−4)² через Sharp nearest/contain, добавить 2 прозрачных
+пикселя с каждой стороны. Альфа 0/255 с порогом 128. Адаптивная палитра до 16 цветов,
+без дизеринга (Sharp palette=true, colours=16); затем экспорт PNG в RGBA 8 бит, чтобы
+сборщик ресурсов мог его прочитать. У готового брикета 15 цветов, у остальных 15–16.
 
 Жидкости: исходники `sources/*_tile.png` уменьшены без обрезки до 16×16 (`nearest`) и
 приведены к палитрам из 4/5 цветов. Подготовленные тайлы — `tiles/`. `gen_assets.py`
 собирает из них 8 кадров: still 16×128, flow 32×256; frametime=4, без интерполяции.
 Стоячая жидкость мягко смещается по X, текущая — циклически по Y. Рисунки предметов
-скрипт проверяет и сохраняет, а не рисует заново. Дополнительные библиотеки для сборки не нужны.
+скрипт проверяет и сохраняет, а не рисует заново; поддерживаются размеры 16/32/64. Дополнительные библиотеки для сборки не нужны.
 
 ## Просмотр и ограничения
 
@@ -79,6 +84,6 @@ Create a SEAMLESS TILEABLE pixel-art FLUID TEXTURE for raw industrial pyrogel in
 
 Edit the supplied RAW PYROGEL seamless fluid tile into a FINISHED PYROGEL fluid tile for native Minecraft Create/TFC style. Preserve its broad stepped horizontal patches and flat simple geometry. Change palette to FOUR muted brick-red/burgundy colors #391c26 #622733 #8c382e #b64b2d, with at most TWO small flat orange patches #e4772f. It must remain dark industrial fuel with sparse warm inclusions, not bright lava, magma, fire or magical liquid. Strict logical 16x16 pixel tile enlarged nearest-neighbor, no smooth gradients, round ripples, bubbles, gloss, sparkle, fine noise or outlines around each pixel. Fully opaque square surface tile filling entire image edge to edge, seamlessly repeating on all four sides. No border, object, perspective, text, label or surrounding background. Restrained broad colour regions, not detailed illustration.
 
-### pyrocoke_briquette_revision
+### pyrocoke_briquette_revision — отклонено пользователем
 
 Edit this finished pyrocoke fuel brick sprite. KEEP the simple rectangular pressed-brick shape, viewing angle, charcoal flat top/front/right planes and two straight top grooves. CHANGE the THREE TINY ORANGE SPECKS into TWO MUCH BROADER simple flat amber-orange rectangular inclusions in the FRONT FACE. Each orange inclusion must occupy about 2 by 2 logical pixels on the intended 16x16 sprite (about one sixth the brick width), so it remains visible after reduction to 16x16. Put one inclusion toward the left end and one toward the right end of the front face. Flat orange #d67824 with no highlight or border. Remove all the other small glowing dots. No shine, light emission, bloom, flames, cracks, fine noise or extra shading. Few large plain grey planes, simple dark outline. This is a native modest Minecraft Create/TFC inventory item sprite, not a detailed pixel-art illustration. Strict 16x16 logical grid enlarged nearest-neighbor, about 7 flat colours. Entire isolated complete brick on true transparent background.
