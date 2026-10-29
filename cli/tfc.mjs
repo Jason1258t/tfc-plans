@@ -977,17 +977,21 @@ async function adminChanges(a, v, [action, ...ids]) {
 async function adminUpdates(a, v, [action, ...ids]) {
   const { updates } = await a.get('/admin/updates');
   const pending = updates.filter((u) => u.status === 'pending');
-  const find = (id) => {
+  const find = (id, allowRejected = false) => {
     const u = updates.find((x) => x.id === id);
     if (!u) throw new Error(`нет обновления ${id ?? ''} — список: tfc admin updates`);
-    if (u.status !== 'pending') throw new Error(`обновление ${u.id} уже не ждёт (${u.status})`);
+    if (u.status !== 'pending' && !(allowRejected && u.status === 'rejected'))
+      throw new Error(`обновление ${u.id} уже не ждёт (${u.status})`);
     return u;
   };
   if (!action || action === 'list') {
     if (!pending.length) console.log('Ждущих обновлений нет.');
     for (const u of pending) printUpdate(u);
-    const done = updates.filter((u) => u.status !== 'pending').slice(0, 5);
-    if (done.length) console.log(dim('\nНедавние:'));
+    const rejected = updates.filter((u) => u.status === 'rejected');
+    if (rejected.length) console.log(dim('\nОтклонённые — только явный pull по id:'));
+    for (const u of rejected) printUpdate(u);
+    const done = updates.filter((u) => u.status === 'approved').slice(0, 5);
+    if (done.length) console.log(dim('\nНедавно одобренные:'));
     for (const u of done) printUpdate(u, { full: false });
     if (pending.length)
       console.log(
@@ -996,20 +1000,37 @@ async function adminUpdates(a, v, [action, ...ids]) {
     return;
   }
   if (action === 'pull') {
-    const todo = ids.length ? ids.map(find) : pending.slice().reverse();
+    const todo = ids.length ? ids.map((id) => find(id, true)) : pending.slice().reverse();
+    const rejected = todo.filter((u) => u.status === 'rejected');
+    if (rejected.length)
+      console.log(
+        yellow(
+          `Явно выбраны отклонённые обновления: ${rejected.map((u) => u.id).join(', ')}. Статус останется «отклонено».`,
+        ),
+      );
     if (!todo.length) return console.log('Ждущих обновлений нет.');
     const profile = currentProfile(loadConfig(), v.profile);
     console.log(`Профиль ${profileTitle(profile)}${profile.serverDir ? dim(` · сервер ${profile.serverDir}`) : ''}`);
     return pullUpdates(a, profile, todo, { yes: v.yes, dryRun: v['dry-run'] });
   }
   if (action === 'approve' || action === 'reject') {
+    if (ids.length !== 1) throw new Error(`tfc admin updates ${action} <id> — укажите ровно одно обновление`);
     const u = find(ids[0]);
     printUpdate(u);
     const q = action === 'approve' ? 'Сделать новой сборкой для всех игроков?' : 'Отклонить?';
-    if (!v.yes && !(interactive() && (await confirm(q, action === 'approve')))) return console.log('Ничего не менял.');
+    if (!v.yes) {
+      if (!interactive()) throw new Error(`Для ${action} нужен --yes: статус обновления не изменён.`);
+      if (!(await confirm(q, action === 'approve'))) return console.log('Статус обновления не изменён.');
+    }
     if (action === 'reject') {
-      await a.post(`/admin/updates/${u.id}/reject`, { reason: v.note ?? '' });
-      return console.log('Отклонено. Если забирали его к себе — вернуть файлы: tfc undo');
+      const rejected = await a.post(`/admin/updates/${u.id}/reject`, { reason: v.note ?? '' });
+      if (rejected.status !== 'rejected')
+        throw new Error('Сервер не подтвердил статус «отклонено». Проверьте список обновлений.');
+      return console.log(
+        'Статус: отклонено. Общий pull его пропустит; забрать явно: tfc admin updates pull ' +
+          u.id +
+          '\nЕсли забирали его к себе — вернуть файлы: tfc undo',
+      );
     }
     const r = await a.post(`/admin/updates/${u.id}/approve`, { force: !!v.force }).catch((e) => {
       if (e.status === 403)

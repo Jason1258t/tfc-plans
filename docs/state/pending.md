@@ -5,12 +5,9 @@ its one-liner in STATE.md.
 
 ## Host actions
 
-- **Euphoria Patcher startup popup** (2026-10-29, dev #150): proposed update `u20261029-193554-dd27`
-  disables `display.doPopUpLogging` in `config/euphoria_patcher/settings.toml`. The installed mod code confirms
-  that this disables Sodium popups while retaining logs. Missing Complementary r5.8.1 remains a separate optional
-  shader installation issue. Host: pull this update, restart the client, check the popup, then approve.
-  Source and manual-client instructions: [euphoria-popup](../../pack-patches/euphoria-popup/README.md).
-  Not checked in game.
+- **Euphoria Patcher missing shader** (dev #150): popup-suppression update `u20261029-193554-dd27`
+  rejected on 2026-10-29. Do not apply it in bulk; investigate installing matching Complementary r5.8.1 instead.
+  The rejected proposal remains available by explicit ID for inspection.
 
 - **Гладкий камень на камнерезе и в прессе** (2026-10-29, dev #151): site datapack `wbgmlRWP5X9h8pWQb5bQ`
   (ns `tfc_plans_smooth`, built by `npm run datapack:smooth -- --upload`). Recipes: stonecutter 1:1 for every
