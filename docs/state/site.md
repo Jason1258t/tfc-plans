@@ -239,6 +239,12 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
     Browser demo checked: divider with/without surrounding blank lines, click to reveal source, dash, code/link
     exclusions, existing horizontal rule. Package build/typecheck, 33 existing checks, oxlint and formatting passed.
     Published to npm by the owner; the site now uses ^0.1.5. Site typecheck, lint and deployment checks passed.
+  - Plain brackets (2026-10-29, dev #141, cm-live-markdown 0.1.6): Lezer parses any `[text]` as a shortcut reference
+    link, so the editor hid the brackets and styled it as a link. Now `[text]`, `[text][]`, `[text][label]` and
+    `![alt]` without a URL and without a matching `[label]: url` definition are plain text (brackets visible, inline
+    formatting inside still works; Ctrl+click ignores them) — matches react-markdown's view. Escapes (`\[`, `\*`…) hide
+    the backslash outside the cursor. 4 new package checks (37), demo and site editor checked in the browser.
+    `npm publish` 404 = expired npm login (`npm whoami` → 401): `npm login` first.
   - Nested list markers (2026-10-23): ordered items show outline numbers «3.1.», «3.2.1.», bullets repeat the dot per
     level «• •» — in `Markdown` (CSS counters, `ol start` → `counter-reset` in the component; applies to every Markdown
     view on the site) and in `LiveMarkdown` (widget from the syntax tree). Source stays plain `1.` / `-`.
