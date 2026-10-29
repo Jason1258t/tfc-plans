@@ -49,7 +49,7 @@ its one-liner in STATE.md.
   connector (phase), converter on an IE capacitor (input/output face by hammer), JEI/EMI recipes, placed rectifiers
   survive; 2.0.2 — cable, EE connector terminal, highlight and label, wrench rotation; 2.1 — wires and spools, sag and
   rendering of spans > 128 blocks, clamp by click, spool tooltips, recipes; 2.2 — blocks, JEI, inverters with motors and
-  several per grid; grid sync only at microTicks = 1. Details — [addons.md](addons.md).
+  several per grid (grid sync at microTicks > 1 fixed in 2.5.1). Details — [addons.md](addons.md).
 - **EE Extras 2.3.1 + Small Diesel 1.0.1** (2026-10-22, `ee-extras-2.3.1.jar`, `small-diesel-1.0.1.jar`; 2.3.1/1.0.1
   — new looks only): host installs both and `tfc publish` (EE Extras 2.3.1 includes 2.2–2.3). In game: new models of the
   generator, rectifiers, inverters, small engine and genset (terminals of both generators moved into terminal boxes —
@@ -59,8 +59,9 @@ its one-liner in STATE.md.
   (`tfc pull addons`, server and players) and `tfc publish`. In game: clicking an IE lantern with the duplex spool, the
   lantern look standing and hanging, light and no flicker on a real AC generator, wrench flip, the tooltip on the IE
   lantern. Details — [addons.md](addons.md).
-- **EE Extras 2.5** (2026-10-29, `ee-extras-2.5.0.jar`, includes 2.4; frequency converters and synchronizers): host
-  installs (`tfc pull addons`, server and players) and `tfc publish`. In game: block looks, the frequency / mode value
+- **EE Extras 2.5.1** (2026-10-29, `ee-extras-2.5.1.jar`, includes 2.4–2.5; frequency converters and synchronizers;
+  2.5.1 — grid inverters sync at the pack's microTicks = 8, dev #142): host
+  installs (`tfc pull addons`, server and players) and `tfc publish`. In game: inverters on a real generator grid (2.5.1), block looks, the frequency / mode value
   boxes, goggle readouts, synchronizer «faster/slower» via redstone dust to real EE brushes, the two-block industrial
   cabinet placement and radiators. Details — [addons.md](addons.md).
 - **Create Aeronautics Extra 1.0.1** (2026-10-29, `create-aeronautics-extra-1.0.1.jar`, new module textures): host
