@@ -57,7 +57,10 @@ function changedFiles(root, branch) {
  * (TFC_LINT_TOOLS переопределяет путь к node_modules). Пусто — всё чисто.
  */
 function lintGate(root, wt, branch) {
-  const files = changedFiles(root, branch).filter((f) => fs.existsSync(path.join(wt, f)));
+  // tools/ — submodule tfc-addons: его файлы проверяет свой репозиторий
+  const files = changedFiles(root, branch).filter(
+    (f) => f !== 'tools' && !f.startsWith('tools/') && fs.existsSync(path.join(wt, f)),
+  );
   if (!files.length) return [];
   const node = process.execPath;
   const base = process.env.TFC_LINT_TOOLS ? path.resolve(process.env.TFC_LINT_TOOLS) : path.join(root, 'node_modules');
