@@ -4,7 +4,8 @@
 // только долотом (режим «гладко» — в мире или на верстаке), а пилы WoodenCog KubeJS сборки удалила целиком.
 // Скрипт берёт из каталога рецептов модов (public/recipes.json — его собирает `npm run mods`) все рецепты долота
 // в режиме tfc:smooth для каменных блоков и пишет:
-//   а) камнерез: тот же вход → тот же выход, 1:1;
+//   а) камнерез: тот же вход → тот же выход, 1:1; и из полученного блока — его плиты, ступени и стены, если у них
+//      есть верстачный рецепт (число на один блок — как у верстака: плита 2, ступени и стена 1);
 //   б) пресс Create над чашей с нагревом (горелка — жёлтое пламя, heated): булыжник породы + 50 мБ лавы →
 //      гладкая порода. Не 4 камешка + лава: это вход рецепта природного камня (перегрев), а пресс с перегревом
 //      подходит и под рецепт с нагревом — рецепты бы перехватывали друг друга.
@@ -30,7 +31,7 @@ import { recipeRefs } from '../src/shared/pack-data/recipeRefs.ts';
 const NS = 'tfc_plans_smooth';
 const NAME = 'Гладкий камень на камнерезе и в прессе';
 const DESCRIPTION =
-  'Гладкие породы, резные кирпичи, песчаник, алебастр — на камнерезе; гладкие породы — в прессе Create с нагревом (scripts/smooth-stone-datapack.mjs, TFC Планы)';
+  'Гладкие породы, резные кирпичи, песчаник, алебастр, их плиты, ступени и стены — на камнерезе; гладкие породы — в прессе Create с нагревом (scripts/smooth-stone-datapack.mjs, TFC Планы)';
 const LAVA_MB = 50;
 const args = process.argv.slice(2);
 const upload = args.includes('--upload');
@@ -83,6 +84,15 @@ const add = (file, json, source, note) => {
   });
 };
 
+/** блок → верстачные рецепты его плиты/ступеней/стены (сетка только из этого блока) */
+const shapes = new Map();
+for (const r of recipes) {
+  if (r.t !== 'minecraft:crafting_shaped' || !/_(slab|stairs|wall)$/.test(r.j.result?.id ?? '') || !active(r)) continue;
+  const keys = Object.values(r.j.key ?? {});
+  if (keys.length !== 1 || !keys[0].item) continue;
+  shapes.set(keys[0].item, [...(shapes.get(keys[0].item) ?? []), r]);
+}
+
 const chisel = recipes.filter(
   (r) => r.t === 'tfc:chisel' && r.j.mode === 'tfc:smooth' && !/greenhouse/.test(JSON.stringify(r.j.result)),
 );
@@ -108,6 +118,25 @@ for (const r of chisel) {
       `как долото «гладко»: ${inputs.join(' / ')}`,
     );
     table.push(`камнерез: ${inputs.join(' / ')} → ${result}`);
+  }
+
+  // Плиты, ступени, стены из этого блока: число — как у верстака на один блок (плита 6 из 3 → 2, ступени 8 из 6 → 1)
+  for (const s of shapes.get(result) ?? []) {
+    const shape = s.j.result.id;
+    if (cut.has(shape)) {
+      console.warn(`! ${shape}: камнерез уже есть — пропущен`);
+      continue;
+    }
+    const cells = s.j.pattern.join('').replace(/ /g, '').length;
+    const count = Math.max(1, Math.floor((s.j.result.count ?? 1) / cells));
+    const [sns, sname] = shape.split(':');
+    add(
+      `data/${NS}/recipe/stonecutting/${sns}/${sname}.json`,
+      { type: 'minecraft:stonecutting', ingredient: { item: result }, result: { id: shape, count } },
+      s,
+      `верстак: ${cells} → ${s.j.result.count ?? 1}`,
+    );
+    table.push(`камнерез: ${result} → ${count} × ${shape}`);
   }
 
   // Пресс — только для гладких пород: их булыжник есть у каждой породы
