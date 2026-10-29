@@ -55,7 +55,7 @@ export async function datapacksInventory(args = {}) {
     page(list, args, (d) => {
       const pin = d.deployment;
       return [
-        `${d.id} — ${d.name}; ${pin ? `В СБОРКЕ: ${pin.path}; ZIP ${pin.sha256}; содержимое ${pin.contentHash}` : d.sourcePath ? `ZIP мира: ${d.sourcePath}` : `карточка сайта: ${d.install ? 'предлагать в мир' : 'тестовая'}`}`,
+        `${d.id} — ${d.name}; ${pin ? `В СБОРКЕ: ${pin.path}; ZIP ${pin.sha256}; содержимое ${pin.contentHash}` : d.sourcePath ? `ZIP мира: ${d.sourcePath}; ZIP ${d.sha256}; содержимое ${d.contentHash ?? 'не прочитано'}` : `карточка сайта: ${d.install ? 'предлагать в мир' : 'тестовая'}; содержимое ${d.contentHash}`}`,
         `  ${d.sourceMissing ? 'Карточки сайта нет' : d.snapshotSource ? 'Источник — ZIP снимка, карточки сайта нет' : `Ревизия карточки в ответе сервера (для записи перечитайте datapack_get): ${d.revision}`}${pin && !d.sourceMissing && pin.contentHash !== d.contentHash ? '; есть новая неподтверждённая редакция' : ''}`,
         `  Догрузить: tfc datapacks pull ${d.id}`,
       ];
