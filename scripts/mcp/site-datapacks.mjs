@@ -10,6 +10,8 @@ import { datapackRecipe, indexRecipe, recipeRecord, recipes, readJson } from './
 import { cached, listAll } from './firestore.mjs';
 
 const loadDocs = cached(10 * 60_000, () => listAll('datapacks', ['name', 'description', 'install', 'entries']));
+/** После записи датапака (datapack_put) — перечитать слой при следующем вопросе */
+export const resetSiteRecipes = () => loadDocs.reset();
 async function load() {
   const docs = await loadDocs();
   const installed = [];

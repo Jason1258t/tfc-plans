@@ -46,3 +46,23 @@ export function datapackPathError(path: string): string | null {
     return 'Путь должен быть вида data/<ns>/…, только a-z 0-9 _ . - / и расширение файла.';
   return null;
 }
+
+/** Ошибки записей, из-за которых файл не загрузится или потеряется: путь, повтор пути, синтаксис JSON */
+export function datapackIssues(entries: { path: string; content: string }[]): { path: string; message: string }[] {
+  const issues: { path: string; message: string }[] = [];
+  const seen = new Set<string>();
+  for (const e of entries) {
+    const pathError = datapackPathError(e.path);
+    if (pathError) issues.push({ path: e.path, message: pathError });
+    if (seen.has(e.path)) issues.push({ path: e.path, message: 'этот путь встречается дважды — победит последний' });
+    seen.add(e.path);
+    if (e.path.endsWith('.json')) {
+      try {
+        JSON.parse(e.content);
+      } catch (err) {
+        issues.push({ path: e.path, message: `ошибка JSON: ${err instanceof Error ? err.message : err}` });
+      }
+    }
+  }
+  return issues;
+}
