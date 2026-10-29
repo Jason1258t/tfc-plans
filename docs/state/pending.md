@@ -5,6 +5,14 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **Гладкий камень на камнерезе и в прессе** (2026-10-29, dev #151): site datapack `wbgmlRWP5X9h8pWQb5bQ`
+  (ns `tfc_plans_smooth`, built by `npm run datapack:smooth -- --upload`). 80 recipes: stonecutter 1:1 for every
+  `tfc:chisel` smooth-mode stone block (smooth rocks from raw/hardened, chiseled bricks, smooth/cut sandstone, polished
+  alabaster, Firmalife sealed bricks); Create compacting `heated`: rock cobble + 50 mB lava → smooth rock (cobble, not
+  4 loose rocks — that is the superheated raw-stone recipe's input and a superheated burner would match both).
+  `recipe_conflicts` clean. Host: flag «ставить», `tfc datapacks install`, check in game, then `confirm`. Not
+  checked in game.
+
 - **Create Ore Excavation veins** (2026-10-29, dev #136): proposed update `u20261029-091146-275f`, source and
   checks — [pack-patches/coe-vein-ids](../../pack-patches/coe-vein-ids/README.md). COE 1.6.8's KubeJS helper writes
   a component object, but the recipe loader expects a JSON string (`FLAT_CODEC`); all 27 custom veins now use
