@@ -178,6 +178,7 @@ export async function confirmDatapacks(api, profile, names, { yes = false, dryRu
   // Права проверяем даже при предпросмотре, до загрузки файлов.
   if ((await api.role()) !== 'admin') throw new Error('подтверждать датапаки может только хост (ключ администратора)');
   const c = await catalog(api);
+  if (!profile.world) throw new Error('для переноса выберите мир: tfc init --world <мир>');
   if (!c.snapshot) throw new Error('сначала опубликуйте снимок сборки');
   const all = !names.length || (names.length === 1 && names[0] === 'all');
   const local = localDatapacks(profile);
@@ -227,7 +228,9 @@ export async function confirmDatapacks(api, profile, names, { yes = false, dryRu
   } else {
     for (const d of selected) {
       items.push({ id: d.id });
-      console.log(`${d.path} → ${worldDatapackPath(d.id)} — ${d.name}`);
+      console.log(
+        `${d.path} → ${d.snapshotSource && d.fileName ? `world/datapacks/${d.fileName}` : worldDatapackPath(d.id)} — ${d.name}`,
+      );
     }
   }
   if (!items.length) {

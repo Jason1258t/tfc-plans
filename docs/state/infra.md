@@ -309,7 +309,7 @@ Cursor configs (shapes from their docs, not tried).
   Old CLI still receives archives as ordinary `kubejs`; old publish cannot lose or replace pinned files. Modified
   world/pack ZIPs stay, managed copies have backups; undo is local and refuses a different selected world.
   Builder parses ZIPs in KubeJS order (direct data last), publishes deployment metadata with `kubejs.json`; MCP keeps
-  later live-card recipes out of the active pinned layer. Checked: 57 local HTTP/CLI scenarios, original CLI full
+  later live-card recipes out of the active pinned layer. Checked: 59 local HTTP/CLI scenarios, original CLI full
   pull, concurrent 409, resource overlap, ZIP priority and builder output; separate combined-scope check and MCP
   list/get/recipe-layer checks. Browser: real cards, confirmed-state fixture desktop/375 px without overflow.
   TypeScript/lint/format passed. Real host world, old/new game-world loading and priorities remain untested;
