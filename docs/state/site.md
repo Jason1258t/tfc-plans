@@ -187,6 +187,13 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   «1)», в просмотре рисуется со скобкой (у ol ставится data-delim по строке исходника, CSS-счётчик добавляет «)»),
   «1.» — с точкой, вложенные — «2.1)». Правка живого редактора — в пакете cm-live-markdown 0.1.4 (маркер вне курсора
   берёт разделитель из исходника, на это есть тесты в пакете); на сайте версия поднимается после публикации в npm.
+- **Letter lists «а) / б)»** (2026-10-29, dev #152): not CommonMark, so `Markdown` pre-processes the source — a letter
+  marker `X)` becomes `1)` of the same width (nesting by indent is unchanged), `ol[data-letters]` / `li[data-mark]`
+  take the letter from the original source line, CSS shows `attr(data-mark)`. Same rules as the editor: a list starts
+  at a block start with any letter or mid-paragraph with `a)` / `а)`; then any letter; not inside fenced code; only `)`
+  (so «т. е.» stays text). Task boxes `а) [ ]` toggle (TASK_BOX knows letters). Editor side — cm-live-markdown 0.1.7
+  (`letterLists` parser extension, Enter continues with the next letter and shifts the rest, Tab/Backspace/Ctrl+Enter;
+  10 new package checks, 47 total); the site switches to `^0.1.7` after the owner publishes it.
 - **Task image gallery** (2026-10-24, task wLnZtM8UKnm1aNIlAyYn): saved images and images of a new-task draft are one
   list, so a draft thumbnail also opens the full-screen view (no zoom cursor that does nothing any more; the view says
   «не загружено — появится после создания задачи»). Hovering a thumbnail shows a cross that deletes the image after a

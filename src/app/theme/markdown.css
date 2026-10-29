@@ -109,6 +109,17 @@
 .md ul > li:not(.task-list-item)::before {
   content: '•';
 }
+/* Буквенный список «а) / б)»: буква как в исходнике (data-mark ставит Markdown), счётчик не участвует —
+   вложенный в пункт нумерованный список нумеруется от внешнего нумерованного, как в редакторе */
+.md ol[data-letters] {
+  counter-reset: none;
+}
+.md ol[data-letters] > li {
+  counter-increment: none;
+}
+.md ol[data-letters] > li:not(.task-list-item)::before {
+  content: attr(data-mark);
+}
 .md :is(ul, ol) ul > li:not(.task-list-item)::before {
   content: '• •';
 }
