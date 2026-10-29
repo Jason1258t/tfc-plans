@@ -1,7 +1,16 @@
 package ie.extras.devtest;
 
 import com.mojang.brigadier.CommandDispatcher;
+import blusunrize.immersiveengineering.api.IEProperties;
+import blusunrize.immersiveengineering.common.blocks.metal.FurnaceHeaterBlockEntity;
+import com.george_vi.electroenergetics.content.resistive_heater.ResistiveHeaterBlockEntity;
+import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.simibubi.create.content.processing.basin.BasinBlockEntity;
+import net.chauvedev.woodencog.blockEntities.BasinBlockEntityExtended;
+import net.dries007.tfc.common.component.heat.HeatCapability;
+import net.dries007.tfc.common.component.heat.IHeat;
+import net.minecraft.world.level.block.Block;
 import ie.extras.AnalogHeaterBlock;
 import ie.extras.AnalogHeaterBlockEntity;
 import ie.extras.IeExtras;
@@ -38,6 +47,10 @@ import net.neoforged.neoforge.items.IItemHandler;
  *   /ietest drain — обнулить запас (вместе с power off — проверка «нет энергии»)
  *   /ietest caps — с каких граней нагреватель принимает FE (кроме решётки) и сколько берёт за раз
  *   /ietest report — сигнал, температура нагревателя и тигля, запас, свечение, выход компаратора, металл в тигле
+ *   /ietest basin none|ie|ie_rs|analog|ee <тепло 0–1> — чаша Create с медным слитком и источник тепла: ничего; внешний
+ *       нагреватель IE сбоку (с бесконечным питанием; ie_rs — с блоком красного камня у нагревателя); аналоговый
+ *       нагреватель под чашей на сигнале 15; нагреватель EE под чашей с заданным теплом (поле heat)
+ *   /ietest basinreport — температура чаши по WoodenCog (её же показывают очки инженера; сам текст подсказки — клиентский), уровень нагрева Create, температура слитка, запас нагревателя IE
  */
 @Mod("ie_extras_devtest")
 public class IeTest {
@@ -46,12 +59,20 @@ public class IeTest {
     static final BlockPos SIGNAL = HEATER.east();
     static final BlockPos CHEST = SIGNAL.east();
     static boolean power;
+    static final BlockPos BASIN = new BlockPos(0, -60, 6);
+    static final BlockPos BASIN_SIDE = BASIN.east();
+    static final BlockPos BASIN_BELOW = BASIN.below();
 
     public IeTest() {
         NeoForge.EVENT_BUS.addListener(IeTest::commands);
         NeoForge.EVENT_BUS.addListener((LevelTickEvent.Pre e) -> {
             if (power && e.getLevel() instanceof ServerLevel level && level.dimension() == ServerLevel.OVERWORLD
                     && level.getBlockEntity(HEATER) instanceof AnalogHeaterBlockEntity be) be.energy.setStored(Integer.MAX_VALUE);
+            if (e.getLevel() instanceof ServerLevel level && level.dimension() == ServerLevel.OVERWORLD) {
+                if (level.getBlockEntity(BASIN_SIDE) instanceof FurnaceHeaterBlockEntity ie) ie.energyStorage.receiveEnergy(256, false);
+                if (level.getBlockEntity(BASIN_BELOW) instanceof AnalogHeaterBlockEntity be) be.energy.setStored(Integer.MAX_VALUE);
+                if (eeHeat >= 0 && level.getBlockEntity(BASIN_BELOW) instanceof ResistiveHeaterBlockEntity ee) ee.heat = eeHeat;
+            }
         });
     }
 
@@ -67,7 +88,15 @@ public class IeTest {
                         .then(Commands.literal("off").executes(c -> power(c.getSource(), false))))
                 .then(Commands.literal("drain").executes(c -> drain(c.getSource())))
                 .then(Commands.literal("caps").executes(c -> caps(c.getSource())))
-                .then(Commands.literal("report").executes(c -> report(c.getSource()))));
+                .then(Commands.literal("report").executes(c -> report(c.getSource())))
+                .then(Commands.literal("basin")
+                        .then(Commands.literal("none").executes(c -> basin(c.getSource(), "none", 0)))
+                        .then(Commands.literal("ie").executes(c -> basin(c.getSource(), "ie", 0)))
+                        .then(Commands.literal("ie_rs").executes(c -> basin(c.getSource(), "ie_rs", 0)))
+                        .then(Commands.literal("analog").executes(c -> basin(c.getSource(), "analog", 0)))
+                        .then(Commands.literal("ee").then(Commands.argument("heat", FloatArgumentType.floatArg(0, 1))
+                                .executes(c -> basin(c.getSource(), "ee", FloatArgumentType.getFloat(c, "heat"))))))
+                .then(Commands.literal("basinreport").executes(c -> basinReport(c.getSource()))));
     }
 
     static int setup(CommandSourceStack src, int signal) {
@@ -148,6 +177,74 @@ public class IeTest {
             be.energy.setStored(0);
         }
         return report(src);
+    }
+
+    static float eeHeat = -1;
+
+    static int basin(CommandSourceStack src, String mode, float heat) {
+        ServerLevel level = src.getLevel();
+        eeHeat = -1;
+        for (BlockPos p : new BlockPos[] {BASIN, BASIN_SIDE, BASIN_BELOW, BASIN_SIDE.east(), BASIN_BELOW.east()})
+            level.setBlockAndUpdate(p, Blocks.AIR.defaultBlockState());
+        level.setBlockAndUpdate(BASIN_BELOW, Blocks.STONE.defaultBlockState());
+        level.setBlockAndUpdate(BASIN, block("create:basin").defaultBlockState());
+        switch (mode) {
+            case "ie", "ie_rs" -> {
+                level.setBlockAndUpdate(BASIN_SIDE, block("immersiveengineering:furnace_heater").defaultBlockState()
+                        .setValue(IEProperties.FACING_ALL, Direction.WEST));
+                if (mode.equals("ie_rs")) level.setBlockAndUpdate(BASIN_SIDE.east(), Blocks.REDSTONE_BLOCK.defaultBlockState());
+            }
+            case "analog" -> {
+                level.setBlockAndUpdate(BASIN_BELOW, IeExtras.ANALOG_HEATER.get().defaultBlockState().setValue(AnalogHeaterBlock.FACING, Direction.UP));
+                level.setBlockAndUpdate(BASIN_BELOW.east(), Blocks.REDSTONE_BLOCK.defaultBlockState());
+            }
+            case "ee" -> {
+                level.setBlockAndUpdate(BASIN_BELOW, block("electroenergetics:resistive_heater").defaultBlockState());
+                eeHeat = heat;
+            }
+            default -> {}
+        }
+        IItemHandler items = level.getCapability(Capabilities.ItemHandler.BLOCK, BASIN, null);
+        ItemStack left = items == null ? ItemStack.EMPTY : items.insertItem(0, new ItemStack(BuiltInRegistries.ITEM.get(ResourceLocation.parse("tfc:metal/ingot/copper"))), false);
+        src.sendSuccess(() -> Component.literal("чаша " + BASIN.toShortString() + ", источник: " + mode + (left.isEmpty() ? ", слиток в чаше" : ", слиток НЕ лёг")), false);
+        return 1;
+    }
+
+    /** BasinBlockEntity.getHeatLevel() — пакетный, вызываем через отражение (то, что видит BasinRecipe) */
+    static String heatLevel(BasinBlockEntity basin) {
+        try {
+            var m = BasinBlockEntity.class.getDeclaredMethod("getHeatLevel");
+            m.setAccessible(true);
+            return String.valueOf(m.invoke(basin));
+        } catch (ReflectiveOperationException e) {
+            return "? " + e;
+        }
+    }
+
+    static Block block(String id) {
+        return BuiltInRegistries.BLOCK.get(ResourceLocation.parse(id));
+    }
+
+    static int basinReport(CommandSourceStack src) {
+        ServerLevel level = src.getLevel();
+        StringBuilder sb = new StringBuilder();
+        if (level.getBlockEntity(BASIN) instanceof BasinBlockEntity basin) {
+            float t = ((BasinBlockEntityExtended) basin).getHeatSourceTemperature();
+            sb.append(String.format("чаша: %.0f °C по WoodenCog, нагрев Create %s", t, heatLevel(basin)));
+            ItemStack ingot = basin.getInputInventory().getStackInSlot(0);
+            IHeat heat = HeatCapability.get(ingot);
+            sb.append(String.format(", слиток %s %s", ingot, heat == null ? "без тепла" : String.format("%.0f °C", heat.getTemperature())));
+        } else sb.append("чаши нет");
+        BlockState below = level.getBlockState(BASIN_BELOW);
+        sb.append("\n  под чашей: ").append(BuiltInRegistries.BLOCK.getKey(below.getBlock()));
+        if (level.getBlockEntity(BASIN_BELOW) instanceof ResistiveHeaterBlockEntity ee)
+            sb.append(String.format(" heat %.2f, HEAT_LEVEL %s", ee.heat, BasinBlockEntity.getHeatLevelOf(below)));
+        if (level.getBlockEntity(BASIN_BELOW) instanceof AnalogHeaterBlockEntity a) sb.append(String.format(" %.0f °C", a.temperature()));
+        if (level.getBlockEntity(BASIN_SIDE) instanceof FurnaceHeaterBlockEntity ie)
+            sb.append(String.format("\n  нагреватель IE: запас %d FE, активен %s", ie.energyStorage.getEnergyStored(), ie.getIsActive()));
+        String text = sb.toString();
+        src.sendSuccess(() -> Component.literal(text), false);
+        return 1;
     }
 
     /** Закрытое поле тигля — для отладки остывания */
