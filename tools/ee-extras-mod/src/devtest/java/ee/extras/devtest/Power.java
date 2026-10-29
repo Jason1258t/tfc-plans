@@ -41,8 +41,22 @@ final class Power {
     static final BlockPos GRID = new BlockPos(120, -60, 40);
 
     static final Map<String, BlockPos> WATCH = new LinkedHashMap<>();
+    /** Частотомеры EE (2.5.1: проверка своего переменного тока и такта с генератором) */
+    static final Map<String, BlockPos> FMS = new LinkedHashMap<>();
     static final List<String> LOG = new ArrayList<>();
     static int left;
+
+    /** Точки известны и после перезапуска сервера (KEEP=1): записи без устройства пропускаются */
+    static {
+        WATCH.put("узел", GRID.east(2));
+        WATCH.put("инв.3 сеть", GRID.offset(0, 0, 8));
+        WATCH.put("инв.1 сеть", GRID.offset(8, 0, 8));
+        WATCH.put("инв.3 остров", ISLAND.offset(0, 0, 3));
+        WATCH.put("инв.1 остров", ISLAND.offset(10, 0, 3));
+        FMS.put("частотомер сети", GRID.offset(6, 0, 4));
+        FMS.put("частотомер инв.3", ISLAND.offset(8, 0, 6));
+        FMS.put("частотомер инв.1", ISLAND.offset(14, 0, 6));
+    }
 
     static BlockState acBattery() {
         return CEEBlocks.CREATIVE_BATTERY.getDefaultState().setValue(CreativeBatteryBlock.AC, true);
@@ -113,6 +127,8 @@ final class Power {
         DevTest.wire(level, inv1, 1, h1, 1);
         meter(level, m1, inv1, 0, inv1, 1);
         meter(level, m3, inv3, 0, inv3, 1);
+        freqMeter(level, ISLAND.offset(8, 0, 6), inv3, 0, inv3, 1, "частотомер инв.3");
+        freqMeter(level, ISLAND.offset(14, 0, 6), inv1, 0, inv1, 1, "частотомер инв.1");
         WATCH.put("инв.3 остров", inv3);
         WATCH.put("инв.1 остров", inv1);
         WATCH.put("вольтм. инв.3", m3);
@@ -125,6 +141,13 @@ final class Power {
         DevTest.place(level, m, CEEBlocks.VOLTMETER.getDefaultState());
         DevTest.wire(level, a, na, m, 0);
         DevTest.wire(level, b, nb, m, 1);
+    }
+
+    static void freqMeter(ServerLevel level, BlockPos m, BlockPos a, int na, BlockPos b, int nb, String name) {
+        DevTest.place(level, m, CEEBlocks.FREQUENCY_METER.getDefaultState());
+        DevTest.wire(level, a, na, m, 0);
+        DevTest.wire(level, b, nb, m, 1);
+        FMS.put(name, m);
     }
 
     static int grid(CommandSourceStack src, int rpm) {
@@ -154,6 +177,7 @@ final class Power {
         dcSource(level, GRID.offset(8, 0, 11), inv1, 2, 3);
         BlockPos m = GRID.offset(4, 0, 8);
         meter(level, m, brushes, 1, brushes, 2);
+        freqMeter(level, GRID.offset(6, 0, 4), brushes, 1, brushes, 2, "частотомер сети");
         WATCH.put("узел", brushes);
         WATCH.put("инв.3 сеть", inv3);
         WATCH.put("инв.1 сеть", inv1);
@@ -213,13 +237,16 @@ final class Power {
             else if (d instanceof GaugeDevice g)
                 s.append(String.format("%s %.0f | ", w.getKey(), g.rmsVoltages.getSigned()));
         }
+        for (var f : FMS.entrySet())
+            s.append(String.format("%s %.2f | ", f.getKey(), Sync.frequency(e.getServer().overworld(), f.getValue())));
         LOG.add(s.toString());
     }
 
     static int report(CommandSourceStack src) {
         DevicesSavedData devices = DevicesSavedData.load(src.getLevel());
         StringBuilder out = new StringBuilder();
-        for (var w : WATCH.entrySet()) out.append(describe(w.getKey(), devices.getDevice(w.getValue()))).append('\n');
+        for (var w : WATCH.entrySet()) if (devices.getDevice(w.getValue()) != null) out.append(describe(w.getKey(), devices.getDevice(w.getValue()))).append('\n');
+        for (var f : FMS.entrySet()) out.append(f.getKey()).append(": ").append(Sync.fm(src.getLevel(), f.getValue())).append('\n');
         for (int i = 0; i < LOG.size(); i++) out.append(i).append(": ").append(LOG.get(i)).append('\n');
         String msg = out.toString();
         src.sendSuccess(() -> Component.literal(msg), false);

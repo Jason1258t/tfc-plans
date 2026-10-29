@@ -5,6 +5,10 @@ import com.george_vi.electroenergetics.devices.device.SimulatedDeviceType;
 import com.george_vi.electroenergetics.foundation.device.SimpleElectricalDevice;
 import com.george_vi.electroenergetics.simulation.BridgeCollector;
 import com.george_vi.electroenergetics.simulation.SimulationResults;
+import com.george_vi.electroenergetics.foundation.nodes.InWorldNode;
+import ee.extras.ac.Ac;
+import ee.extras.ac.Meter;
+import ee.extras.ac.Sine;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
@@ -21,13 +25,12 @@ import net.minecraft.world.level.Level;
  * ступени; дальше блок греется (Heat), как выпрямитель. Источник ограничен запасом так же, как energyLimitedSource EE
  * (сопротивление не меньше U² / 4 × запас на фазу).
  *
- * Такт сети. Отключён (OFF) — меряет сеть: трёхфазный по трём линейным напряжениям знает угол сразу (разложение
- * Кларк: α = ⅔(u_ab − ½u_bc − ½u_ca), β = (u_bc − u_ca)/√3), шаг угла за тик — по двум замерам; однофазный копит
- * отсчёты: у любой синусоиды по отсчётам u(n+1) + u(n−1) = c·u(n), c = 2 cos шага (c — по наименьшим квадратам), угол —
- * по двум последним отсчётам, амплитуда сети — по среднему квадрату (только чтобы решить, выше ли своя ЭДС). В сети
- * (GRID) ставит ЭДС на следующий тик в фазе с сетью; амплитуда ЭДС всегда своя, от постоянного напряжения. Сети нет — сам задаёт переменный ток 1 Гц (ISLAND, 18° за тик: при microTicks = 1 ровная синусоида).
- * Сеть пересилила (сглаженная отданная мощность < 0) — снова OFF и замер. Замеры берутся по SimulationResults: при microTicks > 1
- * EE отдаёт напряжение без знака, подстройка к сети работает только при microTicks = 1 (как на сервере сборки).
+ * Такт сети (2.5.1) — как у преобразователя частоты: Meter меряет выход по мгновенным напряжениям микротиков EE (в
+ * сборке microTicks = 8; getVoltageAt там — действующее без знака), выход — источники Sine на парах (ЭДС меняется на
+ * каждом микротике; пара ab = U·cos θ, bc и ca — со сдвигом 120°). Отключён (OFF) — замер. Сеть есть и своя ЭДС выше
+ * сетевой — GRID: угол и шаг — из замера (theta = predict(0)), трёхфазный идёт за сетью при любом порядке фаз. Сети нет
+ * — свой переменный ток 1 Гц (ISLAND; трёхфазный — с порядком фаз генераторов EE, шаг < 0). Сеть пересилила
+ * (сглаженная отданная мощность < 0) — снова OFF и замер.
  */
 public class InverterDevice extends SimpleElectricalDevice {
     static final double MIN_BUFFER = 2000;
@@ -39,18 +42,17 @@ public class InverterDevice extends SimpleElectricalDevice {
     static final double START_R = 1000;
     /** Доля номинала: на сколько ЭДС выше сети при номинальной мощности */
     static final double Z_PU = 0.1;
-    /** Сети нет, если её амплитуда ниже, В */
-    static final double GRID_MIN = 5;
-    /** Свой переменный ток без сети: шаг угла за тик (1 Гц) */
-    static final double ISLAND_STEP = Math.toRadians(18);
+    /** Свой переменный ток без сети, Гц */
+    static final double ISLAND_HZ = 1;
     static final double VOLTS_FOLLOW = 0.3;
-    static final int WINDOW = 40;
     static final double SHIFT = 2 * Math.PI / 3;
 
     static final int OFF = 0, GRID = 1, ISLAND = 2;
 
     private final Layout layout;
     private final Tier tier;
+    private final Sine[] sines;
+    private final Meter meter;
     private float temp;
     private double stored;
     private double outAvg;
@@ -58,22 +60,12 @@ public class InverterDevice extends SimpleElectricalDevice {
     private double inputR = OPEN_R;
     private double dcVolts;
     private int mode = OFF;
-    /** Угол ЭДС на этот тик и шаг за тик, рад (трёхфазный и свой переменный ток однофазного) */
+    /** Угол ЭДС на микротике 0 следующего тика */
     private double theta;
-    private double step = ISLAND_STEP;
-    /** Прошлый замер угла сети (трёхфазный) */
-    private double lastAngle = Double.NaN;
-    /** ЭДС на этот тик: амплитуда, сопротивление, мгновенные значения по парам контактов */
     private double amp;
     private double rOut = OPEN_R;
-    private final double[] emf = new double[3];
     private boolean active;
-    /** Однофазный: отсчёты u(n), u(n−1), суммы для c, окно среднего квадрата */
-    private double u0, u1;
-    private int samples;
-    private double cNum, cDen;
-    private final double[] window = new double[WINDOW];
-    private int pointer;
+    private double[] dcPlus, dcMinus;
     private double lastIn;
     private double lastOut;
     private double phaseError;
@@ -83,6 +75,10 @@ public class InverterDevice extends SimpleElectricalDevice {
         super(level, pos, devices, type);
         this.layout = layout;
         this.tier = tier;
+        int pairs = three() ? 3 : 1;
+        sines = new Sine[pairs];
+        for (int i = 0; i < pairs; i++) sines[i] = new Sine(-i * SHIFT);
+        meter = three() ? new Meter(pos, 0, 1, 2) : new Meter(pos, 0, 1);
     }
 
     private boolean three() {
@@ -94,52 +90,61 @@ public class InverterDevice extends SimpleElectricalDevice {
     }
 
     /** Пары контактов переменного тока: трёхфазный — ab, bc, ca; однофазный — фаза и нейтраль */
-    private int pairs() {
-        return three() ? 3 : 1;
+    private int a(int i) {
+        return three() ? i : 0;
     }
 
-    private static int a(int i) {
-        return i;
-    }
-
-    private static int b(int i) {
-        return (i + 1) % 3;
+    private int b(int i) {
+        return three() ? (i + 1) % 3 : 1;
     }
 
     @Override
     public void preTick(BridgeCollector collector) {
         BridgeCollector.Builder bld = collector.builder(pos);
         bld.resistor(layout.plus(), layout.minus(), inputR);
-        active = mode != OFF && stored > 1 && amp > 0.5;
+        active = mode != OFF && stored > 1 && amp > Meter.DEAD;
         if (active) {
-            // «Сопротивление на номинал»: P = ΔU × U / … → R = доля × U² / P (трёхфазный треугольник — 1,5 U² на пару)
+            // «Сопротивление на номинал»: R = доля × U² / P (трёхфазный треугольник — 1,5 U² на пару)
             double rNom = (three() ? 1.5 : 0.5) * Z_PU * amp * amp / tier.watts;
             // Не отдать больше запаса за тик (как energyLimitedSource: в согласованную нагрузку — U²эфф / 4R на пару)
-            double rEnergy = pairs() * amp * amp / (8 * stored);
+            double rEnergy = sines.length * amp * amp / (8 * stored);
             rOut = Math.max(MIN_R, Math.max(rNom, rEnergy));
         }
-        for (int i = 0; i < pairs(); i++) {
-            int na = three() ? a(i) : 0, nb = three() ? b(i) : 1;
-            // voltageSourceWithResistance(n1, n2, …, E) поднимает n2 над n1 на E (у творческой батареи EE 0 — «−»),
-            // а getVoltageAt(a, b) = U(a) − U(b) — поэтому n2 = na: ЭДС и замер в одном знаке
-            if (active) bld.voltageSourceWithResistance(nb, na, rOut, emf[i]);
-            else bld.resistor(na, nb, OPEN_R);
+        for (int i = 0; i < sines.length; i++) {
+            Sine s = sines[i];
+            s.amp = active ? amp : 0;
+            s.r = active ? rOut : OPEN_R;
+            s.theta = theta;
+            s.step = mode == GRID ? meter.step : (three() ? -1 : 1) * Ac.step(ISLAND_HZ);
+            // Sine поднимает n2 над n1, замер пары — U(a) − U(b): n2 = a
+            bld.connect(b(i), a(i), s);
         }
     }
 
     @Override
     public void postTick(SimulationResults r) {
-        double dc = r.getVoltageAt(pos, layout.plus(), layout.minus());
-        double in = dc * dc / inputR;
-        dcVolts += (Math.max(0, dc) - dcVolts) * VOLTS_FOLLOW;
-
-        // Отдано в сеть: на каждой паре U × (ЭДС − U) / R
-        double[] u = new double[pairs()];
-        double out = 0;
-        for (int i = 0; i < pairs(); i++) {
-            u[i] = three() ? r.getVoltageAt(pos, a(i), b(i)) : r.getVoltageAt(pos, 0, 1);
-            if (active) out += u[i] * (emf[i] - u[i]) / rOut;
+        // Постоянная сторона — по микротикам: среднее со знаком (обратная полярность — 0), мощность — по среднему квадрату
+        dcPlus = r.getVoltages(new InWorldNode(layout.plus(), pos), dcPlus);
+        dcMinus = r.getVoltages(new InWorldNode(layout.minus(), pos), dcMinus);
+        int n = Math.min(dcPlus.length, dcMinus.length);
+        double mean = 0, sq = 0;
+        for (int k = 0; k < n; k++) {
+            double v = dcPlus[k] - dcMinus[k];
+            mean += v;
+            sq += v * v;
         }
+        if (n > 0) {
+            mean /= n;
+            sq /= n;
+        }
+        double in = sq / inputR;
+        dcVolts += (Math.max(0, mean) - dcVolts) * VOLTS_FOLLOW;
+
+        // Фаза ЭДС на последнем микротике прошлого тика — до замера (для PhaseError)
+        double emfAngle = theta + sines[0].step * (Ac.microTicks() - 1);
+        double out = 0;
+        for (Sine s : sines) out += s.take();
+        if (!active) out = 0;
 
         lastIn = in;
         lastOut = out;
@@ -151,8 +156,9 @@ public class InverterDevice extends SimpleElectricalDevice {
         netAvg = active ? 0.7 * netAvg + 0.3 * out : 0;
 
         amp = (three() ? Math.PI / 3 : Math.PI / 2) * dcVolts;
-        if (three()) syncThree(u, netAvg);
-        else syncSingle(u[0], netAvg);
+        meter.measure(r);
+        phaseError = active && meter.valid ? Math.toDegrees(Ac.wrap(meter.angle - emfAngle)) : 0;
+        control();
 
         // Вход на следующий тик: сопротивление, при котором вход забирает столько, сколько ушло, ±25 % на запас, и
         // дозаряжает запас до половины за BUFFER_TICKS (иначе пустой запас и малая отдача долго тянут друг друга)
@@ -164,94 +170,26 @@ public class InverterDevice extends SimpleElectricalDevice {
         // Пустой запас — подзарядить, чтобы было с чего начать
         if (stored < 1) next = Math.min(next, START_R);
         // Постоянного напряжения почти нет — вход отключён (иначе подзарядка тянула бы сопротивление к нулю)
-        if (dcVolts < GRID_MIN) next = OPEN_R;
+        if (dcVolts < Meter.DEAD) next = OPEN_R;
         next = Math.max(inputR / R_STEP, Math.min(inputR * R_STEP, next));
         inputR = Math.max(MIN_R, Math.min(OPEN_R, next));
     }
 
-    private void syncThree(double[] u, double out) {
-        double alpha = 2.0 / 3.0 * (u[0] - 0.5 * u[1] - 0.5 * u[2]);
-        double beta = (u[1] - u[2]) / Math.sqrt(3);
-        double grid = Math.hypot(alpha, beta);
-        double angle = Math.atan2(beta, alpha);
-        double measured = Double.isNaN(lastAngle) ? Double.NaN : wrap(angle - lastAngle);
-        lastAngle = grid > GRID_MIN ? angle : Double.NaN;
-
-        if (mode == OFF) {
-            if (grid > GRID_MIN) {
-                // Сеть есть: включаться, когда известен шаг (два замера подряд) и своя ЭДС выше сетевой
-                if (!Double.isNaN(measured) && amp > grid) {
-                    step = measured;
-                    mode = GRID;
-                }
-            } else if (amp > GRID_MIN) {
-                mode = ISLAND;
-                step = ISLAND_STEP;
-            }
-        } else if (out < 0) {
+    private void control() {
+        if (mode != OFF && netAvg < 0) {
             mode = OFF;
-        } else if (mode == GRID && !Double.isNaN(measured)) {
-            step = 0.7 * step + 0.3 * measured;
-        }
-
-        // Насколько сеть ушла от ЭДС этого тика (только для /cee device_data): в сети должно быть около нуля
-        phaseError = active && grid > GRID_MIN ? Math.toDegrees(wrap(angle - theta)) : 0;
-        if (mode == GRID) theta = angle + step;
-        else if (mode == ISLAND) theta = wrap(theta + step);
-        for (int i = 0; i < 3; i++) emf[i] = amp * Math.cos(theta - i * SHIFT);
-    }
-
-    private void syncSingle(double v, double out) {
-        // Отсчёты сети (и свои, пока включён): c = Σ (u(n) + u(n−2)) u(n−1) / Σ u(n−1)²
-        if (samples >= 2) {
-            cNum = 0.9 * cNum + (v + u1) * u0;
-            cDen = 0.9 * cDen + u0 * u0;
-        }
-        u1 = u0;
-        u0 = v;
-        samples++;
-        window[pointer] = v * v;
-        pointer = (pointer + 1) % WINDOW;
-        double s = 0;
-        for (double x : window) s += x;
-        double grid = Math.sqrt(2 * s / WINDOW);
-        boolean known = samples > WINDOW && cDen > 1e-9;
-
-        if (mode == OFF) {
-            if (grid > GRID_MIN) {
-                if (known && amp > grid) mode = GRID;
-            } else if (amp > GRID_MIN && samples > WINDOW) {
+        } else if (mode == OFF) {
+            if (meter.valid) {
+                // Сеть есть: включаться, только если своя ЭДС выше сетевой (ниже сети — не отдаёт)
+                if (amp > meter.amp) mode = GRID;
+            } else if (meter.amp <= Meter.DEAD && amp > Meter.DEAD) {
                 mode = ISLAND;
                 theta = 0;
             }
-        } else if (out < 0) {
-            mode = OFF;
         }
-
-        if (mode == GRID && known) {
-            // Шаг угла ω из c = 2 cos ω; угол по двум отсчётам: U cos θ = u(n), U sin θ = (u(n−1) − u(n) cos ω) / sin ω.
-            // Амплитуда — своя (от постоянного напряжения), а не по сети: по сети он подхватывал бы сам себя
-            double c = Math.max(-2, Math.min(2, cNum / cDen));
-            double w = Math.acos(c / 2);
-            if (Math.sin(w) > 0.2) {
-                double angle = Math.atan2((u1 - u0 * Math.cos(w)) / Math.sin(w), u0);
-                emf[0] = amp * Math.cos(angle + w);
-            } else {
-                // Шаг почти 0° или 180° — по отсчётам это постоянный ток или смена знака каждый тик
-                emf[0] = amp * Math.signum(u0) * (c > 0 ? 1 : -1);
-            }
-        } else if (mode == ISLAND) {
-            theta = wrap(theta + ISLAND_STEP);
-            emf[0] = amp * Math.cos(theta);
-        } else {
-            emf[0] = 0;
-        }
-    }
-
-    private static double wrap(double a) {
-        a = (a + Math.PI) % (2 * Math.PI);
-        if (a < 0) a += 2 * Math.PI;
-        return a - Math.PI;
+        int mt = Ac.microTicks();
+        if (mode == GRID && meter.valid) theta = meter.predict(0);
+        else if (mode == ISLAND) theta = Ac.wrap(theta + sines[0].step * mt);
     }
 
     @Override
@@ -276,6 +214,7 @@ public class InverterDevice extends SimpleElectricalDevice {
         tag.putDouble("InputPower", lastIn);
         tag.putDouble("OutputPower", lastOut);
         tag.putDouble("Amplitude", amp);
-        if (three()) tag.putDouble("PhaseError", phaseError);
+        tag.putDouble("GridHz", Math.abs(meter.hz()));
+        tag.putDouble("PhaseError", phaseError);
     }
 }
