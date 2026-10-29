@@ -1,6 +1,7 @@
 # State: pack addons
 
-Part of [STATE.md](../STATE.md). How to build addons — [docs/addons.md](../addons.md). Site page `/addons` (since
+Part of [STATE.md](../STATE.md). How to build addons — [docs/addons.md](../addons.md). Sources since 2026-10-29 — repo
+[tfc-addons](https://github.com/Jason1258t/tfc-addons), the `tools/` submodule here (dev #138). Site page `/addons` (since
 2026-10-16; old `/reference?tab=addons` redirects; jars for download in `/addons/`). Since 2026-10-22 each addon has a
 page `/addons/<mod>`: card `tools/<mod>/addon.json` (+ jar, `icons/`) in git, description — Firestore guide
 `addon-<mod>` (section `addon`, widget `::addon-block`), editable on the site; development — skill `addon-dev` (2026-10-22), release — skill `addon-release`, MCP

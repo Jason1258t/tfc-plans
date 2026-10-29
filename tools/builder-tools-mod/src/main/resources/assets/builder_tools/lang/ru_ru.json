@@ -1,9 +1,0 @@
-{
-  "item.builder_tools.builder_belt": "Пояс строителя",
-  "builder_tools.on": "Пояс строителя включён",
-  "builder_tools.off": "Пояс строителя выключен",
-  "builder_tools.tooltip.equip": "Наденьте в слот Curios «Пояс».",
-  "builder_tools.tooltip.refill": "Пополняет закончившиеся блоки в руке из инвентаря.",
-  "builder_tools.tooltip.tool": "При добыче подставляет подходящий инструмент в руку.",
-  "builder_tools.tooltip.toggle": "Shift + ПКМ с поясом в руке — включить/выключить."
-}

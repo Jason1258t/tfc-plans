@@ -13,9 +13,17 @@ Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md)
   `npm run mods` + `kubejs` before/after — 21 074 files identical except build timestamps. The pack server picks
   core modules from its builders copy at `packages/core/src` and falls back to `src/lib` for an old copy; `tfc admin
 rebuild --pull` runs `npm ci` there (lock changed). Not checked: the VPS itself (rebuild/publish after this merge).
+- **Stage 3 done (2026-10-29):** addons are the repo [tfc-addons](https://github.com/Jason1258t/tfc-addons) (history of
+  `tools/` kept via `git subtree split`, 65 commits), checked out as the `tools/` submodule — every `tools/<mod>` path
+  is unchanged. `tfc-plans-dev`: `worktree_add` inits it (objects from `.git/modules/tools` of the main folder),
+  `ship` refuses a pointer not on tfc-addons `origin/main` or dirty/unpushed `tools/`, updates `tools/` in the main
+  folder after the merge; `ship`/`worktree_remove` deinit the submodule first (git can't remove a worktree with one).
+  `addons-index` (prebuild) inits an empty `tools/` and stops if there are no cards (an empty list would drop addons
+  from the site). Pack server builders copy: `git submodule update --init --depth 1 tools` after pull (an old plain
+  `tools/` folder is removed first). Not checked: the VPS itself.
 - Still cross-folder: `cli` → `server/pack-server/lib/{paths,datapacks,schematic-nbt}.mjs`, `scripts` →
-  `cli/lib/config.mjs`, pack server → `scripts/pack.mjs`/`publish-data.mjs`, MCP/pack server → `tools/`. Next: stage 2
-  (packages for site/cli/server/scripts/mcp) and stage 3 (addons repo).
+  `cli/lib/config.mjs`, pack server → `scripts/pack.mjs`/`publish-data.mjs`; addon `release.sh` → tfc-plans
+  `scripts/mcp/render.mjs`. Next: stage 2 (packages for site/cli/server/scripts/mcp).
 
 ## Data builders
 

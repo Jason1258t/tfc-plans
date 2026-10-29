@@ -1,5 +1,0 @@
-# Сборка и рабочие папки проверочного сервера
-build/
-devserver/build/
-devserver/.gradle/
-devserver/run/

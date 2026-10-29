@@ -1,6 +1,0 @@
-{
-  "host_tools.tab.ping": "%s мс",
-  "host_tools.menu.close_lan": "Закрыть для сети",
-  "host_tools.closed": "Мир закрыт для сети",
-  "host_tools.closed.kicked": "Мир закрыт для сети, отключено игроков: %s"
-}

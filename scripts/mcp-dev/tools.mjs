@@ -57,7 +57,10 @@ function changedFiles(root, branch) {
  * (TFC_LINT_TOOLS переопределяет путь к node_modules). Пусто — всё чисто.
  */
 function lintGate(root, wt, branch) {
-  const files = changedFiles(root, branch).filter((f) => fs.existsSync(path.join(wt, f)));
+  // tools/ — submodule tfc-addons: его файлы проверяет свой репозиторий
+  const files = changedFiles(root, branch).filter(
+    (f) => f !== 'tools' && !f.startsWith('tools/') && fs.existsSync(path.join(wt, f)),
+  );
   if (!files.length) return [];
   const node = process.execPath;
   const base = process.env.TFC_LINT_TOOLS ? path.resolve(process.env.TFC_LINT_TOOLS) : path.join(root, 'node_modules');
@@ -133,7 +136,57 @@ function worktreeAdd(a) {
   if (fs.existsSync(worktreeDir(root, name))) throw new Error(`Ворктри ${name} уже есть`);
   const r = git(['worktree', 'add', `.claude/worktrees/${name}`, '-b', branch, 'main'], root);
   if (!r.ok) throw new Error(r.err || r.out);
-  return `Создано: ворктри .claude/worktrees/${name}, ветка ${branch}. Работай только в нём.`;
+  const sub = initAddons(root, worktreeDir(root, name));
+  return `Создано: ворктри .claude/worktrees/${name}, ветка ${branch}. Работай только в нём.${sub ? '\n' + sub : ''}`;
+}
+
+/**
+ * Аддоны — submodule tools/ (репозиторий tfc-addons, dev #138): достать в ворктри. Объекты берём из копии основной
+ * папки (.git/modules/tools), чтобы не качать заново. Вернуть строку-предупреждение или ''.
+ */
+function initAddons(root, wt) {
+  if (!fs.existsSync(path.join(wt, '.gitmodules'))) return '';
+  const ref = path.join(root, '.git', 'modules', 'tools');
+  const args = ['submodule', 'update', '--init', ...(fs.existsSync(ref) ? ['--reference', ref] : []), 'tools'];
+  const s = git(args, wt);
+  return s.ok ? '' : `⚠ аддоны (tools/) не подтянулись: ${s.err || s.out} — git submodule update --init tools`;
+}
+
+/**
+ * git не удаляет ворктри с подключённым submodule. Если в tools/ нет правок и незапушенных коммитов — отключаем его
+ * (deinit без -f сам откажется при правках) и убираем его .git ворктри; дальше обычный worktree remove.
+ */
+function addonsLocalProblem(wt) {
+  const tools = path.join(wt, 'tools');
+  if (!fs.existsSync(path.join(tools, '.git'))) return '';
+  const dirty = git(['status', '--short'], tools);
+  if (!dirty.ok || dirty.out) return `в tools/ есть незакоммиченное: ${dirty.out || dirty.err}`;
+  const local = git(['log', '--branches', '--not', '--remotes', '--oneline'], tools);
+  return local.out ? `в tools/ есть незапушенные коммиты tfc-addons:\n${local.out}` : '';
+}
+
+function releaseAddons(root, wt) {
+  if (!fs.existsSync(path.join(wt, 'tools', '.git'))) return;
+  const problem = addonsLocalProblem(wt);
+  if (problem) throw new Error(problem);
+  const d = git(['submodule', 'deinit', 'tools'], wt);
+  if (!d.ok) throw new Error(`submodule deinit tools: ${d.err || d.out}`);
+  const gd = git(['rev-parse', '--path-format=absolute', '--git-dir'], wt);
+  if (gd.ok) fs.rmSync(path.join(gd.out, 'modules'), { recursive: true, force: true });
+}
+
+/** Указатель tools/ ветки должен быть в origin/main репозитория аддонов — иначе main сошлётся на чужой коммит */
+function addonsPointerProblem(root, wt, branch) {
+  if (!changedFiles(root, branch).includes('tools')) return '';
+  const sha = git(['rev-parse', `${branch}:tools`], root);
+  if (!sha.ok) return '';
+  const tools = path.join(wt, 'tools');
+  const f = git(['fetch', '-q', 'origin', 'main'], tools);
+  if (!f.ok) return `tools/: не смог проверить ${sha.out.slice(0, 8)} в tfc-addons (${f.err || f.out})`;
+  const anc = git(['merge-base', '--is-ancestor', sha.out, 'origin/main'], tools);
+  return anc.ok
+    ? ''
+    : `tools/ указывает на ${sha.out.slice(0, 8)}, которого нет в origin/main tfc-addons — запушь и влей аддон там`;
 }
 
 function commit(a) {
@@ -172,6 +225,7 @@ function ship(a) {
   const mainSt = git(['status', '--short'], root).out;
   const wtSt = git(['status', '--short'], wt).out;
   const lint = lintGate(root, wt, branch);
+  for (const p of [addonsPointerProblem(root, wt, branch), addonsLocalProblem(wt)]) if (p) lint.push(p);
   const plan = [
     `Сдача ворктри ${name} (ветка ${branch}):`,
     `  1) git merge --no-ff ${branch} -m "Слияние ${branch}: ${subj}"`,
@@ -197,6 +251,11 @@ function ship(a) {
   if (!m.ok) throw new Error(`merge не удался: ${m.err || m.out}`);
   const p = git(['push', 'origin', 'main'], root);
   if (!p.ok) throw new Error(`push не удался: ${p.err || p.out}\n(ворктри не тронут — разберись и повтори)`);
+  // merge не трогает рабочую копию submodule: аддоны в основной папке — на указатель из main
+  const sub = fs.existsSync(path.join(root, '.gitmodules'))
+    ? git(['submodule', 'update', '--init', 'tools'], root)
+    : null;
+  releaseAddons(root, wt);
   const rm = git(['worktree', 'remove', `.claude/worktrees/${name}`], root);
   if (!rm.ok) throw new Error(`worktree remove не удался: ${rm.err || rm.out}`);
   const d = git(['branch', '-d', branch], root);
@@ -204,6 +263,7 @@ function ship(a) {
     `Слито и запушено: ${branch} → main.`,
     m.out,
     p.out,
+    sub && !sub.ok ? `⚠ tools/ в основной папке не обновлён: ${sub.err || sub.out}` : '',
     d.ok ? `Ветка ${branch} удалена.` : `Ветка ${branch} НЕ удалена (${d.err || d.out}).`,
   ]
     .filter(Boolean)
@@ -217,6 +277,7 @@ function worktreeRemove(a) {
   const wt = worktreeDir(root, name);
   if (!fs.existsSync(wt)) throw new Error(`Ворктри ${name} нет`);
   const branch = worktreeBranch(root, name);
+  releaseAddons(root, wt);
   const r = git(['worktree', 'remove', `.claude/worktrees/${name}`], root);
   if (!r.ok) throw new Error(r.err || r.out);
   const d = git(['branch', '-d', branch], root);

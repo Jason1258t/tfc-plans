@@ -92,6 +92,14 @@ export function openJobs(dataDir, { repoDir, managedRepo, repoUrl, repoBranch, h
         await run(j, 'git', ['-C', repoDir, 'fetch', '--depth', '1', 'origin', repoBranch]);
         await run(j, 'git', ['-C', repoDir, 'reset', '--hard', 'FETCH_HEAD']);
       }
+      // Аддоны — submodule tools/ (репозиторий tfc-addons): карточки addon.json нужны сайту и проверкам
+      if (fs.existsSync(path.join(repoDir, '.gitmodules'))) {
+        // В копии до переноса tools/ была обычной папкой: оставшиеся там неотслеживаемые файлы мешают клону
+        const tools = path.join(repoDir, 'tools');
+        if (fs.existsSync(tools) && !fs.existsSync(path.join(tools, '.git')))
+          await fsp.rm(tools, { recursive: true, force: true });
+        await run(j, 'git', ['-C', repoDir, 'submodule', 'update', '--init', '--depth', '1', 'tools']);
+      }
       const lock = path.join(repoDir, 'package-lock.json');
       const stamp = path.join(repoDir, 'node_modules', '.tfc-lock-sha');
       const sha = createHash('sha256').update(fs.readFileSync(lock)).digest('hex');

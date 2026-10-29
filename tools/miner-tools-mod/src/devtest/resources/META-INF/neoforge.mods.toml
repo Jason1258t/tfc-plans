@@ -1,9 +1,0 @@
-modLoader = "javafml"
-loaderVersion = "[1,)"
-license = "MIT"
-
-# Только для проверочного сервера (test-server.sh), в jar аддона не входит
-[[mods]]
-modId = "miner_tools_devtest"
-version = "1.0.0"
-displayName = "Miner Tools dev test"

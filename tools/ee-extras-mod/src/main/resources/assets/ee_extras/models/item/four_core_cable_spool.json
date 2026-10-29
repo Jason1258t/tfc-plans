@@ -1,6 +1,0 @@
-{
-  "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "ee_extras:item/four_core_cable_spool"
-  }
-}

@@ -1,8 +1,0 @@
-{
-  "required": false,
-  "minVersion": "0.8",
-  "package": "ee.overheat.mixin",
-  "compatibilityLevel": "JAVA_21",
-  "mixins": ["ResistiveHeaterMixin"],
-  "injectors": { "defaultRequire": 0 }
-}

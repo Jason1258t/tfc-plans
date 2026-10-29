@@ -1,9 +1,0 @@
-{
-  "required": true,
-  "minVersion": "0.8.5",
-  "package": "ie.extras.mixin",
-  "plugin": "ie.extras.mixin.IeExtrasMixinPlugin",
-  "compatibilityLevel": "JAVA_21",
-  "mixins": ["BasinBlockEntityMixin"],
-  "injectors": { "defaultRequire": 1 }
-}

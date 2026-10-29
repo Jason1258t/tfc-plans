@@ -19,6 +19,9 @@ Main folder: `MAIN=/Users/ivan/vscodeProjects/tfc-taskmanager` (always on `main`
 - Checks relevant to the change passed: `npx tsc -b` (TS), `npm run lint` (oxlint, zero errors), `prettier --check`
   on changed files (`npx prettier --write <files>` to fix). The `ship` tool runs `oxlint` + `prettier --check` on the branch changed
   files and refuses on failure.
+- Addon changes (`tools/` submodule, repo tfc-addons): committed and pushed **there** and on its `origin/main` before
+  shipping here; the `ship` tool checks the `tools` pointer and refuses otherwise. After the merge it updates
+  `tools/` in the main folder (`git submodule update --init tools`).
 - `docs/state/<topic>.md` updated if the state changed (and the `docs/STATE.md` index line, if any).
 
 ## 2. Merge into main

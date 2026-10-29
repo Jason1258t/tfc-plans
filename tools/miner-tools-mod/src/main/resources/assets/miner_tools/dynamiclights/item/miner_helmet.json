@@ -1,8 +1,0 @@
-{
-  "match": {
-    "items": "miner_tools:miner_helmet",
-    "components": { "miner_tools:lit": true }
-  },
-  "luminance": 14,
-  "water_sensitive": false
-}
