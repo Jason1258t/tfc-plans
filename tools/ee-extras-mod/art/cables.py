@@ -229,6 +229,25 @@ def blockstate(ns, name, rot, models):
     return {'variants': variants}
 
 
+def lantern_blockstate(rot):
+    """
+    Фонарь IE в сети EE (lantern/LanternBlock): модели фонаря IE по ссылке. Лицом вверх — стоит (у IE facing=down),
+    вниз — висит (у IE facing=up, x 180), на стене — как остальные блоки лицом в сторону стены (ставится только вверх
+    или вниз, но блокстейт покрывает все состояния)
+    """
+    variants = {}
+    for facing, r in rot.items():
+        for lit in (False, True):
+            model = 'immersiveengineering:block/metal_device/e_lantern_' + ('on' if lit else 'off')
+            for flip in (False, True):
+                for logged in ('dry', 'oillogged', 'waterlogged'):
+                    for rolled in (False, True):
+                        key = (f'facing={facing},flip={str(flip).lower()},lit={str(lit).lower()},'
+                               f'logged_state={logged},roll={str(rolled).lower()}')
+                        variants[key] = {'model': model, **r}
+    return {'variants': variants}
+
+
 # Сторона кабеля двухпроводного соединителя EE по положению (BundledWireNodeConfigurator: юг, восток, север, запад)
 # → сколько раз повернуть креном вывод, нарисованный на юг (крен уводит юг на запад)
 EE_TURNS = [0, 3, 2, 1]
@@ -286,6 +305,8 @@ def generate(res, ns, dump, rot, display):
         dump(insulator_model(ns, name), 'models', 'block', name, 'block.json')
         dump({'parent': f'{ns}:block/{name}/block'}, 'models', 'item', name + '.json')
         dump(blockstate(ns, name, rot, ['block'] * 4), 'blockstates', name + '.json')
+
+    dump(lantern_blockstate(rot), 'blockstates', 'electric_lantern.json')
 
     write(os.path.join(tex, 'block', 'four_core_cable.png'), segment_texture())
     dump(segment_model(ns), 'models', 'block', 'four_core_cable_segment.json')

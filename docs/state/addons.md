@@ -62,6 +62,16 @@ Before 2.0 — EE Rectifiers, `ee_rectifier`; old blocks migrate to new ids via 
   (efficiency 75 %; EE generator ~99 % by bytecode: 48 × magnets × rpm W vs 48 × (magnets + 0.125) SU/rpm), heating
   rating 1.2 kW (smokes above ~200 rpm at full load, doesn't burn). Dev server from a creative motor
   (`rectest kgen|krpm|kreport`): U²/R exact, cap at 1 536 W, stress 8 SU/rpm; terminals 720/720.
+- **2.4** (2026-10-29; dev task #143 «Доработка ie фонариков»): the IE electric lantern joins the EE grid — clicking a
+  placed IE lantern with the EE duplex spool replaces it with `ee_extras:electric_lantern` (IE models by reference,
+  drops the IE lantern, no own item; refused while IE wires are attached) and lays the cable on. For the cable it is a
+  duplex insulator (all cables joined core to core → lanterns in a line), plus a 1000 Ω load between the cores; lit
+  from 50 V with a 40-tick hold (no AC flicker), EE spawn prevention (20 blocks), no burnout; wrench flips stand/hang.
+  IE is now in `libs.sh` (compile only; the mod loads without IE). `test-server.sh` takes `RCON_PORT`/`SERVER_PORT`
+  (another worktree's server on 25599 took this session's RCON commands once). Dev server with IE
+  (`rectest lanterns|lanternpower|lanternreport|lanterncut|lanternie`, `KEEP=1`): real click path, 230 V lit
+  52.9 W, 30 V dark, 60 V AC lit, cut — IE lantern dropped and the tail dark, IE-wired refused, restart kept. Not in
+  game: looks, light, flicker on a real generator.
 - **Insulator-string «fan» — fixed in 2.3.3 (closed)**: the host's `/eeextras wires` showed 971 segments in
   the one garland's visual. EE 1.1.2 `QuadraticWireHelper.wirePointsRaw` (used only by `WireVisual.recreateInstances`
   for wire types without `shouldScaleLast`, i.e. hanging insulators) appends to the reused `WirePoints` buffer without
@@ -153,6 +163,15 @@ candidate — a heater regulated by an analog lever). Depends on TFC 4.2.9 + IE 
   vanilla comparator placed before its input container keeps `OutputSignal` 0 until a neighbour changes (devtest places
   the comparator first). Pack metals above 1600 °C: only tfc_alloy_ext inferior aluminum (1653); IE aluminum is
   1550 via `kubejs/data`.
+- **1.1.0** (2026-10-29, dev #113): Create basin heating with WoodenCog 1.2.18. WoodenCog only reads the block under
+  the basin (charcoal forge, blaze burner, firepit, CCA/CLH/CMB burners) → EE heater, IE external heater and the analog
+  heater gave 0 °C (no item heating, no heated WoodenCog recipes, no goggle line). Mixin on `BasinBlockEntity`
+  (priority 1100, only with create + woodencog): injects into WoodenCog's merged `getHeatSourceTemperature` and Create's
+  `getHeatLevel` — IE external heater from any side (`IExternalHeatable` on `create:basin`, 20 FE/t, 2000 °C, redstone
+  turns it off, like the TFC-IE Crossover crucible), analog heater under the basin facing up, any block whose Create heat
+  level isn't NONE (EE heater) → WoodenCog level temperature 750/1350/2000. Config section `basin`. Dev server (Create,
+  WoodenCog, EE + ee-overheat added to `libs.sh`), `/ietest basin none|ie|ie_rs|analog|ee <heat>`: all values as
+  expected (README). Not in game: goggle line on the client, real basin recipes, basin on a Sable ship.
 
 ## Miner Tools (`tools/miner-tools-mod`, 2026-10-21)
 

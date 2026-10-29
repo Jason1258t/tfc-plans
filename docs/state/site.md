@@ -239,6 +239,12 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
     Browser demo checked: divider with/without surrounding blank lines, click to reveal source, dash, code/link
     exclusions, existing horizontal rule. Package build/typecheck, 33 existing checks, oxlint and formatting passed.
     Published to npm by the owner; the site now uses ^0.1.5. Site typecheck, lint and deployment checks passed.
+  - Plain brackets (2026-10-29, dev #141, cm-live-markdown 0.1.6): Lezer parses any `[text]` as a shortcut reference
+    link, so the editor hid the brackets and styled it as a link. Now `[text]`, `[text][]`, `[text][label]` and
+    `![alt]` without a URL and without a matching `[label]: url` definition are plain text (brackets visible, inline
+    formatting inside still works; Ctrl+click ignores them) — matches react-markdown's view. Escapes (`\[`, `\*`…) hide
+    the backslash outside the cursor. 4 new package checks (37), demo and site editor checked in the browser.
+    `npm publish` 404 = expired npm login (`npm whoami` → 401): `npm login` first.
   - Nested list markers (2026-10-23): ordered items show outline numbers «3.1.», «3.2.1.», bullets repeat the dot per
     level «• •» — in `Markdown` (CSS counters, `ol start` → `counter-reset` in the component; applies to every Markdown
     view on the site) and in `LiveMarkdown` (widget from the syntax tree). Source stays plain `1.` / `-`.
@@ -369,6 +375,13 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   largest face texture from that side, uv by position. Browser-checked on old_brick_factory (2004 copycats: cornices
   of steps, girder panels); not compared with the game. Not done: layer view still shows the icon, Create: Connected
   copycats, doors/trapdoors/fences/walls of Copycats+ (they have vanilla-like models? not checked).
+- **Block-entity data fixes on download** (2026-10-29, dev #144): `lib/schematicBlockFixes.ts` — rules by mod, run by
+  `applyEdits` on every block after replacements. Copycats+ 3.0.8 `MigrationManager.migrateStructure` runs inside
+  `StructureTemplate.load` on the schematic table: a multi-state copycat (board, byte, byte panel, half layer, slab,
+  stacked/vertical half layer) with single-copycat data (`Material`) → IllegalStateException (seen in the host log after
+  replacing `copycat_door` → `copycat_board`); the table has already taken the blank and gives nothing. Such data is
+  dropped (copycat without material). A single Copycats+ copycat with `id: create:copycat` would NPE in the same
+  method — id rewritten to `copycats:copycat`. Checked on 1900s_workshop (4 boards cleaned) in Node, not in game.
 - **Create parts drawn by code** (2026-10-24, task «Отрисовка create»): builder `block-models.mjs` adds `pm` (path →
   model) with every `models/block/**` of mods in `PARTIAL_NAMESPACES` (Create: 1887 incl. 444 never referenced by
   blockstates; create.json ~140 → ~230 KB gz). Site `partialQuads(ref, turns)` (blockModels.ts) bakes one with turns

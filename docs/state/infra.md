@@ -54,7 +54,7 @@ folder|zip>` — all at once with folder discovery, whitelist and `instance/sour
 ## File storage
 
 - Package **firestore-files@0.1.0** (user's separate repo) — attachments and schematic sources.
-- Package **cm-live-markdown** (user's separate repo, npm `^0.1.2`) — the live Markdown editor
+- Package **cm-live-markdown** (user's separate repo, npm `^0.1.6`) — the live Markdown editor
   (details in [site.md](site.md)).
 - Storage behind an interface (`src/lib/fileStorage`): Firestore (default) or own server `server/file-server` (Node
   without deps, systemd + Caddy, Firebase token and App Check verification, SSE). Migration —

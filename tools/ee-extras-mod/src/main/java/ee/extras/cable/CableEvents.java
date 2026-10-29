@@ -5,6 +5,7 @@ import com.george_vi.electroenergetics.content.bundled_wire.BundledWireTerminati
 import com.george_vi.electroenergetics.simulation.infrastructure.InWorldNodeData;
 import com.george_vi.electroenergetics.simulation.infrastructure.InfrastructureSavedData;
 import com.simibubi.create.AllSoundEvents;
+import ee.extras.lantern.LanternConversion;
 import ee.extras.lines.Tension;
 import com.simibubi.create.content.equipment.wrench.WrenchItem;
 import net.minecraft.core.BlockPos;
@@ -23,8 +24,8 @@ import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
 /**
- * События игры: катушка двухпроводного кабеля EE, ключ и установка двухпроводного соединителя EE (фаза, четыре
- * положения вместо двух), сверка кабелей
+ * События игры: катушка двухпроводного кабеля EE (и по фонарю IE — LanternConversion), ключ и установка
+ * двухпроводного соединителя EE (фаза, четыре положения вместо двух), сверка кабелей
  */
 public final class CableEvents {
     public static void register(IEventBus bus) {
@@ -44,6 +45,15 @@ public final class CableEvents {
         Level level = e.getLevel();
         BlockPos pos = e.getPos();
         if (stack.getItem() instanceof BundledWireItem && !(stack.getItem() instanceof FourCoreSpoolItem)) {
+            // Фонарь IE сначала становится фонарём в сети EE, затем клик идёт в прокладку как обычно
+            if (LanternConversion.isIeLantern(level.getBlockState(pos))) {
+                InteractionResult c = LanternConversion.convert(level, pos, e.getEntity());
+                if (c != null) {
+                    e.setCanceled(true);
+                    e.setCancellationResult(c);
+                    return;
+                }
+            }
             InteractionResult r = CableLaying.use(level, e.getEntity(), stack, pos, CableKind.DUPLEX);
             if (r != null) {
                 e.setCanceled(true);
