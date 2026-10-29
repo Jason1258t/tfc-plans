@@ -1,0 +1,628 @@
+{
+  "variants": {
+    "facing=up,flip=false,lit=false,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off"
+    },
+    "facing=up,flip=false,lit=false,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off"
+    },
+    "facing=up,flip=false,lit=false,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off"
+    },
+    "facing=up,flip=false,lit=false,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off"
+    },
+    "facing=up,flip=false,lit=false,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off"
+    },
+    "facing=up,flip=false,lit=false,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off"
+    },
+    "facing=up,flip=true,lit=false,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off"
+    },
+    "facing=up,flip=true,lit=false,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off"
+    },
+    "facing=up,flip=true,lit=false,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off"
+    },
+    "facing=up,flip=true,lit=false,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off"
+    },
+    "facing=up,flip=true,lit=false,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off"
+    },
+    "facing=up,flip=true,lit=false,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off"
+    },
+    "facing=up,flip=false,lit=true,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on"
+    },
+    "facing=up,flip=false,lit=true,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on"
+    },
+    "facing=up,flip=false,lit=true,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on"
+    },
+    "facing=up,flip=false,lit=true,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on"
+    },
+    "facing=up,flip=false,lit=true,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on"
+    },
+    "facing=up,flip=false,lit=true,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on"
+    },
+    "facing=up,flip=true,lit=true,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on"
+    },
+    "facing=up,flip=true,lit=true,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on"
+    },
+    "facing=up,flip=true,lit=true,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on"
+    },
+    "facing=up,flip=true,lit=true,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on"
+    },
+    "facing=up,flip=true,lit=true,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on"
+    },
+    "facing=up,flip=true,lit=true,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on"
+    },
+    "facing=down,flip=false,lit=false,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 180
+    },
+    "facing=down,flip=false,lit=false,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 180
+    },
+    "facing=down,flip=false,lit=false,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 180
+    },
+    "facing=down,flip=false,lit=false,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 180
+    },
+    "facing=down,flip=false,lit=false,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 180
+    },
+    "facing=down,flip=false,lit=false,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 180
+    },
+    "facing=down,flip=true,lit=false,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 180
+    },
+    "facing=down,flip=true,lit=false,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 180
+    },
+    "facing=down,flip=true,lit=false,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 180
+    },
+    "facing=down,flip=true,lit=false,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 180
+    },
+    "facing=down,flip=true,lit=false,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 180
+    },
+    "facing=down,flip=true,lit=false,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 180
+    },
+    "facing=down,flip=false,lit=true,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 180
+    },
+    "facing=down,flip=false,lit=true,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 180
+    },
+    "facing=down,flip=false,lit=true,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 180
+    },
+    "facing=down,flip=false,lit=true,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 180
+    },
+    "facing=down,flip=false,lit=true,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 180
+    },
+    "facing=down,flip=false,lit=true,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 180
+    },
+    "facing=down,flip=true,lit=true,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 180
+    },
+    "facing=down,flip=true,lit=true,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 180
+    },
+    "facing=down,flip=true,lit=true,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 180
+    },
+    "facing=down,flip=true,lit=true,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 180
+    },
+    "facing=down,flip=true,lit=true,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 180
+    },
+    "facing=down,flip=true,lit=true,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 180
+    },
+    "facing=south,flip=false,lit=false,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270
+    },
+    "facing=south,flip=false,lit=false,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270
+    },
+    "facing=south,flip=false,lit=false,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270
+    },
+    "facing=south,flip=false,lit=false,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270
+    },
+    "facing=south,flip=false,lit=false,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270
+    },
+    "facing=south,flip=false,lit=false,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270
+    },
+    "facing=south,flip=true,lit=false,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270
+    },
+    "facing=south,flip=true,lit=false,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270
+    },
+    "facing=south,flip=true,lit=false,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270
+    },
+    "facing=south,flip=true,lit=false,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270
+    },
+    "facing=south,flip=true,lit=false,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270
+    },
+    "facing=south,flip=true,lit=false,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270
+    },
+    "facing=south,flip=false,lit=true,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270
+    },
+    "facing=south,flip=false,lit=true,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270
+    },
+    "facing=south,flip=false,lit=true,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270
+    },
+    "facing=south,flip=false,lit=true,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270
+    },
+    "facing=south,flip=false,lit=true,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270
+    },
+    "facing=south,flip=false,lit=true,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270
+    },
+    "facing=south,flip=true,lit=true,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270
+    },
+    "facing=south,flip=true,lit=true,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270
+    },
+    "facing=south,flip=true,lit=true,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270
+    },
+    "facing=south,flip=true,lit=true,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270
+    },
+    "facing=south,flip=true,lit=true,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270
+    },
+    "facing=south,flip=true,lit=true,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270
+    },
+    "facing=north,flip=false,lit=false,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=false,lit=false,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=false,lit=false,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=false,lit=false,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=false,lit=false,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=false,lit=false,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=true,lit=false,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=true,lit=false,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=true,lit=false,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=true,lit=false,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=true,lit=false,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=true,lit=false,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=false,lit=true,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=false,lit=true,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=false,lit=true,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=false,lit=true,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=false,lit=true,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=false,lit=true,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=true,lit=true,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=true,lit=true,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=true,lit=true,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=true,lit=true,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=true,lit=true,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 180
+    },
+    "facing=north,flip=true,lit=true,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 180
+    },
+    "facing=east,flip=false,lit=false,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=false,lit=false,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=false,lit=false,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=false,lit=false,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=false,lit=false,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=false,lit=false,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=true,lit=false,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=true,lit=false,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=true,lit=false,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=true,lit=false,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=true,lit=false,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=true,lit=false,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=false,lit=true,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=false,lit=true,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=false,lit=true,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=false,lit=true,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=false,lit=true,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=false,lit=true,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=true,lit=true,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=true,lit=true,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=true,lit=true,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=true,lit=true,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=true,lit=true,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 270
+    },
+    "facing=east,flip=true,lit=true,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 270
+    },
+    "facing=west,flip=false,lit=false,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=false,lit=false,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=false,lit=false,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=false,lit=false,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=false,lit=false,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=false,lit=false,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=true,lit=false,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=true,lit=false,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=true,lit=false,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=true,lit=false,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=true,lit=false,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=true,lit=false,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_off",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=false,lit=true,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=false,lit=true,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=false,lit=true,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=false,lit=true,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=false,lit=true,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=false,lit=true,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=true,lit=true,logged_state=dry,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=true,lit=true,logged_state=dry,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=true,lit=true,logged_state=oillogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=true,lit=true,logged_state=oillogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=true,lit=true,logged_state=waterlogged,roll=false": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 90
+    },
+    "facing=west,flip=true,lit=true,logged_state=waterlogged,roll=true": {
+      "model": "immersiveengineering:block/metal_device/e_lantern_on",
+      "x": 270,
+      "y": 90
+    }
+  }
+}

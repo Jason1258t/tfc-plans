@@ -9,6 +9,9 @@ cd "$(dirname "$0")"
 export JAVA_HOME="${JAVA_HOME:-$HOME/.gradle/local-tools/jdk21/Contents/Home}"
 # KEEP=1 — не стирать мир (проверка сохранения); OLD_JAR=<jar> — положить ещё и этот jar (старая версия аддона рядом
 # с новой — проверка перехода со старых id); IE=1 — добавить Immersive Engineering из jar сборки (конденсаторы)
+# RCON_PORT / SERVER_PORT — другие порты, если рядом идёт такой же сервер из другого ворктри
+RCON_PORT="${RCON_PORT:-25599}"
+SERVER_PORT="${SERVER_PORT:-25565}"
 if [ -z "${KEEP:-}" ]; then rm -rf run; fi
 mkdir -p run/mods
 rm -f run/mods/*.jar
@@ -17,13 +20,14 @@ MODS="${MODS:-${TFC_MODS_DIR:-${TFC_PACK_CACHE:-$HOME/.cache/tfc-plans/pack}/mod
 if [ -n "${IE:-}" ]; then cp "$MODS"/ImmersiveEngineering-*.jar run/mods/; fi
 if [ -n "${OLD_JAR:-}" ]; then cp "$OLD_JAR" run/mods/; fi
 echo 'eula=true' > run/eula.txt
-cat > run/server.properties <<'P'
+cat > run/server.properties <<P
 level-type=minecraft\:flat
 online-mode=false
 spawn-protection=0
 generate-structures=false
 enable-rcon=true
-rcon.port=25599
+rcon.port=${RCON_PORT}
+server-port=${SERVER_PORT}
 rcon.password=check
 P
 # MICROTICKS=N — настройка EE simulation.microTicks (сколько расчётов цепи за тик) для мира разработки
@@ -34,12 +38,12 @@ fi
 ./gradlew runServer --console=plain > run/check.log 2>&1 &
 GRADLE=$!
 if [ $# -gt 0 ]; then
-  SERVER_PID=$GRADLE python3 rcon.py 25599 check 'forceload add 0 0 32 32' "$@" 'stop' || true
+  SERVER_PID=$GRADLE python3 rcon.py "$RCON_PORT" check 'forceload add 0 0 32 32' "$@" 'stop' || true
   wait $GRADLE || true
   grep -E "ERROR|Exception|Caused by" run/check.log | grep -v "^\s*at " | head -30 || true
   exit 0
 fi
-SERVER_PID=$GRADLE python3 rcon.py 25599 check \
+SERVER_PID=$GRADLE python3 rcon.py "$RCON_PORT" check \
   'forceload add 0 0' \
   'setblock 0 -60 0 ee_extras:three_phase_rectifier[facing=up,roll=false]' \
   'setblock 2 -60 0 ee_extras:three_phase_rectifier[facing=north,roll=true]' \
