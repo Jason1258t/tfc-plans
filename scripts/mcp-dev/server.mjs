@@ -33,7 +33,12 @@ async function handle(req) {
         const r = await tool.handler(req.params.arguments ?? {});
         const text = typeof r === 'string' ? r : String(r.text ?? '');
         console.error(`[tfc-plans-dev] ${tool.name} ${Date.now() - t0} мс`);
-        return { content: [{ type: 'text', text }] };
+        return {
+          content: [
+            { type: 'text', text },
+            ...(typeof r === 'string' ? [] : (r.images ?? [])).map((img) => ({ type: 'image', ...img })),
+          ],
+        };
       } catch (e) {
         console.error(`[tfc-plans-dev] ${tool.name}: ${e.stack ?? e}`);
         return { content: [{ type: 'text', text: `Ошибка: ${e.message ?? e}` }], isError: true };
