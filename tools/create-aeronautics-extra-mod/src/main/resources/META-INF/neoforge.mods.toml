@@ -4,7 +4,7 @@ license = "MIT"
 
 [[mods]]
 modId = "create_aeronautics_extra"
-version = "1.0.0"
+version = "1.0.1"
 displayName = "Create Aeronautics Extra"
 authors = "TFC Планы"
 description = '''

@@ -1,9 +1,9 @@
 {
   "id": "pyrofuel",
   "name": "TFC Pyrofuel — промышленное пиротопливо",
-  "version": "1.0.0",
-  "jar": "pyrofuel-1.0.0.jar",
-  "sha256": "05b002508be3e6e90f7cd4f101ca61bcb64cac0fe6ff4ecdeee8a53c87bccea2",
+  "version": "1.0.1",
+  "jar": "pyrofuel-1.0.1.jar",
+  "sha256": "145af05556f6b51cacd1c70d3cfd486cc5ab91f0fad67eb0574d451feb686e9c",
   "order": 110,
   "side": "both",
   "summary": "Пирококсовые брикеты для перегрева горелки всполоха и жидкий пирогель для горелки Create Diesel Generators. Производственные линии на коксе, креозоте и дизеле; баки, насосы и трубы для непрерывной подачи жидкого топлива.",

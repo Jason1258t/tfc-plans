@@ -4,7 +4,7 @@ license = "MIT"
 
 [[mods]]
 modId = "pyrofuel"
-version = "1.0.0"
+version = "1.0.1"
 displayName = "TFC Pyrofuel"
 authors = "TFC Планы"
 description = '''Пирококсовые брикеты и жидкий пирогель для промышленного перегрева Create.'''

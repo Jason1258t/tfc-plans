@@ -31,7 +31,7 @@ its one-liner in STATE.md.
   `tfc admin updates approve u20261028-155634-36f7`. Проверены 52 рецепта и 36 удалений, конфликты MCP, код IE/RnR/CDG;
   в игре не проверялось. Распространение жидкого бетона по миру остаётся штатным, расход на площадь не унифицирован.
 
-- **TFC Pyrofuel 1.0.0** (2026-10-27, dev #104): install with `tfc pull addons` on server and all players, then
+- **TFC Pyrofuel 1.0.1** (2026-10-29, dev #104/#135, new textures): install with `tfc pull addons` on server and all players, then
   `tfc publish` to rebuild the item/recipe library. In game: item/fluid textures in tanks, JEI/EMI chains, manual bucket
   transfer, real production lines and fluid trains. Ordinary blaze burner takes briquettes; liquid pyrogel uses the
   separate CDG burner. New cake production is disabled; old cakes can be converted 1:1. Details: [addons.md](addons.md).
@@ -55,7 +55,7 @@ its one-liner in STATE.md.
   generator, rectifiers, inverters, small engine and genset (terminals of both generators moved into terminal boxes —
   placed wires should follow), rotating half-shaft, bucket by hand and Create pipes into the tank, JEI/EMI recipes, a real CDG engine driving
   compact generators, fuels other than diesel. Details — [addons.md](addons.md).
-- **Create Aeronautics Extra 1.0.0** (2026-10-24, `create-aeronautics-extra-1.0.0.jar`, onboard computer): host
+- **Create Aeronautics Extra 1.0.1** (2026-10-29, `create-aeronautics-extra-1.0.1.jar`, new module textures): host
   installs (`tfc pull addons`, server and players) and `tfc publish`. In game: block looks and rotating half-shaft,
   goggles and tooltips, module insert/remove by hand, JEI/EMI recipes, the block on a flying Aeronautics ship with
   propellers. Details — [addons.md](addons.md).
