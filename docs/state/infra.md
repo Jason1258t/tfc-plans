@@ -295,3 +295,8 @@ Cursor configs (shapes from their docs, not tried).
   temporary card and both files deleted afterward. Pack server updated and CLI released as 2026.10.29-ddb430df.
   Browser library verification was blocked by Firestore permission errors in Codex IAB (also participants/onboarding);
   recorded separately. Real game/Windows launcher folders remain untested.
+
+- Dev #147 (2026-10-29): pack-server Firestore requests refresh both token caches after a 401 and retry once,
+  preserving the URL, body and revision preconditions. Concurrent requests share token acquisition; a late 401
+  cannot invalidate a newer token. Local stub checks covered recovery, repeated 401, 403, revision conflict,
+  network/token failures and parallel requests. Actual token expiry/revocation was not induced on production.

@@ -132,3 +132,10 @@ mod=electroenergetics`, 2026-10-21). See how laid cable renders.
 - Addon Host Tools 1.0.1: host updates it; check with a real guest — ping right after join (tab, `/ping`), `/host stop` (guest kicked), `/host random` on Windows.
 - Addons Miner Tools, Stress Fix — see [addons.md](addons.md).
 - `tfc` app on Windows/Linux and with the real launcher folder — see [infra.md](infra.md#tfc-app-cli-stage-3).
+
+## Builder Tools 1.0.1 (dev #103, 2026-10-29)
+
+Host installs on the server and all players (`tfc pull addons builder_tools@1.0.1`), then publishes the snapshot.
+In game: equip builder belt in Curios, place the last block in each hand, hold LMB across stone/dirt/wood,
+check full inventory and inventory-mod interactions. Server and automated dev-client checks passed; real player
+input and the full pack were not checked in game.

@@ -1,0 +1,9 @@
+{
+  "item.builder_tools.builder_belt": "Builder’s Belt",
+  "builder_tools.on": "Builder’s belt enabled",
+  "builder_tools.off": "Builder’s belt disabled",
+  "builder_tools.tooltip.equip": "Equip in the Curios belt slot.",
+  "builder_tools.tooltip.refill": "Refills depleted blocks in hand from your inventory.",
+  "builder_tools.tooltip.tool": "Moves a suitable tool into your hand when mining.",
+  "builder_tools.tooltip.toggle": "Sneak + right-click while holding the belt to toggle."
+}
