@@ -26,14 +26,14 @@ When finishing work: update the topic file, and this index only if a line below 
   and concrete production in game, then `tfc admin updates approve`.
 - Host: pack update `u20261022-150945-83a0` (Chinese KubeJS messages → ru/en): `tfc admin updates pull`, check in game,
   `tfc admin updates approve`.
-- Host: install **EE Extras 2.3** (2.2 + compact generator), **Small Diesel 1.0.0**, **IE Extras 1.0.0** and **Create Aeronautics Extra 1.0.0** + `tfc publish`; warn players
+- Host: install **EE Extras 2.3** (2.2 + compact generator), **Small Diesel 1.0.0**, **IE Extras 1.0.0** and **Create Aeronautics Extra 1.0.1** + `tfc publish`; warn players
   that rectifiers over 6 kW will burn.
 - Host: **`rw-host-fix`** + delete `eratosthenes_portal_clamp.js`; delete corrupted chunks Z ≈ −22 000…−18 400.
 - Host: **World Border** nether limit (`worldborder.json5`) → disable or widen; remove `tp-trace`.
 - Host: apply crop growth config change `MjQFPQkIf9SHOdEjopy4` (`tfc admin changes pull`).
 - Host: apply Carry On change `P3E9AOli90hZrXpIgFBR` — IE crates/barrels, TFC barrels, FD cabinets, Firmalife wine/jar shelves can be carried (`tfc admin changes pull`).
 - Host: `arc-furnace-matadora` resource pack in `server.properties`; `ee-overheat` into `mods/`.
-- Host: install **TFC Pyrofuel 1.0.0** (server and players), then `tfc publish`; check pyrogel/briquette production and client textures.
+- Host: install **TFC Pyrofuel 1.0.1** (server and players), then `tfc publish`; check pyrogel/briquette production and client textures.
 - In game: two-core cable shell model, datapacks `electroenergetics_missing` and `pellet_arc_furnace`, map scale,
   pumpjack, steel on EE heater, all addons (Miner Tools, Stress Fix, EE Extras 2.x, Small Diesel, IE Extras, Create Aeronautics Extra).
 - `tfc` app: Windows/Linux binaries, real launcher folder, real upload — not run.
