@@ -1,12 +1,13 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
-import { initializeAppCheck, ReCaptchaEnterpriseProvider, type AppCheck } from 'firebase/app-check';
+import { getToken, initializeAppCheck, ReCaptchaEnterpriseProvider, type AppCheck } from 'firebase/app-check';
 import { getAuth, signInAnonymously } from 'firebase/auth';
 import {
   initializeFirestore,
   persistentLocalCache,
-  persistentMultipleTabManager,
+  persistentSingleTabManager,
   type Firestore,
 } from 'firebase/firestore';
+import { installSessionRecovery } from './sessionRecovery';
 
 const config = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -45,7 +46,10 @@ export const appCheck: AppCheck | null = app && recaptchaKey ? setupAppCheck(app
 export const db: Firestore | null = app
   ? initializeFirestore(app, {
       ignoreUndefinedProperties: true,
-      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+      // Каждая вкладка использует свои актуальные токены. Общая ведущая вкладка может быть
+      // заморожена браузером и продолжать слать устаревший App Check (dev #137).
+      // Первая вкладка сохраняет кэш на диске, остальные SDK переводит на кэш в памяти.
+      localCache: persistentLocalCache({ tabManager: persistentSingleTabManager({}) }),
     })
   : null;
 
@@ -61,6 +65,13 @@ export const authReady: Promise<void> = auth
       (e) => console.warn('Анонимный вход не удался (включите Anonymous в Firebase Auth):', e),
     )
   : Promise.resolve();
+
+if (auth) {
+  installSessionRecovery(async () => {
+    await authReady;
+    await Promise.all([auth.currentUser?.getIdToken(true), appCheck ? getToken(appCheck, true) : undefined]);
+  });
+}
 
 // Диагностика только по явной ссылке; значения токенов в журнал не попадают.
 if (new URLSearchParams(location.search).get('firebaseDebug') === '1') {

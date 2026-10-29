@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { recoverSession, subscribeSessionRecovery } from './sessionRecovery';
 
 /** Состояние списка: предыдущий снимок остаётся в памяти между открытиями страницы. */
 interface LiveList<T> {
@@ -19,13 +20,18 @@ export function createLiveList<T>(subscribe: ListSource<T>, normalize: (items: T
     let consumers = 0;
     let received = false;
     let session: { active: boolean; stop: () => void } | null = null;
+    let stopRecovery: (() => void) | undefined;
 
     const start = () => {
       const current = { active: true, stop: () => {} };
       session = current;
       set({ loading: !received, error: null });
       const fail = (error: Error) => {
-        if (current.active) set({ loading: false, error: error.message });
+        if (!current.active) return;
+        set({ loading: false, error: error.message });
+        if ('code' in error && (error.code === 'permission-denied' || error.code === 'unauthenticated')) {
+          void recoverSession();
+        }
       };
       try {
         current.stop = subscribe((items) => {
@@ -42,6 +48,14 @@ export function createLiveList<T>(subscribe: ListSource<T>, normalize: (items: T
       // Сначала слушатель: источник вправе прислать первый снимок синхронно.
       const unsubscribe = subscribeState(listener);
       consumers++;
+      if (!stopRecovery) {
+        stopRecovery = subscribeSessionRecovery(() => {
+          if (!consumers || !_get().error || !session) return;
+          session.active = false;
+          session.stop();
+          start();
+        });
+      }
       if (!session) start();
       let subscribed = true;
       return () => {
@@ -57,6 +71,8 @@ export function createLiveList<T>(subscribe: ListSource<T>, normalize: (items: T
           session = null;
           current.active = false;
           current.stop();
+          stopRecovery?.();
+          stopRecovery = undefined;
         });
       };
     };
