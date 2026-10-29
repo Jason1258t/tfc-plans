@@ -5,6 +5,7 @@
  * Подпись записей — TFC_AGENT_NICK (по умолчанию Claude).
  */
 import { packServer } from '../pack-fetch.mjs';
+import { taskFiles, devFileGet } from './files.mjs';
 
 const NICK = process.env.TFC_AGENT_NICK || 'Claude';
 const SITE = 'https://tfc-plans-fd2c.web.app/dev';
@@ -100,7 +101,15 @@ async function devList(a) {
   return `Задач: ${tasks.length}${status ? ` (статус ${status})` : ''}\n${page.map(line).join('\n')}${more}`;
 }
 
-const devGet = async (a) => full(await api('GET', `tasks/${a.id}?notes=${a.notes ?? 20}`));
+async function devGet(a) {
+  const task = full(await api('GET', `tasks/${a.id}?notes=${a.notes ?? 20}`));
+  try {
+    const files = await taskFiles(a.id);
+    return `${task}\n\nВложения (${files.length}):${files.length ? '\n' + files.map((f) => `- ${f.id} «${f.name}» (${f.type}, ${f.size} Б) — dev_file_get task=${a.id} id=${f.id}`).join('\n') : ' нет'}`;
+  } catch (e) {
+    return `${task}\n\nВложения: не удалось проверить (${e.message}). Отсутствие вложений не подтверждено.`;
+  }
+}
 
 async function devCreate(a) {
   const r = await api('POST', 'tasks', fields(a));
@@ -161,6 +170,17 @@ const TASK_PROPS = {
 
 export const DEV_TOOLS = [
   {
+    name: 'dev_file_get',
+    description:
+      'Read an attachment of a dev task: image content for PNG/JPEG/WebP/GIF, local paths for all files. Verifies task ownership and SHA256; cached locally. Does not analyse logs automatically.',
+    inputSchema: {
+      type: 'object',
+      properties: { task: int('dev task number'), id: str('attachment id from dev_get') },
+      required: ['task', 'id'],
+    },
+    handler: devFileGet,
+  },
+  {
     name: 'dev_list',
     description:
       'Dev tasks (pack server, not Firestore): open ones by default (backlog/todo/doing/review), in-progress and important first. Filter by words, status (comma list), kind, area, assignee ("-" — nobody).',
@@ -181,7 +201,8 @@ export const DEV_TOOLS = [
   },
   {
     name: 'dev_get',
-    description: 'Whole dev task: description, checklist, plan docs, last work-log entries, rev for dev_update.',
+    description:
+      'Whole dev task: description, checklist, plan docs, last work-log entries, rev for dev_update, attachment metadata from Firestore (cached 1 min). Use dev_file_get to view images/download files.',
     inputSchema: {
       type: 'object',
       properties: { id: int('task number'), notes: int('how many last log entries (default 20)') },
