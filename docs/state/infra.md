@@ -341,3 +341,7 @@ Cursor configs (shapes from their docs, not tried).
   Proposed update `u20261029-193554-dd27` changes only `display.doPopUpLogging=false`, preserving logs and
   all other config bytes. Verified installed jar code through MCP and source SHA256 against the current snapshot;
   config absent from Firestore, so submitted through `tfc admin propose`. Client launch still awaits host check.
+
+  Live checks after merge with @tfc/core: inventory and exact AirpresureFix.zip pack.mcmeta through MCP; compiled
+  macOS CLI pulls that confirmed legacy filename with no world in dry-run without creating files. Four distribution
+  SHA256s, npm startup and Linux native startup verified. Release: 2026.10.29-7a2edd56. Snapshot/game files unchanged.

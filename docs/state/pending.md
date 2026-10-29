@@ -159,8 +159,10 @@ input and the full pack were not checked in game.
 
 ## Pack-wide datapacks (dev #125, 2026-10-29)
 
-Tooling is implemented; live packs have not been promoted. Host: update tfc, inspect `tfc datapacks list` and
-`files`, install desired packs into the selected world and check them in game. Preview `tfc datapacks confirm all
+Live read during dev #154 found 13 confirmed ZIPs in snapshot `20261029-192724-29d7`; the earlier “not promoted”
+note is obsolete. The agent has not checked runtime behaviour. Host: update tfc, inspect `tfc datapacks list` /
+`files`; named `tfc datapacks pull <id/name/filename>` delivers a confirmed ZIP without choosing a world or opening
+KubeJS folders. Test unconfirmed/changed drafts in a selected world. Preview `tfc datapacks confirm all
 --dry-run`; after verifying the selected versions, confirm one/all and restart. Check both an existing and a new
 world, recipe overrides and KubeJS priority. Changed world copies remain for manual review. Local `undo` does not
 revert server confirmation; `tfc admin rollback` reverts the whole snapshot. Details: [datapacks-pack.md](../plans/datapacks-pack.md).
