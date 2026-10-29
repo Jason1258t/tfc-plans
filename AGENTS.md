@@ -140,7 +140,7 @@ releasing an addon to the site → skill `addon-release`
 (KubeJS scripts, lang, resources, whole files) → `npm run tfc -- admin propose <overlay dir> --note …` (agent key in
 the `tfc` app settings — `%APPDATA%\tfc\config.json` on Windows, `~/.config/tfc/config.json` on macOS/Linux, see
 `cli/lib/config.mjs`; base on the current snapshot, `tfc admin updates` to see status); the host pulls and approves. Site
-tasks/plans/guides → its write tools (signed with `TFC_AGENT_NICK`, default `Claude`, with `baseRevision`), not ad-hoc
+tasks/plans/guides/datapacks → its write tools (signed with `TFC_AGENT_NICK`, default `Claude`, with `baseRevision`), not ad-hoc
 scripts. Site-content tools cost Firestore reads — don't loop them. Tool reference — [docs/mcp.md](docs/mcp.md).
 
 If a needed tool is missing or answers wrongly and you had to fall back to grep/unzip/a script — finish the current

@@ -425,23 +425,24 @@ from the site. Release steps — skill `addon-release`.
 ### Site content: tasks, plan docs, datapacks, schematics
 
 Each answer states how many Firestore reads it cost. Lists are read with a field mask and cached for minutes; a full
-document is a separate request. uids, cookies and tokens never appear in answers. Only tasks and plan docs are written
-(author and `updatedBy` — `Claude`); datapacks, scripts and schematics are read-only.
+document is a separate request. uids, cookies and tokens never appear in answers. Tasks, plan docs and datapacks are
+written (author and `updatedBy` — `TFC_AGENT_NICK`, default `Claude`); site scripts and schematics are read-only.
 
-| Tool                                                                                          | Does                                                                                                                                                                                                                    |
-| --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tasks_list(query, status, assignee, group)` / `task_get(id*, doc_chars)`                     | tasks and groups; a task with checklist, attachments (no content), docs, site link and `revision`                                                                                                                       |
-| `groups_list(query)`                                                                          | task groups: id, name, icon, order — find a group by name («фиксы»)                                                                                                                                                     |
-| `users_list(query)`                                                                           | site members (the nick directory written on every visit): nick, first and last seen — who a task can be assigned to                                                                                                     |
-| `task_create(title*, description, group, priority, status, checklist, icon, assignee, place)` | **write**: a task as from «Новая задача» (rating 1000, `completedAt` when `done`); `group` — id or name; `checklist` — strings, `{ text, done }` or resources `{ itemId, qty, got }` (item checked against the library) |
-| `task_update(id*, baseRevision*, …task_create fields, checklist_add)`                         | **write**: only passed fields change; `checklist` replaces the checklist (existing item ids kept), `checklist_add` appends; a status change sets/clears `completedAt`; `"-"` clears group, icon, assignee               |
-| `artifacts_list(query, task)` / `artifact_get(id*, offset, limit)`                            | plan docs (`artifacts`): list by title and task (`"-"` — unattached); doc by lines and its `revision`                                                                                                                   |
-| `artifact_put(id, baseRevision, title, content, task)`                                        | **write**: without `id` — new doc («План: <task>» if no title), with `id` — edit passed fields; `content` — whole text                                                                                                  |
-| `datapacks_list(query, install)` / `datapack_get(id*, path)`                                  | datapacks; zip file as the site builds it                                                                                                                                                                               |
-| `kubejs_site_list(query, install)` / `kubejs_site_get(id*)`                                   | KubeJS scripts added on the site (not pack scripts)                                                                                                                                                                     |
-| `schematics_list(query)` / `schematic_get(id*)`                                               | Create schematics: size, blocks, replacements                                                                                                                                                                           |
+| Tool                                                                                                              | Does                                                                                                                                                                                                                                            |
+| ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tasks_list(query, status, assignee, group)` / `task_get(id*, doc_chars)`                                         | tasks and groups; a task with checklist, attachments (no content), docs, site link and `revision`                                                                                                                                               |
+| `groups_list(query)`                                                                                              | task groups: id, name, icon, order — find a group by name («фиксы»)                                                                                                                                                                             |
+| `users_list(query)`                                                                                               | site members (the nick directory written on every visit): nick, first and last seen — who a task can be assigned to                                                                                                                             |
+| `task_create(title*, description, group, priority, status, checklist, icon, assignee, place)`                     | **write**: a task as from «Новая задача» (rating 1000, `completedAt` when `done`); `group` — id or name; `checklist` — strings, `{ text, done }` or resources `{ itemId, qty, got }` (item checked against the library)                         |
+| `task_update(id*, baseRevision*, …task_create fields, checklist_add)`                                             | **write**: only passed fields change; `checklist` replaces the checklist (existing item ids kept), `checklist_add` appends; a status change sets/clears `completedAt`; `"-"` clears group, icon, assignee                                       |
+| `artifacts_list(query, task)` / `artifact_get(id*, offset, limit)`                                                | plan docs (`artifacts`): list by title and task (`"-"` — unattached); doc by lines and its `revision`                                                                                                                                           |
+| `artifact_put(id, baseRevision, title, content, task)`                                                            | **write**: without `id` — new doc («План: <task>» if no title), with `id` — edit passed fields; `content` — whole text                                                                                                                          |
+| `datapacks_list(query, install)` / `datapack_get(id*, path)`                                                      | datapacks; zip file as the site builds it                                                                                                                                                                                                       |
+| `datapack_put(id, baseRevision, name, namespace, description, install, entries, upsert, remove, rename, dry_run)` | **write**: without `id` — new datapack (`name` required, namespace default `tfc_plans`); with `id` — passed fields only. Files: `entries` replaces all, `upsert` adds/replaces by path, `remove` deletes paths, `rename` `{from,to}`. See below |
+| `kubejs_site_list(query, install)` / `kubejs_site_get(id*)`                                                       | KubeJS scripts added on the site (not pack scripts)                                                                                                                                                                                             |
+| `schematics_list(query)` / `schematic_get(id*)`                                                                   | Create schematics: size, blocks, replacements                                                                                                                                                                                                   |
 
-`task_update` and `artifact_put` with `id` refuse if the task/doc changed after `task_get`/`artifact_get`:
+`task_update`, `artifact_put` and `datapack_put` with `id` refuse if the task/doc changed after `task_get`/`artifact_get`:
 `baseRevision` is their `revision` (Firestore `updateTime`; checked before writing and as the write's precondition). The
 site also changes task revisions — e.g. the «Что важнее?» comparison edits the rating; on refusal re-read and retry.
 There's no delete: remove temporary records from tests with a one-off script via `scripts/firestore-rest.mjs`. Repo
@@ -487,6 +488,7 @@ scripts/mcp/
   (candidates)      jars.mjs `candidate:` ids, code-index.mjs `candidateIndex`, tools/candidates.mjs `candidate_get`
   firestore.mjs     Firestore REST: api, listAll, cached; configs, config edits, guides
   site-datapacks.mjs  site datapacks as a recipe layer (recipes(site) in data.mjs)
+  datapack-write.mjs  datapack_put and scripts' --upload: entries, checks, pinned-version notice, write with revision
   resources.mjs     client resource layers (resource packs, KubeJS, addons, jars, Minecraft), model with parent
   render.mjs        model rasteriser to PNG (model_render, texture_get) and CLI icon generator
   entityModels.mjs  entity model tools (ModelPart, pose); geoModels.mjs — GeckoLib models (.geo.json)
@@ -495,7 +497,7 @@ scripts/mcp/
                       cuisinedelight, create_submarine)
   tools/<section>.mjs  section tools: code (classes, mixins, decompile, deps), disasm (bytecode), logs, config (config_get,
                       config_propose, config_changes), pack, kubejs, books (+books-index), blocks (+blocks-data), site
-                      (tasks, groups, plan docs with writes; datapacks, schematics, site scripts), map (+map-climate,
+                      (tasks, groups, plan docs and datapacks with writes; schematics, site scripts), map (+map-climate,
                       map-png — PNG read/write), resources (model_render, texture_get, resources_check), addons
                       (addons_list, addon_check, addon_versions, addon_version_get/put), candidates (candidate_get),
                       reports (reports_list, report_get — players' logs/crashes from the site, analysed by logs.mjs)
@@ -533,6 +535,24 @@ handler }]` and an import line in `tools.mjs` (the `TOOLS` list at the end). A t
   [plans/pack-cli.md](plans/pack-cli.md). Tools don't depend on transport; paths are already env-configurable.
 - World generation (what spawns where) isn't indexed: in TFC it depends on climate and rocks; without running the mod
   the answer would be inaccurate.
+
+### Writing site datapacks (`datapack_put`, dev #153)
+
+Replaces ad-hoc REST scripts. An entry is `{ path*, content, kind, note, sourceRecipe }`; `content` is text or a JSON
+object (saved pretty-printed); an upserted entry keeps its id and fields. `kind` is inferred when omitted: not a recipe
+→ `file`, a `neoforge:false` stub → `remove`, a recipe id already in the pack → `replace`, otherwise `add`;
+`replace`/`remove` get `sourceRecipe` = their id, and `sourceHash` is computed from the current catalogue (as the site
+editor's «взять рецепт»). Logic — `scripts/mcp/datapack-write.mjs`, also used by `scripts/*-datapack.mjs --upload`.
+
+Refused (nothing written): bad JSON, path not `data/<ns>/…` or `recipes/`, duplicate paths (shared
+`datapackIssues` in `src/lib/datapackFiles.ts`, same as the site's export check), bad namespace, name > 80, > 300
+entries, document > 1 MB. Warnings repeat the site editor's `staleIssues`/`kubejsIssues` on MCP data: unknown items,
+missing tags or tags of the wrong kind, source recipe gone or changed, a recipe KubeJS removes, `replace`/`remove`
+of a recipe that does not exist, `add` over an existing id, a name shared with another datapack (checked only when
+the name changes). A datapack pinned in the pack (`kubejs.json.datapacks`) gets the site's «В сборке» notice: the
+card edit does not change the confirmed ZIP; the host runs `tfc datapacks unconfirm <id>` to retest. `dry_run` shows
+the result and warnings without writing. Cost: 1 read for the current document (+ the datapack list on a new name).
+Deleting a datapack is not exposed — do it on the site.
 
 ### Datapack deployment levels (dev #125)
 

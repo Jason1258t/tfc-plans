@@ -1,14 +1,16 @@
 /**
  * Инструменты MCP: контент сайта из Firestore — задачи и группы, документы-планы, датапаки, скрипты KubeJS с сайта,
- * схемы Create. Пишут только task_create / task_update / artifact_put (подпись — имя агента, правка — с проверкой ревизии,
- * как guide_put). Экономим чтения (50 тыс. в сутки на всех): списки — с mask (только нужные поля) и кешем на
+ * схемы Create. Пишут только task_create / task_update / artifact_put / datapack_put (подпись — имя агента, правка — с
+ * проверкой ревизии, как guide_put). Экономим чтения (50 тыс. в сутки на всех): списки — с mask (только нужные поля) и кешем на
  * несколько минут, документ целиком — отдельным GET по запросу, вложения задачи — запросом по taskId.
  * В конце каждого ответа — сколько чтений Firestore он стоил (0 — всё из кеша).
  */
 import { DOCS, fromValue } from '../../firestore-rest.mjs';
 import { datapackFiles, zipName } from '../../../src/lib/datapackFiles.ts';
 import { itemName, readJson } from '../data.mjs';
+import { checkDatapack, deploymentNote, makeEntry, saveDatapack } from '../datapack-write.mjs';
 import { FirestoreError, api, cached, createDoc, listAll, patchDoc } from '../firestore.mjs';
+import { resetSiteRecipes } from '../site-datapacks.mjs';
 import { dateOf, nameOf, named, NICK, norm, num, page, paging, short, str, words } from '../fmt.mjs';
 
 const TTL = 3 * 60_000;
@@ -647,6 +649,7 @@ async function datapackGet(a) {
   const out = [
     `${d.id} — ${d.name} (${zipName(d)})`,
     `namespace: ${d.namespace}; ${deploymentMark(d)} (программа tfc); ${who(d)}; изменён ${dateOf(d.updatedAt)}`,
+    `revision: ${d.updateTime}   ← для datapack_put как baseRevision`,
   ];
   if (d.description) out.push(`описание: ${d.description}`);
   const m = await mentions(d.name);
@@ -662,6 +665,110 @@ async function datapackGet(a) {
   }
   const dup = entries.length + 1 - Object.keys(files).length;
   if (dup > 0) out.push(`внимание: ${dup} записей с повторным путём — в zip попадёт последняя`);
+  return out.join('\n');
+}
+
+const entryList = (v, what) => {
+  if (v == null) return [];
+  if (!Array.isArray(v)) throw new Error(`${what} — массив`);
+  return v;
+};
+
+async function datapackPut(a) {
+  const key = String(a.id ?? '').trim();
+  let cur = null;
+  if (key) {
+    const base = String(a.baseRevision ?? '').trim();
+    if (!base) throw new Error('нужен baseRevision — revision из datapack_get');
+    const r = await resolve('datapacks', datapacksIndex, key, (x) => x.name, 'датапака');
+    if (r.error) return `Отказ: ${r.error}`;
+    cur = r.doc;
+    if (cur.updateTime !== base)
+      return `Отказ: датапак изменили после чтения — ваша ревизия ${base}, сейчас ${cur.updateTime} (правил ${cur.updatedBy ?? '?'} ${dateOf(cur.updatedAt)}). Перечитайте datapack_get и перенесите правки; ничего не записано.`;
+  } else if (a.name == null) throw new Error('новый датапак: нужен name (или id — для правки существующего)');
+
+  const p = {};
+  if (a.name != null) p.name = String(a.name).trim();
+  if (a.namespace != null) p.namespace = String(a.namespace).trim();
+  if (a.description != null) p.description = String(a.description);
+  if (a.install != null) p.install = Boolean(a.install);
+  const pack = { name: '', namespace: 'tfc_plans', description: '', install: false, ...cur, ...p };
+  const before = cur?.entries ?? [];
+  let entries = [...before];
+  const ops = [];
+  if (a.entries != null) {
+    const prev = new Map(before.map((e) => [e.path, e]));
+    entries = entryList(a.entries, 'entries').map((e) => makeEntry(e, prev.get(String(e.path ?? '').trim())));
+    ops.push(`записи заменены целиком: было ${before.length}, стало ${entries.length}`);
+  }
+  for (const { from, to } of entryList(a.rename, 'rename')) {
+    const e = entries.find((x) => x.path === from);
+    if (!e) throw new Error(`rename: записи ${from} нет`);
+    if (entries.some((x) => x.path === to)) throw new Error(`rename: путь ${to} уже занят`);
+    entries = entries.map((x) => (x === e ? { ...x, path: String(to).trim() } : x));
+    ops.push(`переименовано: ${from} → ${to}`);
+  }
+  for (const path of entryList(a.remove, 'remove')) {
+    if (!entries.some((x) => x.path === path)) throw new Error(`remove: записи ${path} нет`);
+    entries = entries.filter((x) => x.path !== path);
+    ops.push(`удалено: ${path}`);
+  }
+  for (const input of entryList(a.upsert, 'upsert')) {
+    const path = String(input.path ?? '').trim();
+    const i = entries.findIndex((x) => x.path === path);
+    const e = makeEntry(input, i >= 0 ? entries[i] : null);
+    if (i >= 0) entries[i] = e;
+    else entries.push(e);
+    ops.push(`${i >= 0 ? 'заменено' : 'добавлено'}: ${e.kind} ${path}`);
+  }
+  pack.entries = entries;
+  if (a.entries != null || ops.length) p.entries = entries;
+  if (cur && !Object.keys(p).length)
+    throw new Error(
+      'нечего менять: передайте name, namespace, description, install, entries, upsert, remove или rename',
+    );
+
+  const { errors, warnings } = checkDatapack(pack);
+  // Имя сверяем, только когда оно новое: список датапаков стоит чтение на документ
+  const others =
+    p.name != null && p.name !== cur?.name
+      ? (await datapacksIndex()).filter((d) => d.id !== cur?.id && norm(d.name) === norm(pack.name))
+      : [];
+  if (others.length)
+    warnings.push(`имя совпадает с датапаком ${others.map((d) => d.id).join(', ')} — в мире у них будет один zip`);
+  const out = [];
+  if (ops.length) out.push(...ops.map((o) => `• ${o}`));
+  if (errors.length) {
+    out.unshift(`Отказ: ${errors.length} ошибок, ничего не записано.`);
+    out.push('', 'Ошибки:', ...errors.map((x) => `✗ ${x}`));
+  } else if (a.dry_run) out.unshift(`Проверка без записи (dry_run): ${pack.name}, записей ${entries.length}.`);
+  else {
+    try {
+      const { name, namespace, description, install } = pack;
+      const fields = cur ? p : { name, namespace, description, install, entries };
+      const r = await saveDatapack({ id: cur?.id, base: cur?.updateTime, fields, nick: NICK });
+      datapacksIndex.reset();
+      resetSiteRecipes();
+      out.unshift(
+        cur
+          ? `Сохранено: ${r.id} — ${pack.name}; изменено: ${Object.keys(p).join(', ')}; записей ${entries.length}; подпись ${NICK}.`
+          : `Создан датапак ${r.id} — ${pack.name} (ns ${pack.namespace}, ${pack.install ? 'предлагать в мир' : 'не ставится'}); записей ${entries.length}; автор ${NICK}.`,
+        `revision: ${r.updateTime}   ← для следующего datapack_put как baseRevision`,
+        `на сайте: ${SITE}/datapacks`,
+      );
+      const dep = deploymentNote(r.id);
+      if (dep) out.push('', dep);
+    } catch (e) {
+      if (preconditionFailed(e))
+        return 'Отказ: датапак изменили одновременно с записью. Перечитайте datapack_get; ничего не записано.';
+      throw e;
+    }
+  }
+  if (errors.length || a.dry_run) {
+    const dep = deploymentNote(cur?.id);
+    if (dep) out.push('', dep);
+  }
+  if (warnings.length) out.push('', `Предупреждения (${warnings.length}):`, ...warnings.map((x) => `⚠ ${x}`));
   return out.join('\n');
 }
 
@@ -773,6 +880,18 @@ const TASK_PROPS = {
     description: 'place in the world — shown on the map',
     properties: { x: num('block X'), z: num('block Z'), label: str('label') },
   },
+};
+
+const DP_ENTRY = {
+  type: 'object',
+  properties: {
+    path: str('data/<ns>/recipe/….json, data/<ns>/tags/item/….json, …'),
+    content: { description: 'file text, or a JSON object (saved pretty-printed)' },
+    kind: { type: 'string', enum: ['add', 'replace', 'remove', 'file'], description: 'default inferred' },
+    note: str('note for the site editor; "" — clear'),
+    sourceRecipe: str('recipe id this was taken from (for change tracking)'),
+  },
+  required: ['path'],
 };
 
 const install = { type: 'boolean', description: 'only flagged «ставить» (true) or only unflagged (false)' };
@@ -895,14 +1014,14 @@ export const TOOLS = [
   {
     name: 'datapacks_list',
     description:
-      'Site datapacks (Firestore datapacks): name, namespace, world opt-in and confirmed pack deployment from the published snapshot, author. Read-only.',
+      'Site datapacks (Firestore datapacks): name, namespace, world opt-in and confirmed pack deployment from the published snapshot, author. Edit — datapack_put.',
     inputSchema: { type: 'object', properties: { query: str('words'), install, ...paging } },
     handler: counted(datapacksList),
   },
   {
     name: 'datapack_get',
     description:
-      'Datapack: records (kind, path, recipe type, source recipe), tasks mentioning it; path — one zip file in full (as the site builds it, incl. pack.mcmeta), by lines.',
+      'Datapack: records (kind, path, recipe type, source recipe), tasks mentioning it, revision for datapack_put; path — one zip file in full (as the site builds it, incl. pack.mcmeta), by lines.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -914,6 +1033,36 @@ export const TOOLS = [
       required: ['id'],
     },
     handler: counted(datapackGet),
+  },
+  {
+    name: 'datapack_put',
+    description:
+      'Create or change a site datapack (**write to the shared database**, signed with the agent nick) instead of ad-hoc scripts. Without id — new (name required, namespace default tfc_plans). With id — needs baseRevision from datapack_get; only passed fields change. Files: entries replaces all; upsert adds/replaces by path; remove deletes by path; rename moves a path. kind is inferred (non-recipe → file, neoforge:false stub → remove, recipe id already in the pack → replace, else add); sourceRecipe/sourceHash kept or computed. Refused on bad JSON, path not data/<ns>/…, duplicate paths, Firestore limits; warns like the site editor (missing items/tags, KubeJS removal, changed source recipe) and when the pack has a confirmed pinned version (editing the card does not change it). dry_run — check only.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: str('datapack id or exact name; empty — create'),
+        baseRevision: str('revision from datapack_get (for edits)'),
+        name: str('name (zip file name), ≤80'),
+        namespace: str('namespace for new recipes'),
+        description: str('description (pack.mcmeta)'),
+        install: { type: 'boolean', description: 'offer to install into the world for testing (site checkbox)' },
+        entries: { type: 'array', description: 'replace ALL files', items: DP_ENTRY },
+        upsert: { type: 'array', description: 'add or replace files by path', items: DP_ENTRY },
+        remove: { type: 'array', description: 'paths to delete', items: { type: 'string' } },
+        rename: {
+          type: 'array',
+          description: 'path moves',
+          items: {
+            type: 'object',
+            properties: { from: str('old path'), to: str('new path') },
+            required: ['from', 'to'],
+          },
+        },
+        dry_run: { type: 'boolean', description: 'only check and show the result, write nothing' },
+      },
+    },
+    handler: counted(datapackPut),
   },
   {
     name: 'kubejs_site_list',

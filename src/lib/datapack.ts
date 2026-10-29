@@ -1,5 +1,5 @@
 import { strToU8, zipSync } from 'fflate';
-import { datapackFiles, datapackPathError } from './datapackFiles';
+import { datapackFiles, datapackIssues } from './datapackFiles';
 import type { Datapack, DatapackEntry } from '@/entities/datapack';
 import { recipeHash, uid } from '@/shared/lib';
 import type { ItemIndex } from '@/shared/pack-data';
@@ -117,24 +117,9 @@ export interface PackIssue {
   message: string;
 }
 
-/** Проверки перед экспортом: JSON, пути, дубли */
+/** Проверки перед экспортом: JSON, пути, дубли (общие с MCP datapack_put — datapackFiles.ts) */
 export function validatePack(pack: Datapack): PackIssue[] {
-  const issues: PackIssue[] = [];
-  const seen = new Set<string>();
-  for (const e of pack.entries) {
-    const pathError = datapackPathError(e.path);
-    if (pathError) issues.push({ path: e.path, message: pathError });
-    if (seen.has(e.path)) issues.push({ path: e.path, message: 'этот путь встречается дважды — победит последний' });
-    seen.add(e.path);
-    if (e.path.endsWith('.json')) {
-      try {
-        JSON.parse(e.content);
-      } catch (err) {
-        issues.push({ path: e.path, message: `ошибка JSON: ${err instanceof Error ? err.message : err}` });
-      }
-    }
-  }
-  return issues;
+  return datapackIssues(pack.entries);
 }
 
 /**

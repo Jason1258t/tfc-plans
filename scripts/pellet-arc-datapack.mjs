@@ -12,12 +12,16 @@
 //   node scripts/pellet-arc-datapack.mjs [выход.zip] [--upload]   (по умолчанию out/pellet_arc_furnace.zip)
 //
 // --upload — ещё и положить датапак на сайт (Firestore datapacks, от имени `firebase login`): датапак с тем же
-// именем обновляется, иначе создаётся новый. Подпись — TFC_NICK или git user.name.
+// именем обновляется, иначе создаётся новый. Подпись — TFC_AGENT_NICK (по умолчанию Claude), перед записью — те же
+// проверки, что у MCP datapack_put (scripts/mcp/datapack-write.mjs).
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { strToU8, zipSync } from 'fflate';
-import { DOCS, ROOT, deployer, fromValue, toValue, token } from './firestore-rest.mjs';
+import { ROOT } from './firestore-rest.mjs';
+import { PUBLIC } from './mcp/data.mjs';
+import { uploadDatapack } from './mcp/datapack-write.mjs';
+import { NICK } from './mcp/fmt.mjs';
 import { PACK_FORMAT } from '../src/lib/datapackFiles.ts';
 import { recipeHash } from '../src/shared/lib/hash.ts';
 import { matchFilter } from '../src/shared/pack-data/recipeFilter.ts';
@@ -31,9 +35,10 @@ const args = process.argv.slice(2);
 const upload = args.includes('--upload');
 const out = path.resolve(args.find((a) => !a.startsWith('--')) ?? path.join(ROOT, 'out/pellet_arc_furnace.zip'));
 
-const readJson = (p) => JSON.parse(fs.readFileSync(path.join(ROOT, p), 'utf8'));
-const recipes = readJson('public/recipes.json');
-const kubejsPath = path.join(ROOT, 'public/kubejs.json');
+// Данные сборки — public/ основной копии (в git worktree его нет), как у MCP
+const readJson = (p) => JSON.parse(fs.readFileSync(path.join(PUBLIC, p), 'utf8'));
+const recipes = readJson('recipes.json');
+const kubejsPath = path.join(PUBLIC, 'kubejs.json');
 const removes = fs.existsSync(kubejsPath)
   ? JSON.parse(fs.readFileSync(kubejsPath, 'utf8')).rules.filter((r) => r.kind === 'remove')
   : [];
@@ -47,7 +52,7 @@ const removedByKubejs = (id, type, json) => {
 
 // Теги предметов из каталога модов (правки тегов KubeJS не учитываются)
 const itemTags = new Map();
-for (const t of readJson('public/tags.json').tags)
+for (const t of readJson('tags.json').tags)
   if (t.k === 'item') itemTags.set(t.i, [...new Set(t.s.flatMap((s) => s.v))]);
 const expand = (ing, seen = new Set()) => {
   if (ing.item) return [ing.item];
@@ -159,34 +164,8 @@ console.log(table.sort().join('\n'));
 console.log(`\n${table.length} рецептов → ${path.relative(process.cwd(), out)}`);
 
 if (upload) {
-  const auth = { Authorization: `Bearer ${await token()}`, 'Content-Type': 'application/json' };
-  const nick = deployer('Claude');
-  let existing = null;
-  for (let pageToken = ''; ;) {
-    const res = await fetch(`${DOCS}/datapacks?pageSize=300${pageToken && `&pageToken=${pageToken}`}`, {
-      headers: auth,
-    });
-    if (!res.ok) throw new Error(`чтение datapacks: ${res.status} ${await res.text()}`);
-    const page = await res.json();
-    existing ??= (page.documents ?? []).find((d) => fromValue(d.fields.name ?? { nullValue: null }) === NAME);
-    if (!page.nextPageToken) break;
-    pageToken = page.nextPageToken;
-  }
-  const now = Date.now();
-  const data = { name: NAME, namespace: NS, description: DESCRIPTION, entries, updatedBy: nick, updatedAt: now };
-  if (!existing) Object.assign(data, { author: nick, createdAt: now });
-  const fields = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, toValue(v)]));
-  const mask = Object.keys(data)
-    .map((k) => `updateMask.fieldPaths=${k}`)
-    .join('&');
-  const res = existing
-    ? await fetch(`https://firestore.googleapis.com/v1/${existing.name}?${mask}`, {
-        method: 'PATCH',
-        headers: auth,
-        body: JSON.stringify({ fields }),
-      })
-    : await fetch(`${DOCS}/datapacks`, { method: 'POST', headers: auth, body: JSON.stringify({ fields }) });
-  if (!res.ok) throw new Error(`запись датапака: ${res.status} ${await res.text()}`);
-  const id = (await res.json()).name.split('/').pop();
-  console.log(`${existing ? 'обновлён' : 'создан'} датапак на сайте: datapacks/${id} (подпись ${nick})`);
+  const r = await uploadDatapack({ name: NAME, namespace: NS, description: DESCRIPTION, entries }, NICK);
+  for (const w of r.warnings) console.warn(`! ${w}`);
+  console.log(`${r.created ? 'создан' : 'обновлён'} датапак на сайте: datapacks/${r.id} (подпись ${NICK})`);
+  if (r.deployment) console.log(r.deployment);
 }

@@ -106,3 +106,10 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   including snapshot ZIPs without a source card. Recipe tools exclude the entire pinned card from the live-site
   layer (later new recipe ids remain unconfirmed); ZIP recipes/data and loot respect KubeJS order. Verified via
   stdio list/get and a static pinned recipe fixture against read-only live source cards, with no Firestore writes.
+- **2026-10-29, `datapack_put`** (dev #153): agents create and edit site datapacks (whole entries or upsert/remove/
+  rename by path) with `baseRevision`, signed with `TFC_AGENT_NICK`; structural checks shared with the site
+  (`datapackIssues`), pack checks repeat the editor's warnings; pinned-version notice. `scripts/smooth-stone-datapack.mjs`
+  and `pellet-arc-datapack.mjs --upload` use the same module (and now sign with the agent nick, not git user.name);
+  pellet-arc reads `public/` of the main checkout so it runs from a worktree. Verified over stdio on live Firestore
+  with a temporary datapack (create, refusals on bad JSON/path and stale revision, upsert/rename/remove, dry_run,
+  pinned notice via a fixture `kubejs.json`), then deleted it; scripts' `--upload` not run against Firestore.
