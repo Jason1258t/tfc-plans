@@ -42,6 +42,7 @@ public class DevTest {
 
     static void commands(RegisterCommandsEvent e) {
         CommandDispatcher<CommandSourceStack> d = e.getDispatcher();
+        Sync.register(d);
         d.register(Commands.literal("rectest")
                 .then(Commands.literal("build").executes(c -> build(c.getSource())))
                 .then(Commands.literal("power")

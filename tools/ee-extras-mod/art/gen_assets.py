@@ -336,6 +336,9 @@ name = 'compact_kinetic_generator'
 machines.emit(name, machines.compact_generator(1400), RES, NS, dump, machines.lying_display(DISPLAY))
 dump({'parent': f'{NS}:block/{name}/block'}, 'models', 'item', name + '.json')
 dump(blockstate(name), 'blockstates', name + '.json')
+import acmachines  # noqa: E402 — преобразователи частоты и синхронизаторы (art/acmachines.py, 2.4)
+
+acmachines.generate(RES, NS, dump, blockstate, DISPLAY, machines.emit)
 import cables  # noqa: E402 — кабели, соединитель, изоляторы, катушка (art/cables.py)
 
 cables.generate(RES, NS, dump, ROT, DISPLAY)

@@ -107,8 +107,11 @@ public class CheckNodes {
         rot.put(Direction.WEST, new int[] {270, 90});
         int bad = 0, total = 0;
         for (Layout layout : new Layout[] {Layout.THREE_PHASE, Layout.SINGLE_PHASE, Layout.THREE_PHASE_INVERTER,
-                Layout.SINGLE_PHASE_INVERTER, Layout.CONVERTER}) {
-          for (Tier tier : layout == Layout.CONVERTER ? new Tier[] {Tier.LIGHT} : Tier.values()) {
+                Layout.SINGLE_PHASE_INVERTER, Layout.CONVERTER, Layout.THREE_PHASE_FREQUENCY_CONVERTER,
+                Layout.SINGLE_PHASE_FREQUENCY_CONVERTER, Layout.THREE_PHASE_SYNCHRONIZER, Layout.SINGLE_PHASE_SYNCHRONIZER}) {
+          boolean ac = layout.id().endsWith("frequency_converter") || layout.id().endsWith("synchronizer");
+          for (Tier tier : layout == Layout.CONVERTER ? new Tier[] {Tier.LIGHT}
+                  : ac && layout.inputs() == 3 ? Tier.values() : new Tier[] {Tier.LIGHT, Tier.HEAVY}) {
             float y = tier.terminalY;
             for (boolean rolled : new boolean[] {false, true}) {
                 NodeConfigurator.Builder b = new NodeConfigurator.Builder();

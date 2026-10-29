@@ -55,6 +55,14 @@ public class PowerBlock<D extends SimulatedDevice> extends DirectionalRolledDevi
         return b.simple();
     }
 
+    public Tier tier() {
+        return tier;
+    }
+
+    public Layout layout() {
+        return layout;
+    }
+
     private NodeConfigurator config(BlockState state) {
         return state.getValue(ROLL) ? nodesRolled : nodes;
     }
@@ -83,6 +91,6 @@ public class PowerBlock<D extends SimulatedDevice> extends DirectionalRolledDevi
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return (tier == Tier.HEAVY ? HEAVY_SHAPE : LIGHT_SHAPE).get(state.getValue(FACING));
+        return (tier == Tier.LIGHT ? LIGHT_SHAPE : HEAVY_SHAPE).get(state.getValue(FACING));
     }
 }

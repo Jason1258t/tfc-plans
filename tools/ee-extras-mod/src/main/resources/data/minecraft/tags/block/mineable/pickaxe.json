@@ -6,6 +6,18 @@
     "ee_extras:four_core_termination",
     "ee_extras:duplex_cable_insulator",
     "ee_extras:four_core_cable_insulator",
-    "ee_extras:four_core_tap"
+    "ee_extras:four_core_tap",
+    "ee_extras:three_phase_frequency_converter",
+    "ee_extras:heavy_three_phase_frequency_converter",
+    "ee_extras:industrial_three_phase_frequency_converter",
+    "ee_extras:industrial_three_phase_frequency_converter_base",
+    "ee_extras:single_phase_frequency_converter",
+    "ee_extras:heavy_single_phase_frequency_converter",
+    "ee_extras:three_phase_synchronizer",
+    "ee_extras:heavy_three_phase_synchronizer",
+    "ee_extras:industrial_three_phase_synchronizer",
+    "ee_extras:industrial_three_phase_synchronizer_base",
+    "ee_extras:single_phase_synchronizer",
+    "ee_extras:heavy_single_phase_synchronizer"
   ]
 }

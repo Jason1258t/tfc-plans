@@ -7,7 +7,12 @@ package ee.extras;
  */
 public enum Tier {
     LIGHT("", 6_000, 5),
-    HEAVY("heavy_", 48_000, 14);
+    HEAVY("heavy_", 48_000, 14),
+    /**
+     * Промышленный (2.4, преобразователь частоты и синхронизатор): шкаф в два блока высотой, клеммы — на верхнем.
+     * Номинал — без радиаторов и масла; настоящий считает Cooling по радиаторам вокруг, как трансформатор EE.
+     */
+    INDUSTRIAL("industrial_", 120_000, 14);
 
     /** Приставка к id блока: three_phase_rectifier → heavy_three_phase_rectifier */
     public final String prefix;
