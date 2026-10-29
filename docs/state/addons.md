@@ -123,8 +123,10 @@ BE, on the item as data component `charge`. Device `OnboardDevice` is stateless 
   battery-to-battery over wires, restart, drops. `SABLE=1` (server on NeoForge 21.1.251 + sable jar): `/sable assemble
 area` of the stand — keeps working on the plot. Terminals 24/24. Not checked in game.
 
-- **Texture sources (dev #135, 2026-10-29):** battery and generator modules replaced with 32×32 pixel sprites,
-  matching the dark steel/copper palette of Electro Energetics 1.1.2. ImageGen originals and prompts in
+- **Texture sources (dev #135, 2026-10-29):** battery and generator modules are simple rectangular 32×32
+  cassettes matching the onboard computer: flat graphite panels, thin brass trim, square contacts or copper windings.
+  User direction: simple straight geometry, minimal shading, no rounded machines or decorative highlights.
+  Each sprite uses 12 colours including transparency. ImageGen originals and prompts in
   `art/sources/` and `art/modules.md`; generator preserves finished item PNGs. Prepared for the next release;
   published 1.0.0 unchanged. Client appearance not checked in game. Pyrofuel remains for the next stage.
 
