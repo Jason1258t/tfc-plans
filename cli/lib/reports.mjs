@@ -34,8 +34,16 @@ export const REPORT_TYPES = [
     id: 'kubejs-log',
     kind: 'log',
     label: 'Логи KubeJS (startup, server, client)',
-    dirs: ['logs/kubejs'],
-    re: /\.log$/,
+    dirs: ['logs/kubejs', 'kubejs/logs'],
+    re: /\.log(\.gz)?$/,
+  },
+  {
+    id: 'server-kubejs-log',
+    kind: 'log',
+    side: 'server',
+    label: 'Логи KubeJS сервера (startup, server)',
+    dirs: ['logs/kubejs', 'kubejs/logs'],
+    re: /\.log(\.gz)?$/,
   },
   { id: 'jvm-crash', kind: 'crash', label: 'Падение Java (hs_err_pid)', dirs: ['.'], re: /^hs_err_pid\d+\.log$/ },
   {
@@ -65,6 +73,7 @@ const ALIASES = {
   crashes: 'crash-report',
   debug: 'debug-log',
   kubejs: 'kubejs-log',
+  'server-kubejs': 'server-kubejs-log',
   jvm: 'jvm-crash',
   hs_err: 'jvm-crash',
   server: 'server-log',
@@ -122,14 +131,14 @@ export function pickReports(files, answer) {
     .map((s) => s.trim())
     .filter(Boolean)) {
     const low = want.toLowerCase();
-    const exact = files.find((f) => f.name.toLowerCase() === low || f.rel.toLowerCase() === low);
-    const hits = exact ? [exact] : files.filter((f) => f.name.toLowerCase().includes(low));
+    const exact = files.filter((f) => f.name.toLowerCase() === low || f.rel.toLowerCase() === low);
+    const hits = exact.length ? exact : files.filter((f) => f.name.toLowerCase().includes(low));
     if (!hits.length) throw new Error(`нет файла «${want}»`);
     if (hits.length > 1)
       throw new Error(
         `«${want}» подходит к ${hits.length} файлам: ${hits
           .slice(0, 5)
-          .map((f) => f.name)
+          .map((f) => f.rel)
           .join(', ')}…`,
       );
     if (!out.includes(hits[0])) out.push(hits[0]);
@@ -192,7 +201,7 @@ export async function cmdReport(api, roots, args, { note, task, yes, dryRun }) {
     type = typeById(typeArg);
     if (!type)
       throw new Error(
-        `нет вида «${typeArg}» — ${available.map((t) => t.id).join(', ')} (коротко: log, crash, debug, kubejs, jvm${roots.server ? ', server' : ''})`,
+        `нет вида «${typeArg}» — ${available.map((t) => t.id).join(', ')} (коротко: log, crash, debug, kubejs, jvm${roots.server ? ', server, server-kubejs' : ''})`,
       );
     if (type.side === 'server' && !roots.server)
       throw new Error('у профиля нет папки сервера — tfc init --server-dir <папка>');

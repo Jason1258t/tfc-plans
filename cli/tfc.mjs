@@ -103,7 +103,7 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
   tfc undo                    вернуть как было до прошлого pull
   tfc report                  загрузить на сайт лог или краш-репорт (спросит вид и какие файлы) — для агента
                               и хоста; в конце — строка «Для агента» с id tfc-report:…
-  tfc report <вид> [N | имя]  без вопросов: вид — log, crash, debug, kubejs, jvm (хосту ещё server, server-crash);
+  tfc report <вид> [N | имя]  без вопросов: вид — log, crash, debug, kubejs, jvm (хосту ещё server, server-crash, server-kubejs);
                               без N — последний, N — столько последних (одним zip), имя — конкретный файл
       --note "что случилось"  --task <id задачи> — приложить к задаче   --dry-run — только показать
 

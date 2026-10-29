@@ -22,15 +22,19 @@ function readInput(a) {
   if (!fs.existsSync(p)) throw new Error(`нет ${p}`);
   let others = [];
   if (fs.statSync(p).isDirectory()) {
-    // Папка игры: самый свежий краш-репорт или latest.log
+    // Папка игры: самый свежий краш-репорт, обычный лог или отдельный лог KubeJS
     const cands = [];
-    for (const sub of ['crash-reports', 'logs', '.'])
+    for (const sub of ['crash-reports', 'logs', '.', 'logs/kubejs', 'kubejs/logs'])
       for (const f of fs.existsSync(path.join(p, sub)) ? fs.readdirSync(path.join(p, sub)) : [])
-        if (/^crash-.*\.txt$|^latest\.log$|^debug\.log$/.test(f)) {
+        if (
+          /^crash-.*\.txt$|^(latest|debug)\.log$/.test(f) ||
+          ((sub.endsWith('kubejs') || sub.endsWith('/logs')) && /^(startup|server|client)\.log(\.gz)?$/.test(f))
+        ) {
           const full = path.join(p, sub, f);
-          cands.push({ full, mtime: fs.statSync(full).mtimeMs });
+          const st = fs.statSync(full);
+          if (st.isFile()) cands.push({ full, mtime: st.mtimeMs });
         }
-    if (!cands.length) throw new Error(`в ${p} нет crash-reports/*.txt и logs/latest.log`);
+    if (!cands.length) throw new Error(`в ${p} нет краш-репортов, latest.log, debug.log и логов KubeJS`);
     cands.sort((x, y) => y.mtime - x.mtime);
     const pick = cands.find((c) => !c.full.endsWith('debug.log')) ?? cands[0];
     others = cands
@@ -431,6 +435,7 @@ function crashReport(text) {
 // ---------------------------------------------------------------- строки лога
 
 const LINE_NF = /^\[([^\]]+)\] \[([^\]]+?)\/(\w+)\] \[([^\]]*)\]: ?(.*)$/;
+const LINE_KUBEJS = /^\[([\d:.]+)\] \[(INIT|DEBUG|INFO|WARN|ERROR|FATAL|TRACE)\] (?:! )?(.*)$/;
 const LINE_VANILLA = /^\[([\d:.]+)\] \[([^\]]+?)\/(\w+)\]: ?(.*)$/;
 
 function parseLog(text) {
@@ -443,6 +448,8 @@ function parseLog(text) {
     if (m) cur = { n: i + 1, time: m[1], thread: m[2], level: m[3].toUpperCase(), logger: m[4], msg: m[5], extra: [] };
     else if ((m = l.match(LINE_VANILLA)))
       cur = { n: i + 1, time: m[1], thread: m[2], level: m[3].toUpperCase(), logger: '', msg: m[4], extra: [] };
+    else if ((m = l.match(LINE_KUBEJS)))
+      cur = { n: i + 1, time: m[1], thread: 'KubeJS', level: m[2], logger: 'KubeJS', msg: m[3], extra: [] };
     else {
       if (cur && l.trim()) cur.extra.push(l);
       continue;
@@ -501,11 +508,35 @@ function hints(r) {
     );
   if ((m = s.match(/((?:server|startup|client)_scripts):([\w/.-]+\.js)#(\d+)/)))
     out.push(`скрипт KubeJS ${m[1]}/${m[2]}, строка ${m[3]} — kubejs_read`);
+  for (const [registry, id] of kubeRegistryErrors(s))
+    out.push(
+      `KubeJS: в реестре ${registry} не найден ${id} — проверьте id и формат ингредиента по текущей версии мода`,
+    );
   if ((m = s.match(/Unknown (?:registry key|item|block|fluid)[^']*'([a-z0-9_.-]+:[\w/.-]+)'/i)))
     out.push(`${m[1]} нет в сборке: мод убран или id с опечаткой (items_search / lang_search)`);
   if (/Configuration file .* is not correct\. Correcting/.test(s))
     out.push('конфиг исправлен по умолчанию: ключи не совпали с версией мода — config_get');
   return out;
+}
+
+/** Реестр и id из диагностики кодека: сохраняем причину, даже если JSON рецепта длинный. */
+function kubeRegistryErrors(s) {
+  const found = new Map();
+  for (const m of s.matchAll(/Unknown registry key in ResourceKey\[[^\]]+ \/ ([\w:./-]+)\]: ([\w:./-]+)/g))
+    found.set(`${m[1]}|${m[2]}`, [m[1], m[2]]);
+  return [...found.values()];
+}
+
+/** Рецепты одного скрипта с общей ошибкой кодека объединяем; разные причины и места — отдельно. */
+function logGroupKey(r) {
+  if (/Failed to create custom recipe from json /.test(r.msg)) {
+    const errors = kubeRegistryErrors(r.msg);
+    if (errors.length) {
+      const source = r.msg.match(/^(.*?(?:\.js|\.java)#\d+):/)?.[1] ?? '';
+      return `${r.level}|${r.logger}|${source}|${JSON.stringify(errors.sort())}`;
+    }
+  }
+  return `${r.level}|${r.logger}|${normMsg(r.msg)}`;
 }
 
 const normMsg = (s) =>
@@ -563,7 +594,7 @@ export function logAnalyze(a) {
   const groups = new Map();
   for (const r of recs) {
     if (!want(r)) continue;
-    const key = `${r.level}|${r.logger}|${normMsg(r.msg)}`;
+    const key = logGroupKey(r);
     const g = groups.get(key);
     if (g) g.count++;
     else groups.set(key, { r, count: 1 });
@@ -721,7 +752,7 @@ export const TOOLS = [
   {
     name: 'log_analyze',
     description:
-      'Analyse a log or crash report (latest.log, debug.log, crash-*.txt, .gz, game/server folder — takes the newest; or text — a pasted stack): deduplicated errors, stack → jar and mod, mixin handlers → mod, decoding NoSuchMethodError/missing class/mixin not applied/missing dependency/broken data and KubeJS scripts. Player IPs hidden.',
+      'Analyse a log or crash report (latest.log, debug.log, standalone KubeJS startup/server/client.log, crash-*.txt, .gz, game/server folder — takes the newest; or text — a pasted stack): deduplicated errors, stack → jar and mod, mixin handlers → mod, decoding NoSuchMethodError/missing class/mixin not applied/missing dependency/broken data and KubeJS scripts. Player IPs hidden.',
     inputSchema: {
       type: 'object',
       properties: {

@@ -125,3 +125,9 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   `dev_file_get` returns verified local files and inline images. The dev MCP transport now supports image content.
   Verified over stdio against task #150 (WebP screenshot), an attachment-free task, ownership refusal, and
   repeated downloads from cache. No game/config changes.
+
+- Dev #158 (2026-10-29): `log_analyze` accepts standalone KubeJS `[time] [LEVEL]` logs (including INIT and
+  optional `!`), gzip and game-folder discovery in `logs/kubejs` / `kubejs/logs`. Custom recipe failures with
+  the same source location and missing registry entries are grouped by cause; registry/id hints survive
+  long JSON clipping. Verified through MCP stdio against #157 server.log: all 18 ERROR, groups ×16 and ×2,
+  script path/line and both missing registry causes; filters, levels, timeline and existing log formats checked.

@@ -224,7 +224,7 @@ tfc report
 ```
 
 1. Программа покажет виды файлов и сколько их в папке игры: лог игры (`logs/latest.log` и прошлые `*.log.gz`),
-   краш-репорт (`crash-reports/`), debug-лог, логи KubeJS (`logs/kubejs/`), падение Java (`hs_err_pid*.log`).
+   краш-репорт (`crash-reports/`), debug-лог, логи KubeJS (`logs/kubejs/` или `kubejs/logs/`), падение Java (`hs_err_pid*.log`).
    У хоста, если в профиле есть папка сервера (`tfc init --server-dir`), ещё лог и краш-репорт сервера.
 2. Выберите номер, потом какие файлы: **Enter** — последний, **число** — столько последних, **имя** (или часть
    имени, через запятую — несколько) — конкретные.
@@ -239,8 +239,13 @@ tfc report
 
 Без вопросов (для скриптов): `tfc report crash` — последний краш-репорт, `tfc report log 3` — три последних лога,
 `tfc report crash crash-2026-10-25_12.00.00-client.txt` — конкретный. Виды: `log`, `crash`, `debug`, `kubejs`,
-`jvm`, хосту — `server`, `server-crash`. Ещё: `--note "что случилось"`, `--task <id задачи>` (отчёт появится и в
+`jvm`, хосту — `server`, `server-crash`, `server-kubejs`. Ещё: `--note "что случилось"`, `--task <id задачи>` (отчёт появится и в
 задаче), `--dry-run` (только показать, что уйдёт), `--instance <папка>` (другая папка игры).
+
+Логи KubeJS: `tfc report kubejs server.log` — серверные скрипты из папки игры,
+`tfc report kubejs startup.log,server.log,client.log` — несколько файлов одним ZIP.
+Для отдельной папки сервера хоста: `tfc report server-kubejs server.log`
+(папка задаётся через `tfc init --server-dir <папка>`). Поддерживаются также `.log.gz`.
 
 ## Хосту
 

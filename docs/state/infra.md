@@ -367,3 +367,8 @@ Cursor configs (shapes from their docs, not tried).
   Nine temporary HTTP/CLI scenarios verified persisted rejection, noninteractive failure, bulk exclusion,
   explicit multi-ID pulls, full rejected history, invalid-set preflight, blocked approval of rejected updates,
   argument validation and unexpected server response. Lint/format passed.
+
+- Dev #158 (2026-10-29): `tfc report kubejs` discovers `.log` / `.log.gz` in both `logs/kubejs/` and
+  `kubejs/logs/`; `tfc report server-kubejs` uses the profile host server directory. Ambiguous names show
+  relative paths for explicit selection. Temporary folders and a stub upload API verified discovery, selection,
+  gzip, IP masking, task binding and dry-run. Real game folders/upload and Windows were not checked.
