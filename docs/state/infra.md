@@ -314,3 +314,8 @@ Cursor configs (shapes from their docs, not tried).
   list/get/recipe-layer checks. Browser: real cards, confirmed-state fixture desktop/375 px without overflow.
   TypeScript/lint/format passed. Real host world, old/new game-world loading and priorities remain untested;
   no production datapacks were promoted. Instructions/inventory: [datapacks-pack.md](../plans/datapacks-pack.md).
+
+- Dev #150 (2026-10-29): Euphoria Patcher startup popup traced to missing Complementary r5.8.1.
+  Proposed update `u20261029-193554-dd27` changes only `display.doPopUpLogging=false`, preserving logs and
+  all other config bytes. Verified installed jar code through MCP and source SHA256 against the current snapshot;
+  config absent from Firestore, so submitted through `tfc admin propose`. Client launch still awaits host check.
