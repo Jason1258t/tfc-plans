@@ -128,7 +128,7 @@ area` of the stand — keeps working on the plot. Terminals 24/24. Not checked i
   User direction: simple straight geometry, minimal shading, no rounded machines or decorative highlights.
   Each sprite uses 12 colours including transparency. ImageGen originals and prompts in
   `art/sources/` and `art/modules.md`; generator preserves finished item PNGs. Prepared for the next release;
-  published 1.0.0 unchanged. Client appearance not checked in game. Pyrofuel remains for the next stage.
+  published 1.0.0 unchanged. Client appearance not checked in game. Onboard-computer modules approved by the user; Pyrofuel sources described below.
 
 ## IE Extras (`tools/ie-extras-mod`, 2026-10-23)
 
@@ -233,6 +233,12 @@ only the jar on the site (`/addons/tp-trace-1.0.0.jar`), not in the addon list. 
   (64 rpm imposed by the test fixture), empty shutdown, bucket transfers and 1900 mB retained across restart. Client rendering, complete factory automation and full-pack compatibility: not checked in game.
 - Separate pre-existing CDG/IE recipe parse errors found during testing: dev #118.
 
+- **Texture sources (dev #135, 2026-10-29):** all seven item sprites replaced at 16×16,
+  with simple shapes and 5–11 colours including transparency. Native TFC/IE powders, Create fuel colours and
+  CDG bucket silhouette used as references. Raw/finished fluid tiles use 4/5 colours; eight-frame still/flow
+  animations assembled deterministically. Source art, prompts and palettes in `art/`; resource generation
+  preserves item PNGs. Prepared for the next release; published 1.0.0 unchanged. Not checked in game.
+
 ## Item texture workflow (dev #132, 2026-10-28)
 
 `addon-dev` now routes new item artwork through image generation with inspected pack references, a detailed source,
@@ -240,3 +246,7 @@ transparent output and a separately prepared runtime PNG. Instructions live in
 `.claude/skills/addon-dev/references/item-textures.md`; procedural asset scripts remain for technical patterns and
 assembly. Native-size and inventory previews are required; no fixed 16×16 limit. This updates agent instructions
 only; existing addon textures and in-game appearance were not changed or tested.
+
+Dev #135 (2026-10-29) records the user preference in the skill: simple pixel shapes matching the parent mod or host
+block, flat planes and restrained palette, functional material cues instead of simulated rounded forms, decorative
+highlights or noise. Approved visual example: onboard-computer cassettes in `tools/create-aeronautics-extra-mod/art/`.

@@ -9,11 +9,19 @@ a rendered block icon and its face textures are different assets. Preserve an ex
   Open the reference images; record the item ids and source mod. Choose references for silhouette, palette, material
   treatment and detail density, rather than copying an unrelated icon because it is convenient.
 - Define the object and its recognizable parts, viewing angle, material, palette, lighting and intended texture size.
-  Match the neighboring mod's art direction. Minecraft does not by itself mean mandatory 16×16 pixel art.
-- Separate the detailed generation source from the runtime PNG. Use a high-quality source (for example, about
-  1024×1024 when supported); choose a power-of-two runtime size from the references and readability, commonly
-  32/64/128 pixels. These are starting points, not fixed requirements. Do not upscale a crude 16×16 drawing and
-  call it a detailed source; do not ship a large source automatically as the runtime asset.
+  Match the parent mod and the addon's own blocks, not just a generic Minecraft theme.
+- **Pack art preference (user-approved, dev #135):** simple pixel-art forms, flat planes, clear outline and a small
+  palette. For mechanical parts prefer straight edges, rectangular housings and functional details matching the
+  host block. Do not simulate curves, rounded shoulders or bevels through many tiny highlights and shadow pixels.
+  Avoid glossy rendering, ornate trim, noise and illustrative detail. For powders, fuel and liquids keep their
+  recognizable silhouettes; this preference does not turn every object into a box. Add restrained material cues
+  so the result is not a uniform colour patch. Explicit new user direction takes precedence.
+- The approved example is `tools/create-aeronautics-extra-mod/art/preview-modules.png`: modules share the onboard
+  computer's simple case and panels, with functional contacts or windings. Inspect it when choosing detail density;
+  do not copy its brass palette onto unrelated addons.
+- Keep the generation original separate from the runtime PNG. A large source is for tool output and editing, not
+  a reason to add detail. Choose a power-of-two runtime size from the parent mod and readability: usually 16 or 32
+  pixels for these pack items; increase only when references or explicit requirements justify it.
 
 ## Generate the artwork
 
@@ -27,11 +35,12 @@ is not a visual reference. A useful prompt structure (adapt to the actual item):
 ```text
 Create one inventory item texture for [item and its function].
 References: [images and which palette/material/silhouette traits to match].
-Show [recognizable parts], viewed [angle], with [material and restrained lighting].
-Match the references' game art style and detail density. Clear silhouette, readable at [runtime size].
+Show [recognizable parts], viewed [angle], using simple forms and a few flat material shades.
+Match the parent mod/host block, clear outline and restrained pixel-art detail, readable at [runtime size].
+No glossy bevels, tiny highlights, ornamental trim or noisy texture; use only details that identify the item.
 One complete isolated object, centered with a small transparent margin, no cropped edges.
 True transparent background; no checkerboard drawn into the image, scene, text, watermark or cast ground shadow.
-Produce a detailed source suitable for reduction, without an artificial coarse pixel grid.
+Use a consistent logical pixel grid and a small palette; deliver an enlarged source suitable for reduction.
 ```
 
 Do not substitute a few programmatically drawn rectangles, ellipses or random noise for generated artwork.
@@ -51,6 +60,9 @@ under the addon's `art/` directory so later work does not depend on a temporary 
 - Reduce to the chosen runtime size. Use nearest-neighbor for an intentionally pixel-aligned source; for smooth
   detailed art use a suitable downsampling filter and inspect the result for blur and alpha halos. Do not blindly
   apply one filter to every style. If reduction destroys identifying parts, simplify the artwork or revise size.
+- Inspect beside the host block and parent-mod items, not only beside other generated artwork. A high-resolution
+  pixel-styled illustration is not yet a native-size sprite. Check outline, flat planes and limited palette after
+  reduction; quantization is mechanical cleanup, not a substitute for simple source geometry.
 - Save the runtime PNG under `src/main/resources/assets/<modid>/textures/item/<name>.png`; check the consuming
   item model and its texture reference against the addon's existing conventions. Keep source artwork outside
   runtime resources. Do not add Pillow as a runtime/build requirement just for one conversion.
