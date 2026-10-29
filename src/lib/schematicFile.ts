@@ -6,6 +6,7 @@
  * (`import '../src/lib/schematicFile.ts'`) — сервер сборки и программа tfc собирают тот же файл, что и сайт.
  */
 import { readNbt, T, writeNbt, type Compound, type ParsedNbt, type Tag } from './nbt.ts';
+import { fixBlockData } from './schematicBlockFixes.ts';
 
 /**
  * Форма схемы при скачивании. crop — обрезать по крайним непустым блокам (воздух и структурная пустота
@@ -202,8 +203,24 @@ export async function applyEdits(parsed: ParsedNbt, replace: Map<string, string>
       return !(state?.type === T.Int && removed.has(state.value));
     });
   }
+  if (blocks?.type === T.List) fixBlocks(blocks.value, palettes[0] ?? []);
   if (box) reshape(root.value, box, shape);
   return writeNbt(root, parsed.gzipped);
+}
+
+/** Данные блок-сущностей, несовместимые с блоком после замен (schematicBlockFixes) */
+function fixBlocks(blocks: Tag[], palette: Tag[]) {
+  for (const b of blocks) {
+    if (b.type !== T.Compound) continue;
+    const nbt = b.value.get('nbt');
+    const state = b.value.get('state');
+    if (nbt?.type !== T.Compound || state?.type !== T.Int) continue;
+    const name = palette[state.value] && nameOf(palette[state.value]);
+    if (!name) continue;
+    const fixed = fixBlockData(name, nbt.value);
+    if (!fixed) b.value.delete('nbt');
+    else if (fixed !== nbt.value) b.value.set('nbt', { type: T.Compound, value: fixed });
+  }
 }
 
 export const intList = (v: Vec): Tag => ({
