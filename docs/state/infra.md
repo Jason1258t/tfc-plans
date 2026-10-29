@@ -280,3 +280,14 @@ Cursor configs (shapes from their docs, not tried).
   author refusal, host approval, player/no-key refusal and changing the saved key. The reported Windows credential
   selection was resolved by logging in again: the user approved both updates afterward. The Windows libuv crash
   mitigation still needs verification there; host/Jason keys are distinct admins on VPS.
+
+- Dev #119 (2026-10-29): `tfc schematics list/local/<query>/install/publish/update`: library ids, hashes,
+  Firestore updateTime revisions, local and uploaded copies (also profile serverDir), explicit source preview,
+  author separate from copy owner/uploader. Authenticated `POST /site/schematics`: bounded NBT validation,
+  duplicate source detection, explicit transformed-source opt-in, owner/author/admin update rights, atomic file
+  completion + card revision check; preserves edits/author/description and clears stale preview. Selective pull
+  assigns collision filenames over the entire library; unknown uploaded namesakes are preserved unless --force,
+  known copy hashes persist and undo restores them. Local HTTP/Firestore stub and temporary profiles: 42 scenarios
+  (auth, paths, gzip duplicate, malformed/oversized NBT, simultaneous publication, revision conflict, failed chunks,
+  stable selective filenames, modified uploaded copies, force, undo, CLI entry points). Lint and TypeScript passed.
+  Real game/Windows launcher folders remain untested.

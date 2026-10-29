@@ -17,6 +17,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { HttpError } from './util.mjs';
+import { inspectSchematic } from './schematic-nbt.mjs';
 
 /** Поля схем без превью (до 280 тыс. знаков картинки на запись программе не нужны) */
 const SCHEMATIC_FIELDS = [
@@ -32,6 +33,10 @@ const SCHEMATIC_FIELDS = [
   'author',
   'updatedBy',
   'updatedAt',
+  'createdAt',
+  'contentHash',
+  'sha256',
+  'uploadedBy',
 ];
 const FILE_ID_RE = /^[A-Za-z0-9]{1,64}$/;
 const ADDON_ID_RE = /^[a-z][a-z0-9_]{1,63}$/;
@@ -86,7 +91,7 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
     }
     if (res.status === 404) return null;
     // Условие записи не выполнено (документ изменили после чтения)
-    if (res.status === 400 && init.method === 'PATCH' && /FAILED_PRECONDITION/.test(await res.clone().text()))
+    if ([400, 409].includes(res.status) && /FAILED_PRECONDITION|ABORTED|ALREADY_EXISTS/.test(await res.clone().text()))
       throw new HttpError(409, 'Правку изменили после чтения — посмотрите список ещё раз');
     if (!res.ok) {
       const body = await res.text();
@@ -105,7 +110,8 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
     const m = mask ? mask.map((f) => `&mask.fieldPaths=${f}`).join('') : '';
     do {
       const r = await api(`/${collection}?pageSize=300${m}${pageToken ? `&pageToken=${pageToken}` : ''}`);
-      for (const d of r?.documents ?? []) out.push({ id: d.name.split('/').pop(), ...fields(fsr, d) });
+      for (const d of r?.documents ?? [])
+        out.push({ id: d.name.split('/').pop(), revision: d.updateTime, ...fields(fsr, d) });
       pageToken = r?.nextPageToken ?? '';
     } while (pageToken);
     return out;
@@ -192,6 +198,167 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
     await fsp.writeFile(tmp, bytes);
     await fsp.rename(tmp, target);
     return target;
+  }
+
+  // Очередь не даёт двум публикациям на одном сервере проверить один и тот же старый кеш.
+  let schematicWrite = Promise.resolve();
+  function publishSchematic(bytes, meta, who) {
+    const next = schematicWrite.then(() => saveSchematic(bytes, meta, who));
+    schematicWrite = next.catch(() => {});
+    return next;
+  }
+
+  async function saveSchematic(bytes, meta, who) {
+    const m = meta ?? {};
+    if (m.id != null && !FILE_ID_RE.test(m.id)) throw new HttpError(400, 'Неверный id схемы');
+    // oxlint-disable-next-line no-control-regex -- имена файлов не содержат управляющих символов
+    if (typeof m.fileName !== 'string' || !/^[^/\\\x00-\x1f]{1,180}\.nbt$/i.test(m.fileName))
+      throw new HttpError(400, 'Нужно имя .nbt без папок');
+    if (typeof m.name !== 'string' || !m.name.trim() || m.name.length > 120)
+      throw new HttpError(400, 'Название схемы — от 1 до 120 символов');
+    if (m.author != null && (typeof m.author !== 'string' || !m.author.trim() || m.author.length > 24))
+      throw new HttpError(400, 'Автор — от 1 до 24 символов');
+    if (!m.id && who.role !== 'admin' && m.author && m.author !== who.name && m.author !== 'Неизвестен')
+      throw new HttpError(403, 'Указать другого автора может хост');
+    if (m.sourceOwner != null && (typeof m.sourceOwner !== 'string' || m.sourceOwner.length > 80))
+      throw new HttpError(400, 'Неверный владелец копии');
+    if (m.sourceOwner && m.sourceOwner !== who.name && who.role !== 'admin')
+      throw new HttpError(403, 'Публиковать uploaded-копию другого игрока может хост');
+    let info;
+    try {
+      info = inspectSchematic(bytes);
+    } catch (e) {
+      throw new HttpError(400, `Неверная схема: ${e.message}`);
+    }
+    const fsr = await firestore();
+    const toFields = (data) => Object.fromEntries(Object.entries(data).map(([k, v]) => [k, fsr.toValue(v)]));
+    const current = m.id ? await api(`/schematics/${m.id}`) : null;
+    if (m.id && !current) throw new HttpError(404, 'Схема удалена');
+    const old = current ? fields(fsr, current) : null;
+    if (old) {
+      if (who.role !== 'admin' && old.uploadedByKeyId !== who.id && old.author !== who.name)
+        throw new HttpError(403, 'Обновлять схему может её автор или хост');
+      if (!m.revision || m.revision !== current.updateTime) {
+        cache.delete('schematics');
+        throw new HttpError(409, 'Схему изменили — посмотрите её заново');
+      }
+    }
+    cache.delete('schematics');
+    const { items } = await schematics();
+    for (const entry of items) {
+      // Старые записи ещё без хеша: сравниваем сохранённые исходники, а не имя файла.
+      const source = await fsp.readFile(await filePath(entry.fileId));
+      let existing;
+      try {
+        existing = inspectSchematic(source);
+      } catch {
+        continue;
+      }
+      if (existing.contentHash !== info.contentHash && !m.asSource) {
+        const { schematicFromLibrary } = await import(
+          pathToFileURL(path.join(repoDir, 'src/lib/schematicFile.ts')).href
+        );
+        const edited = inspectSchematic(await schematicFromLibrary(source, { ...entry, replace: entry.replace ?? [] }));
+        if (edited.contentHash === info.contentHash)
+          throw new HttpError(409, 'Это обработанная копия из библиотеки — нужен явный --as-source');
+      }
+      if (existing.contentHash === info.contentHash) {
+        if (entry.id === m.id) return { id: entry.id, unchanged: true, revision: current.updateTime };
+        throw new HttpError(409, `Эта схема уже в библиотеке: ${entry.name} (${entry.id})`);
+      }
+    }
+    const id = m.id ?? randomId();
+    const fileId = randomId();
+    const now = Date.now();
+    const chunks = Math.ceil(bytes.length / REPORT_CHUNK);
+    const fileUrl = `/files/${fileId}`;
+    const cleanup = async () => {
+      for (let i = 0; i < chunks; i++) await api(`${fileUrl}/chunks/${i}`, { method: 'DELETE' }).catch(() => {});
+      await api(fileUrl, { method: 'DELETE' }).catch(() => {});
+    };
+    await api(`${fileUrl}?currentDocument.exists=false`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        fields: toFields({
+          name: m.fileName,
+          size: bytes.length,
+          type: 'application/octet-stream',
+          chunks,
+          complete: false,
+          createdAt: now,
+          sha256: info.sha256,
+          author: who.name,
+          taskId: null,
+        }),
+      }),
+    });
+    try {
+      for (let i = 0; i < chunks; i++)
+        await api(`${fileUrl}/chunks/${i}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            fields: {
+              i: { integerValue: String(i) },
+              data: { bytesValue: bytes.subarray(i * REPORT_CHUNK, (i + 1) * REPORT_CHUNK).toString('base64') },
+            },
+          }),
+        });
+      const data = {
+        fileId,
+        fileSize: bytes.length,
+        size: info.size,
+        blocks: info.blocks,
+        contentHash: info.contentHash,
+        sha256: info.sha256,
+        updatedBy: who.name,
+        updatedAt: now,
+        ...(old ? {} : { uploadedBy: who.name, uploadedByKeyId: who.id, sourceOwner: m.sourceOwner ?? null }),
+        ...(old
+          ? { preview: '' }
+          : {
+              name: m.name.trim(),
+              fileName: m.fileName,
+              author: m.author ?? 'Неизвестен',
+              replace: [],
+              createdAt: now,
+            }),
+      };
+      const fullName = (suffix) => `${fsr.docs.replace(/^.*\/v1\//, '')}${suffix}`;
+      // Файл становится доступным одновременно с карточкой; ревизия защищает и от правки в браузере.
+      const result = await api(':commit', {
+        method: 'POST',
+        body: JSON.stringify({
+          writes: [
+            {
+              update: { name: fullName(fileUrl), fields: { complete: { booleanValue: true } } },
+              updateMask: { fieldPaths: ['complete'] },
+            },
+            {
+              update: { name: fullName(`/schematics/${id}`), fields: toFields(data) },
+              ...(old ? { updateMask: { fieldPaths: Object.keys(data) } } : {}),
+              currentDocument: old ? { updateTime: m.revision } : { exists: false },
+            },
+          ],
+        }),
+      });
+      cache.delete('schematics');
+      return {
+        id,
+        fileId,
+        revision: result.writeResults?.[1]?.updateTime,
+        url: 'https://tfc-plans-fd2c.web.app/schematics',
+      };
+    } catch (e) {
+      cache.delete('schematics');
+      // При потере ответа commit мог завершиться: не удаляем файл, если карточка уже ссылается на него.
+      const saved = await api(`/schematics/${id}`).catch(() => undefined);
+      if (saved && fields(fsr, saved).fileId === fileId) {
+        cache.delete('schematics');
+        return { id, fileId, revision: saved.updateTime };
+      }
+      if (saved !== undefined) await cleanup();
+      throw e;
+    }
   }
 
   /**
@@ -412,6 +579,7 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
   return {
     addons,
     registerAddonVersion,
+    publishSchematic,
     uploadReport,
     datapacks,
     kubejs,

@@ -23,6 +23,7 @@ import {
 } from './lib/pull.mjs';
 import { scanLocal } from './lib/scan.mjs';
 import { listAddons, showAddons, uploadAddons } from './lib/addons.mjs';
+import { listSchematics, publishSchematic } from './lib/schematics.mjs';
 import { cmdReport as reportUpload } from './lib/reports.mjs';
 import { applyChange, planChange, resultsOf } from './lib/changes.mjs';
 import { applyPlan, beginBackup, editBackup, finishBackup, undoLast } from './lib/sync.mjs';
@@ -79,6 +80,13 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
       --yes                   не спрашивать
   tfc pull datapacks|kubejs|schematics|addons <имя…>   одно названное с сайта (датапак — любой, и тестовый)
   tfc pull addons <мод>@<версия>   поставить и закрепить версию аддона (откат); <мод>@latest — снять закрепление
+  tfc schematics list [поиск]    библиотека схем и состояние локальных копий
+  tfc schematics local [поиск]   .nbt в schematics/ и uploaded/<ник>/ (также --server-dir профиля)
+  tfc schematics <id>            схема, её ревизия и копии здесь
+  tfc schematics install <id…>   загрузить выбранные схемы (= pull schematics), --dry-run — план
+  tfc schematics publish <файл>  предпросмотр и публикация; --name, --author, --dry-run, --yes
+  tfc schematics update <id> <файл>  обновить исходник с проверкой ревизии и сохранением настроек
+                              --as-source — явно считать обработанную заменами копию исходником
   tfc addons list             аддоны сборки строками <мод>@<версия>: последняя, что стоит здесь, что закреплено
                               (--host-only — только аддоны для хоста)
   tfc addons <мод…>           все версии аддона строками <мод>@<версия> — какие можно поставить
@@ -175,6 +183,8 @@ const opts = {
   launcher: { type: 'boolean' },
   'mc-dir': { type: 'string' },
   name: { type: 'string' },
+  author: { type: 'string' },
+  'as-source': { type: 'boolean' },
   memory: { type: 'string' },
   'server-dir': { type: 'string' },
   note: { type: 'string' },
@@ -598,6 +608,7 @@ async function cmdPull(v, args) {
   const r = await prepare(v, args);
   const { profile, plan, sitePlans } = r;
   const n = printAll(r, { verbose: v['dry-run'] });
+  if (v['dry-run']) return console.log(dim('--dry-run: ничего не менял'));
   const backup = beginBackup(profile);
   if (!n) {
     // Запомнить, что всё на месте (state.json)
@@ -606,7 +617,6 @@ async function cmdPull(v, args) {
     applyPull(profile, sitePlans, backup, r.overrides);
     return console.log(green('Всё уже на месте.'));
   }
-  if (v['dry-run']) return console.log(dim('--dry-run: ничего не менял'));
   const risky =
     (plan ? plan.update.length + plan.remove.length : 0) +
     sitePlans.reduce((s, p) => s + p.update.length + p.remove.length + p.obsolete.length, 0);
@@ -1020,6 +1030,40 @@ async function cmdAddons(v, [sub, ...names]) {
   await showAddons(api(cfg), profile, [sub, ...names]);
 }
 
+async function cmdSchematics(v, [sub = 'list', ...args]) {
+  if (sub === 'install' || sub === 'pull') {
+    if (!args.length) throw new Error('tfc schematics install <id…> — выберите схемы из list');
+    return cmdPull(v, ['schematics', ...args]);
+  }
+  const cfg = loadConfig();
+  const profile = v.instance
+    ? { instance: path.resolve(v.instance), side: 'client' }
+    : Object.keys(cfg.profiles ?? {}).length
+      ? currentProfile(cfg, v.profile)
+      : null;
+  if (sub === 'publish' || sub === 'update') {
+    if (!profile) throw new Error('Выберите папку игры: tfc init или --instance <папка>');
+    const update = sub === 'update';
+    if (args.length !== (update ? 2 : 1))
+      throw new Error(update ? 'tfc schematics update <id> <файл>' : 'tfc schematics publish <файл>');
+    return publishSchematic(api(cfg), profile, args[update ? 1 : 0], {
+      id: update ? args[0] : undefined,
+      name: v.name,
+      author: v.author,
+      dryRun: v['dry-run'],
+      yes: v.yes,
+      asSource: v['as-source'],
+    });
+  }
+  if (sub === 'local' && !profile) throw new Error('Выберите папку игры: tfc init или --instance <папка>');
+  return listSchematics(
+    sub === 'local' ? new Api(cfg.server, cfg.token) : api(cfg),
+    profile,
+    ['list', 'local'].includes(sub) ? args.join(' ') : [sub, ...args].join(' '),
+    sub === 'local',
+  );
+}
+
 async function cmdReport(v, args) {
   const cfg = loadConfig();
   const profile = v.instance ? null : currentProfile(cfg, v.profile);
@@ -1135,6 +1179,7 @@ const COMMANDS = {
   build: cmdBuild,
   admin: cmdAdmin,
   addons: cmdAddons,
+  schematics: cmdSchematics,
   report: cmdReport,
 };
 

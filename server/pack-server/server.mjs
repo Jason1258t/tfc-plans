@@ -499,6 +499,18 @@ async function handle(req, res) {
       .pipe(res);
   }
 
+  // Публикация исходника схемы: роль и ревизия проверяются на сервере.
+  if (route === 'POST /site/schematics' && parts.length === 2) {
+    const who = await authorize(req, 'player');
+    let meta;
+    try {
+      meta = JSON.parse(decodeURIComponent(String(req.headers['x-schematic'] ?? '')));
+    } catch {
+      throw new HttpError(400, 'X-Schematic — JSON с описанием схемы');
+    }
+    return json(res, 201, await site.publishSchematic(await readRawBody(req, 10 * 1024 ** 2), meta, who));
+  }
+
   // --- отчёты tfc report → хранилище файлов сайта
   if (route === 'POST /site/reports' && parts.length === 2) {
     const who = await authorize(req, 'player');
