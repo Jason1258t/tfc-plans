@@ -69,7 +69,9 @@ and command, jar names in `release.sh`.
 - Models/textures in the target mod's style: look at its similar blocks (`model_render`, `texture_get`), reuse its
   textures by reference (`"texture": "<mod>:block/…"`) where they fit. For new item textures, follow
   [Item textures](references/item-textures.md): use available image generation with pack references, then prepare
-  and inspect the game asset. `art/gen_assets.py` is for deterministic assembly, technical patterns and conversion,
+  and inspect the game asset. Default pack style: simple pixel-art shapes matching the parent mod/host block,
+  few flat shades and functional details; avoid rounded illustrative forms, decorative highlights and noise.
+  `art/gen_assets.py` is for deterministic assembly, technical patterns and conversion,
   not the default way to invent item artwork. Blockstates cover every property combination/orientation.
 - `data/<mod>/loot_table/blocks/*.json`, `minecraft:mineable/<tool>` tag (+ TFC/needs-tool tags if relevant),
   recipe from pack items only — check ids and that the inputs are obtainable (`items_search`, `recipes_for`,
