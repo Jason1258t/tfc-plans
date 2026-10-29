@@ -382,6 +382,14 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   replacing `copycat_door` → `copycat_board`); the table has already taken the blank and gives nothing. Such data is
   dropped (copycat without material). A single Copycats+ copycat with `id: create:copycat` would NPE in the same
   method — id rewritten to `copycats:copycat`. Checked on 1900s_workshop (4 boards cleaned) in Node, not in game.
+- **Copycat materials in the file** (2026-10-29, dev #145): `applyEdits` applies the replacement map to copycat
+  materials too (`replaceCopycatMaterials` in `schematicBlockFixes.ts`, same target as the 3D preview —
+  `copycatMaterialTarget`): `Material`+`Item` (Create `CopycatBlockEntity`) and `material_data.<part>.material`+
+  `consumedItem` (Copycats+ `MaterialItemStorage`) change together; removed/air → `create:copycat_base`, item air/0;
+  an empty item next to a material (part filled by the Copycats+ migration) stays empty. Create resets a copycat whose
+  item doesn't place the material block; Create Schematic Checker (`NbtFunc.NBTCheck`) flags item ≠ material or count ≠ 1.
+  `countBlocks` counts copycat materials, so materials found only inside copycats show up in the block list. Checked in
+  Node on 1900s_workshop (762 slots, preview = file, checker rules hold), not in game.
 - **Create parts drawn by code** (2026-10-24, task «Отрисовка create»): builder `block-models.mjs` adds `pm` (path →
   model) with every `models/block/**` of mods in `PARTIAL_NAMESPACES` (Create: 1887 incl. 444 never referenced by
   blockstates; create.json ~140 → ~230 KB gz). Site `partialQuads(ref, turns)` (blockModels.ts) bakes one with turns
