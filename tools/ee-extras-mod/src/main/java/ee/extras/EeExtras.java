@@ -9,6 +9,7 @@ import com.george_vi.electroenergetics.devices.device.DevicesSavedData;
 import com.george_vi.electroenergetics.devices.device.SimulatedDevice;
 import com.george_vi.electroenergetics.devices.device.SimulatedDeviceType;
 import com.george_vi.electroenergetics.simulation.WireType;
+import ee.extras.ac.AcBlocks;
 import ee.extras.cable.CableEvents;
 import ee.extras.cable.CableHud;
 import ee.extras.cable.CableInsulatorBlock;
@@ -72,9 +73,9 @@ public class EeExtras {
 
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MOD_ID);
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MOD_ID);
-    static final DeferredRegister<SimulatedDeviceType<?>> DEVICES =
+    public static final DeferredRegister<SimulatedDeviceType<?>> DEVICES =
             DeferredRegister.create(CEERegistries.SIMULATED_DEVICE_TYPE, MOD_ID);
-    static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
+    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
             DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MOD_ID);
     public static final DeferredRegister<WireType> WIRES = DeferredRegister.create(CEERegistries.WIRE_TYPE, MOD_ID);
 
@@ -172,7 +173,7 @@ public class EeExtras {
         return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
     }
 
-    static BlockBehaviour.Properties metal() {
+    public static BlockBehaviour.Properties metal() {
         return BlockBehaviour.Properties.of()
                 .mapColor(MapColor.METAL)
                 .strength(2.0f, 6.0f)
@@ -197,6 +198,7 @@ public class EeExtras {
     }
 
     public EeExtras(IEventBus modBus) {
+        AcBlocks.init();
         CableWires.init();
         LineWire.register();
         Tension.register(modBus);
@@ -231,6 +233,7 @@ public class EeExtras {
     private static void addToTab(BuildCreativeModeTabContentsEvent event) {
         if (!event.getTabKey().equals(CEECreativeTab.CREATIVE_TAB.getKey())) return;
         for (Kind<?> k : POWER) event.accept(k.item.get());
+        AcBlocks.addToTab(event);
         for (Supplier<? extends Item> item : new Supplier[] {KINETIC_GENERATOR_ITEM, CONVERTER_ITEM,
                 FOUR_CORE_TERMINATION_ITEM, PHASE_TAP_ITEM, DUPLEX_INSULATOR_ITEM, FOUR_CORE_INSULATOR_ITEM, FOUR_CORE_SPOOL})
             event.accept(item.get());

@@ -1,12 +1,12 @@
 {
   "id": "ee_extras",
   "name": "EE Extras — электрика для Electro Energetics",
-  "version": "2.4.0",
-  "jar": "ee-extras-2.4.0.jar",
-  "sha256": "0ae0bd22a9032f107ae6951a553f4fd9c6f998a516bf199c445456baf4f84366",
+  "version": "2.5.0",
+  "jar": "ee-extras-2.5.0.jar",
+  "sha256": "2b8b255b2c9f63e0eb09daa548a758613e63164ef29930fd1966bba3ac1b505e",
   "order": 10,
   "side": "both",
-  "summary": "Блоки для Create Electro Energetics: выпрямители (переменный ток → ровный постоянный) и с 2.2 сетевые инверторы (постоянный → переменный в такт генераторам), лёгкие на 6 кВт и тяжёлые на 48 кВт, с 2.3 — компактный генератор (вал Create → постоянный ток до 1,5 кВт), двусторонний преобразователь EE ↔ FE для конденсаторов IE, рабочий двухпроводной кабель EE (в самом EE 1.1.2 катушка кабель не прокладывает), четырёхжильный кабель для трёхфазной сети, отвод фазы и кабельные изоляторы; с 2.1 — провода ЛЭП и сильноточной разводки (медная шина, силовой кабель, М, АС, А, бронзовый, ПС) и натяжной зажим; с 2.4 — электрический фонарь IE подключается к двухпроводному кабелю EE и собирается в линию. До версии 2.0 назывался «EE Rectifiers» (ee_rectifier): поставленные выпрямители при обновлении остаются на месте.",
+  "summary": "Блоки для Create Electro Energetics: выпрямители (переменный ток → ровный постоянный) и с 2.2 сетевые инверторы (постоянный → переменный в такт генераторам), лёгкие на 6 кВт и тяжёлые на 48 кВт, с 2.3 — компактный генератор (вал Create → постоянный ток до 1,5 кВт), двусторонний преобразователь EE ↔ FE для конденсаторов IE, рабочий двухпроводной кабель EE (в самом EE 1.1.2 катушка кабель не прокладывает), четырёхжильный кабель для трёхфазной сети, отвод фазы и кабельные изоляторы; с 2.1 — провода ЛЭП и сильноточной разводки (медная шина, силовой кабель, М, АС, А, бронзовый, ПС) и натяжной зажим; с 2.4 — электрический фонарь IE подключается к двухпроводному кабелю EE и собирается в линию; с 2.5 — преобразователи частоты (любой ток → заданные 1–40 Гц) и синхронизаторы (автоматическое включение генератора в сеть), до промышленного шкафа в два блока с радиаторами. До версии 2.0 назывался «EE Rectifiers» (ee_rectifier): поставленные выпрямители при обновлении остаются на месте.",
   "needs": "Сервер и все игроки (новые блоки). NeoForge 21.1.219+, Create 6.0.10, Electro Energetics 1.1.2+. Старый ee-rectifier-*.jar убрать — tfc pull addons уберёт сам.",
   "formerIds": ["ee_rectifier"],
   "replaces": ["mods/ee-rectifier-1.1.0.jar", "mods/ee-rectifier-1.0.0.jar"],
@@ -149,6 +149,221 @@
           "S": {
             "item": "immersiveengineering:plate_steel",
             "tag": "c:plates/steel"
+          }
+        }
+      }
+    },
+    {
+      "id": "ee_extras:three_phase_frequency_converter",
+      "name": "Трёхфазный преобразователь частоты",
+      "image": "three_phase_frequency_converter.png",
+      "recipe": {
+        "pattern": ["CKC", "RPV", " L "],
+        "key": {
+          "C": {
+            "item": "electroenergetics:connector"
+          },
+          "K": {
+            "item": "electroenergetics:capacitor"
+          },
+          "R": {
+            "item": "ee_extras:three_phase_rectifier",
+            "image": "three_phase_rectifier.png",
+            "name": "Трёхфазный выпрямитель"
+          },
+          "P": {
+            "item": "create:iron_sheet",
+            "tag": "c:plates/iron"
+          },
+          "V": {
+            "item": "ee_extras:three_phase_inverter",
+            "image": "three_phase_inverter.png",
+            "name": "Трёхфазный инвертор"
+          },
+          "L": {
+            "item": "electroenergetics:inductor"
+          }
+        }
+      }
+    },
+    {
+      "id": "ee_extras:single_phase_frequency_converter",
+      "name": "Однофазный преобразователь частоты",
+      "image": "single_phase_frequency_converter.png",
+      "recipe": {
+        "pattern": ["CKC", "RPV", " L "],
+        "key": {
+          "C": {
+            "item": "electroenergetics:connector"
+          },
+          "K": {
+            "item": "electroenergetics:capacitor"
+          },
+          "R": {
+            "item": "ee_extras:single_phase_rectifier",
+            "image": "single_phase_rectifier.png",
+            "name": "Однофазный выпрямитель"
+          },
+          "P": {
+            "item": "create:iron_sheet",
+            "tag": "c:plates/iron"
+          },
+          "V": {
+            "item": "ee_extras:single_phase_inverter",
+            "image": "single_phase_inverter.png",
+            "name": "Однофазный инвертор"
+          },
+          "L": {
+            "item": "electroenergetics:inductor"
+          }
+        }
+      }
+    },
+    {
+      "id": "ee_extras:heavy_three_phase_frequency_converter",
+      "name": "Тяжёлые преобразователи частоты (трёх- и однофазный)",
+      "image": "heavy_three_phase_frequency_converter.png",
+      "recipe": {
+        "pattern": ["CRC", "XSX", "RSR"],
+        "key": {
+          "C": {
+            "item": "electroenergetics:connector"
+          },
+          "R": {
+            "item": "electroenergetics:radiator_panel"
+          },
+          "X": {
+            "item": "ee_extras:three_phase_frequency_converter",
+            "image": "three_phase_frequency_converter.png",
+            "name": "Трёхфазный преобразователь частоты"
+          },
+          "S": {
+            "item": "immersiveengineering:plate_steel",
+            "tag": "c:plates/steel"
+          }
+        }
+      }
+    },
+    {
+      "id": "ee_extras:industrial_three_phase_frequency_converter",
+      "name": "Промышленный преобразователь частоты",
+      "image": "industrial_three_phase_frequency_converter.png",
+      "recipe": {
+        "pattern": ["CRC", "XSX", "RSR"],
+        "key": {
+          "C": {
+            "item": "electroenergetics:connector"
+          },
+          "R": {
+            "item": "electroenergetics:radiator_panel"
+          },
+          "X": {
+            "item": "ee_extras:heavy_three_phase_frequency_converter",
+            "image": "heavy_three_phase_frequency_converter.png",
+            "name": "Тяжёлый трёхфазный преобразователь частоты"
+          },
+          "S": {
+            "item": "tfc:metal/block/steel",
+            "tag": "c:storage_blocks/steel"
+          }
+        }
+      }
+    },
+    {
+      "id": "ee_extras:three_phase_synchronizer",
+      "name": "Трёхфазный синхронизатор",
+      "image": "three_phase_synchronizer.png",
+      "recipe": {
+        "pattern": ["CYC", "BPB", " B "],
+        "key": {
+          "C": {
+            "item": "electroenergetics:connector"
+          },
+          "Y": {
+            "item": "electroenergetics:synchroscope"
+          },
+          "B": {
+            "item": "electroenergetics:miniature_circuit_breaker"
+          },
+          "P": {
+            "item": "create:iron_sheet",
+            "tag": "c:plates/iron"
+          }
+        }
+      }
+    },
+    {
+      "id": "ee_extras:single_phase_synchronizer",
+      "name": "Однофазный синхронизатор",
+      "image": "single_phase_synchronizer.png",
+      "recipe": {
+        "pattern": ["CYC", "BPB", "   "],
+        "key": {
+          "C": {
+            "item": "electroenergetics:connector"
+          },
+          "Y": {
+            "item": "electroenergetics:synchroscope"
+          },
+          "B": {
+            "item": "electroenergetics:miniature_circuit_breaker"
+          },
+          "P": {
+            "item": "create:iron_sheet",
+            "tag": "c:plates/iron"
+          }
+        }
+      }
+    },
+    {
+      "id": "ee_extras:heavy_three_phase_synchronizer",
+      "name": "Тяжёлые синхронизаторы (трёх- и однофазный)",
+      "image": "heavy_three_phase_synchronizer.png",
+      "recipe": {
+        "pattern": ["CRC", "XSX", "RSR"],
+        "key": {
+          "C": {
+            "item": "electroenergetics:connector"
+          },
+          "R": {
+            "item": "electroenergetics:radiator_panel"
+          },
+          "X": {
+            "item": "ee_extras:three_phase_synchronizer",
+            "image": "three_phase_synchronizer.png",
+            "name": "Трёхфазный синхронизатор"
+          },
+          "S": {
+            "item": "immersiveengineering:plate_steel",
+            "tag": "c:plates/steel"
+          }
+        }
+      }
+    },
+    {
+      "id": "ee_extras:industrial_three_phase_synchronizer",
+      "name": "Промышленный синхронизатор",
+      "image": "industrial_three_phase_synchronizer.png",
+      "recipe": {
+        "pattern": ["CRC", "XBX", "RSR"],
+        "key": {
+          "C": {
+            "item": "electroenergetics:connector"
+          },
+          "R": {
+            "item": "electroenergetics:radiator_panel"
+          },
+          "X": {
+            "item": "ee_extras:heavy_three_phase_synchronizer",
+            "image": "heavy_three_phase_synchronizer.png",
+            "name": "Тяжёлый трёхфазный синхронизатор"
+          },
+          "B": {
+            "item": "electroenergetics:sulfur_hexafluoride_breaker"
+          },
+          "S": {
+            "item": "tfc:metal/block/steel",
+            "tag": "c:storage_blocks/steel"
           }
         }
       }

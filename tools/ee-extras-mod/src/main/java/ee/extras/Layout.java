@@ -24,6 +24,22 @@ public record Layout(String id, int inputs, float[][] terminals, String[] labels
             SINGLE_PHASE.terminals, new String[] {"phase_1", "neutral", "feed_positive", "feed_negative"});
 
     /**
+     * Преобразователь частоты и синхронизатор (2.4): inputs — число контактов одной стороны (3 — три фазы, 2 — фаза
+     * и ноль); 0…inputs−1 — первая сторона (вход преобразователя, генератор синхронизатора) в ряд у z = 3, затем
+     * вторая (выход, сеть) у z = 13. Середина (8, 8) свободна — там окно значения. plus()/minus() у них не значат ничего.
+     */
+    static final float[][] AC_THREE = {{3, 3}, {8, 3}, {13, 3}, {3, 13}, {8, 13}, {13, 13}};
+    static final float[][] AC_SINGLE = {{3, 3}, {13, 3}, {3, 13}, {13, 13}};
+    public static final Layout THREE_PHASE_FREQUENCY_CONVERTER = new Layout("three_phase_frequency_converter", 3, AC_THREE,
+            new String[] {"input_l1", "input_l2", "input_l3", "output_l1", "output_l2", "output_l3"});
+    public static final Layout SINGLE_PHASE_FREQUENCY_CONVERTER = new Layout("single_phase_frequency_converter", 2, AC_SINGLE,
+            new String[] {"input_l", "input_n", "output_l", "output_n"});
+    public static final Layout THREE_PHASE_SYNCHRONIZER = new Layout("three_phase_synchronizer", 3, AC_THREE,
+            new String[] {"generator_l1", "generator_l2", "generator_l3", "grid_l1", "grid_l2", "grid_l3"});
+    public static final Layout SINGLE_PHASE_SYNCHRONIZER = new Layout("single_phase_synchronizer", 2, AC_SINGLE,
+            new String[] {"generator_l", "generator_n", "grid_l", "grid_n"});
+
+    /**
      * Двусторонний преобразователь: 0 «+» и 1 «−» — заряд (из сети EE в FE), 2 «+» и 3 «−» — разряд (из FE в сеть EE).
      * Не выпрямитель (inputs здесь не нужен), раскладка общая, чтобы клеммы проверял тот же CheckNodes.
      */
