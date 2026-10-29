@@ -3,6 +3,20 @@
 Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md), [tfc-app.md](../tfc-app.md); plan —
 [plans/pack-cli.md](../plans/pack-cli.md) (stages 1–6).
 
+## Repo split (dev #138, plan doc 23)
+
+- Chosen (2026-10-29): one repo with packages (npm workspaces) + addons (`tools/`) moved to their own repo.
+- **Stage 1 done (2026-10-29):** `packages/core` (`@tfc/core`) — 12 modules both the site and Node run (nbt,
+  schematicFile + BlockFixes, datapackFiles, addonVersions, projection, recipeFilter, recipeRefs, liquidFuel, hash,
+  freshness, files.config); `scripts/`, MCP and `cli/` no longer import `src/`. Checked: `tsc -b`, oxlint, Vite build,
+  site pages on the dev server, MCP over stdio (map, freshness, recipes, datapacks), esbuild bundle of `tfc`, and
+  `npm run mods` + `kubejs` before/after — 21 074 files identical except build timestamps. The pack server picks
+  core modules from its builders copy at `packages/core/src` and falls back to `src/lib` for an old copy; `tfc admin
+rebuild --pull` runs `npm ci` there (lock changed). Not checked: the VPS itself (rebuild/publish after this merge).
+- Still cross-folder: `cli` → `server/pack-server/lib/{paths,datapacks,schematic-nbt}.mjs`, `scripts` →
+  `cli/lib/config.mjs`, pack server → `scripts/pack.mjs`/`publish-data.mjs`, MCP/pack server → `tools/`. Next: stage 2
+  (packages for site/cli/server/scripts/mcp) and stage 3 (addons repo).
+
 ## Data builders
 
 - `npm run mods`, `serverconfig`, `kubejs`, `world`, `pack-release` on deploy, and `npm run pack -- <version
@@ -322,3 +336,8 @@ Cursor configs (shapes from their docs, not tried).
   after MCP writes; ordinary full pulls retain the five-minute cache. Checked on temporary HTTP/profiles: 73 cases
   including no-world legacy ZIP pull, deleted source card, unrelated file preservation, fresh draft, SHA256 failure,
   MCP stdio inventory/exact ZIP read and prior promotion/undo/old-CLI scenarios. Game not checked.
+
+- Dev #150 (2026-10-29): Euphoria Patcher startup popup traced to missing Complementary r5.8.1.
+  Proposed update `u20261029-193554-dd27` changes only `display.doPopUpLogging=false`, preserving logs and
+  all other config bytes. Verified installed jar code through MCP and source SHA256 against the current snapshot;
+  config absent from Firestore, so submitted through `tfc admin propose`. Client launch still awaits host check.

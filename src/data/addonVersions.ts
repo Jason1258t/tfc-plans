@@ -1,9 +1,9 @@
 import { collection, doc, getDocs, limit, onSnapshot, orderBy, query, where, writeBatch } from 'firebase/firestore';
 import { authReady, db } from '@/shared/api';
-import { ADDON_VERSIONS, sortVersions, type AddonVersion, type AddonVersionRevision } from '../lib/addonVersions';
+import { ADDON_VERSIONS, sortVersions, type AddonVersion, type AddonVersionRevision } from '@tfc/core/addonVersions';
 
 /**
- * Версии аддонов — коллекция addonVersions (src/lib/addonVersions.ts), у каждой история правок revisions.
+ * Версии аддонов — коллекция addonVersions (packages/core/src/addonVersions.ts), у каждой история правок revisions.
  * Создаёт версию выпуск (MCP и сервер сборки), сайт только правит ченджлог, статус и «что проверено».
  */
 

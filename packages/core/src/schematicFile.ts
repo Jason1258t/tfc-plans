@@ -3,7 +3,7 @@
  * (`schematics`: replace + shape). Подбор замен (fuse.js, Gemini) остаётся в schematic.ts.
  *
  * Импорт только nbt.ts (с расширением .ts) и только стираемый TS: модуль запускает и сайт, и Node
- * (`import '../src/lib/schematicFile.ts'`) — сервер сборки и программа tfc собирают тот же файл, что и сайт.
+ * (`import '@tfc/core/schematicFile'`) — сервер сборки и программа tfc собирают тот же файл, что и сайт.
  */
 import { readNbt, T, writeNbt, type Compound, type ParsedNbt, type Tag } from './nbt.ts';
 import { COPYCAT_BASE, copycatSlots, fixBlockData, replaceCopycatMaterials } from './schematicBlockFixes.ts';

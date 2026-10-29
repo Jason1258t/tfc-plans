@@ -3,13 +3,13 @@
  * проверки перед записью и сама запись с условием ревизии.
  *
  * Проверки — те же, что показывает редактор датапака на сайте (src/lib/datapack.ts: validatePack, staleIssues,
- * kubejsIssues): структурные берём из общего src/lib/datapackFiles.ts, сверку со сборкой повторяем на данных MCP
+ * kubejsIssues): структурные берём из общего packages/core/src/datapackFiles.ts, сверку со сборкой повторяем на данных MCP
  * (data.mjs), потому что модули сайта тянут fetch и React. Поменяли проверку на сайте — поменяйте и здесь.
  */
 import { randomUUID } from 'node:crypto';
-import { datapackIssues } from '../../src/lib/datapackFiles.ts';
-import { recipeHash } from '../../src/shared/lib/hash.ts';
-import { collectRefs, recipeRefs } from '../../src/shared/pack-data/recipeRefs.ts';
+import { datapackIssues } from '@tfc/core/datapackFiles';
+import { recipeHash } from '@tfc/core/hash';
+import { collectRefs, recipeRefs } from '@tfc/core/recipeRefs';
 import { datapackRecipe, getTag, items, readJson, recipeRecord, recipes } from './data.mjs';
 import { createDoc, listAll, patchDoc } from './firestore.mjs';
 

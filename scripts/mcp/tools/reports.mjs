@@ -74,7 +74,7 @@ function reportId(key) {
 }
 
 /** Метаданные + части → кеш; распаковка zip/gz рядом. { dir, meta, files: [{ rel, full, size }] } */
-async function fetchReport(id) {
+export async function fetchReport(id) {
   const dir = path.join(CACHE, id);
   const metaFile = path.join(dir, 'meta.json');
   let meta;
@@ -108,6 +108,8 @@ async function fetchReport(id) {
     if (parts.length !== meta.chunks || parts.some((p, i) => p.i !== i || !Buffer.isBuffer(p.data)))
       throw new Error(`Файл ${id} в Firestore неполный (${parts.length} из ${meta.chunks} частей).`);
     const bytes = Buffer.concat(parts.map((p) => p.data));
+    if (bytes.length !== meta.size)
+      throw new Error(`Файл ${id}: размер не сошёлся (${bytes.length} вместо ${meta.size}).`);
     if (meta.sha256 && createHash('sha256').update(bytes).digest('hex') !== meta.sha256)
       throw new Error(`Файл ${id}: хеш не сошёлся.`);
     const out = path.join(dir, 'files');

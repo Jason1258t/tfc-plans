@@ -15,7 +15,7 @@ import {
   type AddonVersion,
   type AddonVersionRevision,
   type AddonVersionStatus,
-} from '@/lib/addonVersions';
+} from '@tfc/core/addonVersions';
 import { readNick } from '@/shared/lib/nick';
 import { cx } from '@/shared/lib';
 import type { GuideChecked } from '@/entities/guide';

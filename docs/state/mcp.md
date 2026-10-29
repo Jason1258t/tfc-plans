@@ -120,3 +120,8 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   keeps using current `datapack_get` revision. Fixed shared path validation (`..`, empty segments), own block-tags
   masking missing item/fluid warnings, and outdated duplicate-name wording. Checks: stdio against a temporary pack
   server plus validator fixtures; no production source cards modified. Authoring guide: `docs/agents-datapacks.md`.
+
+- **2026-10-29, dev attachments** (dev #155): `dev_get` queries Firestore files bound to `dev:<id>`;
+  `dev_file_get` returns verified local files and inline images. The dev MCP transport now supports image content.
+  Verified over stdio against task #150 (WebP screenshot), an attachment-free task, ownership refusal, and
+  repeated downloads from cache. No game/config changes.

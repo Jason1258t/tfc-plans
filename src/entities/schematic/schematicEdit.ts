@@ -1,4 +1,4 @@
-import { T, type Compound, type Tag } from '../../lib/nbt';
+import { T, type Compound, type Tag } from '@tfc/core/nbt';
 import { countBlocks, nameOf, paletteLists, posOf, REMOVE, type Schematic, type Vec } from './schematic';
 
 /**

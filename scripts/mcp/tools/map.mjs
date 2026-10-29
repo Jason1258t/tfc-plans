@@ -1,7 +1,7 @@
 /**
  * Инструменты MCP: раздел «map» — карта мира TFC Real World.
  *
- * Проекция — тот же модуль, что у сайта (src/lib/projection.ts, перенос ProjectionManager мода). Разбор координат,
+ * Проекция — тот же модуль, что у сайта (packages/core/src/projection.ts, перенос ProjectionManager мода). Разбор координат,
  * поиск городов, ближайшие города, направление и параметры мира повторяют src/lib/geo.ts (он тянет Firebase и React):
  * parseCoords, searchWaypoints, nearestWaypoints, placePath, bearing, worldFromConfig, worldProjection, pointFromGeo.
  * Настройки мира — из импортированного конфига сервера tfc_real_world/server.toml (Firestore config), без него —
@@ -10,7 +10,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { blockToGeo, geoToBlock, greatCircleKm, insideMap } from '../../../src/lib/projection.ts';
+import { blockToGeo, geoToBlock, greatCircleKm, insideMap } from '@tfc/core/projection';
 import { PUBLIC, mods, readJson, reference } from '../data.mjs';
 import { configDocs } from '../firestore.mjs';
 import { dateOf, named, norm, page, paging, str } from '../fmt.mjs';

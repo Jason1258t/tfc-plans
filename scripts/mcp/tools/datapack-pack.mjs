@@ -1,5 +1,5 @@
 /** Живой снимок и точный ZIP датапака — отдельно от редактируемой карточки Firestore. Только чтение. */
-import { zipName } from '../../../src/lib/datapackFiles.ts';
+import { zipName } from '@tfc/core/datapackFiles';
 import { createHash } from 'node:crypto';
 import { datapackCatalog, resolveDatapacks } from '../../../cli/lib/datapacks.mjs';
 import { inspectDatapack, isPackDatapackPath } from '../../../server/pack-server/lib/datapacks.mjs';

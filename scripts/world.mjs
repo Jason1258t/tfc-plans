@@ -16,7 +16,7 @@ import path from 'node:path';
 import { unzipSync } from 'fflate';
 import { fileURLToPath } from 'node:url';
 import { deployer, writeConfigDocs } from './firestore-rest.mjs';
-import { readNbt, T } from '../src/lib/nbt.ts';
+import { readNbt, T } from '@tfc/core/nbt';
 
 const log = (...a) => console.log('[world]', ...a);
 

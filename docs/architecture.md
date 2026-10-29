@@ -41,7 +41,7 @@ The site is a static SPA. All "pack knowledge" is built locally by scripts and d
 | world save (`<world>/data/`)                                                                          | `world.mjs`                                                                                                                            | Firestore `config/world__{file}` — TFC calendar (month length set by command)                                                                                                                                                                                                                                                                                                                                                                                                          |
 | server config zip/folder                                                                              | `serverconfig.mjs`                                                                                                                     | Firestore `config/{scope}__{path}`                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | manifest diff at publish                                                                              | `pack-release.mjs` (from `publish-data.mjs` on the pack server)                                                                        | Firestore `packUpdates/{id}`                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| manifest + Modrinth/CurseForge                                                                        | `freshness.mjs` (prebuild) + `src/pages/updates/model/freshness.ts`                                                                    | `public/pack-freshness.json`                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| manifest + Modrinth/CurseForge                                                                        | `freshness.mjs` (prebuild) + `packages/core/src/freshness.ts`                                                                          | `public/pack-freshness.json`                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
 - Scripts write Firestore via REST as `firebase login` or a service key (`GOOGLE_APPLICATION_CREDENTIALS`)
   (`scripts/firestore-rest.mjs`); rules don't apply. Same way is handy to read the DB from node.
@@ -96,7 +96,7 @@ src/entities/     сущности: типы, коллекции и zustand-хр
                    сохраняет разбиение по чанкам для страницы схем и MultiblockFormed
   user/            SiteUser, useUsers/usePeople, useNick (ник заходившего), touchPresence
   file/            useFiles, файловый API (upload/download/remove) и адаптеры хранилища — entities/file/fileStorage;
-                   конфиг хранилища остался в src/lib/files.config.ts (путь зашит в npm run rules:files и скрипты)
+                   конфиг хранилища — packages/core/src/files.config.ts (путь зашит в npm run rules:files)
   pack-update/     PackUpdate, лента обновлений сборки (usePackUpdates), ченджлоги аддонов, отметка «просмотрено»
   pack-config/     настройки сборки/мира: useModConfig, configValue, слои конфига (коллекция config)
 src/app/          каркас: App.tsx (маршруты), model/startData (присутствие), theme (токены и базовые стили)
@@ -118,19 +118,21 @@ src/components/   оставшиеся общие ErrorBoundary, FileBadge, Kube
 src/data/         адаптеры addonVersions, guides, onboarding; не возвращать сюда состояние страниц
 src/lib/
   kubejsFix.ts                 KubeJS-removal workaround builder (item library, recipes, tags — shared/pack-data)
-  datapack.ts datapackFiles.ts datapack records, zip, checks; datapack files (shared with Node)
+  datapack.ts                  datapack records, zip, checks (datapack files — @tfc/core/datapackFiles)
   kubejsScripts.ts             site KubeJS scripts (collection kubejsScripts, UI — pages/datapacks/ui/KubejsScripts)
-  nbt.ts materials.ts           NBT parser (shared with Node) and schematic material helpers
-  schematicFile.ts             schematic file with replacements and shape (shared with Node; suggestions — entities/schematic)
+  materials.ts                 schematic material helpers (NBT parser, schematic file — @tfc/core)
   reference.ts meals.ts        reference (ores, fuel, liquid fuel, food, metals); composite meals and calculators
   multiblocks.ts               IE multiblocks: templates, tag substitutes (UI — MultiblocksTab, CSS 3D)
   power.ts                     electricity: Create SU ↔ EE (V/A/W) ↔ IE FE/t, formulas from code (UI — PowerTab)
   guideFormat.ts               guide number format {{x | 1 В}} (formulas — shared/lib/calcExpr.ts)
   guideScope.ts powerGuideScope.ts   names for formulas: shared functions + section (settings, power.json, power.ts)
-  projection.ts geo.ts atlas.ts   TFC Real World map, world settings from server config (чтение конфига — entities/pack-config)
-  files.config.ts              attachments config; Firestore or own server (VITE_FILES_SERVER) — место зашито в правила и скрипты
+  geo.ts atlas.ts              TFC Real World map (projection — @tfc/core/projection), world settings from server config
+                               (чтение конфига — entities/pack-config)
 src/features/guides/  GuidesSection, GuideEditor/History/Help, CalcBlock (```calc), GuideBody (Markdown + {{…}} +
                   «::name» widgets), powerWidgets; format — docs/plans/guides.md
+packages/core/    @tfc/core (npm workspace): code both the site and Node run — nbt, schematicFile(+BlockFixes),
+                  datapackFiles, addonVersions, projection, recipeFilter, recipeRefs, liquidFuel, hash, freshness,
+                  files.config (attachments config; Firestore or own server); rules — packages/core/AGENTS.md
 server/file-server/  file server for Ubuntu (Node, no deps); migration — scripts/files-migrate.mjs
 server/pack-server/  pack server (snapshots, keys); on the VPS — docs/pack-server.md
 cli/              `tfc` PC app (npm run tfc -- …): sync/publish; docs/tfc-app.md, cli/README.md

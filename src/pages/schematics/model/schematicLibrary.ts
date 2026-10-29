@@ -3,7 +3,7 @@ import type { SavedSchematic } from '@/entities/schematic';
 import { fileBlob, removeFile, uploadFile } from '@/entities/file';
 import type { ItemIndex } from '@/shared/pack-data';
 import { editedSource, loadSchematic, type Schematic } from '@/entities/schematic';
-import { savedEdits } from '@/lib/schematicFile';
+import { savedEdits } from '@tfc/core/schematicFile';
 
 /**
  * Библиотека схем. Исходник .nbt — в хранилище файлов без привязки к задаче, в записи — имя и замены.

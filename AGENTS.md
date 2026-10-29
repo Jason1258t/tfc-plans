@@ -79,6 +79,7 @@ public styles when several consumers share a pattern. Onboarding targets use tag
 | any page, no domain knowledge (Modal, Button, util, firebase wrapper)                      | `shared/ui`, `shared/lib`, `shared/api`                                  |
 | any page, общий справочник пакета (предметы, рецепты, теги, поиск)                         | `shared/pack-data`                                                       |
 | app shell, providers, theme                                                                | `app/`                                                                   |
+| site **and** Node (scripts, MCP, cli, server): data formats, parsers, pure rules           | `packages/core/src/` (`@tfc/core/<module>`), not `src/`                  |
 
 - Слои (справа налево): `app → pages → widgets → features → entities → shared`. Слой берёт только себя и то, что
   справа: `features` — `features/entities/shared`, `widgets` — `widgets/features/entities/shared`, страницы —
@@ -90,10 +91,10 @@ public styles when several consumers share a pattern. Onboarding targets use tag
   (`Button.tsx` + `Button.module.css`), a folder only for multi-file ones — no `Button/Button.tsx`.
 - Import alias `@/…` = `src/…` (`vite.config.ts` + `tsconfig.app.json`). Inside one folder use relative `./x`; across
   folders `@/…`. CSS imports stay relative (`./X.module.css`).
-- **Files that Node scripts import directly** (`scripts/`, `cli/`, `server/`: `lib/addonVersions`, `datapackFiles`,
-  `freshness`, `projection`, `shared/pack-data/recipeRefs`, `shared/pack-data/recipeFilter`, `nbt`, `schematicFile`,
-  `files.config`, `shared/lib/hash`) must keep **relative** imports — Node doesn't know `@/`. Check with `grep -rn "src/" scripts cli server` before moving
-  them.
+- **Code that both the site and Node (`scripts/`, MCP, `cli/`, `server/`) run lives in `packages/core`** (`@tfc/core`,
+  npm workspace; rules — [packages/core/AGENTS.md](packages/core/AGENTS.md)): `import { readNbt } from
+'@tfc/core/nbt'` from both `src/` and `.mjs`. Node must not import `src/` — Node doesn't know `@/`, and the site is
+  going to be its own package (dev task #138). Check with `grep -rn "src/" scripts cli server`.
 - Harmful (avoid): `shared` importing upward, import cycles, the same code in several places. Everything else is a
   recommendation; exceptions are fine if they are noted in the code.
 
@@ -111,7 +112,7 @@ npm run dev            # Vite; mod data from the pack server first (scripts/ensu
 npm run dev -- --port 5176 --strictPort   # preview port for agents (5177 if busy); offline — TFC_KEEP_MODS=1
 npm run pack:fetch     # pack jars → ~/.cache/tfc-plans/pack (outside the repo) for MCP, npm run mods, addons
 npx tsc -b             # types (part of build)
-npx oxlint src scripts # lint; old set-state-in-effect / only-export-components warnings — don't fix in passing
+npx oxlint src scripts packages # lint (= npm run lint); old set-state-in-effect / only-export-components warnings — don't fix in passing
 npx prettier --write <files>   # singleQuote, printWidth 120; don't run on all of src
 npm run deploy:site    # deploy the site; pack data on Hosting stays as the pack server published it (no jars; works from a worktree)
 # npx firebase deploy --only hosting — blocked (would upload local pack data); pack data → pack server, see docs/pack-server.md

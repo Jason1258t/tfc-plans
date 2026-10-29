@@ -4,7 +4,7 @@ import { authReady, db } from '@/shared/api';
 import type { Datapack } from '@/entities/datapack';
 import { loadAddonVersions } from '@/data/addonVersions';
 import { ADDONS } from '@/lib/addons';
-import { addonChangelogsFrom, type AddonVersion } from '@/lib/addonVersions';
+import { addonChangelogsFrom, type AddonVersion } from '@tfc/core/addonVersions';
 import { itemRefsOf } from '@/shared/pack-data';
 
 /** Запись об обновлении сборки — пишет scripts/pack-release.mjs при деплое */

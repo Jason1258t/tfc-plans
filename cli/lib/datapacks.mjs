@@ -10,7 +10,7 @@ import {
   packDatapackPath,
   worldDatapackPath,
 } from '../../server/pack-server/lib/datapacks.mjs';
-import { datapackFiles, zipName } from '../../src/lib/datapackFiles.ts';
+import { datapackFiles, zipName } from '@tfc/core/datapackFiles';
 import { confirm, dim, interactive } from './ui.mjs';
 
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');

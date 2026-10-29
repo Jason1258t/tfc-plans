@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ItemIndex } from './items';
-import { filterKeys, matchFilter, type FilterTarget, type KjsFilter } from './recipeFilter';
-import { collectRefs, recipeRefs } from './recipeRefs';
+import { filterKeys, matchFilter, type FilterTarget, type KjsFilter } from '@tfc/core/recipeFilter';
+import { collectRefs, recipeRefs } from '@tfc/core/recipeRefs';
 
 /**
  * Каталог рецептов сборки (public/recipes.json, собирается вместе с библиотекой предметов из jar).

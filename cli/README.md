@@ -335,7 +335,7 @@ npm run tfc:dist -- --only macos-arm64 --no-public   # одну, не трога
 ```
 
 - esbuild собирает `cli/tfc.mjs` в один скрипт (разборщики `scripts/` в него не попадают — сборка это проверяет;
-  из сайта попадают только общие модули `src/lib/datapackFiles.ts`, `schematicFile.ts`, `nbt.ts` и fflate),
+  из ядра `@tfc/core` попадают только общие модули `datapackFiles.ts`, `schematicFile.ts`, `nbt.ts` и fflate),
   Node SEA вшивает его в официальный Node той же версии, что запускает сборку (блоб привязан к версии Node).
   Node для всех систем качается с nodejs.org, хеш сверяется с `SHASUMS256.txt`, кеш — `.cache/node-dist/`.
 - Файлы macOS подписываются своей подписью (`codesign -s -`) — без неё Apple Silicon файл не запустит; собирать

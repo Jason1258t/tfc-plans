@@ -81,7 +81,7 @@ Beyond the site, `recipes_for`, `recipes_using` and `recipe_get` include **site 
 flagged «ставить» (`install = true`, the `tfc` app puts them into the world) form a layer over mods (same-id recipe
 replaced, source «датапак сайта <name>»), below `kubejs/data` and scripts; KubeJS removals and replacements apply to it.
 The order «`kubejs/data` over world datapacks» follows the site, not checked in game. Unflagged datapacks appear as a
-separate line «есть на сайте, но не ставится». Files are built by the same `src/lib/datapackFiles.ts` as the site; the
+separate line «есть на сайте, но не ставится». Files are built by the same `packages/core/src/datapackFiles.ts` as the site; the
 collection is read whole (~10 reads) every 10 minutes. Without Firestore login — no layer, with a warning.
 
 | Tool                                                  | Does                                                                                                                                                                                                                |
@@ -382,7 +382,7 @@ of the same-named `tools/` folder; the layer is labelled with that path in the a
 
 ### World map
 
-Projection — the same `src/lib/projection.ts` as the site. Climate reimplemented from TFC Real World 4.1.4 and TFC
+Projection — the same `packages/core/src/projection.ts` as the site. Climate reimplemented from TFC Real World 4.1.4 and TFC
 4.2.9 bytecode (including how Java reads greyscale maps). Scale, profile and spawn — from the server config.
 
 | Tool                                                                 | Does                                                                                                                                                                                                                                            |
@@ -545,7 +545,7 @@ object (saved pretty-printed); an upserted entry keeps its id and fields. `kind`
 editor's «взять рецепт»). Logic — `scripts/mcp/datapack-write.mjs`, also used by `scripts/*-datapack.mjs --upload`.
 
 Refused (nothing written): bad JSON, path not `data/<ns>/…` or `recipes/`, duplicate paths (shared
-`datapackIssues` in `src/lib/datapackFiles.ts`, same as the site's export check), bad namespace, name > 80, > 300
+`datapackIssues` in `packages/core/src/datapackFiles.ts`, same as the site's export check), bad namespace, name > 80, > 300
 entries, document > 1 MB. Warnings repeat the site editor's `staleIssues`/`kubejsIssues` on MCP data: unknown items,
 missing tags or tags of the wrong kind, source recipe gone or changed, a recipe KubeJS removes, `replace`/`remove`
 of a recipe that does not exist, `add` over an existing id, a name shared with another datapack (checked only when

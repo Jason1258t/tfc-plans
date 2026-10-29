@@ -1,5 +1,5 @@
 import { strToU8, zipSync } from 'fflate';
-import { datapackFiles, datapackIssues } from './datapackFiles';
+import { datapackFiles, datapackIssues } from '@tfc/core/datapackFiles';
 import type { Datapack, DatapackEntry } from '@/entities/datapack';
 import { recipeHash, uid } from '@/shared/lib';
 import type { ItemIndex } from '@/shared/pack-data';
@@ -17,7 +17,7 @@ import {
 } from '@/shared/pack-data';
 import { entryRecipeId, recipePathOf, targetFromJson } from './kubejsFix';
 
-export { PACK_FORMAT, zipName } from './datapackFiles';
+export { PACK_FORMAT, zipName } from '@tfc/core/datapackFiles';
 
 /** Так сам TFC отключает ванильные рецепты: файл по тому же пути с ложным условием */
 export const REMOVAL_JSON = { 'neoforge:conditions': [{ type: 'neoforge:false' }] };

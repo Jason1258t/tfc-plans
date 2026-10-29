@@ -10,9 +10,9 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mergeLiquidFuels } from '../../src/shared/pack-data/liquidFuel.ts';
-import { matchFilter } from '../../src/shared/pack-data/recipeFilter.ts';
-import { collectRefs } from '../../src/shared/pack-data/recipeRefs.ts';
+import { mergeLiquidFuels } from '@tfc/core/liquidFuel';
+import { matchFilter } from '@tfc/core/recipeFilter';
+import { collectRefs } from '@tfc/core/recipeRefs';
 import { PACK_MODS } from '../pack-cache.mjs';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');

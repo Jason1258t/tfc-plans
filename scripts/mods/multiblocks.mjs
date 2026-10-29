@@ -22,7 +22,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { openJar } from './zipfile.mjs';
 import { argTypes, clinitValues, instructions, parseClass } from './classfile.mjs';
-import { readNbt, T } from '../../src/lib/nbt.ts';
+import { readNbt, T } from '@tfc/core/nbt';
 import { assetLookup, formedModel } from './multiblock-models.mjs';
 
 /**

@@ -5,10 +5,9 @@ Pipeline overview — [docs/architecture.md](../docs/architecture.md). MCP serve
 - Parsers are a library: input, output (instead of `public/`) and cache dirs are parameters (`buildMods`,
   `buildKubejs`, `configDocs`, `worldDocs`, `packRelease`, `runPack`); repo-root paths are only `npm run …` defaults.
   New paths — as parameters too, not `ROOT`.
-- `src/shared/pack-data/recipeFilter.ts`, `recipeRefs.ts`, `nbt.ts`, `datapackFiles.ts`, `addonVersions.ts`, `schematicFile.ts` (imports only
-  `./nbt.ts`, with the extension) — **no imports, erasable TS syntax only**: both the site and Node run them
-  (`import '../src/lib/x.ts'` from `.mjs`, Node 24). `tsconfig` has `erasableSyntaxOnly` — no enums, no parameter
-  properties.
+- Code shared with the site (NBT, schematics, datapack files, addon versions, recipe filter/refs, liquid fuel, hash,
+  freshness, map projection, files config) — `@tfc/core/<module>` (`packages/core`, rules in its `AGENTS.md`):
+  `import { matchFilter } from '@tfc/core/recipeFilter'`. Never import `../src/…` from here.
 - What a mod defines in code (enums, constants) — read via `scripts/mods/classfile.mjs`, don't hardcode: site data must
   rebuild from the current pack's jars. Example — `scripts/mods/botany.mjs`.
 - Per-mod rules (icons drawn by code, hidden items) — one module per mod in a registry, soft failure, conditions from
