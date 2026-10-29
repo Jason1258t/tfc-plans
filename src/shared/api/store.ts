@@ -2,6 +2,7 @@ import { collection, deleteDoc, doc, onSnapshot, setDoc, updateDoc, writeBatch }
 import { authReady, db } from './firebase';
 import { forgetSubscription, reportError, reportSnapshot, syncKey } from './sync';
 import { track } from './analytics';
+import { recoverSession, subscribeSessionRecovery } from './sessionRecovery';
 
 /** Минимальный CRUD + подписка на коллекцию. Реализации: Firestore и localStorage. */
 export interface CollectionStore<T extends { id: string }, N> {
@@ -37,34 +38,46 @@ function firestoreStore<T extends { id: string }, N extends object>(name: string
     subscribe(cb, onError) {
       let unsub = () => {};
       let cancelled = false;
+      let failed = false;
       const key = syncKey();
-      authReady.then(() => {
-        if (cancelled) return;
-        let first = true;
-        // С метаданными: узнаём, читаем ли из кэша и какие документы ещё не дошли до сервера
-        unsub = onSnapshot(
-          ref,
-          { includeMetadataChanges: true },
-          (snap) => {
-            reportSnapshot(
-              key,
-              name,
-              snap.metadata.fromCache,
-              new Set(snap.docs.filter((d) => d.metadata.hasPendingWrites).map((d) => d.id)),
-            );
-            // Изменились только метаданные — список тот же
-            if (!first && snap.docChanges().length === 0) return;
-            first = false;
-            cb(snap.docs.map((d) => ({ ...(d.data() as Omit<T, 'id'>), id: d.id }) as T));
-          },
-          (e) => {
-            reportError(`Подписка на ${name}: ${e.message}`);
-            onError?.(e);
-          },
-        );
+      const start = () =>
+        void authReady.then(() => {
+          if (cancelled) return;
+          let first = true;
+          // С метаданными: узнаём, читаем ли из кэша и какие документы ещё не дошли до сервера
+          unsub = onSnapshot(
+            ref,
+            { includeMetadataChanges: true },
+            (snap) => {
+              reportSnapshot(
+                key,
+                name,
+                snap.metadata.fromCache,
+                new Set(snap.docs.filter((d) => d.metadata.hasPendingWrites).map((d) => d.id)),
+              );
+              // Изменились только метаданные — список тот же
+              if (!first && snap.docChanges().length === 0) return;
+              first = false;
+              cb(snap.docs.map((d) => ({ ...(d.data() as Omit<T, 'id'>), id: d.id }) as T));
+            },
+            (e) => {
+              failed = true;
+              reportError(`Подписка на ${name}: ${e.message}`);
+              onError?.(e);
+              if (e.code === 'permission-denied' || e.code === 'unauthenticated') void recoverSession();
+            },
+          );
+        });
+      const stopRecovery = subscribeSessionRecovery(() => {
+        if (cancelled || !failed) return;
+        failed = false;
+        unsub();
+        start();
       });
+      start();
       return () => {
         cancelled = true;
+        stopRecovery();
         unsub();
         forgetSubscription(key);
       };
