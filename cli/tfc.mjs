@@ -24,7 +24,7 @@ import {
 } from './lib/pull.mjs';
 import { scanLocal } from './lib/scan.mjs';
 import { listAddons, showAddons, uploadAddons } from './lib/addons.mjs';
-import { confirmDatapacks, datapackIds, listDatapacks } from './lib/datapacks.mjs';
+import { confirmDatapacks, datapackCatalog, datapackIds, listDatapacks, showDatapacks } from './lib/datapacks.mjs';
 import { listSchematics, publishSchematic } from './lib/schematics.mjs';
 import { cmdReport as reportUpload } from './lib/reports.mjs';
 import { applyChange, planChange, resultsOf } from './lib/changes.mjs';
@@ -82,7 +82,8 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
       --yes                   не спрашивать
   tfc datapacks list          список датапаков: мир, сборка, доступные и изменённые
   tfc datapacks files         filename — название для ZIP в снимке сервера
-  tfc datapacks install [all|имя…]   догрузить датапаки (включённые в сборку не дублируются в мире)
+  tfc datapacks <имя/id/filename>    источник, уровень и команда установки
+  tfc datapacks pull <имя/id/filename…|all>   догрузить выбранные (install — то же); подтверждённые ставятся без мира
   tfc datapacks confirm [all|имя…]   хосту: подтвердить проверенные в мире версии для всей сборки
   tfc datapacks unconfirm [all|имя…] хосту: вернуть на уровень мира для проверки новой версии
   tfc pull datapacks|kubejs|schematics|addons <имя…>   одно названное с сайта (датапак — любой, и тестовый)
@@ -450,7 +451,7 @@ async function prepare(v, args) {
 }
 
 async function prepareSteps(v, args, sp) {
-  const { parts, names } = splitArgs(args);
+  let { parts, names } = splitArgs(args);
   const cfg = loadConfig();
   const profile = currentProfile(cfg, v.profile);
   const scope = scopeOf(parts, profile);
@@ -464,6 +465,9 @@ async function prepareSteps(v, args, sp) {
     notes.push('на сервере ещё нет сборки — беру только контент сайта');
     scope.snap = [];
   }
+  if (names.length && parts.length === 1 && parts[0] === 'datapacks')
+    names = await datapackIds(a, names, { hasWorld: !!profile.world });
+  else if (parts.includes('datapacks')) await datapackCatalog(a, { refresh: true });
   const sitePlans = [];
   for (const kind of scope.site) {
     sp.update(`Смотрю ${KIND_TITLE[kind] ?? kind}`);
@@ -574,6 +578,7 @@ function printSite(p, names) {
     console.log(dim('      пушка, которая уже строит схему, держит старую: вынуть схему из пушки и вставить снова'));
   line(yellow('!'), 'там ваш файл — рядом положу .tfc-new (перезаписать: --force)', p.conflict);
   line(dim('·'), 'ставил я, но вы меняли — оставляю', p.keptModified);
+  line(yellow('!'), 'нужен выбранный мир: tfc init --world <мир>', p.noWorld ?? []);
   if (p.unknown.length) {
     console.log(red(`  нет на сайте: ${p.unknown.join(', ')}`));
     if (p.all.length)
@@ -1186,15 +1191,11 @@ async function cmdDatapacks(v, args) {
   let profile = null;
   if (Object.keys(cfg.profiles ?? {}).length) profile = currentProfile(cfg, v.profile);
   if (sub === 'list' || sub === 'files') return listDatapacks(a, profile, names.join(' '), sub === 'files');
-  if (!profile) throw new Error('сначала выберите папку игры и мир: tfc init');
-  if (sub === 'install') {
-    if (!profile.world)
-      throw new Error(
-        'для догрузки в мир выберите его: tfc init --world <мир>; пакеты сборки без мира получает tfc pull datapacks',
-      );
+  if (!['install', 'pull', 'confirm', 'unconfirm'].includes(sub)) return showDatapacks(a, profile, [sub, ...names]);
+  if (!profile) throw new Error('сначала выберите папку игры: tfc init');
+  if (sub === 'install' || sub === 'pull') {
     if (names.includes('all') && names.length > 1) throw new Error('укажите all или отдельные имена');
-    const ids = names.length && names[0] !== 'all' ? await datapackIds(a, names) : [];
-    return cmdPull(v, ['datapacks', ...ids]);
+    return cmdPull(v, ['datapacks', ...(names.length === 1 && names[0] === 'all' ? [] : names)]);
   }
   if (sub === 'confirm' || sub === 'unconfirm') {
     const result = await confirmDatapacks(a, profile, names, { yes: v.yes, dryRun: v['dry-run'], action: sub });
@@ -1202,7 +1203,7 @@ async function cmdDatapacks(v, args) {
     return;
   }
   throw new Error(
-    'tfc datapacks list [поиск] | files [поиск] | install [all|имя…] | confirm [all|имя…] | unconfirm [all|имя…]',
+    'tfc datapacks list [поиск] | files [поиск] | pull|install [all|имя…] | <имя> | confirm [all|имя…] | unconfirm [all|имя…]',
   );
 }
 

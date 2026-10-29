@@ -735,7 +735,9 @@ async function datapackPut(a) {
       ? (await datapacksIndex()).filter((d) => d.id !== cur?.id && norm(d.name) === norm(pack.name))
       : [];
   if (others.length)
-    warnings.push(`имя совпадает с датапаком ${others.map((d) => d.id).join(', ')} — в мире у них будет один zip`);
+    warnings.push(
+      `имя совпадает с датапаком ${others.map((d) => d.id).join(', ')} — для CLI выбирайте по id; имена ZIP ручного экспорта совпадают`,
+    );
   const out = [];
   if (ops.length) out.push(...ops.map((o) => `• ${o}`));
   if (errors.length) {

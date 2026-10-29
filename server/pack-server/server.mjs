@@ -543,7 +543,7 @@ async function handle(req, res) {
       const current = await store.getCurrent();
       const deployed = deploymentsOf(current);
       const inventory = url.searchParams.get('all') === 'true';
-      const result = await site.datapacks(names, { all: inventory });
+      const result = await site.datapacks(names, { all: inventory, fresh: url.searchParams.get('fresh') === 'true' });
       let snapshotItems = [];
       if (url.searchParams.get('v') === '2') {
         const cards = inventory ? result.items : (await site.datapacks([], { all: true })).items;

@@ -134,7 +134,12 @@ export function staleIssues(
 ): PackIssue[] {
   const issues: PackIssue[] = [];
   // Теги, которые датапак определяет сам
-  const ownTags = new Set(pack.entries.map((e) => tagFromPath(e.path)?.id).filter(Boolean));
+  const ownTags = new Set(
+    pack.entries.flatMap((e) => {
+      const t = tagFromPath(e.path);
+      return t && ['item', 'fluid'].includes(t.kind) ? [t.id] : [];
+    }),
+  );
   for (const e of pack.entries) {
     if (catalog?.list.length && e.sourceRecipe) {
       const r = catalog.byId.get(e.sourceRecipe);
