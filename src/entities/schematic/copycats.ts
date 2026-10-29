@@ -1,5 +1,5 @@
-import { T, type Compound } from '../../lib/nbt';
-import { COPYCAT_BASE } from '../../lib/schematicFile';
+import { T, type Compound } from '@tfc/core/nbt';
+import { COPYCAT_BASE } from '@tfc/core/schematicFile';
 
 /**
  * Копикаты (заполняемые блоки Create и Create: Copycats+): модель в jar пустая (minecraft:block/air), игра вырезает

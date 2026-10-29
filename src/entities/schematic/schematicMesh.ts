@@ -13,8 +13,8 @@ import { placedBy, textureUrl, type ItemIndex } from '@/shared/pack-data';
 import { copycatMaterialTarget, EMPTY_BLOCKS, REMOVE, exportSchematic, type Schematic } from './schematic';
 import { blockNbtOf, buildGrid, namesByState, propsByState, stateOf } from './schematicEdit';
 import { drawnByCode, FULL, shapeOf, type Box } from './schematicShape';
-import { readNbt } from '../../lib/nbt';
-import { sizeOf, DEFAULT_SHAPE } from '../../lib/schematicFile';
+import { readNbt } from '@tfc/core/nbt';
+import { sizeOf, DEFAULT_SHAPE } from '@tfc/core/schematicFile';
 
 /**
  * Геометрия схемы для 3D: блок — грани его модели из jar (entities/schematic/blockModels.ts), а нет модели (рисует код:

@@ -6,7 +6,7 @@
  *   node scripts/files-migrate.mjs --from <хранилище> --to <хранилище> [--dry-run] [--overwrite] [--delete-source]
  *
  * Хранилища:
- *   firestore              — Firestore проекта (коллекция из src/lib/files.config.ts); доступ — от `firebase login`
+ *   firestore              — Firestore проекта (коллекция из packages/core/src/files.config.ts); доступ — от `firebase login`
  *   firestore:<коллекция>  — другая коллекция того же проекта (для опытов)
  *   https://files.example.com — сервер файлов (server/file-server); ключ — FILES_ADMIN_TOKEN
  *                            (или FILES_FROM_TOKEN / FILES_TO_TOKEN, если у серверов разные ключи)
@@ -20,7 +20,7 @@
 import { createHash } from 'node:crypto';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
-import filesConfig from '../src/lib/files.config.ts';
+import filesConfig from '@tfc/core/files.config';
 import { DOCS, fromValue, toValue, token } from './firestore-rest.mjs';
 
 const args = process.argv.slice(2);

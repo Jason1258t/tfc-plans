@@ -63,7 +63,7 @@ function lintGate(root, wt, branch) {
   const base = process.env.TFC_LINT_TOOLS ? path.resolve(process.env.TFC_LINT_TOOLS) : path.join(root, 'node_modules');
   const ox = path.join(base, 'oxlint', 'bin', 'oxlint');
   const pr = path.join(base, 'prettier', 'bin', 'prettier.cjs');
-  const lintFiles = files.filter((f) => /^(src|scripts)\/.*\.(ts|tsx|js|jsx|mjs|cjs)$/.test(f));
+  const lintFiles = files.filter((f) => /^(src|scripts|packages)\/.*\.(ts|tsx|js|jsx|mjs|cjs)$/.test(f));
   const fmtFiles = files.filter(
     (f) => /\.(ts|tsx|js|jsx|mjs|cjs|css|json|md|yaml|yml)$/.test(f) && f !== 'package-lock.json',
   );

@@ -3,7 +3,7 @@
  * Аддоны на сайт: карточки tools/<мод>/addon.json → текущий jar и иконки (tools/<мод>/icons/) в public/addons/ +
  * список для программы tfc без ключа (`tfc pull addons`, sha256 и размер jar) → public/addons/index.json.
  * Запускается перед dev/build. На сайте без ключа — только текущие версии: прочие jar из public/addons убираются.
- * Все версии — на сервере сборки (Firestore addonVersions + блобы, src/lib/addonVersions.ts).
+ * Все версии — на сервере сборки (Firestore addonVersions + блобы, packages/core/src/addonVersions.ts).
  *
  * jar в git не хранятся. Откуда берётся текущий (sha256 — из карточки): tools/<мод>/<jar> (только что собран),
  * кеш .cache/addons/<sha256>.jar, сервер сборки (/blobs/<sha256>, TFC_PACK_URL и TFC_PACK_TOKEN — как у

@@ -6,7 +6,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { compareVersions, sortVersions, STATUS_LABEL } from '../../src/lib/addonVersions.ts';
+import { compareVersions, sortVersions, STATUS_LABEL } from '@tfc/core/addonVersions';
 import { modInfoOf } from './jarid.mjs';
 import { loadState } from './plan.mjs';
 import { addonMatches } from './pull.mjs';

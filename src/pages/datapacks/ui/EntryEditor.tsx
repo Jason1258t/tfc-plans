@@ -1,7 +1,7 @@
 import { AlertTriangle, Braces, CheckCircle2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { cx } from '@/shared/lib';
-import { datapackPathError } from '@/lib/datapackFiles';
+import { datapackPathError } from '@tfc/core/datapackFiles';
 import { typeOfContent } from '@/lib/datapack';
 import { itemName, useItems, itemRefsOf, type RecipeCatalog, ItemIcon, ItemIdSearch } from '@/shared/pack-data';
 import type { DatapackEntry } from '@/entities/datapack';

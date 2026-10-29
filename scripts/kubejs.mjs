@@ -26,15 +26,15 @@
  * public/: оттуда же читаются данные модов (recipes.json, reference.json, tags.json, meals.json, icons/).
  */
 import fs from 'node:fs';
-import { readBlazeFuel } from '../src/shared/pack-data/liquidFuel.ts';
+import { readBlazeFuel } from '@tfc/core/liquidFuel';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 import { kubejsDataFiles } from './kubejs-data.mjs';
 import { unzipSync } from 'fflate';
 import { ROOT } from './firestore-rest.mjs';
-import { matchFilter } from '../src/shared/pack-data/recipeFilter.ts';
-import { recipeRefs } from '../src/shared/pack-data/recipeRefs.ts';
+import { matchFilter } from '@tfc/core/recipeFilter';
+import { recipeRefs } from '@tfc/core/recipeRefs';
 import { ingredientOf, skilletEntryValues } from './mods/cuisine.mjs';
 import { oreChains } from './mods/reference.mjs';
 

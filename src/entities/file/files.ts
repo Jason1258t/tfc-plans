@@ -1,6 +1,6 @@
 import { getToken } from 'firebase/app-check';
 import { appCheck, auth, authReady, db, track } from '@/shared/api';
-import filesConfig from '@/lib/files.config';
+import filesConfig from '@tfc/core/files.config';
 import { firestoreAdapter } from './fileStorage/firestore';
 import { serverAdapter } from './fileStorage/server';
 import type { FileAdapter, StoredFile } from './fileStorage/types';

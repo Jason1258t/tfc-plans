@@ -1,0 +1,13 @@
+{
+  "name": "@tfc/core",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Общее ядро «TFC Планы»: форматы и чистые функции, которые запускают и сайт, и Node (скрипты, MCP, программа tfc)",
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "firestore-files": "^0.1.0"
+  }
+}

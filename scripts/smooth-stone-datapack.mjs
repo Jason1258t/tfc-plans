@@ -26,10 +26,10 @@ import { strToU8, zipSync } from 'fflate';
 import { ROOT } from './firestore-rest.mjs';
 import { uploadDatapack } from './mcp/datapack-write.mjs';
 import { NICK } from './mcp/fmt.mjs';
-import { PACK_FORMAT } from '../src/lib/datapackFiles.ts';
-import { recipeHash } from '../src/shared/lib/hash.ts';
-import { matchFilter } from '../src/shared/pack-data/recipeFilter.ts';
-import { recipeRefs } from '../src/shared/pack-data/recipeRefs.ts';
+import { PACK_FORMAT } from '@tfc/core/datapackFiles';
+import { recipeHash } from '@tfc/core/hash';
+import { matchFilter } from '@tfc/core/recipeFilter';
+import { recipeRefs } from '@tfc/core/recipeRefs';
 
 const NS = 'tfc_plans_smooth';
 const NAME = 'Гладкий камень на камнерезе и в прессе';

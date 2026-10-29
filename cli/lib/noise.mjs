@@ -7,7 +7,7 @@
  * Ключ смысла — хеш содержимого без этого шума: равные ключи — файл по сути тот же.
  */
 import { createHash } from 'node:crypto';
-import { readNbt, T } from '../../src/lib/nbt.ts';
+import { readNbt, T } from '@tfc/core/nbt';
 
 /** Текстовые конфиги, у которых сравниваем смысл, а не байты */
 const TEXT = /^(config|defaultconfigs|serverconfig)\/.*\.(toml|json5?|cfg|properties|txt|snbt|ya?ml|ini)$/i;

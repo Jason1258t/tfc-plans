@@ -10,7 +10,7 @@ import { zipSync } from 'fflate';
 import { ask, bold, cyan, date, dim, green, interactive, mb, red, withSpinner, yellow } from './ui.mjs';
 import { SITE } from './update.mjs';
 
-/** Как на сайте (src/lib/files.config.ts) */
+/** Как на сайте (packages/core/src/files.config.ts) */
 const MAX_SIZE = 25 * 1024 * 1024;
 /** Один файл больше этого — в zip: логи сжимаются в 10–20 раз, а каждая часть по 700 КБ — чтение Firestore */
 const ZIP_OVER = 1024 * 1024;

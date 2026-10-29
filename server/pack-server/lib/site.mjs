@@ -9,7 +9,7 @@
  * не меняется: правка схемы на сайте — новый файл).
  *
  * Аддоны: карточки tools/<мод>/addon.json из той же копии репозитория + версии из Firestore addonVersions
- * (src/lib/addonVersions.ts); jar версий — блобы этого сервера по sha256 (/blobs/<sha256>).
+ * (packages/core/src/addonVersions.ts); jar версий — блобы этого сервера по sha256 (/blobs/<sha256>).
  */
 import { createHash, randomBytes } from 'node:crypto';
 import fs from 'node:fs';
@@ -42,7 +42,7 @@ const FILE_ID_RE = /^[A-Za-z0-9]{1,64}$/;
 const ADDON_ID_RE = /^[a-z][a-z0-9_]{1,63}$/;
 const VERSION_RE = /^[0-9][\w.+-]{0,39}$/;
 const JAR_RE = /^[\w.+-]+\.jar$/;
-/** Отчёты tfc report: размер и кусок — как у сайта (src/lib/files.config.ts) */
+/** Отчёты tfc report: размер и кусок — как у сайта (packages/core/src/files.config.ts) */
 const REPORT_KINDS = ['crash', 'log'];
 const REPORT_TYPE_RE = /^[a-z][a-z0-9-]{0,39}$/;
 const REPORT_NAME_RE = /^[^/\\\0]{1,200}$/;
@@ -55,6 +55,13 @@ const randomId = () => [...randomBytes(20)].map((b) => ID_ABC[b % ID_ABC.length]
 export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
   const filesDir = path.join(dataDir, 'site-files');
   let rest = null;
+
+  /** Модуль ядра из копии репозитория: packages/core/src, в копии до переноса ядра — src/lib (dev #138) */
+  function coreModule(name) {
+    const file = path.join(repoDir, 'packages/core/src', `${name}.ts`);
+    const old = path.join(repoDir, 'src/lib', `${name}.ts`);
+    return import(pathToFileURL(fs.existsSync(file) || !fs.existsSync(old) ? file : old).href);
+  }
 
   async function firestore() {
     if (rest) return rest;
@@ -181,7 +188,7 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
   }
 
   async function datapackSource(pack) {
-    const { datapackFiles } = await import(pathToFileURL(path.join(repoDir, 'src/lib/datapackFiles.ts')).href);
+    const { datapackFiles } = await coreModule('datapackFiles');
     return datapackFiles(pack);
   }
 
@@ -284,9 +291,7 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
         continue;
       }
       if (existing.contentHash !== info.contentHash && !m.asSource) {
-        const { schematicFromLibrary } = await import(
-          pathToFileURL(path.join(repoDir, 'src/lib/schematicFile.ts')).href
-        );
+        const { schematicFromLibrary } = await coreModule('schematicFile');
         const edited = inspectSchematic(await schematicFromLibrary(source, { ...entry, replace: entry.replace ?? [] }));
         if (edited.contentHash === info.contentHash)
           throw new HttpError(409, 'Это обработанная копия из библиотеки — нужен явный --as-source');

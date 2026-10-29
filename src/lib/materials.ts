@@ -1,6 +1,6 @@
 import type { ChecklistEntry } from '@/entities/task';
 import type { ItemIndex } from '@/shared/pack-data';
-import { readNbt, T, type Compound, type Tag } from './nbt';
+import { readNbt, T, type Compound, type Tag } from '@tfc/core/nbt';
 import { uid } from '@/shared/lib';
 
 /**

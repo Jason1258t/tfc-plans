@@ -6,7 +6,7 @@
  * (/site/addons: версии из Firestore addonVersions, jar — блобы; `<мод>@<версия>` ставит и закрепляет версию в
  * state.addonPins, `@latest` снимает), без ключа — со статики сайта (/addons/index.json, только последние): старый
  * jar того же мода и файлы, которые аддон заменяет (`replaces`), убираются с копией. Файлы собираются теми же модулями, что и
- * на сайте (src/lib/datapackFiles.ts, schematicFile.ts) — esbuild кладёт их в один файл программы.
+ * на сайте (packages/core/src/datapackFiles.ts, schematicFile.ts) — esbuild кладёт их в один файл программы.
  *
  * Что поставлено — `.tfc/state.json`, поле `pulled`: { вид: { id: { path, sha256, name } } }, path — как в
  * снимке (`world/…` для мира). Без имён — ставим отмеченные и убираем то, что ставили раньше и с чего сняли
@@ -24,9 +24,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { deploymentsOf, inspectDatapack, worldDatapackPath } from '../../server/pack-server/lib/datapacks.mjs';
 import { strToU8, zipSync } from 'fflate';
-import { datapackFiles, zipName } from '../../src/lib/datapackFiles.ts';
-import { schematicFromLibrary } from '../../src/lib/schematicFile.ts';
-import { compareVersions, sortVersions } from '../../src/lib/addonVersions.ts';
+import { datapackFiles, zipName } from '@tfc/core/datapackFiles';
+import { schematicFromLibrary } from '@tfc/core/schematicFile';
+import { compareVersions, sortVersions } from '@tfc/core/addonVersions';
 import { modIdsOf } from './jarid.mjs';
 import { loadState, saveState } from './plan.mjs';
 import { localPath, stateDir } from './scan.mjs';

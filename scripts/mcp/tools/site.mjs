@@ -6,7 +6,7 @@
  * В конце каждого ответа — сколько чтений Firestore он стоил (0 — всё из кеша).
  */
 import { DOCS, fromValue } from '../../firestore-rest.mjs';
-import { datapackFiles, zipName } from '../../../src/lib/datapackFiles.ts';
+import { datapackFiles, zipName } from '@tfc/core/datapackFiles';
 import { itemName, readJson } from '../data.mjs';
 import { checkDatapack, deploymentNote, makeEntry, saveDatapack } from '../datapack-write.mjs';
 import { FirestoreError, api, cached, createDoc, listAll, patchDoc } from '../firestore.mjs';
