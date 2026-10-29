@@ -8,6 +8,7 @@ import { MealsTab } from './tabs/MealsTab';
 import { mealsByItem, useMeals, type Meals } from '@/lib/meals';
 import { RecipeStatusBadge, useTags, ItemIcon, itemName, useItems, type ItemIndex } from '@/shared/pack-data';
 import { LiquidFuelTab } from './tabs/LiquidFuelTab';
+import { GeologyTab } from './tabs/GeologyTab';
 import { MapPage } from '@/pages/map';
 import { MultiblocksTab } from '@/features/reference-tabs';
 import { GuidesTab } from './tabs/GuidesTab';
@@ -37,9 +38,10 @@ import shell from './ReferenceShell.module.css';
 import styles from './ReferencePage.module.css';
 import nutrition from './NutritionTable.module.css';
 
-type Tab = 'ores' | 'fuel' | 'metals' | 'food' | 'botany' | 'power' | 'multiblocks' | 'guides' | 'map';
+type Tab = 'ores' | 'geology' | 'fuel' | 'metals' | 'food' | 'botany' | 'power' | 'multiblocks' | 'guides' | 'map';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'ores', label: 'Руды' },
+  { id: 'geology', label: 'Геология' },
   { id: 'fuel', label: 'Топливо' },
   { id: 'metals', label: 'Металлы' },
   { id: 'food', label: 'Еда' },
@@ -132,7 +134,9 @@ function Reference() {
       ) : ref === null ? (
         <div className="empty">Справочник не собран — выполните npm run mods</div>
       ) : tab === 'ores' ? (
-        <OresTab ref_={ref} items={items} />
+        <OresTab key={params.get('rock') ?? ''} ref_={ref} items={items} initialRock={params.get('rock') ?? ''} />
+      ) : tab === 'geology' ? (
+        <GeologyTab veins={ref.veins} items={items} />
       ) : tab === 'fuel' ? (
         <SectionShell
           navLabel="Разделы топлива"
@@ -236,9 +240,10 @@ interface MineralGroup {
   hay: string;
 }
 
-function OresTab({ ref_, items }: { ref_: Reference; items: ItemIndex | null }) {
+function OresTab({ ref_, items, initialRock }: { ref_: Reference; items: ItemIndex | null; initialRock: string }) {
   const [query, setQuery] = useState('');
-  const [rock, setRock] = useState('');
+  // ?rock= — переход из «Геологии»: жилы выбранной породы
+  const [rock, setRock] = useState(initialRock);
   const [showRocks, setShowRocks] = useState(false);
 
   const groups = useMemo(() => {

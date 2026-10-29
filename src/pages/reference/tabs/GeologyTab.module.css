@@ -1,0 +1,99 @@
+/* Вкладка «Геология»: вступление из книги TFC, сетка карточек пород, слои сверху/снизу, руды. */
+
+.intro {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.intro summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.introBody p,
+.introBody ul {
+  margin: 8px 0 0;
+}
+
+.introBody ul {
+  padding-left: 18px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  min-width: 0;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.category[data-category='sedimentary'] {
+  color: var(--imp-2);
+}
+
+.category[data-category='metamorphic'] {
+  color: var(--diamond);
+}
+
+.category[data-category^='igneous'] {
+  color: var(--accent);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 10px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.facts dt {
+  color: var(--text-3);
+}
+
+.facts dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.links,
+.ores {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.rockLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.rockLink:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.ore {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
