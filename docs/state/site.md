@@ -583,6 +583,14 @@ the step is centred.
 
 - Dev #137 (2026-10-29): `?firebaseDebug=1` opts into console diagnostics of anonymous Auth, forced App Check
   refresh, and a read of the same reserved schematic document via Firestore SDK and REST. No writes, token values,
-  document content or user identifiers are logged. Normal links do not load the diagnostic module.
+  document content or user identifiers are logged. Normal links do not load the diagnostic module. An isolated SDK
+  probe uses the same account and App Check token with an in-memory cache, then closes its resources.
 - Production rules match the repository; anonymous Auth is enabled. At the first IAB failure (10:10 UTC), App Check
-  metrics show Auth VALID/ALLOW and four Firestore INVALID/DENY requests; the exact transport cause is under study.
+  metrics show Auth VALID/ALLOW and four Firestore INVALID/DENY requests. Production diagnostics confirmed that
+  REST and an isolated SDK connection work with the same credentials while the shared persistent SDK fails.
+- Firestore uses the single-tab persistence manager: the first tab keeps disk persistence and additional tabs fall
+  back to memory. This avoids using a frozen primary tab with stale credentials. After five minutes hidden, return
+  from bfcache, or reconnecting, Auth/App Check refresh together. Failed live lists resubscribe without a page reload;
+  credential errors also trigger one coalesced recovery attempt, throttled to once per 30 seconds.
+- Checked: TypeScript, lint, format; one-off checks for shared consumers, recovery, cancellation and a simulated
+  five-minute idle. Actual hours-long browser suspension is not yet verified.
