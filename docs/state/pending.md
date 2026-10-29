@@ -139,3 +139,11 @@ Host installs on the server and all players (`tfc pull addons builder_tools@1.0.
 In game: equip builder belt in Curios, place the last block in each hand, hold LMB across stone/dirt/wood,
 check full inventory and inventory-mod interactions. Server and automated dev-client checks passed; real player
 input and the full pack were not checked in game.
+
+## Pack-wide datapacks (dev #125, 2026-10-29)
+
+Tooling is implemented; live packs have not been promoted. Host: update tfc, inspect `tfc datapacks list` and
+`files`, install desired packs into the selected world and check them in game. Preview `tfc datapacks confirm all
+--dry-run`; after verifying the selected versions, confirm one/all and restart. Check both an existing and a new
+world, recipe overrides and KubeJS priority. Changed world copies remain for manual review. Local `undo` does not
+revert server confirmation; `tfc admin rollback` reverts the whole snapshot. Details: [datapacks-pack.md](../plans/datapacks-pack.md).

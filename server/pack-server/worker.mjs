@@ -15,6 +15,7 @@
  * publish: только шаг 4 по уже собранной data/<снимок>/.
  * Итог — <DATA>/jobs/<id>.result.json.
  */
+import { deploymentsOf } from './lib/datapacks.mjs';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -97,6 +98,15 @@ async function build() {
     dryRun: true, // в Firestore пишет публикация, не сборка
     neoforge: snap.loader ?? null,
   });
+
+  // Уровни установки публикуются вместе с рецептами того же снимка, без чтения Firestore в браузере.
+  const kjsFile = path.join(out, 'kubejs.json');
+  if (fs.existsSync(kjsFile)) {
+    const data = JSON.parse(fs.readFileSync(kjsFile, 'utf8'));
+    data.datapacks = deploymentsOf(snap);
+    data.snapshot = snap.id;
+    fs.writeFileSync(kjsFile, JSON.stringify(data));
+  }
 
   // Документы config: пересобранные части заменяют свои, остальные — из прошлой сборки
   const rebuiltWorld = !only.length || only.includes('world');

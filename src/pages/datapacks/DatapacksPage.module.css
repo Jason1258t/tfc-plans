@@ -335,3 +335,8 @@
     margin-bottom: 12px;
   }
 }
+
+.dpDeployment {
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}

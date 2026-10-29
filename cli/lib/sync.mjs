@@ -164,6 +164,7 @@ export function beginBackup(profile) {
     dir: path.join(stateDir(profile), 'backup', stamp),
     manifest: {
       at: Date.now(),
+      world: profile.world ?? null,
       added: [],
       replaced: [],
       removed: [],
@@ -273,6 +274,8 @@ export async function applyPlan({ api, profile, plan, snapshot, cache, backup, s
   }
 
   state.snapshot = snapshot.id;
+  if (plan.add.concat(plan.update, plan.same).some((f) => f.path.startsWith('world/')))
+    state.world = profile.world ?? null;
   saveState(profile, state);
   cache.save();
   fs.rmSync(path.join(stateDir(profile), 'dl'), { recursive: true, force: true }); // загрузки прошлых версий tfc
@@ -300,6 +303,12 @@ export function undoLast(profile) {
   const last = backups(profile).at(-1);
   if (!last) return null;
   const m = JSON.parse(fs.readFileSync(path.join(last, 'manifest.json'), 'utf8'));
+  if (
+    m.world !== undefined &&
+    m.world !== (profile.world ?? null) &&
+    [...m.added, ...m.replaced, ...m.removed].some((p) => p.startsWith('world/'))
+  )
+    throw new Error(`копия относится к другому миру (${m.world}) — выберите исходный профиль перед undo`);
   const all = [...m.added, ...m.replaced, ...m.removed].map((p) => localPath(profile, p)).filter(Boolean);
   assertNotLocked(all);
   for (const p of [...m.added, ...m.replaced]) {

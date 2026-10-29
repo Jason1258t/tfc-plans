@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { freeScriptName, NEW_SCRIPT_TEXT } from '@/lib/kubejsScripts';
 import { useNick } from '@/entities/user';
-import { datapacksStore, kubejsScriptsStore } from '@/entities/datapack';
+import { datapacksStore, kubejsScriptsStore, useDatapackDeployments } from '@/entities/datapack';
 import type { Datapack, KubejsScript } from '@/entities/datapack';
 import { Button } from '@/shared/ui';
 import { DatapacksList } from './ui/DatapacksList';
@@ -14,6 +14,7 @@ import styles from './DatapacksPage.module.css';
 /** Страница «Датапаки»: каркас раздела — меню слева, выбранный датапак или скрипт справа */
 export function DatapacksPage() {
   const nick = useNick();
+  const deployments = useDatapackDeployments();
   const [params, setParams] = useSearchParams();
   const [packs, setPacks] = useState<Datapack[] | null>(null);
   const [scripts, setScripts] = useState<KubejsScript[] | null>(null);
@@ -63,6 +64,7 @@ export function DatapacksPage() {
     <div className={styles.dpLayout}>
       <DatapacksList
         packs={packs}
+        deployments={deployments}
         scripts={scripts}
         selectedId={selectedId}
         scriptId={scriptId}
@@ -75,14 +77,20 @@ export function DatapacksPage() {
         {script && scripts ? (
           <ScriptEditor key={script.id} script={script} scripts={scripts} onDeleted={() => setParams({})} />
         ) : pack ? (
-          <PackEditor key={pack.id} pack={pack} onDeleted={() => setParams({})} />
+          <PackEditor
+            key={pack.id}
+            pack={pack}
+            deployment={deployments?.find((d) => d.id === pack.id)}
+            onDeleted={() => setParams({})}
+          />
         ) : (
           <div className={styles.dpEmpty}>
             <Package size={36} className="faint" />
             <h2>Датапаки</h2>
             <p className="muted">
-              Новые рецепты по шаблону из сборки, замена и удаление существующих, произвольные файлы. Экспорт в zip —
-              его можно сразу приложить к задаче, чтобы хост сервера закинул в <code>world/datapacks/</code>.
+              Новые рецепты по шаблону из сборки, замена и удаление существующих, произвольные файлы. Для проверки
+              используйте <code>tfc datapacks install</code>. После проверки хост может подтвердить датапак для всех
+              миров сборки командой <code>tfc datapacks confirm</code>.
             </p>
             <Button variant="primary" data-tour="dp-new" onClick={create}>
               <Plus size={16} /> Новый датапак
