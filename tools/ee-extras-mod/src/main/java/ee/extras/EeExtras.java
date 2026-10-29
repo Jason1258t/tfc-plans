@@ -17,6 +17,9 @@ import ee.extras.cable.CableWires;
 import ee.extras.cable.FourCoreSpoolItem;
 import ee.extras.cable.FourCoreTerminationBlock;
 import ee.extras.cable.PhaseTapBlock;
+import ee.extras.lantern.LanternBlock;
+import ee.extras.lantern.LanternConversion;
+import ee.extras.lantern.LanternDevice;
 import ee.extras.lines.LineWire;
 import ee.extras.lines.LinesClient;
 import ee.extras.lines.Tension;
@@ -58,7 +61,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 /**
  * Дополнения к Create Electro Energetics для сборки TFC Планы (до 2.0 — «EE Rectifiers», modId ee_rectifier):
  * выпрямители и сетевые инверторы двух ступеней мощности, компактный кинетический генератор, двусторонний преобразователь EE ↔ FE, двух- и четырёхжильные кабели (катушка двухпроводного кабеля EE
- * в 1.1.2 не доделана — прокладку делает этот мод), кабельные изоляторы.
+ * в 1.1.2 не доделана — прокладку делает этот мод), кабельные изоляторы, фонарь IE на двухпроводном кабеле.
  */
 @Mod(EeExtras.MOD_ID)
 public class EeExtras {
@@ -131,6 +134,13 @@ public class EeExtras {
             "four_core_cable_insulator", () -> new CableInsulatorBlock(ceramic(), CableKind.FOUR_CORE));
     public static final DeferredItem<Item> FOUR_CORE_INSULATOR_ITEM = ITEMS.register("four_core_cable_insulator",
             () -> new TooltipBlockItem(FOUR_CORE_INSULATOR.get(), new Item.Properties()));
+    /** Фонарь IE в сети EE (lantern/): предмета нет — делается из фонаря IE катушкой кабеля, ломается в него же */
+    public static final DeferredHolder<SimulatedDeviceType<?>, SimulatedDeviceType<LanternDevice>> LANTERN_DEVICE =
+            DEVICES.register("electric_lantern", () -> new SimulatedDeviceType<LanternDevice>(rl("electric_lantern"),
+                    (type, level, pos, devices) -> new LanternDevice(level, pos, devices, type)));
+    public static final DeferredBlock<LanternBlock> LANTERN = BLOCKS.register("electric_lantern",
+            () -> new LanternBlock(metal().strength(3.0f, 15.0f).sound(SoundType.METAL).lightLevel(LanternBlock::light)));
+
     public static final DeferredItem<FourCoreSpoolItem> FOUR_CORE_SPOOL = ITEMS.register("four_core_cable_spool",
             () -> new FourCoreSpoolItem(new Item.Properties().stacksTo(16)));
 
@@ -205,6 +215,7 @@ public class EeExtras {
         if (FMLEnvironment.dist == Dist.CLIENT) {
             CableHud.register(modBus, NeoForge.EVENT_BUS);
             LinesClient.register(modBus, NeoForge.EVENT_BUS);
+            LanternConversion.registerTooltip(NeoForge.EVENT_BUS);
             GeneratorClient.register(modBus);
             modBus.addListener((FMLClientSetupEvent e) -> WireFixCheck.log());
             WireDiag.register(NeoForge.EVENT_BUS);

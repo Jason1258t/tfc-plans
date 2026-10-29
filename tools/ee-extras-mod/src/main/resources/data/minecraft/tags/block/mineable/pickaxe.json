@@ -6,6 +6,7 @@
     "ee_extras:four_core_termination",
     "ee_extras:duplex_cable_insulator",
     "ee_extras:four_core_cable_insulator",
-    "ee_extras:four_core_tap"
+    "ee_extras:four_core_tap",
+    "ee_extras:electric_lantern"
   ]
 }

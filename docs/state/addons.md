@@ -62,6 +62,16 @@ Before 2.0 — EE Rectifiers, `ee_rectifier`; old blocks migrate to new ids via 
   (efficiency 75 %; EE generator ~99 % by bytecode: 48 × magnets × rpm W vs 48 × (magnets + 0.125) SU/rpm), heating
   rating 1.2 kW (smokes above ~200 rpm at full load, doesn't burn). Dev server from a creative motor
   (`rectest kgen|krpm|kreport`): U²/R exact, cap at 1 536 W, stress 8 SU/rpm; terminals 720/720.
+- **2.4** (2026-10-29; dev task #143 «Доработка ie фонариков»): the IE electric lantern joins the EE grid — clicking a
+  placed IE lantern with the EE duplex spool replaces it with `ee_extras:electric_lantern` (IE models by reference,
+  drops the IE lantern, no own item; refused while IE wires are attached) and lays the cable on. For the cable it is a
+  duplex insulator (all cables joined core to core → lanterns in a line), plus a 1000 Ω load between the cores; lit
+  from 50 V with a 40-tick hold (no AC flicker), EE spawn prevention (20 blocks), no burnout; wrench flips stand/hang.
+  IE is now in `libs.sh` (compile only; the mod loads without IE). `test-server.sh` takes `RCON_PORT`/`SERVER_PORT`
+  (another worktree's server on 25599 took this session's RCON commands once). Dev server with IE
+  (`rectest lanterns|lanternpower|lanternreport|lanterncut|lanternie`, `KEEP=1`): real click path, 230 V lit
+  52.9 W, 30 V dark, 60 V AC lit, cut — IE lantern dropped and the tail dark, IE-wired refused, restart kept. Not in
+  game: looks, light, flicker on a real generator.
 - **Insulator-string «fan» — fixed in 2.3.3 (closed)**: the host's `/eeextras wires` showed 971 segments in
   the one garland's visual. EE 1.1.2 `QuadraticWireHelper.wirePointsRaw` (used only by `WireVisual.recreateInstances`
   for wire types without `shouldScaleLast`, i.e. hanging insulators) appends to the reused `WirePoints` buffer without
