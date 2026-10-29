@@ -27,8 +27,8 @@ When finishing work: update the topic file, and this index only if a line below 
   atlas, finder and drilling, approve.
 
 - Host: CDG ↔ IE recipe fixes `u20261028-203009-ce84` (dev #118): pull, restart, check four recipes, approve.
-- Host: concrete lime mix update `u20261028-155634-36f7` (dev #124): `tfc admin updates pull`, restart, check recipes
-  and concrete production in game, then `tfc admin updates approve`.
+- Host: KubeJS errors fix `u20261029-202841-ca8c` + ion-thruster draft `CTZcQBggNXDuugbtIReO` (dev #157):
+  pull both fixes, restart, check cement and both ion thrusters in game before approving/confirming.
 - Host: pack update `u20261022-150945-83a0` (Chinese KubeJS messages → ru/en): `tfc admin updates pull`, check in game,
   `tfc admin updates approve`.
 - Host: install **EE Extras 2.3** (2.2 + compact generator), **Small Diesel 1.0.0**, **IE Extras 1.1.0** (basin heating, dev #113) and **Create Aeronautics Extra 1.0.1** + `tfc publish`; warn players

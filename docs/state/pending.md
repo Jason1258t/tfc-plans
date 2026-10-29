@@ -5,6 +5,15 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **KubeJS 18 errors** (dev #157): 16 concrete errors fixed by overlay `u20261029-202841-ca8c`
+  (`fluid_stack` → `neoforge:single` for water). Host: `tfc admin updates pull u20261029-202841-ca8c`, restart,
+  check all 16 cement recipes and KubeJS log, then approve that update. Two other errors are bundled Flight
+  Control recipes referencing absent Create Addition: site draft **Ионные двигатели — аккумулятор сборки**,
+  `CTZcQBggNXDuugbtIReO`, uses the available EE accumulator instead.
+  Host: `tfc datapacks pull CTZcQBggNXDuugbtIReO` into the selected world; check both ion thrusters, then confirm
+  only after game verification. Smooth-stone datapack does not appear in these errors. Static checks only;
+  full-pack reload and machines not checked in game. Details: [concrete patch](../../pack-patches/concrete-lime/README.md).
+
 - **Euphoria Patcher missing shader** (dev #150): popup-suppression update `u20261029-193554-dd27`
   rejected on 2026-10-29. Do not apply it in bulk; investigate installing matching Complementary r5.8.1 instead.
   The rejected proposal remains available by explicit ID for inspection.
@@ -39,9 +48,8 @@ its one-liner in STATE.md.
 - **Бетонные смеси с известью** (2026-10-28, dev #124): обновление `u20261028-155634-36f7`, исходник и проверки —
   [pack-patches/concrete-lime](../../pack-patches/concrete-lime/README.md). Общая основа: 3 песка + 3 гравия + 2 извести
   → 8 смеси; цветные варианты с красителем, IE и RnR используют ту же смесь. Переход датапака «Бетон» TFC → IE
-  сохранён; возврат 25% порошка Diesel Generators убран. Хост: `tfc admin updates pull u20261028-155634-36f7`,
-  перезапуск, проверка рецептов/бочек/смесителя/дорог/цветных жидкостей и журнала KubeJS, затем
-  `tfc admin updates approve u20261028-155634-36f7`. Проверены 52 рецепта и 36 удалений, конфликты MCP, код IE/RnR/CDG;
+  сохранён; возврат 25% порошка Diesel Generators убран. Обновление одобрено хостом; ошибки цветных жидкостей исправляются накладкой dev #157 выше.
+  Проверка рецептов/бочек/смесителя/дорог и журнала KubeJS в игре остаётся за хостом. Проверены 52 рецепта и 36 удалений, конфликты MCP, код IE/RnR/CDG;
   в игре не проверялось. Распространение жидкого бетона по миру остаётся штатным, расход на площадь не унифицирован.
 
 - **TFC Pyrofuel 1.0.1** (2026-10-29, dev #104/#135, new textures): install with `tfc pull addons` on server and all players, then

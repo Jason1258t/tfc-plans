@@ -65,7 +65,7 @@ ServerEvents.recipes((event) => {
     // Одно ведро цветного бетона из одной порции: без прежнего возврата 25% порошка.
     add(`${color}_cement`, {
       type: 'create:mixing',
-      ingredients: [{ type: 'fluid_stack', fluid: 'minecraft:water', amount: 100 }, { item: powder }],
+      ingredients: [{ type: 'neoforge:single', fluid: 'minecraft:water', amount: 100 }, { item: powder }],
       results: [{ id: `createdieselgenerators:${color}_cement`, amount: 1000 }],
     });
   });
