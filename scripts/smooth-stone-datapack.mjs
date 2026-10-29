@@ -6,9 +6,9 @@
 // в режиме tfc:smooth для каменных блоков и пишет:
 //   а) камнерез: тот же вход → тот же выход, 1:1; и из полученного блока — его плиты, ступени и стены, если у них
 //      есть верстачный рецепт (число на один блок — как у верстака: плита 2, ступени и стена 1);
-//   б) пресс Create над чашей с нагревом (горелка — жёлтое пламя, heated): булыжник породы + 50 мБ лавы →
-//      гладкая порода. Не 4 камешка + лава: это вход рецепта природного камня (перегрев), а пресс с перегревом
-//      подходит и под рецепт с нагревом — рецепты бы перехватывали друг друга.
+//   б) пресс Create над чашей с нагревом (горелка — жёлтое пламя, heated): природный камень → гладкий той же
+//      породы, без жидкости. Вход — один блок, которого нет в других рецептах чаши: Create не выбирает между
+//      рецептами с одинаковым входом (4 камешка + лава уже дают природный камень на перегреве).
 //
 // Рецепты долота, которые KubeJS сборки удаляет (public/kubejs.json), и выходы, у которых камнерез уже есть,
 // пропускаются. Медные/железные/деревянные блоки теплиц Firmalife (снятие окиси долотом) — не камень, не берём.
@@ -32,7 +32,6 @@ const NS = 'tfc_plans_smooth';
 const NAME = 'Гладкий камень на камнерезе и в прессе';
 const DESCRIPTION =
   'Гладкие породы, резные кирпичи, песчаник, алебастр, их плиты, ступени и стены — на камнерезе; гладкие породы — в прессе Create с нагревом (scripts/smooth-stone-datapack.mjs, TFC Планы)';
-const LAVA_MB = 50;
 const args = process.argv.slice(2);
 const upload = args.includes('--upload');
 const out = path.resolve(args.find((a) => !a.startsWith('--')) ?? path.join(ROOT, 'out/smooth_stone.zip'));
@@ -139,12 +138,12 @@ for (const r of chisel) {
     table.push(`камнерез: ${result} → ${count} × ${shape}`);
   }
 
-  // Пресс — только для гладких пород: их булыжник есть у каждой породы
+  // Пресс — только для гладких пород: природный камень той же породы, без жидкости
   const rock = /^tfc:rock\/smooth\/([a-z_]+)$/.exec(result)?.[1];
   if (!rock) continue;
-  const cobble = `tfc:rock/cobble/${rock}`;
-  if (!recipes.some((x) => JSON.stringify(x.j).includes(`"${cobble}"`))) {
-    console.warn(`! ${cobble}: не найден в рецептах — пресс для ${result} пропущен`);
+  const raw = `tfc:rock/raw/${rock}`;
+  if (!inputs.includes(raw)) {
+    console.warn(`! ${r.i}: среди входов долота нет ${raw} — пресс для ${result} пропущен`);
     continue;
   }
   add(
@@ -152,13 +151,13 @@ for (const r of chisel) {
     {
       type: 'create:compacting',
       heat_requirement: 'heated',
-      ingredients: [{ item: cobble }, { type: 'neoforge:single', amount: LAVA_MB, fluid: 'minecraft:lava' }],
+      ingredients: [{ item: raw }],
       results: [{ id: result }],
     },
     r,
-    `булыжник + ${LAVA_MB} мБ лавы, нагрев`,
+    'природный камень, нагрев',
   );
-  table.push(`пресс (нагрев): ${cobble} + ${LAVA_MB} мБ лавы → ${result}`);
+  table.push(`пресс (нагрев): ${raw} → ${result}`);
 }
 
 fs.mkdirSync(path.dirname(out), { recursive: true });

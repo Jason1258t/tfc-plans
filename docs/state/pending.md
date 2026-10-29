@@ -9,8 +9,8 @@ its one-liner in STATE.md.
   (ns `tfc_plans_smooth`, built by `npm run datapack:smooth -- --upload`). Recipes: stonecutter 1:1 for every
   `tfc:chisel` smooth-mode stone block (smooth rocks from raw/hardened, chiseled bricks, smooth/cut sandstone, polished
   alabaster, Firmalife sealed bricks), plus slab ×2 / stairs ×1 / wall ×1 from each such block that has a crafting-table
-  shape (smooth rocks, smooth and cut sandstone; 185 recipes in all); Create compacting `heated`: rock cobble + 50 mB lava → smooth rock (cobble, not
-  4 loose rocks — that is the superheated raw-stone recipe's input and a superheated burner would match both).
+  shape (smooth rocks, smooth and cut sandstone; 185 recipes in all); Create compacting `heated`: raw rock → smooth
+  rock, no fluid (a single input no other basin recipe uses, so Create never has to pick between recipes).
   `recipe_conflicts` clean. Host: flag «ставить», `tfc datapacks install`, check in game, then `confirm`. Not
   checked in game.
 
