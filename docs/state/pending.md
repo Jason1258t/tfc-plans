@@ -5,6 +5,16 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **Create Ore Excavation veins** (2026-10-29, dev #136): proposed update `u20261029-091146-275f`, source and
+  checks — [pack-patches/coe-vein-ids](../../pack-patches/coe-vein-ids/README.md). COE 1.6.8's KubeJS helper writes
+  a component object, but the recipe loader expects a JSON string (`FLAT_CODEC`); all 27 custom veins now use
+  explicit JSON through `event.custom`, retaining IDs, translations, generation and drilling. Reduced NeoForge
+  server reproduced the old parse failure, loaded three corrected veins, and passed `/coe setvein` / `/coe locate`.
+  All 27 veins and drilling recipes compared unchanged; other Create recipes compared unchanged after formatting.
+  Host: `tfc admin updates pull u20261029-091146-275f`, restart, check KubeJS errors, command completion, atlas,
+  finder and drilling, then `tfc admin updates approve u20261029-091146-275f`. Full-pack runtime and client UI:
+  not checked in game.
+
 - **CDG ↔ IE recipes** (2026-10-28, dev #118): proposed update `u20261028-203009-ce84`, source and checks —
   [pack-patches/cdg-ie-recipes](../../pack-patches/cdg-ie-recipes/README.md). Four same-id overrides in `kubejs/data`:
   silver/uranium hammering results, phenolic-resin casting and herbicide fluid ingredients; herbicide time corrected
