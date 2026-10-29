@@ -22,10 +22,51 @@ function orderedDelim(source: string, line: number) {
   return /^\s*\d+\)\s/.test(source.split('\n')[line - 1] ?? '') ? ')' : '.';
 }
 
+/** Маркер буквенного пункта «а)» / «b)» в начале строки (после «>» цитаты) */
+const LETTER_ITEM = /^((?:[ \t]*>)*[ \t]*)([a-zа-яё]\))(?=[ \t]|$)/i;
+
+/** Буква пункта в исходнике (строка 1-based) или undefined */
+const letterMark = (source: string, line: number) => LETTER_ITEM.exec(source.split('\n')[line - 1] ?? '')?.[2];
+
+/**
+ * Буквенные списки «а) / б)» — как в живом редакторе (cm-live-markdown): в CommonMark их нет, поэтому маркер
+ * подменяем на «1)» той же ширины (вложенность по отступам не сдвигается), а букву при показе берём из исходника.
+ * Список начинается в начале абзаца любой буквой или посреди абзаца с «a)» / «а)»; дальше — любые буквы.
+ */
+function letterLists(src: string) {
+  const lines = src.split('\n');
+  let fence: string | null = null;
+  let inList = false;
+  let prevBlank = true;
+  for (let i = 0; i < lines.length; i++) {
+    const text = lines[i];
+    const f = /^\s*(`{3,}|~{3,})/.exec(text);
+    if (fence || f) {
+      if (!fence) fence = f![1];
+      else if (f && f[1].startsWith(fence)) fence = null;
+      // После закрытого блока кода — снова начало блока
+      prevBlank = !fence;
+      continue;
+    }
+    const body = text.replace(/^(?:[ \t]*>)*/, '');
+    const blank = !body.trim();
+    const m = LETTER_ITEM.exec(text);
+    const content = m ? text.slice(m[0].length).trim() !== '' : false;
+    if (m && (prevBlank || inList || (content && /^[aа]$/i.test(m[2][0])))) {
+      lines[i] = m[1] + '1)' + text.slice(m[0].length);
+      inList = true;
+    } else if (!blank && prevBlank && !/^\s/.test(body)) inList = false;
+    // Заголовок — блок в одну строку: следующая строка снова может начать список
+    prevBlank = blank || /^ {0,3}#{1,6}(\s|$)/.test(body);
+  }
+  return lines.join('\n');
+}
+
 const items = (text: string) =>
   text.replace(ITEM_TOKEN, (_, id: string, qty?: string) => `[item](item:${id}${qty ? `?${qty}` : ''})`);
 
-function preprocess(src: string) {
+function preprocess(source: string) {
+  const src = letterLists(source);
   let out = '';
   let last = 0;
   for (const m of src.matchAll(CODE)) {
@@ -72,7 +113,7 @@ function MdImage({ src, alt }: { src?: string; alt?: string }) {
   );
 }
 
-const TASK_BOX = /^((?:\s*>)*\s*(?:[-*+]|\d+[.)])\s+)\[([ xX])\]/;
+const TASK_BOX = /^((?:\s*>)*\s*(?:[-*+]|\d+[.)]|[a-zа-яё]\))\s+)\[([ xX])\]/i;
 
 /** Переключает чекбокс `- [ ]` в строке исходника (нумерация с 1); null — в строке чекбокса нет */
 export function toggleTaskLine(source: string, line: number): string | null {
@@ -156,6 +197,13 @@ export function Markdown({ source, className, onToggleTask, link, block, schemes
           // («.» или «)») берём из исходника — список, набранный «1)», остаётся со скобкой
           ol: ({ node, start, children, ...rest }) => {
             const line = node?.position?.start.line;
+            // Буквенный список: маркер каждого пункта — буква из исходника (li), без счётчика
+            if (line && letterMark(source, line))
+              return (
+                <ol {...rest} data-letters="">
+                  {children}
+                </ol>
+              );
             return (
               <ol
                 {...rest}
@@ -167,11 +215,14 @@ export function Markdown({ source, className, onToggleTask, link, block, schemes
               </ol>
             );
           },
-          li: ({ node, children, ...rest }) => (
-            <li {...rest}>
-              <TaskLine.Provider value={node?.position?.start.line ?? null}>{children}</TaskLine.Provider>
-            </li>
-          ),
+          li: ({ node, children, ...rest }) => {
+            const line = node?.position?.start.line ?? null;
+            return (
+              <li {...rest} data-mark={line ? letterMark(source, line) : undefined}>
+                <TaskLine.Provider value={line}>{children}</TaskLine.Provider>
+              </li>
+            );
+          },
           img: ({ src, alt }) => <MdImage src={typeof src === 'string' ? src : undefined} alt={alt} />,
           input: ({ type, checked }) =>
             type === 'checkbox' ? <TaskBox checked={Boolean(checked)} onToggle={onToggleTask} /> : null,
