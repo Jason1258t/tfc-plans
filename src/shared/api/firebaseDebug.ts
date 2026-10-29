@@ -1,7 +1,14 @@
-import type { FirebaseApp } from 'firebase/app';
-import { getToken, type AppCheck } from 'firebase/app-check';
-import type { Auth } from 'firebase/auth';
-import { doc, getDocFromServer, type Firestore } from 'firebase/firestore';
+import { deleteApp, initializeApp, type FirebaseApp } from 'firebase/app';
+import { CustomProvider, getToken, initializeAppCheck, type AppCheck } from 'firebase/app-check';
+import { initializeAuth, inMemoryPersistence, updateCurrentUser, type Auth } from 'firebase/auth';
+import {
+  doc,
+  getDocFromServer,
+  initializeFirestore,
+  memoryLocalCache,
+  terminate,
+  type Firestore,
+} from 'firebase/firestore';
 
 /** Проверяет тот же документ через SDK и REST. Ничего не записывает и не выводит токены. */
 export async function diagnoseFirebase(context: {
@@ -50,5 +57,25 @@ export async function diagnoseFirebase(context: {
     log('Firestore REST', { status: response.status, code: result.error?.status ?? 'OK' });
   } catch (error) {
     log('Firestore REST', failure(error));
+  }
+  // Та же учётная запись и тот же App Check, но без общей IndexedDB/ведущей вкладки.
+  const probe = initializeApp(context.app.options, `firebase-diagnostic-${Date.now()}`);
+  const isolatedDb = initializeFirestore(probe, { localCache: memoryLocalCache() });
+  try {
+    const isolatedAuth = initializeAuth(probe, { persistence: inMemoryPersistence });
+    await updateCurrentUser(isolatedAuth, user);
+    if (appCheckToken) {
+      const token = appCheckToken;
+      initializeAppCheck(probe, {
+        provider: new CustomProvider({ getToken: async () => ({ token, expireTimeMillis: Date.now() + 60_000 }) }),
+      });
+    }
+    const result = await getDocFromServer(doc(isolatedDb, path));
+    log('Firestore SDK без общего кэша', { ok: true, exists: result.exists() });
+  } catch (error) {
+    log('Firestore SDK без общего кэша', failure(error));
+  } finally {
+    await terminate(isolatedDb);
+    await deleteApp(probe);
   }
 }
