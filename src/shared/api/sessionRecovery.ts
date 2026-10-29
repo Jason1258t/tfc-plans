@@ -15,7 +15,8 @@ export function recoverSession(): Promise<void> {
   lastAttempt = Date.now();
   pending = refresh()
     .then(() => {
-      for (const listener of listeners) listener();
+      // Переподписка может удалить старый и добавить новый обработчик.
+      for (const listener of [...listeners]) listener();
     })
     .catch((error: unknown) => {
       console.warn('Не удалось обновить сессию Firebase:', error);
