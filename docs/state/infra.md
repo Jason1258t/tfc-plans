@@ -290,4 +290,8 @@ Cursor configs (shapes from their docs, not tried).
   known copy hashes persist and undo restores them. Local HTTP/Firestore stub and temporary profiles: 42 scenarios
   (auth, paths, gzip duplicate, malformed/oversized NBT, simultaneous publication, revision conflict, failed chunks,
   stable selective filenames, modified uploaded copies, force, undo, CLI entry points). Lint and TypeScript passed.
-  Real game/Windows launcher folders remain untested.
+  Built all four distributions; macOS arm64 binary launched and read the production library. Production API check:
+  temporary publication, update preserving author, stale-revision refusal, second-profile pull with matching bytes;
+  temporary card and both files deleted afterward. Pack server updated and CLI released as 2026.10.29-ddb430df.
+  Browser library verification was blocked by Firestore permission errors in Codex IAB (also participants/onboarding);
+  recorded separately. Real game/Windows launcher folders remain untested.
