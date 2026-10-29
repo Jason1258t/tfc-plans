@@ -369,6 +369,13 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   largest face texture from that side, uv by position. Browser-checked on old_brick_factory (2004 copycats: cornices
   of steps, girder panels); not compared with the game. Not done: layer view still shows the icon, Create: Connected
   copycats, doors/trapdoors/fences/walls of Copycats+ (they have vanilla-like models? not checked).
+- **Block-entity data fixes on download** (2026-10-29, dev #144): `lib/schematicBlockFixes.ts` — rules by mod, run by
+  `applyEdits` on every block after replacements. Copycats+ 3.0.8 `MigrationManager.migrateStructure` runs inside
+  `StructureTemplate.load` on the schematic table: a multi-state copycat (board, byte, byte panel, half layer, slab,
+  stacked/vertical half layer) with single-copycat data (`Material`) → IllegalStateException (seen in the host log after
+  replacing `copycat_door` → `copycat_board`); the table has already taken the blank and gives nothing. Such data is
+  dropped (copycat without material). A single Copycats+ copycat with `id: create:copycat` would NPE in the same
+  method — id rewritten to `copycats:copycat`. Checked on 1900s_workshop (4 boards cleaned) in Node, not in game.
 - **Create parts drawn by code** (2026-10-24, task «Отрисовка create»): builder `block-models.mjs` adds `pm` (path →
   model) with every `models/block/**` of mods in `PARTIAL_NAMESPACES` (Create: 1887 incl. 444 never referenced by
   blockstates; create.json ~140 → ~230 KB gz). Site `partialQuads(ref, turns)` (blockModels.ts) bakes one with turns
