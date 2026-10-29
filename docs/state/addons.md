@@ -72,6 +72,20 @@ Before 2.0 — EE Rectifiers, `ee_rectifier`; old blocks migrate to new ids via 
   (`rectest lanterns|lanternpower|lanternreport|lanterncut|lanternie`, `KEEP=1`): real click path, 230 V lit
   52.9 W, 30 V dark, 60 V AC lit, cut — IE lantern dropped and the tail dark, IE-wired refused, restart kept. Not in
   game: looks, light, flicker on a real generator.
+- **2.5** (2026-10-29; dev task #139 «Новые блоки для EE extras», plan doc 21): frequency converters (any AC/DC in →
+  sine of the set 1–40 Hz out, same rms line voltage; Create value box; parallel units lock to each other, foreign
+  frequency on the output — stays off) and synchronizers (generator breaker with auto-synchronizing: closes at
+  |Δf| < 0.1 Hz, |ΔU| < 10 %, |Δφ| < 10°, same phase order; dead bus — closes at once; redstone «faster/slower» on the
+  ±X side faces for EE brushes, keeps +0.06 Hz slip; trips on reverse power and > 1.5 × rating; mode Auto/Off), light
+  6 kW / heavy 48 kW, 1- and 3-phase, plus industrial 3-phase two-block cabinets (`Tier.INDUSTRIAL`, 120 kW × EE
+  transformer cooling factor: radiators tag, oil; device in the upper half — EE takes node clicks only from the
+  clicked block). Code in `ac/`: `Meter` (phasor from per-microtick samples), `Sine` (`MicroTickingElectricalProperties`
+  source, like EE alternator windings). Pack has `simulation.microTicks = 8`, so `getVoltageAt` is rms — the 2.2
+  inverter grid sync is likely broken on the server: dev task #142. Dev server with real EE generators, `MICROTICKS=8`
+  (`rectest fc|fchz|fcpar|fcorder|fcrad|fcbreak|fcreport`, `sy|syrpm|symode|syreport|syfaces`): EE frequency meter =
+  set Hz, two in parallel share 5.4/5.3 kW, synchronizer closed at 9.7° / 0.044 Hz with no surge, reverse-power and
+  overload trips, dead bus, industrial 58.8 → 281 kW with 4 panels, restart kept, terminals 1344/1344. Not in game:
+  looks, value boxes, goggles, real redstone wiring to brushes, single-phase synchronizer.
 - **Insulator-string «fan» — fixed in 2.3.3 (closed)**: the host's `/eeextras wires` showed 971 segments in
   the one garland's visual. EE 1.1.2 `QuadraticWireHelper.wirePointsRaw` (used only by `WireVisual.recreateInstances`
   for wire types without `shouldScaleLast`, i.e. hanging insulators) appends to the reused `WirePoints` buffer without

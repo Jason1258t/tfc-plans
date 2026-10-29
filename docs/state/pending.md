@@ -59,6 +59,10 @@ its one-liner in STATE.md.
   (`tfc pull addons`, server and players) and `tfc publish`. In game: clicking an IE lantern with the duplex spool, the
   lantern look standing and hanging, light and no flicker on a real AC generator, wrench flip, the tooltip on the IE
   lantern. Details — [addons.md](addons.md).
+- **EE Extras 2.5** (2026-10-29, `ee-extras-2.5.0.jar`, includes 2.4; frequency converters and synchronizers): host
+  installs (`tfc pull addons`, server and players) and `tfc publish`. In game: block looks, the frequency / mode value
+  boxes, goggle readouts, synchronizer «faster/slower» via redstone dust to real EE brushes, the two-block industrial
+  cabinet placement and radiators. Details — [addons.md](addons.md).
 - **Create Aeronautics Extra 1.0.1** (2026-10-29, `create-aeronautics-extra-1.0.1.jar`, new module textures): host
   installs (`tfc pull addons`, server and players) and `tfc publish`. In game: block looks and rotating half-shaft,
   goggles and tooltips, module insert/remove by hand, JEI/EMI recipes, the block on a flying Aeronautics ship with
