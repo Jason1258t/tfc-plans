@@ -5,7 +5,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { readBlazeFuel, mergeLiquidFuels } from '../../src/shared/pack-data/liquidFuel.ts';
+import { readBlazeFuel, mergeLiquidFuels } from '@tfc/core/liquidFuel';
 
 /** Все файлы data/<ns>/<sub>/**.json → Map("ns:path", { json, source }) с перекрытием поздними */
 function collect(dataDirs, sub, parse, filter = () => true) {

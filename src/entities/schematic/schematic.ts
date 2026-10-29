@@ -1,4 +1,4 @@
-import { readNbt, writeNbt, type ParsedNbt } from '../../lib/nbt';
+import { readNbt, writeNbt, type ParsedNbt } from '@tfc/core/nbt';
 import {
   applyEdits,
   countBlocks,
@@ -9,7 +9,7 @@ import {
   sizeOf,
   type Shape,
   type Vec,
-} from '../../lib/schematicFile';
+} from '@tfc/core/schematicFile';
 import { fuzzyCandidates, blockEntry, isBlock, type ItemIndex } from '@/shared/pack-data';
 import {
   geminiErrorText,
@@ -32,7 +32,7 @@ export {
   REMOVE,
   type Shape,
   type Vec,
-} from '../../lib/schematicFile';
+} from '@tfc/core/schematicFile';
 
 /**
  * Схема Create / структура ванили (.nbt): palette — список блоков { Name, Properties },

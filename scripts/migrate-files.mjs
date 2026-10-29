@@ -20,7 +20,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PROJECT = JSON.parse(fs.readFileSync(path.join(ROOT, '.firebaserc'), 'utf8')).projects.default;
 const COLLECTION = 'files';
 const CHUNKS = 'chunks';
-const CHUNK_SIZE = 700 * 1024; // как в src/lib/files.config.ts
+const CHUNK_SIZE = 700 * 1024; // как в packages/core/src/files.config.ts
 const dryRun = process.argv.includes('--dry-run');
 
 const require = createRequire(import.meta.url);

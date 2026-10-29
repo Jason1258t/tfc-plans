@@ -1,11 +1,11 @@
 /**
  * Датапаки сайта (Firestore datapacks) как слой рецептов: те, что отмечены «ставить» (install = true), программа tfc
  * кладёт в мир — их рецепты ложатся поверх модов (data.mjs, recipes(site)). Неотмеченные — отдельным списком
- * («есть на сайте, не ставится»). Файлы датапака собирает тот же src/lib/datapackFiles.ts, что и сайт.
+ * («есть на сайте, не ставится»). Файлы датапака собирает тот же packages/core/src/datapackFiles.ts, что и сайт.
  *
  * Чтения Firestore (50 тыс. в сутки на всех): коллекция целиком (сейчас ~10 документов) — раз в 10 минут.
  */
-import { datapackFiles } from '../../src/lib/datapackFiles.ts';
+import { datapackFiles } from '@tfc/core/datapackFiles';
 import { datapackRecipe, indexRecipe, recipeRecord, recipes, readJson } from './data.mjs';
 import { cached, listAll } from './firestore.mjs';
 

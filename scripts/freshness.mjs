@@ -3,7 +3,7 @@
  * Свежесть сборки → public/pack-freshness.json: для каждого мода из pack-manifest.json — новейшая версия под
  * 1.21.1 NeoForge с Modrinth (по sha1), CurseForge (по отпечатку jar) или из релизов GitHub разработчиков сборки (по
  * имени jar) и цвет отставания. Расчёт —
- * src/pages/updates/model/freshness.ts (тот же у сайта и MCP), план — docs/plans/mod-freshness.md.
+ * packages/core/src/freshness.ts (тот же у сайта и MCP), план — docs/plans/mod-freshness.md.
  *
  *   npm run freshness                      — собрать отчёт и показать сводку
  *   … -- --if-older 6h --soft              — так зовёт prebuild: свежий отчёт не трогает, ошибки не роняют сборку
@@ -17,7 +17,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildReport, cfFingerprint, STATUS_LABEL, STATUS_ORDER } from '../src/pages/updates/model/freshness.ts';
+import { buildReport, cfFingerprint, STATUS_LABEL, STATUS_ORDER } from '@tfc/core/freshness';
 import { addonCards } from './addons-index.mjs';
 import { PACK_MODS, mainCheckoutRoot } from './pack-cache.mjs';
 import { SITE } from './firestore-rest.mjs';
@@ -83,7 +83,7 @@ function fillFingerprints(mods, modsDirs) {
 
 /**
  * Отчёт по снимку сборки. manifest — объект pack-manifest.json; modsDirs — где взять jar для недостающих отпечатков;
- * ownIds — id наших аддонов. Возвращает FreshReport (src/pages/updates/model/freshness.ts).
+ * ownIds — id наших аддонов. Возвращает FreshReport (packages/core/src/freshness.ts).
  */
 export async function freshnessReport({ manifest, modsDirs = [PACK_MODS], key = curseforgeKey(), ownIds } = {}) {
   const mods = manifest.mods.map((m) => ({ ...m }));

@@ -10,7 +10,7 @@ import {
   type FreshReport,
   type FreshStatus,
   type ManifestMod,
-} from './model/freshness';
+} from '@tfc/core/freshness';
 import { cx, timeAgo } from '@/shared/lib';
 import { Button, ButtonLink, Input, Segmented, Tag } from '@/shared/ui';
 import sectionStyles from './UpdatesSection.module.css';

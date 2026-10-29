@@ -3,7 +3,7 @@
  * (scripts/addons-index.mjs кладёт её jar и иконки на сайт при сборке), подробная страница — гайд Firestore
  * addon-<мод> (раздел addon), правится guide_get / guide_put. Здесь только чтение: файлы, jar аддона, один документ
  * гайда на аддон и /addons/index.json с сайта (что сейчас задеплоено).
- * Версии аддона (Firestore addonVersions/{мод}@{версия}, src/lib/addonVersions.ts) — addon_versions,
+ * Версии аддона (Firestore addonVersions/{мод}@{версия}, packages/core/src/addonVersions.ts) — addon_versions,
  * addon_version_get, addon_version_put (ченджлог, статус, «что проверено»; jar заливает tfc admin addon upload).
  */
 import { createHash } from 'node:crypto';
@@ -13,13 +13,7 @@ import { addonCards } from '../../addons-index.mjs';
 import { items } from '../data.mjs';
 import { api, FirestoreError, guideDoc } from '../firestore.mjs';
 import { DOCS, fromValue, toValue } from '../../firestore-rest.mjs';
-import {
-  STATUS_LABEL,
-  addonVersionId,
-  compareVersions,
-  latestReleased,
-  sortVersions,
-} from '../../../src/lib/addonVersions.ts';
+import { STATUS_LABEL, addonVersionId, compareVersions, latestReleased, sortVersions } from '@tfc/core/addonVersions';
 import { dateOf, NICK, str } from '../fmt.mjs';
 import { zipEntries, zipRead } from '../jars.mjs';
 import { TOOLS_DIR } from '../resources.mjs';

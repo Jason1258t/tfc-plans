@@ -2,7 +2,7 @@ import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { useEffect, useMemo, useState } from 'react';
 import { authReady, db } from '@/shared/api';
 import { configValue, useModConfig, type ModConfig } from '@/entities/pack-config';
-import { blockToGeo, geoToBlock, greatCircleKm, insideMap, type WorldProjection } from './projection';
+import { blockToGeo, geoToBlock, greatCircleKm, insideMap, type WorldProjection } from '@tfc/core/projection';
 
 /** География TFC Real World из сборки (public/geo.json, scripts/mods/geo.mjs) */
 export interface GeoName {

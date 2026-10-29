@@ -4,7 +4,7 @@
  * сравнивает локальный public/pack-manifest.json с опубликованным на сайте и, если сборка изменилась,
  * пишет в Firestore packUpdates/{id}: моды (добавлены/убраны/обновлены), предметы, рецепты,
  * новые типы рецептов и ченджлоги модов с Modrinth, а у наших аддонов — ченджлоги их версий из Firestore
- * addonVersions за промежуток «было → стало» (src/lib/addonVersions.ts). Патчноут от модели сайт составит сам.
+ * addonVersions за промежуток «было → стало» (packages/core/src/addonVersions.ts). Патчноут от модели сайт составит сам.
  *
  * Авторизация — от имени залогиненного firebase CLI. Повторный деплой той же сборки ничего не пишет.
  *   SKIP_PACK_RELEASE=1 firebase deploy   — пропустить (например, если Firestore недоступен)
@@ -19,7 +19,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { addonChangelogsFrom } from '../src/lib/addonVersions.ts';
+import { addonChangelogsFrom } from '@tfc/core/addonVersions';
 import { addonCards } from './addons-index.mjs';
 import { deployer, DOCS, fromValue, ROOT, SITE, toValue, token } from './firestore-rest.mjs';
 const LIST_CAP = 3000;

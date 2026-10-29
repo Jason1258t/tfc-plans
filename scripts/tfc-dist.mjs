@@ -52,11 +52,11 @@ function buildVersion() {
     'server/pack-server/lib/paths.mjs',
     'server/pack-server/lib/datapacks.mjs',
     'server/pack-server/lib/schematic-nbt.mjs',
-    'src/lib/datapackFiles.ts',
-    'src/lib/schematicFile.ts',
-    'src/lib/schematicBlockFixes.ts',
-    'src/lib/nbt.ts',
-    'src/lib/addonVersions.ts',
+    'packages/core/src/datapackFiles.ts',
+    'packages/core/src/schematicFile.ts',
+    'packages/core/src/schematicBlockFixes.ts',
+    'packages/core/src/nbt.ts',
+    'packages/core/src/addonVersions.ts',
   ];
   const [ct, hash] = git('log', '-1', '--format=%ct %h', '--', ...srcs).split(' ');
   const time = Number(ct) * 1000;
@@ -126,10 +126,10 @@ async function bundle(work, version, { npm = false } = {}) {
     legalComments: 'none',
   });
   // Разборщики сайта (scripts/) в файл игроков попадать не должны: tfc build — команда только из проекта.
-  // Из сайта — только общие модули без импортов (tfc pull) и fflate
+  // Из ядра @tfc/core — только общие модули без импортов (tfc pull) и fflate
   const foreign = Object.keys(res.metafile.inputs).filter(
     (f) =>
-      !/^(cli|server\/pack-server\/lib)\/|^src\/lib\/(datapackFiles|schematicFile|schematicBlockFixes|nbt|addonVersions)\.ts$|(^|\/)node_modules\/fflate\/|^<define:/.test(
+      !/^(cli|server\/pack-server\/lib)\/|^packages\/core\/src\/(datapackFiles|schematicFile|schematicBlockFixes|nbt|addonVersions)\.ts$|(^|\/)node_modules\/fflate\/|^<define:/.test(
         f,
       ),
   );

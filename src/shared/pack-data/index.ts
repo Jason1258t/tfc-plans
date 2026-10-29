@@ -45,9 +45,9 @@ export {
   typeFieldStats,
   useRecipes,
 } from './recipes';
-export type { FilterTarget, KjsFilter, Match } from './recipeFilter';
-export { filterKeys, filterToJs, matchFilter } from './recipeFilter';
-export { collectRefs, recipeRefs } from './recipeRefs';
+export type { FilterTarget, KjsFilter, Match } from '@tfc/core/recipeFilter';
+export { filterKeys, filterToJs, matchFilter } from '@tfc/core/recipeFilter';
+export { collectRefs, recipeRefs } from '@tfc/core/recipeRefs';
 export type { KjsTagOp, McFluid, RawTag, Tag, TagCatalog, TagEdit, TagKind, TagSource } from './tags';
 export {
   ID_RE,
@@ -74,5 +74,5 @@ export { ItemIdSearch } from './ItemIdSearch';
 export { ItemPicker } from './ItemPicker';
 export { RecipeStatusBadge } from './RecipeStatusBadge';
 
-export { burnerHeat, burnerMode, burnerRate, mergeLiquidFuels } from './liquidFuel';
-export type { BlazeFuel, LiquidFuels, LiquidFamily, LiquidStack, FuelRecipe, EngineStats } from './liquidFuel';
+export { burnerHeat, burnerMode, burnerRate, mergeLiquidFuels } from '@tfc/core/liquidFuel';
+export type { BlazeFuel, LiquidFuels, LiquidFamily, LiquidStack, FuelRecipe, EngineStats } from '@tfc/core/liquidFuel';

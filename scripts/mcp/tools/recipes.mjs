@@ -4,7 +4,7 @@
  * (с учётом зеркала). Тег и предмет пересекаются, если предмет состоит в теге; тег, которого нет в индексе тегов,
  * ничего не покрывает (пустой тег). Отдельно: рецепт с тем же id — новый его заменит в слое поверх.
  */
-import { recipeRefs } from '../../../src/shared/pack-data/recipeRefs.ts';
+import { recipeRefs } from '@tfc/core/recipeRefs';
 import { siteRecipes } from '../site-datapacks.mjs';
 import { directMembers, flattenTag, getTag, isActive, recipeStatus, tags } from '../data.mjs';
 import { named, paging, short, str } from '../fmt.mjs';
