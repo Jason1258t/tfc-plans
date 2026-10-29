@@ -1,18 +1,19 @@
 import { useState } from 'react';
 import { sanitizeNamespace } from '@/lib/datapack';
-import type { Datapack } from '@/entities/datapack';
+import type { Datapack, DatapackDeployment } from '@/entities/datapack';
 import { InstallToggle } from './KubejsScripts';
 import { Input, Label } from '@/shared/ui';
 import styles from '../DatapacksPage.module.css';
 
 interface Props {
   pack: Datapack;
+  deployment?: DatapackDeployment;
   /** Записать правку в стор; родитель добавляет «кто изменил» */
   onUpdate: (patch: Partial<Datapack>) => void;
 }
 
 /** Паспорт датапака: название, namespace, описание и отметка «Ставить в мир» */
-export function PackMeta({ pack, onUpdate }: Props) {
+export function PackMeta({ pack, deployment, onUpdate }: Props) {
   const [name, setName] = useState(pack.name);
   const [namespace, setNamespace] = useState(pack.namespace);
   const [description, setDescription] = useState(pack.description);
@@ -57,10 +58,25 @@ export function PackMeta({ pack, onUpdate }: Props) {
           onBlur={() => description !== pack.description && onUpdate({ description })}
         />
       </div>
+      {deployment && (
+        <div className="small" role="status">
+          <strong>В сборке</strong> · по опубликованному снимку. Подтвердил {deployment.confirmedBy}, версия{' '}
+          <code>{deployment.contentHash.slice(0, 12)}</code>.
+          <div>
+            Путь: <code>{deployment.path}</code>. Отметка ниже не снимает подтверждение.
+          </div>
+          {pack.updatedAt !== deployment.sourceUpdatedAt && (
+            <div>После подтверждения карточка менялась. В сборке остаётся проверенная версия.</div>
+          )}
+          <div>
+            Для проверки новой версии хост сначала выполняет <code>tfc datapacks unconfirm {pack.id}</code>.
+          </div>
+        </div>
+      )}
       <InstallToggle
         checked={!!pack.install}
-        label="Ставить в мир"
-        where="в мир"
+        label="Предлагать установку в мир"
+        where="в мир, если он ещё не включён в сборку"
         onChange={(install) => onUpdate({ install })}
       />
     </section>

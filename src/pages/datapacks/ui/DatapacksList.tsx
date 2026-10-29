@@ -1,12 +1,13 @@
 import { FileTerminal, Package, Plus } from 'lucide-react';
 import { PackNav } from '@/widgets/pack-nav';
 import { cx, timeAgo } from '@/shared/lib';
-import type { Datapack, KubejsScript } from '@/entities/datapack';
+import type { Datapack, DatapackDeployment, KubejsScript } from '@/entities/datapack';
 import { Button } from '@/shared/ui';
 import styles from '../DatapacksPage.module.css';
 
 interface Props {
   packs: Datapack[] | null;
+  deployments: DatapackDeployment[] | null;
   scripts: KubejsScript[] | null;
   selectedId: string | null;
   scriptId: string | null;
@@ -19,6 +20,7 @@ interface Props {
 /** Левое меню раздела: датапаки, ниже — скрипты KubeJS */
 export function DatapacksList({
   packs,
+  deployments,
   scripts,
   selectedId,
   scriptId,
@@ -59,9 +61,9 @@ export function DatapacksList({
                     {p.entries.length} файл(ов) · {p.updatedBy}, {timeAgo(p.updatedAt)}
                   </span>
                 </span>
-                {p.install && (
-                  <span className={styles.dpBadge} title="Отмечен «Ставить в мир»: программа tfc поставит его в мир">
-                    в мир
+                {(p.install || deployments?.some((d) => d.id === p.id)) && (
+                  <span className={styles.dpBadge} title="Уровень установки по опубликованному снимку сборки">
+                    {deployments?.some((d) => d.id === p.id) ? 'в сборке' : 'в мир'}
                   </span>
                 )}
               </button>

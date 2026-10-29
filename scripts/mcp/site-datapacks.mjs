@@ -6,23 +6,31 @@
  * Чтения Firestore (50 тыс. в сутки на всех): коллекция целиком (сейчас ~10 документов) — раз в 10 минут.
  */
 import { datapackFiles } from '../../src/lib/datapackFiles.ts';
-import { datapackRecipe, indexRecipe, recipeRecord, recipes } from './data.mjs';
+import { datapackRecipe, indexRecipe, recipeRecord, recipes, readJson } from './data.mjs';
 import { cached, listAll } from './firestore.mjs';
 
-const load = cached(10 * 60_000, async () => {
-  const docs = await listAll('datapacks', ['name', 'description', 'install', 'entries']);
+const loadDocs = cached(10 * 60_000, () => listAll('datapacks', ['name', 'description', 'install', 'entries']));
+async function load() {
+  const docs = await loadDocs();
   const installed = [];
   const other = [];
+  const deployed = new Set((readJson('kubejs.json', {}).datapacks ?? []).map((d) => d.id));
   for (const d of docs) {
     const files = datapackFiles({ name: d.name, description: d.description, entries: d.entries ?? [] });
     for (const [file, text] of Object.entries(files)) {
       const r = datapackRecipe(file, text);
       if (!r) continue;
-      (d.install ? installed : other).push({ ...r, s: `датапак сайта ${d.name}`, dp: d.name, dpId: d.id, file });
+      (d.install && !deployed.has(d.id) ? installed : other).push({
+        ...r,
+        s: `датапак сайта ${d.name}`,
+        dp: d.name,
+        dpId: d.id,
+        file,
+      });
     }
   }
   return { docs: docs.length, installed, other, at: Date.now() };
-});
+}
 
 /**
  * Каталог рецептов со слоем датапаков сайта: { cat, other (неставящиеся: byOutput/byInput/byId), note }.

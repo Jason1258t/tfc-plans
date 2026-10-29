@@ -31,7 +31,7 @@ export interface Datapack {
   namespace: string;
   description: string;
   entries: DatapackEntry[];
-  /** «Ставить в мир»: программа tfc ставит только отмеченные; тестовые не отмечают */
+  /** Предлагать для проверки в мире. Подтверждённые версии сборки закреплены отдельно в снимке сервера. */
   install?: boolean;
   author: string;
   updatedBy: string;

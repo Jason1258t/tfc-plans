@@ -50,6 +50,7 @@ function buildVersion() {
   const srcs = [
     'cli',
     'server/pack-server/lib/paths.mjs',
+    'server/pack-server/lib/datapacks.mjs',
     'server/pack-server/lib/schematic-nbt.mjs',
     'src/lib/datapackFiles.ts',
     'src/lib/schematicFile.ts',

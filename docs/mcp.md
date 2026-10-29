@@ -533,3 +533,14 @@ handler }]` and an import line in `tools.mjs` (the `TOOLS` list at the end). A t
   [plans/pack-cli.md](plans/pack-cli.md). Tools don't depend on transport; paths are already env-configurable.
 - World generation (what spawns where) isn't indexed: in TFC it depends on climate and rocks; without running the mod
   the answer would be inaccurate.
+
+### Datapack deployment levels (dev #125)
+
+`datapacks_list` / `datapack_get` combine live source cards with confirmed deployment metadata from the published
+snapshot (`kubejs.json.datapacks`): pack path, pinned content hash, confirmer and later card edits. ZIP sources
+without a site card are included when published. Recipe tools keep a confirmed card out of the live-site layer;
+its pinned ZIP is parsed by the KubeJS builder, so new unconfirmed recipe ids do not leak into the active catalogue.
+Deployment metadata is static and costs no extra Firestore reads; it can lag a queued server build/publication.
+For the live server/local inventory and filename → pack mapping use `tfc datapacks list` / `files`. Promotion is a
+host operation after game verification (`confirm`, `unconfirm`), not an MCP write to the site's `install` flag.
+See [datapacks-pack.md](plans/datapacks-pack.md).

@@ -1,5 +1,5 @@
 /**
- * `tfc pull`, часть «сайт» — контент сайта в папку игры (снимок сборки — plan.mjs и sync.mjs, вместе — cli/tfc.mjs): датапаки «Ставить в мир» → `<мир>/datapacks/tfc-plans-<id>.zip`,
+ * `tfc pull`, часть «сайт» — контент сайта в папку игры (снимок сборки — plan.mjs и sync.mjs, вместе — cli/tfc.mjs): неподтверждённые датапаки → мир, подтверждённые ZIP → `kubejs/data/` сборки,
  * скрипты KubeJS «Ставить на сервер» → `kubejs/server_scripts/<fileName>`, схемы библиотеки → `schematics/`
  * (и на сервере — копии игроков в `schematics/uploaded/<ник>/`, uploadedCopies).
  * Берёт с сервера сборки (раздел /site), сайт закрыт App Check. Аддоны сборки → `mods/` — с сервера сборки
@@ -19,9 +19,10 @@
  * убирается (две версии одного датапака в мире спорили бы); `tfc publish` их в сборку не заливает
  * (siteDatapackPaths). У скриптов главная сборка — путь, который есть в снимке, сайт не трогает.
  */
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { deploymentsOf, inspectDatapack, worldDatapackPath } from '../../server/pack-server/lib/datapacks.mjs';
 import { strToU8, zipSync } from 'fflate';
 import { datapackFiles, zipName } from '../../src/lib/datapackFiles.ts';
 import { schematicFromLibrary } from '../../src/lib/schematicFile.ts';
@@ -88,7 +89,7 @@ export async function siteDatapackPaths(api, profile) {
   const names = new Map();
   for (const r of Object.values(loadState(profile).pulled?.datapacks ?? {})) names.set(r.path, r.name);
   try {
-    const { items } = await api.get('/site/datapacks');
+    const { items } = await api.get('/site/datapacks?all=true');
     for (const d of items) {
       names.set(datapackPath(d), d.name);
       names.set(manualDatapackPath(d), d.name);
@@ -106,16 +107,42 @@ export async function siteDatapackPaths(api, profile) {
 async function wanted(api, kind, names, profile) {
   if (kind === 'addons') return wantedAddons(api, names, profile);
   if (kind === 'datapacks') {
-    const r = await api.get(`/site/datapacks${query(names)}`);
+    const r = await api.get(`/site/datapacks${query(names)}${names.length ? '&' : '?'}v=2`);
     return {
       ...r,
-      items: r.items.map((d) => ({
-        id: d.id,
-        name: d.name,
-        path: datapackPath(d),
-        manual: manualDatapackPath(d),
-        bytes: async () => datapackZip(d),
-      })),
+      items: [
+        ...r.items.map((d) => ({
+          id: d.id,
+          name: d.name,
+          path: datapackPath(d),
+          manual: manualDatapackPath(d),
+          bytes: async () => datapackZip(d),
+        })),
+        ...(r.snapshotItems ?? []).map((d) => ({
+          id: d.id,
+          name: d.name,
+          path: d.sourcePath,
+          expectedSha: d.sha256,
+          bytes: async () => api.bytes(`/blobs/${d.sha256}`),
+        })),
+        ...(r.deployed ?? [])
+          .filter(
+            (d) =>
+              !names.length ||
+              names.some(
+                (n) => n === d.id || n.toLowerCase() === d.name.toLowerCase() || n === d.path.split('/').at(-1),
+              ),
+          )
+          .map((d) => ({
+            id: d.id,
+            name: d.name,
+            path: d.path,
+            deployment: d,
+            expectedSha: d.sha256,
+            bytes: async () => api.bytes(`/blobs/${d.sha256}`),
+          })),
+      ],
+      notes: (r.omitted ?? []).map((d) => `«${d.name}» уже включён в сборку — используется подтверждённая версия`),
     };
   }
   if (kind === 'kubejs') {
@@ -368,6 +395,16 @@ export function addonObsolete(profile, items, skip) {
   return [...out.values()];
 }
 
+function worldZipPaths(profile) {
+  if (!profile.world) return [];
+  const dir = path.join(profile.world, 'datapacks');
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir, { withFileTypes: true })
+    .filter((e) => e.isFile() && e.name.endsWith('.zip'))
+    .map((e) => `world/datapacks/${e.name}`);
+}
+
 /**
  * План одного вида. Возвращает { add, update, same, conflict, remove, keptModified, skipped, unknown, all }:
  * элементы — { id, name, path, file, sha256, bytes }.
@@ -400,11 +437,18 @@ export async function planPull(api, profile, kind, names = [], { force = false }
     target.add(it.path);
     const bytes = await it.bytes();
     const item = { ...it, file, bytes, sha256: sha(bytes) };
+    if (it.expectedSha && item.sha256 !== it.expectedSha)
+      throw new Error(`«${it.name}»: повреждён ZIP — хеш не совпал`);
     const disk = fileSha(file);
     // Своё неизменённое — то, что ставил pull, или то, что поставил tfc sync из сборки
     const rec = mine[it.id];
-    const ours = disk && rec?.path === it.path && rec.sha256 === disk;
-    const fromSync = disk && state.files?.[it.path] === disk;
+    const ours =
+      disk &&
+      rec?.path === it.path &&
+      rec.sha256 === disk &&
+      (!it.path.startsWith('world/') || rec.world === profile.world);
+    const fromSync =
+      disk && state.files?.[it.path] === disk && (!it.path.startsWith('world/') || state.world === profile.world);
     if (!disk) plan.add.push(item);
     else if (disk === item.sha256) plan.same.push(item);
     // jar аддона руками не правят: другой файл под тем же именем — просто заменяем (с копией)
@@ -416,10 +460,12 @@ export async function planPull(api, profile, kind, names = [], { force = false }
     const still = w.items.find((x) => x.id === id);
     if (still ? still.path === rec.path : names.length) continue;
     if (target.has(rec.path)) continue;
+    if (kind === 'datapacks' && still && plan.conflict.some((x) => x.id === id)) continue;
     const file = localPath(profile, rec.path);
     if (!file) continue;
     const disk = fileSha(file);
     const item = { id, name: rec.name, path: rec.path, file, sha256: rec.sha256 };
+    if (rec.path.startsWith('world/') && rec.world && rec.world !== profile.world) continue;
     if (!disk) plan.remove.push({ ...item, gone: true });
     else if (disk === rec.sha256) plan.remove.push(item);
     else plan.keptModified.push(item);
@@ -430,24 +476,41 @@ export async function planPull(api, profile, kind, names = [], { force = false }
     plan.same.push(...copies.same);
     plan.keptModified.push(...copies.kept);
   }
-  // Ручная копия датапака (скачан кнопкой «Скачать» и положен в мир) рядом с поставленным — убрать
-  if (kind === 'datapacks')
-    for (const it of [...plan.add, ...plan.update, ...plan.same, ...plan.conflict]) {
-      const file = it.manual && it.manual !== it.path ? localPath(profile, it.manual) : null;
-      if (file && fs.existsSync(file))
-        plan.obsolete.push({
-          id: it.manual,
-          name: `копия «${it.name}», скачанная с сайта вручную`,
-          path: it.manual,
-          file,
-        });
+  if (kind === 'datapacks') {
+    for (const it of [...plan.add, ...plan.update, ...plan.same]) {
+      const candidates = it.deployment
+        ? new Set([worldDatapackPath(it.id), ...(it.deployment.worldPaths ?? []), ...worldZipPaths(profile)])
+        : new Set([it.manual]);
+      for (const p of candidates) {
+        if (!p || p === it.path || plan.obsolete.some((x) => x.path === p) || plan.remove.some((x) => x.path === p))
+          continue;
+        const file = localPath(profile, p);
+        if (!file || !fs.existsSync(file)) continue;
+        let same = false;
+        try {
+          same = inspectDatapack(fs.readFileSync(file)).contentHash === inspectDatapack(it.bytes).contentHash;
+        } catch {
+          /* Неизвестный ZIP оставляем. */
+        }
+        if (same) plan.obsolete.push({ id: p, name: `копия «${it.name}» в мире`, path: p, file });
+        else if (p === it.manual || p === worldDatapackPath(it.id) || it.deployment?.worldPaths?.includes(p))
+          plan.keptModified.push({ id: p, name: `изменённая копия «${it.name}»`, path: p, file });
+      }
     }
+  }
   if (kind === 'addons') {
     const skip = new Set([...target, ...plan.remove.map((x) => x.path), ...plan.keptModified.map((x) => x.path)]);
     plan.obsolete = addonObsolete(profile, [...plan.add, ...plan.update, ...plan.same], skip);
     plan.skip = skip;
   }
-  return { ...plan, unknown: w.unknown ?? [], all: w.all ?? [], notes: w.notes ?? [], pins: w.pins };
+  return {
+    ...plan,
+    unknown: w.unknown ?? [],
+    all: w.all ?? [],
+    notes: w.notes ?? [],
+    pins: w.pins,
+    snapshot: w.snapshot,
+  };
 }
 
 /**
@@ -516,7 +579,7 @@ export function siteOwned(plans, snapshot, state) {
     for (const k of ['add', 'update', 'same', 'conflict', 'remove', 'keptModified'])
       p[k] = p[k].filter((x) => !snapPaths.has(x.path));
   }
-  const skip = new Set();
+  const skip = new Set(deploymentsOf(snapshot).flatMap((d) => [worldDatapackPath(d.id), ...(d.worldPaths ?? [])]));
   for (const p of plans) for (const x of [...targets(p), ...p.remove, ...p.keptModified]) skip.add(x.path);
   // Датапаки сайта, залитые в сборку раньше (tfc-plans-*.zip и ручные копии), снимок не ставит и не убирает:
   // ими распоряжается сайт
@@ -580,6 +643,18 @@ export function applyPull(profile, plans, backup, overrides) {
   const keep = (x, list) => toBackup(backup, x.file, x.path, list);
   for (const p of plans) {
     const mine = (state.pulled[p.kind] ??= {});
+    for (const x of p.update) keep(x, 'replaced');
+    for (const x of [...p.add, ...p.update]) {
+      fs.mkdirSync(path.dirname(x.file), { recursive: true });
+      const tmp = path.join(path.dirname(x.file), `.tfc-${randomBytes(6).toString('hex')}.tmp`);
+      try {
+        fs.writeFileSync(tmp, x.bytes);
+        fs.renameSync(tmp, x.file);
+      } finally {
+        fs.rmSync(tmp, { force: true });
+      }
+      if (p.add.includes(x)) manifest.added.push(x.path);
+    }
     for (const x of p.remove) {
       if (!x.gone) keep(x, 'removed');
       delete mine[x.id];
@@ -588,14 +663,8 @@ export function applyPull(profile, plans, backup, overrides) {
       keep(x, 'removed');
       delete state.files?.[x.path];
     }
-    for (const x of p.update) keep(x, 'replaced');
-    for (const x of [...p.add, ...p.update]) {
-      fs.mkdirSync(path.dirname(x.file), { recursive: true });
-      fs.writeFileSync(x.file, x.bytes);
-      if (p.add.includes(x)) manifest.added.push(x.path);
-    }
     for (const x of [...p.add, ...p.update, ...p.same]) {
-      if (!x.copy) mine[x.id] = { path: x.path, sha256: x.sha256, name: x.name };
+      if (!x.copy) mine[x.id] = { path: x.path, sha256: x.sha256, name: x.name, world: profile.world ?? null };
       else {
         state.schematicCopies ??= {};
         state.schematicCopies[x.path] = { id: x.schematicId, sha256: x.sha256 };

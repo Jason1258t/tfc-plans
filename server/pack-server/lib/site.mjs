@@ -151,9 +151,15 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
     };
   }
 
-  async function datapacks(names) {
+  async function datapacks(names = [], { all = false, fresh = false } = {}) {
+    if (fresh) cache.delete('datapacks');
     const list = await cached('datapacks');
-    return pick(list, names, (d) => d.name ?? '');
+    return all ? { items: list } : pick(list, names, (d) => d.name ?? '');
+  }
+
+  async function datapackSource(pack) {
+    const { datapackFiles } = await import(pathToFileURL(path.join(repoDir, 'src/lib/datapackFiles.ts')).href);
+    return datapackFiles(pack);
   }
 
   async function kubejs(names) {
@@ -582,6 +588,7 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
     publishSchematic,
     uploadReport,
     datapacks,
+    datapackSource,
     kubejs,
     schematics,
     filePath,

@@ -25,13 +25,21 @@ import { useItems, useRecipes, type Recipe, tagFromPath, tagKey, useTags } from 
 import { entryRecipeId, kubejsScript, scriptFileName } from '@/lib/kubejsFix';
 import { downloadScript } from '@/lib/kubejsScripts';
 import { cx, timeAgo, uid } from '@/shared/lib';
-import type { Datapack, DatapackEntry } from '@/entities/datapack';
+import type { Datapack, DatapackEntry, DatapackDeployment } from '@/entities/datapack';
 import { Button } from '@/shared/ui';
 import { download } from '../model/download';
 import styles from '../DatapacksPage.module.css';
 
 /** Один датапак: паспорт, кнопки, файлы и окна — каталог рецептов, конструктор KubeJS, правка записи */
-export function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () => void }) {
+export function PackEditor({
+  pack,
+  deployment,
+  onDeleted,
+}: {
+  pack: Datapack;
+  deployment?: DatapackDeployment;
+  onDeleted: () => void;
+}) {
   const nick = useNick();
   const { items: files } = useFiles();
   const navigate = useNavigate();
@@ -142,7 +150,7 @@ export function PackEditor({ pack, onDeleted }: { pack: Datapack; onDeleted: () 
 
   return (
     <div className={styles.dpEditor}>
-      <PackMeta pack={pack} onUpdate={update} />
+      <PackMeta pack={pack} deployment={deployment} onUpdate={update} />
 
       <PackToolbar
         canExportScript={Boolean(recipeEntries.length)}

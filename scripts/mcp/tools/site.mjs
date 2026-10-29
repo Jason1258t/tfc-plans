@@ -7,7 +7,7 @@
  */
 import { DOCS, fromValue } from '../../firestore-rest.mjs';
 import { datapackFiles, zipName } from '../../../src/lib/datapackFiles.ts';
-import { itemName } from '../data.mjs';
+import { itemName, readJson } from '../data.mjs';
 import { FirestoreError, api, cached, createDoc, listAll, patchDoc } from '../firestore.mjs';
 import { dateOf, nameOf, named, NICK, norm, num, page, paging, short, str, words } from '../fmt.mjs';
 
@@ -597,20 +597,42 @@ async function mentions(name) {
   return found.length ? `упоминается в задачах: ${found.map((t) => `${t.id} «${t.title}»`).join('; ')}` : null;
 }
 
+function deploymentMark(d) {
+  const deployment = (readJson('kubejs.json', {}).datapacks ?? []).find((p) => p.id === d.id);
+  return deployment
+    ? `в сборке: ${deployment.path}, содержимое ${deployment.contentHash.slice(0, 12)}, подтвердил ${deployment.confirmedBy}${deployment.sourceUpdatedAt !== d.updatedAt ? '; карточка после подтверждения менялась' : ''}`
+    : `${installMark(d)} в мир`;
+}
+
 async function datapacksList(a) {
   let list = [...(await datapacksIndex())];
+  for (const d of readJson('kubejs.json', {}).datapacks ?? [])
+    if (!list.some((p) => p.id === d.id))
+      list.push({
+        ...d,
+        namespace: '—',
+        author: d.confirmedBy,
+        updatedAt: d.confirmedAt,
+        install: false,
+        description: 'Подтверждённый ZIP снимка без карточки сайта',
+      });
   const ws = words(a.query);
   if (ws.length) list = list.filter((d) => has(`${d.id} ${d.name} ${d.namespace} ${d.description ?? ''}`, ws));
   if (a.install != null) list = list.filter((d) => Boolean(d.install) === a.install);
   list.sort(byUpdated);
   return page(list, a, (d) => [
-    `${d.id} — ${d.name} [ns ${d.namespace}, ${installMark(d)}; ${who(d)}, ${dateOf(d.updatedAt)}]${
+    `${d.id} — ${d.name} [ns ${d.namespace}, ${deploymentMark(d)}; ${who(d)}, ${dateOf(d.updatedAt)}]${
       d.description ? `: ${short(d.description, 150)}` : ''
     }`,
   ]);
 }
 
 async function datapackGet(a) {
+  const published = (readJson('kubejs.json', {}).datapacks ?? []).find(
+    (d) => d.id === a.id || norm(d.name) === norm(a.id),
+  );
+  if (published?.snapshotSource)
+    return `${published.id} — ${published.name}\nВ сборке: ${published.path}; ZIP ${published.sha256}; содержимое ${published.contentHash}; подтвердил ${published.confirmedBy}.\nКарточки сайта нет. Исходное имя: ${published.fileName}; файлы доступны в снимке сборки (tfc datapacks files).`;
   const r = await resolve('datapacks', datapacksIndex, a.id, (x) => x.name, 'датапака');
   if (r.error) return r.error;
   const d = r.doc;
@@ -624,7 +646,7 @@ async function datapackGet(a) {
   const entries = d.entries ?? [];
   const out = [
     `${d.id} — ${d.name} (${zipName(d)})`,
-    `namespace: ${d.namespace}; ${installMark(d)} в мир (программа tfc); ${who(d)}; изменён ${dateOf(d.updatedAt)}`,
+    `namespace: ${d.namespace}; ${deploymentMark(d)} (программа tfc); ${who(d)}; изменён ${dateOf(d.updatedAt)}`,
   ];
   if (d.description) out.push(`описание: ${d.description}`);
   const m = await mentions(d.name);
@@ -873,7 +895,7 @@ export const TOOLS = [
   {
     name: 'datapacks_list',
     description:
-      'Site datapacks (Firestore datapacks): name, namespace, whether installed into the world, author. Read-only.',
+      'Site datapacks (Firestore datapacks): name, namespace, world opt-in and confirmed pack deployment from the published snapshot, author. Read-only.',
     inputSchema: { type: 'object', properties: { query: str('words'), install, ...paging } },
     handler: counted(datapacksList),
   },

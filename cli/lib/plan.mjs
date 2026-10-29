@@ -14,6 +14,7 @@
  * - пути, которые отдаёт сайт (аддоны, датапаки и скрипты «ставить»), план не трогает — см. siteOwned в pull.mjs.
  */
 import fs from 'node:fs';
+import { isPackDatapackPath } from '../../server/pack-server/lib/datapacks.mjs';
 import path from 'node:path';
 import { isClientConfig, isStatePath } from '../../server/pack-server/lib/paths.mjs';
 import { textKey } from './noise.mjs';
@@ -28,7 +29,7 @@ export const PARTS = {
   config: { snap: ['config', 'defaultconfig', 'serverconfig'] },
   kubejs: { snap: ['kubejs'], site: ['kubejs'] },
   resourcepacks: { snap: ['resourcepack'] },
-  datapacks: { snap: ['world-datapack'], site: ['datapacks'] },
+  datapacks: { snap: ['kubejs', 'world-datapack'], site: ['datapacks'] },
   world: { snap: ['world-data'] },
   schematics: { site: ['schematics'] },
   addons: { site: ['addons'] },
@@ -40,11 +41,11 @@ const DEFAULT_SNAP = {
   server: ['config', 'defaultconfig', 'serverconfig', 'kubejs', 'world-datapack'],
 };
 const DEFAULT_SITE = {
-  client: ['addons', 'kubejs', 'schematics'],
+  client: ['addons', 'kubejs', 'datapacks', 'schematics'],
   server: ['addons', 'kubejs', 'datapacks', 'schematics'],
 };
 
-const EDITABLE = new Set(['config', 'defaultconfig', 'serverconfig', 'kubejs']);
+const EDITABLE = new Set(['config', 'defaultconfig', 'serverconfig', 'kubejs', 'world-datapack']);
 
 /**
  * Что тянуть: { snap: виды снимка, site: виды сайта }. Выбран мир — его датапаки тянем и на клиенте
@@ -125,8 +126,15 @@ function editedByPlayer(state, l) {
  * Возвращает { add, update, conflict, keepClient, keptLocal, remove, keptModified, extra, same, noWorld }:
  * элементы — { path, kind, sha256, size, local? }.
  */
-export function makePlan(snapshot, local, state, kinds, { force = false, hasWorld = true, skip = new Set() } = {}) {
-  const inScope = (kind) => kinds.includes(kind);
+export function makePlan(
+  snapshot,
+  local,
+  state,
+  kinds,
+  { force = false, hasWorld = true, skip = new Set(), datapacksOnly = false } = {},
+) {
+  const inScope = (kind, file) =>
+    kinds.includes(kind) && (!datapacksOnly || kind === 'world-datapack' || isPackDatapackPath(file));
   const plan = {
     add: [],
     update: [],
@@ -141,7 +149,7 @@ export function makePlan(snapshot, local, state, kinds, { force = false, hasWorl
   };
   const inSnap = new Set();
   for (const f of snapshot?.files ?? []) {
-    if (!inScope(f.kind) || skip.has(f.path) || isStatePath(f.path)) continue;
+    if (!inScope(f.kind, f.path) || skip.has(f.path) || isStatePath(f.path)) continue;
     inSnap.add(f.path);
     if (f.path.startsWith('world/') && !hasWorld) {
       plan.noWorld.push(f);
@@ -151,6 +159,8 @@ export function makePlan(snapshot, local, state, kinds, { force = false, hasWorl
     if (!l) plan.add.push(f);
     else if (l.sha256 === f.sha256) plan.same.push(f);
     else if (isClientConfig(f.path)) plan.keepClient.push({ ...f, local: l });
+    else if ((isPackDatapackPath(f.path) || f.kind === 'world-datapack') && !state.files[f.path] && !force)
+      plan.conflict.push({ ...f, local: l });
     else if (EDITABLE.has(f.kind) && state.files[f.path] && state.files[f.path] !== l.sha256 && !force) {
       // В сборке файл с прошлого pull тот же — менять нечего, правку (игрока или игры) оставляем
       if (state.files[f.path] === f.sha256) plan.keptLocal.push({ ...f, local: l });
@@ -160,7 +170,7 @@ export function makePlan(snapshot, local, state, kinds, { force = false, hasWorl
     } else plan.update.push({ ...f, local: l });
   }
   for (const [p, l] of local) {
-    if (inSnap.has(p) || !inScope(l.kind) || skip.has(p) || isStatePath(p)) continue;
+    if (inSnap.has(p) || !inScope(l.kind, p) || skip.has(p) || isStatePath(p)) continue;
     const was = state.files[p];
     if (!was) plan.extra.push(l);
     else if (was === l.sha256 || force) plan.remove.push(l);

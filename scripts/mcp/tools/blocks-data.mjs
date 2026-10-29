@@ -121,7 +121,18 @@ function sources() {
   const done = path.join(VANILLA, '.done-v4');
   if (fs.existsSync(done)) list.push(dirSource('ванилла (кеш npm run mods)', VANILLA, done));
   for (const jar of jarList()) list.push(jarSource(jar));
-  for (const layer of kubejsLayers()) list.push(dirSource(`kubejs/${layer}`, path.join(INSTANCE, 'kubejs', layer)));
+  for (const layer of kubejsLayers()) {
+    const root = path.join(INSTANCE, 'kubejs', layer);
+    const data = path.join(root, 'data');
+    if (fs.existsSync(data))
+      for (const name of fs
+        .readdirSync(data)
+        .filter((n) => n.endsWith('.zip'))
+        .sort((a, b) => (a.toLowerCase() < b.toLowerCase() ? -1 : a.toLowerCase() > b.toLowerCase() ? 1 : 0)))
+        if (fs.statSync(path.join(data, name)).isFile())
+          list.push(zipSource(`kubejs/${layer}/data/${name}`, path.join(data, name)));
+    list.push(dirSource(`kubejs/${layer}`, root));
+  }
   list.push(...resourcepacks());
   return list;
 }

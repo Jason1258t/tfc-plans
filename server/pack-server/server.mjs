@@ -47,6 +47,8 @@ import { fileURLToPath } from 'node:url';
 import { openDev } from './lib/dev.mjs';
 import { verifyAppCheck, verifyIdToken } from './lib/firebase-auth.mjs';
 import { openJobs, PUBLISH } from './lib/jobs.mjs';
+import { deploymentsOf } from './lib/datapacks.mjs';
+import { changeDatapacks, snapshotDatapacks } from './lib/datapack-deployment.mjs';
 import { openKeys } from './lib/keys.mjs';
 import { openSite } from './lib/site.mjs';
 import { openStore } from './lib/store.mjs';
@@ -371,6 +373,14 @@ async function handle(req, res) {
     }
   }
 
+  // --- датапаки: административный перенос с проверкой ревизии и текущего снимка
+  if (route === 'POST /admin/datapacks') {
+    const who = await authorize(req, 'admin');
+    const body = await readJsonBody(req);
+    const snap = await changeDatapacks(store, site, body, who);
+    return json(res, 201, { snapshot: snap.id, ...(await makeCurrent({ id: snap.id, base: body.base }, who.name)) });
+  }
+
   // --- ключи
   if (parts[0] === 'admin' && parts[1] === 'keys') {
     const who = await authorize(req, 'admin');
@@ -529,7 +539,33 @@ async function handle(req, res) {
   if (parts[0] === 'site' && req.method === 'GET') {
     await authorize(req, 'player');
     const names = url.searchParams.getAll('name');
-    if (url.pathname === '/site/datapacks') return json(res, 200, await site.datapacks(names));
+    if (url.pathname === '/site/datapacks') {
+      const current = await store.getCurrent();
+      const deployed = deploymentsOf(current);
+      const inventory = url.searchParams.get('all') === 'true';
+      const result = await site.datapacks(names, { all: inventory });
+      let snapshotItems = [];
+      if (url.searchParams.get('v') === '2') {
+        const cards = inventory ? result.items : (await site.datapacks([], { all: true })).items;
+        snapshotItems = await snapshotDatapacks(store, site, current, cards);
+        const match = (d, n) =>
+          [d.id, d.name, d.fileName, d.path?.split('/').at(-1)].some((x) => x?.toLowerCase() === n.toLowerCase());
+        if (names.length) snapshotItems = snapshotItems.filter((d) => names.some((n) => match(d, n)));
+        result.unknown = (result.unknown ?? []).filter(
+          (n) => !snapshotItems.some((d) => match(d, n)) && !deployed.some((d) => match(d, n)),
+        );
+      }
+      // И старому CLI не отдаём подтверждённые пакеты для повторной установки в мир.
+      const omitted = result.items.filter((d) => deployed.some((p) => p.id === d.id));
+      if (!inventory) result.items = result.items.filter((d) => !deployed.some((p) => p.id === d.id));
+      return json(res, 200, {
+        ...result,
+        snapshotItems,
+        deployed,
+        omitted: omitted.map((d) => ({ id: d.id, name: d.name })),
+        snapshot: current?.id ?? null,
+      });
+    }
     if (url.pathname === '/site/kubejs') return json(res, 200, await site.kubejs(names));
     if (url.pathname === '/site/schematics') return json(res, 200, await site.schematics());
     if (url.pathname === '/site/addons') return json(res, 200, await site.addons());
