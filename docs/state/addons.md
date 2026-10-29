@@ -286,3 +286,19 @@ only; existing addon textures and in-game appearance were not changed or tested.
 Dev #135 (2026-10-29) records the user preference in the skill: simple pixel shapes matching the parent mod or host
 block, flat planes and restrained palette, functional material cues instead of simulated rounded forms, decorative
 highlights or noise. Approved visual example: onboard-computer cassettes in `tools/create-aeronautics-extra-mod/art/`.
+
+## Builder Tools (`tools/builder-tools-mod`, 2026-10-29)
+
+Dev #103, **1.0.1**: builder belt `builder_tools:builder_belt` in Curios belt slot. After the last block is placed,
+refills either hand from the 36 normal inventory slots, matching all item components; main hand is never used as an
+offhand refill source. On attack input at a block only, swaps a suitable tool into the selected slot via the standard
+inventory SWAP packet (old stack goes into the tool slot, works with a full valid inventory). Tool choice prefers
+correct drops where required, then base destroy speed; ignores efficiency enchants and tools with one use left.
+No auto-restore after mining, no backpack access. Sneak + RMB with belt in hand toggles its persistent component.
+Recipe: five leather + one jute fibre; requires TFC for the recipe, NeoForge 21.1.251+ and Curios 9+ for the mod.
+
+Verified: MCP platform sources for attack events and placement, build, resource/model checks, 23/23 standalone
+Curios server checks, 26/26 with TFC 4.2.9 + Patchouli 93 (real placement, TFC tools, recipe), deliberate failing
+assertion followed by a clean run; dev client checks ordinary inventory swap and server synchronization.
+ImageGen source and 16×16 runtime texture based on Create goggles in the addon; release jar uploaded to pack server, card/page/version on site.
+Not checked in game: real mouse input, long construction, remote multiplayer and full-pack inventory-mod interactions.

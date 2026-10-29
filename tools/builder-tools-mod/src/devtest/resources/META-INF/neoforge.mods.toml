@@ -1,0 +1,7 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "MIT"
+[[mods]]
+modId = "builder_tools_devtest"
+version = "1.0.0"
+displayName = "Проверка пояса строителя"
