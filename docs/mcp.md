@@ -554,6 +554,21 @@ card edit does not change the confirmed ZIP; the host runs `tfc datapacks unconf
 the result and warnings without writing. Cost: 1 read for the current document (+ the datapack list on a new name).
 Deleting a datapack is not exposed — do it on the site.
 
+### Live datapack inventory and archive reads (dev #154)
+
+| Tool                                                 | Source and contract                                                                                                                                                                                                               |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `datapacks_inventory(query, refresh, limit, offset)` | Live snapshot + source cards from the pack server: site/world/pack levels, ids, filenames, hashes and named pull commands. `refresh=true` bypasses the source-card cache (Firestore reads on server); snapshot is always current. |
+| `datapack_pack_get(id*, path, limit, offset)`        | Exact ZIP in the live snapshot, by id/name/filename; no path lists files, path reads a text file by lines. SHA256 is checked. Pinned packs and ZIPs without a site card are supported; editable drafts remain `datapack_get`.     |
+
+Read-only; a player key suffices (`tfc login`, or `TFC_PACK_URL`/`TFC_PACK_TOKEN`). No writes, promotion or host
+confirmation. Source-card revisions in the server cache and old confirmed revisions are not a substitute for
+`datapack_get`'s current `revision` when editing. Missing/unreachable server or a revision/snapshot race is reported,
+not silently replaced with published static data. Restart MCP after updating its code to load these tools.
+
+Authoring route and exact destinations: [agents-datapacks.md](agents-datapacks.md). Explicit CLI datapack pulls
+refresh source cards after MCP writes; ordinary full pulls retain the normal five-minute cache.
+
 ### Datapack deployment levels (dev #125)
 
 `datapacks_list` / `datapack_get` combine live source cards with confirmed deployment metadata from the published

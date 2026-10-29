@@ -329,6 +329,14 @@ Cursor configs (shapes from their docs, not tried).
   TypeScript/lint/format passed. Real host world, old/new game-world loading and priorities remain untested;
   no production datapacks were promoted. Instructions/inventory: [datapacks-pack.md](../plans/datapacks-pack.md).
 
+- Dev #154 (2026-10-29): named `tfc datapacks pull <id/name/filename>` (`install` alias) and raw `pull datapacks`
+  resolve pinned ZIPs without cards, original filenames, and old pinned names after a card rename. Pack-level pulls
+  work without a selected world; world drafts require one and missing-world skips are visible. `datapacks <name>`
+  shows source, level and a copyable pull command. Explicit datapack pulls refresh the independent server card cache
+  after MCP writes; ordinary full pulls retain the five-minute cache. Checked on temporary HTTP/profiles: 73 cases
+  including no-world legacy ZIP pull, deleted source card, unrelated file preservation, fresh draft, SHA256 failure,
+  MCP stdio inventory/exact ZIP read and prior promotion/undo/old-CLI scenarios. Game not checked.
+
 - Dev #150 (2026-10-29): Euphoria Patcher startup popup traced to missing Complementary r5.8.1.
   Proposed update `u20261029-193554-dd27` changes only `display.doPopUpLogging=false`, preserving logs and
   all other config bytes. Verified installed jar code through MCP and source SHA256 against the current snapshot;

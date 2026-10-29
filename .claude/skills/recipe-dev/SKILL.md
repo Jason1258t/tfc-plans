@@ -39,8 +39,8 @@ commit) — Russian.
 | pack config value                                    | `config_get` → `config_propose`    |
 | new block/item with logic                            | addon — skill `addon-dev`          |
 
-- Site datapack: Firestore `datapacks` (`datapacks_list` / `datapack_get`), installed into the selected world for testing
-  by `tfc datapacks install`. Shared fixes can then be confirmed by the host (`tfc datapacks confirm`) as pinned ZIPs
+- Site datapack: Firestore `datapacks` (`datapacks_list` / `datapack_get` → `datapack_put`), installed into the selected world for testing
+  by `tfc datapacks pull <id>`. Shared fixes can then be confirmed by the host (`tfc datapacks confirm`) as pinned ZIPs
   in `kubejs/data/` for all worlds; the current pack snapshot owns the confirmed version. A site edit or `install`
   flag never replaces it automatically. The agent cannot verify in game or confirm on the host's behalf without
   the host explicitly reporting those versions checked; use `--dry-run` for a plan. See `docs/plans/datapacks-pack.md`.
@@ -69,6 +69,13 @@ commit) — Russian.
 
 ## 8. Write
 
+- For site datapacks use the MCP writer, not ad-hoc REST scripts or loose files in `kubejs/data`/`public`.
+  `datapack_get` gives the current `revision`; pass it as `baseRevision` to `datapack_put`. Use `upsert` for
+  selected paths; `entries` replaces the entire pack. Preview `dry_run=true`, inspect warnings, then write.
+  New cards use `datapack_put name=… namespace=… entries=[{path,content,kind}]` (test cards can stay `install=false`).
+  For live placement and exact pinned/legacy ZIPs use `datapacks_inventory` / `datapack_pack_get`; the pinned source
+  revision is not the current card revision. Full route: [agent datapacks](../../../docs/agents-datapacks.md).
+
 - The chosen route (datapack / KubeJS / `tfc admin propose`). Keep the id unique (`<ns>:<path>`); check with
   `recipe_get` which KubeJS rules might touch the namespace.
 
@@ -79,6 +86,11 @@ commit) — Russian.
 - Mark «в игре не проверялось» (real machine behaviour, feel, multiplayer).
 
 ## 10. Report
+
+- Give the datapack's id/name and `tfc datapacks pull <id>`, its world/pack level, and what needs checking in game.
+  Named pulls refresh the server's card cache. A confirmed pack downloads directly to its managed destination
+  without requiring a selected world; a draft requires one. A changed pinned card needs host `unconfirm`, retest
+  and `confirm`; the write itself does not update the pinned version.
 
 - Commit `Рецепты: <что> — …`; skill `ship`. Site task → `done` with a short Russian note; anything waiting for the
   host or an in-game check → `docs/state/pending.md`.

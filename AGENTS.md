@@ -151,11 +151,17 @@ things — [docs/plans/mcp-next.md](docs/plans/mcp-next.md).
 
 ## Datapack deployment levels
 
+- Agent authoring workflow — [docs/agents-datapacks.md](docs/agents-datapacks.md). New editable fixes belong in site
+  cards via `datapack_put`, not loose files in `kubejs/data/` or `public/`. Read/update with `datapack_get` →
+  `datapack_put baseRevision=<current card revision>`; inspect active bytes separately with `datapack_pack_get`.
+  `datapacks_inventory` shows the live server snapshot, while published UI labels can lag. Give the host a copyable
+  `tfc datapacks pull <id>` command and source id/name after every new/editable datapack change.
+
 - Shared fixes can be confirmed for the whole pack as ZIP files in `kubejs/data/` (installed KubeJS loads them).
   Source of truth: the current pack-server snapshot's `datapacks` records, including content/archive hashes and source
   revision. Site `install` is a world-test opt-in, not confirmation or permission to replace the pinned pack version.
-- Inspect `tfc datapacks list` / `files`; `install all|<id/name/filename>` puts unconfirmed packs into the selected
-  world. Host `confirm all|<id/name/filename>` promotes matching world ZIPs after verification in game;
+- Inspect `tfc datapacks list` / `files`; `pull` / `install all|<id/name/filename>` puts unconfirmed packs into the selected
+  world and confirmed ZIPs directly into the instance, also without a selected world. Host `confirm all|<id/name/filename>` promotes matching world ZIPs after verification in game;
   `unconfirm` returns a pinned version to world scope for retesting. Use `--dry-run` to inspect first.
 - An agent cannot verify in game. Do not declare a version tested or run live `confirm` on the host's behalf without
   their explicit confirmation that those versions were checked. Ship the tooling normally; record the game check

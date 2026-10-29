@@ -96,7 +96,12 @@ export function checkDatapack(pack) {
 
   const cat = recipes();
   const itemIndex = items();
-  const ownTags = new Set(entries.map((e) => tagFromPath(e.path)?.id).filter(Boolean));
+  const ownTags = new Set(
+    entries.flatMap((e) => {
+      const t = tagFromPath(e.path);
+      return t && ['item', 'fluid'].includes(t.kind) ? [t.id] : [];
+    }),
+  );
   for (const e of entries) {
     const r = datapackRecipe(e.path, e.content);
     if (e.sourceRecipe) {

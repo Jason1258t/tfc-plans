@@ -42,14 +42,22 @@ export function localDatapacks(profile) {
   return out;
 }
 
-async function catalog(api) {
-  const [inventory, snapshot] = await Promise.all([api.get('/site/datapacks?all=true&v=2'), api.current()]);
+export async function datapackCatalog(api, { refresh = false } = {}) {
+  const [inventory, snapshot] = await Promise.all([
+    api.get(`/site/datapacks?all=true&v=2${refresh ? '&fresh=true' : ''}`),
+    api.current(),
+  ]);
   if (!Array.isArray(inventory.deployed))
     throw new Error('сервер ещё не поддерживает уровни датапаков — обновите сервер сборки');
   if (inventory.snapshot !== (snapshot?.id ?? null))
     throw new Error('сборка изменилась во время чтения — повторите команду');
   const items = inventory.items.map((d) => ({ ...d, contentHash: datapackContentHash(datapackFiles(d)) }));
-  return { items: [...items, ...(inventory.snapshotItems ?? [])], snapshot, deployed: deploymentsOf(snapshot) };
+  const deployed = deploymentsOf(snapshot);
+  for (const d of items) d.deployment = deployed.find((p) => p.id === d.id);
+  for (const d of deployed) {
+    if (!items.some((p) => p.id === d.id)) items.push({ ...d, deployment: d, sourceMissing: true, install: false });
+  }
+  return { items: [...items, ...(inventory.snapshotItems ?? [])], snapshot, deployed };
 }
 
 function matches(d, query) {
@@ -57,9 +65,12 @@ function matches(d, query) {
     d.id,
     d.name,
     d.fileName,
+    d.deployment?.name,
+    d.deployment?.fileName,
+    d.deployment?.path.split('/').at(-1),
     zipName(d),
     `tfc-plans-${d.id}.zip`,
-    ...(d.worldPaths ?? []).map((p) => p.split('/').at(-1)),
+    ...(d.worldPaths ?? d.deployment?.worldPaths ?? []).map((p) => p.split('/').at(-1)),
   ].some((s) => s && key(s) === key(query));
 }
 
@@ -77,7 +88,7 @@ function select(items, names) {
   return [...selected];
 }
 
-async function resolveNames(api, catalog, items, names) {
+export async function resolveDatapacks(api, catalog, items, names) {
   if (!names.length || (names.length === 1 && names[0] === 'all')) return select(items, names);
   const resolved = [];
   for (const n of names) {
@@ -110,7 +121,7 @@ async function resolveNames(api, catalog, items, names) {
 }
 
 export async function listDatapacks(api, profile, query = '', filesOnly = false) {
-  const c = await catalog(api);
+  const c = await datapackCatalog(api);
   const local = profile ? localDatapacks(profile) : [];
   if (!filesOnly) {
     console.log(`Датапаки сайта; снимок ${c.snapshot?.id ?? 'ещё не опубликован'}`);
@@ -125,7 +136,7 @@ export async function listDatapacks(api, profile, query = '', filesOnly = false)
             ? 'доступен для мира'
             : 'тестовый';
       console.log(
-        `${d.id} — ${d.name} · ${state}${d.snapshotSource ? '; ZIP снимка без карточки сайта' : ''}${d.error ? `; ${d.error}` : ''}`,
+        `${d.id} — ${d.name} · ${state}${d.sourceMissing ? '; без карточки сайта' : d.snapshotSource ? '; ZIP снимка без карточки сайта' : ''}${d.error ? `; ${d.error}` : ''}`,
       );
       console.log(
         dim(
@@ -133,8 +144,6 @@ export async function listDatapacks(api, profile, query = '', filesOnly = false)
         ),
       );
     }
-    for (const d of c.deployed.filter((d) => !c.items.some((s) => s.id === d.id)))
-      console.log(`${d.id} — ${d.name} · в сборке; карточка сайта удалена`);
   }
   console.log('Файлы снимка: filename — название · место · sha256');
   for (const f of c.snapshot?.files.filter(
@@ -166,23 +175,48 @@ export async function listDatapacks(api, profile, query = '', filesOnly = false)
       );
     }
   }
+  if (!filesOnly)
+    console.log(dim('Детали: tfc datapacks <имя/id/filename>; догрузить: tfc datapacks pull <имя/id/filename>'));
+}
+
+export async function showDatapacks(api, profile, names) {
+  const c = await datapackCatalog(api);
+  const selected = await resolveDatapacks(api, c, c.items, names);
+  for (const d of selected) {
+    const pin = d.deployment;
+    console.log(`${d.id} — ${d.name}`);
+    console.log(
+      `  ${pin ? `В сборке: ${pin.path}; проверенное содержимое ${short(pin.contentHash)}` : `Для проверки в мире: ${d.sourcePath ?? worldDatapackPath(d.id)}`}`,
+    );
+    if (pin && d.contentHash !== pin.contentHash)
+      console.log('  На сайте новая редакция; pull получает подтверждённую версию сборки.');
+    console.log(`  Догрузить: tfc datapacks pull ${d.id}`);
+    if (pin) console.log(`  Для проверки новой версии хостом: tfc datapacks unconfirm ${d.id}`);
+    if (!pin && !profile?.world) console.log('  Для установки выберите мир: tfc init --world <мир>');
+  }
 }
 
 /** Имена разрешаем до pull: одинаковые названия не должны незаметно выбирать два разных датапака. */
-export async function datapackIds(api, names) {
-  const c = await catalog(api);
-  return (await resolveNames(api, c, c.items, names)).map((d) => d.id);
+export async function datapackIds(api, names, { hasWorld = true } = {}) {
+  const c = await datapackCatalog(api, { refresh: true });
+  const selected = await resolveDatapacks(api, c, c.items, names);
+  const needWorld = selected.filter((d) => !d.deployment);
+  if (!hasWorld && needWorld.length)
+    throw new Error(
+      `Для проверки в мире нужен выбранный мир: ${needWorld.map((d) => d.name).join(', ')}. Выполните tfc init --world <мир>. Подтверждённые пакеты сборки можно pull без мира.`,
+    );
+  return selected.map((d) => d.id);
 }
 
 export async function confirmDatapacks(api, profile, names, { yes = false, dryRun = false, action = 'confirm' } = {}) {
   // Права проверяем даже при предпросмотре, до загрузки файлов.
   if ((await api.role()) !== 'admin') throw new Error('подтверждать датапаки может только хост (ключ администратора)');
-  const c = await catalog(api);
+  const c = await datapackCatalog(api, { refresh: true });
   if (!profile.world) throw new Error('для переноса выберите мир: tfc init --world <мир>');
   if (!c.snapshot) throw new Error('сначала опубликуйте снимок сборки');
   const all = !names.length || (names.length === 1 && names[0] === 'all');
   const local = localDatapacks(profile);
-  let selected = await resolveNames(api, c, action === 'confirm' ? c.items : c.deployed, names);
+  let selected = await resolveDatapacks(api, c, action === 'confirm' ? c.items : c.deployed, names);
   const items = [];
   if (action === 'confirm') {
     if (!profile.world) throw new Error('выберите мир с проверенными датапаками: tfc init --world <мир>');

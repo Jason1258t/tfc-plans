@@ -158,3 +158,10 @@ Personal configs (absolute paths, keys) stay out of git; commit a shared one onl
   conflicts there are resolved by keeping both sides' rules.
 - Dev servers: one port per session (5176, 5177, 5179); a taken port means another agent is running — pick the next.
 - Firestore reads are shared (50k/day free) — the "don't loop" rule matters more with several agents.
+
+## Datapack authoring and delivery
+
+Follow [agents-datapacks.md](agents-datapacks.md): editable sources are site cards via MCP `datapack_put` with
+current card revisions. `datapacks_inventory` and `datapack_pack_get` read the live snapshot/exact ZIP, including
+legacy sources. Give the host `tfc datapacks pull <id>` instead of a manual path into KubeJS. World testing and
+host confirmation remain separate from writing a draft.

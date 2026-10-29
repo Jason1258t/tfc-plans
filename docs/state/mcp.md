@@ -114,6 +114,13 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   with a temporary datapack (create, refusals on bad JSON/path and stale revision, upsert/rename/remove, dry_run,
   pinned notice via a fixture `kubejs.json`), then deleted it; scripts' `--upload` not run against Firestore.
 
+- Dev #154 (2026-10-29): audited datapack_put (dev #153): revision CAS, author preservation, draft/pin distinction
+  and cache invalidation are present. Added read-only `datapacks_inventory` (live server, optional source refresh)
+  and `datapack_pack_get` (exact snapshot ZIP/files + SHA256, including legacy ZIPs without cards). Draft editing
+  keeps using current `datapack_get` revision. Fixed shared path validation (`..`, empty segments), own block-tags
+  masking missing item/fluid warnings, and outdated duplicate-name wording. Checks: stdio against a temporary pack
+  server plus validator fixtures; no production source cards modified. Authoring guide: `docs/agents-datapacks.md`.
+
 - **2026-10-29, dev attachments** (dev #155): `dev_get` queries Firestore files bound to `dev:<id>`;
   `dev_file_get` returns verified local files and inline images. The dev MCP transport now supports image content.
   Verified over stdio against task #150 (WebP screenshot), an attachment-free task, ownership refusal, and

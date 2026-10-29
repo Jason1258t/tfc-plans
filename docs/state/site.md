@@ -639,3 +639,7 @@ the step is centred.
   version active and the UI explains retesting through `tfc datapacks unconfirm`. Labels follow the published
   snapshot and can lag the server's build queue. Checked existing live source cards plus a separate local confirmed
   fixture on desktop/375 px; no shared source records were modified.
+
+- Dev #154 (2026-10-29): shared datapack validation now rejects empty/dot/parent path segments before export/write,
+  matching CLI delivery. An own block-tag no longer hides a missing item/fluid-tag warning in the recipe editor.
+  MCP uses the same path validation and tag-kind rule. Verified with invalid-path and tag-kind fixtures, TypeScript.
