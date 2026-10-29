@@ -12,7 +12,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { deploymentsOf } from './datapacks.mjs';
+import { deploymentsOf, inspectDatapack } from './datapacks.mjs';
 import { classifyPath } from './paths.mjs';
 import { HttpError, readJson, SHA256_RE, writeJsonAtomic } from './util.mjs';
 
@@ -176,6 +176,22 @@ export async function openStore(dataDir, { maxBlobSize, maxTotalBytes, minFreeBy
           if (!old) throw new HttpError(400, 'Нет файла подтверждённого датапака');
           files.push(old);
         }
+      }
+      if (deployments.length) {
+        const kept = [];
+        for (const f of files) {
+          let duplicate = false;
+          if (/^world\/datapacks\/[^/]+\.zip$/.test(f.path ?? '') && blobs.has(f.sha256)) {
+            try {
+              const content = inspectDatapack(await fsp.readFile(blobPath(f.sha256))).contentHash;
+              duplicate = deployments.some((d) => d.contentHash === content);
+            } catch {
+              /* Неизвестный или повреждённый ZIP оставляем. */
+            }
+          }
+          if (!duplicate) kept.push(f);
+        }
+        files = kept;
       }
       const problems = [];
       const missing = [];
