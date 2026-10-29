@@ -5,8 +5,8 @@
  * пустые строки, время мира — cli/lib/noise.mjs), или это клиентский конфиг, в снимок идёт версия сервера.
  */
 import fs from 'node:fs';
-import { deploymentsOf } from '../../server/pack-server/lib/datapacks.mjs';
-import { isClientConfig } from '../../server/pack-server/lib/paths.mjs';
+import { deploymentsOf } from '@tfc/pack-server/datapacks';
+import { isClientConfig } from '@tfc/pack-server/paths';
 import { hasMeaning, meaningKey } from './noise.mjs';
 import { normsOf, saveState, loadState } from './plan.mjs';
 import { bold, confirm, dim, interactive, mb, progress, yellow } from './ui.mjs';

@@ -14,8 +14,31 @@ schematics, datapacks, recipes, reference, world map, pack updates.
   [docs/mcp.md](docs/mcp.md); addons — [docs/addons.md](docs/addons.md) (+ `tools/AGENTS.md`); pack server —
   [docs/pack-server.md](docs/pack-server.md); `tfc` app — [docs/tfc-app.md](docs/tfc-app.md); feature plans —
   `docs/plans/`; human docs — README.md.
-- Folders with their own short rules: `scripts/AGENTS.md`, `scripts/mcp/AGENTS.md`, `server/AGENTS.md`,
-  `tools/AGENTS.md` — read the one for the folder you edit.
+- Folders with their own short rules: `packages/core/AGENTS.md`, `scripts/AGENTS.md`, `scripts/mcp/AGENTS.md`,
+  `cli/AGENTS.md`, `server/AGENTS.md`, `tools/AGENTS.md` — read the one for the folder you edit.
+
+## Packages (npm workspaces, dev task #138)
+
+One repo, several packages; each has its own `package.json` (own dependencies) and may later become its own repo
+(`git subtree split --prefix=<folder>`, as was done for addons).
+
+| Package            | Folder               | What                                                      | Takes from             |
+| ------------------ | -------------------- | --------------------------------------------------------- | ---------------------- |
+| site (root)        | `src/`, root configs | the site (Vite, Firebase)                                 | core                   |
+| `@tfc/core`        | `packages/core`      | formats and pure functions the site **and** Node run      | —                      |
+| `@tfc/scripts`     | `scripts/`           | data builders, MCP `tfc-pack` and `tfc-plans-dev`, deploy | core, cli, pack-server |
+| `@tfc/cli`         | `cli/`               | the `tfc` app                                             | core, pack-server      |
+| `@tfc/pack-server` | `server/pack-server` | pack server (VPS, no npm dependencies)                    | —                      |
+| `@tfc/file-server` | `server/file-server` | file server (VPS, no npm dependencies)                    | —                      |
+| addons             | `tools/` (submodule) | repo tfc-addons, see below                                | —                      |
+
+- Another package's code — only as `@tfc/<package>/<module>` (`exports` in its `package.json`: core `./src/*.ts`,
+  scripts `./*.mjs`, cli and pack-server `./lib/*.mjs`), never `../other-folder/…`. A new external dependency goes into
+  the `package.json` of the package that imports it (the site's — the root one). Check: `npm run boundaries`
+  (`scripts/repo-boundaries.mjs`; also run by CI and the `ship` tool). A deliberate exception — comment
+  `граница-ок: <почему>` on or above the import line (now: pack-server `worker.mjs` → scripts, file-server `auth.mjs`
+  → pack-server; both because the servers are installed on the VPS by copying a folder, without npm).
+- `npm install` / `npm ci` — always in the repo root (workspaces); never inside a package folder.
 
 ## Language
 
@@ -118,13 +141,14 @@ npm run dev            # Vite; mod data from the pack server first (scripts/ensu
 npm run dev -- --port 5176 --strictPort   # preview port for agents (5177 if busy); offline — TFC_KEEP_MODS=1
 npm run pack:fetch     # pack jars → ~/.cache/tfc-plans/pack (outside the repo) for MCP, npm run mods, addons
 npx tsc -b             # types (part of build)
-npx oxlint src scripts packages # lint (= npm run lint); old set-state-in-effect / only-export-components warnings — don't fix in passing
+npm run lint           # oxlint src scripts packages cli server; old set-state-in-effect / only-export-components warnings — don't fix in passing
 npx prettier --write <files>   # singleQuote, printWidth 120; don't run on all of src
 npm run deploy:site    # deploy the site; pack data on Hosting stays as the pack server published it (no jars; works from a worktree)
 # npx firebase deploy --only hosting — blocked (would upload local pack data); pack data → pack server, see docs/pack-server.md
 npx firebase deploy --only firestore:rules
 npm run ui:classes -- --css <file>   # where CSS classes are used (own / shared / dead / library) — skill css-modules
 npm run ui:boundaries                # FSD layer imports: shared must not import pages/entities, pages must not import app
+npm run boundaries                   # package boundaries: no ../other-package imports, dependencies declared per package
 npm run ui:shots -- capture before --only <page>   # desktop+mobile screenshots; then `capture after`, `diff before after`
 npm run mods | serverconfig | kubejs | world | pack | guides | pack:fetch | pack:publish | freshness   # see docs/architecture.md
 ```

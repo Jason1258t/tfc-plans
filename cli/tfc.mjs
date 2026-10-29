@@ -6,7 +6,7 @@
  */
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { isPackDatapackPath } from '../server/pack-server/lib/datapacks.mjs';
+import { isPackDatapackPath } from '@tfc/pack-server/datapacks';
 import { Api } from './lib/api.mjs';
 import { configFile, currentProfile, DEFAULT_SERVER, loadConfig, saveConfig } from './lib/config.mjs';
 import { detectVersions, findInstances, findWorlds, gameDirOf, isDir, isServerDir } from './lib/detect.mjs';
@@ -788,7 +788,7 @@ async function cmdBuild(v, parts) {
   const msg = 'сборка данных доступна только из папки проекта сайта (npm run tfc -- build)';
   if (BUILD) throw new Error(msg);
   const profile = currentProfile(loadConfig(), v.profile);
-  const packModule = '../scripts/pack.mjs';
+  const packModule = '@tfc/scripts/pack';
   let runPack;
   try {
     ({ runPack } = await import(packModule));

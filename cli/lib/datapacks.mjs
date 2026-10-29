@@ -9,7 +9,7 @@ import {
   isPackDatapackPath,
   packDatapackPath,
   worldDatapackPath,
-} from '../../server/pack-server/lib/datapacks.mjs';
+} from '@tfc/pack-server/datapacks';
 import { datapackFiles, zipName } from '@tfc/core/datapackFiles';
 import { confirm, dim, interactive } from './ui.mjs';
 

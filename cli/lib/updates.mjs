@@ -7,7 +7,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { classifyPath } from '../../server/pack-server/lib/paths.mjs';
+import { classifyPath } from '@tfc/pack-server/paths';
 import { loadState, saveState } from './plan.mjs';
 import { localPath, sha256File } from './scan.mjs';
 import { assertNotLocked, beginBackup, editBackup, finishBackup, toBackup } from './sync.mjs';

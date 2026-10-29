@@ -66,7 +66,7 @@ function lintGate(root, wt, branch) {
   const base = process.env.TFC_LINT_TOOLS ? path.resolve(process.env.TFC_LINT_TOOLS) : path.join(root, 'node_modules');
   const ox = path.join(base, 'oxlint', 'bin', 'oxlint');
   const pr = path.join(base, 'prettier', 'bin', 'prettier.cjs');
-  const lintFiles = files.filter((f) => /^(src|scripts|packages)\/.*\.(ts|tsx|js|jsx|mjs|cjs)$/.test(f));
+  const lintFiles = files.filter((f) => /^(src|scripts|packages|cli|server)\/.*\.(ts|tsx|js|jsx|mjs|cjs)$/.test(f));
   const fmtFiles = files.filter(
     (f) => /\.(ts|tsx|js|jsx|mjs|cjs|css|json|md|yaml|yml)$/.test(f) && f !== 'package-lock.json',
   );
@@ -82,6 +82,12 @@ function lintGate(root, wt, branch) {
       const r = runBin(node, [pr, '--check', ...fmtFiles], wt);
       if (!r.ok) problems.push(`prettier --check:\n${(r.err || r.out).slice(0, 1500)}`);
     } else problems.push('prettier не установлен — npm install в основной копии');
+  }
+  // Границы пакетов @tfc/* (scripts/repo-boundaries.mjs ветки): относительные импорты не выходят из пакета
+  const bounds = path.join(wt, 'scripts', 'repo-boundaries.mjs');
+  if (fs.existsSync(bounds) && files.some((f) => /\.(ts|tsx|js|mjs|cjs|json)$/.test(f))) {
+    const r = runBin(node, [bounds], wt);
+    if (!r.ok) problems.push(`границы пакетов:\n${(r.err || r.out).slice(0, 1500)}`);
   }
   return problems;
 }

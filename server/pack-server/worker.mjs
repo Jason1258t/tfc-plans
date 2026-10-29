@@ -28,7 +28,9 @@ const snapDir = (id) => path.join(DATA, 'data', id);
 // Генератор объёмных иконок (MCP) читает jar из TFC_MODS_DIR, путь берётся при загрузке модуля — поэтому до импорта
 // разборщиков; без него он искал бы jar в mods/ копии репозитория, где их нет
 process.env.TFC_MODS_DIR = path.join(DATA, 'work', spec.snapshot, 'mods');
+// граница-ок: worker запускается только в полной копии репозитория (код разборщиков), не в /opt/tfc-pack, где нет npm
 const { runPack } = await import('../../scripts/pack.mjs');
+// граница-ок: то же
 const { dataFiles, publishData } = await import('../../scripts/publish-data.mjs');
 
 /** Снимок → папка версии из жёстких ссылок на blobs. Блоб — только чтение: разборщик его не испортит */

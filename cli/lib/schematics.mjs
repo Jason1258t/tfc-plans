@@ -1,7 +1,7 @@
 /** Библиотека и локальные схемы Create. Ник папки uploaded обозначает копию, а не автора. */
 import fs from 'node:fs';
 import path from 'node:path';
-import { inspectSchematic, SCHEMATIC_MAX } from '../../server/pack-server/lib/schematic-nbt.mjs';
+import { inspectSchematic, SCHEMATIC_MAX } from '@tfc/pack-server/schematic-nbt';
 import { schematicTargets } from './pull.mjs';
 import { loadState } from './plan.mjs';
 import { bold, dim, confirm, mb } from './ui.mjs';

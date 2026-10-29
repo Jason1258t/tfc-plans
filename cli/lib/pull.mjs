@@ -22,7 +22,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { deploymentsOf, inspectDatapack, worldDatapackPath } from '../../server/pack-server/lib/datapacks.mjs';
+import { deploymentsOf, inspectDatapack, worldDatapackPath } from '@tfc/pack-server/datapacks';
 import { strToU8, zipSync } from 'fflate';
 import { datapackFiles, zipName } from '@tfc/core/datapackFiles';
 import { schematicFromLibrary } from '@tfc/core/schematicFile';

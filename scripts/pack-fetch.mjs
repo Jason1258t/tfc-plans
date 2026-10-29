@@ -22,7 +22,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadConfig } from '../cli/lib/config.mjs';
+import { loadConfig } from '@tfc/cli/config';
 import { ROOT } from './firestore-rest.mjs';
 import { MODS_OUTPUTS } from './data-roots.mjs';
 import { PACK_CACHE, mainCheckoutRoot } from './pack-cache.mjs';
