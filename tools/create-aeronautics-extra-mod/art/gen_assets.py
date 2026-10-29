@@ -7,15 +7,14 @@
   на стороне −Z (наверху, когда блок стоит валом вбок).
 Клеммы — те же числа, что Terminals.CENTERS и Terminals.Y; совпадение с точками проводов во всех положениях проверяет
 art/CheckNodes.java (./check-nodes.sh).
-Предметы-модули — плоские иконки 16×16 (item/generated).
+Предметы-модули — готовые текстуры 32×32 (item/generated), исходники и запросы — art/sources и art/modules.md.
 """
 import copy
 import json
 import os
 
 import kit
-from kit import BLUE, BRASS, COPPER, DARKER, EDGE, RED, RUBBER, Mat, Model, hexc, shade
-from png import write
+from kit import BLUE, BRASS, DARKER, EDGE, RED, RUBBER, Mat, Model, hexc, shade
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RES = os.path.join(HERE, '..', 'src', 'main', 'resources', 'assets', 'create_aeronautics_extra')
@@ -127,62 +126,6 @@ def computer():
     return m
 
 
-# ---------------------------------------------------------------- иконки модулей 16×16
-
-T = (0, 0, 0, 0)
-
-
-def icon(rows, pal):
-    return [[pal[ch] if ch != '.' else T for ch in row] for row in rows]
-
-
-GENERATOR_ICON = [
-    '................',
-    '..bbbbbbbbbbbb..',
-    '.bsssssssssssdb.',
-    '.bsccccccccccdb.',
-    '.bscrrrrrrrrcdb.',
-    '.bscrmmmmmmrcdb.',
-    '.bscrmsSSsmrcdb.',
-    '.bscrmSkkSmrcdb.',
-    '.bscrmSkkSmrcdb.',
-    '.bscrmsSSsmrcdb.',
-    '.bscrmmmmmmrcdb.',
-    '.bscrrrrrrrrcdb.',
-    '.bsccccccccccdb.',
-    '.bddddddddddddb.',
-    '..bbbbbbbbbbbb..',
-    '................',
-]
-GENERATOR_PAL = {
-    'b': BODY_PAL[0], 's': BODY_PAL[2], 'd': BODY_PAL[1], 'c': COPPER[1], 'r': COPPER[3],
-    'm': hexc('6c7173'), 'S': hexc('b9bec0'), 'k': hexc('2b2d2c'),
-}
-
-BATTERY_ICON = [
-    '................',
-    '...pp......nn...',
-    '...PP......NN...',
-    '.bbbbbbbbbbbbbb.',
-    '.bhhhhhhhhhhhhb.',
-    '.bssssssssssssb.',
-    '.bsBBBBBBBBBBsb.',
-    '.bsBggggggggBsb.',
-    '.bsBggggggggBsb.',
-    '.bsBBBBBBBBBBsb.',
-    '.bssssssssssssb.',
-    '.bsllllllllllsb.',
-    '.bssssssssssssb.',
-    '.bddddddddddddb.',
-    '.bbbbbbbbbbbbbb.',
-    '................',
-]
-BATTERY_PAL = {
-    'b': BODY_PAL[0], 'h': BRASS[2], 's': BODY_PAL[2], 'd': BODY_PAL[1], 'B': BRASS[1], 'g': LAMP_GREEN,
-    'l': BRASS[0], 'p': RED[3], 'P': RED[1], 'n': BLUE[3], 'N': BLUE[1],
-}
-
-
 # ---------------------------------------------------------------- вывод
 
 
@@ -220,8 +163,10 @@ for facing, rot in ROT.items():
                 'model': f'{NS}:block/{name}/' + ('block_roll' if rolled else 'block'), **rot}
 dump({'variants': variants}, 'blockstates', name + '.json')
 
-for item, rows, pal in (('generator_module', GENERATOR_ICON, GENERATOR_PAL), ('battery_module', BATTERY_ICON, BATTERY_PAL)):
-    write(os.path.join(RES, 'textures', 'item', item + '.png'), icon(rows, pal))
+# Рисунки хранятся готовыми: сборка моделей не должна заменять их процедурными значками.
+for item in ('generator_module', 'battery_module'):
+    if not os.path.isfile(os.path.join(RES, 'textures', 'item', item + '.png')):
+        raise FileNotFoundError(f'Нет готовой текстуры {item}; восстановите её из git (см. art/modules.md)')
     dump({'parent': 'minecraft:item/generated', 'textures': {'layer0': f'{NS}:item/{item}'}}, 'models', 'item', item + '.json')
 
 print('готово:', os.path.normpath(RES))
