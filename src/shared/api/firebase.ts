@@ -61,3 +61,10 @@ export const authReady: Promise<void> = auth
       (e) => console.warn('Анонимный вход не удался (включите Anonymous в Firebase Auth):', e),
     )
   : Promise.resolve();
+
+// Диагностика только по явной ссылке; значения токенов в журнал не попадают.
+if (new URLSearchParams(location.search).get('firebaseDebug') === '1') {
+  void import('./firebaseDebug').then(({ diagnoseFirebase }) =>
+    diagnoseFirebase({ app, appCheck, auth, authReady, db }),
+  );
+}

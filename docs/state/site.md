@@ -578,3 +578,11 @@ the step is centred.
   task (someone else's report is not overwritten, a new doc «Анализ интеграции: …» is added). MCP can't read jars
   outside `mods/` — candidates are read by `unzip`/`javap` for now (skill step 7). Step 1 tried on «химия»; not yet run
   end to end on a real candidate.
+
+## Firebase diagnostics
+
+- Dev #137 (2026-10-29): `?firebaseDebug=1` opts into console diagnostics of anonymous Auth, forced App Check
+  refresh, and a read of the same reserved schematic document via Firestore SDK and REST. No writes, token values,
+  document content or user identifiers are logged. Normal links do not load the diagnostic module.
+- Production rules match the repository; anonymous Auth is enabled. At the first IAB failure (10:10 UTC), App Check
+  metrics show Auth VALID/ALLOW and four Firestore INVALID/DENY requests; the exact transport cause is under study.
