@@ -123,6 +123,11 @@ BE, on the item as data component `charge`. Device `OnboardDevice` is stateless 
   battery-to-battery over wires, restart, drops. `SABLE=1` (server on NeoForge 21.1.251 + sable jar): `/sable assemble
 area` of the stand — keeps working on the plot. Terminals 24/24. Not checked in game.
 
+- **Texture sources (dev #135, 2026-10-29):** battery and generator modules replaced with 32×32 pixel sprites,
+  matching the dark steel/copper palette of Electro Energetics 1.1.2. ImageGen originals and prompts in
+  `art/sources/` and `art/modules.md`; generator preserves finished item PNGs. Prepared for the next release;
+  published 1.0.0 unchanged. Client appearance not checked in game. Pyrofuel remains for the next stage.
+
 ## IE Extras (`tools/ie-extras-mod`, 2026-10-23)
 
 Blocks and features for Immersive Engineering (task «Аддон для блоков и функций IE», group «Разработка»; the user's first
