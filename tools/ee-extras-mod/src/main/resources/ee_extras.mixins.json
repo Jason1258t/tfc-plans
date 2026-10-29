@@ -1,9 +1,0 @@
-{
-  "required": false,
-  "minVersion": "0.8",
-  "package": "ee.extras.mixin",
-  "compatibilityLevel": "JAVA_21",
-  "mixins": ["WirePointsRawMixin"],
-  "client": ["WireVisualMixin", "BundledWirePreviewMixin"],
-  "injectors": { "defaultRequire": 0 }
-}

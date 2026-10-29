@@ -16,6 +16,9 @@ Details live in [docs/addons.md](../../../docs/addons.md) (environment, versions
   when the idea is "borrow X from mod Y".
 - Own worktree and branch (`feat/<addon>-<short>`), never the main checkout. Another session may be editing the same
   addon — check `git -C /Users/ivan/vscodeProjects/tfc-taskmanager branch` / `worktree list`; don't touch its folder.
+- `tools/` is the submodule of the [tfc-addons](https://github.com/Jason1258t/tfc-addons) repo (AGENTS.md
+  «Addons are their own repo»): `git -C tools switch -c feat/<addon>-<short> origin/main` before the first edit;
+  addon commits go there (`Аддон <mod>: что сделано`), the tfc-plans branch only gets the `tools` pointer.
 
 ## 2. Is it an addon at all?
 

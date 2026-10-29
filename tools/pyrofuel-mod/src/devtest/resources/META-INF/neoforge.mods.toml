@@ -1,7 +1,0 @@
-modLoader="javafml"
-loaderVersion="[2,)"
-license="MIT"
-[[mods]]
-modId="pyrofuel_devtest"
-version="1.0.0"
-displayName="Проверка пиротоплива"

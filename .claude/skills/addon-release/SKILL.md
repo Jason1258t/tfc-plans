@@ -7,13 +7,13 @@ description: Release a pack addon (tools/<mod>) to the site — bump version, bu
 
 An addon on the site:
 
-| What | Where | Who reads it |
-| --- | --- | --- |
-| jar | **pack server** blob by sha256 (all versions; not in git — `tools/*/*.jar` is ignored); the fresh build sits in `tools/<mod>/<jar>` locally | `tfc pull addons [<mod>@<ver>]` (key); the current one is copied to `/addons/` by `scripts/addons-index.mjs` (from `tools/`, else by the card's sha256 from cache / pack server / site) |
-| version | Firestore `addonVersions/{mod}@{ver}`: date, status draft/released/withdrawn, jar {file, sha256, size}, **changelog** (Russian, for players, «what changed since the previous version»), checked + checkedNote; revisions kept | page tab «Версии», `/site/addons` on the pack server for `tfc`, pack-update records and patch notes |
-| card | `tools/<mod>/addon.json`: id, name, version, jar, sha256, order, side, summary, needs, replaces?, formerIds?, unlisted?, blocks (id, name, image, recipe) | site list `/addons`, page header, `::addon-block` widget, `/addons/index.json` for `tfc pull addons` without a key |
-| icons | `tools/<mod>/icons/*.png` (192 px, drawn by `release.sh` via `scripts/mcp/render.mjs`) | `/addons/icons/<mod>/` |
-| page | Firestore guide `addon-<mod>` (mod id with `_` → `-`), `section: addon` | `/addons/<mod>`, edited by players on the site |
+| What    | Where                                                                                                                                                                                                                          | Who reads it                                                                                                                                                                            |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| jar     | **pack server** blob by sha256 (all versions; not in git — `tools/*/*.jar` is ignored); the fresh build sits in `tools/<mod>/<jar>` locally                                                                                    | `tfc pull addons [<mod>@<ver>]` (key); the current one is copied to `/addons/` by `scripts/addons-index.mjs` (from `tools/`, else by the card's sha256 from cache / pack server / site) |
+| version | Firestore `addonVersions/{mod}@{ver}`: date, status draft/released/withdrawn, jar {file, sha256, size}, **changelog** (Russian, for players, «what changed since the previous version»), checked + checkedNote; revisions kept | page tab «Версии», `/site/addons` on the pack server for `tfc`, pack-update records and patch notes                                                                                     |
+| card    | `tools/<mod>/addon.json`: id, name, version, jar, sha256, order, side, summary, needs, replaces?, formerIds?, unlisted?, blocks (id, name, image, recipe)                                                                      | site list `/addons`, page header, `::addon-block` widget, `/addons/index.json` for `tfc pull addons` without a key                                                                      |
+| icons   | `tools/<mod>/icons/*.png` (192 px, drawn by `release.sh` via `scripts/mcp/render.mjs`)                                                                                                                                         | `/addons/icons/<mod>/`                                                                                                                                                                  |
+| page    | Firestore guide `addon-<mod>` (mod id with `_` → `-`), `section: addon`                                                                                                                                                        | `/addons/<mod>`, edited by players on the site                                                                                                                                          |
 
 Work in a worktree (AGENTS.md). Game facts — from jars via MCP; nothing is checked in game.
 
@@ -67,8 +67,11 @@ Work in a worktree (AGENTS.md). Game facts — from jars via MCP; nothing is che
 ## 6. Ship
 
 - Update `docs/state/addons.md` (version, what changed, how verified) and the `docs/addons.md` table row.
-- Commit (`Аддоны: <мод> <версия> — …`), then the `ship` skill: merge → `npm run deploy:site` from `main` (prebuild
-  copies the jar and icons) → push. `addon_check` afterwards reports «на сайте <версия> — задеплоено».
+- Addon repo first: in `tools/` commit (`Аддон <мод> <версия>: …`), `git -C tools push origin HEAD:main` (fast-forward;
+  otherwise merge `origin/main` into your branch there, re-check, push). Then in the tfc-plans worktree commit the
+  new `tools` pointer with the docs (`Аддоны: <мод> <версия> — …`), then the `ship` skill: merge →
+  `npm run deploy:site` from `main` (prebuild copies the jar and icons) → push. `ship` refuses a pointer that is not
+  on tfc-addons `origin/main`. `addon_check` afterwards reports «на сайте <версия> — задеплоено».
 - Report: the host installs it with `tfc pull addons` (or the jar from `/addons/<mod>`) on the server and players;
   a broken version — status «отозвана» on the site (tfc rolls back to the previous released one);
   add to docs/state/pending.md what waits for the host or an in-game check.

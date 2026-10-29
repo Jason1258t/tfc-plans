@@ -11,6 +11,7 @@
  * (предупреждение), сборка сайта не останавливается. Так же не попадают повтор id, имя jar, которое tfc не примет,
  * и unlisted (jar на сайте есть, но всем его не ставить).
  */
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -127,7 +128,29 @@ export async function addonsIndex(
   return { addons, missing, warnings };
 }
 
+/**
+ * Аддоны — submodule tools/ (репозиторий tfc-addons). В свежем ворктри он пуст: подтянуть, а если не вышло —
+ * остановиться: пустой список карточек убрал бы аддоны с сайта при выкладке.
+ */
+function ensureAddons(root) {
+  const tools = path.join(root, 'tools');
+  const has = () =>
+    fs.existsSync(tools) && fs.readdirSync(tools).some((d) => fs.existsSync(path.join(tools, d, 'addon.json')));
+  if (has() || !fs.existsSync(path.join(root, '.gitmodules'))) return;
+  console.log('[addons] tools/ пуст — git submodule update --init tools');
+  try {
+    execFileSync('git', ['submodule', 'update', '--init', 'tools'], { cwd: root, stdio: 'inherit' });
+  } catch {
+    // ниже — понятная ошибка
+  }
+  if (!has()) {
+    console.error('[addons] нет карточек аддонов в tools/ (submodule tfc-addons): git submodule update --init tools');
+    process.exit(1);
+  }
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  ensureAddons(ROOT);
   const { packServer } = await import('./pack-fetch.mjs');
   const { addons, missing, warnings } = await addonsIndex(ROOT, DIR, { srv: packServer() });
   for (const w of warnings) console.warn(`[addons] ${w}`);

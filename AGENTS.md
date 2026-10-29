@@ -32,6 +32,12 @@ comments, commit messages, guides, MCP tool output. Keep Russian UI labels verba
   `/Users/ivan/vscodeProjects/tfc-taskmanager` stays on `main`: never edit or switch branches there. Without a worktree
   — read and answer only. Before editing shared agent files (`AGENTS.md`, skills, `docs/mcp.md`) check
   `git worktree list` / `git log main..<branch>` of other worktrees for the same files.
+- **Addons are their own repo** — [tfc-addons](https://github.com/Jason1258t/tfc-addons), checked out as the `tools/`
+  git submodule (all `tools/<mod>` paths stay the same). `tfc-plans-dev` `worktree_add` fills it; after a plain
+  `git worktree add` run `git submodule update --init tools` (the site build does it too and stops if it can't).
+  Editing an addon: branch inside `tools/` (`git -C tools switch -c feat/<short> origin/main`), commit there, push and
+  get it into `main` of tfc-addons, then commit the new `tools` pointer here. `ship` refuses a pointer that is not on
+  tfc-addons `origin/main` and uncommitted/unpushed work in `tools/`.
 - **Lint and format are mandatory** before commit: `npm run lint` (zero errors) and format your changed files
   with `npx prettier --write <files>` (or `npm run format -- <files>`). The `ship` tool (tfc-plans-dev) refuses to merge if the
   branch changed files fail `oxlint` or `prettier --check`; CI (`.github/workflows/ci.yml`) repeats `oxlint`, `tsc` and a changed-file `prettier --check` on every push to `main`.

@@ -1,7 +1,0 @@
-{
-  "block.ie_extras.analog_heater": "Analog Heater",
-  "block.ie_extras.analog_heater.tooltip": "Electric heater for the crucible and other TFC heat devices: heats the block in front of its grille, like a forge heats a crucible above it.",
-  "block.ie_extras.analog_heater.tooltip.more": "Temperature follows redstone signal strength: 15 → %s °C (analog lever, comparator). FE from any face but the grille; up to %s FE/t at signal 15. Grille faces away from the player, Shift — towards. A comparator reads the temperature.",
-  "block.ie_extras.analog_heater.status": "Heater: %s °C → target %s °C (signal %s/15), stored %s FE",
-  "block.ie_extras.analog_heater.status.no_power": "Heater: %s °C, target %s °C (signal %s/15) — not enough energy, cooling (stored %s FE)"
-}

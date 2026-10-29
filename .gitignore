@@ -73,6 +73,3 @@ __pycache__/
 server/file-server/data/
 server/pack-server/data/
 out/
-
-# jar аддонов — не в git: все версии на сервере сборки (tfc admin addon upload), текущий — по sha256 из addon.json
-tools/*/*.jar

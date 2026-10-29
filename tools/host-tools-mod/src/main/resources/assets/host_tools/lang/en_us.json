@@ -1,6 +1,0 @@
-{
-  "host_tools.tab.ping": "%s ms",
-  "host_tools.menu.close_lan": "Close LAN World",
-  "host_tools.closed": "World closed to LAN",
-  "host_tools.closed.kicked": "World closed to LAN, players disconnected: %s"
-}
