@@ -1,7 +1,8 @@
 # IE Extras (`ie_extras`)
 
 Блоки и функции к Immersive Engineering для сборки TFC Планы. Ставится на сервер и всем игрокам (новый блок).
-Зависимости: NeoForge 21.1.234+, TFC 4.2.9, Immersive Engineering 12.4.2.
+Зависимости: NeoForge 21.1.234+, TFC 4.2.9, Immersive Engineering 12.4.2; нагрев чаши — при Create 6.0.10 и WoodenCog 1.2.18
+(необязательные).
 
 ## Аналоговый нагреватель (`ie_extras:analog_heater`, 1.0.0)
 
@@ -26,13 +27,41 @@
 Внешний вид — текстуры внешнего нагревателя IE (решётка, розетка) по ссылке на IE и своя боковая панель с прибором
 (`art/gen_assets.py`).
 
+## Нагрев чаши Create (1.1.0)
+
+WoodenCog 1.2.18 (`MixinBasinBlockEntity.getHeatSourceTemperature`) берёт температуру чаши только у блока под ней: угольный
+горн, горелка всполоха (`BlazeBurnerBlockentityExtended`), жаровня (/2), горелки CCA/CLH/CMB, датапак
+`woodencog:temperature`. Нагреватель EE, внешний нагреватель IE и аналоговый — 0 °C: предметы TFC не греются
+(`ItemHeatingBehaviour`), рецепты WoodenCog (`HeatedBasinRecipe.apply` → `testSourceTemp`) не идут, строки в очках нет.
+
+`mixin/BasinBlockEntityMixin` (приоритет 1100 — после WoodenCog 1000; только при create + woodencog,
+`IeExtrasMixinPlugin`), логика — `basin/BasinHeaters`:
+
+- `getHeatSourceTemperature` (метод, который добавляет WoodenCog) @RETURN — большая из своей и нашей: внешний
+  нагреватель IE (`IExternalHeatable` на `create:basin`, с любой стороны; как тигель в TFC + IE Crossover: красный камень
+  выключает, 20 FE/т, 2000 °C, держится 5 тиков после последнего тика нагревателя; синхронизируется клиенту в
+  `write`/`read`), аналоговый нагреватель под чашей решёткой вверх, любой блок под чашей с уровнем нагрева Create
+  (`getHeatLevelOf`: нагреватель EE — свойство HEAT_LEVEL) → `CogUtil.heatLevelToTemp` (750/1350/2000 из
+  `woodencog-common.toml`).
+- `getHeatLevel` @RETURN — уровень Create (heated/superheated) от внешнего и аналогового нагревателя по
+  `CogUtil.tempToHeatLevel`; у нагревателя EE уровень и так в свойстве блока (SEETHING — с `ee-overheat`).
+- Sable вешает на `getHeatLevel` отмену после `getHeatLevelOf`, только если сам нашёл нагрев под чашей на корабле.
+
+Настройки: раздел `basin` (`externalHeaterTemperature` 2000, `externalHeaterFePerTick` 20).
+
 ## Устройство папки
 
-`./libs.sh` — TFC, Patchouli, IE из jar сборки (кеш снимка, `npm run pack:fetch`) (только для компиляции и сервера разработки). `./release.sh` —
+`./libs.sh` — TFC, Patchouli, IE, Create, WoodenCog (и EE + EE Overheat для проверки) из jar сборки (кеш снимка, `npm run pack:fetch`) (только для компиляции и сервера разработки). `./release.sh` —
 ресурсы, сборка, jar и иконка. `./test-server.sh` — сервер разработки (TFC + IE, RCON 25597) и проверочный мод
 `src/devtest` (`/ietest`).
 
 ## Что проверено
+
+1.1.0 (2026-10-29), сервер разработки (+ Create 6.0.10, WoodenCog 1.2.18, EE 1.1.2, EE Overheat 1.0.0), `/ietest basin …`,
+чаша с медным слитком: без источника 0 °C / NONE; внешний нагреватель IE сбоку — 2000 °C, SEETHING, слиток 181 → 559 °C,
+запас держится (20 FE/т); с блоком красного камня у нагревателя — 0 °C, неактивен; аналоговый на сигнале 15 — 1600 °C,
+KINDLED, слиток 1071 °C; EE heat 0,5 → 750 °C FADING, 0,7 → 1350 °C KINDLED, 0,95 → 2000 °C SEETHING, 0 → 0 °C.
+Не проверено: подсказка очков (клиентская), настоящие рецепты в чаше, чаша на корабле Sable.
 
 1.0.0 (2026-10-23), сервер разработки (`./test-server.sh`, NeoForge 21.1.251, TFC 4.2.9, IE 12.4.2), тигель TFC с медным
 слитком над нагревателем, сигнал — компаратор от сундука:

@@ -163,6 +163,15 @@ candidate — a heater regulated by an analog lever). Depends on TFC 4.2.9 + IE 
   vanilla comparator placed before its input container keeps `OutputSignal` 0 until a neighbour changes (devtest places
   the comparator first). Pack metals above 1600 °C: only tfc_alloy_ext inferior aluminum (1653); IE aluminum is
   1550 via `kubejs/data`.
+- **1.1.0** (2026-10-29, dev #113): Create basin heating with WoodenCog 1.2.18. WoodenCog only reads the block under
+  the basin (charcoal forge, blaze burner, firepit, CCA/CLH/CMB burners) → EE heater, IE external heater and the analog
+  heater gave 0 °C (no item heating, no heated WoodenCog recipes, no goggle line). Mixin on `BasinBlockEntity`
+  (priority 1100, only with create + woodencog): injects into WoodenCog's merged `getHeatSourceTemperature` and Create's
+  `getHeatLevel` — IE external heater from any side (`IExternalHeatable` on `create:basin`, 20 FE/t, 2000 °C, redstone
+  turns it off, like the TFC-IE Crossover crucible), analog heater under the basin facing up, any block whose Create heat
+  level isn't NONE (EE heater) → WoodenCog level temperature 750/1350/2000. Config section `basin`. Dev server (Create,
+  WoodenCog, EE + ee-overheat added to `libs.sh`), `/ietest basin none|ie|ie_rs|analog|ee <heat>`: all values as
+  expected (README). Not in game: goggle line on the client, real basin recipes, basin on a Sable ship.
 
 ## Miner Tools (`tools/miner-tools-mod`, 2026-10-21)
 

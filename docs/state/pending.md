@@ -63,7 +63,9 @@ its one-liner in STATE.md.
   installs (`tfc pull addons`, server and players) and `tfc publish`. In game: block looks and rotating half-shaft,
   goggles and tooltips, module insert/remove by hand, JEI/EMI recipes, the block on a flying Aeronautics ship with
   propellers. Details — [addons.md](addons.md).
-- **IE Extras 1.0.0** (2026-10-23, `ie-extras-1.0.0.jar`, analog heater): host installs (`tfc pull addons`, server and
+- **IE Extras 1.1.0** (2026-10-29, `ie-extras-1.1.0.jar`; 1.0.0 — analog heater, 1.1.0 — basin heating by IE external,
+  EE and analog heaters, dev #113): in game — basin temperature line in goggles, heated/superheated basin recipes (steel,
+  kaolinite) on the IE external heater and the EE heater. Host installs (`tfc pull addons`, server and
   players) and `tfc publish`. In game: block looks and placement, Create analog lever, IE wires/connector feeding it,
   crucible cooling after lowering the signal (can't be seen on the dev server — TFC calendar stands without players),
   Firmalife vat/pot/oven top, JEI/EMI recipe. Details — [addons.md](addons.md).
