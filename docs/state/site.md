@@ -593,4 +593,5 @@ the step is centred.
   from bfcache, or reconnecting, Auth/App Check refresh together. Failed live lists resubscribe without a page reload;
   credential errors also trigger one coalesced recovery attempt, throttled to once per 30 seconds.
 - Checked: TypeScript, lint, format; one-off checks for shared consumers, recovery, cancellation and a simulated
-  five-minute idle. Actual hours-long browser suspension is not yet verified.
+  five-minute idle. Production `/schematics` loaded all nine library records in the same previously failing IAB
+  tab after deploying the fix, with no new permission errors. Actual hours-long browser suspension is not yet verified.
