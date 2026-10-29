@@ -1,34 +1,40 @@
-# Пиксельные модули — этап задачи №135
+# Прямоугольные кассеты — этап задачи №135
 
 Дата: 2026-10-29. Встроенный Codex ImageGen, без CLI/API.
 
-Исходники: `sources/battery_module.png`, `sources/generator_module.png` (1254×1254 RGBA).
-Игровые текстуры: `../src/main/resources/assets/create_aeronautics_extra/textures/item/`, 32×32.
-Подготовка: Sharp, nearest-neighbor; затем ближайший цвет палитры EE без дизеринга,
-альфа 0/255 с порогом 128. Аккумулятор — 18 цветов с прозрачностью, генератор — 17.
-Палитра: #191920 #222227 #2b2b2e #353438 #434243 #50534f #676161 #817e7e #9f9b93
-#bbb8af #ddd9d0 #5e1c33 #772434 #a04a50 #5b2924 #793b2b #9a5038 #c26b4c #e3826c.
-Готовые PNG хранятся в ресурсах; `gen_assets.py` сохраняет их при пересборке моделей.
+Ориентир — сам `create_aeronautics_extra:onboard_computer`, его изображение
+`../icons/onboard_computer.png` просмотрено и передано генератору. Для генераторной кассеты
+дополнительно передан новый рисунок аккумулятора, чтобы сохранить общий корпус.
 
-Ориентиры из Electro Energetics 1.1.2 через MCP `texture_get`:
-`item/commutator`, `item/miniature_circuit_breaker`, `item/miniature_voltmeter` (16×16, 12–16 цветов),
-`block/accumulator` (атлас 32×32). Все изображения просмотрены и переданы генератору;
-для генератора дополнительно передан новый аккумулятор.
+Уточнение пользователя: простые формы в стиле основного блока. Плоские прямоугольные панели,
+графитовый корпус и тонкая латунная рамка. Без округлых машин, сложной передачи изгибов,
+декоративных бликов, мелкого шума и лишней детализации. Аккумулятор узнаётся по квадратным
+клеммам и индикатору, генератор — по двум прямоугольным медным обмоткам и сердечнику.
 
-По замечанию пользователя исключены детальные рисованные варианты и золотые рамки.
-Цель: простые пиксельные предметы в стилистике EE, обводка, теневая грань,
-сдержанные блики и фактура вместо одноцветного пятна.
+## Исходники и подготовка
+
+Исходники ImageGen: `sources/battery_module.png`, `sources/generator_module.png`, 1199×1312 RGBA.
+Готовые игровые PNG: `../src/main/resources/assets/create_aeronautics_extra/textures/item/`, 32×32.
+У каждого — 12 цветов с прозрачностью. Готовые PNG сохраняются при запуске `gen_assets.py`.
+
+Механическая подготовка: по альфе ≥128 определены границы объекта, удалены пустые поля.
+Sharp: вписать в 28×28 без изменения пропорций (`nearest`, `contain`), добавить по 2 прозрачных
+пикселя со всех сторон. Альфа 0/255, порог 128. Ближайший цвет палитры, без дизеринга.
+Общая палитра: #141719 #1e2124 #33383d #3f454b #7a5418 #a8772a #d0a046.
+Аккумулятор дополнительно: #e0473a #445d8b #2f8a4e #7cf09a.
+Генератор дополнительно: #b26247 #e3826c #676d70 #969895.
 
 ## Запрос: аккумулятор
 
-Create ONE actual Minecraft pixel-art inventory sprite for a removable BATTERY MODULE for Create Electro Energetics. Reference images supplied are actual Electro Energetics textures enlarged: commutator (copper and steel palette), miniature circuit breaker (industrial sprite shading), miniature voltmeter (dark case), accumulator UV sheet (battery material). Match their restrained vanilla Minecraft pixel art, NOT the ornate illustrated battery/generator previously generated. Sprite must be drawn on a strict 32 BY 32 PIXEL GRID, enlarged exactly nearest-neighbor so each logical pixel is a hard square. All edges must fall on that grid. No subpixel detail, no antialiasing, no smooth shading, no painted brushwork, no bevel-render illustration. Limit about 16-20 flat colors total. One simple dark graphite rectangular battery cartridge, slight 3/4 perspective so narrow right side and top are visible, red and dull gray terminal posts, a small steel retaining strap, two broad rib grooves and 2 or 3 restrained surface texture pixels to break flat fields. Dark clean one-pixel contour; upper left highlights and darker right face to give volume. Mostly graphite #222227 #2b2b2e #353438, steel #757171 #9f9b93, muted terminal red #772434. NO gold frame, NO brass jewelry, no handle, no screen, no modern glossy look. Recognizable industrial component, not a chest. Fill a 26x27 logical-pixel area centered in the 32x32 canvas with transparent margin. Transparent background, no text, no cast shadow. Output should look like a native modest Minecraft mod sprite viewed at 32px, only enlarged for delivery.
+Create ONE small Minecraft inventory PIXEL SPRITE: a BATTERY CASSETTE that plugs into the onboard computer in the reference image. Reference is the EXACT host block: copy its simple BOX GEOMETRY, dark graphite flat panels, thin brass trim and two square red/blue terminals. The module should look like a spare removable rectangular cassette from the side bays of that block. Design: a single rectangular graphite case, flat dark front panel, narrow brass perimeter rail, two SQUARE red/blue contacts on its top edge, a tiny horizontal green rectangular charge slit. Nearly frontal orthographic view with only a 2-pixel-wide right side and top visible. Absolutely straight edges and right angle corners, no rounded shoulders, curves, cylindrical cells, bulging ribs or angled bevels. Few large simple flat color regions, about 10-12 colors: black outline, 3 dark graphite shades, 2 subdued brass shades, red, blue and muted green. No metal sparkle, specular highlights, gradient shading, worn speckles, noise, small rivets or ornamental details. Volume ONLY from single flat darker right plane, not light effects. Looks like a modest native Create Electro Energetics component, NOT a detailed pixel illustration. STRICT 32x32 logical pixel canvas, enlarged nearest-neighbor, each logical pixel uniform color. Centered complete sprite with rectangular silhouette, object 22 pixels wide and 24 pixels tall, transparent margin. True transparent background, no text, labels, logos, floor or cast shadow. One item only.
 
 ## Запрос: генератор
 
-Create ONE actual Minecraft pixel-art inventory sprite for a GENERATOR MODULE insert for Create Electro Energetics. References 1 and 2 are actual Electro Energetics 16x16 sprites enlarged (commutator and miniature circuit breaker); reference 3 is the new battery module: match its modest chunky pixels and graphite/steel shading, but make a distinct generator. A compact squat dark steel electrical generator cartridge with a visible COPPER COIL around the steel shaft end at the front, a small gray shaft protruding diagonally toward lower left, dark rear casing with two cooling slits and simple flat steel mounting feet. Slight 3/4 perspective, NOT dramatic cylindrical illustration. Native Minecraft item pixel art on a STRICT 32x32 logical pixel grid, delivered enlarged nearest-neighbor. Every logical pixel a flat square, only 16-20 colors total, dark one-pixel outline, shadowed right face, restrained upper left highlight. No antialiasing, brush texture, smooth gradients, photorealism or tiny details. Copper from EE commutator #5b2924 #793b2b #9a5038 #c26b4c #e3826c; steel #3e3e3e #50534f #72716b #9f9b93. Large clear copper winding segments with a few stepped highlights, no gold/brass frame or decorative rivets. No terminals or screen. Object occupies roughly 26x26 of 32x32 grid, fully visible, centered with transparent margin. True transparent background. No text, numbers, logo, floor or cast shadow. Should look like a simple native Create Electro Energetics component at inventory size, not a rendered product illustration.
+Create ONE Minecraft inventory pixel sprite of a GENERATOR CASSETTE insert for the onboard computer. Reference 1 is the exact host block; reference 2 is its new BATTERY CASSETTE. Create the matching GENERATOR in the SAME SIMPLE rectangular case, near-frontal orthographic view with narrow right face and top. Match reference 2's straight-edged silhouette and slim brass rail, but replace battery terminals and charge slit with a visible rectangular electrical assembly: TWO broad rectangular copper winding packs left and right of ONE vertical flat gray steel core bar, a small square dark socket in the lower middle. The copper packs consist of only 3 broad horizontal flat bands each, all right angles. Top of the cassette is plain dark graphite, NO red/blue terminals. Dark graphite case, thin muted brass perimeter frame as in host computer, restrained copper #b26247 #d67b5b, gray steel. The object must look like a removable functional cartridge, not a machine statue. No cylinder, no rotor wheel, no circular hole, no round shaft, no curved corner, no bulging winding, no bolts, no bevels, no ornate gold border. All major geometry is rectangular, simple planes and right angles. STRICT 32x32 logical pixel canvas enlarged nearest-neighbor, hard clean grid edges, 12-14 flat colors total. Minimal flat shading: one darker side, no gradient, glints, specular highlights, worn texture, noise, tiny decorative pixels or highly detailed illustration. Keep big clear functional shapes. Center complete object 22 pixels wide and 24 pixels tall with transparent margin, same proportions as battery. True transparent background, one item, no text, numbers, logos, scene or cast shadow.
 
 ## Просмотр
 
-`preview-modules.png`: прежний значок, новый PNG 32×32, увеличение ×4,
-тёмный и светлый фон. Всё увеличение без сглаживания. Это проверка рисунка, не снимок клиента Minecraft.
-В игре не проверялось. Подготовлено к следующему выпуску; версия 1.0.0 не переиздавалась.
+`preview-modules.png`: бортовой компьютер, предыдущий вариант, новый PNG 32×32,
+увеличение ×4, тёмный и светлый фон. Увеличение без сглаживания.
+Это проверка рисунка, не снимок клиента Minecraft. В игре не проверялось.
+Подготовлено к следующему выпуску; опубликованная версия 1.0.0 не переиздавалась.
