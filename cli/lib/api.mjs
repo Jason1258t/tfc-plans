@@ -204,6 +204,21 @@ export class Api {
     return data;
   }
 
+  /** Исходник схемы с метаданными; публикация выполняется только после предпросмотра в CLI. */
+  async publishSchematic(bytes, meta) {
+    const res = await fetch(`${this.server}/site/schematics`, {
+      method: 'POST',
+      headers: this.headers({
+        'Content-Type': 'application/octet-stream',
+        'X-Schematic': encodeURIComponent(JSON.stringify(meta)),
+      }),
+      body: bytes,
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(apiError(res.status, data));
+    return data;
+  }
+
   /** Залить файл в хранилище сервера */
   async upload(file, sha256, onBytes) {
     const size = fs.statSync(file).size;

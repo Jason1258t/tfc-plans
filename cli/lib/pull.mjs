@@ -132,6 +132,10 @@ async function wanted(api, kind, names, profile) {
         })),
     };
   }
+  return schematicTargets(api, profile, names);
+}
+
+export async function schematicTargets(api, profile, names = []) {
   // Схемы: «Ставить» у них нет — без имён берём всю библиотеку
   const { items: list } = await api.get('/site/schematics');
   const want = names.map((n) => n.trim().toLowerCase()).filter(Boolean);
@@ -149,12 +153,14 @@ async function wanted(api, kind, names, profile) {
   // Одинаковые названия — второй и дальше с кусочком id, чтобы не затирали друг друга
   const used = new Set();
   const cacheDir = path.join(stateDir(profile), 'site-files');
-  const items = chosen
+  const items = list
     .filter((s) => s.fileId)
-    .sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0) || a.id.localeCompare(b.id))
+    .sort((a, b) => a.id.localeCompare(b.id))
     .map((s) => {
       let file = schematicFileName(s);
       if (used.has(file.toLowerCase())) file = file.replace(/\.nbt$/, `-${s.id.slice(0, 6)}.nbt`);
+      if (used.has(file.toLowerCase())) file = file.replace(/\.nbt$/, `-${s.id}.nbt`);
+      while (used.has(file.toLowerCase())) file = file.replace(/\.nbt$/, '-copy.nbt');
       used.add(file.toLowerCase());
       let memo; // один раз на схему: её же сверяем с копиями игроков на сервере
       return {
@@ -162,17 +168,22 @@ async function wanted(api, kind, names, profile) {
         name: s.name,
         path: `schematics/${file}`,
         bytes: () => (memo ??= build()),
+        sourceBytes: source,
       };
-      async function build() {
+      async function source() {
         const src = path.join(cacheDir, s.fileId);
         if (!fs.existsSync(src)) {
           fs.mkdirSync(cacheDir, { recursive: true });
           fs.writeFileSync(`${src}.part`, await api.bytes(`/site/files/${encodeURIComponent(s.fileId)}`));
           fs.renameSync(`${src}.part`, src);
         }
-        return schematicFromLibrary(new Uint8Array(fs.readFileSync(src)), s);
+        return new Uint8Array(fs.readFileSync(src));
       }
-    });
+      async function build() {
+        return schematicFromLibrary(await source(), { ...s, replace: s.replace ?? [] });
+      }
+    })
+    .filter((s) => chosen.some((x) => x.id === s.id));
   return { items, unknown, all: list.map((s) => ({ id: s.id, name: s.name })) };
 }
 
@@ -413,7 +424,12 @@ export async function planPull(api, profile, kind, names = [], { force = false }
     else if (disk === rec.sha256) plan.remove.push(item);
     else plan.keptModified.push(item);
   }
-  if (kind === 'schematics') plan.update.push(...(await uploadedCopies(profile, w.items)));
+  if (kind === 'schematics') {
+    const copies = await uploadedCopies(profile, w.items, state, force);
+    plan.update.push(...copies.update);
+    plan.same.push(...copies.same);
+    plan.keptModified.push(...copies.kept);
+  }
   // Ручная копия датапака (скачан кнопкой «Скачать» и положен в мир) рядом с поставленным — убрать
   if (kind === 'datapacks')
     for (const it of [...plan.add, ...plan.update, ...plan.same, ...plan.conflict]) {
@@ -438,17 +454,18 @@ export async function planPull(api, profile, kind, names = [], { force = false }
  * Копии схем игроков на сервере. Стол схем Create загружает файл игрока в `schematics/uploaded/<ник>/<файл>`
  * на сервере (у хоста — в его папке игры: мир открыт из его клиента), и пушка строит по этой копии, а не по файлу
  * у игрока. Игрок после `tfc pull` видит новую голограмму, а пушка строит старую. Поэтому pull на сервере
- * заменяет копии с тем же именем, что у схемы библиотеки. В `pulled` их не пишем: это файлы игроков, при снятии
- * схемы с сайта не убираем. Старое — в копию pull, `tfc undo` вернёт.
+ * обновляет известные копии с тем же именем; неизвестные одноимённые файлы сохраняет без --force.
+ * Хеши копий — в schematicCopies, отдельно от pulled: при удалении схемы с сайта файлы игроков не убираем.
+ * Старое — в копию pull, `tfc undo` вернёт.
  */
-async function uploadedCopies(profile, items) {
+async function uploadedCopies(profile, items, state, force) {
   const dir = path.join(profile.instance, 'schematics', 'uploaded');
-  if (!fs.existsSync(dir)) return [];
+  if (!fs.existsSync(dir)) return { update: [], same: [], kept: [] };
   const players = fs
     .readdirSync(dir, { withFileTypes: true })
     .filter((d) => d.isDirectory())
     .map((d) => d.name);
-  const out = [];
+  const out = { update: [], same: [], kept: [] };
   for (const it of items) {
     const name = path.posix.basename(it.path);
     for (const nick of players) {
@@ -458,16 +475,23 @@ async function uploadedCopies(profile, items) {
       if (!disk) continue;
       const bytes = await it.bytes();
       const sha256 = sha(bytes);
-      if (disk !== sha256)
-        out.push({
-          id: `${it.id}@${nick}`,
-          name: `${it.name} — копия на сервере у ${nick}`,
-          path: rel,
-          file,
-          bytes,
-          sha256,
-          copy: true,
-        });
+      const item = {
+        id: `${it.id}@${nick}`,
+        schematicId: it.id,
+        name: `${it.name} — копия на сервере у ${nick}`,
+        path: rel,
+        file,
+        bytes,
+        sha256,
+        copy: true,
+      };
+      const previous = state.schematicCopies?.[rel];
+      const known = previous?.id === it.id && previous.sha256 === disk;
+      const ours = state.pulled?.schematics?.[it.id]?.sha256 === disk;
+      const source = sha(await it.sourceBytes());
+      if (disk === sha256) out.same.push(item);
+      else if (force || known || ours || disk === source) out.update.push(item);
+      else out.kept.push(item);
     }
   }
   return out;
@@ -570,8 +594,13 @@ export function applyPull(profile, plans, backup, overrides) {
       fs.writeFileSync(x.file, x.bytes);
       if (p.add.includes(x)) manifest.added.push(x.path);
     }
-    for (const x of [...p.add, ...p.update, ...p.same])
+    for (const x of [...p.add, ...p.update, ...p.same]) {
       if (!x.copy) mine[x.id] = { path: x.path, sha256: x.sha256, name: x.name };
+      else {
+        state.schematicCopies ??= {};
+        state.schematicCopies[x.path] = { id: x.schematicId, sha256: x.sha256 };
+      }
+    }
     for (const x of p.conflict) {
       fs.writeFileSync(`${x.file}.tfc-new`, x.bytes);
       manifest.tfcNew.push(`${x.path}.tfc-new`);
