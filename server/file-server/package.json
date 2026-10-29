@@ -1,5 +1,5 @@
 {
-  "name": "tfc-file-server",
+  "name": "@tfc/file-server",
   "private": true,
   "version": "1.0.0",
   "description": "Сервер файлов для сайта «TFC Планы»: вложения на диске вместо Firestore",

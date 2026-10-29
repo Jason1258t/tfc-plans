@@ -10,7 +10,7 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { classifyPath, isStatePath } from '../../server/pack-server/lib/paths.mjs';
+import { classifyPath, isStatePath } from '@tfc/pack-server/paths';
 import { isDir } from './detect.mjs';
 
 /** Папки, которые обходим, и что внутри них не берём (сгенерированное модами, черновики программы) */

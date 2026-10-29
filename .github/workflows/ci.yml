@@ -18,11 +18,13 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Lint (oxlint)
-        run: npx oxlint src scripts packages
+        run: npx oxlint src scripts packages cli server
       - name: Types (tsc)
         run: npx tsc -b
       - name: Layer boundaries (FSD)
         run: node scripts/ui/boundaries.mjs
+      - name: Package boundaries (@tfc/*)
+        run: node scripts/repo-boundaries.mjs
       - name: Format check (changed files)
         run: |
           if [ -n "${{ github.event.pull_request.base.sha }}" ]; then

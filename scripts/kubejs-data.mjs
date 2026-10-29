@@ -1,7 +1,7 @@
 /** Файлы слоя KubeJS в порядке игры: ZIP по имени, затем обычный data/<namespace>/. */
 import fs from 'node:fs';
 import path from 'node:path';
-import { inspectDatapack } from '../server/pack-server/lib/datapacks.mjs';
+import { inspectDatapack } from '@tfc/pack-server/datapacks';
 
 export function kubejsDataFiles(root, label) {
   const base = path.join(root, 'data');

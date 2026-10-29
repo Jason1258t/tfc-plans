@@ -21,9 +21,15 @@ rebuild --pull` runs `npm ci` there (lock changed). Not checked: the VPS itself 
   `addons-index` (prebuild) inits an empty `tools/` and stops if there are no cards (an empty list would drop addons
   from the site). Pack server builders copy: `git submodule update --init --depth 1 tools` after pull (an old plain
   `tools/` folder is removed first). Not checked: the VPS itself.
-- Still cross-folder: `cli` → `server/pack-server/lib/{paths,datapacks,schematic-nbt}.mjs`, `scripts` →
-  `cli/lib/config.mjs`, pack server → `scripts/pack.mjs`/`publish-data.mjs`; addon `release.sh` → tfc-plans
-  `scripts/mcp/render.mjs`. Next: stage 2 (packages for site/cli/server/scripts/mcp).
+- **Stage 2 done (2026-10-29), in place (host's choice, no move to `apps/`):** workspaces `@tfc/scripts` (`scripts/`,
+  incl. both MCP servers), `@tfc/cli`, `@tfc/pack-server`, `@tfc/file-server`, own `package.json` and dependencies
+  (adm-zip, esbuild, postject, smol-toml → scripts); site = root package (`react-router` now declared). Cross-package
+  imports via `@tfc/<package>/<module>`; `scripts/repo-boundaries.mjs` (`npm run boundaries`, CI, `ship` gate) checks
+  it. Exceptions `граница-ок`: pack-server `worker.mjs` → scripts, file-server `auth.mjs` → pack-server (VPS installs
+  by folder copy). `npm run lint` now covers `cli/` and `server/` too. Checked: tsc, oxlint, boundaries (incl. a
+  negative probe), esbuild bundle of `tfc` (same inputs), `@tfc/scripts/pack` resolution for `tfc build`, MCP over
+  stdio, KubeJS data identical to `main`. Not checked: the VPS (`npm ci` on rebuild — lock changed).
+- Still cross-repo: addon `release.sh` → tfc-plans `scripts/mcp/render.mjs`. Next (optional): stage 4 (server repo).
 
 ## Data builders
 

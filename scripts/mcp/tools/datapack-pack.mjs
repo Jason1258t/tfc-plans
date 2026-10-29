@@ -1,8 +1,8 @@
 /** Живой снимок и точный ZIP датапака — отдельно от редактируемой карточки Firestore. Только чтение. */
 import { zipName } from '@tfc/core/datapackFiles';
 import { createHash } from 'node:crypto';
-import { datapackCatalog, resolveDatapacks } from '../../../cli/lib/datapacks.mjs';
-import { inspectDatapack, isPackDatapackPath } from '../../../server/pack-server/lib/datapacks.mjs';
+import { datapackCatalog, resolveDatapacks } from '@tfc/cli/datapacks';
+import { inspectDatapack, isPackDatapackPath } from '@tfc/pack-server/datapacks';
 import { packServer } from '../../pack-fetch.mjs';
 import { page, paging, str } from '../fmt.mjs';
 

@@ -4,7 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "scripts",
+    "cli",
+    "server/pack-server",
+    "server/file-server"
   ],
   "bin": {
     "tfc": "cli/tfc.mjs"
@@ -17,7 +21,7 @@
     "mods": "node scripts/mods.mjs",
     "items": "node scripts/mods.mjs",
     "freshness": "node scripts/freshness.mjs",
-    "lint": "oxlint src scripts packages",
+    "lint": "oxlint src scripts packages cli server",
     "ui:boundaries": "node scripts/ui/boundaries.mjs",
     "preview": "vite preview",
     "deploy": "firebase deploy --only firestore,auth && node scripts/deploy-site.mjs",
@@ -39,7 +43,8 @@
     "tfc": "node cli/tfc.mjs",
     "tfc:dist": "node scripts/tfc-dist.mjs",
     "ui:classes": "node scripts/ui/classes.mjs",
-    "ui:shots": "node scripts/ui/shots.mjs"
+    "ui:shots": "node scripts/ui/shots.mjs",
+    "boundaries": "node scripts/repo-boundaries.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",
@@ -59,6 +64,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",
+    "react-router": "^7.18.4",
     "react-router-dom": "^7.18.4",
     "remark-gfm": "^4.0.1",
     "three": "^0.186.1",
@@ -71,12 +77,8 @@
     "@types/react-dom": "^19.2.7",
     "@types/three": "^0.186.0",
     "@vitejs/plugin-react": "^6.1.1",
-    "adm-zip": "^0.6.1",
-    "esbuild": "^0.28.2",
     "oxlint": "^1.81.0",
-    "postject": "^1.0.0-alpha.6",
     "prettier": "^3.9.9",
-    "smol-toml": "^1.9.0",
     "typescript": "~6.0.2",
     "vite": "^8.3.0"
   }

@@ -14,9 +14,9 @@
  * - пути, которые отдаёт сайт (аддоны, датапаки и скрипты «ставить»), план не трогает — см. siteOwned в pull.mjs.
  */
 import fs from 'node:fs';
-import { isPackDatapackPath } from '../../server/pack-server/lib/datapacks.mjs';
+import { isPackDatapackPath } from '@tfc/pack-server/datapacks';
 import path from 'node:path';
-import { isClientConfig, isStatePath } from '../../server/pack-server/lib/paths.mjs';
+import { isClientConfig, isStatePath } from '@tfc/pack-server/paths';
 import { textKey } from './noise.mjs';
 import { stateDir } from './scan.mjs';
 
