@@ -63,6 +63,11 @@ under the addon's `art/` directory so later work does not depend on a temporary 
 - Inspect beside the host block and parent-mod items, not only beside other generated artwork. A high-resolution
   pixel-styled illustration is not yet a native-size sprite. Check outline, flat planes and limited palette after
   reduction; quantization is mechanical cleanup, not a substitute for simple source geometry.
+- For approved source art, preserve its silhouette, proportions and identifying marks. Do not force 16×16 or a
+  fixed tiny palette when they erase the approved design: compare 32/64 first, before redrawing features. Compare
+  source → runtime PNG → rendered item at equal display size; check transparent margins and all contour extremes.
+  A standard single-layer `item/generated` uses the PNG alpha, not a separate clipping mask. Check custom loaders
+  separately instead of assuming that every apparent cut is a mask.
 - Save the runtime PNG under `src/main/resources/assets/<modid>/textures/item/<name>.png`; check the consuming
   item model and its texture reference against the addon's existing conventions. Keep source artwork outside
   runtime resources. Do not add Pillow as a runtime/build requirement just for one conversion.

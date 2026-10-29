@@ -233,8 +233,10 @@ only the jar on the site (`/addons/tp-trace-1.0.0.jar`), not in the addon list. 
   (64 rpm imposed by the test fixture), empty shutdown, bucket transfers and 1900 mB retained across restart. Client rendering, complete factory automation and full-pack compatibility: not checked in game.
 - Separate pre-existing CDG/IE recipe parse errors found during testing: dev #118.
 
-- **Texture sources (dev #135, 2026-10-29):** all seven item sprites replaced at 16×16,
-  with simple shapes and 5–11 colours including transparency. Native TFC/IE powders, Create fuel colours and
+- **Texture sources (dev #135, 2026-10-29):** all seven item sprites replaced; six at 32×32 and the user-selected finished
+  briquette at 64×64 (three orange inclusions), with 15–16 colours including transparency.
+  Earlier forced 16×16 conversion and fixed tiny palettes discarded contour/material details; no separate mask
+  exists in their single-layer item/generated models. Alpha bounds and proportions are preserved. Native TFC/IE powders, Create fuel colours and
   CDG bucket silhouette used as references. Raw/finished fluid tiles use 4/5 colours; eight-frame still/flow
   animations assembled deterministically. Source art, prompts and palettes in `art/`; resource generation
   preserves item PNGs. Prepared for the next release; published 1.0.0 unchanged. Not checked in game.
