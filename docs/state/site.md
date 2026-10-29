@@ -461,6 +461,16 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   Leftovers listed in the plan («Сознательно не сделано»). CSS вкладки `MealsTab` переведён на локальные классы
   `MealsTab.module.css`; остаточных зависимостей от `ReferenceShared.css` и `:global` в ней нет (2026-10-26).
 
+### Geology (2026-10-29, dev #149)
+
+Tab «Геология» (`/reference?tab=geology`, `pages/reference/tabs/GeologyTab.tsx` + `model/geology.ts`): intro from the
+TFC field guide (`the_world/geology`), 21 rock cards with ru/en name search (also by ore name → rocks hosting it) and a
+category filter. Static facts from TFC 4.2.9 jar in `model/geology.ts`: categories/acidity (`Rock` enum), tool
+durability (`TFCTiers`), flux (`#tfc:fluxstone`), igneous-only rock anvils, layer relations from the only world preset
+(`overworld.json` `rock_layer_settings`; tuff is in no layer → «не появляется»). Ores per rock — live from
+`reference.json` veins (`kind: 'ore'`); «жилы →» opens «Руды» with `?rock=` preselected. Re-check the constants on a
+TFC update.
+
 ### Botany
 
 Reference tab, side menu: crops / bushes / trees. Climate ranges, fruits and seeds, T/humidity filter; from mod code —
