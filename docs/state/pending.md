@@ -5,6 +5,15 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **Гладкий камень на камнерезе и в прессе** (2026-10-29, dev #151): site datapack `wbgmlRWP5X9h8pWQb5bQ`
+  (ns `tfc_plans_smooth`, built by `npm run datapack:smooth -- --upload`). Recipes: stonecutter 1:1 for every
+  `tfc:chisel` smooth-mode stone block (smooth rocks from raw/hardened, chiseled bricks, smooth/cut sandstone, polished
+  alabaster, Firmalife sealed bricks), plus slab ×2 / stairs ×1 / wall ×1 from each such block that has a crafting-table
+  shape (smooth rocks, smooth and cut sandstone; 185 recipes in all); Create compacting `heated`: rock cobble + 50 mB lava → smooth rock (cobble, not
+  4 loose rocks — that is the superheated raw-stone recipe's input and a superheated burner would match both).
+  `recipe_conflicts` clean. Host: flag «ставить», `tfc datapacks install`, check in game, then `confirm`. Not
+  checked in game.
+
 - **Create Ore Excavation veins** (2026-10-29, dev #136): proposed update `u20261029-091146-275f`, source and
   checks — [pack-patches/coe-vein-ids](../../pack-patches/coe-vein-ids/README.md). COE 1.6.8's KubeJS helper writes
   a component object, but the recipe loader expects a JSON string (`FLAT_CODEC`); all 27 custom veins now use
@@ -133,3 +142,18 @@ mod=electroenergetics`, 2026-10-21). See how laid cable renders.
 - Addon Host Tools 1.0.1: host updates it; check with a real guest — ping right after join (tab, `/ping`), `/host stop` (guest kicked), `/host random` on Windows.
 - Addons Miner Tools, Stress Fix — see [addons.md](addons.md).
 - `tfc` app on Windows/Linux and with the real launcher folder — see [infra.md](infra.md#tfc-app-cli-stage-3).
+
+## Builder Tools 1.0.1 (dev #103, 2026-10-29)
+
+Host installs on the server and all players (`tfc pull addons builder_tools@1.0.1`), then publishes the snapshot.
+In game: equip builder belt in Curios, place the last block in each hand, hold LMB across stone/dirt/wood,
+check full inventory and inventory-mod interactions. Server and automated dev-client checks passed; real player
+input and the full pack were not checked in game.
+
+## Pack-wide datapacks (dev #125, 2026-10-29)
+
+Tooling is implemented; live packs have not been promoted. Host: update tfc, inspect `tfc datapacks list` and
+`files`, install desired packs into the selected world and check them in game. Preview `tfc datapacks confirm all
+--dry-run`; after verifying the selected versions, confirm one/all and restart. Check both an existing and a new
+world, recipe overrides and KubeJS priority. Changed world copies remain for manual review. Local `undo` does not
+revert server confirmation; `tfc admin rollback` reverts the whole snapshot. Details: [datapacks-pack.md](../plans/datapacks-pack.md).

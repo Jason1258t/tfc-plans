@@ -1,0 +1,49 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+version = mod_version
+group = 'builder.tools'
+base { archivesName = 'builder-tools' }
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+// Проверочный мод для сервера и клиента; в выпускной jar не попадает.
+sourceSets {
+    devtest {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+configurations {
+    devtestCompileOnly.extendsFrom compileOnly
+}
+
+neoForge {
+    version = project.neo_version
+    mods {
+        builder_tools { sourceSet sourceSets.main }
+        builder_tools_devtest { sourceSet sourceSets.devtest }
+    }
+    addModdingDependenciesTo(sourceSets.devtest)
+    // Curios кладёт в run/mods проверочный скрипт.
+    runs {
+        client {
+            client()
+            sourceSet = sourceSets.devtest
+        }
+        server {
+            server()
+            programArgument '--nogui'
+            sourceSet = sourceSets.devtest
+        }
+    }
+}
+
+dependencies {
+    // Curios из jar сборки — только для компиляции (libs.sh)
+    compileOnly fileTree(dir: 'libs', include: '*.jar')
+}
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }

@@ -5,6 +5,7 @@
  * пустые строки, время мира — cli/lib/noise.mjs), или это клиентский конфиг, в снимок идёт версия сервера.
  */
 import fs from 'node:fs';
+import { deploymentsOf } from '../../server/pack-server/lib/datapacks.mjs';
 import { isClientConfig } from '../../server/pack-server/lib/paths.mjs';
 import { hasMeaning, meaningKey } from './noise.mjs';
 import { normsOf, saveState, loadState } from './plan.mjs';
@@ -77,6 +78,17 @@ async function keepServerVersions(api, files, local, current) {
 }
 
 export async function publish({ api, profile, local, current, note, mc, loader, yes, force, setCurrent = true }) {
+  // Подтверждённую версию меняют отдельной командой; publish со старого профиля не снимает подтверждение.
+  for (const d of deploymentsOf(current)) {
+    const f = current.files.find((f) => f.path === d.path);
+    const mine = local.get(d.path);
+    if (!mine || mine.sha256 !== d.sha256) {
+      console.log(
+        dim(`«${d.name}»: сохраняю подтверждённую версию сборки (сменить — tfc datapacks unconfirm ${d.id})`),
+      );
+      local.set(d.path, { ...f, file: mine?.file });
+    }
+  }
   const files = [...local.values()].map((f) => ({ path: f.path, sha256: f.sha256, size: f.size, kind: f.kind }));
   const kept = await keepServerVersions(api, files, local, current);
   const say = (list, title) => {
@@ -142,8 +154,8 @@ export async function publish({ api, profile, local, current, note, mc, loader, 
     for (const f of need) await api.upload(local.get(f.path).file, f.sha256, (n) => bar.add(n));
     bar.end();
   }
-  const snap = await api.post('/pack/snapshots', { note: note ?? '', mc, loader, files });
-  if (setCurrent) await api.post('/pack/current', { id: snap.id });
+  const snap = await api.post('/pack/snapshots', { note: note ?? '', mc, loader, files, base: current?.id ?? null });
+  if (setCurrent) await api.post('/pack/current', { id: snap.id, base: current?.id ?? null });
   saveState(profile, {
     ...loadState(profile), // pulled (tfc pull) — не терять
     snapshot: snap.id,

@@ -10,7 +10,7 @@ import {
 import { codeParts, hasCodeParts } from './createParts';
 import { COPYCAT_BASE, copycatMaterials, copycatParts, isCopycat, type Material } from './copycats';
 import { placedBy, textureUrl, type ItemIndex } from '@/shared/pack-data';
-import { EMPTY_BLOCKS, REMOVE, exportSchematic, type Schematic } from './schematic';
+import { copycatMaterialTarget, EMPTY_BLOCKS, REMOVE, exportSchematic, type Schematic } from './schematic';
 import { blockNbtOf, buildGrid, namesByState, propsByState, stateOf } from './schematicEdit';
 import { drawnByCode, FULL, shapeOf, type Box } from './schematicShape';
 import { readNbt } from '../../lib/nbt';
@@ -170,9 +170,10 @@ function copycatQuads(
   const parts = copycatParts(id, p);
   const matOf = (part: string): Material => {
     const m = mats.get(part) ?? mats.get('') ?? { id: COPYCAT_BASE, p: new Map() };
-    const to = replace.get(m.id);
+    // Та же замена, что в файле (schematicFile: replaceCopycatMaterials)
+    const to = copycatMaterialTarget(m.id, replace);
     if (!to) return m;
-    return to === REMOVE ? { id: COPYCAT_BASE, p: new Map() } : { id: to, p: m.p };
+    return to === COPYCAT_BASE ? { id: COPYCAT_BASE, p: new Map() } : { id: to, p: m.p };
   };
   const used = parts.map((x) => matOf(x.part));
   const key = `${id}[${[...p].join()}]${used.map((m) => `${m.id}[${[...m.p].join()}]`).join('|')}`;

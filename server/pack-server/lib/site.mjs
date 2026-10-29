@@ -66,12 +66,28 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
       );
     const m = await import(pathToFileURL(file).href);
     let tok = null;
+    let refreshing = null;
     rest = {
       docs: docsUrl || m.DOCS,
       fromValue: m.fromValue,
       toValue: m.toValue,
-      async auth() {
-        if (!tok || tok.until < Date.now()) tok = { value: await m.token(), until: Date.now() + 45 * 60_000 };
+      async auth(rejected) {
+        // Поздний 401 от старого запроса не сбрасывает уже обновлённый токен.
+        const fresh = rejected !== undefined && tok?.value === rejected;
+        if (fresh) tok = null;
+        if (!tok || tok.until < Date.now()) {
+          if (!refreshing) {
+            refreshing = (async () => {
+              try {
+                tok = { value: await m.token({ fresh }), until: Date.now() + 45 * 60_000 };
+                return tok.value;
+              } finally {
+                refreshing = null;
+              }
+            })();
+          }
+          return refreshing;
+        }
         return tok.value;
       },
     };
@@ -82,10 +98,17 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
     const fsr = await firestore();
     let res;
     try {
-      res = await fetch(fsr.docs + url, {
-        ...init,
-        headers: { Authorization: `Bearer ${await fsr.auth()}`, 'Content-Type': 'application/json' },
-      });
+      const send = (value) =>
+        fetch(fsr.docs + url, {
+          ...init,
+          headers: { Authorization: `Bearer ${value}`, 'Content-Type': 'application/json' },
+        });
+      const value = await fsr.auth();
+      res = await send(value);
+      if (res.status === 401) {
+        await res.body?.cancel();
+        res = await send(await fsr.auth(value));
+      }
     } catch (e) {
       throw new HttpError(502, `Firestore недоступен: ${e.cause?.code ?? e.message}`);
     }
@@ -151,9 +174,15 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
     };
   }
 
-  async function datapacks(names) {
+  async function datapacks(names = [], { all = false, fresh = false } = {}) {
+    if (fresh) cache.delete('datapacks');
     const list = await cached('datapacks');
-    return pick(list, names, (d) => d.name ?? '');
+    return all ? { items: list } : pick(list, names, (d) => d.name ?? '');
+  }
+
+  async function datapackSource(pack) {
+    const { datapackFiles } = await import(pathToFileURL(path.join(repoDir, 'src/lib/datapackFiles.ts')).href);
+    return datapackFiles(pack);
   }
 
   async function kubejs(names) {
@@ -582,6 +611,7 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
     publishSchematic,
     uploadReport,
     datapacks,
+    datapackSource,
     kubejs,
     schematics,
     filePath,

@@ -18,6 +18,11 @@ When finishing work: update the topic file, and this index only if a line below 
 
 ## In progress / waiting (details — [pending.md](state/pending.md))
 
+- Host: pack-wide datapacks (dev #125): inspect list/files, verify chosen versions in game, confirm with tfc,
+  restart and check old/new worlds. Tooling implemented; production datapacks have not been promoted.
+
+- Host: install **Builder Tools 1.0.1** (dev #103) on the server and all players, publish snapshot; check builder belt in game.
+
 - Host: COE vein loading fix `u20261029-091146-275f` (dev #136): pull, restart, check command suggestions,
   atlas, finder and drilling, approve.
 

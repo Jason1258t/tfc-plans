@@ -382,6 +382,14 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   replacing `copycat_door` → `copycat_board`); the table has already taken the blank and gives nothing. Such data is
   dropped (copycat without material). A single Copycats+ copycat with `id: create:copycat` would NPE in the same
   method — id rewritten to `copycats:copycat`. Checked on 1900s_workshop (4 boards cleaned) in Node, not in game.
+- **Copycat materials in the file** (2026-10-29, dev #145): `applyEdits` applies the replacement map to copycat
+  materials too (`replaceCopycatMaterials` in `schematicBlockFixes.ts`, same target as the 3D preview —
+  `copycatMaterialTarget`): `Material`+`Item` (Create `CopycatBlockEntity`) and `material_data.<part>.material`+
+  `consumedItem` (Copycats+ `MaterialItemStorage`) change together; removed/air → `create:copycat_base`, item air/0;
+  an empty item next to a material (part filled by the Copycats+ migration) stays empty. Create resets a copycat whose
+  item doesn't place the material block; Create Schematic Checker (`NbtFunc.NBTCheck`) flags item ≠ material or count ≠ 1.
+  `countBlocks` counts copycat materials, so materials found only inside copycats show up in the block list. Checked in
+  Node on 1900s_workshop (762 slots, preview = file, checker rules hold), not in game.
 - **Create parts drawn by code** (2026-10-24, task «Отрисовка create»): builder `block-models.mjs` adds `pm` (path →
   model) with every `models/block/**` of mods in `PARTIAL_NAMESPACES` (Create: 1887 incl. 444 never referenced by
   blockstates; create.json ~140 → ~230 KB gz). Site `partialQuads(ref, turns)` (blockModels.ts) bakes one with turns
@@ -452,6 +460,16 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
 - Food section closed (`docs/plans/food.md`): products, composite meals with calculators, cooked meals by method.
   Leftovers listed in the plan («Сознательно не сделано»). CSS вкладки `MealsTab` переведён на локальные классы
   `MealsTab.module.css`; остаточных зависимостей от `ReferenceShared.css` и `:global` в ней нет (2026-10-26).
+
+### Geology (2026-10-29, dev #149)
+
+Tab «Геология» (`/reference?tab=geology`, `pages/reference/tabs/GeologyTab.tsx` + `model/geology.ts`): intro from the
+TFC field guide (`the_world/geology`), 21 rock cards with ru/en name search (also by ore name → rocks hosting it) and a
+category filter. Static facts from TFC 4.2.9 jar in `model/geology.ts`: categories/acidity (`Rock` enum), tool
+durability (`TFCTiers`), flux (`#tfc:fluxstone`), igneous-only rock anvils, layer relations from the only world preset
+(`overworld.json` `rock_layer_settings`; tuff is in no layer → «не появляется»). Ores per rock — live from
+`reference.json` veins (`kind: 'ore'`); «жилы →» opens «Руды» with `?rock=` preselected. Re-check the constants on a
+TFC update.
 
 ### Botany
 
@@ -608,3 +626,9 @@ the step is centred.
 - Checked: TypeScript, lint, format; one-off checks for shared consumers, recovery, cancellation and a simulated
   five-minute idle. Production `/schematics` loaded all nine library records in the same previously failing IAB
   tab after deploying the fix, with no new permission errors. Actual hours-long browser suspension is not yet verified.
+
+- Dev #125 (2026-10-29): datapack cards distinguish world-test opt-in from pinned pack deployment. Published
+  `kubejs.json.datapacks` supplies path/hash/confirmer without Firestore reads; a later card edit leaves the pinned
+  version active and the UI explains retesting through `tfc datapacks unconfirm`. Labels follow the published
+  snapshot and can lag the server's build queue. Checked existing live source cards plus a separate local confirmed
+  fixture on desktop/375 px; no shared source records were modified.

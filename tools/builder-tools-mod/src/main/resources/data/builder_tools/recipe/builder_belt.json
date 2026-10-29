@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "LLL",
+    "LJL"
+  ],
+  "key": {
+    "L": {
+      "item": "minecraft:leather"
+    },
+    "J": {
+      "item": "tfc:jute_fiber"
+    }
+  },
+  "result": {
+    "id": "builder_tools:builder_belt",
+    "count": 1
+  },
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "tfc"
+    }
+  ]
+}

@@ -6,6 +6,7 @@
  */
 import path from 'node:path';
 import { parseArgs } from 'node:util';
+import { isPackDatapackPath } from '../server/pack-server/lib/datapacks.mjs';
 import { Api } from './lib/api.mjs';
 import { configFile, currentProfile, DEFAULT_SERVER, loadConfig, saveConfig } from './lib/config.mjs';
 import { detectVersions, findInstances, findWorlds, gameDirOf, isDir, isServerDir } from './lib/detect.mjs';
@@ -23,6 +24,7 @@ import {
 } from './lib/pull.mjs';
 import { scanLocal } from './lib/scan.mjs';
 import { listAddons, showAddons, uploadAddons } from './lib/addons.mjs';
+import { confirmDatapacks, datapackIds, listDatapacks } from './lib/datapacks.mjs';
 import { listSchematics, publishSchematic } from './lib/schematics.mjs';
 import { cmdReport as reportUpload } from './lib/reports.mjs';
 import { applyChange, planChange, resultsOf } from './lib/changes.mjs';
@@ -78,6 +80,11 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
       что: ${Object.keys(PARTS).join(', ')} (без — всё, что нужно этой папке)
       --dry-run               только показать          --force   перезаписать и ваши правки (с копией)
       --yes                   не спрашивать
+  tfc datapacks list          список датапаков: мир, сборка, доступные и изменённые
+  tfc datapacks files         filename — название для ZIP в снимке сервера
+  tfc datapacks install [all|имя…]   догрузить датапаки (включённые в сборку не дублируются в мире)
+  tfc datapacks confirm [all|имя…]   хосту: подтвердить проверенные в мире версии для всей сборки
+  tfc datapacks unconfirm [all|имя…] хосту: вернуть на уровень мира для проверки новой версии
   tfc pull datapacks|kubejs|schematics|addons <имя…>   одно названное с сайта (датапак — любой, и тестовый)
   tfc pull addons <мод>@<версия>   поставить и закрепить версию аддона (откат); <мод>@latest — снять закрепление
   tfc schematics list [поиск]    библиотека схем и состояние локальных копий
@@ -459,12 +466,11 @@ async function prepareSteps(v, args, sp) {
   }
   const sitePlans = [];
   for (const kind of scope.site) {
-    if (kind === 'datapacks' && !profile.world) {
-      if (parts.length) notes.push(`датапаки сайта: мир не выбран — пропускаю (tfc init --world <мир>)`);
-      continue;
-    }
     sp.update(`Смотрю ${KIND_TITLE[kind] ?? kind}`);
-    sitePlans.push(await planPull(a, profile, kind, names, { force: v.force }));
+    const planned = await planPull(a, profile, kind, names, { force: v.force });
+    if (kind === 'datapacks' && planned.snapshot && planned.snapshot !== current?.id)
+      throw new Error('сборка изменилась во время сверки — повторите команду');
+    sitePlans.push(planned);
   }
   const state = loadState(profile);
   const owned = siteOwned(sitePlans, names.length ? null : current, state);
@@ -477,7 +483,12 @@ async function prepareSteps(v, args, sp) {
   let cache = null;
   if (scope.snap.length) {
     ({ files: local, cache } = await scan(profile, sp));
-    plan = makePlan(current, local, state, scope.snap, { force: v.force, hasWorld: !!profile.world, skip: owned.skip });
+    plan = makePlan(current, local, state, scope.snap, {
+      force: v.force,
+      hasWorld: !!profile.world,
+      skip: owned.skip,
+      datapacksOnly: parts.includes('datapacks') && !parts.includes('kubejs'),
+    });
     plan.extra = plan.extra.filter((f) => !pulled.has(f.path));
   }
   return {
@@ -624,30 +635,37 @@ async function cmdPull(v, args) {
     if (!interactive() && risky) throw new Error('есть замены и удаления — подтвердите: tfc pull --yes');
     if (interactive() && !(await confirm('Применить?', true))) return;
   }
-  if (plan) {
-    const res = await applyPlan({
-      api: r.api,
-      profile,
-      plan,
-      snapshot: r.current,
-      cache: r.cache,
-      backup,
-      skip: r.skip,
-    });
-    for (const d of res.duplicates)
-      console.log(`  ${red('−')} старая версия мода ${d.ids.join(', ')}: ${d.path} ${dim(`(в сборке — ${d.by})`)}`);
-    const before = sitePlans.find((p) => p.kind === 'addons')?.obsolete.length ?? 0;
-    if (r.overrides) recheckAddons(profile, sitePlans, r.overrides);
-    for (const x of sitePlans.find((p) => p.kind === 'addons')?.obsolete.slice(before) ?? [])
-      console.log(`  ${red('−')} ${x.path} ${dim(`— ${x.name}, вместо него аддон`)}`);
+  try {
+    if (plan) {
+      const res = await applyPlan({
+        api: r.api,
+        profile,
+        plan,
+        snapshot: r.current,
+        cache: r.cache,
+        backup,
+        skip: r.skip,
+      });
+      for (const d of res.duplicates)
+        console.log(`  ${red('−')} старая версия мода ${d.ids.join(', ')}: ${d.path} ${dim(`(в сборке — ${d.by})`)}`);
+      const before = sitePlans.find((p) => p.kind === 'addons')?.obsolete.length ?? 0;
+      if (r.overrides) recheckAddons(profile, sitePlans, r.overrides);
+      for (const x of sitePlans.find((p) => p.kind === 'addons')?.obsolete.slice(before) ?? [])
+        console.log(`  ${red('−')} ${x.path} ${dim(`— ${x.name}, вместо него аддон`)}`);
+    }
+    applyPull(profile, sitePlans, backup, r.overrides);
+  } finally {
+    finishBackup(profile, backup);
   }
-  applyPull(profile, sitePlans, backup, r.overrides);
   const dir = finishBackup(profile, backup);
   console.log(green('Готово.') + (dir ? dim(` Копия прежнего — ${dir}; вернуть: tfc undo`) : ''));
   if (plan?.conflict.length || sitePlans.some((p) => p.conflict.length))
     console.log(yellow('Сравните свои файлы с *.tfc-new и оставьте нужное.'));
   const changed = (kind) => sitePlans.some((p) => p.kind === kind && pullChanges(p));
-  if (changed('datapacks') || plan?.add.concat(plan.update, plan.remove).some((f) => f.kind === 'world-datapack'))
+  if (
+    changed('datapacks') ||
+    plan?.add.concat(plan.update, plan.remove).some((f) => f.kind === 'world-datapack' || isPackDatapackPath(f.path))
+  )
     console.log(dim('Датапаки подхватятся после перезапуска мира или командой /reload.'));
   if (changed('addons') || plan?.add.concat(plan.update, plan.remove).some((f) => f.kind === 'mod'))
     console.log(dim('Моды поменялись — перезапустите игру (и сервер).'));
@@ -1161,6 +1179,33 @@ async function cmdAdmin(v, [sub, ...args]) {
     );
 }
 
+async function cmdDatapacks(v, args) {
+  const [sub = 'list', ...names] = args;
+  const cfg = loadConfig();
+  const a = api(cfg);
+  let profile = null;
+  if (Object.keys(cfg.profiles ?? {}).length) profile = currentProfile(cfg, v.profile);
+  if (sub === 'list' || sub === 'files') return listDatapacks(a, profile, names.join(' '), sub === 'files');
+  if (!profile) throw new Error('сначала выберите папку игры и мир: tfc init');
+  if (sub === 'install') {
+    if (!profile.world)
+      throw new Error(
+        'для догрузки в мир выберите его: tfc init --world <мир>; пакеты сборки без мира получает tfc pull datapacks',
+      );
+    if (names.includes('all') && names.length > 1) throw new Error('укажите all или отдельные имена');
+    const ids = names.length && names[0] !== 'all' ? await datapackIds(a, names) : [];
+    return cmdPull(v, ['datapacks', ...ids]);
+  }
+  if (sub === 'confirm' || sub === 'unconfirm') {
+    const result = await confirmDatapacks(a, profile, names, { yes: v.yes, dryRun: v['dry-run'], action: sub });
+    if (result) return cmdPull({ ...v, yes: true, force: false }, ['datapacks', ...result.ids]);
+    return;
+  }
+  throw new Error(
+    'tfc datapacks list [поиск] | files [поиск] | install [all|имя…] | confirm [all|имя…] | unconfirm [all|имя…]',
+  );
+}
+
 // ---------------------------------------------------------------- main
 
 const COMMANDS = {
@@ -1180,6 +1225,7 @@ const COMMANDS = {
   admin: cmdAdmin,
   addons: cmdAddons,
   schematics: cmdSchematics,
+  datapacks: cmdDatapacks,
   report: cmdReport,
 };
 

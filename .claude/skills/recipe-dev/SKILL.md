@@ -39,7 +39,11 @@ commit) — Russian.
 | pack config value                                    | `config_get` → `config_propose`    |
 | new block/item with logic                            | addon — skill `addon-dev`          |
 
-- Site datapack: Firestore `datapacks` (`datapacks_list` / `datapack_get`), installed into the world by the tfc app.
+- Site datapack: Firestore `datapacks` (`datapacks_list` / `datapack_get`), installed into the selected world for testing
+  by `tfc datapacks install`. Shared fixes can then be confirmed by the host (`tfc datapacks confirm`) as pinned ZIPs
+  in `kubejs/data/` for all worlds; the current pack snapshot owns the confirmed version. A site edit or `install`
+  flag never replaces it automatically. The agent cannot verify in game or confirm on the host's behalf without
+  the host explicitly reporting those versions checked; use `--dry-run` for a plan. See `docs/plans/datapacks-pack.md`.
 - Site KubeJS script: `kubejs_site_list` / `kubejs_site_get`.
 - Pack KubeJS/datapack files: `npm run tfc -- admin propose <overlay dir> --note …` (host pulls and approves).
 - Pack config: `config_propose`.

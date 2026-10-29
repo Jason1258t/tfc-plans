@@ -148,6 +148,21 @@ task by the workaround, then propose a separate session (own worktree, branch `f
 "Adding a tool" in docs/mcp.md; in the brief say what you looked for, the workaround, and the desired answer. Bigger
 things — [docs/plans/mcp-next.md](docs/plans/mcp-next.md).
 
+## Datapack deployment levels
+
+- Shared fixes can be confirmed for the whole pack as ZIP files in `kubejs/data/` (installed KubeJS loads them).
+  Source of truth: the current pack-server snapshot's `datapacks` records, including content/archive hashes and source
+  revision. Site `install` is a world-test opt-in, not confirmation or permission to replace the pinned pack version.
+- Inspect `tfc datapacks list` / `files`; `install all|<id/name/filename>` puts unconfirmed packs into the selected
+  world. Host `confirm all|<id/name/filename>` promotes matching world ZIPs after verification in game;
+  `unconfirm` returns a pinned version to world scope for retesting. Use `--dry-run` to inspect first.
+- An agent cannot verify in game. Do not declare a version tested or run live `confirm` on the host's behalf without
+  their explicit confirmation that those versions were checked. Ship the tooling normally; record the game check
+  separately. Changed/unknown world copies must be preserved, with backups for managed removals.
+- Local `undo` does not revert the server's confirmation; server `admin rollback` reverts the entire snapshot.
+  Published site/MCP deployment labels follow the snapshot's `kubejs.json`, so can lag a queued rebuild/publish.
+  Details and migration — [docs/plans/datapacks-pack.md](docs/plans/datapacks-pack.md).
+
 ## Browser checks
 
 - Dev server on port 5176 (5177 if busy), see Commands; it needs no jars.

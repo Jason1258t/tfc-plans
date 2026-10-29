@@ -30,6 +30,7 @@ import { readBlazeFuel } from '../src/shared/pack-data/liquidFuel.ts';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import { kubejsDataFiles } from './kubejs-data.mjs';
 import { unzipSync } from 'fflate';
 import { ROOT } from './firestore-rest.mjs';
 import { matchFilter } from '../src/shared/pack-data/recipeFilter.ts';
@@ -573,33 +574,22 @@ function libraryItems(registered) {
 
 // ---------------------------------------------------------------- kubejs/data — датапак
 
+const dataCache = new Map();
+function layerData(layer) {
+  if (!dataCache.has(layer)) dataCache.set(layer, kubejsDataFiles(path.join(INSTANCE, layer), `kubejs/${layer}`));
+  return dataCache.get(layer);
+}
+
 function dataRecipes(layer) {
-  const base = path.join(INSTANCE, layer, 'data');
   const out = [];
-  if (!fs.existsSync(base)) return out;
-  for (const ns of fs.readdirSync(base)) {
-    for (const folder of ['recipe', 'recipes']) {
-      const dir = path.join(base, ns, folder);
-      if (!fs.existsSync(dir)) continue;
-      const walk = (d) => {
-        for (const e of fs.readdirSync(d, { withFileTypes: true })) {
-          const full = path.join(d, e.name);
-          if (e.isDirectory()) walk(full);
-          else if (e.name.endsWith('.json')) {
-            try {
-              const j = JSON.parse(fs.readFileSync(full, 'utf8'));
-              const id = `${ns}:${path
-                .relative(dir, full)
-                .replaceAll('\\', '/')
-                .replace(/\.json$/, '')}`;
-              out.push({ i: id, t: typeof j.type === 'string' ? j.type : '', s: `kubejs/${layer}/data`, j });
-            } catch {
-              /* битый JSON игра тоже пропустит */
-            }
-          }
-        }
-      };
-      walk(dir);
+  for (const [file, { text, source }] of layerData(layer)) {
+    const m = /^([^/]+)\/recipes?\/(.+)\.json$/.exec(file);
+    if (!m) continue;
+    try {
+      const j = JSON.parse(text);
+      out.push({ i: `${m[1]}:${m[2]}`, t: typeof j.type === 'string' ? j.type : '', s: source, j });
+    } catch {
+      /* Битый JSON игра тоже пропустит. */
     }
   }
   return out;
@@ -612,20 +602,14 @@ function dataRecipes(layer) {
  */
 const NUTRIENTS = ['grain', 'fruit', 'vegetables', 'protein', 'dairy'];
 function dataFilesOf(layer, sub) {
-  const base = path.join(INSTANCE, layer, 'data');
   const out = [];
-  if (!fs.existsSync(base)) return out;
-  for (const ns of fs.readdirSync(base)) {
-    const dir = path.join(base, ns, sub);
-    if (!fs.existsSync(dir)) continue;
-    for (const rel of fs.readdirSync(dir, { recursive: true })) {
-      if (!String(rel).endsWith('.json')) continue;
-      try {
-        const json = JSON.parse(fs.readFileSync(path.join(dir, String(rel)), 'utf8'));
-        out.push({ ns, rel: String(rel).replaceAll('\\', '/'), json });
-      } catch {
-        /* битый JSON игра тоже пропустит */
-      }
+  for (const [file, { text, source }] of layerData(layer)) {
+    const i = file.indexOf('/');
+    if (i < 0 || !file.slice(i + 1).startsWith(`${sub}/`) || !file.endsWith('.json')) continue;
+    try {
+      out.push({ ns: file.slice(0, i), rel: file.slice(i + sub.length + 2), json: JSON.parse(text), source });
+    } catch {
+      /* Битый JSON игра тоже пропустит. */
     }
   }
   return out;
@@ -639,12 +623,11 @@ function dataOverrides(layers) {
   const cooked = [];
   const notes = [];
   for (const layer of layers) {
-    const source = `kubejs/${layer}/data`;
-    for (const { ns, rel, json } of dataFilesOf(layer, 'compat')) {
+    for (const { ns, rel, json, source } of dataFilesOf(layer, 'compat')) {
       const fuel = readBlazeFuel(`${ns}:${rel.replace(/\.json$/, '')}`, source, json);
       if (fuel) blazeFuels.push(fuel);
     }
-    for (const { ns, rel, json } of dataFilesOf(layer, 'tfc/food')) {
+    for (const { ns, rel, json, source } of dataFilesOf(layer, 'tfc/food')) {
       const ing = ingredientOf(json.ingredient);
       if (ing.tags.length) notes.push(`${source}: еда ${ns}:${rel} задана тегом — состав тега на сайте не раскрыт`);
       foods.push({
@@ -659,7 +642,7 @@ function dataOverrides(layers) {
         nutrients: Object.fromEntries(NUTRIENTS.filter((n) => json[n]).map((n) => [n, json[n]])),
       });
     }
-    for (const { ns, rel, json } of dataFilesOf(layer, 'tfc/fluid_heat'))
+    for (const { ns, rel, json, source } of dataFilesOf(layer, 'tfc/fluid_heat'))
       metals.push({
         id: `${ns}:${rel.replace(/\.json$/, '')}`,
         source,
@@ -667,7 +650,7 @@ function dataOverrides(layers) {
         melt: json.melt_temperature ?? json.temperature ?? null,
         specificHeat: json.specific_heat_capacity ?? null,
       });
-    for (const { ns, rel, json } of dataFilesOf(layer, 'cuisinedelight_config/ingredient'))
+    for (const { ns, rel, json, source } of dataFilesOf(layer, 'cuisinedelight_config/ingredient'))
       for (const e of json?.entries ?? []) {
         const ing = ingredientOf(e.ingredient);
         entries.push({ file: `${ns}:${rel}`, source, items: ing.items, tags: ing.tags, ...skilletEntryValues(e) });
@@ -680,7 +663,7 @@ function dataOverrides(layers) {
       /* библиотека ещё не собрана */
     }
     if (cookedDir)
-      for (const { ns, rel, json } of dataFilesOf(layer, cookedDir)) {
+      for (const { ns, rel, json, source } of dataFilesOf(layer, cookedDir)) {
         const ing = ingredientOf(json?.ingredient);
         cooked.push({
           file: `${ns}:${rel}`,
@@ -762,14 +745,11 @@ const MOD_ONLY_DATA = [
   ['structure/multiblocks', 'шаблоны мультиблоков IE'],
 ];
 function unhandledData(layer) {
-  const base = path.join(INSTANCE, layer, 'data');
-  if (!fs.existsSync(base)) return [];
-  const out = [];
-  for (const [sub, what] of MOD_ONLY_DATA) {
-    const where = fs.readdirSync(base).filter((ns) => fs.existsSync(path.join(base, ns, sub)));
-    if (where.length) out.push(`${layer}/data: ${what} (${where.map((ns) => `${ns}/${sub}`).join(', ')})`);
-  }
-  return out;
+  const files = [...layerData(layer).keys()];
+  return MOD_ONLY_DATA.flatMap(([sub, what]) => {
+    const found = files.filter((p) => p.slice(p.indexOf('/') + 1).startsWith(`${sub}/`));
+    return found.length ? [`${layer}/data: ${what} (${found.length} файлов)`] : [];
+  });
 }
 
 // ---------------------------------------------------------------- main
@@ -778,6 +758,7 @@ function unhandledData(layer) {
 export function buildKubejs({ instanceDir = DEFAULT_INSTANCE, outDir = DEFAULT_OUT } = {}) {
   INSTANCE = instanceDir;
   OUT_DIR = outDir;
+  dataCache.clear();
   if (!fs.existsSync(INSTANCE)) {
     log(`${shown(INSTANCE)} нет — импортируйте папку: npm run kubejs -- <zip|папка>`);
     return;

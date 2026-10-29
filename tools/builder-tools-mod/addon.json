@@ -1,0 +1,29 @@
+{
+  "id": "builder_tools",
+  "name": "Builder Tools — инструменты строителя",
+  "version": "1.0.1",
+  "jar": "builder-tools-1.0.1.jar",
+  "sha256": "911fd82cc8bfc795802aa5287c9439edf3f1503e9f0d0bf464d51a4c0427d918",
+  "order": 120,
+  "side": "both",
+  "summary": "Пояс строителя пополняет закончившиеся блоки в обеих руках и при добыче подставляет подходящий инструмент из инвентаря. Работает в слоте Curios «Пояс»; Shift + ПКМ с поясом в руке включает или выключает его.",
+  "needs": "Сервер и все игроки. Minecraft 1.21.1, NeoForge 21.1.251+, Curios 9+. Рецепт использует кожу и джутовое волокно TFC.",
+  "blocks": [
+    {
+      "id": "builder_tools:builder_belt",
+      "name": "Пояс строителя",
+      "image": "builder_belt.png",
+      "recipe": {
+        "pattern": ["LLL", "LJL", "   "],
+        "key": {
+          "L": {
+            "item": "minecraft:leather"
+          },
+          "J": {
+            "item": "tfc:jute_fiber"
+          }
+        }
+      }
+    }
+  ]
+}

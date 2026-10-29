@@ -12,6 +12,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
+import { deploymentsOf, inspectDatapack } from './datapacks.mjs';
 import { classifyPath } from './paths.mjs';
 import { HttpError, readJson, SHA256_RE, writeJsonAtomic } from './util.mjs';
 
@@ -75,6 +76,8 @@ export async function openStore(dataDir, { maxBlobSize, maxTotalBytes, minFreeBy
       if (!summaries.has(id)) return id;
     }
   }
+
+  let channelWrite = Promise.resolve();
 
   return {
     stats: () => ({ blobs: blobs.size, bytes: totalBytes, snapshots: summaries.size, current: channels.current }),
@@ -144,8 +147,8 @@ export async function openStore(dataDir, { maxBlobSize, maxTotalBytes, minFreeBy
      * Новый снимок. Проверки: пути из белого списка без запрещённых, без повторов, все файлы уже залиты
      * и размер совпадает. Ошибки собираются списком (problems), чтобы клиент показал всё сразу.
      */
-    async createSnapshot(body, author) {
-      const { note = '', mc = '', loader = '', files } = body ?? {};
+    async createSnapshot(body, author, options = {}) {
+      let { note = '', mc = '', loader = '', files } = body ?? {};
       if (!Array.isArray(files) || !files.length) throw new HttpError(400, 'files — непустой массив');
       if (files.length > MAX_FILES) throw new HttpError(400, `Больше ${MAX_FILES} файлов в снимке`);
       for (const [k, v, max] of [
@@ -155,6 +158,41 @@ export async function openStore(dataDir, { maxBlobSize, maxTotalBytes, minFreeBy
       ])
         if (typeof v !== 'string' || v.length > max) throw new HttpError(400, `${k} — строка до ${max} символов`);
 
+      const current = await this.getCurrent();
+      if (body.base !== undefined && body.base !== (current?.id ?? null))
+        throw new HttpError(409, 'Сборка изменилась — перечитайте план');
+      const deployments = options.datapacks ?? deploymentsOf(current);
+      files = [...files];
+      // Старый CLI не знает об уровне сборки: не разрешаем ему потерять подтверждённые пакеты.
+      for (const d of deployments) {
+        const f = files.find((x) => x.path === d.path);
+        if (f && f.sha256 !== d.sha256)
+          throw new HttpError(
+            409,
+            `Датапак «${d.name}» изменён: сначала снимите подтверждение (tfc datapacks unconfirm)`,
+          );
+        if (!f) {
+          const old = current?.files.find((x) => x.path === d.path && x.sha256 === d.sha256);
+          if (!old) throw new HttpError(400, 'Нет файла подтверждённого датапака');
+          files.push(old);
+        }
+      }
+      if (deployments.length) {
+        const kept = [];
+        for (const f of files) {
+          let duplicate = false;
+          if (/^world\/datapacks\/[^/]+\.zip$/.test(f.path ?? '') && blobs.has(f.sha256)) {
+            try {
+              const content = inspectDatapack(await fsp.readFile(blobPath(f.sha256))).contentHash;
+              duplicate = deployments.some((d) => d.contentHash === content);
+            } catch {
+              /* Неизвестный или повреждённый ZIP оставляем. */
+            }
+          }
+          if (!duplicate) kept.push(f);
+        }
+        files = kept;
+      }
       const problems = [];
       const missing = [];
       const seen = new Set();
@@ -208,6 +246,7 @@ export async function openStore(dataDir, { maxBlobSize, maxTotalBytes, minFreeBy
         loader,
         parent: channels.current,
         files: out,
+        datapacks: deployments,
       };
       await writeJsonAtomic(snapPath(snap.id), snap);
       summaries.set(snap.id, summarize(snap));
@@ -215,25 +254,31 @@ export async function openStore(dataDir, { maxBlobSize, maxTotalBytes, minFreeBy
     },
 
     /** Сделать снимок текущим: { id } или { rollback: true } — на тот, что был текущим до нынешнего */
-    async setCurrent(body, by) {
-      const at = new Date().toISOString();
-      let history;
-      let id = body?.id;
-      if (body?.rollback === true) {
-        // Назад по истории: повторный откат уходит ещё на шаг, а не возвращает обратно
-        const i = channels.history.findLastIndex((h) => h.id !== channels.current);
-        if (i < 0) throw new HttpError(409, 'Откатываться некуда: другого текущего снимка не было');
-        id = channels.history[i].id;
-        history = [...channels.history.slice(0, i), { id, at, by, rollback: true }];
-      } else {
-        if (!summaries.has(id)) throw new HttpError(404, 'Нет такого снимка');
-        history = [...channels.history, { id, at, by }].slice(-200);
-      }
-      const next = { current: id, history };
-      await writeJsonAtomic(channelsFile, next);
-      const was = channels.current;
-      channels = next;
-      return { current: id, previous: was };
+    setCurrent(body, by) {
+      const nextWrite = channelWrite.then(async () => {
+        if (body?.base !== undefined && body.base !== channels.current)
+          throw new HttpError(409, 'Сборка изменилась — перечитайте план');
+        const at = new Date().toISOString();
+        let history;
+        let id = body?.id;
+        if (body?.rollback === true) {
+          // Назад по истории: повторный откат уходит ещё на шаг, а не возвращает обратно
+          const i = channels.history.findLastIndex((h) => h.id !== channels.current);
+          if (i < 0) throw new HttpError(409, 'Откатываться некуда: другого текущего снимка не было');
+          id = channels.history[i].id;
+          history = [...channels.history.slice(0, i), { id, at, by, rollback: true }];
+        } else {
+          if (!summaries.has(id)) throw new HttpError(404, 'Нет такого снимка');
+          history = [...channels.history, { id, at, by }].slice(-200);
+        }
+        const next = { current: id, history };
+        await writeJsonAtomic(channelsFile, next);
+        const was = channels.current;
+        channels = next;
+        return { current: id, previous: was };
+      });
+      channelWrite = nextWrite.catch(() => {});
+      return nextWrite;
     },
   };
 }

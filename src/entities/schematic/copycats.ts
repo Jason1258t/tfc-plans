@@ -1,4 +1,5 @@
 import { T, type Compound } from '../../lib/nbt';
+import { COPYCAT_BASE } from '../../lib/schematicFile';
 
 /**
  * Копикаты (заполняемые блоки Create и Create: Copycats+): модель в jar пустая (minecraft:block/air), игра вырезает
@@ -20,7 +21,7 @@ export interface Material {
   p: Map<string, string>;
 }
 
-export const COPYCAT_BASE = 'create:copycat_base';
+export { COPYCAT_BASE };
 
 // ---------------------------------------------------------------- коробки и повороты (как MutableAABB)
 

@@ -6,7 +6,9 @@
  * (`import '../src/lib/schematicFile.ts'`) — сервер сборки и программа tfc собирают тот же файл, что и сайт.
  */
 import { readNbt, T, writeNbt, type Compound, type ParsedNbt, type Tag } from './nbt.ts';
-import { fixBlockData } from './schematicBlockFixes.ts';
+import { COPYCAT_BASE, copycatSlots, fixBlockData, replaceCopycatMaterials } from './schematicBlockFixes.ts';
+
+export { COPYCAT_BASE };
 
 /**
  * Форма схемы при скачивании. crop — обрезать по крайним непустым блокам (воздух и структурная пустота
@@ -69,7 +71,10 @@ export const nameOf = (entry: Tag) => {
   return n?.type === T.String ? n.value : null;
 };
 
-/** id блока → сколько раз встречается; блоки палитры без позиций — с нулём */
+/**
+ * id блока → сколько раз встречается; блоки палитры без позиций — с нулём. Материалы копикатов тоже считаются
+ * (каждый — предмет, который тратит пушка): иначе материал, который есть только внутри копикатов, нельзя заменить.
+ */
 export function countBlocks(parsed: ParsedNbt): Map<string, number> {
   const root = parsed.root.value;
   const palettes = paletteLists(root);
@@ -83,6 +88,12 @@ export function countBlocks(parsed: ParsedNbt): Map<string, number> {
       if (state?.type !== T.Int) continue;
       const name = nameOf(palette[state.value]);
       if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
+      const nbt = b.value.get('nbt');
+      if (nbt?.type !== T.Compound) continue;
+      for (const { material } of copycatSlots(nbt.value)) {
+        const m = nameOf({ type: T.Compound, value: material });
+        if (m && m !== COPYCAT_BASE && !EMPTY_BLOCKS.has(m)) counts.set(m, (counts.get(m) ?? 0) + 1);
+      }
     }
   }
   // Блоки палитры, которые не встречаются в blocks (бывает) — тоже показываем
@@ -203,18 +214,33 @@ export async function applyEdits(parsed: ParsedNbt, replace: Map<string, string>
       return !(state?.type === T.Int && removed.has(state.value));
     });
   }
-  if (blocks?.type === T.List) fixBlocks(blocks.value, palettes[0] ?? []);
+  if (blocks?.type === T.List) fixBlocks(blocks.value, palettes[0] ?? [], replace, legacyItems(root.value));
   if (box) reshape(root.value, box, shape);
   return writeNbt(root, parsed.gzipped);
 }
 
-/** Данные блок-сущностей, несовместимые с блоком после замен (schematicBlockFixes) */
-function fixBlocks(blocks: Tag[], palette: Tag[]) {
+/** Материал копиката после замен: новый id, COPYCAT_BASE — материал убран (блок удалён или стал воздухом), null — без замены */
+export function copycatMaterialTarget(id: string, replace: Map<string, string>): string | null {
+  const to = replace.get(id);
+  if (!to) return null;
+  return to === REMOVE || EMPTY_BLOCKS.has(to) ? COPYCAT_BASE : to;
+}
+
+/** Предметы в nbt по-старому (Count байтом): схема сохранена до 1.20.5 (DataVersion 3837), игра обновит её при чтении */
+function legacyItems(root: Compound) {
+  const v = root.get('DataVersion');
+  return v?.type === T.Int && v.value < 3837;
+}
+
+/** Материалы копикатов по заменам и данные блок-сущностей, несовместимые с блоком после замен (schematicBlockFixes) */
+function fixBlocks(blocks: Tag[], palette: Tag[], replace: Map<string, string>, legacy: boolean) {
+  const target = (id: string) => copycatMaterialTarget(id, replace);
   for (const b of blocks) {
     if (b.type !== T.Compound) continue;
     const nbt = b.value.get('nbt');
     const state = b.value.get('state');
     if (nbt?.type !== T.Compound || state?.type !== T.Int) continue;
+    if (replace.size) replaceCopycatMaterials(nbt.value, target, legacy);
     const name = palette[state.value] && nameOf(palette[state.value]);
     if (!name) continue;
     const fixed = fixBlockData(name, nbt.value);

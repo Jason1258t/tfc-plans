@@ -21,6 +21,7 @@ import {
 
 // Файл схемы с заменами и формой — общий с Node модуль schematicFile.ts; здесь — то, что нужно только сайту
 export {
+  copycatMaterialTarget,
   countBlocks,
   DEFAULT_SHAPE,
   EMPTY_BLOCKS,
