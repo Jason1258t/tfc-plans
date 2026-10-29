@@ -353,3 +353,11 @@ Cursor configs (shapes from their docs, not tried).
   Proposed update `u20261029-193554-dd27` changes only `display.doPopUpLogging=false`, preserving logs and
   all other config bytes. Verified installed jar code through MCP and source SHA256 against the current snapshot;
   config absent from Firestore, so submitted through `tfc admin propose`. Client launch still awaits host check.
+
+- Dev #156 (2026-10-29): rejected pack updates remain listed without the five-record history limit and can
+  be pulled explicitly by ID; bulk pull accepts pending updates only. Reject/approve without an interactive
+  terminal now require `--yes` and fail visibly instead of silently keeping pending status. Reject verifies
+  the server response; named pull retains rejected status. Obsolete Euphoria popup update was rejected live.
+  Nine temporary HTTP/CLI scenarios verified persisted rejection, noninteractive failure, bulk exclusion,
+  explicit multi-ID pulls, full rejected history, invalid-set preflight, blocked approval of rejected updates,
+  argument validation and unexpected server response. Lint/format passed.
