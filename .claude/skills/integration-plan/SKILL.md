@@ -44,20 +44,20 @@ questions matter (rarity of ores, energy, danger, server load) — before readin
 
 What the pack already has, cheap first, one call per question:
 
-| Question | Tool |
-| --- | --- |
-| mods of the area (by name/id) | `mods_list query=…`; per mod `mod_get <id>` (items, recipe types, configs) |
+| Question                                                            | Tool                                                                                                                                    |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| mods of the area (by name/id)                                       | `mods_list query=…`; per mod `mod_get <id>` (items, recipe types, configs)                                                              |
 | items and fluids of the area (uranium, nitric acid, plastic, steam) | `items_search query=…` — English word or id first (`acid`, `uranium`); Russian matches the exact word form («кислота» misses «кислоты») |
-| how they're made / used, with KubeJS status | `recipes_for` / `recipes_using` (tags with `#`) — for key items only |
-| tags that tie mods (`c:ingots/…`, `c:dusts/…`, fluids) | `tag_members`, `tags_of` |
-| ores, metals, smelting chains, fuels, energy formulas | `reference_get section=ores|metals|chains|fuels|liquid|power` |
-| where in the world (rocks, veins) | `map_rocks`, `reference_get section=ores` |
-| pack KubeJS touching it | `kubejs_search query="<id1>|<id2>|…" context=0` — one regex |
-| site datapacks / site KubeJS | `datapacks_list`, `kubejs_site_list` once each |
-| our addons | `addons_list` once; `docs/state/addons.md` |
-| configs that switch features (worldgen, explosions) | `config_get mod=<id>` |
-| players' guides on the topic | `guide_search query=…` |
-| code-level: who implements an API, event, capability | `class_find`, `class_hierarchy`, `code_refs`, `event_listeners` |
+| how they're made / used, with KubeJS status                         | `recipes_for` / `recipes_using` (tags with `#`) — for key items only                                                                    |
+| tags that tie mods (`c:ingots/…`, `c:dusts/…`, fluids)              | `tag_members`, `tags_of`                                                                                                                |
+| ores, metals, smelting chains, fuels, energy formulas               | `reference_get section=ores                                                                                                             | metals | chains                    | fuels | liquid | power` |
+| where in the world (rocks, veins)                                   | `map_rocks`, `reference_get section=ores`                                                                                               |
+| pack KubeJS touching it                                             | `kubejs_search query="<id1>                                                                                                             | <id2>  | …" context=0` — one regex |
+| site datapacks / site KubeJS                                        | `datapacks_list`, `kubejs_site_list` once each                                                                                          |
+| our addons                                                          | `addons_list` once; `docs/state/addons.md`                                                                                              |
+| configs that switch features (worldgen, explosions)                 | `config_get mod=<id>`                                                                                                                   |
+| players' guides on the topic                                        | `guide_search query=…`                                                                                                                  |
+| code-level: who implements an API, event, capability                | `class_find`, `class_hierarchy`, `code_refs`, `event_listeners`                                                                         |
 
 Write down what's **missing** (no consumer for uranium, no acid, no plastic) — that's what the integration is for —
 and what's **already there** (a second radiation, a second electricity model, a second steel would duplicate it).
@@ -74,7 +74,7 @@ Pages, changelogs and reports say what the author or a chatbot claims; the plan 
    - CurseForge / GitHub — a direct file link: `candidate_get url=<cdn link>` (same two steps), or download it yourself
      after the user's yes into its own empty folder in the scratchpad and `candidate_get path=<jar>`;
    - `candidate_get` with no args — candidates already registered (`.cache/mcp/candidates/`).
-   Don't run the jar.
+     Don't run the jar.
 2. **Read the summary, then drill down.** The summary answers most of the table below in one call: mods, license, deps
    checked against the pack (as `mods_check`), jar-in-jar, side, content counts with ru_ru, recipes by type, tags,
    worldgen, config classes, mixin targets shared with pack mods. Full lists — `section=` one of
@@ -84,18 +84,18 @@ Pages, changelogs and reports say what the author or a chatbot claims; the plan 
    `class_find`/`code_refs`/`mixins` without `jar` stay pack-only.
 3. What to get from it:
 
-| Question | Where in the jar |
-| --- | --- |
+| Question                                                                                                                         | Where in the jar                                                                                                                                 |
+| -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | mod id, version, Minecraft/NeoForge ranges, required deps and their ranges vs the pack (Create, Flywheel, Ponder, Architectury…) | `candidate_get` summary (from `META-INF/neoforge.mods.toml` + jar-in-jar); NeoForge ranges vs the server — `mods_check neoforge=…` for pack mods |
-| license and redistribution (the pack server hands jars to players) | `license` in the toml, LICENSE file, the project page; closed license → «уточнить у автора» |
-| client/server side | `side` of deps, `displayTest`, client-only classes |
-| content: blocks, items, fluids, entities | summary counts; names — `section=content query=block` (or `item`, `fluid_type`, …) (en / ru) |
-| recipes and recipe types — data or hardcoded | `section=recipes` (by type), a file — `jar_read`; recipe type registries — `class_find jar=candidate:…` |
-| tags it provides and expects (`c:` vs own) | `section=tags` (marks tags the pack already has); expected tags — `jar_grep query='"tag": "c:'` |
-| worldgen (ores, structures, biomes) — can it be switched off | `section=worldgen` (biome modifiers with biomes/features), switches — `section=config` |
-| configs: what's tunable (explosions, fallout, rates) | `section=config` → `decompile class=<config class> jar=candidate:…` |
-| mixins and their targets — clashes with pack mods | `section=mixins` (targets mixed by pack mods first); then `mixins target=<class>` on the pack |
-| extension points for our addon (registries, events, data-driven fuels) | public API packages, events it posts |
+| license and redistribution (the pack server hands jars to players)                                                               | `license` in the toml, LICENSE file, the project page; closed license → «уточнить у автора»                                                      |
+| client/server side                                                                                                               | `side` of deps, `displayTest`, client-only classes                                                                                               |
+| content: blocks, items, fluids, entities                                                                                         | summary counts; names — `section=content query=block` (or `item`, `fluid_type`, …) (en / ru)                                                     |
+| recipes and recipe types — data or hardcoded                                                                                     | `section=recipes` (by type), a file — `jar_read`; recipe type registries — `class_find jar=candidate:…`                                          |
+| tags it provides and expects (`c:` vs own)                                                                                       | `section=tags` (marks tags the pack already has); expected tags — `jar_grep query='"tag": "c:'`                                                  |
+| worldgen (ores, structures, biomes) — can it be switched off                                                                     | `section=worldgen` (biome modifiers with biomes/features), switches — `section=config`                                                           |
+| configs: what's tunable (explosions, fallout, rates)                                                                             | `section=config` → `decompile class=<config class> jar=candidate:…`                                                                              |
+| mixins and their targets — clashes with pack mods                                                                                | `section=mixins` (targets mixed by pack mods first); then `mixins target=<class>` on the pack                                                    |
+| extension points for our addon (registries, events, data-driven fuels)                                                           | public API packages, events it posts                                                                                                             |
 
 Mark every fact by source: «по jar», «по странице мода», «по отчёту (не проверено)».
 
@@ -125,13 +125,13 @@ Go through each — a short verdict and the evidence:
 
 For each piece of the integration pick the cheapest route (docs/addons.md «Когда нужен аддон»):
 
-| Route | When | How |
-| --- | --- | --- |
-| **Config** | switch off worldgen, explosions; tune rates | `config_propose` after install (keys from the jar's config classes) |
-| **KubeJS / datapack** | recipes, tags, removals, TFC data (veins, heat, melting) | pack KubeJS → `npm run tfc -- admin propose`; site datapack — section «Датапаки» |
-| **Mixin addon** | change a number or condition in someone's code | small addon like `ee-overheat`; breaks on target updates |
-| **Own addon** | new block/mechanic, or a borrowed mechanic | `tools/<mod>` per docs/addons.md, separate session per addon |
-| **Don't install** | duplicates the pack, closed license blocks distribution, version mismatch | say what would change the answer |
+| Route                 | When                                                                      | How                                                                              |
+| --------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| **Config**            | switch off worldgen, explosions; tune rates                               | `config_propose` after install (keys from the jar's config classes)              |
+| **KubeJS / datapack** | recipes, tags, removals, TFC data (veins, heat, melting)                  | pack KubeJS → `npm run tfc -- admin propose`; site datapack — section «Датапаки» |
+| **Mixin addon**       | change a number or condition in someone's code                            | small addon like `ee-overheat`; breaks on target updates                         |
+| **Own addon**         | new block/mechanic, or a borrowed mechanic                                | `tools/<mod>` per docs/addons.md, separate session per addon                     |
+| **Don't install**     | duplicates the pack, closed license blocks distribution, version mismatch | say what would change the answer                                                 |
 
 ## 5. The plan text (Russian)
 
@@ -143,20 +143,33 @@ Show it to the user **before** writing to the site. Structure:
 Источники: jar <file> (<version>), MCP по сборке от <date>; страницы модов — где помечено. В игре ничего не проверялось.
 
 ## Итог
+
 Ставить / не ставить / взять механики — одним абзацем, с главной причиной.
 
 ## Что уже есть в сборке
+
 ## Кандидат(ы) по jar
+
 | Что | Факт | Источник |
+
 ## Пересечения и конфликты
+
 | Что | С чем в сборке | Решение |
+
 ## Маршрут
+
 | Часть | Как (конфиг / KubeJS / датапак / аддон) | Кто делает (агент → propose / хост / отдельная сессия) |
+
 ## Этапы
+
 ### Этап 0. … — что сделать, чем проверить, что решить с игроками
+
 ## Ответ на отчёт (если был) — по его разделам, в его порядке
+
 ### <раздел отчёта, как у автора>
+
 | Предложение / утверждение | Ответ: верно · уже есть · берём (этап N) · не берём · вне темы | Почему, чем проверено |
+
 ## Открытые вопросы и что не проверено агентом
 ```
 
