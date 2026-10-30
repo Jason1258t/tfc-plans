@@ -40,7 +40,13 @@ function blockLook(f, blockPath) {
 function stats(iconsDir, tex) {
   const p = path.join(iconsDir, `${tex}.png`);
   if (!tex || !fs.existsSync(p)) return null;
-  const img = decodePng(fs.readFileSync(p));
+  let img;
+  try {
+    img = decodePng(fs.readFileSync(p));
+  } catch {
+    // Чересстрочные и битые PNG разборщик не читает — блок просто не попадёт в подбор, сборка не падает
+    return null;
+  }
   // Анимированные текстуры — полоса кадров: берём первый квадрат
   const w = img.width;
   const h = Math.min(img.height, img.width);

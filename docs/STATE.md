@@ -18,7 +18,7 @@ When finishing work: update the topic file, and this index only if a line below 
 
 ## In progress / waiting (details — [pending.md](state/pending.md))
 
-- Building generator (dev #166): page `/builder` live (stages 0–4); next — stage 5 brush. Host: rebuild + publish
+- Building generator (dev #166): page `/builder` live (stages 0–5, with brush); next — stage 6 forms/styles. Host: rebuild + publish
   for `block-colors.json`.
 
 - Host: pack-wide datapacks (dev #125/#154): shared ZIPs are already confirmed in the live snapshot.

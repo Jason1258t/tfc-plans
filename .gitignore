@@ -46,6 +46,9 @@ public/power.json
 public/multiblocks.json
 public/multiblocks/
 public/block-models/
+public/block-colors.json
+# Промежуточная папка загрузки данных с сервера сборки (scripts/pack-fetch.mjs)
+public/.tfc-data-new/
 public/addons/
 public/config-defaults.json
 

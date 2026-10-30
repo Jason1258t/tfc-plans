@@ -48,8 +48,21 @@ const genericRule: FamilyRule = {
   },
 };
 
-/** Реестр правил: свои правила модов — в начало */
-export const FAMILY_RULES: FamilyRule[] = [genericRule];
+/** Приставка вместо суффикса — Immersive Engineering: `concrete` → `stairs_concrete`, `slab_concrete` */
+const prefixRule: FamilyRule = {
+  variants(full, shape) {
+    const [ns, p] = split(full);
+    return [`${ns}:${shape}_${p}`];
+  },
+  bases(part) {
+    const [ns, p] = split(part);
+    const m = /^(stairs|slab|wall)_(.+)$/.exec(p);
+    return m ? [`${ns}:${m[2]}`] : [];
+  },
+};
+
+/** Реестр правил: свои правила модов — в начало; общие идут по очереди, пока не найдётся блок */
+export const FAMILY_RULES: FamilyRule[] = [genericRule, prefixRule];
 
 const SHAPES = ['stairs', 'slab', 'wall'] as const;
 

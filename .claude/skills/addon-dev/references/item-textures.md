@@ -77,4 +77,4 @@ under the addon's `art/` directory so later work does not depend on a temporary 
 - Run MCP `resources_check` for the addon and `model_render` for the consuming model when supported. If a tool
   cannot render that item model, report the limitation and inspect the PNG/model reference separately.
 - Report the source and final paths, final dimensions, generation tool and prompt, references used, and checks.
-  Client appearance remains **«в игре не проверялось»** unless the user supplies an actual in-game check.
+  Client appearance is noted as unchecked in game only if it is load-bearing; otherwise omit it.

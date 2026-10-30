@@ -1,5 +1,6 @@
 import { Dices, Plus, Trash2 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
+import { PALETTES, applyPalette } from '@tfc/core/building/palettes';
 import { FORMS, STYLES, TYPES, makeSpec } from '@tfc/core/building/presets';
 import type { BuildingSpec, RoofSpec, Side, Volume } from '@tfc/core/building/spec';
 import { Button, Input, Segmented, Select } from '@/shared/ui';
@@ -68,6 +69,10 @@ const DEGREES = [
 /** Параметры постройки: пресет, объёмы, проёмы, отделка, степень текстурирования */
 export function ParamsPanel({ spec, onChange }: Props) {
   const [preset, setPreset] = useState({ form: spec.form, style: spec.style, type: spec.type });
+  const [palette, setPalette] = useState(spec.palette ?? '');
+  // Палитры, подобранные под выбранный стиль, — первыми
+  const fits = Object.entries(PALETTES).filter(([, p]) => p.styles.includes(preset.style));
+  const others = Object.entries(PALETTES).filter(([, p]) => !p.styles.includes(preset.style));
   const vol = (i: number, patch: Partial<Volume>) =>
     onChange({ ...spec, volumes: spec.volumes.map((v, k) => (k === i ? { ...v, ...patch } : v)) });
   const roof = (i: number, patch: Partial<RoofSpec>) => vol(i, { roof: { ...spec.volumes[i].roof, ...patch } });
@@ -112,13 +117,40 @@ export function ParamsPanel({ spec, onChange }: Props) {
             ))}
           </Select>
         </div>
-        <Button
-          size="sm"
-          onClick={() => onChange(makeSpec({ ...preset, seed: spec.seed, degree: spec.texture.degree }))}
-          title="Объёмы, проёмы, отделка и блоки ролей — заново из пресета"
-        >
-          Применить пресет
-        </Button>
+        <Select value={palette} onChange={(e) => setPalette(e.target.value)} aria-label="Палитра материалов">
+          <option value="">материалы стиля</option>
+          <optgroup label="Для этого стиля">
+            {fits.map(([id, p]) => (
+              <option key={id} value={id}>
+                {p.name}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Другие палитры">
+            {others.map(([id, p]) => (
+              <option key={id} value={id}>
+                {p.name}
+              </option>
+            ))}
+          </optgroup>
+        </Select>
+        <div className={styles.row}>
+          <Button
+            size="sm"
+            onClick={() => onChange(makeSpec({ ...preset, palette, seed: spec.seed, degree: spec.texture.degree }))}
+            title="Объёмы, проёмы, отделка и блоки ролей — заново из пресета и палитры"
+          >
+            Применить пресет
+          </Button>
+          <Button
+            size="sm"
+            disabled={!palette}
+            onClick={() => onChange({ ...spec, palette, roles: applyPalette(spec.roles, PALETTES[palette]) })}
+            title="Только материалы ролей — форма, проёмы и правки клеток остаются"
+          >
+            Только палитру
+          </Button>
+        </div>
       </Group>
 
       <Group title="Объёмы">
@@ -306,6 +338,7 @@ export function ParamsPanel({ spec, onChange }: Props) {
         {(
           [
             ['quoins', 'русты на углах'],
+            ['piers', 'простенки: столбы кладки между окнами'],
             ['openingExt', 'перемычки и подоконники шире проёма'],
             ['chimney', 'труба'],
             ['clearInside', 'воздух внутри (очистить место)'],
@@ -314,7 +347,7 @@ export function ParamsPanel({ spec, onChange }: Props) {
           <label key={k} className={cx('small', styles.check)}>
             <input
               type="checkbox"
-              checked={det[k]}
+              checked={!!det[k]}
               onChange={(e) => onChange({ ...spec, details: { ...det, [k]: e.target.checked } })}
             />
             {label}

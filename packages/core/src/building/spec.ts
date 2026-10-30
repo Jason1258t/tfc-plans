@@ -73,6 +73,8 @@ export interface DetailSpec {
   openingExt: boolean;
   /** Фахверк: стойки каркаса через столько клеток (0 — без каркаса) */
   frameEvery: number;
+  /** Простенки: сплошные столбы стены между колоннами окон берут роль каркаса (индустриальный кирпич) */
+  piers?: boolean;
   /** Труба */
   chimney: boolean;
   /** Воздух внутри (очистить место под постройку) */
@@ -92,6 +94,8 @@ export interface BuildingSpec {
   form: string;
   style: string;
   type: string;
+  /** Палитра материалов (подпись; пусто — блоки стиля или выбранные вручную) */
+  palette?: string;
   volumes: Volume[];
   openings: OpeningsSpec;
   details: DetailSpec;
