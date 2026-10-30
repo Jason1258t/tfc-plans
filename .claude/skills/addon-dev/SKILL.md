@@ -94,7 +94,7 @@ and command, jar names in `release.sh`.
   server — say so.
 - `log_analyze path=run/logs/latest.log` for errors.
 - Report and site page always separate: **checked by code** (bytecode/MCP), **on the dev server** (which command, what
-  numbers), **«в игре не проверялось»** (models seen by a client, feel, multiplayer).
+  numbers). In-game behaviour (models seen by a client, feel, multiplayer) is noted only if it is load-bearing.
 
 ## 7. Hand-off
 

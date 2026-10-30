@@ -7,7 +7,7 @@ description: Build a pack update plan («план обновления») from t
 
 The plan is advice for the host, not an update: the agent never swaps jars. Pack file changes go through the host
 (`tfc admin propose`, `config_propose`), the jars themselves — the host's own update (docs/pack-server.md). Nothing is
-checked in game — every step the plan asks to verify is marked «в игре не проверялось».
+checked in game — in-game steps are noted as unchecked only when load-bearing.
 
 All facts from MCP `tfc-pack` (AGENTS.md), not from memory. Everything the user sees — in Russian.
 
@@ -91,7 +91,7 @@ Show the plan to the user **before** writing anything to the site (writes go to 
 ```markdown
 # План обновления: <scope>
 
-Источник: mods_freshness от <date>, модов в плане N. Ничего в игре не проверялось.
+Источник: mods_freshness от <date>, модов в плане N.
 
 ## Итог
 | Мод | Сейчас → новая | Риск | Почему |
@@ -106,7 +106,7 @@ Show the plan to the user **before** writing anything to the site (writes go to 
 - KubeJS, датапаки сайта, аддоны: … (или «не трогают»)
 - Миксины: … (если есть общие методы с другими модами)
 - Что сделать: … (конфиг перенести, propose, ждать сборку зависимого мода)
-- Проверить в игре: … — «в игре не проверялось»
+- Проверить в игре: …
 
 ## Не обновлять сейчас
 ## Что не проверено агентом

@@ -83,7 +83,8 @@ commit) — Russian.
 
 - `recipe_get id=<new>` — parses, status «работает», no unexpected KubeJS removal/replacement.
 - `recipe_conflicts` (step 7) clean; `recipes_using` on the new inputs — nothing important was shadowed.
-- Mark «в игре не проверялось» (real machine behaviour, feel, multiplayer).
+- Note in-game behaviour (machine feel, multiplayer) only if it matters for the answer; don't append a routine
+  «в игре не проверялось» mark.
 
 ## 10. Report
 

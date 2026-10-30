@@ -8,7 +8,7 @@ description: Analyse the pack for an integration («анализ интегра�
 The result is advice and a staged plan, not an installation: the agent never adds jars to the pack. Pack file changes
 go through the host (`config_propose`, `npm run tfc -- admin propose`), new jars — the host's own update
 (docs/pack-server.md), own code — an addon in `tools/` (docs/addons.md) in a separate session. Nothing is checked in
-game — every in-game step is marked «в игре не проверялось».
+game — in-game steps are noted as unchecked only when load-bearing.
 
 All pack facts from MCP `tfc-pack` (AGENTS.md), candidate facts from its jar. Everything the user sees — in Russian.
 
@@ -153,7 +153,7 @@ Show it to the user **before** writing to the site. Structure:
 ## Маршрут
 | Часть | Как (конфиг / KubeJS / датапак / аддон) | Кто делает (агент → propose / хост / отдельная сессия) |
 ## Этапы
-### Этап 0. … — что сделать, чем проверить («в игре не проверялось»), что решить с игроками
+### Этап 0. … — что сделать, чем проверить, что решить с игроками
 ## Ответ на отчёт (если был) — по его разделам, в его порядке
 ### <раздел отчёта, как у автора>
 | Предложение / утверждение | Ответ: верно · уже есть · берём (этап N) · не берём · вне темы | Почему, чем проверено |

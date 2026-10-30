@@ -80,8 +80,8 @@ report=…`: a short Russian report — what changed for players, what was check
 - Report to the user (not a frontend dev): what changed for players, what was checked and how, what wasn't. No internal
   function names unless needed for an action.
 - Game facts (mod mechanics, KubeJS filters, map projection) — **verify in jars** (MCP first), not from memory. Say what
-  was checked in code and what wasn't. The agent can't check anything in game: mark recipes, scripts, coordinates
-  «в игре не проверялось».
+  was checked in code and what wasn't. The agent can't run the game, so don't append a routine «в игре не проверялось»
+  note unless the in-game status is actually load-bearing for the answer.
 - Cheap delegation: broad "where is X / how does Y work" searches → a read-only subagent if your harness has one; when
   one session is about to span several unrelated features, finish and start a new session instead of growing the
   context.
