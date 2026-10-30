@@ -1,5 +1,5 @@
-import { Download, FileBox, ImagePlus, Library, Search, Trash2, X } from 'lucide-react';
-import { Button, ErrorBox } from '@/shared/ui';
+import { Download, FileBox, ImagePlus, Library, Search, Trash2, Wand2, X } from 'lucide-react';
+import { Button, ButtonLink, ErrorBox } from '@/shared/ui';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
@@ -9,7 +9,7 @@ import { useSearchTrack } from '@/shared/api';
 import { formatSize } from '@/entities/file';
 import { useItems } from '@/shared/pack-data';
 import { REMOVE, type Schematic } from '@/entities/schematic';
-import { openFromLibrary, refreshPreview, removeFromLibrary } from '../model/schematicLibrary';
+import { openFromLibrary, refreshPreview, removeFromLibrary } from '@/entities/schematic';
 import { cx, timeAgo } from '@/shared/lib';
 import section from '../SchematicsSection.module.css';
 import styles from './SchematicLibrary.module.css';
@@ -176,6 +176,17 @@ export function SchematicLibrary({ openIds, onOpen, onDownload }: Props) {
                 >
                   {isOpen ? 'Открыта' : 'Открыть'}
                 </Button>
+                {entry.building && (
+                  <ButtonLink
+                    size="sm"
+                    icon
+                    to={`/builder?from=${entry.id}`}
+                    aria-label={`Открыть ${entry.name} в генераторе построек`}
+                    title="Открыть в генераторе построек: поменять размеры, материалы, текстуру"
+                  >
+                    <Wand2 size={14} />
+                  </ButtonLink>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"

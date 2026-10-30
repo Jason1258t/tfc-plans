@@ -1,6 +1,5 @@
-/* Оверлей «Слои» и объёмный вид: шапка, панель инструментов, канвас, легенда слоя, меню выделения.
-   Модуль импортируют SchematicLayers и SchematicView3D — вид 3D живёт внутри того же оверлея,
-   поэтому его классы здесь (и правило «подсказка над 3D» — тоже). */
+/* Оверлей «Слои»: шапка, панель инструментов, канвас, легенда слоя, меню выделения. Сам 3D-вид — виджет
+   schematic-view; здесь только правило «подсказка над 3D». */
 
 .overlay {
   position: fixed;
@@ -211,50 +210,9 @@
   border-color: var(--border);
 }
 
-/* ------------------------------------------------------------------ вид 3D */
+/* ------------------------------------------------------------------ вид 3D (виджет schematic-view) */
 
-.view3d {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--surface-2);
-}
-
-.view3d canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  touch-action: none;
-}
-
-.view3dStats {
-  position: absolute;
-  left: 8px;
-  top: 8px;
-  z-index: 1;
-  pointer-events: none;
-}
-
-/* Рамка объекта (перетаскивание ЛКМ) */
-.view3dFrame {
-  position: absolute;
-  z-index: 1;
-  border: 2px dashed var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  pointer-events: none;
-}
-
-.view3dError {
-  position: absolute;
-  top: 40px;
-  z-index: 1;
-}
-
-.view3d ~ .hint {
+[data-schematic-view] ~ .hint {
   z-index: 2;
 }
 

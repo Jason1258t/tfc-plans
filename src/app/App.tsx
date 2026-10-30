@@ -17,6 +17,7 @@ import { FilesPage } from '@/pages/files';
 import { ReferencePage } from '@/pages/reference';
 import { FreshnessPage, UpdatesPage } from '@/pages/updates';
 import { SchematicsPage } from '@/pages/schematics';
+import { BuilderPage } from '@/pages/builder';
 import { StatsPage } from '@/pages/stats';
 import { DevPage } from '@/pages/dev';
 import { TasksPage } from '@/pages/tasks';
@@ -61,6 +62,7 @@ export default function App() {
           <Route path="/doc/:id" element={<DocPage />} />
           <Route path="/docs/:id" element={<OldDocRedirect />} />
           <Route path="/schematics" element={<SchematicsPage />} />
+          <Route path="/builder" element={<BuilderPage />} />
           <Route path="/datapacks" element={<DatapacksPage />} />
           <Route path="/recipes" element={<RecipesPage />} />
           <Route path="/tags" element={<TagsPage />} />

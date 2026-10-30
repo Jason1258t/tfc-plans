@@ -41,3 +41,4 @@ export {
 export type { CellInfo, Grid } from './schematicEdit';
 export { blockTopView } from './blockModels';
 export { drawnByCode, isFullCube } from './schematicShape';
+export { makePreview, openFromLibrary, refreshPreview, removeFromLibrary, saveToLibrary } from './librarySave';

@@ -1,5 +1,5 @@
-import { Upload } from 'lucide-react';
-import { Button } from '@/shared/ui';
+import { Upload, Wand2 } from 'lucide-react';
+import { Button, ButtonLink } from '@/shared/ui';
 import styles from '../SchematicsPage.module.css';
 
 interface Props {
@@ -18,6 +18,10 @@ export function SchematicsHeader({ inputRef, onFiles }: Props) {
           никуда не загружаются.
         </p>
       </div>
+      <ButtonLink to="/builder" title="Собрать постройку по форме, стилю и материалам">
+        <Wand2 size={16} />
+        Генератор построек
+      </ButtonLink>
       <Button variant="primary" data-tour="schem-open" onClick={() => inputRef.current?.click()}>
         <Upload size={16} />
         Открыть .nbt

@@ -6,10 +6,9 @@ import { useItems } from '@/shared/pack-data';
 import type { Schematic, Vec } from '@/entities/schematic';
 import { buildMesh, disposeMesh, meshObject, newRenderer } from '@/entities/schematic/render';
 import { cx } from '@/shared/lib';
-// классы .view3d* живут в модуле слоёв: 3D показывается внутри того же оверлея
-import styles from './SchematicLayers.module.css';
+import styles from './SchematicView3D.module.css';
 
-interface Props {
+export interface SchematicView3DProps {
   schematic: Schematic;
   replace: Map<string, string>;
   /** Срез: слои выше не показываются */
@@ -56,7 +55,7 @@ export default function SchematicView3D({
   onPick,
   onHover,
   onFrame,
-}: Props) {
+}: SchematicView3DProps) {
   const items = useItems();
   const wrapRef = useRef<HTMLDivElement>(null);
   const three = useRef<{
@@ -402,7 +401,7 @@ export default function SchematicView3D({
   }, [selected, maxY]);
 
   return (
-    <div className={styles.view3D} ref={wrapRef}>
+    <div className={styles.view3D} ref={wrapRef} data-schematic-view="">
       {error && <ErrorBox className={styles.view3DError}>{error}</ErrorBox>}
       {stats && <div className={cx(styles.view3DStats, 'faint', 'small')}>{stats}</div>}
       {rect && (

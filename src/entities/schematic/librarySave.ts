@@ -1,13 +1,15 @@
-import { schematicsStore } from '@/entities/schematic';
-import type { SavedSchematic } from '@/entities/schematic';
 import { fileBlob, removeFile, uploadFile } from '@/entities/file';
 import type { ItemIndex } from '@/shared/pack-data';
-import { editedSource, loadSchematic, type Schematic } from '@/entities/schematic';
+import type { BuildingSpec } from '@tfc/core/building/spec';
 import { savedEdits } from '@tfc/core/schematicFile';
+import { editedSource, loadSchematic, type Schematic } from './schematic';
+import { schematicsStore } from './store';
+import type { SavedSchematic } from './types';
 
 /**
  * Библиотека схем. Исходник .nbt — в хранилище файлов без привязки к задаче, в записи — имя и замены.
  * Файл с заменами собирается при скачивании, поэтому замены можно поправить в любой момент.
+ * Нужна странице схем и генератору построек (он кладёт в запись и параметры постройки).
  */
 
 /** Только замены блоков, которые есть в этой схеме */
@@ -25,9 +27,11 @@ export async function saveToLibrary(
   replace: Map<string, string>,
   nick: string,
   preview?: string | null,
+  /** Параметры генератора построек — схему можно снова открыть в генераторе */
+  building?: BuildingSpec,
 ): Promise<{ id: string; fileId?: string }> {
   const edited = s.rev !== (s.savedRev ?? 0);
-  const withPreview = preview ? { preview } : {};
+  const withPreview = { ...(preview ? { preview } : {}), ...(building ? { building } : {}) };
   if (s.libraryId) {
     if (!edited) {
       await schematicsStore.update(s.libraryId, {
