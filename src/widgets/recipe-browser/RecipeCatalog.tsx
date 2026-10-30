@@ -12,7 +12,8 @@ import {
   type RecipeStatus,
   ItemIcon,
   ItemPicker,
-  RecipeStatusBadge,
+  RecipeGrid,
+  RecipeStatusBadges,
 } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
 import { Modal, Search, Segmented, Button, Select, Tag } from '@/shared/ui';
@@ -35,23 +36,6 @@ interface BrowserProps {
 }
 
 /** Значки: удалён / изменён / добавлен KubeJS, из kubejs/data. */
-function StatusBadges({ r }: { r: Recipe }) {
-  return (
-    <>
-      {r.runtime && <RecipeStatusBadge kind="added">создаётся при запуске</RecipeStatusBadge>}
-      {r.kjsRemoved.length > 0 && <RecipeStatusBadge kind="removed">удалён KubeJS</RecipeStatusBadge>}
-      {r.kjsRemoved.length === 0 && r.kjsMaybe.length > 0 && (
-        <RecipeStatusBadge kind="changed" title="Фильтр не разобрать без игры">
-          возможно удалён
-        </RecipeStatusBadge>
-      )}
-      {r.kjsChanged.length > 0 && <RecipeStatusBadge kind="changed">изменён KubeJS</RecipeStatusBadge>}
-      {r.origin === 'kubejs-script' && <RecipeStatusBadge kind="added">скрипт KubeJS</RecipeStatusBadge>}
-      {r.origin === 'kubejs-data' && <RecipeStatusBadge kind="added">kubejs/data</RecipeStatusBadge>}
-    </>
-  );
-}
-
 /** Поиск по каталогу рецептов сборки: по названию/id/типу, по предмету и по статусу в игре */
 export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFocus, initial }: BrowserProps) {
   const items = useItems();
@@ -197,7 +181,7 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
                       </span>
                       <code className={styles.catId}>{r.i}</code>
                     </span>
-                    <StatusBadges r={r} />
+                    <RecipeStatusBadges r={r} />
                     {r.t && <Tag className={styles.recipeType}>{r.t}</Tag>}
                     <span className={cx('faint', 'small', styles.catSrc)} title={r.s}>
                       {r.s.split(/[-_](?=\d)/)[0]}
@@ -218,6 +202,7 @@ export function RecipeBrowser({ catalog, actions, onConstructor, scroll, autoFoc
                   {expanded && (
                     <div className={styles.catDetail}>
                       <code className="faint small">{recipePath(r.i)}</code>
+                      <RecipeGrid recipe={r} compact />
                       {r.runtime && (
                         <div className="faint small">
                           Мод создаёт этот рецепт при запуске игры. JSON восстановлен из кода для использования как

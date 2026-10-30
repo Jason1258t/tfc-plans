@@ -1,26 +1,16 @@
-import { ChevronDown, ChevronUp, Download, FlipHorizontal2, RotateCcw } from 'lucide-react';
-import { Segmented, Button, ButtonLink, Card, SectionShell, Table, TableWrap, tableStyles } from '@/shared/ui';
-import { lazy, Suspense, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { Download } from 'lucide-react';
+import { Segmented, ButtonLink, Card, SectionShell, Table, TableWrap, tableStyles } from '@/shared/ui';
+import { lazy, Suspense, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  blockEntry,
-  iconUrl,
-  itemName,
-  useItems,
-  type ItemIndex,
-  sourceName,
-  useTags,
-  ItemIcon,
-} from '@/shared/pack-data';
+import { BlockStructureViewer } from '@/entities/block-structure';
+import { itemName, useItems, type ItemIndex, sourceName, useTags, ItemIcon } from '@/shared/pack-data';
 import {
   alternatives,
-  blockForm,
   materials,
   mbName,
   mbSlug,
   MOD_LABEL,
   useMultiblocks,
-  type MbForm,
   type MbManual,
   type MbShape,
   type Multiblock,
@@ -164,100 +154,41 @@ function MultiblockCard({ m, data }: { m: Multiblock; data: MultiblockData }) {
   );
 }
 
-/** Объёмный вид и слой сверху с ползунком слоёв и зеркалом — в карточке и в виджете гайда */
+/** Общий просмотр структуры + своё у IE: «Итог» (модель собранной машины), зеркало, блок для молота */
 function MbViewer({
   m,
   shape,
   trigger,
   formedOk = true,
-  initialLayer,
 }: {
-  m?: Multiblock;
+  m: Multiblock;
   shape: MbShape;
   trigger: [number, number, number] | null;
   /** Итоговый вид относится к этой форме (не к «целиком, как в книге») */
   formedOk?: boolean;
-  initialLayer?: number;
 }) {
-  const [mirrored, setMirrored] = useState(false);
-  const formed = formedOk ? m?.formed : undefined;
-  const [view, setView] = useState<'build' | 'formed'>('build');
-  const sy = shape.size[1];
-  const [layer, setLayer] = useState(initialLayer ?? sy - 1);
-  const top = Math.min(layer, sy - 1);
-  const showFormed = view === 'formed' && !!formed;
+  const formed = formedOk ? m.formed : undefined;
   return (
-    <>
-      <div className={styles.toolbar}>
-        {formed && (
-          <Segmented
-            role="tablist"
-            label="Вид"
-            value={showFormed}
-            onChange={(v) => setView(v ? 'formed' : 'build')}
-            options={[
-              { value: false, label: 'Постройка' },
-              { value: true, label: 'Итог' },
-            ]}
-          />
-        )}
-        {m?.mirror && (
-          <Button variant="ghost" className={cx(mirrored && styles.on)} onClick={() => setMirrored((v) => !v)}>
-            <FlipHorizontal2 size={15} /> {mirrored ? 'Зеркально' : 'Как в книге'}
-          </Button>
-        )}
-        {!showFormed && (
-          <div className={styles.layerCtl}>
-            <Button
-              size="sm"
-              icon
-              aria-label="Слой ниже"
-              title="Слой ниже"
-              disabled={top <= 0}
-              onClick={() => setLayer(top - 1)}
-            >
-              <ChevronDown size={16} />
-            </Button>
-            <input
-              type="range"
-              min={0}
-              max={sy - 1}
-              value={top}
-              onChange={(e) => setLayer(Number(e.target.value))}
-              aria-label="Слой"
-            />
-            <Button
-              size="sm"
-              icon
-              aria-label="Слой выше"
-              title="Слой выше"
-              disabled={top >= sy - 1}
-              onClick={() => setLayer(top + 1)}
-            >
-              <ChevronUp size={16} />
-            </Button>
-            <span className="small">
-              слой {top + 1} из {sy}
-            </span>
-          </div>
-        )}
-      </div>
-      {showFormed ? (
-        <Suspense fallback={<div className={cx(styles.formedFallback, 'empty')}>Загружаю просмотр…</div>}>
-          <MultiblockFormed formed={formed} size={shape.size} mirrored={mirrored} />
-          <p className={cx('faint', 'small', styles.formedFoot)}>
-            Модель собранной машины из jar мода, поставлена на место постройки
-            {formed.rough ? ' (совпадение с постройкой неполное)' : ''}. Подвижные части (барабаны, поршни, лопасти) мод
-            рисует отдельно — здесь их нет.
-          </p>
-        </Suspense>
-      ) : (
-        <div className={styles.views}>
-          <Iso shape={shape} trigger={trigger} upTo={top} mirrored={mirrored} />
-          <LayerGrid shape={shape} trigger={trigger} y={top} mirrored={mirrored} />
-        </div>
-      )}
-    </>
+    <BlockStructureViewer
+      shape={shape}
+      trigger={trigger}
+      mirror={m.mirror}
+      alt={
+        formed && {
+          label: 'Итог',
+          render: (mirrored) => (
+            <Suspense fallback={<div className={cx(styles.formedFallback, 'empty')}>Загружаю просмотр…</div>}>
+              <MultiblockFormed formed={formed} size={shape.size} mirrored={mirrored} />
+              <p className={cx('faint', 'small', styles.formedFoot)}>
+                Модель собранной машины из jar мода, поставлена на место постройки
+                {formed.rough ? ' (совпадение с постройкой неполное)' : ''}. Подвижные части (барабаны, поршни, лопасти)
+                мод рисует отдельно — здесь их нет.
+              </p>
+            </Suspense>
+          ),
+        }
+      }
+    />
   );
 }
 
@@ -301,235 +232,6 @@ export function MultiblockEmbed({ id, full, withMaterials }: { id: string; full?
       </div>
       <MbViewer m={m} shape={shape} trigger={trigger} formedOk={!(full && m.extra)} />
       {withMaterials && <Materials m={m} shape={shape} data={data} />}
-    </div>
-  );
-}
-
-/** Та же блочная схема со слоями для конструкций, которые собирают вручную, без шаблона IE. */
-export function BlockStructureEmbed({
-  title,
-  shape,
-  initialLayer,
-}: {
-  title: string;
-  shape: MbShape;
-  initialLayer?: number;
-}) {
-  return (
-    <div className={styles.embed}>
-      <h3>{title}</h3>
-      <p className="faint small">
-        {shape.size.join('×')} · блоков {shape.blocks.length}
-      </p>
-      <MbViewer key={title} shape={shape} trigger={null} initialLayer={initialLayer} />
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------- объёмный вид
-
-const FACE_SHADE = { top: 1, bottom: 0.45, front: 0.85, back: 0.7, left: 0.75, right: 0.6 };
-type Face = keyof typeof FACE_SHADE;
-const NEIGHBOR: Record<Face, [number, number, number]> = {
-  top: [0, 1, 0],
-  bottom: [0, -1, 0],
-  front: [0, 0, 1],
-  back: [0, 0, -1],
-  right: [1, 0, 0],
-  left: [-1, 0, 0],
-};
-
-function Iso({
-  shape,
-  trigger,
-  upTo,
-  mirrored,
-}: {
-  shape: MbShape;
-  trigger: [number, number, number] | null;
-  upTo: number;
-  mirrored: boolean;
-}) {
-  const items = useItems();
-  const [rot, setRot] = useState({ yaw: -35, pitch: -28 });
-  const drag = useRef<{ x: number; y: number; yaw: number; pitch: number } | null>(null);
-  const [sx, sy, sz] = shape.size;
-  // Размер клетки — по диагонали структуры, чтобы при любом повороте она помещалась в окно
-  const S = Math.max(10, Math.min(44, Math.floor(270 / Math.hypot(sx, sy, sz))));
-  const forms = useMemo(() => shape.palette.map(blockForm), [shape]);
-  const cubes = useMemo(() => {
-    const set = new Set<string>();
-    for (const b of shape.blocks) if (b[1] <= upTo && forms[b[3]] === 'cube') set.add(`${b[0]},${b[1]},${b[2]}`);
-    return set;
-  }, [shape, forms, upTo]);
-
-  const onDown = (e: ReactPointerEvent) => {
-    (e.target as Element).setPointerCapture?.(e.pointerId);
-    drag.current = { x: e.clientX, y: e.clientY, ...rot };
-  };
-  const onMove = (e: ReactPointerEvent) => {
-    const d = drag.current;
-    if (!d) return;
-    setRot({
-      yaw: d.yaw + (e.clientX - d.x) * 0.5,
-      pitch: Math.max(-89, Math.min(10, d.pitch - (e.clientY - d.y) * 0.4)),
-    });
-  };
-
-  return (
-    <div
-      className={styles.iso}
-      onPointerDown={onDown}
-      onPointerMove={onMove}
-      onPointerUp={() => (drag.current = null)}
-      onPointerCancel={() => (drag.current = null)}
-    >
-      <div className={styles.isoScene} style={{ transform: `rotateX(${rot.pitch}deg) rotateY(${rot.yaw}deg)` }}>
-        <div
-          className={styles.isoFloor}
-          style={{
-            width: sx * S,
-            height: sz * S,
-            transform: `translate(-50%, -50%) translateY(${(sy / 2) * S}px) rotateX(90deg)`,
-          }}
-        >
-          <span>▼ лицевая сторона</span>
-        </div>
-        {shape.blocks.map((b, i) => {
-          if (b[1] > upTo) return null;
-          const state = shape.palette[b[3]];
-          const form = forms[b[3]];
-          const x = mirrored ? sx - 1 - b[0] : b[0];
-          const isTrigger = !!trigger && b[0] === trigger[0] && b[1] === trigger[1] && b[2] === trigger[2];
-          const url = iconUrl(blockEntry(items, state.id));
-          const faces = (Object.keys(FACE_SHADE) as Face[]).filter((f) => {
-            if (form !== 'cube') return true;
-            const [dx, dy, dz] = NEIGHBOR[f];
-            return !cubes.has(`${b[0] + (mirrored ? -dx : dx)},${b[1] + dy},${b[2] + dz}`);
-          });
-          if (!faces.length) return null;
-          return (
-            <Cube
-              key={i}
-              S={S}
-              pos={[(x - sx / 2 + 0.5) * S, -(b[1] - sy / 2 + 0.5) * S, (b[2] - sz / 2 + 0.5) * S]}
-              form={form}
-              faces={faces}
-              url={url}
-              trigger={isTrigger}
-              current={b[1] === upTo && upTo < sy - 1}
-            />
-          );
-        })}
-      </div>
-      <Button
-        variant="ghost"
-        icon
-        className={styles.isoReset}
-        aria-label="Вернуть вид"
-        onClick={() => setRot({ yaw: -35, pitch: -28 })}
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        <RotateCcw size={14} />
-      </Button>
-      <span className={cx(styles.isoHint, 'faint', 'small')}>тяните, чтобы повернуть</span>
-    </div>
-  );
-}
-
-function Cube({
-  S,
-  pos,
-  form,
-  faces,
-  url,
-  trigger,
-  current,
-}: {
-  S: number;
-  pos: [number, number, number];
-  form: MbForm;
-  faces: Face[];
-  url: string | null;
-  trigger: boolean;
-  current: boolean;
-}) {
-  const w = form === 'post' ? S * 0.375 : S;
-  const h = form === 'slab-bottom' || form === 'slab-top' ? S / 2 : S;
-  const dy = form === 'slab-bottom' ? S / 4 : form === 'slab-top' ? -S / 4 : 0;
-  const face = (f: Face) => {
-    const [fw, fh] = f === 'top' || f === 'bottom' ? [w, w] : [w, h];
-    const t = {
-      front: `translateZ(${w / 2}px)`,
-      back: `rotateY(180deg) translateZ(${w / 2}px)`,
-      right: `rotateY(90deg) translateZ(${w / 2}px)`,
-      left: `rotateY(-90deg) translateZ(${w / 2}px)`,
-      top: `rotateX(90deg) translateZ(${h / 2}px)`,
-      bottom: `rotateX(-90deg) translateZ(${h / 2}px)`,
-    }[f];
-    return (
-      <div
-        key={f}
-        className={styles.face}
-        style={{
-          width: fw,
-          height: fh,
-          marginLeft: -fw / 2,
-          marginTop: -fh / 2,
-          transform: t,
-          backgroundImage: url ? `url(${url})` : undefined,
-          filter: `brightness(${FACE_SHADE[f]})`,
-        }}
-      />
-    );
-  };
-  return (
-    <div
-      className={cx(styles.cube, trigger && styles.trigger, current && styles.current, !url && styles.noicon)}
-      style={{ transform: `translate3d(${pos[0]}px, ${pos[1] + dy}px, ${pos[2]}px)` }}
-    >
-      {faces.map(face)}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------- слой сверху
-
-function LayerGrid({
-  shape,
-  trigger,
-  y,
-  mirrored,
-}: {
-  shape: MbShape;
-  trigger: [number, number, number] | null;
-  y: number;
-  mirrored: boolean;
-}) {
-  const [sx, , sz] = shape.size;
-  const cell = Math.max(22, Math.min(36, Math.floor(300 / Math.max(sx, sz))));
-  const at = new Map<string, number>();
-  for (const b of shape.blocks) if (b[1] === y) at.set(`${mirrored ? sx - 1 - b[0] : b[0]},${b[2]}`, b[3]);
-  const tx = trigger ? (mirrored ? sx - 1 - trigger[0] : trigger[0]) : -1;
-  return (
-    <div className={styles.layer}>
-      <div className={styles.grid} style={{ gridTemplateColumns: `repeat(${sx}, ${cell}px)` }}>
-        {Array.from({ length: sz }, (_, z) =>
-          Array.from({ length: sx }, (_, x) => {
-            const p = at.get(`${x},${z}`);
-            const isTrigger = !!trigger && trigger[1] === y && tx === x && trigger[2] === z;
-            return (
-              <div
-                key={`${x},${z}`}
-                className={cx(styles.cell, p === undefined && 'empty', isTrigger && styles.trigger)}
-              >
-                {p !== undefined && <ItemIcon id={shape.palette[p].id} size={cell - 6} />}
-              </div>
-            );
-          }),
-        )}
-      </div>
-      <div className={cx(styles.front, 'faint', 'small')}>▼ лицевая сторона — здесь стоит игрок</div>
     </div>
   );
 }

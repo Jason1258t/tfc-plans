@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { cx } from '@/shared/lib';
 import { Button, Input, Card } from '@/shared/ui';
 import type { GuideKit } from './GuideBody';
+import { widgetsOf } from './commonWidgets';
 import styles from './Guides.module.css';
 
 const CALC_EXAMPLE = `\`\`\`calc
@@ -113,7 +114,7 @@ export function GuideHelp({ kit, onClose }: { kit: GuideKit; onClose: () => void
           </dl>
           <h3>Виджеты</h3>
           <dl className={cx(styles.guideHelpNames, 'small')}>
-            {Object.entries(kit.widgets).map(([k, w]) => (
+            {Object.entries(widgetsOf(kit)).map(([k, w]) => (
               <div key={k}>
                 <dt>
                   <code>::{k}</code>

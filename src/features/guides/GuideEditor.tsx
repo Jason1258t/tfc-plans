@@ -1,5 +1,5 @@
-import { HelpCircle, X } from 'lucide-react';
-import { useDeferredValue, useRef, useState } from 'react';
+import { Boxes, Grid3x3, HelpCircle, X } from 'lucide-react';
+import { lazy, Suspense, useDeferredValue, useRef, useState } from 'react';
 import { saveGuide, type GuideDraft } from '@/data/guides';
 import { readNick } from '@/shared/lib/nick';
 import { cx } from '@/shared/lib';
@@ -13,6 +13,12 @@ import { GuideHelp } from './GuideHelp';
 import { GuideEditingContext } from './guideLinks';
 import { CHECKED } from './guideMeta';
 import styles from './Guides.module.css';
+
+// Подбор рецепта и схемы тянет каталог и библиотеку — грузим по кнопке
+const RecipeInsertPicker = lazy(() => import('./GuideInsertPickers').then((m) => ({ default: m.RecipeInsertPicker })));
+const SchematicInsertPicker = lazy(() =>
+  import('./GuideInsertPickers').then((m) => ({ default: m.SchematicInsertPicker })),
+);
 
 const NEW_BODY = `## Что понадобится
 
@@ -82,6 +88,7 @@ export function GuideEditor({
   const [checked, setChecked] = useState<GuideChecked>(base?.checked ?? 'none');
   const [hidden, setHidden] = useState(base?.hidden ?? false);
   const [help, setHelp] = useState(false);
+  const [picker, setPicker] = useState<'recipe' | 'schematic' | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const area = useRef<LiveMarkdownHandle>(null);
@@ -109,6 +116,14 @@ export function GuideEditor({
       el.focus();
       el.select(a + text.length);
     });
+  };
+
+  /** Виджет — отдельной строкой: «::имя» работает только в начале строки */
+  const insertWidget = (line: string) => {
+    setPicker(null);
+    const [a] = selection.current;
+    const before = body.slice(0, a);
+    insert(`${before && !before.endsWith('\n') ? '\n' : ''}${line}\n`);
   };
 
   const save = async () => {
@@ -170,6 +185,10 @@ export function GuideEditor({
       {restore && <div className={cx(content.note, 'small')}>Это версия из истории — сохраните, чтобы вернуть её.</div>}
       {error && <div className={cx(styles.guideErrors, 'small')}>{error}</div>}
       {help && <GuideHelp kit={kit} onClose={() => setHelp(false)} />}
+      <Suspense fallback={null}>
+        {picker === 'recipe' && <RecipeInsertPicker onInsert={insertWidget} onClose={() => setPicker(null)} />}
+        {picker === 'schematic' && <SchematicInsertPicker onInsert={insertWidget} onClose={() => setPicker(null)} />}
+      </Suspense>
 
       <div className={styles.guideFields}>
         <label className={cx(styles.guideField, styles.guideFieldWide)}>
@@ -233,7 +252,15 @@ export function GuideEditor({
         <div className={styles.guideSource}>
           <div className={styles.guideSourceBar}>
             <span className="faint small">Текст (Markdown)</span>
-            <ItemPicker small dropUp={false} onPick={(it) => insert(`[[${it.i}]]`)} placeholder="Вставить предмет…" />
+            <span className={styles.guideInsertBtns}>
+              <Button variant="ghost" className="small" onClick={() => setPicker('recipe')}>
+                <Grid3x3 size={14} /> Рецепт…
+              </Button>
+              <Button variant="ghost" className="small" onClick={() => setPicker('schematic')}>
+                <Boxes size={14} /> Схема…
+              </Button>
+              <ItemPicker small dropUp={false} onPick={(it) => insert(`[[${it.i}]]`)} placeholder="Вставить предмет…" />
+            </span>
           </div>
           <MarkdownField
             ref={area}

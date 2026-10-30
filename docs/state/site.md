@@ -649,3 +649,19 @@ the step is centred.
   reused from IE, including the excavator; block-only icons resolve through their placing item. The oil guide's
   ASCII drawings are replaced with these widgets. Pumpjack geometry is temporarily embedded; dev #164 tracks
   a shared recipe grid, a general structure viewer and library-backed schematic embeds, coordinated with MCP #162.
+
+- Dev #164 (2026-10-30): shared embeds for every guide section (`features/guides/commonWidgets.tsx`):
+  `::craft recipe=<id>` — `RecipeGrid` (`shared/pack-data`, parser `craftGrid.ts`): shaped/shapeless/TFC advanced/
+  Create mechanical crafting up to 9×9, empty cells, tags and alternatives cycle (static under reduced motion),
+  result count, KubeJS status badges; the same grid sits above the JSON in the recipe catalogue. Tags the site doesn't
+  know (many `c:*` from NeoForge) show the tag tail instead of an icon.
+  `::schematic id=<card> ver=<updatedAt> [layer=N] [materials]` — a library card via `entities/schematic/library.ts`
+  (1 doc read + file chunks, cached per tab, loads when scrolled near), replacements and shape applied with the same
+  `applyEdits` as the download button, then `entities/block-structure` (`shapeFromNbt`, copycats by material).
+  Missing card / unreadable file / card edited after `ver` are shown explicitly. Editor: «Рецепт…» (by output item)
+  and «Схема…» (library search with previews) insert the widget line; MCP `schematic_get` prints the same line.
+  `entities/block-structure/BlockStructureViewer` replaced the IE viewer in «Мультиблоки» (IE keeps «Итог», mirror,
+  hammer block, material alternatives): layer slider, x/z axes, click-to-select (cell, cube or material → all such
+  blocks highlighted, name/props/coords), container-width layout for narrow previews and phones; >3000 blocks — layers
+  only. `::pumpjack` and the embedded NBT data are gone; the CDG guide uses the two library cards.
+  The schematics page keeps its own three.js editor (not switched to this viewer).
