@@ -1,0 +1,42 @@
+/* 3D-вид схемы: заполняет родителя (у родителя position: relative и высота). */
+
+.view3d {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+}
+
+.view3d canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.view3dStats {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Рамка объекта (перетаскивание ЛКМ) */
+.view3dFrame {
+  position: absolute;
+  z-index: 1;
+  border: 2px dashed var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  pointer-events: none;
+}
+
+.view3dError {
+  position: absolute;
+  top: 40px;
+  z-index: 1;
+}
