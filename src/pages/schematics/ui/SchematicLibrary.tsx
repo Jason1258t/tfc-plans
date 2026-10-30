@@ -2,6 +2,7 @@ import { Download, FileBox, ImagePlus, Library, Search, Trash2, X } from 'lucide
 import { Button, ErrorBox } from '@/shared/ui';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useNick } from '@/entities/user';
 import { schematicsStore } from '@/entities/schematic';
 import { useSearchTrack } from '@/shared/api';
@@ -35,8 +36,29 @@ export function SchematicLibrary({ openIds, onOpen, onDownload }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Выбранная схема — в адресе (?id=…): адрес страницы — ссылка на карточку (её же выдаёт MCP)
+  const [params, setParams] = useSearchParams();
+  const selectedId = params.get('id');
+  const setSelectedId = (id: string | null) =>
+    setParams(
+      (p) => {
+        const next = new URLSearchParams(p);
+        if (id) next.set('id', id);
+        else next.delete('id');
+        return next;
+      },
+      { replace: true },
+    );
   const items = useItems();
+  const listReady = Boolean(list);
+
+  // Пришли по ссылке — прокрутить к схеме, когда список загрузился
+  useEffect(() => {
+    if (!listReady || !selectedId) return;
+    document.querySelector(`[data-schematic-id="${CSS.escape(selectedId)}"]`)?.scrollIntoView({ block: 'center' });
+    // только при загрузке списка, не при каждом выборе
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listReady]);
 
   useEffect(
     () =>
@@ -120,7 +142,11 @@ export function SchematicLibrary({ openIds, onOpen, onDownload }: Props) {
           {shown.map((entry) => {
             const isOpen = openIds.has(entry.id);
             return (
-              <li key={entry.id} className={cx(section.file, selectedId === entry.id && section.fileSelected)}>
+              <li
+                key={entry.id}
+                data-schematic-id={entry.id}
+                className={cx(section.file, selectedId === entry.id && section.fileSelected)}
+              >
                 <button
                   className={styles.libPick}
                   onClick={() => setSelectedId(selectedId === entry.id ? null : entry.id)}

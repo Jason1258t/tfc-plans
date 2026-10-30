@@ -426,7 +426,8 @@ from the site. Release steps — skill `addon-release`.
 
 Each answer states how many Firestore reads it cost. Lists are read with a field mask and cached for minutes; a full
 document is a separate request. uids, cookies and tokens never appear in answers. Tasks, plan docs and datapacks are
-written (author and `updatedBy` — `TFC_AGENT_NICK`, default `Claude`); site scripts and schematics are read-only.
+written (author and `updatedBy` — `TFC_AGENT_NICK`, default `Claude`); site scripts are read-only. Schematics — see
+«Create schematics» below.
 
 | Tool                                                                                                              | Does                                                                                                                                                                                                                                            |
 | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -440,13 +441,30 @@ written (author and `updatedBy` — `TFC_AGENT_NICK`, default `Claude`); site sc
 | `datapacks_list(query, install)` / `datapack_get(id*, path)`                                                      | datapacks; zip file as the site builds it                                                                                                                                                                                                       |
 | `datapack_put(id, baseRevision, name, namespace, description, install, entries, upsert, remove, rename, dry_run)` | **write**: without `id` — new datapack (`name` required, namespace default `tfc_plans`); with `id` — passed fields only. Files: `entries` replaces all, `upsert` adds/replaces by path, `remove` deletes paths, `rename` `{from,to}`. See below |
 | `kubejs_site_list(query, install)` / `kubejs_site_get(id*)`                                                       | KubeJS scripts added on the site (not pack scripts)                                                                                                                                                                                             |
-| `schematics_list(query)` / `schematic_get(id*)`                                                                   | Create schematics: size, blocks, replacements                                                                                                                                                                                                   |
 
 `task_update`, `artifact_put` and `datapack_put` with `id` refuse if the task/doc changed after `task_get`/`artifact_get`:
 `baseRevision` is their `revision` (Firestore `updateTime`; checked before writing and as the write's precondition). The
 site also changes task revisions — e.g. the «Что важнее?» comparison edits the rating; on refusal re-read and retry.
 There's no delete: remove temporary records from tests with a one-off script via `scripts/firestore-rest.mjs`. Repo
 plans (`docs/plans/*.md`) have no tool — they're plain files, read them directly.
+
+### Create schematics (`tools/schematics.mjs`, render — `schematic-render.mjs`)
+
+List and sources go through the pack server (`GET /site/schematics`, `GET /site/files/:id`; 0 Firestore reads for MCP,
+the server's list lags up to 5 min). Sources are cached at `~/.cache/tfc-plans/schematics/<fileId>` (a file id never
+changes content); block colours for renders — `colors.json` there. Parsing and the downloaded file are the site's
+`@tfc/core/nbt` + `@tfc/core/schematicFile` (`applyEdits`). Site links — `/schematics?id=<id>` (opens the card).
+
+| Tool                                                                                                                              | Does                                                                                                                                                                                                                                                                                                                                                                              |
+| --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schematics_list(query, blocks)`                                                                                                  | id, name, file, size, description, link; words not in metadata are searched in block ids/Russian names of each source (`blocks=false` — off)                                                                                                                                                                                                                                      |
+| `schematic_get(id*, section, block, y, pos, box, edited, save, fresh)`                                                            | summary (revision, size, shape, block counts with replacements); `palette`; `blocks` (positions, `block=` words, `box=`); `y=` — layer as text with legend; `pos=` — state + block-entity SNBT; `nbt` — root tags, entities; `edited` — after replacements/shape; `save=` — write the .nbt (edited by default); `fresh` — record from Firestore (1 read) for the current revision |
+| `schematic_render(id \| file, view, y, edited, shape, size)`                                                                      | PNG: `iso` / `top` / `layer`; block = cube coloured by its model (copycats — by material), no partial shapes; `file` — local .nbt before upload                                                                                                                                                                                                                                   |
+| `schematic_put(id, baseRevision, file, name, description, author, replace, replaceSet, shape, blocks, asSource, preview, dryRun)` | **write**: no `id` — upload `file` (duplicate check by content hash, then pack server `POST /site/schematics`, author default `TFC_AGENT_NICK`, iso preview); with `id` + `baseRevision` — fields via Firestore PATCH with `updateTime` precondition, new source (`file` or `blocks` cell edits) via the pack server with the revision. `dryRun` — check only                     |
+
+Preview is written only when the source changes or with `preview=true`: the site's own 3D preview is better, so a
+metadata edit keeps it. Block edits: `{ pos, to?, block }`, `block` — `ns:id[prop=v]`, `minecraft:air` (explicit air,
+clears space on paste) or `#remove`; replaced cells lose block-entity data; multi-palette schematics are refused.
 
 ### Dev tracker (`tfc-plans-dev`)
 
@@ -497,7 +515,8 @@ scripts/mcp/
                       cuisinedelight, create_submarine)
   tools/<section>.mjs  section tools: code (classes, mixins, decompile, deps), disasm (bytecode), logs, config (config_get,
                       config_propose, config_changes), pack, kubejs, books (+books-index), blocks (+blocks-data), site
-                      (tasks, groups, plan docs and datapacks with writes; schematics, site scripts), map (+map-climate,
+                      (tasks, groups, plan docs and datapacks with writes; site scripts), schematics (+schematic-render — library
+                      schematics: read, render, upload/edit), map (+map-climate,
                       map-png — PNG read/write), resources (model_render, texture_get, resources_check), addons
                       (addons_list, addon_check, addon_versions, addon_version_get/put), candidates (candidate_get),
                       reports (reports_list, report_get — players' logs/crashes from the site, analysed by logs.mjs)
