@@ -247,13 +247,11 @@ button.cell:focus-visible {
   background: var(--accent-soft);
 }
 
-.materials ul {
+.matList {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin: 6px 0 0;
-  padding: 0;
-  list-style: none;
+  margin-top: 6px;
 }
 
 .mat {

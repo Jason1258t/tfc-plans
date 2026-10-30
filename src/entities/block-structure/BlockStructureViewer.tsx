@@ -209,9 +209,10 @@ function MaterialList({
   return (
     <div className={styles.materials}>
       <div className="faint small">Материалы — нажмите, чтобы найти на схеме</div>
-      <ul>
+      {/* Не ul/li: внутри статьи их перехватывают стили Markdown (маркеры, отступы) */}
+      <div role="list" className={styles.matList}>
         {list.map(({ state, count }) => (
-          <li key={keyOf(state)}>
+          <div role="listitem" key={keyOf(state)}>
             <button
               type="button"
               aria-pressed={picked === keyOf(state)}
@@ -225,9 +226,9 @@ function MaterialList({
               </span>
               <b>{count}</b>
             </button>
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }
