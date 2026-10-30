@@ -1,6 +1,6 @@
 /**
- * Инструменты MCP: контент сайта из Firestore — задачи и группы, документы-планы, датапаки, скрипты KubeJS с сайта,
- * схемы Create. Пишут только task_create / task_update / artifact_put / datapack_put (подпись — имя агента, правка — с
+ * Инструменты MCP: контент сайта из Firestore — задачи и группы, документы-планы, датапаки, скрипты KubeJS с сайта
+ * (схемы Create — tools/schematics.mjs). Пишут только task_create / task_update / artifact_put / datapack_put (подпись — имя агента, правка — с
  * проверкой ревизии, как guide_put). Экономим чтения (50 тыс. в сутки на всех): списки — с mask (только нужные поля) и кешем на
  * несколько минут, документ целиком — отдельным GET по запросу, вложения задачи — запросом по taskId.
  * В конце каждого ответа — сколько чтений Firestore он стоил (0 — всё из кеша).
@@ -100,27 +100,6 @@ const scriptsIndex = cached(TTL, () =>
   listCounted('kubejsScripts', ['fileName', 'install', 'author', 'updatedBy', 'updatedAt']),
 );
 const usersIndex = cached(TTL, () => listCounted('users', ['nick', 'firstSeen', 'lastSeen']));
-// превью (data URL до ~200 КБ) не берём ни в список, ни в schematic_get
-const SCHEM_MASK = [
-  'name',
-  'fileName',
-  'fileId',
-  'fileSize',
-  'size',
-  'blocks',
-  'replace',
-  'description',
-  'author',
-  'updatedBy',
-  'updatedAt',
-];
-const schematicsIndex = cached(TTL, () =>
-  listCounted(
-    'schematics',
-    SCHEM_MASK.filter((f) => f !== 'description'),
-  ),
-);
-
 const STATUS = { todo: 'надо сделать', doing: 'в работе', done: 'готово' };
 const PRIORITY = ['низкая', 'обычная', 'высокая', 'критическая'];
 
@@ -591,7 +570,7 @@ const installMark = (d) => (d.install ? 'ставится' : 'не ставит�
  * Задачи, где упомянуто имя датапака/схемы: связи в данных нет, ищем по тексту. Только из тёплого кеша задач —
  * грузить ради подсказки весь список (чтение на каждую задачу) не стоит; иначе — совет, как проверить.
  */
-async function mentions(name) {
+export async function mentions(name) {
   const n = norm(name ?? '');
   if (n.length < 4) return null;
   if (Date.now() - tasksLoaded > TTL) return `в каких задачах упомянут — tasks_list query="${name}"`;
@@ -795,53 +774,6 @@ async function kubejsSiteGet(a) {
     `${s.id} — server_scripts/${s.fileName}; ${installMark(s)} на сервер; ${who(s)}; изменён ${dateOf(s.updatedAt)}`,
     lines(s.text, a),
   ].join('\n');
-}
-
-// ---------------------------------------------------------------- схемы
-
-const sizeOf = (s) => (s.size?.length ? s.size.join('×') : '?');
-
-async function schematicsList(a) {
-  let list = [...(await schematicsIndex())];
-  const ws = words(a.query);
-  if (ws.length)
-    list = list.filter((s) =>
-      has(`${s.id} ${s.name} ${s.fileName} ${(s.replace ?? []).map((x) => `${x.from} ${x.to}`).join(' ')}`, ws),
-    );
-  list.sort(byUpdated);
-  return page(list, a, (s) => [
-    `${s.id} — ${s.name} (${s.fileName}, ${sizeOf(s)}, ${s.blocks ?? '?'} блоков, замен ${(s.replace ?? []).length}; ${who(s)}, ${dateOf(s.updatedAt)})`,
-  ]);
-}
-
-async function schematicGet(a) {
-  const r = await resolve('schematics', schematicsIndex, a.id, (x) => x.name, 'схемы', [...SCHEM_MASK, 'shape']);
-  if (r.error) return r.error;
-  const s = r.doc;
-  const out = [
-    `${s.id} — ${s.name}`,
-    `файл: ${s.fileName} (${kb(s.fileSize)}, files/${s.fileId}); габариты ${sizeOf(s)}; блоков ${s.blocks ?? '?'} (до удалений)`,
-    `${who(s)}; изменена ${dateOf(s.updatedAt)}`,
-  ];
-  if (s.shape) {
-    const sh = s.shape;
-    out.push(
-      `при скачивании: ${sh.crop ? 'обрезка, ' : ''}отступы по бокам ${sh.sides}, снизу ${sh.bottom}, сверху ${sh.top}` +
-        `${sh.clearAir ? ', воздух очищает место' : ''}${
-          sh.platform
-            ? `; платформа ${sh.platformBlock ?? '?'} высотой ${sh.platformHeight ?? 1}${sh.platformHollow ? ' (полая)' : ''}`
-            : ''
-        }`,
-    );
-  }
-  if (s.description) out.push('', 'Описание:', s.description);
-  const rep = s.replace ?? [];
-  out.push('', `Замены блоков (${rep.length}):`);
-  for (const x of rep) out.push(`${named(x.from)} → ${x.to === '#remove' ? 'удалить' : named(x.to)}`);
-  out.push('', 'Материалы в документе не хранятся: их считает сайт по файлу схемы (раздел «Схемы»).');
-  const m = await mentions(s.name);
-  if (m) out.push(m);
-  return out.join('\n');
 }
 
 // ---------------------------------------------------------------- описание
@@ -1082,19 +1014,5 @@ export const TOOLS = [
       required: ['id'],
     },
     handler: counted(kubejsSiteGet),
-  },
-  {
-    name: 'schematics_list',
-    description:
-      'Create schematics in the site library (Firestore schematics): name, file, size, block and replacement counts. Search by words, incl. block ids in replacements.',
-    inputSchema: { type: 'object', properties: { query: str('words'), ...paging } },
-    handler: counted(schematicsList),
-  },
-  {
-    name: 'schematic_get',
-    description:
-      'Schematic: file, size, download settings (crop, platform), description, block replacements with names. Materials are not stored in the database.',
-    inputSchema: { type: 'object', properties: { id: str('schematic id or name') }, required: ['id'] },
-    handler: counted(schematicGet),
   },
 ];

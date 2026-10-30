@@ -131,3 +131,12 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   the same source location and missing registry entries are grouped by cause; registry/id hints survive
   long JSON clipping. Verified through MCP stdio against #157 server.log: all 18 ERROR, groups ×16 and ×2,
   script path/line and both missing registry causes; filters, levels, timeline and existing log formats checked.
+
+- Dev #162 (2026-10-30): Create schematics moved to `tools/schematics.mjs`. `schematics_list` searches metadata and
+  block contents (ids + Russian names), gives `/schematics?id=` links (the site now opens the card from `?id=`).
+  `schematic_get` reads the .nbt: palette, block positions, text layers, block-entity SNBT, root/entities, the
+  downloaded (edited) file and `save=`. `schematic_render` — iso/top/layer PNG by block-model colours.
+  `schematic_put` — upload (pack server, duplicate check by content hash), fields via Firestore with revision,
+  cell edits → new source via the pack server. Verified over stdio on oil_pump_small/big (read, render, duplicate
+  refusal, stale-revision refusal, dryRun of fields and block edits); real writes not made (no test record allowed
+  in the shared library).
