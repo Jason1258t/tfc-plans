@@ -123,9 +123,11 @@ export async function resolveDatapacks(api, catalog, items, names) {
 export async function listDatapacks(api, profile, query = '', filesOnly = false) {
   const c = await datapackCatalog(api);
   const local = profile ? localDatapacks(profile) : [];
+  console.log(`Датапаки сайта; снимок ${c.snapshot?.id ?? 'ещё не опубликован'}`);
   if (!filesOnly) {
-    console.log(`Датапаки сайта; снимок ${c.snapshot?.id ?? 'ещё не опубликован'}`);
-    for (const d of c.items.filter((d) => key(`${d.id} ${d.name} ${zipName(d)}`).includes(key(query)))) {
+    const shown = c.items.filter((d) => key(`${d.id} ${d.name} ${zipName(d)}`).includes(key(query)));
+    console.log(`\nНа сайте: ${shown.length}`);
+    for (const d of shown) {
       const deployed = c.deployed.find((p) => p.id === d.id);
       const world = local.filter((f) => f.path.startsWith('world/') && f.info?.contentHash === d.contentHash);
       const state = deployed
@@ -136,16 +138,13 @@ export async function listDatapacks(api, profile, query = '', filesOnly = false)
             ? 'доступен для мира'
             : 'тестовый';
       console.log(
-        `${d.id} — ${d.name} · ${state}${d.sourceMissing ? '; без карточки сайта' : d.snapshotSource ? '; ZIP снимка без карточки сайта' : ''}${d.error ? `; ${d.error}` : ''}`,
-      );
-      console.log(
-        dim(
-          `  ${zipName(d)}; содержимое ${short(d.contentHash)}${deployed ? `; подтверждено ${short(deployed.contentHash)} (${deployed.confirmedBy})` : ''}`,
-        ),
+        `  ${d.id} | ${d.name} | ${state}${d.sourceMissing ? ' | без карточки сайта' : d.snapshotSource ? ' | ZIP снимка без карточки' : ''}${d.error ? ` | ${d.error}` : ''}`,
       );
     }
+    if (!shown.length) console.log('  (пусто)');
   }
-  console.log('Файлы снимка: filename — название · место · sha256');
+  console.log('\nФайлы снимка: filename | название | место | sha256');
+  let snapShown = 0;
   for (const f of c.snapshot?.files.filter(
     (f) => (f.kind === 'world-datapack' || isPackDatapackPath(f.path)) && f.path.endsWith('.zip'),
   ) ?? []) {
@@ -159,24 +158,29 @@ export async function listDatapacks(api, profile, query = '', filesOnly = false)
       }
     }
     if (!key(`${f.path} ${d?.name ?? ''}`).includes(key(query))) continue;
+    snapShown++;
     console.log(
-      `${path.posix.basename(f.path)} — ${d ? `${d.name}${d.snapshotSource ? ' (нет карточки сайта)' : ''}` : 'неизвестный датапак'} · ${f.path} · ${short(f.sha256)}`,
+      `  ${path.posix.basename(f.path)} | ${d ? `${d.name}${d.snapshotSource ? ' (нет карточки сайта)' : ''}` : 'неизвестный датапак'} | ${f.path} | ${short(f.sha256)}`,
     );
   }
+  if (!snapShown) console.log('  (пусто)');
   if (profile && !filesOnly) {
-    console.log(`Локальные ZIP (${profile.world ? `мир: ${profile.world}` : 'мир не выбран'}):`);
+    console.log(`\nЛокальные ZIP (${profile.world ? `мир: ${profile.world}` : 'мир не выбран'}):`);
+    let localShown = 0;
     for (const f of local) {
       const d =
         c.items.find((d) => d.contentHash === f.info?.contentHash) ??
         c.deployed.find((d) => d.contentHash === f.info?.contentHash);
       if (!key(`${f.path} ${d?.name ?? ''}`).includes(key(query))) continue;
+      localShown++;
       console.log(
-        `${f.path} — ${d?.name ?? 'неизвестный или изменённый датапак'} · ${short(f.info?.sha256)}${f.error ? ` (${f.error})` : ''}`,
+        `  ${f.path} | ${d?.name ?? 'неизвестный или изменённый датапак'} | ${short(f.info?.sha256)}${f.error ? ` | ${f.error}` : ''}`,
       );
     }
+    if (!localShown) console.log('  (пусто)');
   }
   if (!filesOnly)
-    console.log(dim('Детали: tfc datapacks <имя/id/filename>; догрузить: tfc datapacks pull <имя/id/filename>'));
+    console.log(dim('\nДетали: tfc datapacks <имя/id/filename>; догрузить: tfc datapacks pull <имя/id/filename>'));
 }
 
 export async function showDatapacks(api, profile, names) {
