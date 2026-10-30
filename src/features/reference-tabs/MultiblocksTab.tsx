@@ -2,7 +2,16 @@ import { ChevronDown, ChevronUp, Download, FlipHorizontal2, RotateCcw } from 'lu
 import { Segmented, Button, ButtonLink, Card, SectionShell, Table, TableWrap, tableStyles } from '@/shared/ui';
 import { lazy, Suspense, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { iconUrl, itemName, useItems, type ItemIndex, sourceName, useTags, ItemIcon } from '@/shared/pack-data';
+import {
+  blockEntry,
+  iconUrl,
+  itemName,
+  useItems,
+  type ItemIndex,
+  sourceName,
+  useTags,
+  ItemIcon,
+} from '@/shared/pack-data';
 import {
   alternatives,
   blockForm,
@@ -161,18 +170,20 @@ function MbViewer({
   shape,
   trigger,
   formedOk = true,
+  initialLayer,
 }: {
-  m: Multiblock;
+  m?: Multiblock;
   shape: MbShape;
   trigger: [number, number, number] | null;
   /** Итоговый вид относится к этой форме (не к «целиком, как в книге») */
   formedOk?: boolean;
+  initialLayer?: number;
 }) {
   const [mirrored, setMirrored] = useState(false);
-  const formed = formedOk ? m.formed : undefined;
+  const formed = formedOk ? m?.formed : undefined;
   const [view, setView] = useState<'build' | 'formed'>('build');
   const sy = shape.size[1];
-  const [layer, setLayer] = useState(sy - 1);
+  const [layer, setLayer] = useState(initialLayer ?? sy - 1);
   const top = Math.min(layer, sy - 1);
   const showFormed = view === 'formed' && !!formed;
   return (
@@ -190,7 +201,7 @@ function MbViewer({
             ]}
           />
         )}
-        {m.mirror && (
+        {m?.mirror && (
           <Button variant="ghost" className={cx(mirrored && styles.on)} onClick={() => setMirrored((v) => !v)}>
             <FlipHorizontal2 size={15} /> {mirrored ? 'Зеркально' : 'Как в книге'}
           </Button>
@@ -233,7 +244,7 @@ function MbViewer({
       </div>
       {showFormed ? (
         <Suspense fallback={<div className={cx(styles.formedFallback, 'empty')}>Загружаю просмотр…</div>}>
-          <MultiblockFormed formed={formed} size={m.size} mirrored={mirrored} />
+          <MultiblockFormed formed={formed} size={shape.size} mirrored={mirrored} />
           <p className={cx('faint', 'small', styles.formedFoot)}>
             Модель собранной машины из jar мода, поставлена на место постройки
             {formed.rough ? ' (совпадение с постройкой неполное)' : ''}. Подвижные части (барабаны, поршни, лопасти) мод
@@ -290,6 +301,27 @@ export function MultiblockEmbed({ id, full, withMaterials }: { id: string; full?
       </div>
       <MbViewer m={m} shape={shape} trigger={trigger} formedOk={!(full && m.extra)} />
       {withMaterials && <Materials m={m} shape={shape} data={data} />}
+    </div>
+  );
+}
+
+/** Та же блочная схема со слоями для конструкций, которые собирают вручную, без шаблона IE. */
+export function BlockStructureEmbed({
+  title,
+  shape,
+  initialLayer,
+}: {
+  title: string;
+  shape: MbShape;
+  initialLayer?: number;
+}) {
+  return (
+    <div className={styles.embed}>
+      <h3>{title}</h3>
+      <p className="faint small">
+        {shape.size.join('×')} · блоков {shape.blocks.length}
+      </p>
+      <MbViewer key={title} shape={shape} trigger={null} initialLayer={initialLayer} />
     </div>
   );
 }
@@ -369,7 +401,7 @@ function Iso({
           const form = forms[b[3]];
           const x = mirrored ? sx - 1 - b[0] : b[0];
           const isTrigger = !!trigger && b[0] === trigger[0] && b[1] === trigger[1] && b[2] === trigger[2];
-          const url = iconUrl(items?.byId.get(state.id));
+          const url = iconUrl(blockEntry(items, state.id));
           const faces = (Object.keys(FACE_SHADE) as Face[]).filter((f) => {
             if (form !== 'cube') return true;
             const [dx, dy, dz] = NEIGHBOR[f];
