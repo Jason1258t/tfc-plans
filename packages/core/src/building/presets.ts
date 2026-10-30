@@ -110,6 +110,10 @@ export interface TypePreset {
   chimney: boolean;
   /** Своя крыша типа поверх стиля (цех — пологая) */
   roof?: Partial<Omit<RoofSpec, 'axis'>>;
+  /** Форма объёмов (силос — круглый) */
+  shape?: Volume['shape'];
+  /** Своя отделка типа поверх стиля (котельная — высокая труба 2×2) */
+  details?: Partial<DetailSpec>;
 }
 
 export const TYPES: Record<string, TypePreset> = {
@@ -141,6 +145,49 @@ export const TYPES: Record<string, TypePreset> = {
     chimney: false,
     roof: { pitch: 0.5 },
   },
+  sawtoothHall: {
+    name: 'Цех с шедовой крышей',
+    w: 25,
+    d: 17,
+    floors: 1,
+    floorH: 8,
+    openings: { windowW: 2, windowH: 3, windowEvery: 4, sillH: 2, door: { side: 'south', w: 5, h: 5 } },
+    chimney: false,
+    roof: { kind: 'sawtooth', pitch: 1, overhang: 0, tooth: 5 },
+  },
+  warehouse: {
+    name: 'Склад',
+    w: 23,
+    d: 13,
+    floors: 1,
+    floorH: 9,
+    // Ленточные окна под крышей: высоко над полом, узкие, частые
+    openings: { windowW: 3, windowH: 1, windowEvery: 4, sillH: 6, door: { side: 'south', w: 5, h: 6 } },
+    chimney: false,
+    roof: { pitch: 0.5 },
+  },
+  boilerHouse: {
+    name: 'Котельная',
+    w: 11,
+    d: 9,
+    floors: 1,
+    floorH: 9,
+    openings: { windowW: 2, windowH: 5, windowEvery: 4, sillH: 1, door: { side: 'south', w: 2, h: 3 } },
+    chimney: true,
+    roof: { pitch: 0.5 },
+    details: { chimneyH: 14, chimneySize: 2 },
+  },
+  silo: {
+    name: 'Силос / башня',
+    w: 9,
+    d: 9,
+    floors: 4,
+    floorH: 5,
+    openings: { windowW: 1, windowH: 1, windowEvery: 5, sillH: 2, door: { side: 'south', w: 2, h: 3 } },
+    chimney: false,
+    roof: { kind: 'cone', pitch: 1, overhang: 1 },
+    shape: 'round',
+  },
   factory: {
     name: 'Цех',
     w: 21,
@@ -153,7 +200,11 @@ export const TYPES: Record<string, TypePreset> = {
   },
 };
 
-type Rect = Pick<Volume, 'x' | 'z' | 'w' | 'd'> & { axis: RoofSpec['axis'] };
+type Rect = Pick<Volume, 'x' | 'z' | 'w' | 'd'> & {
+  axis: RoofSpec['axis'];
+  /** На сколько этажей ниже главного объёма (пристройка) */
+  lower?: number;
+};
 
 export const FORMS: Record<string, { name: string; rects(w: number, d: number): Rect[] }> = {
   rect: { name: 'Прямоугольник', rects: (w, d) => [{ x: 0, z: 0, w, d, axis: 'auto' }] },
@@ -188,10 +239,34 @@ export const FORMS: Record<string, { name: string; rects(w: number, d: number): 
       ];
     },
   },
+  annex: { name: 'С пристройкой', rects: annex },
+  court: { name: 'Двор', rects: court },
 };
 
 /** Ширина крыла — нечётная (конёк по середине), не уже 5 */
 const wing = (w: number, d: number) => Math.max(5, Math.round(Math.min(w, d) / 2) | 1);
+
+/** Пристройка: низкое крыло вдоль южного фасада, стена общая с главным объёмом */
+function annex(w: number, d: number): Rect[] {
+  const k = Math.max(5, Math.round(d * 0.45) | 1);
+  const aw = Math.max(7, Math.round(w * 0.6));
+  return [
+    { x: 0, z: 0, w, d, axis: 'auto' },
+    { x: Math.floor((w - aw) / 2), z: d - 1, w: aw, d: k, axis: 'x', lower: 1 },
+  ];
+}
+
+/** Двор: замкнутое кольцо из четырёх крыльев */
+function court(w: number, d: number): Rect[] {
+  // Крыло — четверть короткой стороны: внутри остаётся двор хотя бы 3×3
+  const k = Math.max(5, Math.min(Math.round(Math.min(w, d) / 4) | 1, Math.floor((Math.min(w, d) - 3) / 2)));
+  return [
+    { x: 0, z: 0, w, d: k, axis: 'x' },
+    { x: 0, z: d - k, w, d: k, axis: 'x' },
+    { x: 0, z: 0, w: k, d, axis: 'z' },
+    { x: w - k, z: 0, w: k, d, axis: 'z' },
+  ];
+}
 
 export interface MakeSpecOptions {
   form?: string;
@@ -212,7 +287,7 @@ export function makeSpec(opts: MakeSpecOptions = {}): BuildingSpec {
   const typeId = TYPES[opts.type ?? 'house'] ? (opts.type ?? 'house') : 'house';
   const style = STYLES[styleId];
   const type = TYPES[typeId];
-  const grow = form === 'rect' ? 1 : 1.5;
+  const grow = form === 'rect' || form === 'annex' ? 1 : 1.5;
   const w = opts.w ?? Math.round(type.w * grow);
   const d = opts.d ?? Math.round(type.d * grow);
   const roof = { ...style.roof, ...type.roof };
@@ -229,12 +304,13 @@ export function makeSpec(opts: MakeSpecOptions = {}): BuildingSpec {
       w: r.w,
       d: r.d,
       y: 0,
-      floors: type.floors,
+      floors: Math.max(1, type.floors - (r.lower ?? 0)),
       floorH: type.floorH,
       roof: { ...roof, axis: r.axis },
+      ...(type.shape ? { shape: type.shape } : {}),
     })),
     openings: structuredClone(type.openings),
-    details: { ...style.details, chimney: type.chimney, clearInside: true },
+    details: { ...style.details, chimney: type.chimney, clearInside: true, ...type.details },
     texture: { degree: opts.degree ?? 0 },
     palette: opts.palette && PALETTES[opts.palette] ? opts.palette : '',
     roles:

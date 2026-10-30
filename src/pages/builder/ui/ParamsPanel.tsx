@@ -56,6 +56,8 @@ const ROOFS: { value: RoofSpec['kind']; label: string }[] = [
   { value: 'hip', label: 'вальмовая' },
   { value: 'shed', label: 'односкатная' },
   { value: 'flat', label: 'плоская' },
+  { value: 'sawtooth', label: 'шедовая' },
+  { value: 'cone', label: 'конус' },
 ];
 
 const DEGREES = [
@@ -231,6 +233,25 @@ export function ParamsPanel({ spec, onChange }: Props) {
                 max={2}
                 onChange={(overhang) => roof(i, { overhang })}
               />
+              {v.roof.kind === 'sawtooth' && (
+                <Num
+                  label="зубец"
+                  value={v.roof.tooth ?? 5}
+                  min={3}
+                  max={12}
+                  onChange={(tooth) => roof(i, { tooth })}
+                  title="Ширина зубца шедовой крыши в клетках"
+                />
+              )}
+              <Select
+                value={v.shape ?? 'rect'}
+                onChange={(e) => vol(i, { shape: e.target.value as Volume['shape'] })}
+                aria-label="Форма объёма"
+                title="Круглый — вписан в прямоугольник ширина×глубина; крыша у него плоская или конус"
+              >
+                <option value="rect">прямоугольный</option>
+                <option value="round">круглый</option>
+              </Select>
             </div>
           </div>
         ))}
@@ -334,6 +355,25 @@ export function ParamsPanel({ spec, onChange }: Props) {
             onChange={(frameEvery) => onChange({ ...spec, details: { ...det, frameEvery } })}
             title="Фахверк: стойки через столько клеток; 0 — без каркаса"
           />
+          {det.chimney && (
+            <>
+              <Num
+                label="труба над крышей"
+                value={det.chimneyH ?? 2}
+                min={1}
+                max={40}
+                onChange={(chimneyH) => onChange({ ...spec, details: { ...det, chimneyH } })}
+              />
+              <Num
+                label="сечение трубы"
+                value={det.chimneySize ?? 1}
+                min={1}
+                max={2}
+                onChange={(chimneySize) => onChange({ ...spec, details: { ...det, chimneySize } })}
+                title="1 — обычная, 2 — промышленная 2×2"
+              />
+            </>
+          )}
         </div>
         {(
           [

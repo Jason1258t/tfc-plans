@@ -32,9 +32,11 @@ export interface Layout {
 /** Сколько блоков крыша может подняться над верхом стен */
 function roofRise(v: Volume) {
   const o = v.roof.overhang;
+  if (v.roof.kind === 'flat') return 2;
+  if (v.roof.kind === 'sawtooth') return Math.ceil((v.roof.tooth ?? 5) * v.roof.pitch) + 2;
   const span = v.roof.kind === 'shed' ? Math.max(v.w, v.d) : Math.min(v.w, v.d);
   const half = v.roof.kind === 'shed' ? span + 2 * o : Math.ceil((span + 2 * o) / 2);
-  return v.roof.kind === 'flat' ? 2 : Math.ceil(half * v.roof.pitch) + 2;
+  return Math.ceil(half * v.roof.pitch) + 2;
 }
 
 export function layout(spec: BuildingSpec): Layout {
@@ -44,7 +46,9 @@ export function layout(spec: BuildingSpec): Layout {
   const minZ = Math.min(...vs.map((v) => v.z)) - pad;
   const maxX = Math.max(...vs.map((v) => v.x + v.w - 1)) + pad;
   const maxZ = Math.max(...vs.map((v) => v.z + v.d - 1)) + pad;
-  const maxY = Math.max(...vs.map((v) => v.y + v.floors * v.floorH + roofRise(v))) + (spec.details.chimney ? 3 : 1);
+  const maxY =
+    Math.max(...vs.map((v) => v.y + v.floors * v.floorH + roofRise(v))) +
+    (spec.details.chimney ? (spec.details.chimneyH ?? 2) + 1 : 1);
   const ox = -minX;
   const oz = -minZ;
   const grid = new Grid(maxX - minX + 1, maxY + 1, maxZ - minZ + 1);
@@ -63,7 +67,16 @@ export function layout(spec: BuildingSpec): Layout {
   return { grid, boxes, ox, oz };
 }
 
-export const inPlan = (b: Box, x: number, z: number) => x >= b.x0 && x <= b.x1 && z >= b.z0 && z <= b.z1;
+/** Клетка в плане объёма: прямоугольник или вписанный в него овал (по центру клетки) */
+export function inPlan(b: Box, x: number, z: number) {
+  if (x < b.x0 || x > b.x1 || z < b.z0 || z > b.z1) return false;
+  if (b.v.shape !== 'round') return true;
+  const rx = (b.x1 - b.x0 + 1) / 2;
+  const rz = (b.z1 - b.z0 + 1) / 2;
+  const dx = (x - (b.x0 + b.x1) / 2) / rx;
+  const dz = (z - (b.z0 + b.z1) / 2) / rz;
+  return dx * dx + dz * dz <= 1;
+}
 
 /** Первый объём, который занимает клетку на этой высоте (от фундамента до верхнего ряда стен) */
 export function boxAt(boxes: Box[], x: number, y: number, z: number): Box | null {
