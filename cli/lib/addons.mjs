@@ -71,16 +71,17 @@ const hereNote = ({ here, installed, pin }) =>
 export async function listAddons(api, profile, { hostOnly = false } = {}) {
   const list = (await addonsHere(api, profile)).filter((x) => !hostOnly || x.a.hostOnly);
   if (!list.length) return console.log(hostOnly ? 'Аддонов для хоста нет.' : 'Аддонов нет.');
+  console.log(`Аддоны сборки${hostOnly ? ' (для хоста)' : ''}: ${list.length}`);
   const str = ({ a, vs, latest }) => full(a, (latest ?? vs[0])?.version ?? 'latest');
   const width = Math.max(...list.map((x) => str(x).length));
   for (const x of list) {
     const { a, vs, installed, latest, pin } = x;
     const top = latest ?? vs[0];
     console.log(
-      `${bold(str(x).padEnd(width))}  ${a.name}${a.hostOnly ? cyan(' [хосту]') : ''}${top && !latest ? yellow(` (${STATUS_LABEL[top.status]})`) : ''}${hereNote(x)}`,
+      `  ${bold(str(x).padEnd(width))}  ${a.name}${a.hostOnly ? cyan(' [хосту]') : ''}${top && !latest ? yellow(` (${STATUS_LABEL[top.status]})`) : ''}${hereNote(x)}`,
     );
     if (installed && latest && compareVersions(installed.version, latest.version) < 0 && !pin)
-      console.log(dim(`    есть новее — tfc addons install ${full(a, latest.version)}`));
+      console.log(dim(`      есть новее — tfc addons install ${full(a, latest.version)}`));
   }
   console.log(dim('\nВерсии аддона: tfc addons <мод>; поставить: tfc addons install <мод>@<версия>'));
 }

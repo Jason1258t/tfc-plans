@@ -46,7 +46,7 @@ export interface SimilarOptions {
 
 /** Что не строительный блок: руды, растения, механизмы-однодневки, формы-варианты */
 const NOT_BUILDING =
-  /(^|[/_:])(ore|deposit|loose|spike|sapling|leaves|fallen_leaves|crop|plant|flower|grass|mushroom|coral|button|pressure_plate|sign|torch|lantern|chest|crate|barrel|bed|carpet|candle|rail|door|trapdoor|fence|fence_gate|gravel|sand|dirt|farmland|snow|ice|water|lava|spawner|infested|shulker_box|command_block|structure|jigsaw|barrier|air|magma|clay|muddy_roots|roots|peat|grate|piston|sticky_piston|observer|dispenser|dropper|furnace|crafting_table|hopper|tnt|sponge)($|[/_])|_(stairs|slab|wall)$/;
+  /(^|[/_:])(ore|deposit|loose|spike|sapling|leaves|fallen_leaves|crop|plant|flower|grass|mushroom|coral|button|pressure_plate|sign|torch|lantern|chest|crate|barrel|bed|carpet|candle|rail|door|trapdoor|fence|fence_gate|gravel|sand|dirt|farmland|snow|ice|water|lava|spawner|infested|shulker_box|command_block|structure|jigsaw|barrier|air|magma|clay|muddy_roots|roots|peat|grate|piston|sticky_piston|observer|dispenser|dropper|furnace|crafting_table|hopper|tnt|sponge|aqueduct|road|chute|pipe|valve|vine|vines|hide|upgrade)($|[/_])|_(stairs|slab|wall)$/;
 
 export const isBuildingBlock = (id: string) => !NOT_BUILDING.test(id);
 

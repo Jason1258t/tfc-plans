@@ -4,7 +4,7 @@ import path from 'node:path';
 import { inspectSchematic, SCHEMATIC_MAX } from '@tfc/pack-server/schematic-nbt';
 import { schematicTargets } from './pull.mjs';
 import { loadState } from './plan.mjs';
-import { bold, dim, confirm, mb } from './ui.mjs';
+import { confirm, mb } from './ui.mjs';
 
 function roots(profile) {
   return [...new Set([profile?.instance, profile?.serverDir].filter(Boolean))].map((p) => path.join(p, 'schematics'));
@@ -91,26 +91,40 @@ export async function listSchematics(api, profile, query = '', localOnly = false
     available = false;
   }
   const files = profile ? localSchematics(profile) : [];
-  if (!localOnly)
-    for (const s of entries.filter((s) => contains(`${s.id} ${s.name} ${s.fileName} ${s.author}`, query))) {
+  const containsLocal = (text) => contains(text, query);
+  if (!localOnly) {
+    const shown = entries.filter((s) => contains(`${s.id} ${s.name} ${s.fileName} ${s.author}`, query));
+    console.log(`Библиотека на сайте${query ? ` (поиск «${query}»)` : ''}: ${shown.length}`);
+    for (const s of shown) {
       const copies = files.filter((f) => matches(f, [s], profile).length);
-      console.log(
-        `${bold(s.id)}  ${s.name} — автор: ${s.author || 'Неизвестен'}; ${s.fileName}; ${mb(s.fileSize ?? 0)}`,
-      );
-      console.log(dim(`  SHA-256: ${s.sha256 ?? 'ещё не рассчитан'}`));
-      console.log(
-        dim(
-          `  ревизия: ${s.revision ?? 'сервер требует обновления'}; ${copies.length ? `копий здесь: ${copies.length}` : 'не установлена'}`,
-        ),
-      );
+      const installed = profile ? (copies.length ? `установлена (${copies.length})` : 'не установлена') : '—';
+      console.log(`  ${s.name} | ${s.id} | ${installed}`);
     }
-  for (const f of files) {
+    if (!shown.length) console.log('  (пусто)');
+    console.log('');
+  }
+  const shownFiles = files.filter((f) => {
     const hits = matches(f, entries, profile);
-    if (!contains(`${f.file} ${hits.map((h) => `${h.s.id} ${h.s.name}`).join(' ')}`, query)) continue;
-    if (f.info) console.log(dim(`SHA-256: ${f.info.sha256}`));
-    console.log(
-      `${f.file} — ${mb(f.size)}; владелец копии: ${f.owner ?? 'локальная'}; ${f.error ? `ошибка: ${f.error}` : hits.length ? hits.map((h) => `${h.s.id}: ${h.kind}`).join(', ') : available ? 'нет в библиотеке' : 'совпадения не проверены'}`,
-    );
+    return containsLocal(`${f.file} ${hits.map((h) => `${h.s.id} ${h.s.name}`).join(' ')}`);
+  });
+  if (shownFiles.length || files.length) {
+    if (profile) {
+      const roots = [...new Set([profile.instance, profile.serverDir].filter(Boolean))];
+      console.log(`Профиль: ${roots.join(', ')}`);
+    }
+    console.log(`Локальные .nbt${query ? ` (поиск «${query}»)` : ''}: ${shownFiles.length}`);
+    for (const f of shownFiles) {
+      const hits = matches(f, entries, profile);
+      const status = f.error
+        ? `ошибка: ${f.error}`
+        : hits.length
+          ? hits.map((h) => `${h.s.id}: ${h.kind}`).join(', ')
+          : available
+            ? 'нет в библиотеке'
+            : 'совпадения не проверены';
+      console.log(`  ${f.rel} | ${mb(f.size)} | владелец: ${f.owner ?? 'локальная'} | ${status}`);
+    }
+    if (!shownFiles.length) console.log('  (пусто)');
   }
   if (localOnly && !files.length) console.log('Локальных .nbt нет.');
 }

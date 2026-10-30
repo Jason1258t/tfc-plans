@@ -4,7 +4,7 @@ import type { PackIssue } from '@/lib/datapack';
 import type { Datapack, DatapackEntry } from '@/entities/datapack';
 import { Button } from '@/shared/ui';
 import { KIND_LABEL } from '../model/entryKind';
-import styles from '../DatapacksPage.module.css';
+import styles from '../DatapacksPage/DatapacksPage.module.css';
 
 interface Props {
   pack: Datapack;

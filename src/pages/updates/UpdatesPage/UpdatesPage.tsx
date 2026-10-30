@@ -1,0 +1,472 @@
+import { AlertTriangle, ChevronDown, ChevronRight, Package, Pencil, Sparkles } from 'lucide-react';
+import { ErrorBox } from '@/shared/ui';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ItemIcon, useItems, type ItemIndex } from '@/shared/pack-data';
+import { Markdown } from '../../../components/Markdown';
+import { MarkdownField } from '../../../components/MarkdownField';
+import { TfcDownload } from '../ui/TfcDownload';
+import { useNick } from '@/entities/user';
+import { useGroups } from '@/entities/group';
+import { useTasks } from '@/entities/task';
+import { datapacksStore } from '@/entities/datapack';
+import { generatePatchNotes, geminiEnabled, geminiErrorText } from '@/shared/api';
+import { addonById } from '../../../lib/addons';
+import { UpdatesNav } from '../FreshnessPage';
+import {
+  datapackRisks,
+  markUpdatesSeen,
+  nsOf,
+  saveNotes,
+  useAddonChangelogs,
+  usePackUpdates,
+  withAddonChangelogs,
+  type DatapackRisk,
+  type ModRef,
+  type PackUpdate,
+} from '@/entities/pack-update';
+import { cx, timeAgo } from '@/shared/lib';
+import { Button, Tag } from '@/shared/ui';
+import type { Datapack } from '@/entities/datapack';
+import sectionStyles from '../UpdatesSection.module.css';
+import styles from './UpdatesPage.module.css';
+
+/** Лента обновлений сборки: патчноут от модели + машинная разница (моды, предметы, рецепты, датапаки) */
+export function UpdatesPage() {
+  const updates = usePackUpdates();
+  const items = useItems();
+  const [packs, setPacks] = useState<Datapack[]>([]);
+  useEffect(() => datapacksStore.subscribe(setPacks), []);
+
+  useEffect(() => {
+    if (updates?.length) markUpdatesSeen(updates[0].createdAt);
+  }, [updates]);
+
+  return (
+    <main className={sectionStyles.page}>
+      <UpdatesNav />
+      <div className={sectionStyles.head}>
+        <h1>Обновления сборки</h1>
+        <p className="faint small">
+          Запись появляется при деплое, если поменялись jar в mods/. Патчноут пишет модель по ченджлогам модов с
+          Modrinth, ченджлогам версий наших аддонов и разнице сборок; его можно поправить руками.
+        </p>
+      </div>
+      <TfcDownload />
+      {updates === null ? (
+        <div className="empty">Загружаю…</div>
+      ) : updates.length === 0 ? (
+        <div className="empty">
+          Записей пока нет — первая появится при следующем деплое (<code>npm run deploy</code>).
+        </div>
+      ) : (
+        updates.map((u, i) => <UpdateCard key={u.id} update={u} items={items} packs={packs} latest={i === 0} />)
+      )}
+    </main>
+  );
+}
+
+function UpdateCard({
+  update: u,
+  items,
+  packs,
+  latest,
+}: {
+  update: PackUpdate;
+  items: ItemIndex | null;
+  packs: Datapack[];
+  latest: boolean;
+}) {
+  const nick = useNick();
+  const { items: groups } = useGroups();
+  const { items: tasks } = useTasks();
+  const risks = useMemo(() => datapackRisks(u, packs), [u, packs]);
+  // Список изменений свёрнут у всех обновлений, включая последнее: сверху и так патчноут
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const autoTried = useRef(false);
+  const full = useAddonChangelogs(u, open);
+
+  const generate = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const active = tasks.filter((t) => t.status !== 'done');
+      const context =
+        `Группы задач: ${groups.map((g) => g.name).join(', ') || 'нет'}.\n` +
+        `Активные задачи: ${active
+          .slice(0, 40)
+          .map((t) => t.title)
+          .join('; ')}`;
+      const full = await withAddonChangelogs(u);
+      const body = await generatePatchNotes({ report: describeUpdate(full, items, risks), context });
+      await saveNotes(u.id, body, 'agent', nick);
+    } catch (e) {
+      setError(geminiErrorText(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Патчноут для свежего обновления пишется сам при первом открытии — дальше его видят все
+  useEffect(() => {
+    if (!latest || u.baseline || u.notes || !geminiEnabled || !items || autoTried.current) return;
+    autoTried.current = true;
+    void generate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latest, u.baseline, u.notes, items]);
+
+  const m = u.mods;
+  return (
+    <article className={cx(sectionStyles.card, latest && sectionStyles.latest)}>
+      <header className={sectionStyles.cardHead}>
+        <Package size={18} className="faint" />
+        <div className="grow">
+          <h2>
+            {u.baseline ? 'Начало истории' : `Обновление от ${new Date(u.createdAt).toLocaleDateString('ru-RU')}`}
+          </h2>
+          <div className="faint small">
+            {timeAgo(u.createdAt)} · {u.deployedBy} · модов {u.counts.mods[1]}, предметов{' '}
+            {u.counts.items[1].toLocaleString('ru-RU')}, рецептов {u.counts.recipes[1].toLocaleString('ru-RU')}
+          </div>
+        </div>
+        {!u.baseline && (
+          <div className={styles.badges}>
+            {m.added.length > 0 && <Tag className={styles.kAdd}>+{m.added.length} мод.</Tag>}
+            {m.updated.length > 0 && <Tag className={styles.kUpd}>~{m.updated.length}</Tag>}
+            {m.removed.length > 0 && <Tag className={styles.kDel}>−{m.removed.length}</Tag>}
+            {risks.length > 0 && (
+              <Tag className={styles.kWarn}>
+                <AlertTriangle size={12} /> датапаки
+              </Tag>
+            )}
+          </div>
+        )}
+      </header>
+
+      {!u.baseline && (
+        <section className={styles.notes}>
+          {editing ? (
+            <>
+              <MarkdownField value={draft} onChange={setDraft} rows={14} autoFocus />
+              <div className={cx('row', styles.notesActions)}>
+                <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
+                  Отмена
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={async () => {
+                    await saveNotes(u.id, draft, 'manual', nick);
+                    setEditing(false);
+                  }}
+                >
+                  Сохранить
+                </Button>
+              </div>
+            </>
+          ) : u.notes ? (
+            <>
+              <Markdown source={u.notes.body} />
+              <div className={cx('row', 'faint', 'small', styles.notesMeta)}>
+                <span className="grow">
+                  {u.notes.source === 'agent' ? 'Патчноут от модели' : 'Патчноут поправлен вручную'} ·{' '}
+                  {u.notes.updatedBy} · {timeAgo(u.notes.updatedAt)}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setDraft(u.notes!.body);
+                    setEditing(true);
+                  }}
+                >
+                  <Pencil size={13} /> Править
+                </Button>
+                {geminiEnabled && (
+                  <Button variant="ai" size="sm" onClick={generate} disabled={busy}>
+                    <Sparkles size={13} /> {busy ? 'Пишу…' : 'Обновить агентом'}
+                  </Button>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className={cx('row', styles.notesEmpty)}>
+              <span className="faint grow">{busy ? 'Модель пишет патчноут…' : 'Патчноута пока нет.'}</span>
+              {geminiEnabled && !busy && (
+                <Button variant="ai" size="sm" onClick={generate}>
+                  <Sparkles size={13} /> Составить агентом
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setDraft('');
+                  setEditing(true);
+                }}
+              >
+                <Pencil size={13} /> Написать
+              </Button>
+            </div>
+          )}
+          {error && <ErrorBox>{error}</ErrorBox>}
+        </section>
+      )}
+
+      {risks.length > 0 && <Risks risks={risks} />}
+
+      <Button variant="ghost" size="sm" className={styles.toggle} onClick={() => setOpen((v) => !v)}>
+        {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        {u.baseline ? 'Состав сборки' : 'Что изменилось'}
+      </Button>
+      {open && <Details u={full} />}
+    </article>
+  );
+}
+
+function Risks({ risks }: { risks: DatapackRisk[] }) {
+  return (
+    <section className={styles.risks}>
+      <h3>
+        <AlertTriangle size={14} /> Датапаки под угрозой
+      </h3>
+      <ul>
+        {risks.map((r, i) => (
+          <li key={i}>
+            <Link to={`/datapacks?pack=${r.pack.id}`}>{r.pack.name}</Link> · <code>{r.path}</code> — {r.reason}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function ModList({
+  title,
+  mods,
+  changelogs,
+  sources,
+}: {
+  title: string;
+  mods: ModRef[];
+  changelogs?: Record<string, string>;
+  sources?: PackUpdate['changelogSources'];
+}) {
+  if (!mods.length) return null;
+  return (
+    <div className={styles.block}>
+      <h4>
+        {title} <span className="faint">{mods.length}</span>
+      </h4>
+      <ul className={styles.mods}>
+        {mods.map((m) => (
+          <li key={m.id}>
+            {changelogs?.[m.id] ? (
+              <details>
+                <summary>
+                  <ModLine m={m} />{' '}
+                  <span className="faint small">
+                    {sources?.[m.id] === 'addon' ? 'что нового в версиях' : 'ченджлог'}
+                  </span>
+                </summary>
+                <div className={styles.changelog}>
+                  <Markdown source={changelogs[m.id]} />
+                </div>
+              </details>
+            ) : (
+              <ModLine m={m} />
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+const ModLine = ({ m }: { m: ModRef }) => (
+  <span>
+    <b>{m.name}</b>{' '}
+    {addonById(m.id) && (
+      <Tag
+        as={Link}
+        className={styles.addon}
+        to={`/addons/${m.id}`}
+        title="Аддон группы — версии и описание на его странице"
+      >
+        наш аддон
+      </Tag>
+    )}{' '}
+    <span className="faint small">
+      {m.from ? `${m.from} → ${m.version}` : m.version} · <code>{m.id}</code>
+    </span>
+  </span>
+);
+
+/** Предметы по модам: иконки, первые 48 в группе */
+function ItemGroups({ ids, total }: { ids: string[]; total: number }) {
+  const groups = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const id of ids) map.set(nsOf(id), [...(map.get(nsOf(id)) ?? []), id]);
+    return [...map].sort((a, b) => b[1].length - a[1].length);
+  }, [ids]);
+  return (
+    <div className={styles.items}>
+      {groups.map(([ns, list]) => (
+        <div key={ns}>
+          <div className="faint small">
+            <code>{ns}</code> · {list.length}
+          </div>
+          <div className={styles.icons}>
+            {list.slice(0, 48).map((id) => (
+              <ItemIcon key={id} id={id} size={24} />
+            ))}
+            {list.length > 48 && <span className="faint small">ещё {list.length - 48}</span>}
+          </div>
+        </div>
+      ))}
+      {total > ids.length && (
+        <div className="faint small">
+          Показаны первые {ids.length} из {total}.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RecipeCounts({ title, ids, total }: { title: string; ids: string[]; total: number }) {
+  if (!total) return null;
+  const byNs = new Map<string, number>();
+  for (const id of ids) byNs.set(nsOf(id), (byNs.get(nsOf(id)) ?? 0) + 1);
+  return (
+    <details className={styles.block}>
+      <summary>
+        <b>{title}</b> <span className="faint">{total.toLocaleString('ru-RU')}</span>{' '}
+        <span className="faint small">
+          {[...byNs]
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 6)
+            .map(([ns, n]) => `${ns} ${n}`)
+            .join(', ')}
+        </span>
+      </summary>
+      <ul className={styles.recipes}>
+        {ids.slice(0, 300).map((id) => (
+          <li key={id}>
+            <code>{id}</code>
+          </li>
+        ))}
+        {ids.length > 300 && <li className="faint">… ещё {ids.length - 300}</li>}
+      </ul>
+    </details>
+  );
+}
+
+function Details({ u }: { u: PackUpdate }) {
+  if (u.baseline)
+    return (
+      <div className={styles.details}>
+        <ModList title="Моды" mods={[...u.mods.added].sort((a, b) => a.name.localeCompare(b.name))} />
+      </div>
+    );
+  const t = u.totals;
+  return (
+    <div className={styles.details}>
+      <ModList title="Новые моды" mods={u.mods.added} changelogs={u.changelogs} sources={u.changelogSources} />
+      <ModList title="Обновлённые" mods={u.mods.updated} changelogs={u.changelogs} sources={u.changelogSources} />
+      <ModList title="Убранные" mods={u.mods.removed} />
+      {!!t?.itemsAdded && (
+        <div className={styles.block}>
+          <h4>
+            Новые предметы <span className="faint">{t.itemsAdded}</span>
+          </h4>
+          <ItemGroups ids={u.items?.added ?? []} total={t.itemsAdded} />
+        </div>
+      )}
+      {!!t?.itemsRemoved && (
+        <div className={styles.block}>
+          <h4>
+            Пропавшие предметы <span className="faint">{t.itemsRemoved}</span>
+          </h4>
+          <ul className={styles.recipes}>
+            {(u.items?.removed ?? []).slice(0, 200).map((id) => (
+              <li key={id}>
+                <code>{id}</code>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <RecipeCounts title="Новые рецепты" ids={u.recipes?.added ?? []} total={t?.recipesAdded ?? 0} />
+      <RecipeCounts title="Изменённые рецепты" ids={u.recipes?.changed ?? []} total={t?.recipesChanged ?? 0} />
+      <RecipeCounts title="Удалённые рецепты" ids={u.recipes?.removed ?? []} total={t?.recipesRemoved ?? 0} />
+      {!!u.newRecipeTypes?.length && (
+        <div className={styles.block}>
+          <h4>Новые типы рецептов</h4>
+          <p className="faint small">
+            Подсказки для них можно составить агентом в редакторе датапака (рецепт по шаблону этого типа).
+          </p>
+          <div className={styles.types}>
+            {u.newRecipeTypes.map((t) => (
+              <code key={t}>{t}</code>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Текстовый отчёт для модели: всё, на что ей можно опираться */
+function describeUpdate(u: PackUpdate, items: ItemIndex | null, risks: DatapackRisk[]): string {
+  const name = (id: string) => {
+    const it = items?.byId.get(id);
+    return it ? `${it.r ?? it.e} (${id})` : id;
+  };
+  const lines: string[] = [];
+  const mods = (title: string, list: ModRef[]) => {
+    if (!list.length) return;
+    lines.push(`## ${title}`);
+    for (const m of list) lines.push(`- ${m.name} [${m.id}] ${m.from ? `${m.from} → ${m.version}` : m.version}`);
+  };
+  mods('Новые моды', u.mods.added);
+  mods('Обновлённые моды', u.mods.updated);
+  mods('Убранные моды', u.mods.removed);
+  const t = u.totals;
+  lines.push(
+    `## Счётчики\nпредметы +${t?.itemsAdded ?? 0} −${t?.itemsRemoved ?? 0}; рецепты +${t?.recipesAdded ?? 0} ` +
+      `−${t?.recipesRemoved ?? 0}, изменено ${t?.recipesChanged ?? 0}. Всего: модов ${u.counts.mods.join(' → ')}, ` +
+      `предметов ${u.counts.items.join(' → ')}, рецептов ${u.counts.recipes.join(' → ')}.`,
+  );
+  const sample = (title: string, ids: string[]) => {
+    if (!ids.length) return;
+    const byNs = new Map<string, string[]>();
+    for (const id of ids) byNs.set(nsOf(id), [...(byNs.get(nsOf(id)) ?? []), id]);
+    lines.push(`## ${title} (примеры по модам)`);
+    for (const [ns, list] of byNs)
+      lines.push(`- ${ns} (${list.length}): ${list.slice(0, 30).map(name).join(', ')}${list.length > 30 ? ', …' : ''}`);
+  };
+  sample('Новые предметы', u.items?.added ?? []);
+  sample('Пропавшие предметы', u.items?.removed ?? []);
+  sample('Изменённые рецепты', u.recipes?.changed ?? []);
+  if (u.newRecipeTypes?.length) lines.push(`## Новые типы рецептов\n${u.newRecipeTypes.join(', ')}`);
+  if (risks.length)
+    lines.push(
+      `## Наши датапаки под угрозой\n${risks.map((r) => `- «${r.pack.name}» ${r.path}: ${r.reason}`).join('\n')}`,
+    );
+  const all = Object.entries(u.changelogs ?? {});
+  const ours = all.filter(([id]) => u.changelogSources?.[id] === 'addon');
+  const logs = all.filter(([id]) => u.changelogSources?.[id] !== 'addon');
+  if (ours.length) {
+    lines.push('## Наши аддоны (свои моды группы) — что изменилось в версиях');
+    for (const [id, text] of ours) lines.push(`### ${addonById(id)?.name ?? id} [${id}]\n${text}`);
+  }
+  if (logs.length) {
+    lines.push('## Ченджлоги модов (Modrinth)');
+    for (const [id, text] of logs) lines.push(`### ${id}\n${text}`);
+  } else lines.push('## Ченджлоги Modrinth\nнет (моды не найдены на Modrinth)');
+  return lines.join('\n');
+}

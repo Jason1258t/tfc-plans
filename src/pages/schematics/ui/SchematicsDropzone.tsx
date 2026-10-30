@@ -1,5 +1,5 @@
 import { FileBox } from 'lucide-react';
-import styles from '../SchematicsPage.module.css';
+import styles from '../SchematicsPage/SchematicsPage.module.css';
 
 /** Пустая страница схем: большая дропзона вместо списка файлов */
 export function SchematicsDropzone({ onClick }: { onClick: () => void }) {

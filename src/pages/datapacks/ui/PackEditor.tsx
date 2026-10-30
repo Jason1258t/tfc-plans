@@ -28,7 +28,7 @@ import { cx, timeAgo, uid } from '@/shared/lib';
 import type { Datapack, DatapackEntry, DatapackDeployment } from '@/entities/datapack';
 import { Button } from '@/shared/ui';
 import { download } from '../model/download';
-import styles from '../DatapacksPage.module.css';
+import styles from '../DatapacksPage/DatapacksPage.module.css';
 
 /** Один датапак: паспорт, кнопки, файлы и окна — каталог рецептов, конструктор KubeJS, правка записи */
 export function PackEditor({

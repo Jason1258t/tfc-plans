@@ -8,7 +8,7 @@ import { Button, Modal } from '@/shared/ui';
 import { cx } from '@/shared/lib';
 import { Attachments, Gallery, useFileIntake } from '@/features/task-files';
 import { TaskFields } from './TaskFields';
-import styles from './TaskDialog.module.css';
+import styles from './TaskDialog/TaskDialog.module.css';
 
 export function CreateTask({
   groupId,

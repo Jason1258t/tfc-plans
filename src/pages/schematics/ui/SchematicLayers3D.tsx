@@ -1,10 +1,7 @@
-import { Suspense, lazy } from 'react';
 import type { Schematic, Vec } from '@/entities/schematic';
+import { SchematicView3D } from '@/entities/schematic';
 import { cx } from '@/shared/lib';
-import styles from './SchematicLayers.module.css';
-
-// three.js — отдельным куском, грузится только при переходе в 3D
-const SchematicView3D = lazy(() => import('@/entities/schematic/render').then((m) => ({ default: m.SchematicView3D })));
+import styles from './SchematicLayers/SchematicLayers.module.css';
 
 interface Props {
   schematic: Schematic;
@@ -21,7 +18,7 @@ interface Props {
 /** 3D-вид схемы (three.js отдельным куском) и подсказка управления; пока грузится — надпись */
 export function SchematicLayers3D({ schematic, replace, maxY, textured, selected, onPick, onHover, onFrame }: Props) {
   return (
-    <Suspense fallback={<div className={cx(styles.view3D, 'faint', 'small')}>Загружаю 3D…</div>}>
+    <>
       <SchematicView3D
         className={styles.view3D}
         schematic={schematic}
@@ -38,6 +35,6 @@ export function SchematicLayers3D({ schematic, replace, maxY, textured, selected
         повторно — снять · Delete — убрать · зажатое колесо (или Alt+ЛКМ) — вращать вокруг точки под курсором · ПКМ —
         сдвигать · колесо — масштаб · ↑↓ — слой среза · блоки по моделям из сборки, у части блоков — упрощённая форма
       </div>
-    </Suspense>
+    </>
   );
 }

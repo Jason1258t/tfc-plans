@@ -1,4 +1,4 @@
-import styles from './Table.module.css';
+import styles from './Table/Table.module.css';
 
 /** Оформление нативных ячеек без обёрток и предметных знаний. */
 export const tableStyles = {

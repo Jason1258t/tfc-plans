@@ -425,7 +425,21 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
 
 ## Building generator (dev #166, plan doc 26)
 
-Stages 0–3 done 2026-10-30 (`feat/building-core`); no UI yet — stage 4 is the `/builder` page.
+Stages 0–4 done 2026-10-30 (`feat/building-core`, `feat/building-page`); next — stage 5 (brush and selections in 3D).
+
+- Page `/builder` (`pages/builder`): presets, volumes, openings, details, texture degree + seed; 3D via the shared
+  `SchematicView3D` from `@/entities/schematic` (was `widgets/schematic-view`; moved to entities in #167 so the
+  structure viewer can use it; `[data-schematic-view] ~ .hint` keeps the overlay hint on top); hover shows role and block, the eye button highlights a role's cells; roles panel lists roles with
+  cells plus their parents (timber has no plain wall cells, infill takes the wall's blocks); per role — chosen blocks
+  (order = share, manual weight), search, pattern, «Подобрать» (picker groups). Output: materials, download .nbt,
+  save/update in the schematic library with `building` (BuildingSpec) in the record — library rows with it get a
+  generator button, `/builder?from=<id>` reopens. Update re-uploads the file and removes the previous one.
+- Library save/open moved to `entities/schematic/librarySave.ts` (shared by both pages).
+- Colours: `block-colors.json` if published, else computed in the browser (~5–16 s, blocks with their own block
+  texture and a 3D icon; machines with block textures can still appear until the published file adds full-cube info).
+- Browser-checked on the dev server (prod Firestore): stone house, L timber with valley, picker add, degree 3 shares,
+  save → update → reopen, schematics page 3D unchanged, 375 px without horizontal scroll; test record and its files
+  deleted.
 
 - Core `@tfc/core/building/*`: `spec.ts` (BuildingSpec v1), `presets.ts` (styles stone/timber/log, types
   house/barn/workshop, forms rect/L/T/U → `makeSpec`), `massing.ts` (walls on the 8-neighbour outline of the volume
@@ -685,8 +699,8 @@ the step is centred.
   only. `::pumpjack` and the embedded NBT data are gone; the CDG guide uses the two library cards.
   The schematics page keeps its own three.js editor (not switched to this viewer).
 
-- Dev #167 (2026-10-30): the schematics editor's three.js view is the reference. `SchematicView3D` moved to
-  `entities/schematic/ui` (exported lazily via `@/entities/schematic/render`) and is used by the editor and by
+- Dev #167 (2026-10-30): the schematics editor's three.js view is the reference. `SchematicView3D` lives in
+  `entities/schematic/ui/SchematicView3D` (exported lazily from `@/entities/schematic`) and is used by the editor and by
   `BlockStructureViewer` in `viewer` mode (LMB/finger rotate, Ctrl+wheel/pinch zoom, plain wheel scrolls the page,
   «Вернуть вид», mirror via a holder group, hammer-block outline, layer slider = cut, selection = marks). Guides pass
   the card's parsed NBT; IE shapes go through `nbtFromShape`. So models, partial blocks, copycats by material and

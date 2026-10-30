@@ -116,8 +116,7 @@ public styles when several consumers share a pattern. Onboarding targets use tag
   только когда код действительно нужен нескольким страницам: одну страницу оставляем в `pages/<x>/`. Если сомневаешься,
   кладём рядом с главным потребителем, а не «по схеме». Проверка — `npm run ui:boundaries`.
 - Every module folder has an `index.ts` with only its **public** part (not `export *`); import from outside through it:
-  `@/entities/schematic`, not `@/entities/schematic/lib/schematicMesh`. One component = one flat file
-  (`Button.tsx` + `Button.module.css`), a folder only for multi-file ones — no `Button/Button.tsx`.
+  `@/entities/schematic`, not `@/entities/schematic/lib/schematicMesh`. A component with its own styles lives in its own folder (`X/index.ts`, `X/X.tsx`, `X/X.module.css`); simple components without styles may stay flat files
 - Import alias `@/…` = `src/…` (`vite.config.ts` + `tsconfig.app.json`). Inside one folder use relative `./x`; across
   folders `@/…`. CSS imports stay relative (`./X.module.css`).
 - **Code that both the site and Node (`scripts/`, MCP, `cli/`, `server/`) run lives in `packages/core`** (`@tfc/core`,

@@ -13,7 +13,7 @@ import { cx } from '@/shared/lib';
 import { Checklist } from './Checklist';
 import { PlaceField } from './PlaceField';
 import { SchematicImport } from './SchematicImport';
-import styles from './TaskDialog.module.css';
+import styles from './TaskDialog/TaskDialog.module.css';
 
 type Values = Pick<
   Task,

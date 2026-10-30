@@ -5,7 +5,7 @@ import type { ReplaceFavorite } from '@/entities/schematic';
 import { cx } from '@/shared/lib';
 import { Button, Tag } from '@/shared/ui';
 import section from '../SchematicsSection.module.css';
-import styles from '../SchematicsPage.module.css';
+import styles from '../SchematicsPage/SchematicsPage.module.css';
 
 /** Мод предмета — у одноимённых предметов (TFC и ванильный «Медный люк») различается только он */
 const modOf = (id: string) => id.split(':')[0];

@@ -5,7 +5,7 @@ import { Button } from '@/shared/ui';
 import type { SmartResult } from '../model/schematicFormat';
 import type { ToolPanel } from '../model/schematicPrefs';
 import section from '../SchematicsSection.module.css';
-import styles from '../SchematicsPage.module.css';
+import styles from '../SchematicsPage/SchematicsPage.module.css';
 
 interface Props {
   panel: ToolPanel;

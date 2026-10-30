@@ -6,7 +6,7 @@ import { cx } from '@/shared/lib';
 import { Button } from '@/shared/ui';
 import { clampPad, outName, replaceSig, shapeSummary } from '../model/schematicFormat';
 import section from '../SchematicsSection.module.css';
-import styles from '../SchematicsPage.module.css';
+import styles from '../SchematicsPage/SchematicsPage.module.css';
 
 interface Props {
   schematics: Schematic[];

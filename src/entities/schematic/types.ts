@@ -1,3 +1,5 @@
+import type { BuildingSpec } from '@tfc/core/building/spec';
+
 /** Схема из библиотеки и общие избранные замены блоков. */
 
 /**
@@ -30,6 +32,8 @@ export interface SavedSchematic {
   };
   /** Превью (data URL webp/png ≤ ~200 КБ), рисуется в браузере сохранившего; нет у старых записей */
   preview?: string;
+  /** Параметры генератора построек, если схема из него (@tfc/core/building/spec) */
+  building?: BuildingSpec;
   /** Описание (Markdown), правят все */
   description?: string;
   author: string;

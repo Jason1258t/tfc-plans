@@ -42,3 +42,7 @@ export {
 export type { CellInfo, Grid } from './schematicEdit';
 export { blockTopView } from './blockModels';
 export { drawnByCode, isFullCube } from './schematicShape';
+/** 3D-вид схемы (редактор, генератор построек, просмотр в гайдах и мультиблоках IE); three.js грузится лениво */
+export { LazySchematicView3D as SchematicView3D } from './ui/LazySchematicView3D';
+export type { SchematicView3DProps } from './ui/SchematicView3D';
+export { makePreview, openFromLibrary, refreshPreview, removeFromLibrary, saveToLibrary } from './librarySave';

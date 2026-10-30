@@ -8,7 +8,7 @@ import { downloadScript } from '@/lib/kubejsScripts';
 import { cx, timeAgo } from '@/shared/lib';
 import type { KubejsScript } from '@/entities/datapack';
 import { Button, Input, Label, Textarea } from '@/shared/ui';
-import styles from '../DatapacksPage.module.css';
+import styles from '../DatapacksPage/DatapacksPage.module.css';
 
 /** Отметка «Ставить в мир» / «Ставить на сервер» с подсказкой */
 export function InstallToggle({

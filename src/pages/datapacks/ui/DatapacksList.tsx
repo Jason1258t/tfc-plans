@@ -3,7 +3,7 @@ import { PackNav } from '@/widgets/pack-nav';
 import { cx, timeAgo } from '@/shared/lib';
 import type { Datapack, DatapackDeployment, KubejsScript } from '@/entities/datapack';
 import { Button } from '@/shared/ui';
-import styles from '../DatapacksPage.module.css';
+import styles from '../DatapacksPage/DatapacksPage.module.css';
 
 interface Props {
   packs: Datapack[] | null;

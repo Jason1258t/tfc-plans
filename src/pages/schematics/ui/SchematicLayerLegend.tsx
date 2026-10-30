@@ -3,7 +3,7 @@ import { ItemIcon } from '@/shared/pack-data';
 import { REMOVE } from '@/entities/schematic';
 import { cx } from '@/shared/lib';
 import { Segmented } from '@/shared/ui';
-import styles from './SchematicLayers.module.css';
+import styles from './SchematicLayers/SchematicLayers.module.css';
 
 export type LegendScope = 'layer' | 'all';
 

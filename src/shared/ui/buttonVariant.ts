@@ -1,4 +1,4 @@
-import styles from './Button.module.css';
+import styles from './Button/Button.module.css';
 
 export type ButtonVariant = 'primary' | 'ghost' | 'danger' | 'ai';
 

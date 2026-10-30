@@ -1,0 +1,283 @@
+/* Оверлей «Слои»: шапка, панель инструментов, канвас, легенда слоя, меню выделения. Сам 3D-вид — общий
+   (entities/schematic/ui/SchematicView3D); здесь только правило «подсказка над 3D». */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.head,
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-wrap: wrap;
+}
+
+.head h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.y {
+  min-width: 96px;
+  text-align: center;
+  font-size: 13px;
+}
+
+.step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.range {
+  width: min(240px, 40vw);
+}
+
+.main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.canvas {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.canvas canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.hover {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  z-index: 2;
+  max-width: calc(100% - 16px);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  pointer-events: none;
+}
+
+.hover code,
+.menuNames code {
+  font-size: 12px;
+  color: var(--text-2);
+  word-break: break-all;
+}
+
+.hint {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 16px);
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  text-align: center;
+  pointer-events: none;
+}
+
+.hint.hidden {
+  display: none;
+}
+
+.menu {
+  position: absolute;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-lg);
+}
+
+.menuNames {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.scope {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.scope label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.note {
+  margin: 0;
+}
+
+.legend {
+  width: 260px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.legend-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.legend-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.legend ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.legend li button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.legend li button.on {
+  background: var(--surface-3);
+}
+
+.legend li button.picked {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* Телефон: материалы — под видом, а не сбоку; подсказки управления мышью не нужны */
+@media (max-width: 720px) {
+  .main {
+    flex-direction: column;
+  }
+  .legend {
+    width: auto;
+    max-height: 34vh;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+  .hint {
+    display: none;
+  }
+}
+
+.mode {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+/* Кнопки вида — Button из shared/ui: у них больше нет глобального .btn, поэтому берём по месту */
+.mode > * {
+  border-color: transparent;
+  background: transparent;
+}
+
+.mode > .on {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+/* ------------------------------------------------------------------ вид 3D (виджет schematic-view) */
+
+[data-schematic-view] ~ .hint {
+  z-index: 2;
+}
+
+/* Кнопки панели выделения переносятся, а не уходят за край */
+.selection :global(.row) {
+  flex-wrap: wrap;
+}
+
+/* Выделение: панель действий справа сверху (слева сверху — подсказка блока под курсором) */
+.selection {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 320px;
+  max-width: calc(100% - 16px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  box-shadow: var(--shadow-sm);
+  z-index: 2;
+}
+
+.menuSelect {
+  flex-wrap: wrap;
+  gap: 4px;
+}
