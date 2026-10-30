@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { directMembers, flattenTag, type TagCatalog } from '@/shared/pack-data';
+import type { BlockShape, BlockState, StructureBlock } from '@/entities/block-structure';
 
 /**
  * Мультиблоки IE и Advanced TFC Tech (public/multiblocks.json, scripts/mods/multiblocks.mjs): шаблон структуры,
@@ -7,14 +8,10 @@ import { directMembers, flattenTag, type TagCatalog } from '@/shared/pack-data';
  * (лицевая сторона шаблона — юг, +Z: так IE поворачивает структуру к стороне, по которой ударили).
  */
 
-export interface MbBlockState {
-  id: string;
-  /** Свойства блока (type у плит, facing…) */
-  p?: Record<string, string>;
-}
+export type MbBlockState = BlockState;
 
 /** [x, y, z, номер в палитре] — без воздуха */
-export type MbBlock = [number, number, number, number];
+export type MbBlock = StructureBlock;
 
 export interface MbManual {
   entry: string;
@@ -29,10 +26,7 @@ export interface MbManual {
   en?: string;
 }
 
-export interface MbShape {
-  size: [number, number, number];
-  palette: MbBlockState[];
-  blocks: MbBlock[];
+export interface MbShape extends BlockShape {
   nbt: string;
 }
 
@@ -105,27 +99,7 @@ export const MOD_LABEL: Record<string, string> = {
   advancedtfctech: 'Advanced TFC Tech',
 };
 
-/** Форма блока для объёмного вида: плиты — половина, заборы и столбы — тонкие */
-export type MbForm = 'cube' | 'slab-bottom' | 'slab-top' | 'post';
-export function blockForm(s: MbBlockState): MbForm {
-  const path = s.id.split(':')[1] ?? '';
-  if (/(^|_)slab(_|$)/.test(path))
-    return s.p?.type === 'top' ? 'slab-top' : s.p?.type === 'double' ? 'cube' : 'slab-bottom';
-  if (/fence|_post$/.test(path) && !/gate/.test(path)) return 'post';
-  return 'cube';
-}
-
-/** Материалы: блок → сколько штук, по убыванию */
-export function materials(shape: MbShape): { state: MbBlockState; count: number }[] {
-  const byId = new Map<string, { state: MbBlockState; count: number }>();
-  for (const b of shape.blocks) {
-    const s = shape.palette[b[3]];
-    const cur = byId.get(s.id) ?? { state: s, count: 0 };
-    cur.count++;
-    byId.set(s.id, cur);
-  }
-  return [...byId.values()].sort((a, b) => b.count - a.count || a.state.id.localeCompare(b.state.id));
-}
+export { blockForm, materials, type BlockForm as MbForm } from '@/entities/block-structure';
 
 /**
  * Чем ещё можно заменить блок: IE принимает любой блок из того же тега-заменителя (хранилища и листовой металл

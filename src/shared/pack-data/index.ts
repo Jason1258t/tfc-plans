@@ -72,7 +72,10 @@ export {
 export { ItemIcon } from './ItemIcon';
 export { ItemIdSearch } from './ItemIdSearch';
 export { ItemPicker } from './ItemPicker';
-export { RecipeStatusBadge } from './RecipeStatusBadge';
+export { RecipeStatusBadge, RecipeStatusBadges } from './RecipeStatusBadge';
+export { RecipeGrid } from './RecipeGrid';
+export { ingredientSlot, recipeGrid } from './craftGrid';
+export type { GridSlot, RecipeGrid as CraftGrid } from './craftGrid';
 
 export { burnerHeat, burnerMode, burnerRate, mergeLiquidFuels } from '@tfc/core/liquidFuel';
 export type { BlazeFuel, LiquidFuels, LiquidFamily, LiquidStack, FuelRecipe, EngineStats } from '@tfc/core/liquidFuel';

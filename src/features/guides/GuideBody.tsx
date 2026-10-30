@@ -9,6 +9,7 @@ import { BlockBoundary } from './BlockBoundary';
 import { CalcBlock, CalcErrors, type Picker } from './CalcBlock';
 import { GuideLinkContext, useGuideEditing } from './guideLinks';
 import { compile, prepare, widgetCall } from './guideText';
+import { widgetsOf } from './commonWidgets';
 import styles from './Guides.module.css';
 
 /** Виджет раздела: то, что разметкой не описать (схемы-рисунки, особые графики) */
@@ -49,8 +50,9 @@ export function GuideBody({ source, kit, onGuide }: { source: string; kit: Guide
     }
     if (lang === 'widget') {
       const { name, params } = widgetCall(text);
-      const w = kit.widgets[name];
-      if (!w) return <CalcErrors list={[`нет виджета «${name}»: ${Object.keys(kit.widgets).join(', ')}`]} />;
+      const widgets = widgetsOf(kit);
+      const w = widgets[name];
+      if (!w) return <CalcErrors list={[`нет виджета «${name}»: ${Object.keys(widgets).join(', ')}`]} />;
       return (
         <BlockBoundary text={text}>
           <w.render params={params} scope={kit.scope.values} />

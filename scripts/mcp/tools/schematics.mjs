@@ -501,6 +501,7 @@ async function schematicGet(a) {
   const out = [
     `${entry.id} — ${entry.name}`,
     `ссылка: ${link(entry.id)}`,
+    `в гайд: ::schematic id=${entry.id} ver=${entry.updatedAt ?? 0} materials  (ver — когда вставили: изменят схему — гайд покажет пометку)`,
     `файл: ${entry.fileName} (${kb(entry.fileSize)}, files/${entry.fileId}); ${who(entry)}; изменена ${dateOf(entry.updatedAt)}`,
     `ревизия: ${entry.revision ?? '?'}${a.fresh ? '' : ' (из списка сервера сборки, до 5 мин; свежая — fresh=true)'}`,
     `исходник: ${sizeText(src.size)}, клеток ${src.cells.length}, палитра ${src.states.length}, блок-сущностей ${src.cells.filter((c) => c.nbt).length}, сущностей ${src.entities.length}, DataVersion ${src.root.get('DataVersion')?.value ?? '?'}`,
