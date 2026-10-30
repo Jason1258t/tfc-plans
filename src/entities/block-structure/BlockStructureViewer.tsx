@@ -1,5 +1,7 @@
 import { ChevronDown, ChevronUp, FlipHorizontal2, RotateCcw, X } from 'lucide-react';
 import {
+  lazy,
+  Suspense,
   useEffect,
   useMemo,
   useRef,
@@ -11,11 +13,26 @@ import {
 import { blockEntry, iconUrl, itemName, ItemIcon, useItems } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
 import { Button, Segmented } from '@/shared/ui';
-import { blockForm, materials, type BlockForm, type BlockShape, type BlockState } from './model';
+import type { ParsedNbt } from '@tfc/core/nbt';
+import { viewSchematic, type Vec } from '@/entities/schematic';
+import { blockForm, materials, nbtFromShape, type BlockForm, type BlockShape, type BlockState } from './model';
 import styles from './BlockStructureViewer.module.css';
 
-/** Больше блоков CSS-3D не тянет (каждая видимая грань — элемент): тогда только слои */
+// Объёмный вид — тот же, что в редакторе на странице «Схемы» (three.js, модели блоков из jar): отдельным куском
+const SchematicView3D = lazy(() => import('@/entities/schematic/render').then((m) => ({ default: m.SchematicView3D })));
+
+/** Больше блоков запасной CSS-3D не тянет (каждая видимая грань — элемент): тогда только слои */
 const ISO_LIMIT = 3000;
+
+/** Есть ли WebGL: без него — запасной вид на CSS 3D (грубые формы, иконки на гранях) */
+function hasWebGL() {
+  try {
+    const c = document.createElement('canvas');
+    return !!(c.getContext('webgl2') ?? c.getContext('webgl'));
+  } catch {
+    return false;
+  }
+}
 
 /** Выделяем блок вместе с такими же: копикаты — по материалу */
 const keyOf = (s: BlockState) => (s.m ? `${s.id}|${s.m}` : s.id);
@@ -39,8 +56,14 @@ export function BlockStructureViewer({
   mirror,
   alt,
   withMaterials,
+  nbt,
+  name = 'structure',
 }: {
   shape: BlockShape;
+  /** Исходный файл структуры (схема из библиотеки) — объёмный вид рисует по нему; нет — собирается из shape */
+  nbt?: ParsedNbt;
+  /** Имя для 3D-вида (ключ кеша) */
+  name?: string;
   /** Клетка, которую подсвечиваем рамкой (блок для удара молотом IE) */
   trigger?: [number, number, number] | null;
   initialLayer?: number;
@@ -59,6 +82,20 @@ export function BlockStructureViewer({
   const pick = (state: BlockState, at?: [number, number, number]) =>
     setPicked((p) => (p?.key === keyOf(state) && !at ? null : { key: keyOf(state), at }));
   const pickAt = (b: [number, number, number, number]) => pick(shape.palette[b[3]], [b[0], b[1], b[2]]);
+  const [gl, setGl] = useState(hasWebGL);
+  const schematic = useMemo(() => viewSchematic(nbt ?? nbtFromShape(shape), name), [nbt, shape, name]);
+  /** Выделенные: все блоки того же вида — подсветка в 3D */
+  const pickedPos = useMemo(
+    () =>
+      picked
+        ? shape.blocks.filter((b) => keyOf(shape.palette[b[3]]) === picked.key).map((b) => [b[0], b[1], b[2]] as Vec)
+        : [],
+    [picked, shape],
+  );
+  const pickPos = (pos: Vec | null) => {
+    const b = pos && shape.blocks.find((x) => x[0] === pos[0] && x[1] === pos[1] && x[2] === pos[2]);
+    if (b) pickAt(b);
+  };
   return (
     <div className={styles.viewer}>
       <div className={styles.toolbar}>
@@ -121,7 +158,26 @@ export function BlockStructureViewer({
       ) : (
         <>
           <div className={styles.views}>
-            {shape.blocks.length <= ISO_LIMIT ? (
+            {gl ? (
+              <div className={styles.glView}>
+                <Suspense fallback={<div className={cx(styles.glWait, 'empty')}>Загружаю объёмный вид…</div>}>
+                  <SchematicView3D
+                    viewer
+                    schematic={schematic}
+                    maxY={top < sy - 1 ? top : undefined}
+                    textured
+                    selected={pickedPos}
+                    trigger={trigger}
+                    mirrored={mirrored}
+                    onPick={pickPos}
+                    onFail={() => shape.blocks.length <= ISO_LIMIT && setGl(false)}
+                  />
+                </Suspense>
+                <span className={cx(styles.isoHint, 'faint', 'small')}>
+                  тяните — повернуть, Ctrl+колесо или щипок — масштаб, щелчок — выделить блок
+                </span>
+              </div>
+            ) : shape.blocks.length <= ISO_LIMIT ? (
               <Iso
                 shape={shape}
                 trigger={trigger}

@@ -1,4 +1,5 @@
-/* Просмотр блочной структуры: объёмный вид (CSS 3D, грани с иконкой блока), слой сверху, выделение, материалы.
+/* Просмотр блочной структуры: объёмный вид (3D редактора схем; без WebGL — CSS 3D с иконкой блока на гранях),
+   слой сверху, выделение, материалы.
    Глобальные помощники темы: `.empty / .faint / .small / .grow`; `.empty` на пустой клетке слоя задаёт отступы. */
 
 .viewer {
@@ -166,6 +167,31 @@
   left: 8px;
   bottom: 6px;
   right: 8px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* 3D редактора схем: он заполняет этот блок целиком */
+.gl-view {
+  position: relative;
+  height: 380px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.gl-wait {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@container (max-width: 440px) {
+  .gl-view {
+    height: 300px;
+  }
 }
 
 .layer {

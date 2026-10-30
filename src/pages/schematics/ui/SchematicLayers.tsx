@@ -22,7 +22,7 @@ import { useLayerPointer } from '../model/useLayerPointer';
 import { useLayerSelection } from '../model/layerSelection';
 import { MAX_ZOOM, MIN_ZOOM, paintLayer } from './layerCanvas';
 import { SchematicHoverInfo } from './SchematicHoverInfo';
-import { SchematicLayerLegend } from './SchematicLayerLegend';
+import { SchematicLayerLegend, type LegendScope } from './SchematicLayerLegend';
 import { SchematicLayerMenu, type Scope } from './SchematicLayerMenu';
 import { SchematicLayers3D } from './SchematicLayers3D';
 import { SchematicLayersHead } from './SchematicLayersHead';
@@ -77,6 +77,8 @@ export function SchematicLayers({
   const [menu, setMenu] = useState<Menu | null>(null);
   const [scope, setScope] = useState<Scope>('cell');
   const [highlight, setHighlight] = useState<string | null>(null);
+  const [legendScope, setLegendScope] = useState<LegendScope>('layer');
+  const [legendQuery, setLegendQuery] = useState('');
   /** 3D: блок под курсором (индекс в списке blocks, -1 — нет) */
   const [hover3d, setHover3d] = useState(-1);
 
@@ -263,26 +265,45 @@ export function SchematicLayers({
 
   const selectedOnLayer = layer ? layer.reduce((a, i) => a + (i >= 0 && selection.selected.has(i) ? 1 : 0), 0) : 0;
 
-  /** Блоки текущего слоя (с общими заменами) — легенда */
-  const legend = (() => {
-    const m = new Map<string, number>();
-    if (layer)
-      for (const idx of layer) {
-        if (idx < 0) continue;
-        const name = names[stateOf(s, idx)];
-        if (!name) continue;
-        const eff = effective(name);
-        m.set(eff, (m.get(eff) ?? 0) + 1);
-      }
-    return [...m].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-  })();
-
   const shownName = (id: string) =>
     id === REMOVE
       ? 'Удалён из схемы'
       : EMPTY_BLOCKS.has(id)
         ? 'Воздух'
         : itemName(blockEntry(items, id), id.split(':').pop() ?? id);
+
+  /** Все блоки схемы (индексы в списке blocks) — для материалов всей схемы и «все такие же» */
+  const allCells = useMemo(() => {
+    const out: number[] = [];
+    for (const l of grid.layers.values()) for (const i of l) if (i >= 0) out.push(i);
+    return out;
+  }, [grid]);
+  const effectiveOf = (idx: number) => {
+    const name = names[stateOf(s, idx)];
+    return name ? effective(name) : null;
+  };
+  const scopeList = legendScope === 'all' ? allCells : layer ? [...layer].filter((i) => i >= 0) : [];
+
+  /** Материалы слоя или всей схемы (с общими заменами), с поиском по названию и id */
+  const legend = (() => {
+    const m = new Map<string, number>();
+    for (const idx of scopeList) {
+      const eff = effectiveOf(idx);
+      if (eff) m.set(eff, (m.get(eff) ?? 0) + 1);
+    }
+    const q = legendQuery.trim().toLowerCase();
+    return [...m]
+      .filter(([id]) => !q || id.toLowerCase().includes(q) || shownName(id).toLowerCase().includes(q))
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  })();
+
+  /** Вид выделенных блоков, если он один (для строки материалов и панели выделения) */
+  const selectedIds = new Set([...selection.selected].map(effectiveOf));
+  const selectedId = selectedIds.size === 1 ? [...selectedIds][0] : null;
+  /** Выделить все блоки этого вида — в материалах слоя или всей схемы */
+  const selectSame = (id: string) => selection.selectOnly(scopeList.filter((i) => effectiveOf(i) === id));
+  /** Расширить выделение на все такие же блоки во всей схеме */
+  const selectAllSame = () => selection.selectOnly(allCells.filter((i) => selectedIds.has(effectiveOf(i))));
 
   const layerTotal = layer ? layer.reduce((a, i) => a + (i >= 0 ? 1 : 0), 0) : 0;
   const stepY = (d: number) => {
@@ -358,6 +379,8 @@ export function SchematicLayers({
             отмена и повтор · Delete — убрать выделенное · Esc — снять выделение
           </div>
           <SchematicSelectionPanel
+            selectedName={selectedId ? { id: selectedId, label: shownName(selectedId) } : null}
+            onSelectSame={selectAllSame}
             selectedCount={selection.selected.size}
             selectedOnLayer={selectedOnLayer}
             selNote={selection.selNote}
@@ -396,7 +419,18 @@ export function SchematicLayers({
           )}
         </div>
 
-        <SchematicLayerLegend entries={legend} highlight={highlight} onHighlight={setHighlight} label={shownName} />
+        <SchematicLayerLegend
+          entries={legend}
+          scope={legendScope}
+          onScope={setLegendScope}
+          query={legendQuery}
+          onQuery={setLegendQuery}
+          highlight={highlight}
+          onHighlight={setHighlight}
+          selectedId={selectedId}
+          onSelect={selectSame}
+          label={shownName}
+        />
       </div>
     </div>,
     document.body,

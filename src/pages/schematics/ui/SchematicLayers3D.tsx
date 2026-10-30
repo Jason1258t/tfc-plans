@@ -4,7 +4,7 @@ import { cx } from '@/shared/lib';
 import styles from './SchematicLayers.module.css';
 
 // three.js — отдельным куском, грузится только при переходе в 3D
-const SchematicView3D = lazy(() => import('./SchematicView3D'));
+const SchematicView3D = lazy(() => import('@/entities/schematic/render').then((m) => ({ default: m.SchematicView3D })));
 
 interface Props {
   schematic: Schematic;
@@ -23,6 +23,7 @@ export function SchematicLayers3D({ schematic, replace, maxY, textured, selected
   return (
     <Suspense fallback={<div className={cx(styles.view3D, 'faint', 'small')}>Загружаю 3D…</div>}>
       <SchematicView3D
+        className={styles.view3D}
         schematic={schematic}
         replace={replace}
         maxY={maxY}

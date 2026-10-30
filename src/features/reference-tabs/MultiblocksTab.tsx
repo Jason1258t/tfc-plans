@@ -21,7 +21,8 @@ import { cx } from '@/shared/lib';
 import styles from './MultiblocksTab.module.css';
 
 /**
- * Справочник → «Мультиблоки»: структуры IE и Advanced TFC Tech как в книге инженера — объёмный вид, слои,
+ * Справочник → «Мультиблоки»: структуры IE и Advanced TFC Tech как в книге инженера — объёмный вид (3D редактора
+ * схем: модели блоков из jar), слои,
  * блок для удара молотом, материалы с допустимыми заменами, расход энергии и рецепты машины.
  * Данные — scripts/mods/multiblocks.mjs (шаблоны и код из jar сборки).
  */
@@ -171,6 +172,7 @@ function MbViewer({
   return (
     <BlockStructureViewer
       shape={shape}
+      name={`ie:${shape.nbt}`}
       trigger={trigger}
       mirror={m.mirror}
       alt={

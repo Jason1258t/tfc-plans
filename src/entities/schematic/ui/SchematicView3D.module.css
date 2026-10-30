@@ -1,0 +1,48 @@
+/* 3D-вид схемы: заполняет родителя (оверлей редактора) или блок своей высоты (просмотр в статье) */
+.view {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+}
+
+.view canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.stats {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Рамка объекта (перетаскивание ЛКМ) */
+.frame {
+  position: absolute;
+  z-index: 1;
+  border: 2px dashed var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  pointer-events: none;
+}
+
+.error {
+  position: absolute;
+  top: 40px;
+  z-index: 1;
+}
+
+.reset {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  z-index: 1;
+}

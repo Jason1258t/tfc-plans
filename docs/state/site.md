@@ -512,7 +512,7 @@ fertiliser blocks, calendar with month labels. `.class` parsing — `scripts/mod
 
 - `?tab=multiblocks&mb=<name>`: 24 IE structures and 4 Advanced TFC Tech from jar templates
   (`scripts/mods/multiblocks.mjs` → `public/multiblocks.json`, `public/multiblocks/*.nbt`).
-- 3D view (CSS 3D, mouse rotate) and top layer view with slider, mirrored variant, hammer-strike block (from code,
+- 3D view (since #167 — the schematics editor's three.js view; CSS 3D only without WebGL) and top layer view with slider, mirrored variant, hammer-strike block (from code,
   checked against book text for crusher and excavator), materials with IE tag substitutes (scaffolding, sheet metal,
   storage; hopper and tank — any sheet metal), energy use from `power.json`, recipe links, book text (IE — English as
   in game; Advanced TFC Tech and TFC-IE Crossover — Russian), .nbt download. Arc furnace — TFC-IE Crossover variant
@@ -673,7 +673,7 @@ the step is centred.
   `::craft recipe=<id>` — `RecipeGrid` (`shared/pack-data`, parser `craftGrid.ts`): shaped/shapeless/TFC advanced/
   Create mechanical crafting up to 9×9, empty cells, tags and alternatives cycle (static under reduced motion),
   result count, KubeJS status badges; the same grid sits above the JSON in the recipe catalogue. Tags the site doesn't
-  know (many `c:*` from NeoForge) show the tag tail instead of an icon.
+  know show the tag tail instead of an icon (`c:*` from NeoForge — known since #167).
   `::schematic id=<card> ver=<updatedAt> [layer=N] [materials]` — a library card via `entities/schematic/library.ts`
   (1 doc read + file chunks, cached per tab, loads when scrolled near), replacements and shape applied with the same
   `applyEdits` as the download button, then `entities/block-structure` (`shapeFromNbt`, copycats by material).
@@ -684,3 +684,15 @@ the step is centred.
   blocks highlighted, name/props/coords), container-width layout for narrow previews and phones; >3000 blocks — layers
   only. `::pumpjack` and the embedded NBT data are gone; the CDG guide uses the two library cards.
   The schematics page keeps its own three.js editor (not switched to this viewer).
+
+- Dev #167 (2026-10-30): the schematics editor's three.js view is the reference. `SchematicView3D` moved to
+  `entities/schematic/ui` (exported lazily via `@/entities/schematic/render`) and is used by the editor and by
+  `BlockStructureViewer` in `viewer` mode (LMB/finger rotate, Ctrl+wheel/pinch zoom, plain wheel scrolls the page,
+  «Вернуть вид», mirror via a holder group, hammer-block outline, layer slider = cut, selection = marks). Guides pass
+  the card's parsed NBT; IE shapes go through `nbtFromShape`. So models, partial blocks, copycats by material and
+  > 3000-block schematics are drawn as in the editor. CSS 3D stays only as the no-WebGL fallback (≤3000 blocks, rough
+  > forms). Editor gained: materials of the layer or whole schematic with search, click selects all such blocks,
+  > «Все такие же» and the selected block's name/id in the selection panel, x/z axes on the layer canvas, materials
+  > under the view on phones. Builder: `scripts/mods.mjs` adds NeoForge universal jar data (`c:*` tags) right after
+  > vanilla (version from the snapshot's loader, locally from the addon platform); recipe grid shows TFC
+  > `fluid_content` as the fluid's bucket with mB and unknown mod ingredients by type name with a JEI hint.

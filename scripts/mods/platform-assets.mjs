@@ -37,28 +37,30 @@ async function cached(file, url, want) {
 
 /**
  * mc — версия Minecraft (1.21.1), neoforge — версия NeoForge (21.1.248 или «neoforge-21.1.248»).
- * Возвращает { minecraft, neoforge, mappings } — пути к файлам или null.
+ * minecraft: false — только NeoForge (его общие теги c:*). Возвращает { minecraft, neoforge, mappings } — пути к
+ * файлам или null.
  */
-export async function platformAssets({ cacheDir, mc, neoforge = null, log = () => {} }) {
+export async function platformAssets({ cacheDir, mc, neoforge = null, minecraft = true, log = () => {} }) {
   const dir = path.join(cacheDir, 'platform');
   const out = { minecraft: null, neoforge: null, mappings: null };
-  try {
-    // Классы client.jar обфусцированы — рядом карта имён Mojang (цвета красителей DyeColor для знамён и кроватей)
-    const jar = path.join(dir, `minecraft-${mc}-client.jar`);
-    const txt = path.join(dir, `minecraft-${mc}-client-mappings.txt`);
-    if (!fs.existsSync(jar) || !fs.existsSync(txt)) {
-      log(`ресурсы Minecraft ${mc}: качаю client.jar и карту имён`);
-      const ver = (await get(MANIFEST, 'json')).versions.find((v) => v.id === mc);
-      if (!ver) throw new Error(`версии ${mc} нет в манифесте Mojang`);
-      const { client, client_mappings: map } = (await get(ver.url, 'json')).downloads;
-      await cached(jar, client.url, client.sha1);
-      if (map) await cached(txt, map.url, map.sha1);
+  if (minecraft)
+    try {
+      // Классы client.jar обфусцированы — рядом карта имён Mojang (цвета красителей DyeColor для знамён и кроватей)
+      const jar = path.join(dir, `minecraft-${mc}-client.jar`);
+      const txt = path.join(dir, `minecraft-${mc}-client-mappings.txt`);
+      if (!fs.existsSync(jar) || !fs.existsSync(txt)) {
+        log(`ресурсы Minecraft ${mc}: качаю client.jar и карту имён`);
+        const ver = (await get(MANIFEST, 'json')).versions.find((v) => v.id === mc);
+        if (!ver) throw new Error(`версии ${mc} нет в манифесте Mojang`);
+        const { client, client_mappings: map } = (await get(ver.url, 'json')).downloads;
+        await cached(jar, client.url, client.sha1);
+        if (map) await cached(txt, map.url, map.sha1);
+      }
+      out.minecraft = jar;
+      out.mappings = fs.existsSync(txt) ? txt : null;
+    } catch (e) {
+      log(`ресурсы Minecraft не скачались (${e.message}) — сундуки, кровати и головы будут текстурой`);
     }
-    out.minecraft = jar;
-    out.mappings = fs.existsSync(txt) ? txt : null;
-  } catch (e) {
-    log(`ресурсы Minecraft не скачались (${e.message}) — сундуки, кровати и головы будут текстурой`);
-  }
   const v = neoforge ? String(neoforge).replace(/^neoforge-/, '') : null;
   if (!v) log('версия NeoForge неизвестна — вёдра с жидкостью могут остаться текстурой');
   else

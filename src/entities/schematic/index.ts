@@ -10,6 +10,7 @@ export {
   exportSchematic,
   invalidTargets,
   loadSchematic,
+  viewSchematic,
   shapedSize,
   DEFAULT_SHAPE,
   EMPTY_BLOCKS,
