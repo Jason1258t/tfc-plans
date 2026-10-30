@@ -74,3 +74,32 @@ export function cellsOf(built: Built, role: Role): Vec[] {
         if (g.role[g.idx(x, y, z)] === code && built.gen.painted.cells[g.idx(x, y, z)]) out.push([x, y, z]);
   return out;
 }
+
+/**
+ * Видимые блоки в рамке: поставленные (не воздух) и хотя бы одной гранью наружу — иначе рамка цепляла бы
+ * перекрытия и кладку за фасадом.
+ */
+export function framedCells(built: Built, inFrame: (pos: Vec) => boolean): Vec[] {
+  const g = built.gen.layout.grid;
+  const { cells, palette } = built.gen.painted;
+  const solid = (x: number, y: number, z: number) => {
+    if (!g.in(x, y, z)) return false;
+    const c = cells[g.idx(x, y, z)];
+    return !!c && palette[c - 1].Name !== 'minecraft:air';
+  };
+  const out: Vec[] = [];
+  for (let y = 0; y < g.Y; y++)
+    for (let z = 0; z < g.Z; z++)
+      for (let x = 0; x < g.X; x++) {
+        if (!solid(x, y, z)) continue;
+        const open =
+          !solid(x + 1, y, z) ||
+          !solid(x - 1, y, z) ||
+          !solid(x, y + 1, z) ||
+          !solid(x, y - 1, z) ||
+          !solid(x, y, z + 1) ||
+          !solid(x, y, z - 1);
+        if (open && inFrame([x, y, z])) out.push([x, y, z]);
+      }
+  return out;
+}

@@ -425,7 +425,16 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
 
 ## Building generator (dev #166, plan doc 26)
 
-Stages 0–4 done 2026-10-30 (`feat/building-core`, `feat/building-page`); next — stage 5 (brush and selections in 3D).
+Stages 0–5 done 2026-10-30 (`feat/building-core`, `feat/building-page`, `feat/building-brush`); next — stage 6
+(more forms, types, styles).
+
+- Brush (stage 5): selection in 3D — click (Shift adds/removes), frame = visible solid blocks with an open face,
+  «выделить» on a role row = all its cells. Selection panel: «Сделать ролью» (keeps stair/slab/glass shape),
+  a block (same shape of the chosen material, else full), «Воздух» (also Delete), «ничего», reset. Overrides live in
+  `spec.overrides` in spec coordinates; applied only where the building still has a cell (role ≠ empty) — others
+  are `gen.lost`, shown as «не применены» with a remove button (no floating blocks after shrinking). Undo/redo
+  (buttons, Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y) over the whole spec, edits within 0.7 s merge into one step;
+  selection resets when the grid size/offset changes. Browser-checked on the dev server.
 
 - Page `/builder` (`pages/builder`): presets, volumes, openings, details, texture degree + seed; 3D via the shared
   widget `widgets/schematic-view` (moved from the schematics page, `[data-schematic-view] ~ .hint` keeps the overlay

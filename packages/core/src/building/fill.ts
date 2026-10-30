@@ -235,9 +235,23 @@ export function paint({ grid: g, ox, oz }: Layout, spec: BuildingSpec, has: Has)
       const [x, y, z] = [ov.pos[0] + ox, ov.pos[1], ov.pos[2] + oz];
       if (!g.in(x, y, z)) continue;
       const i = g.idx(x, y, z);
+      if (ov.block === 'minecraft:air') {
+        block[i] = ov.block;
+        final[i] = SHAPE.air;
+        continue;
+      }
+      // Форма клетки сохраняется: на месте ступени — ступень выбранного материала; нет такой формы — целый блок
       const fam = FAMILY_OF_SHAPE[final[i]];
-      block[i] = fam ? (shapeOf(ov.block, fam, has) ?? ov.block) : ov.block;
-      if (!final[i]) final[i] = SHAPE.full;
+      const shaped = fam ? shapeOf(ov.block, fam, has) : null;
+      block[i] = shaped ?? ov.block;
+      if (
+        !final[i] ||
+        final[i] === SHAPE.air ||
+        (fam && !shaped) ||
+        (final[i] === SHAPE.pane && !isPane(ov.block)) ||
+        (final[i] === SHAPE.door && !isDoor(ov.block))
+      )
+        final[i] = SHAPE.full;
     }
 
   // Состояния блоков

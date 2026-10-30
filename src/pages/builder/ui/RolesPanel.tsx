@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Eye } from 'lucide-react';
+import { BoxSelect, ChevronDown, ChevronRight, Eye } from 'lucide-react';
 import { useState } from 'react';
 import type { Has } from '@tfc/core/building/families';
 import { sourceOf } from '@tfc/core/building/fill';
@@ -20,11 +20,13 @@ interface Props {
   colors: ColorsState;
   shown: Role | null;
   onShow: (role: Role | null) => void;
+  /** Выделить все клетки роли — для правки разом */
+  onSelect: (role: Role) => void;
   onChange: (role: Role, rs: RoleSpec) => void;
 }
 
 /** Роли постройки: сколько клеток, включена ли, чьи блоки берёт; раскрытая роль — выбор блоков */
-export function RolesPanel({ spec, counts, items, has, colors, shown, onShow, onChange }: Props) {
+export function RolesPanel({ spec, counts, items, has, colors, shown, onShow, onSelect, onChange }: Props) {
   const [open, setOpen] = useState<Role | null>('wall');
   // Роли с клетками и все, чьи блоки они берут (у фахверка клеток «стены» нет, но заполнение — её блоками)
   const used = new Set<Role>(ROLE_ORDER.filter((r) => counts?.get(r) || (r === 'door' && spec.openings.door.w > 0)));
@@ -75,6 +77,17 @@ export function RolesPanel({ spec, counts, items, has, colors, shown, onShow, on
                 onClick={() => onShow(shown === role ? null : role)}
               >
                 <Eye size={14} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon
+                disabled={!counts?.get(role)}
+                aria-label={`Выделить клетки роли «${info.name}»`}
+                title="Выделить все клетки роли — и поправить их разом"
+                onClick={() => onSelect(role)}
+              >
+                <BoxSelect size={14} />
               </Button>
             </div>
             {isOpen && (
