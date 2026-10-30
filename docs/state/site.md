@@ -423,6 +423,25 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
 - Library is a plain list; clicking opens a right panel: preview (draw/redraw), title and description (Markdown,
   `description` ≤ 4000 chars), edited in place, saved on blur.
 
+## Building generator (dev #166, plan doc 26)
+
+Stages 0–3 done 2026-10-30 (`feat/building-core`); no UI yet — stage 4 is the `/builder` page.
+
+- Core `@tfc/core/building/*`: `spec.ts` (BuildingSpec v1), `presets.ts` (styles stone/timber/log, types
+  house/barn/workshop, forms rect/L/T/U → `makeSpec`), `massing.ts` (walls on the 8-neighbour outline of the volume
+  union — junctions open), `openings.ts` (facade runs over the whole grid, door on the longest run of its side),
+  `roof.ts` (distance field: gable/hip/shed, pitch 1 and 0.5, overhang 0–2; overlaps keep the higher roof inside a
+  volume's plan → valleys; gables and attic air), `roles.ts` (corner/quoins, plinth, belt, lintel/sill/jamb with
+  side extension, frame/infill, eave/verge), `fill.ts` (texture degree 0–4: exact shares by noise rank, patches,
+  gradient; stair shape = vanilla `getStairsShape`), `toNbt.ts` (DataVersion 3955), `generate.ts`.
+- Picker: `color.ts` (Lab, CIEDE2000 — matches Sharma reference values), `similar.ts` (groups family / close /
+  lighter / darker / textured; score 0.45 colour + 0.25 family + 0.15 tags + 0.15 spread), data
+  `public/block-colors.json` from `scripts/mods/block-colors.mjs` (side texture of the first model; not on Hosting
+  until the host rebuilds and publishes).
+- Checked by scratch scripts: all 36 preset combos × 6 roof variants generate; every emitted block state exists in the
+  live `block-models` (tfc, minecraft); degree shares within 0.3%; same spec → byte-identical file; role colours and
+  slices rendered with MCP `schematic_render`. Not checked in game.
+
 ## Datapacks, KubeJS scripts, recipes, tags
 
 - **Datapacks**: template / replace / remove recipes, arbitrary files, zip, «К задаче», «Сохранить как файл» (zip in

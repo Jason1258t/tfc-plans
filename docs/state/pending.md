@@ -5,6 +5,10 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **Building generator colours** (2026-10-30, dev #166): builder `block-colors.json` added to `npm run mods`; reaches
+  the site after `tfc admin rebuild --pull` + `tfc admin publish --live`. Until then the generator page (stage 4)
+  computes colours in the browser.
+
 - **KubeJS 18 errors** (dev #157): 16 concrete errors fixed by overlay `u20261029-202841-ca8c`
   (`fluid_stack` → `neoforge:single` for water). Host: `tfc admin updates pull u20261029-202841-ca8c`, restart,
   check all 16 cement recipes and KubeJS log, then approve that update. Two other errors are bundled Flight

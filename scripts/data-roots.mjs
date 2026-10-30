@@ -8,6 +8,7 @@
 export const MODS_OUTPUTS = [
   'items.json',
   'blocks.json',
+  'block-colors.json',
   'icons',
   'recipes.json',
   'reference.json',

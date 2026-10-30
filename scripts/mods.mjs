@@ -30,6 +30,7 @@ import { writeGeo } from './mods/geo.mjs';
 import { buildReference } from './mods/reference.mjs';
 import { writeTags } from './mods/tags.mjs';
 import { writeBlocks } from './mods/blocks.mjs';
+import { writeBlockColors } from './mods/block-colors.mjs';
 import { isBotanyClass, writeBotany } from './mods/botany.mjs';
 import { isMealClass, writeMeals } from './mods/meals.mjs';
 import { isCuisineClass, isCuisineData } from './mods/cuisine.mjs';
@@ -791,6 +792,16 @@ export async function buildMods({
   );
   log(
     `блоки без предмета: ${blocks.count}, из них с предметом из добычи ${blocks.withDrop} — blocks.json ${blocks.kb}KB`,
+  );
+  // После block-models и иконок, по пометке предметов-блоков (b)
+  const colors = writeBlockColors({
+    items,
+    blockModelsDir: path.join(outDir, 'block-models'),
+    iconsDir: OUT_ICONS,
+    outFile: path.join(outDir, 'block-colors.json'),
+  });
+  log(
+    `цвета блоков (генератор построек): ${colors.count}, целых кубов ${colors.full}, по текстуре предмета ${colors.fromItem} — block-colors.json ${colors.kb}KB`,
   );
   fs.writeFileSync(OUT_JSON, JSON.stringify(items));
   const runtime = createWashingRecipes(

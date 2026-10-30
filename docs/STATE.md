@@ -18,6 +18,9 @@ When finishing work: update the topic file, and this index only if a line below 
 
 ## In progress / waiting (details — [pending.md](state/pending.md))
 
+- Building generator (dev #166): core + picker done; next — stage 4 page `/builder`. Host: rebuild + publish for
+  `block-colors.json`.
+
 - Host: pack-wide datapacks (dev #125/#154): shared ZIPs are already confirmed in the live snapshot.
   Check old/new worlds in game; retest changed drafts before confirming them again. Named pull needs no manual KubeJS paths.
 
