@@ -3,7 +3,7 @@ import { sanitizeNamespace } from '@/lib/datapack';
 import type { Datapack, DatapackDeployment } from '@/entities/datapack';
 import { InstallToggle } from './KubejsScripts';
 import { Input, Label } from '@/shared/ui';
-import styles from '../DatapacksPage.module.css';
+import styles from '../DatapacksPage/DatapacksPage.module.css';
 
 interface Props {
   pack: Datapack;

@@ -1,6 +1,6 @@
 import { Upload, Wand2 } from 'lucide-react';
 import { Button, ButtonLink } from '@/shared/ui';
-import styles from '../SchematicsPage.module.css';
+import styles from '../SchematicsPage/SchematicsPage.module.css';
 
 interface Props {
   inputRef: React.RefObject<HTMLInputElement | null>;

@@ -1,7 +1,7 @@
 import type { Schematic, Vec } from '@/entities/schematic';
 import { SchematicView3D } from '@/widgets/schematic-view';
 import { cx } from '@/shared/lib';
-import styles from './SchematicLayers.module.css';
+import styles from './SchematicLayers/SchematicLayers.module.css';
 
 interface Props {
   schematic: Schematic;

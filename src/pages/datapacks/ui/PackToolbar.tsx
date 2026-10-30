@@ -1,6 +1,6 @@
 import { Download, FileCode2, FilePen, FilePlus2, FileTerminal, Hash, Paperclip, Save } from 'lucide-react';
 import { Button } from '@/shared/ui';
-import styles from '../DatapacksPage.module.css';
+import styles from '../DatapacksPage/DatapacksPage.module.css';
 
 interface Props {
   /** В датапаке есть рецепты — их можно выгрузить KubeJS-скриптом */

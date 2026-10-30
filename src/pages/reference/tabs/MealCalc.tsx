@@ -15,7 +15,7 @@ import {
 import { NUTRIENTS, type Nutrient } from '@/lib/reference';
 import { cx } from '@/shared/lib';
 import { Select } from '@/shared/ui';
-import styles from './MealsTab.module.css';
+import styles from './MealsTab/MealsTab.module.css';
 
 const NUTRIENT_LABEL: Record<Nutrient, string> = {
   grain: 'зерновые',

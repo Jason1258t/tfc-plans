@@ -4,7 +4,7 @@ import { FORMS, STYLES, TYPES, makeSpec } from '@tfc/core/building/presets';
 import type { BuildingSpec, RoofSpec, Side, Volume } from '@tfc/core/building/spec';
 import { Button, Input, Segmented, Select } from '@/shared/ui';
 import { cx } from '@/shared/lib';
-import styles from '../BuilderPage.module.css';
+import styles from '../BuilderPage/BuilderPage.module.css';
 
 interface Props {
   spec: BuildingSpec;

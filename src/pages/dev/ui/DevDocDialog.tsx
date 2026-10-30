@@ -5,7 +5,7 @@ import { useNick } from '@/entities/user';
 import { timeAgo } from '@/shared/lib';
 import { Button, ErrorBox, Input, Modal } from '@/shared/ui';
 import { DevError, devApi, type DevDoc } from '../model/api';
-import styles from './DevTaskDialog.module.css';
+import styles from './DevTaskDialog/DevTaskDialog.module.css';
 
 /** План задачи разработки: просмотр markdown и правка целиком (последняя запись не затирает чужую — rev) */
 export function DevDocDialog({ id, onClose }: { id: number; onClose: () => void }) {

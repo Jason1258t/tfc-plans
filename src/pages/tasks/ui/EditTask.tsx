@@ -12,7 +12,7 @@ import { timeAgo } from '@/shared/lib';
 import { Button, Modal } from '@/shared/ui';
 import { Attachments, Gallery, useFileIntake } from '@/features/task-files';
 import { TaskFields } from './TaskFields';
-import styles from './TaskDialog.module.css';
+import styles from './TaskDialog/TaskDialog.module.css';
 
 export function EditTask({
   taskId,

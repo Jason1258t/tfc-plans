@@ -2,7 +2,7 @@ import { Box, ChevronDown, ChevronUp, Layers, Maximize, Minus, Plus } from 'luci
 import { cx } from '@/shared/lib';
 import { Button } from '@/shared/ui';
 import section from '../SchematicsSection.module.css';
-import styles from './SchematicLayers.module.css';
+import styles from './SchematicLayers/SchematicLayers.module.css';
 
 interface Props {
   mode: '2d' | '3d';

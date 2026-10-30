@@ -6,7 +6,7 @@ import { useNick } from '@/entities/user';
 import { ItemIcon, blockEntry, itemName, type ItemIndex } from '@/shared/pack-data';
 import { Button, ButtonLink, ErrorBox, Input } from '@/shared/ui';
 import type { Built } from '../model/useBuilding';
-import styles from '../BuilderPage.module.css';
+import styles from '../BuilderPage/BuilderPage.module.css';
 
 interface Props {
   built: Built;

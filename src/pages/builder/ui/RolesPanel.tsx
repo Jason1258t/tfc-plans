@@ -10,7 +10,7 @@ import { cx } from '@/shared/lib';
 import type { ColorsState } from '../model/blockColors';
 import { ROLE_INFO, ROLE_ORDER } from '../model/roleInfo';
 import { RoleBlocks } from './RoleBlocks';
-import styles from '../BuilderPage.module.css';
+import styles from '../BuilderPage/BuilderPage.module.css';
 
 interface Props {
   spec: BuildingSpec;

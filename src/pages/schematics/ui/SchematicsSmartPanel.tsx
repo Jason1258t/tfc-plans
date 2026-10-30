@@ -5,7 +5,7 @@ import { Button, Input } from '@/shared/ui';
 import type { SmartResult } from '../model/schematicFormat';
 import type { AgentPrefs } from '../model/schematicPrefs';
 import section from '../SchematicsSection.module.css';
-import styles from '../SchematicsPage.module.css';
+import styles from '../SchematicsPage/SchematicsPage.module.css';
 
 interface Props {
   useAgent: boolean;

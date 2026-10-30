@@ -1,6 +1,6 @@
 import type { CellInfo } from '@/entities/schematic';
 import { cx } from '@/shared/lib';
-import styles from './SchematicLayers.module.css';
+import styles from './SchematicLayers/SchematicLayers.module.css';
 
 interface Props {
   info: CellInfo;

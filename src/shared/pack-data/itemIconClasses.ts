@@ -1,4 +1,4 @@
-import styles from './ItemIcon.module.css';
+import styles from './ItemIcon/ItemIcon.module.css';
 
 /** Публичные классы иконки для Markdown-декораций, которые создаются напрямую в DOM. */
 export const itemIconClasses = {

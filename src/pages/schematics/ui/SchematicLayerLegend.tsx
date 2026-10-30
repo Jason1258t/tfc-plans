@@ -2,7 +2,7 @@ import { Trash2 } from 'lucide-react';
 import { ItemIcon } from '@/shared/pack-data';
 import { REMOVE } from '@/entities/schematic';
 import { cx } from '@/shared/lib';
-import styles from './SchematicLayers.module.css';
+import styles from './SchematicLayers/SchematicLayers.module.css';
 
 interface Props {
   entries: [string, number][];

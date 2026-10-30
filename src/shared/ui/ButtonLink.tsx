@@ -2,7 +2,7 @@ import type { AnchorHTMLAttributes, ReactNode } from 'react';
 import { Link } from 'react-router';
 import { cx } from '@/shared/lib';
 import { BUTTON_VARIANT, type ButtonVariant } from './buttonVariant';
-import styles from './Button.module.css';
+import styles from './Button/Button.module.css';
 
 interface Props extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> {
   /** Внутренняя ссылка сайта: рисуется через <Link> */

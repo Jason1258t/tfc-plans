@@ -3,7 +3,7 @@ import { ItemIcon, ItemPicker } from '@/shared/pack-data';
 import type { CellInfo } from '@/entities/schematic';
 import { cx } from '@/shared/lib';
 import { Button } from '@/shared/ui';
-import styles from './SchematicLayers.module.css';
+import styles from './SchematicLayers/SchematicLayers.module.css';
 
 export type Scope = 'cell' | 'layer' | 'all';
 const SCOPES: [Scope, string][] = [
