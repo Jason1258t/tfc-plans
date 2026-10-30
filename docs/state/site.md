@@ -643,3 +643,9 @@ the step is centred.
 - Dev #154 (2026-10-29): shared datapack validation now rejects empty/dot/parent path segments before export/write,
   matching CLI delivery. An own block-tag no longer hides a missing item/fluid-tag warning in the recipe editor.
   MCP uses the same path validation and tag-kind rule. Verified with invalid-path and tag-kind fixtures, TypeScript.
+
+- Dev #163 (2026-10-30): multiblock guides support `::craft recipe=<id>` (catalogue crafting grid with item/tag
+  icons) and `::pumpjack` (small/large CDG structures and layers from the player's NBT files). The layer viewer is
+  reused from IE, including the excavator; block-only icons resolve through their placing item. The oil guide's
+  ASCII drawings are replaced with these widgets. Pumpjack geometry is temporarily embedded; dev #164 tracks
+  a shared recipe grid, a general structure viewer and library-backed schematic embeds, coordinated with MCP #162.

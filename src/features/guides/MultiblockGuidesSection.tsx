@@ -2,11 +2,21 @@ import { BASE_DOCS, BASE_VALUES } from '@/lib/guideScope';
 import { MultiblockEmbed } from '@/features/reference-tabs';
 import type { GuideKit } from './GuideBody';
 import { GuidesSection } from './GuidesSection';
+import { CraftingRecipe } from './CraftingRecipe';
+import { PumpjackStructure } from './PumpjackStructure';
 
 /** Имена формул — только общие; виджет раздела — структура мультиблока из вкладки «Мультиблоки» */
 const KIT: GuideKit = {
   scope: { values: BASE_VALUES, docs: BASE_DOCS },
   widgets: {
+    craft: {
+      doc: 'сетка крафта с иконками из каталога: recipe=<id рецепта>',
+      render: ({ params }) => <CraftingRecipe id={String(params.recipe ?? '')} />,
+    },
+    pumpjack: {
+      doc: 'блочная схема малой и большой качалок CDG по слоям из присланных .nbt',
+      render: () => <PumpjackStructure />,
+    },
     multiblock: {
       doc: 'структура мультиблока: id=crusher (имя из адреса вкладки «Мультиблоки»); full — целиком, как в книге (экскаватор); materials — с таблицей материалов',
       render: ({ params }) => (
