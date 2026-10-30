@@ -1,5 +1,5 @@
-/* Оверлей «Слои»: шапка, панель инструментов, канвас, легенда слоя, меню выделения. Сам 3D-вид — виджет
-   schematic-view; здесь только правило «подсказка над 3D». */
+/* Оверлей «Слои»: шапка, панель инструментов, канвас, легенда слоя, меню выделения. Сам 3D-вид — общий
+   (entities/schematic/ui/SchematicView3D); здесь только правило «подсказка над 3D». */
 
 .overlay {
   position: fixed;
@@ -147,17 +147,36 @@
 }
 
 .legend {
-  width: 240px;
+  width: 260px;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   overflow-y: auto;
   padding: 10px 12px;
   border-left: 1px solid var(--border);
   background: var(--surface);
 }
 
-.legend h3 {
-  margin: 0 0 8px;
-  font-weight: 600;
+.legend-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.legend-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
 }
 
 .legend ul {
@@ -169,22 +188,41 @@
   gap: 2px;
 }
 
-.legend li {
+.legend li button {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 3px 6px;
+  border: 0;
   border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
   font-size: 13px;
+  text-align: left;
+  cursor: pointer;
 }
 
-.legend li.on {
+.legend li button.on {
   background: var(--surface-3);
 }
 
+.legend li button.picked {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* Телефон: материалы — под видом, а не сбоку; подсказки управления мышью не нужны */
 @media (max-width: 720px) {
+  .main {
+    flex-direction: column;
+  }
   .legend {
-    display: none;
+    width: auto;
+    max-height: 34vh;
+    border-left: 0;
+    border-top: 1px solid var(--border);
   }
   .hint {
     display: none;
@@ -214,6 +252,11 @@
 
 [data-schematic-view] ~ .hint {
   z-index: 2;
+}
+
+/* Кнопки панели выделения переносятся, а не уходят за край */
+.selection :global(.row) {
+  flex-wrap: wrap;
 }
 
 /* Выделение: панель действий справа сверху (слева сверху — подсказка блока под курсором) */

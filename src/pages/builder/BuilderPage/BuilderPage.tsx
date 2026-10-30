@@ -7,7 +7,7 @@ import { libraryEntry, type Vec } from '@/entities/schematic';
 import { blockEntry, itemName, useItems } from '@/shared/pack-data';
 import { ErrorBox } from '@/shared/ui';
 import { cx } from '@/shared/lib';
-import { SchematicView3D } from '@/widgets/schematic-view';
+import { SchematicView3D } from '@/entities/schematic';
 import { useBlockColors } from '../model/blockColors';
 import { ROLE_INFO } from '../model/roleInfo';
 import { cellAt, cellsOf, useBuilding, type CellInfo } from '../model/useBuilding';
