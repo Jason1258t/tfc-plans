@@ -34,7 +34,7 @@ export function buildRoles(input: BuildingSpec): { spec: BuildingSpec; layout: L
   massing(l);
   openings(l, normalized);
   roofs(l);
-  if (normalized.details.chimney) chimney(l);
+  if (normalized.details.chimney) chimney(l, normalized.details.chimneyH, normalized.details.chimneySize);
   deriveRoles(l, normalized.details);
   const { kept, lost } = splitOverrides(l, normalized.overrides);
   const spec = { ...normalized, overrides: kept };

@@ -5,7 +5,8 @@
  */
 import type { Role } from './grid.ts';
 
-export type RoofKind = 'gable' | 'hip' | 'shed' | 'flat';
+/** Шедовая — ряд односкатных зубцов с остеклённой вертикальной гранью (цеха); конус — у круглых объёмов */
+export type RoofKind = 'gable' | 'hip' | 'shed' | 'flat' | 'sawtooth' | 'cone';
 /** Уклон: 1 — 45° (ступени), 0.5 — пологий (плита и целый блок через ряд) */
 export type Pitch = 1 | 0.5;
 /** Вдоль какой оси конёк (у односкатной — вдоль высокой стороны); auto — вдоль длинной стороны */
@@ -17,9 +18,11 @@ export interface RoofSpec {
   /** Свес за стены, 0–2 блока */
   overhang: number;
   axis: RidgeAxis;
+  /** Шедовая: ширина зубца в клетках (по умолчанию 5) */
+  tooth?: number;
 }
 
-/** Объём — прямоугольник в плане; здание сложной формы = несколько объёмов */
+/** Объём — прямоугольник (или вписанный в него круг) в плане; здание сложной формы = несколько объёмов */
 export interface Volume {
   id: string;
   /** Угол объёма (минимальные x и z), размеры вместе со стенами */
@@ -33,6 +36,8 @@ export interface Volume {
   /** Высота этажа: пол + воздух */
   floorH: number;
   roof: RoofSpec;
+  /** Круг/овал, вписанный в прямоугольник w×d (силос, башня); крыша у круга — плоская или конус */
+  shape?: 'rect' | 'round';
 }
 
 export type Side = 'north' | 'east' | 'south' | 'west';
@@ -77,6 +82,9 @@ export interface DetailSpec {
   piers?: boolean;
   /** Труба */
   chimney: boolean;
+  /** Труба: на сколько выше крыши (по умолчанию 2) и сечение 1 или 2 клетки (промышленная) */
+  chimneyH?: number;
+  chimneySize?: number;
   /** Воздух внутри (очистить место под постройку) */
   clearInside: boolean;
 }
@@ -139,7 +147,11 @@ export function normalizeSpec(spec: BuildingSpec): BuildingSpec {
       d: clamp(v.d, 3, MAX_SIDE),
       floors: clamp(v.floors, 1, 12),
       floorH: clamp(v.floorH, 3, 12),
-      roof: { ...v.roof, overhang: clamp(v.roof.overhang, 0, 2) },
+      roof: {
+        ...v.roof,
+        overhang: clamp(v.roof.overhang, 0, 2),
+        ...(v.roof.tooth !== undefined ? { tooth: clamp(v.roof.tooth, 3, 12) } : {}),
+      },
     })),
     openings: {
       ...spec.openings,
@@ -157,6 +169,8 @@ export function normalizeSpec(spec: BuildingSpec): BuildingSpec {
       ...spec.details,
       plinthH: clamp(spec.details.plinthH, 0, 4),
       frameEvery: clamp(spec.details.frameEvery, 0, 12),
+      chimneyH: clamp(spec.details.chimneyH ?? 2, 1, 40),
+      chimneySize: clamp(spec.details.chimneySize ?? 1, 1, 2),
     },
     texture: { degree: clamp(spec.texture.degree, 0, 4) },
   };

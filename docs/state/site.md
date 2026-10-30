@@ -428,6 +428,14 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
 Stages 0–5 done 2026-10-30 (`feat/building-core`, `feat/building-page`, `feat/building-brush`); next — stage 6
 (more forms, types, styles).
 
+- Stage 6 (2026-10-31, industrial first): round volumes (`shape: 'round'` — oval inscribed in w×d; `inPlan` is
+  shape-aware, so walls/openings/floors work unchanged) with roof «конус» (ellipse distance field, stairs face the
+  centre by the dominant axis); «шедовая» roof (`sawtooth`, `tooth` 3–12: shed teeth with a pane strip up to the
+  previous tooth top); chimney height above the roof `chimneyH` and section `chimneySize` 1|2. Types: «Цех с шедовой
+  крышей», «Склад» (ribbon windows high up), «Котельная» (2×2 chimney 14 above the roof), «Силос / башня» (round,
+  cone). Forms: «С пристройкой» (lower wing on the south side, shared wall), «Двор» (ring, courtyard ≥ 3×3). Checked:
+  slices and role renders, 422 emitted block states exist in live block-models, browser look of the sawtooth hall and
+  the silo. Not done yet: scandinavian/japanese styles, bay, stacked tiers.
 - Palettes (task item 11, 2026-10-30): `packages/core/src/building/palettes.ts` — materials apart from the style;
   host priority: concrete and bricks, industrial. Style «Индустриальный» (pitch 0.5, plinth 2, `piers` — solid wall
   columns between window columns take the frame role), type «Цех». 7 industrial palettes (Create Deco bricks with
