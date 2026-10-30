@@ -3,7 +3,7 @@ import { ItemPicker } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
 import { Button } from '@/shared/ui';
 import { plural } from '../model/layerSelection';
-import styles from './SchematicLayers.module.css';
+import styles from './SchematicLayers/SchematicLayers.module.css';
 
 interface Props {
   selectedCount: number;

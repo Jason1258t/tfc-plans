@@ -1,4 +1,4 @@
-import pw from './powerWidgets.module.css';
+import pw from './powerWidgets/powerWidgets.module.css';
 import { useMemo, useState, type ReactNode } from 'react';
 import { cx, errorText, type Scope } from '@/shared/lib';
 import { Button, Input, Select, Table, TableWrap, contentStyles as content, tableStyles } from '@/shared/ui';

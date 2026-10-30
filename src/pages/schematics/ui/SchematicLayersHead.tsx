@@ -1,6 +1,6 @@
 import { Layers, Redo2, RotateCcw, Undo2, X } from 'lucide-react';
 import { Button } from '@/shared/ui';
-import styles from './SchematicLayers.module.css';
+import styles from './SchematicLayers/SchematicLayers.module.css';
 
 interface Props {
   fileName: string;

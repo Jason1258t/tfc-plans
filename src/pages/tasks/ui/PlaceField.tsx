@@ -12,7 +12,7 @@ import {
 import { cx } from '@/shared/lib';
 import { Button, ButtonLink, Input, Label } from '@/shared/ui';
 import type { TaskPlace } from '@/entities/task';
-import styles from './TaskDialog.module.css';
+import styles from './TaskDialog/TaskDialog.module.css';
 
 interface Props {
   value: TaskPlace | null | undefined;

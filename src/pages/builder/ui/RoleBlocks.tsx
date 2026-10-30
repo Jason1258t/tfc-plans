@@ -8,7 +8,7 @@ import { ItemIcon, blockEntry, isBlock, itemName, searchItems, type ItemIndex } 
 import { Button, Input, Search, Select } from '@/shared/ui';
 import { cx } from '@/shared/lib';
 import type { ColorsState } from '../model/blockColors';
-import styles from '../BuilderPage.module.css';
+import styles from '../BuilderPage/BuilderPage.module.css';
 
 interface Props {
   fill: RoleFill;
