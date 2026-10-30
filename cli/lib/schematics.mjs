@@ -108,6 +108,10 @@ export async function listSchematics(api, profile, query = '', localOnly = false
     return containsLocal(`${f.file} ${hits.map((h) => `${h.s.id} ${h.s.name}`).join(' ')}`);
   });
   if (shownFiles.length || files.length) {
+    if (profile) {
+      const roots = [...new Set([profile.instance, profile.serverDir].filter(Boolean))];
+      console.log(`Профиль: ${roots.join(', ')}`);
+    }
     console.log(`Локальные .nbt${query ? ` (поиск «${query}»)` : ''}: ${shownFiles.length}`);
     for (const f of shownFiles) {
       const hits = matches(f, entries, profile);
@@ -118,7 +122,7 @@ export async function listSchematics(api, profile, query = '', localOnly = false
           : available
             ? 'нет в библиотеке'
             : 'совпадения не проверены';
-      console.log(`  ${f.file} | ${mb(f.size)} | владелец: ${f.owner ?? 'локальная'} | ${status}`);
+      console.log(`  ${f.rel} | ${mb(f.size)} | владелец: ${f.owner ?? 'локальная'} | ${status}`);
     }
     if (!shownFiles.length) console.log('  (пусто)');
   }
