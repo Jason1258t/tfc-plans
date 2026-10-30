@@ -1,11 +1,15 @@
-import { Sparkles, SquareDashedMousePointer, Star, Trash2, X } from 'lucide-react';
-import { ItemPicker } from '@/shared/pack-data';
+import { CopyCheck, Sparkles, SquareDashedMousePointer, Star, Trash2, X } from 'lucide-react';
+import { ItemIcon, ItemPicker } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
 import { Button } from '@/shared/ui';
 import { plural } from '../model/layerSelection';
 import styles from './SchematicLayers/SchematicLayers.module.css';
 
 interface Props {
+  /** Все выделенные — одного вида: его id и название */
+  selectedName: { id: string; label: string } | null;
+  /** Выделить все такие же блоки во всей схеме */
+  onSelectSame: () => void;
   selectedCount: number;
   selectedOnLayer: number;
   selNote: string | null;
@@ -21,6 +25,8 @@ interface Props {
 
 /** Панель выделения: сколько выбрано, замена, удаление, умная замена и избранное; строка итога */
 export function SchematicSelectionPanel({
+  selectedName,
+  onSelectSame,
   selectedCount,
   selectedOnLayer,
   selNote,
@@ -57,6 +63,14 @@ export function SchematicSelectionPanel({
               Сбросить
             </Button>
           </div>
+          {selectedName && (
+            <div className="row">
+              <ItemIcon id={selectedName.id} size={20} tip={false} />
+              <span className="grow">
+                {selectedName.label} <code className="faint">{selectedName.id}</code>
+              </span>
+            </div>
+          )}
           <div className="row">
             <span className="grow">
               <ItemPicker small blocksOnly placeholder="Заменить выбранные на…" onPick={(it) => onPick(it.i)} />
@@ -67,6 +81,15 @@ export function SchematicSelectionPanel({
             </Button>
           </div>
           <div className="row">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onSelectSame}
+              title="Выделить во всей схеме все блоки того же вида, что выбранные"
+            >
+              <CopyCheck size={14} />
+              Все такие же
+            </Button>
             <Button
               variant="ghost"
               size="sm"

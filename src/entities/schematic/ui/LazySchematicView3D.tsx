@@ -9,7 +9,7 @@ const SchematicView3D = lazy(() => import('./SchematicView3D'));
 /** 3D-вид схемы с ленивой загрузкой; пока грузится — надпись на месте вида */
 export function LazySchematicView3D(props: SchematicView3DProps) {
   return (
-    <Suspense fallback={<div className={cx(styles.view3D, 'faint', 'small')}>Загружаю 3D…</div>}>
+    <Suspense fallback={<div className={cx(styles.view, props.className, 'faint', 'small')}>Загружаю 3D…</div>}>
       <SchematicView3D {...props} />
     </Suspense>
   );

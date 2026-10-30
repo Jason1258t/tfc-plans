@@ -10,8 +10,22 @@ export interface GridSlot {
   options: string[];
   /** Ингредиент задан тегом */
   tag?: string;
-  /** Не разобрали (жидкость, особый ингредиент мода) — что показать вместо иконки */
+  /** Ёмкость с жидкостью (TFC fluid_content: ведро, кувшин…): id жидкости или #тег, объём в мБ */
+  fluid?: { id: string; amount?: number };
+  /** Не разобрали (особый ингредиент мода: его тип) — что показать вместо иконки */
   unknown?: string;
+}
+
+/** Жидкость ингредиента: «minecraft:milk», { fluid, amount }, { id, amount }, { tag } — в разных модах по-разному */
+function fluidOf(v: unknown): GridSlot['fluid'] | undefined {
+  if (typeof v === 'string') return { id: v };
+  if (Array.isArray(v)) return fluidOf(v[0]);
+  if (!v || typeof v !== 'object') return undefined;
+  const o = v as Record<string, unknown>;
+  const amount = typeof o.amount === 'number' ? o.amount : undefined;
+  const inner = o.fluid ?? o.id ?? (typeof o.tag === 'string' ? `#${o.tag}` : undefined);
+  const f = typeof inner === 'string' ? { id: inner } : fluidOf(inner);
+  return f && { ...f, ...(amount !== undefined ? { amount } : f.amount !== undefined ? { amount: f.amount } : {}) };
 }
 
 export interface RecipeGrid {
@@ -34,6 +48,7 @@ export function ingredientSlot(value: unknown, tags: TagCatalog | null): GridSlo
   const ids: string[] = [];
   let tag: string | undefined;
   let unknown: string | undefined;
+  let fluid: GridSlot['fluid'];
   const add = (v: unknown) => {
     if (Array.isArray(v)) return v.forEach(add);
     if (typeof v === 'string') return v.startsWith('#') ? addTag(v.slice(1)) : void ids.push(v);
@@ -48,8 +63,10 @@ export function ingredientSlot(value: unknown, tags: TagCatalog | null): GridSlo
     if (Array.isArray(o.items) || typeof o.items === 'string') return add(o.items);
     // NeoForge difference: base минус subtracted — показываем base
     if (o.base !== undefined) return add(o.base);
-    if (o.fluid !== undefined || o.fluids !== undefined) unknown ??= 'жидкость';
-    else unknown ??= typeof o.type === 'string' ? o.type : '?';
+    const f = o.fluid !== undefined || o.fluids !== undefined ? fluidOf(o.fluid ?? o.fluids) : undefined;
+    if (f) fluid ??= f;
+    // Условие без предмета (tfc:not_rotten в составе tfc:and) — не ингредиент, а фильтр к соседним
+    else if (typeof o.type === 'string' && !/not_rotten|has_trait|lacks_trait/.test(o.type)) unknown ??= o.type;
   };
   const addTag = (t: string) => {
     tag ??= t;
@@ -61,7 +78,8 @@ export function ingredientSlot(value: unknown, tags: TagCatalog | null): GridSlo
   return {
     options,
     ...(tag ? { tag } : {}),
-    ...(!options.length ? { unknown: unknown ?? (tag ? `#${tag}` : '?') } : {}),
+    ...(!options.length && fluid ? { fluid } : {}),
+    ...(!options.length && !fluid ? { unknown: unknown ?? (tag ? `#${tag}` : '?') } : {}),
   };
 }
 

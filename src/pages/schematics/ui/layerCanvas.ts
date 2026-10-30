@@ -238,6 +238,24 @@ export function paintLayer(o: PaintOptions) {
   ctx.lineWidth = 1.5;
   ctx.strokeRect(ox, oy, sx * zoom, sz * zoom);
 
+  // Оси: x — над схемой, z — слева (при сдвиге прижаты к краю окна); подпись не чаще ~26 px
+  const step = [1, 2, 5, 10, 20, 50, 100].find((n) => n * zoom >= 26) ?? 200;
+  ctx.font = '10px system-ui, sans-serif';
+  ctx.fillStyle = color('--text-3');
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  const ax = Math.max(12, Math.min(box.h, oy - 3));
+  for (let x = Math.ceil(x0 / step) * step; x < x1; x += step) ctx.fillText(String(x), ox + (x + 0.5) * zoom, ax);
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  const az = Math.max(22, Math.min(box.w, ox - 4));
+  for (let z = Math.ceil(z0 / step) * step; z < z1; z += step) ctx.fillText(String(z), az, oy + (z + 0.5) * zoom);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('x →', Math.max(2, Math.min(box.w - 30, ox + sx * zoom + 6)), ax);
+  ctx.textBaseline = 'top';
+  ctx.fillText('z ↓', Math.max(2, az - 18), Math.max(2, Math.min(box.h - 12, oy + sz * zoom + 4)));
+
   // Выделение — заливка и рамка поверх блока (и поверх воздуха и убранных)
   if (selected.size && layer) {
     ctx.fillStyle = accent;

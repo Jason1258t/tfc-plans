@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BlockStructureViewer, shapeFromNbt, type BlockShape } from '@/entities/block-structure';
 import { libraryEntry, libraryParsed, schematicLink, type SavedSchematic } from '@/entities/schematic';
+import type { ParsedNbt } from '@tfc/core/nbt';
 import { errorText } from '@/shared/lib';
 import { useGuideEditing } from './guideLinks';
 import styles from './Guides.module.css';
@@ -20,7 +21,7 @@ type State =
   | { s: 'wait' }
   | { s: 'missing' }
   | { s: 'error'; message: string; entry?: SavedSchematic }
-  | { s: 'ok'; entry: SavedSchematic; shape: BlockShape };
+  | { s: 'ok'; entry: SavedSchematic; shape: BlockShape; parsed: ParsedNbt };
 
 /** Грузим, только когда виджет докрутили до экрана: файл схемы — несколько чтений Firestore */
 function useNearScreen<T extends Element>() {
@@ -41,7 +42,7 @@ function useNearScreen<T extends Element>() {
 
 /**
  * Виджет гайда «::schematic id=<id карточки> [ver=<updatedAt>] [layer=N] [materials]»: схема из библиотеки
- * в общем просмотре по слоям — с заменами и формой карточки, как её скачивают. Инструкция — в тексте гайда,
+ * в общем просмотре по слоям (3D — как в редакторе схем) — с заменами и формой карточки, как её скачивают. Инструкция — в тексте гайда,
  * здесь только вид. ver — какой была карточка, когда её вставили: изменилась — пометка «схему поменяли».
  */
 export default function SchematicEmbed({
@@ -68,7 +69,8 @@ export default function SchematicEmbed({
       .then(async (entry) => {
         if (!entry) return done({ s: 'missing' });
         try {
-          done({ s: 'ok', entry, shape: shapeFromNbt(await libraryParsed(entry)) });
+          const parsed = await libraryParsed(entry);
+          done({ s: 'ok', entry, shape: shapeFromNbt(parsed), parsed });
         } catch (e) {
           done({ s: 'error', message: errorText(e), entry });
         }
@@ -125,6 +127,8 @@ export default function SchematicEmbed({
         <BlockStructureViewer
           key={`${id}|${entry!.updatedAt}`}
           shape={state.shape}
+          nbt={state.parsed}
+          name={`${id}|${entry!.updatedAt}`}
           initialLayer={layer !== undefined ? layer - 1 : undefined}
           withMaterials={withMaterials}
         />

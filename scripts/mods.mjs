@@ -596,6 +596,15 @@ export async function buildMods({
   collectRecipes(recipes, path.join(vanillaDir, 'data'), 'minecraft');
   /** data/ всех источников в порядке загрузки — для справочника */
   const dataDirs = [{ dir: path.join(vanillaDir, 'data'), source: 'minecraft' }];
+  // Общие теги c:* (c:dusts/redstone, c:ingots/iron…) задаёт сам загрузчик, а не моды: universal jar NeoForge —
+  // сразу после ванили. Версия — из снимка сборки, локально — из NeoForge platform аддонов.
+  const loader = neoforge ?? platform()?.version ?? null;
+  const loaderJar = loader
+    ? (await platformAssets({ cacheDir, mc: MC_VERSION, neoforge: loader, minecraft: false, log })).neoforge
+    : null;
+  const loaderData = loaderJar && prepareJar(loaderJar);
+  if (loaderData) dataDirs.push({ dir: loaderData.data, source: path.basename(loaderJar, '.jar') });
+  else log('теги NeoForge (c:*) не прочитаны: версия загрузчика неизвестна или jar не скачался');
   // Сначала сам jar, за ним вложенные в него моды; один и тот же вложенный jar из разных бандлов — один раз
   const nestedSeen = new Set();
   const units = jars.flatMap((jar) => {

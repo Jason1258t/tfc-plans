@@ -81,6 +81,24 @@ export async function loadSchematic(file: File): Promise<Schematic> {
 }
 
 /**
+ * Схема только для просмотра (виджет гайда, мультиблок IE): тот же объект, что у редактора, но без исходного
+ * файла — его рисует тот же 3D-вид.
+ */
+export function viewSchematic(parsed: ParsedNbt, name: string): Schematic {
+  return {
+    key: `view:${name}`,
+    file: new File([], name),
+    fileName: name,
+    fileSize: 0,
+    parsed,
+    counts: countBlocks(parsed),
+    size: sizeOf(parsed.root.value),
+    shape: { ...DEFAULT_SHAPE },
+    rev: 0,
+  };
+}
+
+/**
  * Замены, которые нельзя записать в схему: цели нет в сборке или это предмет, а не блок (механический ремень).
  * Перед скачиванием — чтобы в схему попадал ровно тот id, что есть в сборке (minecraft:… не станет tfc:…).
  */

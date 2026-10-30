@@ -1,5 +1,5 @@
-import { T, type ParsedNbt } from '@tfc/core/nbt';
-import { COPYCAT_BASE, EMPTY_BLOCKS, nameOf, paletteLists, posOf, sizeOf } from '@tfc/core/schematicFile';
+import { T, type Compound, type ParsedNbt, type Tag } from '@tfc/core/nbt';
+import { COPYCAT_BASE, EMPTY_BLOCKS, intList, nameOf, paletteLists, posOf, sizeOf } from '@tfc/core/schematicFile';
 import { copycatSlots } from '@tfc/core/schematicBlockFixes';
 
 /**
@@ -95,4 +95,33 @@ export function shapeFromNbt(parsed: ParsedNbt): BlockShape {
     }
   const size = sizeOf(root) ?? max;
   return { size: [Math.max(size[0], max[0]), Math.max(size[1], max[1]), Math.max(size[2], max[2])], palette, blocks };
+}
+
+/**
+ * Обратно — структура как файл .nbt в памяти (палитра, блоки, размер; у копиката — материал в nbt клетки): для
+ * объёмного вида редактора схем, который рисует по файлу. У мультиблоков IE файла рядом нет — собираем.
+ */
+export function nbtFromShape(shape: BlockShape): ParsedNbt {
+  const str = (value: string): Tag => ({ type: T.String, value });
+  const compound = (entries: [string, Tag][]): Tag => ({ type: T.Compound, value: new Map(entries) as Compound });
+  const palette = shape.palette.map((s) =>
+    compound([
+      ['Name', str(s.id)],
+      ...(s.p ? ([['Properties', compound(Object.entries(s.p).map(([k, v]) => [k, str(v)]))]] as [string, Tag][]) : []),
+    ]),
+  );
+  const blocks = shape.blocks.map(([x, y, z, st]) => {
+    const m = shape.palette[st]?.m;
+    return compound([
+      ['pos', intList([x, y, z])],
+      ['state', { type: T.Int, value: st }],
+      ...(m ? ([['nbt', compound([['Material', compound([['Name', str(m)]])]])]] as [string, Tag][]) : []),
+    ]);
+  });
+  const root: Compound = new Map([
+    ['size', intList(shape.size)],
+    ['palette', { type: T.List, elemType: T.Compound, value: palette }],
+    ['blocks', { type: T.List, elemType: T.Compound, value: blocks }],
+  ]);
+  return { root: { name: '', value: root }, gzipped: true };
 }

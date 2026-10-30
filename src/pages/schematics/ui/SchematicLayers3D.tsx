@@ -1,5 +1,5 @@
 import type { Schematic, Vec } from '@/entities/schematic';
-import { SchematicView3D } from '@/widgets/schematic-view';
+import { SchematicView3D } from '@/entities/schematic';
 import { cx } from '@/shared/lib';
 import styles from './SchematicLayers/SchematicLayers.module.css';
 
@@ -20,6 +20,7 @@ export function SchematicLayers3D({ schematic, replace, maxY, textured, selected
   return (
     <>
       <SchematicView3D
+        className={styles.view3D}
         schematic={schematic}
         replace={replace}
         maxY={maxY}
