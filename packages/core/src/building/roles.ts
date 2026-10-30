@@ -85,6 +85,21 @@ export function deriveRoles({ grid: g }: Layout, d: DetailSpec) {
             put(x, y, z, (runAxis === 1 ? x : z) % d.frameEvery === 0 ? 'frame' : 'infill', orient(0, false, 0));
         }
 
+  // Простенки (индустриальный кирпич): сплошные столбы кладки между колоннами окон — роль каркаса.
+  // Колонна с окном или дверью на любой высоте остаётся стеной (подоконные и надоконные вставки).
+  if (d.piers) {
+    const open = new Uint8Array(g.X * g.Z);
+    for (let y = 0; y < g.Y; y++)
+      for (let z = 0; z < g.Z; z++)
+        for (let x = 0; x < g.X; x++) if (isOpening(g.roleAt(x, y, z))) open[x + g.X * z] = 1;
+    for (let y = 0; y < g.Y; y++)
+      for (let z = 0; z < g.Z; z++)
+        for (let x = 0; x < g.X; x++) {
+          const i = g.idx(x, y, z);
+          if (g.role[i] === ROLE.wall && !next.has(i) && !open[x + g.X * z]) put(x, y, z, 'frame', orient(0, false, 0));
+        }
+  }
+
   for (const [i, { role, o }] of next) {
     g.role[i] = ROLE[role];
     if (o !== undefined) g.orient[i] = o;

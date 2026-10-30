@@ -428,6 +428,14 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
 Stages 0–5 done 2026-10-30 (`feat/building-core`, `feat/building-page`, `feat/building-brush`); next — stage 6
 (more forms, types, styles).
 
+- Palettes (task item 11, 2026-10-30): `packages/core/src/building/palettes.ts` — materials apart from the style;
+  host priority: concrete and bricks, industrial. Style «Индустриальный» (pitch 0.5, plinth 2, `piers` — solid wall
+  columns between window columns take the frame role), type «Цех». 7 industrial palettes (Create Deco bricks with
+  their corner variant, IE concrete/steel, clinker, Create andesite) + 10 TFC ones. Family rule for IE prefixes
+  (`stairs_x`, `slab_x`). UI: palette select (fitting the style first), «Применить пресет» / «Только палитру».
+  Checked by script: all palette blocks exist, roofs have stairs + slab, 290 emitted states exist in the live
+  block-models (tfc, minecraft, create, createdeco, immersiveengineering); browser look of 3 industrial palettes.
+  Colour builder skips interlaced/broken PNGs instead of failing the pack build.
 - Brush (stage 5): selection in 3D — click (Shift adds/removes), frame = visible solid blocks with an open face,
   «выделить» on a role row = all its cells. Selection panel: «Сделать ролью» (keeps stair/slab/glass shape),
   a block (same shape of the chosen material, else full), «Воздух» (also Delete), «ничего», reset. Overrides live in

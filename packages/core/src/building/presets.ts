@@ -4,6 +4,7 @@
  * Новый стиль/тип/форма — запись в реестре здесь. Блоки по умолчанию проверены по библиотеке сборки (2026-10-30).
  */
 import type { Role } from './grid.ts';
+import { PALETTES, applyPalette } from './palettes.ts';
 import type { BuildingSpec, DetailSpec, OpeningsSpec, RoleSpec, RoofSpec, Volume } from './spec.ts';
 
 const one = (id: string): RoleSpec => ({ on: true, fill: { blocks: [{ id }] } });
@@ -17,6 +18,28 @@ export interface StylePreset {
 }
 
 export const STYLES: Record<string, StylePreset> = {
+  industrial: {
+    name: 'Индустриальный',
+    roof: { kind: 'gable', pitch: 0.5, overhang: 1 },
+    details: { plinthH: 2, quoins: false, openingExt: true, frameEvery: 0, piers: true },
+    roles: {
+      foundation: one('immersiveengineering:concrete'),
+      wall: one('minecraft:bricks'),
+      frame: one('createdeco:corner_red_bricks'),
+      corner: one('createdeco:corner_red_bricks'),
+      plinth: one('immersiveengineering:concrete_brick'),
+      belt: one('immersiveengineering:concrete'),
+      lintel: one('immersiveengineering:concrete'),
+      sill: one('immersiveengineering:concrete'),
+      jamb: off,
+      parapet: one('immersiveengineering:concrete'),
+      roof: one('create:cut_deepslate_bricks'),
+      floor: one('immersiveengineering:concrete'),
+      glass: one('create:industrial_iron_window_pane'),
+      door: one('createdeco:industrial_iron_door'),
+      chimney: one('minecraft:bricks'),
+    },
+  },
   stone: {
     name: 'Каменный',
     roof: { kind: 'gable', pitch: 1, overhang: 1 },
@@ -118,6 +141,16 @@ export const TYPES: Record<string, TypePreset> = {
     chimney: false,
     roof: { pitch: 0.5 },
   },
+  factory: {
+    name: 'Цех',
+    w: 21,
+    d: 13,
+    floors: 2,
+    floorH: 6,
+    openings: { windowW: 2, windowH: 3, windowEvery: 4, sillH: 1, door: { side: 'south', w: 4, h: 5 } },
+    chimney: true,
+    roof: { pitch: 0.5 },
+  },
 };
 
 type Rect = Pick<Volume, 'x' | 'z' | 'w' | 'd'> & { axis: RoofSpec['axis'] };
@@ -169,6 +202,8 @@ export interface MakeSpecOptions {
   d?: number;
   seed?: number;
   degree?: number;
+  /** Палитра материалов (PALETTES); нет — блоки стиля */
+  palette?: string;
 }
 
 export function makeSpec(opts: MakeSpecOptions = {}): BuildingSpec {
@@ -201,7 +236,11 @@ export function makeSpec(opts: MakeSpecOptions = {}): BuildingSpec {
     openings: structuredClone(type.openings),
     details: { ...style.details, chimney: type.chimney, clearInside: true },
     texture: { degree: opts.degree ?? 0 },
-    roles: structuredClone(style.roles),
+    palette: opts.palette && PALETTES[opts.palette] ? opts.palette : '',
+    roles:
+      opts.palette && PALETTES[opts.palette]
+        ? applyPalette(structuredClone(style.roles), PALETTES[opts.palette])
+        : structuredClone(style.roles),
     overrides: [],
   };
 }

@@ -166,6 +166,8 @@ export function BuilderPage() {
           <div className={styles.view}>
             {built && (
               <SchematicView3D
+                // Новый пресет — камера наводится заново (в остальных правках ракурс сохраняется)
+                key={`${spec.form}|${spec.style}|${spec.type}`}
                 schematic={built.schematic}
                 replace={NO_REPLACE}
                 textured={textured}
