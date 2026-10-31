@@ -216,6 +216,7 @@ export function ParamsPanel({ spec, onChange }: Props) {
               >
                 <option value={1}>45°</option>
                 <option value={0.5}>пологая</option>
+                <option value={2}>крутая</option>
               </Select>
               <Select
                 value={v.roof.axis}
@@ -242,6 +243,16 @@ export function ParamsPanel({ spec, onChange }: Props) {
                   onChange={(tooth) => roof(i, { tooth })}
                   title="Ширина зубца шедовой крыши в клетках"
                 />
+              )}
+              {(v.roof.kind === 'gable' || v.roof.kind === 'hip') && (
+                <label className={cx('small', styles.check)} title="Углы свеса загибаются вверх (японский)">
+                  <input
+                    type="checkbox"
+                    checked={!!v.roof.upturned}
+                    onChange={(e) => roof(i, { upturned: e.target.checked })}
+                  />
+                  подъём углов
+                </label>
               )}
               <Select
                 value={v.shape ?? 'rect'}

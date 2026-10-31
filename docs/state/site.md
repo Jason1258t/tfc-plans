@@ -425,8 +425,8 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
 
 ## Building generator (dev #166, plan doc 26)
 
-Stages 0–5 done 2026-10-30 (`feat/building-core`, `feat/building-page`, `feat/building-brush`); next — stage 6
-(more forms, types, styles).
+Stages 0–5 done 2026-10-30 (`feat/building-core`, `feat/building-page`, `feat/building-brush`); stage 6 done
+2026-10-31 (`feat/building-forms`, `feat/building-tiers-styles`); next — copycats, photos, wooden styles.
 
 - Stage 6 (2026-10-31, industrial first): round volumes (`shape: 'round'` — oval inscribed in w×d; `inPlan` is
   shape-aware, so walls/openings/floors work unchanged) with roof «конус» (ellipse distance field, stairs face the
@@ -435,7 +435,20 @@ Stages 0–5 done 2026-10-30 (`feat/building-core`, `feat/building-page`, `feat/
   крышей», «Склад» (ribbon windows high up), «Котельная» (2×2 chimney 14 above the roof), «Силос / башня» (round,
   cone). Forms: «С пристройкой» (lower wing on the south side, shared wall), «Двор» (ring, courtyard ≥ 3×3). Checked:
   slices and role renders, 422 emitted block states exist in live block-models, browser look of the sawtooth hall and
-  the silo. Not done yet: scandinavian/japanese styles, bay, stacked tiers.
+  the silo.
+- Stages 6б/6в (2026-10-31, `feat/building-tiers-styles`): pitch 2 («крутая» 2:1 — full block every 2 in, steps on
+  both rows) and `upturned` (gable/hip, overhang ≥ 1: corner outline cell raised by 2, its edge neighbours by 1).
+  Stacked volumes: foundation only under cells with no building below; a shared tier row (upper volume's `y0` = lower
+  one's top) becomes a slab row («ceiling» if any volume tops there, else «floor» by `(y - y0) % floorH` over any
+  containing volume); a lower volume's roof is suppressed where an upper volume's plan covers it (`inPlan` of any
+  other box with `y0 > b.y0`). Forms «С эркером» (3–5×4 south bay, `lower: 1` when multi-floor, own gable roof, grow
+  = 1) and «Ярусы» (up to 3 volumes, each −4 per side and −1 floor, standing on the previous top). Styles
+  «Скандинавский» (pitch 2 gable, birch planks + spruce log corners/bands, spruce plank roof) and «Японский» (hip
+  pitch 1, overhang 2, upturned; white wattle + rosewood frame every 3, `tfc:rock/bricks/basalt` roof). Bug fixed:
+  family axis regexes (`^basalt` etc.) now apply only to single-segment ids, so tfc basalt bricks no longer get a
+  bogus `axis=y`. Checked: 384 style×type×form combos (degree 2) all generate, every emitted block state exists in
+  the live block-models, tier shared row is solid slabs with no roof inside the upper volume, bay has its own roof,
+  one seed → byte-identical .nbt; browser look of japanese tiers and scandinavian bay, 375 px.
 - Palettes (task item 11, 2026-10-30): `packages/core/src/building/palettes.ts` — materials apart from the style;
   host priority: concrete and bricks, industrial. Style «Индустриальный» (pitch 0.5, plinth 2, `piers` — solid wall
   columns between window columns take the frame role), type «Цех». 7 industrial palettes (Create Deco bricks with

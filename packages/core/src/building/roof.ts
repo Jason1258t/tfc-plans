@@ -2,9 +2,12 @@
  * Крыши: двускатная, вальмовая, односкатная, шедовая (зубцы с остеклённой гранью), конус (у круглого объёма),
  * плоская с парапетом. Скат строится как поле расстояний до края
  * крыши (со свесом): высота растёт к коньку, ступени смотрят в сторону подъёма — так в игре ставит игрок, глядя
- * вверх по скату (facing = куда поднимается ступень, StairBlock 1.21.1).
+ * вверх по скату (facing = куда поднимается ступень, StairBlock 1.21.1). Уклоны: 1 — ступень на клетку (45°),
+ * 0.5 — плита и целый блок через клетку, 2 — целый блок и ступень на клетку (крутая); `upturned` загибает углы
+ * контура вверх (японский свес).
  * Где крыши объёмов пересекаются (Г, Т, П), над планом объёма остаётся более высокая — так получаются ендовы;
- * свес высокого объёма над крышей низкого не съедает её.
+ * свес высокого объёма над крышей низкого не съедает её. Над клеткой, где стоит ярус (объём с основанием выше),
+ * крыша нижнего объёма не строится вовсе.
  */
 import { ROLE, orient, type Role, type Shape } from './grid.ts';
 import { inPlan, type Box, type Layout } from './massing.ts';
@@ -99,6 +102,7 @@ function surfaceAt(box: Box, d: number) {
   const k = d - box.v.roof.overhang;
   const yb = box.top + 1;
   if (box.v.roof.pitch === 1) return yb + k + 1;
+  if (box.v.roof.pitch === 2) return k >= 0 ? yb + 2 * k + 1 : yb + k + 1;
   return k % 2 === 0 ? yb + k / 2 + 0.5 : yb + (k + 1) / 2;
 }
 
@@ -118,6 +122,23 @@ function candidate(box: Box, x: number, z: number): Candidate | null {
       const to = Math.ceil(surfaceAt(box, back.d)) - 1;
       const axis = ridgeAxis(box) === 'x' ? 1 : 2;
       for (let y = from; y <= to; y++) c.cells.push({ y, role: 'glass', shape: 'pane', o: orient(0, false, axis) });
+    }
+  }
+  // Подъём углов (японский): угол контура крыши загибается вверх — самый угол на 2, соседние по рёбрам на 1
+  if ((kind === 'gable' || kind === 'hip') && r.upturned && r.overhang >= 1) {
+    const cx = Math.min(x - (box.x0 - r.overhang), box.x1 + r.overhang - x);
+    const cz = Math.min(z - (box.z0 - r.overhang), box.z1 + r.overhang - z);
+    if (cx <= 1 && cz <= 1) {
+      const raise = cx === 0 && cz === 0 ? 2 : 1;
+      const from = Math.max(...c.cells.map((cell) => cell.y));
+      for (let j = 1; j < raise; j++) c.cells.push({ y: from + j, role: c.cells[0].role, shape: 'full', o: 0 });
+      c.cells.push({
+        y: from + raise,
+        role: c.cells[0].role,
+        shape: 'stairs',
+        o: orient(Math.max(0, here.asc), true),
+      });
+      c.surface += raise;
     }
   }
   return c;
@@ -157,6 +178,28 @@ function slope(
       };
     return { box, surface: yb + k + 1, cells: [{ y: yb + k, role, shape: 'stairs', o: orient(facing) }] };
   }
+  // Крутая (2:1): подъём два блока на клетку — целый блок и ступень на нём; свес уходит вниз полого, как у 45°
+  if (r.pitch === 2) {
+    if (k < 0) return { box, surface: yb + k + 1, cells: [{ y: yb + k, role, shape: 'stairs', o: orient(facing) }] };
+    if (here.asc < 0)
+      return {
+        box,
+        surface: yb + 2 * k + 1,
+        cells: [
+          { y: yb + 2 * k - 1, role, shape: 'full', o: 0 },
+          { y: yb + 2 * k, role, shape: 'full', o: 0 },
+        ],
+      };
+    if (k === 0) return { box, surface: yb + 1, cells: [{ y: yb, role, shape: 'stairs', o: orient(facing) }] };
+    return {
+      box,
+      surface: yb + 2 * k + 1,
+      cells: [
+        { y: yb + 2 * k - 1, role, shape: 'full', o: 0 },
+        { y: yb + 2 * k, role, shape: 'stairs', o: orient(facing) },
+      ],
+    };
+  }
   // Пологая: через клетку плита и целый блок — подъём на полблока за клетку
   if (k % 2 === 0)
     return { box, surface: yb + k / 2 + 0.5, cells: [{ y: yb + k / 2, role, shape: 'slab', o: orient(facing) }] };
@@ -168,7 +211,11 @@ export function roofs({ grid: g, boxes }: Layout) {
   const pitched = boxes.filter((b) => roofKind(b) !== 'flat');
   for (let z = 0; z < g.Z; z++)
     for (let x = 0; x < g.X; x++) {
-      const list = pitched.map((b) => candidate(b, x, z)).filter((c): c is Candidate => !!c);
+      // Ярусы: над клеткой стоит другой объём — крыша нижнего здесь не нужна (была бы зарыта в его этажи)
+      const list = pitched
+        .filter((b) => !boxes.some((o) => o !== b && o.y0 > b.y0 && inPlan(o, x, z)))
+        .map((b) => candidate(b, x, z))
+        .filter((c): c is Candidate => !!c);
       const keep = list.filter(
         (c) =>
           !list.some(
@@ -192,12 +239,19 @@ export function roofs({ grid: g, boxes }: Layout) {
 
   for (const b of boxes) {
     if (roofKind(b) === 'flat') {
+      // Над частью плана может стоять ярус: там верх объёма остаётся перекрытием, а не крышей
+      const tierAbove = (x: number, z: number) => boxes.some((o) => o !== b && o.y0 > b.y0 && inPlan(o, x, z));
       for (let z = b.z0; z <= b.z1; z++)
         for (let x = b.x0; x <= b.x1; x++) {
           const r = g.roleAt(x, b.top, z);
-          if (r === ROLE.ceiling) g.relabel(x, b.top, z, 'roof');
-          if (r === ROLE.wall) g.fill(x, b.top + 1, z, 'parapet');
-          if (r === ROLE.ceiling || r === ROLE.wall) g.roofed[x + g.X * z] = 1;
+          if (r === ROLE.ceiling && !tierAbove(x, z)) {
+            g.relabel(x, b.top, z, 'roof');
+            g.roofed[x + g.X * z] = 1;
+          }
+          if (r === ROLE.wall) {
+            g.fill(x, b.top + 1, z, 'parapet');
+            g.roofed[x + g.X * z] = 1;
+          }
         }
       continue;
     }

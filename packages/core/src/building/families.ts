@@ -104,7 +104,8 @@ export const hasAxis = (id: string) => {
   // TFC: wood/log/oak, wood/stripped_wood/oak (но не wood/planks/oak); ваниль: oak_log, quartz_pillar, basalt
   const seg = split(id)[1].split('/');
   if (seg.slice(1).some((s) => /^(stripped_)?(log|wood|stem|hyphae)$/.test(s))) return true;
-  return /(_log|_wood|_stem|_hyphae|_pillar|^basalt|^polished_basalt|^bone_block)$/.test(seg[seg.length - 1]);
+  // Односегментные id (ваниль и моды без путей): tfc:rock/bricks/basalt — не бревно, оси у него нет
+  return seg.length === 1 && /(_log|_wood|_stem|_hyphae|_pillar|^basalt|^polished_basalt|^bone_block)$/.test(seg[0]);
 };
 export const isPane = (id: string) => /pane|bars/.test(id);
 export const isDoor = (id: string) => /(^|[/_:])door($|[/_])/.test(id) && !/trapdoor/.test(id);
