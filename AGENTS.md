@@ -73,6 +73,10 @@ report=…`: a short Russian report — what changed for players, what was check
   `dev_doc_put`. A task already `doing` under another agent — don't take it, ask the user. Found a separate problem
   along the way — a new dev task. Players' tasks and pack plans (update/integration plans) stay on the site
   (`tfc-pack` `task_*`).
+- **Dev checklist progress is structured data:** pass checklist items as `{ text, done }`, never as strings containing
+  `[x]` / `[ ]`; `text` is only the label. Immediately after each verified milestone set its `done=true` with the current
+  `baseRev`, preserve every other item, then confirm the checkboxes and progress with `dev_get`. A journal note alone does
+  not mark anything complete.
 - Deploy only from clean `main` after the merge, never from a feature branch (use the dev server to check).
 - Commit message: `Раздел: что сделано`, one line; merge commit `Слияние feat/<short>: что сделано`. Co-author
   trailer — the one your harness uses.

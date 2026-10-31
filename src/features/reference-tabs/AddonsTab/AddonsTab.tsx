@@ -11,7 +11,7 @@ import {
   type AddonBlock,
   type AddonsSub,
 } from '@/lib/addons';
-import { itemName, useItems, ItemIcon } from '@/shared/pack-data';
+import { RecipeGrid, toRecipe, type IconOverrides, type Recipe } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
 import styles from './AddonsTab.module.css';
 import { ButtonLink, Card, CardHead, SectionShell, contentStyles as content } from '@/shared/ui';
@@ -146,9 +146,32 @@ function AddonPreview({ a }: { a: Addon }) {
   );
 }
 
+/** Рецепт верстака из карточки аддона → обычный рецепт каталога (его рисует общая сетка RecipeGrid) */
+function cardRecipe(a: Addon, b: AddonBlock): Recipe | null {
+  if (!b.recipe) return null;
+  const key = Object.fromEntries(
+    Object.entries(b.recipe.key).map(([ch, k]) => [ch, k.tag ? { tag: k.tag } : { item: k.item }]),
+  );
+  return toRecipe({
+    i: b.id,
+    t: 'minecraft:crafting_shaped',
+    s: `tools/${a.source.split('/').pop()}/addon.json`,
+    j: { type: 'minecraft:crafting_shaped', pattern: b.recipe.pattern, key, result: { id: b.id, count: 1 } },
+  });
+}
+
+/** Картинки предметов самого аддона из карточки: блок и ключи рецепта с image */
+function cardIcons(a: Addon, b: AddonBlock): IconOverrides {
+  const map = new Map<string, { url: string; name: string }>();
+  for (const k of Object.values(b.recipe?.key ?? {}))
+    if (k.image) map.set(k.item, { url: addonImage(a, k.image), name: k.name ?? k.item });
+  if (b.image) map.set(b.id, { url: addonImage(a, b.image), name: b.name });
+  return map;
+}
+
 /** Блок аддона: картинка, название, id, рецепт. Описание — текстом статьи после виджета ::addon-block */
 export function AddonBlockCard({ a, b }: { a: Addon; b: AddonBlock }) {
-  const items = useItems();
+  const recipe = cardRecipe(a, b);
   return (
     <div className={cx(styles.addonRow, styles.addonBlock)}>
       {b.image && (
@@ -162,33 +185,9 @@ export function AddonBlockCard({ a, b }: { a: Addon; b: AddonBlock }) {
       <div className="grow">
         <b>{b.name}</b> <span className="faint small">{b.id}</span>
       </div>
-      {b.recipe && (
-        <div className={styles.recipe} aria-label={`Рецепт: ${b.name}`}>
-          {b.recipe.pattern.flatMap((row, y) =>
-            [...row.padEnd(3)].map((ch, x) => {
-              const k = b.recipe!.key[ch];
-              return (
-                <span
-                  key={`${x}-${y}`}
-                  className={styles.recipeCell}
-                  title={k ? (k.tag ? `#${k.tag}` : (k.name ?? itemName(items?.byId.get(k.item), k.item))) : ''}
-                >
-                  {k?.image ? (
-                    <img
-                      src={addonImage(a, k.image)}
-                      alt={k.name ?? k.item}
-                      width={28}
-                      height={28}
-                      className={styles.pixel}
-                      data-addon-block-image
-                    />
-                  ) : (
-                    k && <ItemIcon id={k.item} size={28} tip={false} />
-                  )}
-                </span>
-              );
-            }),
-          )}
+      {recipe && (
+        <div className={styles.recipe}>
+          <RecipeGrid recipe={recipe} compact icons={cardIcons(a, b)} />
         </div>
       )}
     </div>

@@ -23,6 +23,7 @@ import {
   tags,
   tagsOf,
 } from './data.mjs';
+import { recipeView, recipeViewLines } from '@tfc/core/recipeView';
 import { siteRecipes } from './site-datapacks.mjs';
 import { FirestoreError, guideDoc, guideDocs, writeGuide } from './firestore.mjs';
 import { clip, dateOf, nameOf, named, NICK, norm, num, page, paging, short, str, userRegex, words } from './fmt.mjs';
@@ -32,6 +33,7 @@ import { TOOLS as datapackPackTools } from './tools/datapack-pack.mjs';
 import { TOOLS as addonsTools } from './tools/addons.mjs';
 import { TOOLS as devserverTools } from './tools/devserver.mjs';
 import { TOOLS as blocksTools } from './tools/blocks.mjs';
+import { TOOLS as blockstatesTools } from './tools/blockstates.mjs';
 import { TOOLS as booksTools } from './tools/books.mjs';
 import { TOOLS as candidatesTools } from './tools/candidates.mjs';
 import { TOOLS as codeTools } from './tools/code.mjs';
@@ -212,6 +214,8 @@ async function recipeGet(a) {
   for (const n of r.kjsChanged) out.push(`меняет: ${ruleRef(n, cat)}`);
   out.push(`выход: ${r.outputs.map(named).join(', ') || '—'}`);
   out.push(`вход: ${r.inputs.map(named).join(', ') || '—'}`);
+  const view = r.removed ? null : recipeView(r);
+  if (view) out.push(...recipeViewLines(view));
   if (r.effInputs.join() !== r.inputs.join() || r.effOutputs.join() !== r.outputs.join())
     out.push(`после замен KubeJS — выход: ${r.effOutputs.join(', ')}; вход: ${r.effInputs.join(', ')}`);
   const file = r.file ?? (r.s.startsWith('kubejs/') ? r.s : `data/${r.i.replace(':', '/recipe/')}.json`);
@@ -745,6 +749,7 @@ export const TOOLS = [
   ...kubejsTools,
   ...booksTools,
   ...blocksTools,
+  ...blockstatesTools,
   ...resourcesTools,
   ...siteTools,
   ...schematicsTools,
@@ -764,4 +769,4 @@ for (const t of TOOLS) {
   };
 }
 
-export const INSTRUCTIONS = `TFC RealWorld pack data for the «TFC Studio» site (data: ${PUBLIC}). Use instead of grep over public/*.json and unzipping pack jars: answers already include KubeJS (removals, replacements, kubejs/data), tags with nested and KubeJS members, config layers. Jar facts — jar_find/jar_read; bytecode instead of javap in a shell (method outline, one method's op stream, a jar/classes folder on disk, diff of two versions). Pack debugging: class_find/class_info/class_hierarchy, code_refs (callers, field writers, code side), event_listeners (event handlers incl. KubeJS), mixins (mixins and conflicts), decompile, jar_grep, mods_check (dependencies), candidate_get (a candidate mod jar not in the pack: summary, then the jar tools with jar="candidate:<file>"), log_analyze (log/crash; level=timeline — game chronology); a player's uploaded log/crash («tfc-report:<id>», …/docs?report=<id>) — report_get, list — reports_list. World regions — map_regions. Resources without a client: model_render (model as an image), texture_get, resources_check (blockstates ↔ block properties, models, textures, translation keys from Component.translatable of a mod or a tools/ addon; addon from a git worktree — addon=<path>, same for model_render/texture_get). Recipes include site datapacks; check a new recipe against existing ones — recipe_conflicts. Datapack live inventory — datapacks_inventory; exact confirmed/world ZIP files — datapack_pack_get. Editable site sources: datapack_get → datapack_put with revision (create/edit files, checks like the site) — not ad-hoc Firestore scripts. Settings: config_get; config edits — config_propose (host applies), result — config_changes. Guides: guide_get → edit → guide_put with revision. Pack addons: addons_list, addon_check (release check: card tools/<mod>/addon.json, jar, icons, site page = guide addon-<mod>). Site tasks and plans: groups_list, users_list, task_create, task_get → task_update with revision; plan doc for a task — artifact_put (edits with revision from artifact_get). Create schematics: schematics_list (also searches blocks), schematic_get (palette, blocks, layers, block NBT, save the file), schematic_render (PNG), schematic_put (upload/edit with revision; dryRun). Tool output is in Russian.`;
+export const INSTRUCTIONS = `TFC RealWorld pack data for the «TFC Studio» site (data: ${PUBLIC}). Use instead of grep over public/*.json and unzipping pack jars: answers already include KubeJS (removals, replacements, kubejs/data), tags with nested and KubeJS members, config layers. Jar facts — jar_find/jar_read; bytecode instead of javap in a shell (method outline, one method's op stream, a jar/classes folder on disk, diff of two versions). Pack debugging: class_find/class_info/class_hierarchy, code_refs (callers, field writers, code side), event_listeners (event handlers incl. KubeJS), mixins (mixins and conflicts), decompile, jar_grep, mods_check (dependencies), candidate_get (a candidate mod jar not in the pack: summary, then the jar tools with jar="candidate:<file>"), log_analyze (log/crash; level=timeline — game chronology); a player's uploaded log/crash («tfc-report:<id>», …/docs?report=<id>) — report_get, list — reports_list. World regions — map_regions. Resources without a client: model_render (model as an image), texture_get, blockstate_check (generated block states vs site block models), resources_check (blockstates ↔ block properties, models, textures, translation keys from Component.translatable of a mod or a tools/ addon; addon from a git worktree — addon=<path>, same for model_render/texture_get). Recipes include site datapacks; check a new recipe against existing ones — recipe_conflicts. Datapack live inventory — datapacks_inventory; exact confirmed/world ZIP files — datapack_pack_get. Editable site sources: datapack_get → datapack_put with revision (create/edit files, checks like the site) — not ad-hoc Firestore scripts. Settings: config_get; config edits — config_propose (host applies), result — config_changes. Guides: guide_get → edit → guide_put with revision. Pack addons: addons_list, addon_check (release check: card tools/<mod>/addon.json, jar, icons, site page = guide addon-<mod>). Site tasks and plans: groups_list, users_list, task_create, task_get → task_update with revision; plan doc for a task — artifact_put (edits with revision from artifact_get). Create schematics: schematics_list (also searches blocks), schematic_get (palette, blocks, layers, block NBT, save the file), schematic_render (PNG), schematic_put (upload/edit with revision; dryRun). Tool output is in Russian.`;

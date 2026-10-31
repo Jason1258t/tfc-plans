@@ -60,6 +60,8 @@ export function ingredientSlot(value: unknown, tags: TagCatalog | null): GridSlo
     // Обёртки: TFC not_rotten/has_trait (ingredient), NeoForge compound/intersection (children), components (items)
     if (o.ingredient !== undefined) return add(o.ingredient);
     if (Array.isArray(o.children)) return add(o.children);
+    // NeoForge compound (в т. ч. у Create): ingredients — любой из
+    if (Array.isArray(o.ingredients)) return add(o.ingredients);
     if (Array.isArray(o.items) || typeof o.items === 'string') return add(o.items);
     // NeoForge difference: base минус subtracted — показываем base
     if (o.base !== undefined) return add(o.base);

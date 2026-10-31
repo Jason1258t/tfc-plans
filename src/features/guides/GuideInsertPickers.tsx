@@ -41,7 +41,7 @@ export function RecipeInsertPicker({ onInsert, onClose }: { onInsert: (line: str
             <RecipeGrid
               recipe={r}
               compact
-              fallback={<div className="faint small">не сетка крафта — виджет покажет только сообщение</div>}
+              fallback={<div className="faint small">тип не разобран — виджет покажет только сообщение</div>}
             />
           </li>
         ))}

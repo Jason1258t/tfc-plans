@@ -90,7 +90,7 @@ collection is read whole (~10 reads) every 10 minutes. Without Firestore login �
 | `item_get(id*)`                                       | item: mod, jar, tags, recipe count, food/fuel/melting/botany                                                                                                                                                        |
 | `recipes_for(output*, status, type)`                  | how to obtain: recipes with the item, fluid or tag as output, with in-game status                                                                                                                                   |
 | `recipes_using(input*, via_tags, status, type)`       | where used: directly, via tags and after KubeJS replacements                                                                                                                                                        |
-| `recipe_get(id*)`                                     | full recipe: source, which KubeJS rule removes or changes it (file:line), JSON                                                                                                                                      |
+| `recipe_get(id*)`                                     | full recipe: source, which KubeJS rule removes or changes it (file:line), JEI-like layout, JSON                                                                                                                     |
 | `recipe_conflicts(type, recipe, id, inputs, outputs)` | would a new recipe be intercepted: same type + same inputs (tags considered) or same shaped grid (mirror); same id → replaced. Sources: mods, kubejs/data, KubeJS scripts, site datapacks (KubeJS removals applied) |
 | `tag_members(tag*, kind, expand)`                     | tag members after mods and KubeJS, nested tags expanded                                                                                                                                                             |
 | `tags_of(id*, kind)`                                  | tags containing an item, fluid or block                                                                                                                                                                             |
@@ -243,6 +243,16 @@ The item library is items only. Blocks without items, entities, fluids, effects 
 | `loot_sources(item*, kind)`      | where an item drops from: directly, via tag, nested table, modifier                                 |
 
 Tables from `kubejs/data` override mod files with the same path.
+
+`blockstate_check(states*, all)` — for code that builds block states itself (building generator #166, schematics):
+each state `{ id, properties? }` or `"ns:path[k=v,…]"` (no namespace = `minecraft`) is checked against the site block
+models `block-models/<ns>.json` (`scripts/mods/block-models.mjs`): ✓ block and variant exist, ⚠ incomplete (variant
+properties not given, multipart value no part mentions, no part matches), ✗ no block / unknown value / no variant for
+the combination, ? no data for the mod. Multipart — each property may come from its own part (glass pane); the answer
+counts matched parts. Properties absent from the blockstate (`waterlogged`, TFC `natural`) don't affect the model — a
+note, not a warning. Data: `public/block-models` of the main checkout, else the live site (they are published only
+by the pack server; kept in memory 15 min); matching repeats `src/entities/schematic/blockModels.ts`. > 30 states —
+only problems are listed unless `all=true`.
 
 ### Client resources: models, textures, checks
 
@@ -515,7 +525,7 @@ scripts/mcp/
                       immersiveengineering + ieConveyor, functionalstorage, computercraft, sophisticatedbackpacks,
                       cuisinedelight, create_submarine)
   tools/<section>.mjs  section tools: code (classes, mixins, decompile, deps), disasm (bytecode), logs, config (config_get,
-                      config_propose, config_changes), pack, kubejs, books (+books-index), blocks (+blocks-data), site
+                      config_propose, config_changes), pack, kubejs, books (+books-index), blocks (+blocks-data), blockstates, site
                       (tasks, groups, plan docs and datapacks with writes; site scripts), schematics (+schematic-render — library
                       schematics: read, render, upload/edit), map (+map-climate,
                       map-png — PNG read/write), resources (model_render, texture_get, resources_check), addons

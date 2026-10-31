@@ -60,6 +60,16 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 - Header: Задачи · Документы (file storage) · Схемы · Датапаки · Справочник; on the right — pack-update bell.
 - Markdown plans (formerly «Документы») are the «Планы» section of the tasks page (`/tasks?view=docs`, left, above groups; old `/?view=docs` redirects).
 - Datapack editing stays at `/datapacks`; recipes and tags are reference material at `/reference?tab=items&sub=recipes|tags` (old `/recipes` and `/tags` redirect).
+- Recipe layouts (dev #173, plan doc 40): non-grid recipes render as a JEI-like station layout (inputs → station
+  icon + time/temperature/energy/tier → outputs with counts, chances, fluids; anvil rules, glassworking ops, Create
+  assembly as steps; knapping/sewing pattern). Parsing — `@tfc/core/recipeView` (per-mod rule registry; unknown types
+  with plain input/output fields — «по общим полям», others — JSON as before); rendering — `shared/pack-data/RecipeGrid`
+  (catalogue, `::craft` guide embeds, insert picker); MCP `recipe_get` prints the same layout. ~99 % of recipes covered;
+  202 special recipes (plate_cuisine, mineral_mix, ore excavation, special crafts) stay JSON. The 728 empty-type recipes
+  are all removal stubs.
+- One recipe renderer for guides: `::craft` and `::addon-block` (addon articles, «Аддоны» tab) both use
+  `shared/pack-data/RecipeGrid`; the addon card recipe (`tools/<mod>/addon.json`) is turned into a shaped recipe
+  (`toRecipe`) and addon item pictures are passed as `icons` (dev #180). Don't add separate recipe grids.
 - Map belongs to «Мир и ресурсы» (`/reference?tab=world&sub=map`). Full-page doc — `/doc/{id}` (old `/docs/{id}` and `/map?x=…` redirect).
 
 ## Styles (CSS Modules migration completed 2026-10-28)

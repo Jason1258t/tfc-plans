@@ -4,12 +4,16 @@
       "command": "node",
       "args": ["scripts/mcp/server.mjs"],
       "env": {
-        "TFC_FIRESTORE_KEY": "${TFC_FIRESTORE_KEY:-~/.config/tfc/mcp-firestore.json}"
+        "TFC_FIRESTORE_KEY": "${TFC_FIRESTORE_KEY:-~/.config/tfc/mcp-firestore.json}",
+        "TFC_AGENT_NICK": "${TFC_AGENT_NICK:-Kimi}"
       }
     },
     "tfc-plans-dev": {
       "command": "node",
-      "args": ["scripts/mcp-dev/server.mjs"]
+      "args": ["scripts/mcp-dev/server.mjs"],
+      "env": {
+        "TFC_AGENT_NICK": "${TFC_AGENT_NICK:-Kimi}"
+      }
     }
   }
 }

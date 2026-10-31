@@ -140,3 +140,9 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   cell edits → new source via the pack server. Verified over stdio on oil_pump_small/big (read, render, duplicate
   refusal, stale-revision refusal, dryRun of fields and block edits); real writes not made (no test record allowed
   in the shared library).
+
+- Dev #174 (2026-10-31): `blockstate_check` (`tools/blockstates.mjs`) — block states against `block-models/<ns>.json`
+  (variants and multipart, local `public/` or the live site, honest «нет данных» for a missing mod). Replaces the
+  script download used for #166 stage checks. Verified over stdio: all 26 844 variant states of minecraft + tfc → ✓,
+  wrong value / combination / missing block → ✗, waterlogged/natural → note, glass pane parts, missing mod → «нет
+  данных», bad input → error; both sources (TFC_PUBLIC_DIR copy and the site).

@@ -33,6 +33,38 @@ addon`, `formerIds` for ee_rectifier → ee_extras, rollback marked); `/updates`
   all versions (401 without a key), `tfc admin addon upload` — same jar «уже записана», mismatched 2.2.0 jar refused
   (409), `tfc pull addons ee_extras@2.3.1` from the live server installed the jar with the recorded hash.
 
+## Destroy Bridge + Destroy Extras (`tools/destroy-bridge-mod`, `tools/destroy-extras-mod`)
+
+Dev #22, plans 37–38, **0.1.0 development prototypes only** (`unlisted`, no player release or dependency publishing).
+The owner selected the Destroy hybrid: Destroy owns molecules/mixtures/reactions, Bridge owns only the TFC/EE/Create
+boundary, Extras will own missing machines, and PCBs stay in EE Extras. The owner moved the compact EE process from
+240 V to **300 V / 8 A** (37.5 Ω, working zone 270–330 V) on 2026-10-31.
+
+- M0: JDK 21 / NeoForge 21.1.251 projects, exact pack jars plus Destroy 0.4.6-eligibbs and Petrolpark 1.5.11 with
+  checked SHA-256, compile-only jar-in-jar dependencies, `minimal|thermal|sable`, RCON assertions and deliberate-fail
+  handling. Environment checks pass 2/2 in all three profiles; the real Destroy `destroy/reactions` datapack listener
+  loads the test reaction, and Castner remains loaded. Thermal still has baseline Wooden Cog/TFC/Create item errors and
+  is not a full-pack audit.
+- M1: main-code `ProcessPowerDevice` (no world/block/recipe access in simulation methods), `SaltWaterAdapter` (1:1 TFC →
+  Destroy mixture, caller-supplied concentrations) and `AtomicFluidOperation` (all outputs simulated before execution).
+  Devtest-only blocks use a finite source tank, real NeoForge fluid transfer, EE creative battery and real wires; they
+  are absent from the release jar. M1 itself contained only the devtest controller; the production machine arrived in M2.
+- Dedicated-server M1 results: 299.827 V / 7.995 A, one 1000 mB batch → 250 mB H₂ + 250 mB Cl₂ + 500 mB NaOH with exact
+  components and mass balance (12/12); 200 V sag stops progress after at most one transitional EE tick (7/7); each full
+  output blocks the whole operation without partial products (5/5 each); full restart preserves progress, all tanks and
+  an exact pre-restart mixture NBT snapshot without repeating output (6/6). Commands and logs are documented in the
+  Bridge README.
+- M2: Extras now has the production membrane electrolyzer and 64-batch membrane, a datapack-driven three-output recipe,
+  directional fluid/item capabilities, five translated status states and JEI integration. It uses the real RecipeManager,
+  restores the recipe after reload by id or saved mixture, and executes each batch through Bridge's atomic operation.
+  Destroy 0.4.6's gas fluid id is `destroy:gas` (`DestroyFluids.GAS_MIXTURE`), not `destroy:gas_mixture`.
+- Dedicated-server M2 results: environment 4/4 and ports 5/5; normal batch 13/13 at 299.827 V / 7.995 A with exact
+  products, membrane wear and mass balance; missing/worn membrane 3/3 each; 200 V sag 6/6; each blocked output 6/6;
+  restart 6/6. The deliberate-fail scenario exits nonzero. Build and resources/models pass. Client/JEI was not launched.
+- Not done: M3 etching bath, client/JEI/EMI runtime, full pack/site audit, real old-world migration and load tests.
+  Petrolpark's optional JEI integration targets a newer JEI than the pack's 19.44.0.401; client compatibility remains
+  unresolved. Site datapack loading remains blocked by the local `firebase-tools/lib/auth` module error.
+
 ## EE Extras (`tools/ee-extras-mod`)
 
 Before 2.0 — EE Rectifiers, `ee_rectifier`; old blocks migrate to new ids via aliases.
