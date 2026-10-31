@@ -72,10 +72,7 @@ const updates = await openUpdates(config.dataDir, store);
 const dev = openDev(config.dataDir);
 /** Страница «Разработка» сайта: откуда пускать (CORS) и чей вход принимать */
 const devSite = {
-  origins: (
-    env.DEV_ORIGINS ??
-    'https://tfc-plans-fd2c.web.app,https://tfc-plans-fd2c.firebaseapp.com,http://localhost:5173,http://localhost:5176,http://localhost:5177'
-  )
+  origins: (env.DEV_ORIGINS ?? 'https://tfc-plans-fd2c.web.app,https://tfc-plans-fd2c.firebaseapp.com')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean),
@@ -144,7 +141,9 @@ async function authorizeDev(req) {
 
 function devCors(req, res) {
   const origin = req.headers.origin;
-  if (!origin || !devSite.origins.includes(origin)) return;
+  // dev-сервер сайта на любом порту (у агентов и превью порты разные); вход всё равно по токену Firebase
+  const local = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin ?? '');
+  if (!origin || !(local || devSite.origins.includes(origin))) return;
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
