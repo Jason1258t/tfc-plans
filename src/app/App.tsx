@@ -21,13 +21,20 @@ import { BuilderPage } from '@/pages/builder';
 import { StatsPage } from '@/pages/stats';
 import { DevPage } from '@/pages/dev';
 import { TasksPage } from '@/pages/tasks';
+import { HomePage } from '@/pages/home';
+import { legacyTasksTarget, mapReferenceTarget } from '@/shared/lib';
 
-/** Старые ссылки на карту (в том числе с точками в адресе) ведут во вкладку справочника */
+/** Без параметров корень — главная; прежние ссылки на задачи и планы сохраняют весь query. */
+function RootPage() {
+  const { search } = useLocation();
+  const legacy = legacyTasksTarget(search);
+  return legacy ? <Navigate to={legacy} replace /> : <HomePage />;
+}
+
+/** Старые ссылки на карту (в том числе с точками в адресе) ведут в раздел «Мир и ресурсы» */
 function MapRedirect() {
   const { search } = useLocation();
-  const params = new URLSearchParams(search);
-  params.set('tab', 'map');
-  return <Navigate to={`/reference?${params}`} replace />;
+  return <Navigate to={mapReferenceTarget(search)} replace />;
 }
 
 /** Прежний адрес документа на всю страницу: /docs теперь — страница файлов */
@@ -56,7 +63,8 @@ export default function App() {
       <VisitTracker />
       <ErrorBoundary>
         <Routes>
-          <Route path="/" element={<TasksPage />} />
+          <Route path="/" element={<RootPage />} />
+          <Route path="/tasks" element={<TasksPage />} />
           <Route path="/docs" element={<FilesPage />} />
           <Route path="/files" element={<Navigate to="/docs" replace />} />
           <Route path="/doc/:id" element={<DocPage />} />

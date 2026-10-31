@@ -229,7 +229,7 @@ function MapView({ geo, profile, world }: { geo: GeoData; profile: GeoProfile; w
               }}
             />
           )}
-          onMarker={(m) => m.kind === 'task' && navigate(`/?task=${m.id}`)}
+          onMarker={(m) => m.kind === 'task' && navigate(`/tasks?task=${m.id}`)}
           focus={a ? { x: a.x, z: a.z, key: `${a.x}:${a.z}` } : null}
         />
       </section>

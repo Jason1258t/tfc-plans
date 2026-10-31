@@ -180,7 +180,7 @@ export function FilesPage() {
                   {schematic ? (
                     <Link to="/schematics">библиотека схем: {schematic.name}</Link>
                   ) : task ? (
-                    <Link to={`/?task=${task.id}`}>↳ {task.title}</Link>
+                    <Link to={`/tasks?task=${task.id}`}>↳ {task.title}</Link>
                   ) : f.taskId ? (
                     'задача удалена'
                   ) : (

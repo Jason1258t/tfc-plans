@@ -42,13 +42,11 @@ export function Header({ nick, onChangeNick }: Props) {
 
   return (
     <header className={styles.appHeader}>
-      <NavLink to="/" className={styles.brand} aria-label="TFC Studio — на главную">
+      <NavLink to="/" end className={styles.brand} aria-label="TFC Studio — на главную">
         <BrandLogo />
       </NavLink>
       <nav className={styles.nav} aria-label="Основные разделы">
-        <NavLink to="/" end>
-          Задачи
-        </NavLink>
+        <NavLink to="/tasks">Задачи</NavLink>
         <NavLink to="/docs">Документы</NavLink>
         <NavLink to="/schematics">Схемы</NavLink>
         <NavLink to="/datapacks" data-active={inPacks || undefined}>

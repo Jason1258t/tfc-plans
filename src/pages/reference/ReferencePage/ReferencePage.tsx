@@ -32,16 +32,16 @@ import {
   type Reference,
   type Vein,
 } from '@/lib/reference';
-import { cx } from '@/shared/lib';
+import { cx, legacyReferenceTarget } from '@/shared/lib';
 import { useSearchTrack } from '@/shared/api';
 import shell from '../ReferenceShell.module.css';
 import styles from './ReferencePage.module.css';
 import nutrition from '../NutritionTable.module.css';
 
-type Tab = 'ores' | 'geology' | 'fuel' | 'metals' | 'food' | 'botany' | 'power' | 'multiblocks' | 'guides' | 'map';
+type Tab = 'world' | 'fuel' | 'metals' | 'food' | 'botany' | 'power' | 'multiblocks' | 'guides';
+type WorldSub = 'ores' | 'geology' | 'map';
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'ores', label: 'Руды' },
-  { id: 'geology', label: 'Геология' },
+  { id: 'world', label: 'Мир и ресурсы' },
   { id: 'fuel', label: 'Топливо' },
   { id: 'metals', label: 'Металлы' },
   { id: 'food', label: 'Еда' },
@@ -49,12 +49,18 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'power', label: 'Электричество' },
   { id: 'multiblocks', label: 'Мультиблоки' },
   { id: 'guides', label: 'Гайды' },
-  { id: 'map', label: 'Карта' },
+];
+const WORLD_SUBS: { id: WorldSub; label: string }[] = [
+  { id: 'ores', label: 'Руды' },
+  { id: 'geology', label: 'Геология' },
+  { id: 'map', label: 'Карта мира' },
 ];
 
 /** Справочник по данным сборки: жилы руд, топливо, еда, температуры металлов */
 export function ReferencePage() {
   const [params] = useSearchParams();
+  const legacy = legacyReferenceTarget(params.toString());
+  if (legacy) return <Navigate to={legacy} replace />;
   // Прежние адреса: аддоны — теперь своя страница, гайды электричества — вкладка «Гайды»
   if (params.get('tab') === 'addons') {
     const rest = new URLSearchParams(params);
@@ -72,7 +78,8 @@ function Reference() {
   const [params, setParams] = useSearchParams();
   // tab=liquid — прежний адрес жидкого топлива, теперь это подраздел «Топлива»
   const oldLiquid = params.get('tab') === 'liquid';
-  const tab = oldLiquid ? 'fuel' : ((TABS.find((t) => t.id === params.get('tab'))?.id ?? 'ores') as Tab);
+  const tab = oldLiquid ? 'fuel' : ((TABS.find((t) => t.id === params.get('tab'))?.id ?? 'world') as Tab);
+  const worldSub = WORLD_SUBS.find((s) => s.id === params.get('sub'))?.id ?? 'ores';
   const liquid = oldLiquid || (tab === 'fuel' && params.get('sub') === 'liquid');
   const ref = useReference();
   const items = useItems();
@@ -82,7 +89,7 @@ function Reference() {
     : 0;
 
   return (
-    <main className={cx(shell.page, tab === 'map' && shell.pageWide)}>
+    <main className={cx(shell.page, tab === 'world' && worldSub === 'map' && shell.pageWide)}>
       <div className={shell.head}>
         <div className="grow">
           <h1>Справочник</h1>
@@ -97,11 +104,32 @@ function Reference() {
         tabs
         className={styles.tabs}
         value={tab}
-        onChange={(id) => setParams(id === 'ores' ? {} : { tab: id }, { replace: true })}
+        onChange={(id) => setParams({ tab: id }, { replace: true })}
         options={TABS.map((t) => ({ value: t.id, label: t.label }))}
       />
-      {tab === 'map' ? (
-        <MapPage />
+      {tab === 'world' ? (
+        <SectionShell
+          navLabel="Мир и ресурсы"
+          nav={WORLD_SUBS.map((s) => (
+            <button key={s.id} aria-pressed={worldSub === s.id} onClick={() => setParams({ tab: 'world', sub: s.id })}>
+              <span>{s.label}</span>
+            </button>
+          ))}
+        >
+          <div className={shell.fuelMain}>
+            {worldSub === 'map' ? (
+              <MapPage />
+            ) : ref === undefined ? (
+              <div className="empty">Загружаю справочник…</div>
+            ) : ref === null ? (
+              <div className="empty">Справочник не собран — выполните npm run mods</div>
+            ) : worldSub === 'geology' ? (
+              <GeologyTab veins={ref.veins} items={items} />
+            ) : (
+              <OresTab key={params.get('rock') ?? ''} ref_={ref} items={items} initialRock={params.get('rock') ?? ''} />
+            )}
+          </div>
+        </SectionShell>
       ) : tab === 'guides' ? (
         <GuidesTab
           sub={GUIDES_SUBS.find((s) => s.id === params.get('sub'))?.id ?? 'power'}
@@ -133,10 +161,6 @@ function Reference() {
         <div className="empty">Загружаю справочник…</div>
       ) : ref === null ? (
         <div className="empty">Справочник не собран — выполните npm run mods</div>
-      ) : tab === 'ores' ? (
-        <OresTab key={params.get('rock') ?? ''} ref_={ref} items={items} initialRock={params.get('rock') ?? ''} />
-      ) : tab === 'geology' ? (
-        <GeologyTab veins={ref.veins} items={items} />
       ) : tab === 'fuel' ? (
         <SectionShell
           navLabel="Разделы топлива"

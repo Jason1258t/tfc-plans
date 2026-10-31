@@ -98,7 +98,7 @@ export function ReportList({ kind, files, taskById, focusId, busyId, onDownload,
                   {task && (
                     <>
                       {' · '}
-                      <Link to={`/?task=${task.id}`}>↳ {task.title}</Link>
+                      <Link to={`/tasks?task=${task.id}`}>↳ {task.title}</Link>
                     </>
                   )}
                   {r.note && <span className={styles.reportNote}>«{r.note}»</span>}

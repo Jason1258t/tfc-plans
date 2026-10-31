@@ -45,7 +45,7 @@ export function AttachDialog({ pack, onClose }: { pack: Datapack; onClose: () =>
           <>
             <span className="grow" />
             <Button onClick={onClose}>Закрыть</Button>
-            <Button variant="primary" onClick={() => navigate(`/?task=${taskId}`)}>
+            <Button variant="primary" onClick={() => navigate(`/tasks?task=${taskId}`)}>
               Открыть задачу
             </Button>
           </>

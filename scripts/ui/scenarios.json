@@ -14,13 +14,40 @@
   },
   "scenarios": [
     {
-      "name": "tasks",
+      "name": "home",
       "path": "/",
       "waitFor": "main"
     },
     {
-      "name": "tasks.new-dialog",
+      "name": "home.dark",
       "path": "/",
+      "waitFor": "main",
+      "theme": "dark"
+    },
+    {
+      "name": "reference.world",
+      "path": "/reference?tab=world",
+      "waitFor": "main [role=tablist]"
+    },
+    {
+      "name": "reference.world.dark",
+      "path": "/reference?tab=world&sub=geology",
+      "waitFor": "main [role=tablist]",
+      "theme": "dark"
+    },
+    {
+      "name": "reference.world-map",
+      "path": "/reference?tab=world&sub=map&x=0&z=0",
+      "waitFor": "main [role=tablist]"
+    },
+    {
+      "name": "tasks",
+      "path": "/tasks",
+      "waitFor": "main"
+    },
+    {
+      "name": "tasks.new-dialog",
+      "path": "/tasks",
       "waitFor": "main",
       "actions": [
         {
@@ -35,7 +62,7 @@
     },
     {
       "name": "tasks.group-dialog",
-      "path": "/",
+      "path": "/tasks",
       "waitFor": "main",
       "actions": [{ "click": "button[aria-label=\"Новая группа\"]" }, { "wait": "[role=dialog]" }],
       "fullPage": false,
@@ -43,7 +70,7 @@
     },
     {
       "name": "tasks.compare",
-      "path": "/",
+      "path": "/tasks",
       "waitFor": "main",
       "actions": [{ "click": "button[title=\"Попарно сравнить задачи по важности\"]" }, { "wait": "[role=dialog]" }],
       "fullPage": false,
@@ -51,13 +78,13 @@
     },
     {
       "name": "tasks.dark",
-      "path": "/",
+      "path": "/tasks",
       "waitFor": "main",
       "theme": "dark"
     },
     {
       "name": "tasks.new-dialog.dark",
-      "path": "/",
+      "path": "/tasks",
       "waitFor": "main",
       "actions": [
         {
@@ -72,7 +99,7 @@
     },
     {
       "name": "tasks.nick-dialog",
-      "path": "/",
+      "path": "/tasks",
       "waitFor": "main",
       "actions": [{ "click": "header > button" }, { "wait": "[role=dialog]" }],
       "fullPage": false,
