@@ -30,7 +30,7 @@ import styles from './TagsPage.module.css';
 const SHOWN = 120;
 
 /** Теги сборки: поиск по id и по составу, откуда что взялось, правка датапаком */
-export function TagsPage() {
+export function TagsPage({ embedded = false }: { embedded?: boolean }) {
   const cat = useTags();
   const items = useItems();
   const navigate = useNavigate();
@@ -86,119 +86,119 @@ export function TagsPage() {
   };
 
   const shown = all ? found : found.slice(0, SHOWN);
+  const Container = embedded ? 'section' : 'main';
 
-  return (
-    <PackSection>
-      <main className={styles.tagsPage}>
-        <div className={styles.tagsHead}>
-          <div className="grow">
-            <h1>Теги сборки</h1>
-            <p className="faint small">
-              Состав каждого тега по модам и скриптам KubeJS. Поиск идёт по id тега и по тому, что в него входит
-              (по-русски тоже). Править можно датапаком: добавить, убрать, заменить состав.
-            </p>
-          </div>
-          <Button onClick={() => setEditing({ kind: kind === 'all' ? 'item' : kind, id: null })}>
-            <FilePlus2 size={15} /> Новый тег
-          </Button>
-        </div>
-
-        {pack && (
-          <p className={cx(styles.tagsPack, 'small')}>
-            Правка пойдёт в датапак <b>{pack.name}</b>.{' '}
-            <button className={styles.link} onClick={() => set({ pack: null })}>
-              Выбирать при сохранении
-            </button>
+  const page = (
+    <Container className={cx(styles.tagsPage, embedded && styles.embedded)}>
+      <div className={styles.tagsHead}>
+        <div className="grow">
+          <h1>Теги сборки</h1>
+          <p className="faint small">
+            Состав каждого тега по модам и скриптам KubeJS. Поиск идёт по id тега и по тому, что в него входит
+            (по-русски тоже). Править можно датапаком: добавить, убрать, заменить состав.
           </p>
-        )}
+        </div>
+        <Button onClick={() => setEditing({ kind: kind === 'all' ? 'item' : kind, id: null })}>
+          <FilePlus2 size={15} /> Новый тег
+        </Button>
+      </div>
 
-        <div className={styles.tagsBar}>
-          <div className={styles.tagsSearch} role="search" aria-label="Поиск по тегам">
-            <Search size={15} className="faint" />
-            <Input
-              autoFocus
-              value={q}
-              placeholder="Тег или что в нём: plantoil, оливковое масло, ingots/steel…"
-              onChange={(e) => {
-                setQ(e.target.value);
-                setAll(false);
-              }}
-            />
-          </div>
-          <Segmented
-            value={kind}
-            onChange={(v) => set({ kind: v })}
-            options={[{ value: null, label: 'Все' }, ...TAG_KINDS.map((k) => ({ value: k, label: TAG_KIND_LABEL[k] }))]}
+      {pack && (
+        <p className={cx(styles.tagsPack, 'small')}>
+          Правка пойдёт в датапак <b>{pack.name}</b>.{' '}
+          <button className={styles.link} onClick={() => set({ pack: null })}>
+            Выбирать при сохранении
+          </button>
+        </p>
+      )}
+
+      <div className={styles.tagsBar}>
+        <div className={styles.tagsSearch} role="search" aria-label="Поиск по тегам">
+          <Search size={15} className="faint" />
+          <Input
+            autoFocus
+            value={q}
+            placeholder="Тег или что в нём: plantoil, оливковое масло, ingots/steel…"
+            onChange={(e) => {
+              setQ(e.target.value);
+              setAll(false);
+            }}
           />
         </div>
+        <Segmented
+          value={kind}
+          onChange={(v) => set({ kind: v })}
+          options={[{ value: null, label: 'Все' }, ...TAG_KINDS.map((k) => ({ value: k, label: TAG_KIND_LABEL[k] }))]}
+        />
+      </div>
 
-        {!cat ? (
-          <p className="faint">Загружаю теги…</p>
-        ) : cat.list.length === 0 ? (
-          <p className="empty">
-            Тегов нет: пересоберите библиотеку (<code>npm run mods</code>) — она создаёт <code>public/tags.json</code>.
-          </p>
-        ) : (
-          <div className={styles.tagsBody}>
-            <aside className={styles.tagsList}>
-              <div className={cx(styles.tagsCount, 'faint', 'small')}>
-                Найдено {found.length}
-                {found.length > shown.length && `, показано ${shown.length}`}
+      {!cat ? (
+        <p className="faint">Загружаю теги…</p>
+      ) : cat.list.length === 0 ? (
+        <p className="empty">
+          Тегов нет: пересоберите библиотеку (<code>npm run mods</code>) — она создаёт <code>public/tags.json</code>.
+        </p>
+      ) : (
+        <div className={styles.tagsBody}>
+          <aside className={styles.tagsList}>
+            <div className={cx(styles.tagsCount, 'faint', 'small')}>
+              Найдено {found.length}
+              {found.length > shown.length && `, показано ${shown.length}`}
+            </div>
+            <ul>
+              {shown.map((t) => (
+                <li key={t.key}>
+                  <button className={cx(t.key === selectedKey && styles.active)} onClick={() => set({ tag: t.key })}>
+                    <code>{t.i}</code>
+                    <span className="faint small">
+                      <KindLabel kind={t.k} /> {directMembers(t).length}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {found.length > shown.length && (
+              <Button variant="ghost" size="sm" onClick={() => setAll(true)}>
+                Показать все {found.length}
+              </Button>
+            )}
+          </aside>
+
+          <section className={styles.tagsDetail}>
+            {tag ? (
+              <TagDetail
+                key={tag.key}
+                tag={tag}
+                onEdit={() => setEditing({ kind: tag.k, id: tag.i })}
+                hasEntry={Boolean(pack?.entries.some((e) => e.path === tagPath(tag.k, tag.i)))}
+                onOpenTag={(id, k = tag.k) => set({ tag: tagKey(k, id) })}
+              />
+            ) : (
+              <div className={cx(styles.tagsHint, 'faint')}>
+                Выберите тег слева. Например <code>c:plantoil</code> — масла для биодизеля, или найдите тег по предмету.
               </div>
-              <ul>
-                {shown.map((t) => (
-                  <li key={t.key}>
-                    <button className={cx(t.key === selectedKey && styles.active)} onClick={() => set({ tag: t.key })}>
-                      <code>{t.i}</code>
-                      <span className="faint small">
-                        <KindLabel kind={t.k} /> {directMembers(t).length}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              {found.length > shown.length && (
-                <Button variant="ghost" size="sm" onClick={() => setAll(true)}>
-                  Показать все {found.length}
-                </Button>
-              )}
-            </aside>
+            )}
+          </section>
+        </div>
+      )}
 
-            <section className={styles.tagsDetail}>
-              {tag ? (
-                <TagDetail
-                  key={tag.key}
-                  tag={tag}
-                  onEdit={() => setEditing({ kind: tag.k, id: tag.i })}
-                  hasEntry={Boolean(pack?.entries.some((e) => e.path === tagPath(tag.k, tag.i)))}
-                  onOpenTag={(id, k = tag.k) => set({ tag: tagKey(k, id) })}
-                />
-              ) : (
-                <div className={cx(styles.tagsHint, 'faint')}>
-                  Выберите тег слева. Например <code>c:plantoil</code> — масла для биодизеля, или найдите тег по
-                  предмету.
-                </div>
-              )}
-            </section>
-          </div>
-        )}
-
-        {editing && cat && (
-          <TagEditor
-            key={`${editing.kind}|${editing.id}`}
-            cat={cat}
-            kind={editing.kind}
-            tagId={editing.id}
-            existing={existingEntry?.content}
-            saveLabel={pack ? `В датапак «${pack.name}»` : 'Выбрать датапак…'}
-            onSave={save}
-            onClose={() => setEditing(null)}
-          />
-        )}
-        {pending && <PackPicker make={pending} onClose={() => setPending(null)} />}
-      </main>
-    </PackSection>
+      {editing && cat && (
+        <TagEditor
+          key={`${editing.kind}|${editing.id}`}
+          cat={cat}
+          kind={editing.kind}
+          tagId={editing.id}
+          existing={existingEntry?.content}
+          saveLabel={pack ? `В датапак «${pack.name}»` : 'Выбрать датапак…'}
+          onSave={save}
+          onClose={() => setEditing(null)}
+        />
+      )}
+      {pending && <PackPicker make={pending} onClose={() => setPending(null)} />}
+    </Container>
   );
+
+  return embedded ? page : <PackSection>{page}</PackSection>;
 }
 
 function TagDetail({

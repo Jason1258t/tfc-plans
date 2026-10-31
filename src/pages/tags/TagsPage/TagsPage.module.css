@@ -9,6 +9,10 @@
   box-sizing: border-box;
 }
 
+.embedded {
+  padding: 0;
+}
+
 .tagsHead {
   display: flex;
   align-items: flex-start;

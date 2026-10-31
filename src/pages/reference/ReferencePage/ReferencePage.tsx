@@ -5,6 +5,9 @@ import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { BotanyTab } from '../tabs/BotanyTab';
 import { DishesTab } from '../tabs/DishesTab';
 import { MealsTab } from '../tabs/MealsTab';
+import { ItemCatalogTab } from '../tabs/ItemCatalogTab';
+import { RecipesPage } from '@/pages/recipes';
+import { TagsPage } from '@/pages/tags';
 import { mealsByItem, useMeals, type Meals } from '@/lib/meals';
 import { RecipeStatusBadge, useTags, ItemIcon, itemName, useItems, type ItemIndex } from '@/shared/pack-data';
 import { LiquidFuelTab } from '../tabs/LiquidFuelTab';
@@ -38,14 +41,14 @@ import shell from '../ReferenceShell.module.css';
 import styles from './ReferencePage.module.css';
 import nutrition from '../NutritionTable.module.css';
 
-type Tab = 'world' | 'fuel' | 'metals' | 'food' | 'botany' | 'power' | 'multiblocks' | 'guides';
+type Tab = 'world' | 'items' | 'food' | 'power' | 'multiblocks' | 'guides';
 type WorldSub = 'ores' | 'geology' | 'map';
+type ItemsSub = 'items' | 'recipes' | 'tags' | 'metals' | 'fuel' | 'liquid';
+type FoodSub = 'food' | 'meals' | 'dishes' | BotanySub;
 const TABS: { id: Tab; label: string }[] = [
   { id: 'world', label: 'Мир и ресурсы' },
-  { id: 'fuel', label: 'Топливо' },
-  { id: 'metals', label: 'Металлы' },
-  { id: 'food', label: 'Еда' },
-  { id: 'botany', label: 'Ботаника' },
+  { id: 'items', label: 'Предметы и рецепты' },
+  { id: 'food', label: 'Еда и сельское хозяйство' },
   { id: 'power', label: 'Электричество' },
   { id: 'multiblocks', label: 'Мультиблоки' },
   { id: 'guides', label: 'Гайды' },
@@ -54,6 +57,24 @@ const WORLD_SUBS: { id: WorldSub; label: string }[] = [
   { id: 'ores', label: 'Руды' },
   { id: 'geology', label: 'Геология' },
   { id: 'map', label: 'Карта мира' },
+];
+const ITEM_SUBS: { id: ItemsSub; label: string }[] = [
+  { id: 'items', label: 'Предметы' },
+  { id: 'recipes', label: 'Рецепты' },
+  { id: 'tags', label: 'Теги' },
+  { id: 'metals', label: 'Металлы' },
+  { id: 'fuel', label: 'Твёрдое топливо' },
+  { id: 'liquid', label: 'Жидкое топливо' },
+];
+const FOOD_SUBS: { id: FoodSub; label: string }[] = [
+  { id: 'food', label: 'Продукты' },
+  { id: 'meals', label: 'Сборные блюда' },
+  { id: 'dishes', label: 'Готовые блюда' },
+  { id: 'crop', label: 'Культуры' },
+  { id: 'bush', label: 'Кусты' },
+  { id: 'tree', label: 'Деревья' },
+  { id: 'plant', label: 'Растения' },
+  { id: 'greenhouse', label: 'Теплица' },
 ];
 
 /** Справочник по данным сборки: жилы руд, топливо, еда, температуры металлов */
@@ -76,11 +97,8 @@ export function ReferencePage() {
 
 function Reference() {
   const [params, setParams] = useSearchParams();
-  // tab=liquid — прежний адрес жидкого топлива, теперь это подраздел «Топлива»
-  const oldLiquid = params.get('tab') === 'liquid';
-  const tab = oldLiquid ? 'fuel' : ((TABS.find((t) => t.id === params.get('tab'))?.id ?? 'world') as Tab);
+  const tab = (TABS.find((t) => t.id === params.get('tab'))?.id ?? 'world') as Tab;
   const worldSub = WORLD_SUBS.find((s) => s.id === params.get('sub'))?.id ?? 'ores';
-  const liquid = oldLiquid || (tab === 'fuel' && params.get('sub') === 'liquid');
   const ref = useReference();
   const items = useItems();
   const meals = useMeals();
@@ -157,91 +175,146 @@ function Reference() {
             setParams(k === 'link' ? { tab: 'power' } : { tab: 'power', sub: k }, { replace: true })
           }
         />
-      ) : ref === undefined ? (
-        <div className="empty">Загружаю справочник…</div>
-      ) : ref === null ? (
-        <div className="empty">Справочник не собран — выполните npm run mods</div>
-      ) : tab === 'fuel' ? (
-        <SectionShell
-          navLabel="Разделы топлива"
-          nav={
-            <>
-              <button aria-pressed={!liquid} onClick={() => setParams({ tab: 'fuel' }, { replace: true })}>
-                <span>Твёрдое</span>
-                <span className="faint small">{ref.fuels.length}</span>
-              </button>
-              <button
-                aria-pressed={liquid}
-                onClick={() => setParams({ tab: 'fuel', sub: 'liquid' }, { replace: true })}
-              >
-                <span>Жидкое</span>
-                <span className="faint small">{ref.liquid?.families.length ?? ''}</span>
-              </button>
-            </>
-          }
-        >
-          <div className={shell.fuelMain}>
-            {!liquid ? (
-              <FuelTab fuels={ref.fuels} items={items} />
-            ) : ref.liquid ? (
-              <LiquidFuelTab families={ref.liquid.families} items={items} />
-            ) : (
-              <div className="empty">Справочник собран старой версией — выполните npm run mods</div>
-            )}
-          </div>
-        </SectionShell>
-      ) : tab === 'food' ? (
-        <SectionShell
-          navLabel="Разделы еды"
-          nav={
-            <>
-              <button
-                aria-pressed={params.get('sub') !== 'meals' && params.get('sub') !== 'dishes'}
-                onClick={() => setParams({ tab: 'food' }, { replace: true })}
-              >
-                <span>Продукты</span>
-                <span className="faint small">{ref.foods.length}</span>
-              </button>
-              <button
-                aria-pressed={params.get('sub') === 'meals'}
-                onClick={() => setParams({ tab: 'food', sub: 'meals' }, { replace: true })}
-              >
-                <span>Сборные блюда</span>
-                <span className="faint small">{mealCount || ''}</span>
-              </button>
-              <button
-                aria-pressed={params.get('sub') === 'dishes'}
-                onClick={() => setParams({ tab: 'food', sub: 'dishes' }, { replace: true })}
-              >
-                <span>Готовые блюда</span>
-              </button>
-            </>
-          }
-        >
-          <div className={shell.fuelMain}>
-            {params.get('sub') === 'meals' ? (
-              <MealsTab items={items} foods={ref.foods} initialQuery={params.get('q') ?? ''} />
-            ) : params.get('sub') === 'dishes' ? (
-              <DishesTab items={items} foods={ref.foods} />
-            ) : (
-              <FoodTab foods={ref.foods} items={items} meals={meals ?? null} />
-            )}
-          </div>
-        </SectionShell>
-      ) : tab === 'botany' ? (
-        <BotanyTab
-          foods={ref.foods}
-          sub={
-            (['crop', 'bush', 'tree', 'plant', 'greenhouse'] as const).find((k) => k === params.get('sub')) ?? 'crop'
-          }
-          onSub={(k: BotanySub) =>
-            setParams(k === 'crop' ? { tab: 'botany' } : { tab: 'botany', sub: k }, { replace: true })
-          }
+      ) : tab === 'items' ? (
+        <ItemsSection
+          ref_={ref}
+          items={items}
+          sub={ITEM_SUBS.find((s) => s.id === params.get('sub'))?.id ?? 'items'}
+          onSub={(sub) => setParams(sub === 'items' ? { tab: 'items' } : { tab: 'items', sub }, { replace: true })}
+          query={params.get('q') ?? ''}
+          selectedId={params.get('item')}
+          onQuery={(q) => {
+            const next = new URLSearchParams(params);
+            next.set('tab', 'items');
+            next.set('sub', 'items');
+            if (q) next.set('q', q);
+            else next.delete('q');
+            next.delete('item');
+            setParams(next, { replace: true });
+          }}
+          onSelect={(item) => {
+            const next = new URLSearchParams(params);
+            next.set('tab', 'items');
+            next.set('sub', 'items');
+            if (item) next.set('item', item);
+            else next.delete('item');
+            setParams(next, { replace: true });
+          }}
         />
-      ) : (
-        <MetalsTab ref_={ref} items={items} />
-      )}
+      ) : tab === 'food' ? (
+        <FoodSection
+          ref_={ref}
+          items={items}
+          meals={meals ?? null}
+          mealCount={mealCount}
+          sub={FOOD_SUBS.find((s) => s.id === params.get('sub'))?.id ?? 'food'}
+          onSub={(sub) => setParams(sub === 'food' ? { tab: 'food' } : { tab: 'food', sub }, { replace: true })}
+          query={params.get('q') ?? ''}
+        />
+      ) : null}
     </main>
+  );
+}
+
+function ItemsSection({
+  ref_,
+  items,
+  sub,
+  onSub,
+  query,
+  selectedId,
+  onQuery,
+  onSelect,
+}: {
+  ref_: Reference | null | undefined;
+  items: ItemIndex | null;
+  sub: ItemsSub;
+  onSub: (sub: ItemsSub) => void;
+  query: string;
+  selectedId: string | null;
+  onQuery: (query: string) => void;
+  onSelect: (id: string | null) => void;
+}) {
+  return (
+    <SectionShell
+      navLabel="Предметы и рецепты"
+      nav={ITEM_SUBS.map((s) => (
+        <button key={s.id} aria-pressed={sub === s.id} onClick={() => onSub(s.id)}>
+          <span>{s.label}</span>
+          {s.id === 'fuel' && ref_ && <span className="faint small">{ref_.fuels.length}</span>}
+          {s.id === 'liquid' && ref_?.liquid && <span className="faint small">{ref_.liquid.families.length}</span>}
+        </button>
+      ))}
+    >
+      <div className={shell.fuelMain}>
+        {sub === 'recipes' ? (
+          <RecipesPage embedded />
+        ) : sub === 'tags' ? (
+          <TagsPage embedded />
+        ) : sub === 'items' ? (
+          <ItemCatalogTab query={query} selectedId={selectedId} onQuery={onQuery} onSelect={onSelect} />
+        ) : ref_ === undefined ? (
+          <div className="empty">Загружаю справочник…</div>
+        ) : ref_ === null ? (
+          <div className="empty">Справочник не собран — выполните npm run mods</div>
+        ) : sub === 'metals' ? (
+          <MetalsTab ref_={ref_} items={items} />
+        ) : sub === 'fuel' ? (
+          <FuelTab fuels={ref_.fuels} items={items} />
+        ) : ref_.liquid ? (
+          <LiquidFuelTab families={ref_.liquid.families} items={items} />
+        ) : (
+          <div className="empty">Справочник собран старой версией — выполните npm run mods</div>
+        )}
+      </div>
+    </SectionShell>
+  );
+}
+
+function FoodSection({
+  ref_,
+  items,
+  meals,
+  mealCount,
+  sub,
+  onSub,
+  query,
+}: {
+  ref_: Reference | null | undefined;
+  items: ItemIndex | null;
+  meals: Meals | null;
+  mealCount: number;
+  sub: FoodSub;
+  onSub: (sub: FoodSub) => void;
+  query: string;
+}) {
+  return (
+    <SectionShell
+      navLabel="Еда и сельское хозяйство"
+      nav={FOOD_SUBS.map((s) => (
+        <button key={s.id} aria-pressed={sub === s.id} onClick={() => onSub(s.id)}>
+          <span>{s.label}</span>
+          {s.id === 'food' && ref_ && <span className="faint small">{ref_.foods.length}</span>}
+          {s.id === 'meals' && <span className="faint small">{mealCount || ''}</span>}
+        </button>
+      ))}
+    >
+      <div className={shell.fuelMain}>
+        {ref_ === undefined ? (
+          <div className="empty">Загружаю справочник…</div>
+        ) : ref_ === null ? (
+          <div className="empty">Справочник не собран — выполните npm run mods</div>
+        ) : sub === 'meals' ? (
+          <MealsTab items={items} foods={ref_.foods} initialQuery={query} />
+        ) : sub === 'dishes' ? (
+          <DishesTab items={items} foods={ref_.foods} />
+        ) : sub === 'food' ? (
+          <FoodTab foods={ref_.foods} items={items} meals={meals} />
+        ) : (
+          <BotanyTab foods={ref_.foods} sub={sub} onSub={onSub} framed={false} />
+        )}
+      </div>
+    </SectionShell>
   );
 }
 

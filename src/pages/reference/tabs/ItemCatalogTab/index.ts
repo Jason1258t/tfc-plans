@@ -1,0 +1,1 @@
+export { ItemCatalogTab } from './ItemCatalogTab';

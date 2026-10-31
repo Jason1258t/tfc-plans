@@ -42,6 +42,14 @@ const ITEMS: NavigationItem[] = [
     group: 'game',
   },
   {
+    to: '/reference?tab=items&sub=recipes',
+    title: 'Предметы и рецепты',
+    description: 'Как получить предмет, где он используется и в какие теги входит.',
+    keywords: 'рецепты предметы теги получить использование крафт',
+    icon: BookOpen,
+    group: 'game',
+  },
+  {
     to: '/reference?tab=guides',
     title: 'Гайды',
     description: 'Пошаговые статьи, схемы и калькуляторы для механизмов сборки.',
