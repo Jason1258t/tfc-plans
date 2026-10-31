@@ -304,7 +304,7 @@ attachments stay in Firestore group «Фиксы» (their copies on the server n
 
 `AGENTS.md` (root + `scripts/`, `scripts/mcp/`, `server/`, `tools/`) is the source of truth; every `CLAUDE.md` is
 `@AGENTS.md` + Claude-only notes (root). Skills stay in `.claude/skills/`, `.agents/skills` is a symlink for Codex and
-others. MCP signs writes with `TFC_AGENT_NICK` (default `Claude`). Per-agent setup — `docs/agents.md`. Checked: Claude
+others. MCP signs writes with `TFC_AGENT_NICK`, else the detected harness (`Claude`, `Kimi`…), else `Агент?` (dev #184). Per-agent setup — `docs/agents.md`. Checked: Claude
 Code loads nested `@AGENTS.md` imports; MCP server starts and reads the nick from env. 2026-10-24: DeepSeek Harness
 (DSH) set up and checked — both MCP servers (`tfc-pack`, `tfc-plans-dev`) connected through the DSH profile patch, a
 Firestore read and `git_state` verified, tools appear as `mcp__tfc-pack__*` (`docs/agents.md`). 2026-10-25: OpenCode

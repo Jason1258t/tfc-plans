@@ -4,12 +4,12 @@
  * 50 тыс. чтений в сутки на всех.
  */
 import fs from 'node:fs';
-import os from 'node:os';
 import { DOCS, fromValue, toValue, token } from '../firestore-rest.mjs';
+import { envValue } from './env.mjs';
 
 // Ключ сервисного аккаунта только для MCP (TFC_FIRESTORE_KEY в .mcp.json, пример — scripts/mcp/firestore-key.example.md):
 // его токен не отзывает firebase CLI. Нет файла — как раньше, от имени firebase login.
-const KEY = process.env.TFC_FIRESTORE_KEY?.replace(/^~(?=\/|$)/, os.homedir());
+const KEY = envValue('TFC_FIRESTORE_KEY');
 if (KEY && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
   if (fs.existsSync(KEY)) process.env.GOOGLE_APPLICATION_CREDENTIALS = KEY;
   else console.error(`[tfc-pack] ключа ${KEY} нет — Firestore от имени firebase login`);

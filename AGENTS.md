@@ -67,7 +67,7 @@ comments, commit messages, guides, MCP tool output. Keep Russian UI labels verba
 - **Work log — dev tracker on the pack server** (site page «Разработка» `/dev`, MCP `tfc-plans-dev` `dev_*`; not
   Firestore — zero reads, [docs/plans/dev-tracker.md](docs/plans/dev-tracker.md)): at the start find the task
   (`dev_list query=…`) or create one (`dev_create`, kind `fix` for fixes), set `doing` + assignee = **your own agent
-  name** (= `TFC_AGENT_NICK`; never `Claude` unless you are Claude — `Codex`, `Gemini`, `Cursor`, `DeepSeek`…; see
+  name** (= `TFC_AGENT_NICK`, or just `assignee: "me"`; never `Claude` unless you are Claude — `Codex`, `Gemini`, `Cursor`, `DeepSeek`…; see
   [docs/agents.md](docs/agents.md)) + `branch`; progress — `dev_note`; at the end — `dev_update status=done
 report=…`: a short Russian report — what changed for players, what was checked, what wasn't. Plan docs —
   `dev_doc_put`. A task already `doing` under another agent — don't take it, ask the user. Found a separate problem
@@ -176,7 +176,7 @@ overlay=<dir>` (production dedicated server with full KubeJS, no game needed) �
 `npm run tfc -- admin propose <overlay dir> --note …` (agent key in
 the `tfc` app settings — `%APPDATA%\tfc\config.json` on Windows, `~/.config/tfc/config.json` on macOS/Linux, see
 `cli/lib/config.mjs`; base on the current snapshot, `tfc admin updates` to see status); the host pulls and approves. Site
-tasks/plans/guides/datapacks → its write tools (signed with `TFC_AGENT_NICK`, default `Claude`, with `baseRevision`), not ad-hoc
+tasks/plans/guides/datapacks → its write tools (signed with `TFC_AGENT_NICK` or the detected agent, with `baseRevision`), not ad-hoc
 scripts. Site-content tools cost Firestore reads — don't loop them. Tool reference — [docs/mcp.md](docs/mcp.md).
 
 If a needed tool is missing or answers wrongly and you had to fall back to grep/unzip/a script — finish the current

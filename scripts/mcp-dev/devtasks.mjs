@@ -2,12 +2,12 @@
  * Задачи разработки для tfc-plans-dev: журнал работ агентов на сервере сборки (SQLite, /dev/… — см.
  * server/pack-server/lib/dev.mjs, docs/plans/dev-tracker.md). Ни одного чтения Firestore.
  * Адрес и ключ — как у npm run pack:fetch: TFC_PACK_URL / TFC_PACK_TOKEN, .env.local или вход в программу tfc.
- * Подпись записей — TFC_AGENT_NICK (по умолчанию Claude).
+ * Подпись записей — TFC_AGENT_NICK, иначе имя запустившего агента (scripts/mcp/env.mjs).
  */
+import { NICK } from '../mcp/env.mjs';
 import { packServer } from '../pack-fetch.mjs';
 import { taskFiles, devFileGet } from './files.mjs';
 
-const NICK = process.env.TFC_AGENT_NICK || 'Claude';
 const SITE = 'https://tfc-plans-fd2c.web.app/dev';
 
 const STATUS_RU = {
@@ -79,6 +79,8 @@ function fields(a) {
   const f = {};
   for (const k of ['title', 'body', 'kind', 'area', 'status', 'priority', 'assignee', 'branch', 'checklist', 'note'])
     if (a[k] !== undefined) f[k] = a[k];
+  // «me» — сам агент: так он не подпишет задачу чужим ником по привычке
+  if (f.assignee === 'me') f.assignee = NICK;
   return f;
 }
 
@@ -86,7 +88,7 @@ async function devList(a) {
   const p = new URLSearchParams();
   const status = a.status ?? (a.all ? null : OPEN.join(','));
   if (status) p.set('status', status);
-  for (const k of ['kind', 'area', 'assignee']) if (a[k]) p.set(k, a[k]);
+  for (const k of ['kind', 'area', 'assignee']) if (a[k]) p.set(k, a[k] === 'me' && k === 'assignee' ? NICK : a[k]);
   if (a.query) p.set('q', a.query);
   const { tasks } = await api('GET', `tasks?${p}`);
   // Сначала в работе и важные, потом по свежести
@@ -162,7 +164,7 @@ const TASK_PROPS = {
   area: { type: 'string', enum: ['site', 'mcp', 'addon', 'server', 'pack', 'app', 'agents', '-'], description: 'area' },
   status: { type: 'string', enum: Object.keys(STATUS_RU), description: 'status (default todo)' },
   priority: int('0 low … 3 urgent (default 1)'),
-  assignee: str('agent/person nick; "-" clears'),
+  assignee: str(`agent/person nick; "me" = you (${NICK}); "-" clears`),
   branch: str('git branch, e.g. feat/dev-tracker; "-" clears'),
   checklist: { type: 'array', items: {}, description: 'strings or { text, done }; replaces the whole checklist' },
   note: str('work-log entry added with this change'),
@@ -191,7 +193,7 @@ export const DEV_TOOLS = [
         status: str('comma list of backlog,todo,doing,review,done,dropped'),
         kind: str('comma list of kinds'),
         area: str('comma list of areas'),
-        assignee: str('nick or "-"'),
+        assignee: str(`nick, "me" (${NICK}) or "-"`),
         all: { type: 'boolean', description: 'all statuses incl. done' },
         limit: int('default 30'),
         offset: int('start offset'),
@@ -212,7 +214,7 @@ export const DEV_TOOLS = [
   },
   {
     name: 'dev_create',
-    description: `Write: new dev task signed ${NICK}. Start of work — status "doing", assignee = your nick, branch.`,
+    description: `Write: new dev task signed ${NICK}. Start of work — status "doing", assignee "me" (= ${NICK}), branch.`,
     inputSchema: { type: 'object', properties: TASK_PROPS, required: ['title'] },
     handler: devCreate,
   },
