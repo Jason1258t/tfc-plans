@@ -42,6 +42,8 @@ export interface Painted {
   /** Номер в палитре + 1 у каждой клетки; 0 — блок не ставится */
   cells: Uint32Array;
   palette: BlockState[];
+  /** Материал копиката у клетки (форма c*): палитра держит блок-копикат, а это — блок роли для nbt */
+  mats: (string | null)[];
 }
 
 export const DEGREE = [
@@ -156,8 +158,17 @@ export function paint({ grid: g, ox, oz }: Layout, spec: BuildingSpec, has: Has)
     const weights = mixWeights(src.fill, degree);
     let ids = src.fill.blocks.slice(0, weights.length).map((b) => b.id);
     let w = weights;
-    let fs = shape;
-    const fam = FAMILY_OF_SHAPE[shape];
+    // Плавные скаты: ступени и плиты крыши становятся копикатами — материал целый, семейство не нужно
+    const smooth =
+      spec.details.trim?.slopes && (r === ROLE.roof || r === ROLE.eave || r === ROLE.verge)
+        ? shape === SHAPE.stairs
+          ? SHAPE.cslope
+          : shape === SHAPE.slab
+            ? SHAPE.cslopelayer
+            : 0
+        : 0;
+    let fs = smooth || shape;
+    const fam = smooth ? undefined : FAMILY_OF_SHAPE[shape];
     if (fam && fam !== 'full') {
       // Только блоки, у которых есть такая форма; нет ни одного — у родителя; нет и там — целый блок
       const pick = (list: string[], ws: number[]) => {
@@ -258,6 +269,7 @@ export function paint({ grid: g, ox, oz }: Layout, spec: BuildingSpec, has: Has)
   const palette: BlockState[] = [];
   const keys = new Map<string, number>();
   const cells = new Uint32Array(n);
+  const mats: (string | null)[] = new Array(n).fill(null);
   const finalAt = (x: number, y: number, z: number) => (g.in(x, y, z) ? final[g.idx(x, y, z)] : 0);
   const stairsAt = (x: number, y: number, z: number) => finalAt(x, y, z) === SHAPE.stairs;
   for (let i = 0; i < n; i++) {
@@ -269,9 +281,32 @@ export function paint({ grid: g, ox, oz }: Layout, spec: BuildingSpec, has: Has)
     const o = g.orient[i];
     let props: Record<string, string> | undefined;
     const fs = final[i];
-    if (fs === SHAPE.stairs) {
+    // Копикаты: в палитру идёт блок-копикат с его состоянием, выбранный блок роли — материалом в nbt клетки
+    let copycat: string | null = null;
+    if (fs === SHAPE.cslope || fs === SHAPE.cslopelayer) {
+      copycat = fs === SHAPE.cslope ? 'copycats:copycat_slope' : 'copycats:copycat_slope_layer';
+      props = { facing: DIRS[facingOf(o)], half: isTop(o) ? 'top' : 'bottom' };
+      if (fs === SHAPE.cslopelayer) props.layers = '2';
+    } else if (fs === SHAPE.cbeam) {
+      copycat = 'copycats:copycat_beam';
+      props = { axis: AXES[axisOf(o)] };
+    } else if (fs === SHAPE.cpanel) {
+      copycat = 'create:copycat_panel';
+      props = { facing: DIRS[facingOf(o)] };
+    } else if (fs === SHAPE.cpane) {
+      copycat = 'copycats:copycat_pane';
+      props = {};
+      for (let s = 0; s < 4; s++) {
+        const f = finalAt(x + DX[s], y, z + DZ[s]);
+        props[DIRS[s]] =
+          f === SHAPE.full || f === SHAPE.pane || f === SHAPE.cpane || f === SHAPE.stairs ? 'true' : 'false';
+      }
+    }
+    const name = copycat ?? id;
+    if (copycat) mats[i] = id;
+    if (!copycat && fs === SHAPE.stairs) {
       props = { facing: DIRS[facingOf(o)], half: isTop(o) ? 'top' : 'bottom', shape: stairShape(g, x, y, z, stairsAt) };
-    } else if (fs === SHAPE.slab) props = { type: isTop(o) ? 'top' : 'bottom' };
+    } else if (!copycat && fs === SHAPE.slab) props = { type: isTop(o) ? 'top' : 'bottom' };
     else if (fs === SHAPE.door)
       props = {
         facing: DIRS[facingOf(o)],
@@ -279,27 +314,27 @@ export function paint({ grid: g, ox, oz }: Layout, spec: BuildingSpec, has: Has)
         hinge: hingeRightOf(o) ? 'right' : 'left',
         open: 'false',
       };
-    else if (fs === SHAPE.pane || (fs === SHAPE.full && isPane(id))) {
+    else if (!copycat && (fs === SHAPE.pane || (fs === SHAPE.full && isPane(id)))) {
       props = {};
       for (let s = 0; s < 4; s++) {
         const f = finalAt(x + DX[s], y, z + DZ[s]);
         props[DIRS[s]] = f === SHAPE.full || f === SHAPE.pane || f === SHAPE.stairs ? 'true' : 'false';
       }
-    } else if (fs === SHAPE.full && hasAxis(id)) props = { axis: AXES[axisOf(o)] };
+    } else if (!copycat && fs === SHAPE.full && hasAxis(id)) props = { axis: AXES[axisOf(o)] };
     const key = props
-      ? `${id}|${Object.entries(props)
+      ? `${name}|${Object.entries(props)
           .map(([k, v]) => `${k}=${v}`)
           .join(',')}`
-      : id;
+      : name;
     let p = keys.get(key);
     if (p === undefined) {
       p = palette.length;
-      palette.push(props ? { Name: id, Properties: props } : { Name: id });
+      palette.push(props ? { Name: name, Properties: props } : { Name: name });
       keys.set(key, p);
     }
     cells[i] = p + 1;
   }
-  return { X: g.X, Y: g.Y, Z: g.Z, cells, palette };
+  return { X: g.X, Y: g.Y, Z: g.Z, cells, palette, mats };
 }
 
 /** Форма ступеней по соседям — как StairBlock.getStairsShape в 1.21.1 (проверено по исходникам NeoForge 21.1.251) */

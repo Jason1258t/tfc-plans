@@ -29,7 +29,12 @@ interface Props {
 export function RolesPanel({ spec, counts, items, has, colors, shown, onShow, onSelect, onChange }: Props) {
   const [open, setOpen] = useState<Role | null>('wall');
   // Роли с клетками и все, чьи блоки они берут (у фахверка клеток «стены» нет, но заполнение — её блоками)
-  const used = new Set<Role>(ROLE_ORDER.filter((r) => counts?.get(r) || (r === 'door' && spec.openings.door.w > 0)));
+  const used = new Set<Role>(
+    ROLE_ORDER.filter(
+      (r) =>
+        counts?.get(r) || (r === 'door' && spec.openings.door.w > 0) || (r === 'lattice' && spec.details.trim?.lattice),
+    ),
+  );
   for (const r of [...used]) for (let p = ROLE_PARENT[r]; p; p = ROLE_PARENT[p]) used.add(p);
   const roles = ROLE_ORDER.filter((r) => used.has(r));
   return (

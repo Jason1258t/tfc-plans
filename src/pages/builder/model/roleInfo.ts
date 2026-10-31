@@ -23,6 +23,7 @@ export const ROLE_INFO: Partial<Record<Role, { name: string; hint: string; need?
   floor: { name: 'Перекрытия', hint: 'полы этажей' },
   ceiling: { name: 'Потолок', hint: 'верхнее перекрытие (пол чердака)' },
   glass: { name: 'Окна', hint: 'стекло или стеклянная панель' },
+  lattice: { name: 'Переплёт', hint: 'решётка вместо стекла (отделка копикатами); без блоков — стекло' },
   door: { name: 'Дверь', hint: 'дверь (не дверь — будет проём)' },
 };
 
@@ -48,5 +49,6 @@ export const ROLE_ORDER: Role[] = [
   'floor',
   'ceiling',
   'glass',
+  'lattice',
   'door',
 ];
