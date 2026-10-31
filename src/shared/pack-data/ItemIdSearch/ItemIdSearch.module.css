@@ -22,8 +22,9 @@
   padding: 0;
   max-height: 52vh;
   overflow-y: auto;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius);
+  background: var(--surface);
 }
 
 .compact .results {
@@ -67,5 +68,5 @@
 
 /* Кнопка «скопировать» отметилась — зелёная */
 .copied {
-  color: var(--accent);
+  color: var(--success);
 }

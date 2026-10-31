@@ -1,6 +1,6 @@
 /* Карточка и её шапка; оформление принадлежит компонентам Card и CardHead. */
 .card {
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius-lg);
   background: var(--surface);
   padding: 14px;

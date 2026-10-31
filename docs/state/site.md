@@ -8,6 +8,13 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 - Full text rebranding also covers the README, CLI, workspace package descriptions, MCP/server descriptions and addon source metadata. Technical identifiers and historical Superpowers specs/plans intentionally retain their existing names; no addon jars were released for the metadata-only change.
 - Verified with Prettier, oxlint (zero errors), FSD and package boundary checks, TypeScript, a production build, and desktop/mobile light/dark browser captures of the tasks page. Favicon rendering was checked at 16, 24, 32 and 48 px; its outline follows the browser colour scheme.
 
+## Calm minimalist theme (2026-10-31, #178)
+
+- The calmer TFC Studio theme is applied site-wide: quieter surfaces and borders, restrained accents, consistent semantic status colours and a solid loading skeleton instead of the animated shimmer.
+- Green marks positive and active work states, including task completion and «в работе». Changed schematic blocks use soft green highlighting rather than copper, keeping replacements distinct from warnings and errors.
+- The shared 3D editor (`src/entities/schematic/ui/SchematicView3D/`) is unchanged. DOM, layout, routes and behaviour were not altered.
+- Verified with Prettier, oxlint (zero errors), TypeScript, FSD and package boundary checks, and a production build. Browser captures covered desktop/mobile and light/dark themes across the site; keyboard focus, task statuses and schematic replacement colours were also checked.
+
 ## Concrete washing templates (2026-10-27)
 
 - The recipe catalogue includes Create's 16 runtime-generated vanilla concrete washing recipes. The builder reads

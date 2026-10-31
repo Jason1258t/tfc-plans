@@ -9,14 +9,12 @@
   background: var(--surface);
   color: var(--text);
   outline: none;
-  transition:
-    border-color 0.12s,
-    box-shadow 0.12s;
+  transition: border-color 0.12s;
 }
 
 .input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: var(--focus);
+  box-shadow: none;
 }
 
 .input::placeholder {

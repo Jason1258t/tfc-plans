@@ -2,7 +2,7 @@
    Имя/id блока и стрелка — из SchematicsSection.module.css. */
 
 .favs {
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius);
   background: var(--surface);
   padding: 8px 12px;

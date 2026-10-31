@@ -210,7 +210,7 @@
 
 .legend li button.picked {
   background: var(--accent-soft);
-  box-shadow: inset 0 0 0 1px var(--accent);
+  box-shadow: none;
 }
 
 /* Телефон: материалы — под видом, а не сбоку; подсказки управления мышью не нужны */

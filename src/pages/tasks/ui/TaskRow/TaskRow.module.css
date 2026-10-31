@@ -15,8 +15,8 @@
 }
 
 .taskRow.selected {
-  background: var(--amethyst-soft);
-  box-shadow: inset 3px 0 0 var(--amethyst);
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .taskCheck {
@@ -44,8 +44,8 @@
 }
 
 .taskCheck.on {
-  border-color: var(--accent);
-  background: var(--accent);
+  border-color: var(--success);
+  background: var(--success);
   color: var(--accent-text);
 }
 
@@ -82,8 +82,8 @@
 
 /* Ярлык «в работе» */
 .doing {
-  color: var(--diamond);
-  background: color-mix(in srgb, var(--diamond) 12%, transparent);
+  color: var(--success);
+  background: var(--success-soft);
 }
 
 .taskMeta {
@@ -195,7 +195,7 @@
 }
 
 .copyBtn.on {
-  color: var(--accent);
+  color: var(--success);
 }
 
 @media (max-width: 560px) {

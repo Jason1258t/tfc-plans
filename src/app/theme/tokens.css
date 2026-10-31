@@ -1,45 +1,45 @@
-/*
- * Палитра — из Minecraft: камень/глубинный сланец для поверхностей,
- * трава/изумруд как акцент, лазурит/золото/редстоун для важности, аметист — агент Gemini.
- */
+/* Палитра TFC Studio: бумага и графит, медь для действий, чертёжный синий для информации. */
 :root {
-  --bg: #f4f3ef;
-  --surface: #ffffff;
-  --surface-2: #f0efea;
-  --surface-3: #e6e4dd;
-  --border: #dcd9d0;
-  --border-strong: #c4c0b4;
-  --text: #1f1d1a;
-  --text-2: #5c5850;
-  --text-3: #8b867b;
+  --bg: #f5f3ee;
+  --surface: #fcfbf8;
+  --surface-2: #efede7;
+  --surface-3: #e6e2da;
+  --border: #d9d4ca;
+  --border-strong: #bdb6aa;
+  --text: #27241f;
+  --text-2: #5e5951;
+  --text-3: #767066;
 
-  --accent: #4c8a2b; /* трава */
-  --accent-hover: #3f7523;
-  --accent-soft: #e3efd9;
+  --accent: #925735;
+  --accent-hover: #774329;
+  --accent-soft: #f0e2d8;
   --accent-text: #ffffff;
+  --focus: #356d8a;
 
-  --nutrient-grain: #d9a441;
-  --nutrient-fruit: #e2626b;
-  --nutrient-protein: #c7764c;
+  --nutrient-grain: #9a742e;
+  --nutrient-fruit: #a6535d;
+  --nutrient-protein: #9a6547;
 
-  --diamond: #1b9e98;
-  --amethyst: #8a4fc7;
-  --amethyst-soft: #f1e8fa;
-  --danger: #c43a2f; /* редстоун */
-  --danger-soft: #fbe5e2;
+  --diamond: #356d8a;
+  --amethyst: #68676c;
+  --amethyst-soft: #eae8e5;
+  --success: #4f7356;
+  --success-soft: #e4ece3;
+  --danger: #b5443a;
+  --danger-soft: #f5e3df;
 
-  --imp-0: #8f8b82; /* камень */
-  --imp-1: #2f6fc4; /* лазурит */
-  --imp-2: #d48c06; /* золото */
-  --imp-3: #d03a2e; /* редстоун */
+  --imp-0: #7b766e;
+  --imp-1: #426f97;
+  --imp-2: #9a6a1f;
+  --imp-3: #b5443a;
 
-  --shadow-sm: 0 1px 2px rgb(30 25 15 / 0.06);
-  --shadow-md: 0 4px 16px rgb(30 25 15 / 0.08), 0 1px 3px rgb(30 25 15 / 0.06);
-  --shadow-lg: 0 16px 48px rgb(30 25 15 / 0.18);
+  --shadow-sm: none;
+  --shadow-md: 0 8px 24px rgb(42 35 28 / 0.1);
+  --shadow-lg: 0 20px 56px rgb(42 35 28 / 0.16);
 
-  --radius: 10px;
-  --radius-sm: 6px;
-  --radius-lg: 14px;
+  --radius: 8px;
+  --radius-sm: 5px;
+  --radius-lg: 12px;
 
   --font: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
@@ -51,35 +51,42 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #18181a;
-    --surface: #212124;
-    --surface-2: #29292d;
-    --surface-3: #323237;
-    --border: #36363b;
-    --border-strong: #4a4a50;
-    --text: #ecebe8;
-    --text-2: #b0aea8;
-    --text-3: #7f7d78;
+    --bg: #1d1e1f;
+    --surface: #252627;
+    --surface-2: #2c2d2e;
+    --surface-3: #343536;
+    --border: #3b3c3d;
+    --border-strong: #555657;
+    --text: #ece9e3;
+    --text-2: #b7b2aa;
+    --text-3: #918c84;
 
-    --accent: #6cbf44;
-    --accent-hover: #7fd156;
-    --accent-soft: #24331c;
-    --accent-text: #0f1a09;
+    --accent: #ce966f;
+    --accent-hover: #deb08c;
+    --accent-soft: #3b3029;
+    --accent-text: #241812;
+    --focus: #83afc7;
 
-    --diamond: #4ad6cf;
-    --amethyst: #b07ef0;
-    --amethyst-soft: #2c2338;
-    --danger: #ef5b4f;
-    --danger-soft: #3a1f1c;
+    --nutrient-grain: #c7a669;
+    --nutrient-fruit: #cb8b94;
+    --nutrient-protein: #c18e70;
 
-    --imp-0: #8d8a84;
-    --imp-1: #5b9cf0;
-    --imp-2: #f2b233;
-    --imp-3: #f0594c;
+    --diamond: #83afc7;
+    --amethyst: #aaa6ac;
+    --amethyst-soft: #323033;
+    --success: #8faf92;
+    --success-soft: #29372c;
+    --danger: #d68176;
+    --danger-soft: #3d2927;
 
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
-    --shadow-md: 0 4px 16px rgb(0 0 0 / 0.35);
-    --shadow-lg: 0 16px 48px rgb(0 0 0 / 0.5);
+    --imp-0: #959087;
+    --imp-1: #83a9ca;
+    --imp-2: #c6a061;
+    --imp-3: #d68176;
+
+    --shadow-sm: none;
+    --shadow-md: 0 8px 24px rgb(0 0 0 / 0.28);
+    --shadow-lg: 0 20px 56px rgb(0 0 0 / 0.42);
 
     color-scheme: dark;
   }

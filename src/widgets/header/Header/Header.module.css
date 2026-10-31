@@ -8,9 +8,9 @@
   align-items: center;
   gap: 20px;
   padding: 0 16px;
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
   backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0;
 }
 
 .brand {
@@ -97,8 +97,8 @@
 
 .nav a[aria-current='page'],
 .nav a[data-active='true'] {
-  color: var(--text);
-  background: var(--surface-3);
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .offline {
@@ -174,5 +174,4 @@
   height: 7px;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 0 2px var(--bg);
 }

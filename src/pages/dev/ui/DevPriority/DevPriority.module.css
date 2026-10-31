@@ -5,7 +5,6 @@
   flex: none;
   border-radius: 50%;
   background: #4285d4;
-  box-shadow: 0 0 0 1px var(--border);
 }
 .dot[data-priority='1'] {
   background: var(--accent);

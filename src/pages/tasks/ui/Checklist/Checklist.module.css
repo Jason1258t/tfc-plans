@@ -2,8 +2,9 @@
   list-style: none;
   margin: 0 0 8px;
   padding: 0;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius);
+  background: var(--surface);
   overflow: hidden;
 }
 
@@ -41,8 +42,8 @@
 }
 
 .clCheck.on {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--success);
+  border-color: var(--success);
 }
 
 .clText {

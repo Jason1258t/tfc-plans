@@ -88,7 +88,7 @@
 }
 
 .kjsDiff .add {
-  color: var(--accent);
+  color: var(--success);
 }
 
 .kjsId {
@@ -98,7 +98,7 @@
 }
 
 .kjsOk {
-  color: var(--accent);
+  color: var(--success);
 }
 
 .kjsBad {

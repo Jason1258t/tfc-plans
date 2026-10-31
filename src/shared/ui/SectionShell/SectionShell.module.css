@@ -22,7 +22,7 @@
   flex-direction: column;
   gap: 2px;
   padding: 6px;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius);
   background: var(--surface);
   position: sticky;

@@ -85,9 +85,9 @@
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--amethyst) 35%, var(--border));
+  border: 0;
   border-radius: var(--radius);
-  background: linear-gradient(to bottom, var(--amethyst-soft), var(--surface) 80px);
+  background: var(--surface);
 }
 
 .aiIco {
@@ -218,7 +218,7 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius);
   background: var(--surface);
 }
@@ -237,7 +237,7 @@
 }
 
 .row.replaced {
-  background: color-mix(in srgb, var(--accent-soft) 60%, transparent);
+  background: color-mix(in srgb, var(--success-soft) 75%, transparent);
 }
 
 .src,
@@ -307,8 +307,8 @@
 
 /* Замена уводит блок в другой мод (minecraft → tfc) — подсвечиваем, чтобы одноимённые не путались */
 .modTag.modChanged {
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 40%, var(--border));
 }
 
 .agentToggle {

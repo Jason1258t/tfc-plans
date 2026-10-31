@@ -22,7 +22,7 @@
   stroke: var(--border);
 }
 .fill {
-  stroke: var(--accent);
+  stroke: var(--success);
 }
 .numbers {
   display: inline-flex;

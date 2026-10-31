@@ -1,7 +1,7 @@
 /* Таблица справочника. Переехала из pages/reference/ReferenceShared.css (.ref-table-wrap, .ref-table). */
 .wrap {
   overflow-x: auto;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius-lg);
   background: var(--surface);
 }

@@ -157,8 +157,9 @@
   gap: 8px;
   margin: 0;
   padding: 8px 10px 10px;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius);
+  background: var(--surface);
 }
 
 .group legend {
@@ -224,8 +225,9 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius);
+  background: var(--surface);
 }
 
 .role + .role {

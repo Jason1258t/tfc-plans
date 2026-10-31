@@ -67,7 +67,7 @@
   gap: 12px;
   align-items: flex-start;
   padding: 12px;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius);
   background: var(--surface);
   color: inherit;
@@ -75,19 +75,17 @@
   text-align: left;
   cursor: pointer;
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s,
+    background 0.15s,
     transform 0.15s;
 }
 
 .guideCard:hover {
-  border-color: var(--accent);
-  box-shadow: 0 2px 10px rgb(0 0 0 / 0.08);
+  background: var(--accent-soft);
   transform: translateY(-1px);
 }
 
 .guideCard:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -484,7 +482,7 @@
   flex-direction: column;
   gap: 6px;
   padding: 8px;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius-sm);
   background: var(--surface);
 }
@@ -635,7 +633,7 @@
   flex-direction: column;
   gap: 10px;
   padding: 12px;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius);
   background: var(--surface-2);
 }
@@ -651,7 +649,7 @@
   gap: 10px;
   margin: 12px 0;
   padding: 12px;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius-lg);
   background: var(--surface);
   min-width: 0;

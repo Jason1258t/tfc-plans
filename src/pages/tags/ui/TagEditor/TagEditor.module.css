@@ -40,8 +40,9 @@
   padding: 0;
   max-height: 340px;
   overflow: auto;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius);
+  background: var(--surface);
 }
 
 .tagList:empty {

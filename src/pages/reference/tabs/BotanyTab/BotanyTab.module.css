@@ -11,7 +11,7 @@
 .summary {
   margin: 10px 0 14px;
   padding: 12px 14px;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius);
   background: var(--surface);
 }
@@ -67,7 +67,7 @@
 
 .card {
   padding: 16px;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius-lg);
   background: var(--surface);
   display: flex;

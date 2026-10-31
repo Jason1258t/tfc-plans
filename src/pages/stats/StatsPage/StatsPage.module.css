@@ -51,7 +51,7 @@
 .tile,
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius-lg);
   padding: 12px 14px;
   min-width: 0;

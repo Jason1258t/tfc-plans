@@ -19,7 +19,8 @@
 }
 
 .search:focus-within {
-  border-color: var(--accent);
+  border-color: var(--focus);
+  box-shadow: none;
 }
 
 .search input {
@@ -48,7 +49,7 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius);
   background: var(--surface);
   overflow: hidden;

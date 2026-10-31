@@ -124,8 +124,8 @@
 }
 
 .doing {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .review {
@@ -133,7 +133,11 @@
   color: var(--amethyst);
 }
 
-.done,
+.done {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
 .dropped {
   color: var(--text-3);
 }

@@ -8,7 +8,7 @@
   --fresh-orange: color-mix(in srgb, var(--imp-3) 50%, var(--imp-2));
   --fresh-yellow: var(--imp-2);
   --fresh-gray: var(--imp-0);
-  --fresh-ok: var(--accent);
+  --fresh-ok: var(--success);
 }
 
 .meta {
@@ -50,7 +50,7 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius-lg);
   background: var(--surface);
   overflow: hidden;

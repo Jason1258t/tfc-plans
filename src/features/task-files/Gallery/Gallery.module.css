@@ -39,33 +39,27 @@
   display: block;
 }
 
-.gThumb:hover,
-.gThumb:focus-within {
+.gThumb:hover {
   border-color: var(--accent);
 }
 
+.gThumb:focus-within {
+  border-color: var(--focus);
+}
+
 .gOpen:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: -2px;
 }
 
 .gSkeleton {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, var(--surface-2), var(--surface-3), var(--surface-2));
-  background-size: 200% 100%;
-  animation: shimmer 1.2s infinite linear;
+  background: var(--surface-2);
 }
 
 .gSkeleton.failed {
-  animation: none;
   background: var(--danger-soft);
-}
-
-@keyframes shimmer {
-  to {
-    background-position: -200% 0;
-  }
 }
 
 .gThumb.uploading {
