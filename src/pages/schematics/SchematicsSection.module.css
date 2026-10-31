@@ -70,7 +70,7 @@
 
 /* стрелка в строке, где замена есть */
 .arrowAccent {
-  color: var(--accent);
+  color: var(--success);
 }
 
 /* Поиск. Раньше оформление приходило из глобального .search (TasksPage.css); теперь своё — иначе

@@ -237,7 +237,7 @@
 }
 
 .row.replaced {
-  background: color-mix(in srgb, var(--accent-soft) 60%, transparent);
+  background: color-mix(in srgb, var(--success-soft) 75%, transparent);
 }
 
 .src,
@@ -307,8 +307,8 @@
 
 /* Замена уводит блок в другой мод (minecraft → tfc) — подсвечиваем, чтобы одноимённые не путались */
 .modTag.modChanged {
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 40%, var(--border));
 }
 
 .agentToggle {

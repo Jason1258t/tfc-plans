@@ -195,7 +195,7 @@
 }
 
 .copyBtn.on {
-  color: var(--accent);
+  color: var(--success);
 }
 
 @media (max-width: 560px) {
