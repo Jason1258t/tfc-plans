@@ -17,8 +17,8 @@ interface Props {
 
 export function Header({ nick, onChangeNick }: Props) {
   const [searching, setSearching] = useState(false);
-  // Датапаки, рецепты и теги — один раздел с тремя вкладками
-  const inPacks = /^\/(datapacks|recipes|tags)\b/.test(useLocation().pathname);
+  // Рецепты и теги — справка; активный редактор датапаков — только на своей странице
+  const inPacks = /^\/datapacks\b/.test(useLocation().pathname);
   const updates = usePackUpdates();
   const [seen, setSeen] = useState(lastSeenUpdate);
   useEffect(() => {

@@ -11,8 +11,6 @@ import { VisitTracker } from '@/components/VisitTracker';
 import { AddonPage, AddonsPage } from '@/pages/addons';
 import { DocPage } from '@/pages/doc';
 import { DatapacksPage } from '@/pages/datapacks';
-import { RecipesPage } from '@/pages/recipes';
-import { TagsPage } from '@/pages/tags';
 import { FilesPage } from '@/pages/files';
 import { ReferencePage } from '@/pages/reference';
 import { FreshnessPage, UpdatesPage } from '@/pages/updates';
@@ -22,7 +20,7 @@ import { StatsPage } from '@/pages/stats';
 import { DevPage } from '@/pages/dev';
 import { TasksPage } from '@/pages/tasks';
 import { HomePage } from '@/pages/home';
-import { legacyTasksTarget, mapReferenceTarget } from '@/shared/lib';
+import { legacyTasksTarget, mapReferenceTarget, recipesReferenceTarget, tagsReferenceTarget } from '@/shared/lib';
 
 /** Без параметров корень — главная; прежние ссылки на задачи и планы сохраняют весь query. */
 function RootPage() {
@@ -35,6 +33,12 @@ function RootPage() {
 function MapRedirect() {
   const { search } = useLocation();
   return <Navigate to={mapReferenceTarget(search)} replace />;
+}
+
+/** Справочные каталоги сохраняют прежние адреса совместимыми переходами. */
+function ReferenceRedirect({ target }: { target: (search: string) => string }) {
+  const { search } = useLocation();
+  return <Navigate to={target(search)} replace />;
 }
 
 /** Прежний адрес документа на всю страницу: /docs теперь — страница файлов */
@@ -72,8 +76,8 @@ export default function App() {
           <Route path="/schematics" element={<SchematicsPage />} />
           <Route path="/builder" element={<BuilderPage />} />
           <Route path="/datapacks" element={<DatapacksPage />} />
-          <Route path="/recipes" element={<RecipesPage />} />
-          <Route path="/tags" element={<TagsPage />} />
+          <Route path="/recipes" element={<ReferenceRedirect target={recipesReferenceTarget} />} />
+          <Route path="/tags" element={<ReferenceRedirect target={tagsReferenceTarget} />} />
           <Route path="/reference" element={<ReferencePage />} />
           <Route path="/addons" element={<AddonsPage />} />
           <Route path="/addons/:id" element={<AddonPage />} />
