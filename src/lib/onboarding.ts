@@ -31,7 +31,7 @@ const T = (key: string, label: string, guide: string | undefined, steps: TourSte
 
 export const WELCOME: Tour = T('welcome', 'Знакомство с сайтом', 'site-overview', [
   {
-    title: 'Добро пожаловать в TFC Планы',
+    title: 'Добро пожаловать в TFC Studio',
     body: 'Общий блокнот группы для сборки TerraFirmaCraft RealWorld: задачи, схемы Create, датапаки, справочник по сборке и карта мира. Пара коротких подсказок — их можно пропустить в любой момент.',
   },
   {
