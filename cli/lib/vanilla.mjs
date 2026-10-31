@@ -99,11 +99,11 @@ export function defaultMemoryGb() {
   return gb >= 15 ? 8 : gb >= 11 ? 6 : 4;
 }
 
-/** Установщик NeoForge в кеш программы, со сверкой sha256 из maven */
-async function fetchInstaller(nf) {
+/** Установщик NeoForge в кеш (по умолчанию — кеш программы), со сверкой sha256 из maven */
+export async function fetchInstaller(nf, dir = path.join(cacheDir(), 'neoforge')) {
   const name = `neoforge-${nf}-installer.jar`;
   const url = `${MAVEN}/${nf}/${name}`;
-  const file = path.join(cacheDir(), 'neoforge', name);
+  const file = path.join(dir, name);
   const get = async (u) => {
     let res;
     try {

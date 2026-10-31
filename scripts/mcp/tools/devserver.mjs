@@ -2,27 +2,15 @@
  * Инструменты MCP: прогон сервера разработки аддона (tools/<мод>/test-server.sh). Запускает gradlew runServer с
  * модами из libs/, ждёт готовности, шлёт команды через RCON и возвращает ответы и ошибки из лога. Долгий (минута-две)
  * — вызывать только напрямую, не в фоне. Работает на любой ОС (на Windows — через gradlew.bat) и не требует python.
+ * pack_devserver — стенд всей сборки (scripts/pack-stand.mjs): production-сервер со снимком и полным KubeJS.
  */
-import { execFile, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
-import net from 'node:net';
+import { isWin, javaHome, killTree, runRcon, sleep } from '../../mc-server.mjs';
+import { runStand } from '../../pack-stand.mjs';
 import { str, num } from '../fmt.mjs';
 import { TOOLS_DIR } from '../resources.mjs';
-
-const isWin = process.platform === 'win32';
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-/** JAVA_HOME аддона: ~/.gradle/local-tools/jdk21 (macOS — Contents/Home, Windows/Linux — корень) */
-function javaHome() {
-  const base = path.join(os.homedir(), '.gradle', 'local-tools', 'jdk21');
-  for (const p of [path.join(base, 'Contents', 'Home'), base]) {
-    const j = isWin ? path.join(p, 'bin', 'java.exe') : path.join(p, 'bin', 'java');
-    if (fs.existsSync(j)) return p;
-  }
-  return process.env.JAVA_HOME ?? '';
-}
 
 /** Папка аддона: путь или имя в tools/ (с -mod или без) */
 function resolveAddon(a) {
@@ -45,85 +33,6 @@ function rconParams(dir) {
     password = s.match(/rcon\.password\s*=\s*(\S+)/)?.[1] ?? password;
   }
   return { port, password };
-}
-
-/** Пакет RCON: [len][id][type][body][0][0] */
-function rconPacket(id, type, body) {
-  const data = Buffer.alloc(8 + Buffer.byteLength(body) + 2);
-  data.writeInt32LE(id, 0);
-  data.writeInt32LE(type, 4);
-  data.write(body, 8);
-  const out = Buffer.alloc(4 + data.length);
-  out.writeInt32LE(data.length, 0);
-  data.copy(out, 4);
-  return out;
-}
-
-/** RCON-клиент: авторизация, команды по очереди («sleep N» — пауза), ответы текстом */
-function runRcon(port, password, commands) {
-  return new Promise((resolve, reject) => {
-    const sock = net.connect({ host: '127.0.0.1', port });
-    const replies = [];
-    let buf = Buffer.alloc(0);
-    let authed = false;
-    let idx = 0;
-    let waiting = null;
-    const next = () => {
-      if (idx >= commands.length) {
-        sock.end();
-        resolve(replies.join('\n'));
-        return;
-      }
-      const c = commands[idx++];
-      if (/^sleep\s/.test(c)) {
-        sleep(Number(c.split(/\s+/)[1]) * 1000).then(next);
-        return;
-      }
-      waiting = c;
-      sock.write(rconPacket(2, 2, c));
-    };
-    sock.on('connect', () => sock.write(rconPacket(1, 3, password)));
-    sock.on('data', (d) => {
-      buf = Buffer.concat([buf, d]);
-      while (buf.length >= 4) {
-        const len = buf.readInt32LE(0);
-        if (buf.length < 4 + len) break;
-        const pkt = buf.slice(0, 4 + len);
-        buf = buf.slice(4 + len);
-        const body = pkt.slice(12, 4 + len - 2).toString('utf8');
-        if (!authed) {
-          authed = true;
-          next();
-        } else {
-          replies.push('> ' + waiting + '\n' + body);
-          waiting = null;
-          next();
-        }
-      }
-    });
-    sock.on('error', (e) => reject(e));
-    sock.setTimeout(10000, () => {
-      sock.destroy();
-      if (authed) resolve(replies.join('\n'));
-      else reject(new Error('RCON: сервер не ответил на авторизацию'));
-    });
-  });
-}
-
-/** Завершить дерево процессов gradlew */
-function killTree(pid) {
-  if (isWin) execFile('taskkill', ['/F', '/T', '/PID', String(pid)], () => {});
-  else {
-    try {
-      process.kill(-pid, 'SIGKILL');
-    } catch {
-      try {
-        process.kill(pid, 'SIGKILL');
-      } catch {
-        /* уже умер */
-      }
-    }
-  }
 }
 
 /** Простой глоб с одной «*» (cp-строки test-server.sh: create-1.21.1-*.jar) */
@@ -269,6 +178,24 @@ async function devServer(a) {
   return out;
 }
 
+/** Строки параметра: массив или текст по строкам */
+const lines = (v) =>
+  (Array.isArray(v) ? v : String(v ?? '').split(/[\r\n]+/)).map((x) => String(x).trim()).filter(Boolean);
+
+async function packDevServer(a) {
+  const r = await runStand({
+    commands: lines(a.commands),
+    mods: lines(a.mods),
+    exclude: lines(a.exclude),
+    include: lines(a.include),
+    overlay: a.overlay ? String(a.overlay) : null,
+    keep: Boolean(a.keep),
+    timeout: Math.max(60, Number(a.timeout ?? 900) | 0),
+    memory: a.memory ? String(a.memory) : undefined,
+  });
+  return r.text;
+}
+
 export const TOOLS = [
   {
     name: 'addon_devserver',
@@ -289,5 +216,37 @@ export const TOOLS = [
       required: ['addon'],
     },
     handler: devServer,
+  },
+  {
+    name: 'pack_devserver',
+    description:
+      'Run the whole pack on a production NeoForge dedicated server (scripts/pack-stand.mjs, stand in ~/.cache/tfc-plans/stand): current snapshot mods minus client-only ones, config, full KubeJS, flat world; RCON commands, then a summary — KubeJS script counts and errors, deduplicated latest.log errors, crash report. For checking KubeJS/datapack/addon changes against the full pack without the game. Slow (3–6 min, first run also installs NeoForge) — call directly only. Needs npm run pack:fetch.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        commands: {
+          type: 'array',
+          items: { type: 'string' },
+          description:
+            'RCON commands once the server is up ("sleep N" — pause, seconds), e.g. "reload", "kubejs reload server_scripts"',
+        },
+        mods: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'own jar paths; replace pack jars with the same modId',
+        },
+        overlay: str('folder copied over the run dir (kubejs/…, config/… — like a tfc admin propose overlay)'),
+        exclude: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'more mods to drop: modId or file name part',
+        },
+        include: { type: 'array', items: { type: 'string' }, description: 'keep these even if listed as client-only' },
+        keep: { type: 'boolean', description: 'keep world/ from the previous run' },
+        memory: str('-Xmx (6G)'),
+        timeout: num('max seconds to boot (900)'),
+      },
+    },
+    handler: packDevServer,
   },
 ];

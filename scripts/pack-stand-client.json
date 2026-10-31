@@ -1,0 +1,14 @@
+{
+  "_": "Клиентские моды, которых нет на выделенном сервере сборки (стенд pack-stand.mjs). modId → почему. Моды Fabric с environment=client и всё, что обязательно зависит от исключённых, отбрасываются сами — сюда только то, что так не видно.",
+  "sodium": "рендер",
+  "sodium_extra": "рендер (Sodium)",
+  "reeses_sodium_options": "настройки Sodium",
+  "iris": "шейдеры",
+  "euphoria_patcher": "шейдеры (Iris)",
+  "voxy": "LoD-рендер, Fabric через Connector; environment=*",
+  "immediatelyfast": "рендер",
+  "dynamic_fps": "FPS клиента",
+  "ponderforkc": "Ponder для Kaleidoscope Cookery — главный класс клиентский",
+  "opticores": "оптимизация клиента — главный класс клиентский",
+  "imblocker": "метод ввода клиента — главный класс клиентский"
+}
