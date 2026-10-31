@@ -12,6 +12,11 @@
   cursor: default;
 }
 
+.badge[data-state='sending'] {
+  color: var(--diamond);
+  background: color-mix(in srgb, var(--diamond) 10%, var(--surface));
+}
+
 .badge[data-state='error'],
 .badge[data-state='offline'] {
   color: var(--danger);
