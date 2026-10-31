@@ -19,6 +19,10 @@ site work log.
 `.agents/skills` is a git symlink: on Windows it needs `git config core.symlinks true` (Developer Mode), otherwise it
 checks out as a text file — then point the agent at `.claude/skills` directly.
 
+Firebase auth for scripts and MCP (`scripts/firestore-rest.mjs`, without a service key) loads `firebase-tools` from
+the real `firebase` on `PATH`, then `npm root -g`, then the usual prefixes (`/opt/homebrew`, `/usr/local`). If the
+harness's npm prefix is unrelated (Kimi Work), that is enough; otherwise set `TFC_FIREBASE_TOOLS=<firebase-tools dir>`.
+
 ## MCP `tfc-pack` for any agent
 
 The server is one command: `node <repo>/scripts/mcp/server.mjs`. Environment:

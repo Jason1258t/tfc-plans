@@ -82,6 +82,60 @@ async function serviceAccountToken(file) {
   return { value: access_token, until: Date.now() + (expires_in ?? 3600) * 1000 - 60_000 };
 }
 
+/**
+ * Каталог установленного firebase-tools. `npm root -g` бывает чужим (в Kimi Work — несуществующий префикс), поэтому
+ * по порядку: TFC_FIREBASE_TOOLS (каталог пакета), реальный `firebase` из PATH, `npm root -g`, обычные префиксы.
+ */
+export function firebaseToolsDir() {
+  const ok = (dir) => dir && fs.existsSync(path.join(dir, 'lib/auth.js'));
+  const tried = [];
+  const check = (dir) => {
+    if (!dir) return null;
+    tried.push(dir);
+    return ok(dir) ? dir : null;
+  };
+  if (process.env.TFC_FIREBASE_TOOLS) {
+    if (check(process.env.TFC_FIREBASE_TOOLS)) return process.env.TFC_FIREBASE_TOOLS;
+    throw new Error(`TFC_FIREBASE_TOOLS=${process.env.TFC_FIREBASE_TOOLS}: нет lib/auth.js`);
+  }
+  const win = process.platform === 'win32';
+  for (const bin of (process.env.PATH ?? '').split(path.delimiter)) {
+    for (const name of win ? ['firebase.cmd', 'firebase'] : ['firebase']) {
+      const file = path.join(bin, name);
+      if (!bin || !fs.existsSync(file)) continue;
+      // Симлинк (Homebrew, fnm, npm на Unix) ведёт внутрь пакета: …/firebase-tools/lib/bin/firebase.js
+      let dir = path.dirname(fs.realpathSync(file));
+      for (let i = 0; i < 4 && dir !== path.dirname(dir); i++, dir = path.dirname(dir))
+        if (path.basename(dir) === 'firebase-tools' && check(dir)) return dir;
+      // Шим (Windows firebase.cmd) лежит в префиксе npm рядом с node_modules
+      const prefix = path.dirname(file);
+      for (const d of [path.join(prefix, 'node_modules'), path.join(prefix, '../lib/node_modules')])
+        if (check(path.join(d, 'firebase-tools'))) return path.join(d, 'firebase-tools');
+    }
+  }
+  try {
+    // На Windows npm — это npm.cmd: без shell execFile его не находит
+    const root = execFileSync('npm', ['root', '-g'], {
+      encoding: 'utf8',
+      shell: win,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    if (check(path.join(root.trim(), 'firebase-tools'))) return path.join(root.trim(), 'firebase-tools');
+  } catch {
+    // npm нет в PATH — смотрим обычные места ниже
+  }
+  for (const d of ['/opt/homebrew/lib/node_modules', '/usr/local/lib/node_modules', '/usr/lib/node_modules'])
+    if (check(path.join(d, 'firebase-tools'))) return path.join(d, 'firebase-tools');
+  throw new Error(
+    `Не найден firebase-tools (искал: ${tried.join(', ') || 'нигде'}). Установи firebase CLI или задай TFC_FIREBASE_TOOLS`,
+  );
+}
+
+/** Модуль авторизации firebase CLI (`firebase login`) — getGlobalDefaultAccount, getAccessToken */
+export function firebaseAuth() {
+  return createRequire(import.meta.url)(path.join(firebaseToolsDir(), 'lib/auth'));
+}
+
 let cached = null;
 /** fresh — не брать токен сервисного ключа из кеша (прежний отвергнут Firestore) */
 export async function token({ fresh = false } = {}) {
@@ -90,10 +144,7 @@ export async function token({ fresh = false } = {}) {
     if (fresh || !cached || cached.until < Date.now()) cached = await serviceAccountToken(keyFile);
     return cached.value;
   }
-  const require = createRequire(import.meta.url);
-  // На Windows npm — это npm.cmd: без shell execFile его не находит
-  const fbRoot = execFileSync('npm', ['root', '-g'], { encoding: 'utf8', shell: process.platform === 'win32' }).trim();
-  const auth = require(path.join(fbRoot, 'firebase-tools/lib/auth'));
+  const auth = firebaseAuth();
   const acc = auth.getGlobalDefaultAccount();
   if (!acc) throw new Error('Нужно выполнить firebase login');
   const { access_token } = await auth.getAccessToken(acc.tokens.refresh_token, [SCOPE]);

@@ -9,10 +9,9 @@
  *   node scripts/migrate-files.mjs --dry-run   — только показать, что будет сделано
  *   node scripts/migrate-files.mjs             — перезалить
  */
-import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
-import { createRequire } from 'node:module';
+import { firebaseAuth } from './firestore-rest.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -23,9 +22,7 @@ const CHUNKS = 'chunks';
 const CHUNK_SIZE = 700 * 1024; // как в packages/core/src/files.config.ts
 const dryRun = process.argv.includes('--dry-run');
 
-const require = createRequire(import.meta.url);
-const fbRoot = execFileSync('npm', ['root', '-g'], { encoding: 'utf8' }).trim();
-const auth = require(path.join(fbRoot, 'firebase-tools/lib/auth'));
+const auth = firebaseAuth();
 
 const DOCS = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;
 let headers;
