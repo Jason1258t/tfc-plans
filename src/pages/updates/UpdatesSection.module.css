@@ -53,11 +53,11 @@
 .nav a[aria-current='page'] {
   background: var(--surface);
   color: var(--text);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .card {
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius-lg);
   background: var(--surface);
   padding: 16px;
@@ -67,9 +67,8 @@
   min-width: 0;
 }
 
-/* у последнего обновления рамка заметнее — класс идёт вместе с .card */
 .latest {
-  border-color: var(--border-strong);
+  border: 0;
 }
 
 .cardHead {
