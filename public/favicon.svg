@@ -1,6 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
-  <rect x="1" y="5" width="14" height="7" fill="#3a2a10"/>
-  <rect x="2" y="5" width="12" height="5" fill="#e77c56"/>
-  <rect x="3" y="5" width="10" height="2" fill="#fcb48b"/>
-  <rect x="2" y="10" width="12" height="1" fill="#a14a2c"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <g stroke="#d8e2e7" stroke-width="5">
+      <path d="M60 19L91 37L60 55L29 37Z" />
+      <path d="M24 49L50 64V96L24 81Z" />
+      <path d="M96 49L70 64V96L96 81Z" />
+    </g>
+    <path d="M60 19L91 37L60 55Z" fill="#d98c62" fill-opacity=".28" stroke="#d98c62" stroke-width="5" />
+  </g>
 </svg>

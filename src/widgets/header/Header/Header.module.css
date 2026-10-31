@@ -24,6 +24,55 @@
   white-space: nowrap;
 }
 
+.brand-logo {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  color: var(--text);
+}
+
+.brand-logo-compact {
+  display: none;
+}
+
+.logo-construction {
+  stroke: var(--text-2);
+  opacity: 0.55;
+}
+
+.brand-name {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  line-height: 1;
+}
+
+.brand-title {
+  font-size: 16px;
+  font-weight: 750;
+  letter-spacing: -0.4px;
+}
+
+.brand-subtitle {
+  color: var(--text-2);
+  font-size: 8px;
+  font-weight: 650;
+  letter-spacing: 2.4px;
+}
+
+@media (max-width: 560px) {
+  .brand-logo {
+    width: 34px;
+    height: 34px;
+  }
+  .brand-logo-full {
+    display: none;
+  }
+  .brand-logo-compact {
+    display: block;
+  }
+}
+
 .nav {
   display: flex;
   gap: 2px;

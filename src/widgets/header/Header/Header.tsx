@@ -5,7 +5,8 @@ import { firebaseEnabled } from '@/shared/api';
 import { lastSeenUpdate, usePackUpdates } from '@/entities/pack-update';
 import styles from './Header.module.css';
 import { OnboardingMenu } from '@/widgets/onboarding';
-import { ItemIcon, ItemIdSearch } from '@/shared/pack-data';
+import { ItemIdSearch } from '@/shared/pack-data';
+import { BrandLogo } from './BrandLogo';
 import { Modal, tooltipHandlers, Button, ButtonLink } from '@/shared/ui';
 import { SyncBadge } from '@/components/SyncBadge';
 
@@ -41,9 +42,8 @@ export function Header({ nick, onChangeNick }: Props) {
 
   return (
     <header className={styles.appHeader}>
-      <NavLink to="/" className={styles.brand}>
-        <ItemIcon id="tfc:metal/ingot/copper" size={22} tip={false} />
-        <span className={styles.brandName}>TFC Планы</span>
+      <NavLink to="/" className={styles.brand} aria-label="TFC Studio — на главную">
+        <BrandLogo />
       </NavLink>
       <nav className={styles.nav} aria-label="Основные разделы">
         <NavLink to="/" end>
