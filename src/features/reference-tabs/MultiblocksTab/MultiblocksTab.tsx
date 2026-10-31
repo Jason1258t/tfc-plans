@@ -1,5 +1,5 @@
-import { Download } from 'lucide-react';
-import { Segmented, ButtonLink, Card, SectionShell, Table, TableWrap, tableStyles } from '@/shared/ui';
+import { Download, Search } from 'lucide-react';
+import { Segmented, ButtonLink, Card, SectionShell, Select, Table, TableWrap, tableStyles } from '@/shared/ui';
 import { lazy, Suspense, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BlockStructureViewer } from '@/entities/block-structure';
@@ -30,6 +30,26 @@ import styles from './MultiblocksTab.module.css';
 const HAMMER = 'immersiveengineering:hammer';
 
 const MultiblockFormed = lazy(() => import('../MultiblockFormed'));
+const MultiblockGuidesSection = lazy(() => import('@/features/guides/MultiblockGuidesSection'));
+
+export type MultiblockSub = 'build' | 'materials' | 'work' | 'guides';
+type MbPurpose = 'production' | 'mining' | 'energy' | 'storage' | 'other';
+
+const PURPOSE_LABEL: Record<MbPurpose, string> = {
+  production: 'Производство',
+  mining: 'Добыча',
+  energy: 'Энергия',
+  storage: 'Хранение',
+  other: 'Другое',
+};
+
+function mbPurpose(m: Multiblock): MbPurpose {
+  const id = m.id.split(':')[1];
+  if (id === 'excavator' || id === 'bucket_wheel') return 'mining';
+  if (id === 'diesel_generator' || id === 'lightning_rod') return 'energy';
+  if (id === 'silo' || id === 'sheetmetal_tank' || id === 'shelf') return 'storage';
+  return m.recipes.length > 0 ? 'production' : 'other';
+}
 
 /** Иконка машины; у блоков с объёмной моделью (верстак, молниетвод) её нет — тогда самый частый блок структуры */
 function mbIcon(m: Multiblock, items: ItemIndex | null): string | null {
@@ -37,23 +57,78 @@ function mbIcon(m: Multiblock, items: ItemIndex | null): string | null {
   return materials(m).find((x) => items?.byId.get(x.state.id)?.t)?.state.id ?? m.block;
 }
 
-export function MultiblocksTab({ slug, onSlug }: { slug: string | null; onSlug: (s: string | null) => void }) {
+export function MultiblocksTab({
+  slug,
+  onSlug,
+  sub,
+  onSub,
+  guide,
+  onGuide,
+}: {
+  slug: string | null;
+  onSlug: (s: string | null) => void;
+  sub: MultiblockSub;
+  onSub: (s: MultiblockSub) => void;
+  guide: string | null;
+  onGuide: (id: string | null) => void;
+}) {
   const data = useMultiblocks();
   const items = useItems();
+  const [query, setQuery] = useState('');
+  const [mod, setMod] = useState('');
+  const [purpose, setPurpose] = useState<MbPurpose | ''>('');
   if (data === undefined) return <div className="empty">Загружаю мультиблоки…</div>;
   if (data === null) return <div className="empty">Мультиблоки не собраны — выполните npm run mods</div>;
   const current =
     data.list.find((m) => mbSlug(m, data.list) === slug) ?? data.list.find((m) => m.id === slug) ?? data.list[0];
-  const groups = [...new Set(data.list.map((m) => m.ns))];
+  const normalized = query.trim().toLowerCase().replaceAll('ё', 'е');
+  const visible = data.list.filter(
+    (m) =>
+      (!mod || m.ns === mod) &&
+      (!purpose || mbPurpose(m) === purpose) &&
+      (!normalized || `${mbName(m)} ${m.name.en} ${m.id}`.toLowerCase().replaceAll('ё', 'е').includes(normalized)),
+  );
+  const groups = [...new Set(visible.map((m) => m.ns))];
   return (
     <SectionShell
       navLabel="Мультиблоки"
       nav={
         <>
+          <div className={styles.filters}>
+            <label className={styles.search}>
+              <Search size={15} className="faint" aria-hidden />
+              <input
+                aria-label="Поиск мультиблоков"
+                placeholder="Название или id"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </label>
+            <Select aria-label="Мод мультиблока" value={mod} onChange={(e) => setMod(e.target.value)}>
+              <option value="">Все моды</option>
+              {[...new Set(data.list.map((m) => m.ns))].map((ns) => (
+                <option key={ns} value={ns}>
+                  {MOD_LABEL[ns] ?? ns}
+                </option>
+              ))}
+            </Select>
+            <Select
+              aria-label="Назначение мультиблока"
+              value={purpose}
+              onChange={(e) => setPurpose(e.target.value as MbPurpose | '')}
+            >
+              <option value="">Все назначения</option>
+              {Object.entries(PURPOSE_LABEL).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          </div>
           {groups.map((ns) => (
             <div key={ns} className={styles.navGroup}>
               <div className={cx(styles.navMod, 'faint', 'small')}>{MOD_LABEL[ns] ?? ns}</div>
-              {data.list
+              {visible
                 .filter((m) => m.ns === ns)
                 .map((m) => (
                   <button
@@ -69,18 +144,78 @@ export function MultiblocksTab({ slug, onSlug }: { slug: string | null; onSlug: 
                 ))}
             </div>
           ))}
+          {!visible.length && (
+            <p className="faint small" role="status">
+              Ничего не найдено
+            </p>
+          )}
         </>
       }
     >
       <div>
-        <MultiblockCard key={current.id} m={current} data={data} />
+        <MultiblockCard
+          key={current.id}
+          m={current}
+          data={data}
+          sub={sub}
+          onSub={onSub}
+          guide={guide}
+          onGuide={onGuide}
+        />
       </div>
     </SectionShell>
   );
 }
 
-function MultiblockCard({ m, data }: { m: Multiblock; data: MultiblockData }) {
+function MultiblockCard({
+  m,
+  data,
+  sub,
+  onSub,
+  guide,
+  onGuide,
+}: {
+  m: Multiblock;
+  data: MultiblockData;
+  sub: MultiblockSub;
+  onSub: (s: MultiblockSub) => void;
+  guide: string | null;
+  onGuide: (id: string | null) => void;
+}) {
   const [full, setFull] = useState(false);
+  return (
+    <div className={styles.card}>
+      <Segmented
+        className={styles.subtabs}
+        value={sub}
+        onChange={onSub}
+        options={[
+          { value: 'build', label: 'Обзор и постройка' },
+          { value: 'materials', label: 'Материалы' },
+          { value: 'work', label: 'Работа' },
+          { value: 'guides', label: 'Гайды' },
+        ]}
+      />
+      {sub === 'build' && <MultiblockOverview m={m} full={full} onFull={setFull} />}
+      {sub === 'materials' && <Materials m={m} shape={m} data={data} />}
+      {sub === 'work' && (
+        <>
+          <MachineInfo m={m} />
+          {m.manual.map((e) => (
+            <ManualEntry key={`${e.ns}:${e.entry}`} e={e} m={m} />
+          ))}
+        </>
+      )}
+      {sub === 'guides' && (
+        <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>
+          <MultiblockGuidesSection guide={guide} onGuide={onGuide} />
+        </Suspense>
+      )}
+    </div>
+  );
+}
+
+function MultiblockOverview({ m, full, onFull }: { m: Multiblock; full: boolean; onFull: (value: boolean) => void }) {
   const shape: MbShape = full && m.extra ? m.extra : m;
   const trigger = full ? null : m.trigger;
   const [sx, sy, sz] = shape.size;
@@ -93,65 +228,58 @@ function MultiblockCard({ m, data }: { m: Multiblock; data: MultiblockData }) {
   const items = useItems();
 
   return (
-    <div className={styles.card}>
-      <Card>
-        <div className={styles.head}>
-          <ItemIcon id={mbIcon(m, items) ?? undefined} size={40} />
-          <div className="grow">
-            <h2>{mbName(m)}</h2>
-            <div className="faint small">
-              {m.name.ru && m.name.en !== m.name.ru ? `${m.name.en} · ` : ''}
-              {MOD_LABEL[m.ns] ?? m.ns} · {sx}×{sy}×{sz} (ширина × высота × глубина) · блоков {count}
-            </div>
+    <Card>
+      <div className={styles.head}>
+        <ItemIcon id={mbIcon(m, items) ?? undefined} size={40} />
+        <div className="grow">
+          <h2>{mbName(m)}</h2>
+          <div className="faint small">
+            {m.name.ru && m.name.en !== m.name.ru ? `${m.name.en} · ` : ''}
+            {MOD_LABEL[m.ns] ?? m.ns} · {sx}×{sy}×{sz} (ширина × высота × глубина) · блоков {count}
           </div>
-          <ButtonLink variant="ghost" href={`${import.meta.env.BASE_URL}multiblocks/${shape.nbt}`} download>
-            <Download size={15} /> Схема .nbt
-          </ButtonLink>
         </div>
-        {m.replaces && (
-          <p className={styles.note}>
-            Шаблон заменён модом <b>{sourceName(m.source)}</b>: здесь показан его вариант, а не исходный из{' '}
-            {sourceName(m.replaces)}.
-          </p>
-        )}
-        <ol className={styles.steps}>
+        <ButtonLink variant="ghost" href={`${import.meta.env.BASE_URL}multiblocks/${shape.nbt}`} download>
+          <Download size={15} /> Схема .nbt
+        </ButtonLink>
+      </div>
+      {m.replaces && (
+        <p className={styles.note}>
+          Шаблон заменён модом <b>{sourceName(m.source)}</b>: здесь показан его вариант, а не исходный из{' '}
+          {sourceName(m.replaces)}.
+        </p>
+      )}
+      <ol className={styles.steps}>
+        <li>
+          Поставьте блоки по слоям снизу вверх (см. схему ниже). Пустые клетки — любые: воздух или что угодно, IE их не
+          проверяет.
+        </li>
+        {triggerState && trigger && (
           <li>
-            Поставьте блоки по слоям снизу вверх (см. схему ниже). Пустые клетки — любые: воздух или что угодно, IE их
-            не проверяет.
+            Встаньте <b>со стороны лицевой грани</b> (на схеме — снизу) и ударьте
+            <ItemIcon id={HAMMER} size={18} className={styles.stepIcon} /> молотом инженера по блоку{' '}
+            <b>{itemName(items?.byId.get(triggerState.id), triggerState.id)}</b> — слой {trigger[1] + 1}, подсвечен
+            рамкой. Конструкция повернётся к вам той стороной, по которой ударили.
           </li>
-          {triggerState && trigger && (
-            <li>
-              Встаньте <b>со стороны лицевой грани</b> (на схеме — снизу) и ударьте
-              <ItemIcon id={HAMMER} size={18} className={styles.stepIcon} /> молотом инженера по блоку{' '}
-              <b>{itemName(items?.byId.get(triggerState.id), triggerState.id)}</b> — слой {trigger[1] + 1}, подсвечен
-              рамкой. Конструкция повернётся к вам той стороной, по которой ударили.
-            </li>
-          )}
-          <li>
-            {m.mirror
-              ? 'Можно строить и зеркально (лево ↔ право) — IE примет оба варианта.'
-              : 'Только как на схеме: зеркальный вариант эта печь не принимает.'}
-          </li>
-        </ol>
-        {m.extra && (
-          <Segmented
-            className={styles.fullToggle}
-            value={full}
-            onChange={setFull}
-            options={[
-              { value: false, label: 'Сама машина' },
-              { value: true, label: 'Целиком (как в книге)' },
-            ]}
-          />
         )}
-        <MbViewer key={String(full)} m={m} shape={shape} trigger={trigger} formedOk={!full} />
-      </Card>
-      <Materials m={m} shape={shape} data={data} />
-      <MachineInfo m={m} />
-      {m.manual.map((e) => (
-        <ManualEntry key={`${e.ns}:${e.entry}`} e={e} m={m} />
-      ))}
-    </div>
+        <li>
+          {m.mirror
+            ? 'Можно строить и зеркально (лево ↔ право) — IE примет оба варианта.'
+            : 'Только как на схеме: зеркальный вариант эта печь не принимает.'}
+        </li>
+      </ol>
+      {m.extra && (
+        <Segmented
+          className={styles.fullToggle}
+          value={full}
+          onChange={onFull}
+          options={[
+            { value: false, label: 'Сама машина' },
+            { value: true, label: 'Целиком (как в книге)' },
+          ]}
+        />
+      )}
+      <MbViewer key={String(full)} m={m} shape={shape} trigger={trigger} formedOk={!full} />
+    </Card>
   );
 }
 
@@ -218,7 +346,7 @@ export function MultiblockEmbed({ id, full, withMaterials }: { id: string; full?
       <div className={styles.head}>
         <ItemIcon id={mbIcon(m, items) ?? undefined} size={28} />
         <div className="grow">
-          <Link to={`/reference?tab=multiblocks&mb=${encodeURIComponent(mbSlug(m, data.list))}`}>
+          <Link to={`/reference?tab=multiblocks&mb=${encodeURIComponent(mbSlug(m, data.list))}&sub=build`}>
             <b>{mbName(m)}</b>
           </Link>
           <div className="faint small">

@@ -13,7 +13,7 @@ import { RecipeStatusBadge, useTags, ItemIcon, itemName, useItems, type ItemInde
 import { LiquidFuelTab } from '../tabs/LiquidFuelTab';
 import { GeologyTab } from '../tabs/GeologyTab';
 import { MapPage } from '@/pages/map';
-import { MultiblocksTab } from '@/features/reference-tabs';
+import { MultiblocksTab, type MultiblockSub } from '@/features/reference-tabs';
 import { GuidesTab, PowerGuidesTab } from '../tabs/GuidesTab';
 import { GUIDES_SUBS, type GuidesSub } from '@/features/guides';
 import { PowerTab } from '../tabs/PowerTab';
@@ -53,6 +53,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'multiblocks', label: 'Мультиблоки' },
   { id: 'guides', label: 'Все гайды' },
 ];
+const MB_SUBS: MultiblockSub[] = ['build', 'materials', 'work', 'guides'];
 const WORLD_SUBS: { id: WorldSub; label: string }[] = [
   { id: 'ores', label: 'Руды' },
   { id: 'geology', label: 'Геология' },
@@ -164,7 +165,27 @@ function Reference() {
       ) : tab === 'multiblocks' ? (
         <MultiblocksTab
           slug={params.get('mb')}
-          onSlug={(mb) => setParams(mb ? { tab: 'multiblocks', mb } : { tab: 'multiblocks' }, { replace: true })}
+          onSlug={(mb) => {
+            const sub = params.get('sub');
+            setParams(
+              {
+                tab: 'multiblocks',
+                ...(mb ? { mb } : {}),
+                ...(sub && MB_SUBS.includes(sub as MultiblockSub) ? { sub } : {}),
+              },
+              { replace: true },
+            );
+          }}
+          sub={MB_SUBS.includes(params.get('sub') as MultiblockSub) ? (params.get('sub') as MultiblockSub) : 'build'}
+          onSub={(sub) => {
+            const mb = params.get('mb');
+            setParams({ tab: 'multiblocks', ...(mb ? { mb } : {}), sub }, { replace: true });
+          }}
+          guide={params.get('g')}
+          onGuide={(g) => {
+            const mb = params.get('mb');
+            setParams({ tab: 'multiblocks', ...(mb ? { mb } : {}), sub: 'guides', ...(g ? { g } : {}) });
+          }}
         />
       ) : tab === 'power' ? (
         <PowerTab
