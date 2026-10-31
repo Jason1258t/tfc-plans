@@ -28,6 +28,7 @@ export const ROLES = [
   'verge',
   'glass',
   'door',
+  'lattice', // переплёт: решётка-копикат вместо стекла (только с выбранными блоками)
 ] as const;
 export type Role = (typeof ROLES)[number];
 export const ROLE: Record<Role, number> = Object.fromEntries(ROLES.map((r, i) => [r, i])) as Record<Role, number>;
@@ -52,10 +53,24 @@ export const ROLE_PARENT: Partial<Record<Role, Role>> = {
   eave: 'roof',
   ridge: 'roof',
   verge: 'roof',
+  lattice: 'glass',
 };
 
-/** Формы блока. air — воздух (проём, интерьер) */
-export const SHAPES = ['none', 'full', 'stairs', 'slab', 'pane', 'door', 'air'] as const;
+/** Формы блока. air — воздух (проём, интерьер); c* — копикаты (материал — блок роли, пишется в nbt клетки) */
+export const SHAPES = [
+  'none',
+  'full',
+  'stairs',
+  'slab',
+  'pane',
+  'door',
+  'air',
+  'cslope', // copycats:copycat_slope — плавный скат 45° (facing, half)
+  'cslopelayer', // copycats:copycat_slope_layer — плавный пологий скат (facing, half, layers=2)
+  'cbeam', // copycats:copycat_beam — балка карниза (axis)
+  'cpanel', // create:copycat_panel — наличник (facing наружу)
+  'cpane', // copycats:copycat_pane — переплёт (стороны, как у панели)
+] as const;
 export type Shape = (typeof SHAPES)[number];
 export const SHAPE: Record<Shape, number> = Object.fromEntries(SHAPES.map((s, i) => [s, i])) as Record<Shape, number>;
 

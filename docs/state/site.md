@@ -432,7 +432,8 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
 ## Building generator (dev #166, plan doc 26)
 
 Stages 0–5 done 2026-10-30 (`feat/building-core`, `feat/building-page`, `feat/building-brush`); stage 6 done
-2026-10-31 (`feat/building-forms`, `feat/building-tiers-styles`); next — copycats, photos, wooden styles.
+2026-10-31 (`feat/building-forms`, `feat/building-tiers-styles`); stage 7 done 2026-10-31 (`feat/building-trim`);
+next — photos, MCP, wooden styles.
 
 - Stage 6 (2026-10-31, industrial first): round volumes (`shape: 'round'` — oval inscribed in w×d; `inPlan` is
   shape-aware, so walls/openings/floors work unchanged) with roof «конус» (ellipse distance field, stairs face the
@@ -455,6 +456,20 @@ Stages 0–5 done 2026-10-30 (`feat/building-core`, `feat/building-page`, `feat/
   bogus `axis=y`. Checked: 384 style×type×form combos (degree 2) all generate, every emitted block state exists in
   the live block-models, tier shared row is solid slabs with no roof inside the upper volume, bay has its own roof,
   one seed → byte-identical .nbt; browser look of japanese tiers and scandinavian bay, 375 px.
+- Stage 7 (2026-10-31, `feat/building-trim`): copycat trim — `details.trim` {slopes, surround, cornice, lattice}
+  (`spec.ts`, `trim.ts`). Slopes: roof/eave/verge stairs → `copycats:copycat_slope`, slabs → `copycat_slope_layer`
+  (layers 2), block choice without the family (any full block of the role goes into the cell's `mats[i]`).
+  Surround: `create:copycat_panel` in the empty outside neighbour of every lintel/sill/jamb cell, facing out, keeps the
+  source role. Cornice: `copycats:copycat_beam` in the cell under the outermost eave cell (edge = neighbour against the
+  rise direction `(f+2)%4` not roofed), axis across the slope. Lattice: glass → role «Переплёт» (`cpane`) only when
+  `roles.lattice.on !== false` and it has blocks. `toNbt.ts`: a cell with a material writes BE nbt
+  (`copycats:copycat` / `create:copycat` by prefix; Item = material, count Int 1, Material.Name) — NBT shapes from
+  decompiled Copycats+ 3.0.8 / Create 6.0.10 (single-state BE; the game drops the material if Item does not place it).
+  `materials()` counts both the copycat and its material. New render shapes in `entities/schematic/copycats.ts`:
+  slope_layer (CCShapes: base = layers>4 ? 4(l−4) : 0, top = min(16, 4·layers)) and pane (post + side arms). UI: 4
+  checkboxes in «Отделка», role «Переплёт» visible when trim.lattice is on. Checked: 213 copycat cells in the 9×7×2
+  stone house with all options on, every BE nbt well-formed, no roof stairs left, determinism; browser look of slopes,
+  surrounds, cornice, lattice, 375 px.
 - Palettes (task item 11, 2026-10-30): `packages/core/src/building/palettes.ts` — materials apart from the style;
   host priority: concrete and bricks, industrial. Style «Индустриальный» (pitch 0.5, plinth 2, `piers` — solid wall
   columns between window columns take the frame role), type «Цех». 7 industrial palettes (Create Deco bricks with

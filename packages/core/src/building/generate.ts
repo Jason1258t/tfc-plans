@@ -10,6 +10,7 @@ import { openings } from './openings.ts';
 import { chimney, roofs } from './roof.ts';
 import { deriveRoles } from './roles.ts';
 import { checkSpec, normalizeSpec, type BuildingSpec, type Override } from './spec.ts';
+import { trim } from './trim.ts';
 import { materials, toNbt } from './toNbt.ts';
 
 export interface Generated {
@@ -36,6 +37,7 @@ export function buildRoles(input: BuildingSpec): { spec: BuildingSpec; layout: L
   roofs(l);
   if (normalized.details.chimney) chimney(l, normalized.details.chimneyH, normalized.details.chimneySize);
   deriveRoles(l, normalized.details);
+  trim(l, normalized);
   const { kept, lost } = splitOverrides(l, normalized.overrides);
   const spec = { ...normalized, overrides: kept };
   applyRoleOverrides(l, spec);

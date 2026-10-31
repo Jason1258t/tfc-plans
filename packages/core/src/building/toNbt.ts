@@ -23,14 +23,33 @@ export function structureRoot(p: Painted): NbtRoot {
   for (let y = 0; y < p.Y; y++)
     for (let z = 0; z < p.Z; z++)
       for (let x = 0; x < p.X; x++) {
-        const c = p.cells[x + p.X * (z + p.Z * y)];
-        if (c)
-          blocks.push(
+        const i = x + p.X * (z + p.Z * y);
+        const c = p.cells[i];
+        if (!c) continue;
+        const e: [string, Tag][] = [
+          ['pos', ints([x, y, z])],
+          ['state', int(c - 1)],
+        ];
+        // Копикат: данные блок-сущности с материалом и предметом (проверка схемы в игре требует совпадения)
+        const mat = p.mats[i];
+        if (mat) {
+          const be = p.palette[c - 1].Name.startsWith('copycats:') ? 'copycats:copycat' : 'create:copycat';
+          e.push([
+            'nbt',
             compound([
-              ['pos', ints([x, y, z])],
-              ['state', int(c - 1)],
+              ['id', str(be)],
+              [
+                'Item',
+                compound([
+                  ['id', str(mat)],
+                  ['count', int(1)],
+                ]),
+              ],
+              ['Material', compound([['Name', str(mat)]])],
             ]),
-          );
+          ]);
+        }
+        blocks.push(compound(e));
       }
   return {
     name: '',
@@ -47,13 +66,17 @@ export function structureRoot(p: Painted): NbtRoot {
 /** Файл .nbt (gzip), как его сохраняет Create */
 export const toNbt = (p: Painted) => writeNbt(structureRoot(p), true);
 
-/** Сколько каких блоков (без воздуха) — список материалов */
+/** Сколько каких блоков (без воздуха) — список материалов; у копиката считается и он сам, и его материал */
 export function materials(p: Painted): Map<string, number> {
-  const per = new Array<number>(p.palette.length).fill(0);
-  for (const c of p.cells) if (c) per[c - 1]++;
   const out = new Map<string, number>();
-  p.palette.forEach((s, i) => {
-    if (per[i] && s.Name !== 'minecraft:air') out.set(s.Name, (out.get(s.Name) ?? 0) + per[i]);
-  });
+  const add = (id: string) => out.set(id, (out.get(id) ?? 0) + 1);
+  for (let i = 0; i < p.cells.length; i++) {
+    const c = p.cells[i];
+    if (!c) continue;
+    const name = p.palette[c - 1].Name;
+    if (name !== 'minecraft:air') add(name);
+    const mat = p.mats[i];
+    if (mat) add(mat);
+  }
   return out;
 }

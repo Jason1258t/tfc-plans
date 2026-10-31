@@ -404,6 +404,27 @@ export function ParamsPanel({ spec, onChange }: Props) {
             {label}
           </label>
         ))}
+        {(
+          [
+            ['slopes', 'плавные скаты (материал — любой блок ската)'],
+            ['surround', 'наличники вокруг окон и двери'],
+            ['cornice', 'карниз: балка под краем свеса'],
+            ['lattice', 'переплёт вместо стекла (блоки — роль «Переплёт»)'],
+          ] as const
+        ).map(([k, label]) => (
+          <label
+            key={k}
+            className={cx('small', styles.check)}
+            title="Отделка копикатами Create: материал — любой целый блок роли, семейство со ступенями не нужно"
+          >
+            <input
+              type="checkbox"
+              checked={!!det.trim?.[k]}
+              onChange={(e) => onChange({ ...spec, details: { ...det, trim: { ...det.trim, [k]: e.target.checked } } })}
+            />
+            {label}
+          </label>
+        ))}
       </Group>
 
       <Group title="Текстурирование">

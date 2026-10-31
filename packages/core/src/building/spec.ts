@@ -70,6 +70,18 @@ export interface RoleSpec {
   fill?: RoleFill;
 }
 
+/** Отделка копикатами (Create / Copycats+): материал — любой целый блок роли, семейство со ступенями не нужно */
+export interface TrimSpec {
+  /** Плавные скаты: ступени крыши → copycat_slope, плиты пологого ската → copycat_slope_layer */
+  slopes?: boolean;
+  /** Наличники: панели снаружи вокруг окон и двери (материал — блок перемычки/подоконника/откоса) */
+  surround?: boolean;
+  /** Карниз: балка под краем свеса (материал — блок свеса) */
+  cornice?: boolean;
+  /** Переплёт: решётка вместо стекла (роль «lattice» — только когда у неё выбраны блоки) */
+  lattice?: boolean;
+}
+
 /** Отделка, которую задаёт стиль */
 export interface DetailSpec {
   /** Рядов цоколя (0 — нет) */
@@ -87,6 +99,8 @@ export interface DetailSpec {
   /** Труба: на сколько выше крыши (по умолчанию 2) и сечение 1 или 2 клетки (промышленная) */
   chimneyH?: number;
   chimneySize?: number;
+  /** Отделка копикатами */
+  trim?: TrimSpec;
   /** Воздух внутри (очистить место под постройку) */
   clearInside: boolean;
 }

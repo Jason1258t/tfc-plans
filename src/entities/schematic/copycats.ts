@@ -188,6 +188,28 @@ const slope: Shape = (p) =>
     box: toDirection(toHalf(aabb(16, ((i + 1) / 8) * 16, 2, 0, 0, i * 2), p.get('half')), p.get('facing') ?? 'north'),
     part: '',
   }));
+/** Склон-полоса (CCShapes.SLOPE_LAYER): вершина min(4·layers, 16) px; layers > 4 — от основания 4·(layers−4) до 16 */
+const slopeLayer: Shape = (p) => {
+  const l = layers(p);
+  const base = l > 4 ? 4 * (l - 4) : 0;
+  const top = Math.min(16, 4 * l);
+  return Array.from({ length: 8 }, (_, i) => ({
+    box: toDirection(
+      toHalf(aabb(16, base + ((i + 1) / 8) * (top - base), 2, 0, 0, i * 2), p.get('half')),
+      p.get('facing') ?? 'north',
+    ),
+    part: '',
+  }));
+};
+/** Решётка — центральный штырь 2 px и отводы по включённым сторонам, как ванильная панель */
+const paneShape: Shape = (p) => {
+  const out: CopycatPart[] = [{ box: [7, 0, 7, 9, 16, 9], part: '' }];
+  if (p.get('north') === 'true') out.push({ box: [7, 0, 0, 9, 16, 7], part: '' });
+  if (p.get('south') === 'true') out.push({ box: [7, 0, 9, 9, 16, 16], part: '' });
+  if (p.get('west') === 'true') out.push({ box: [0, 0, 7, 7, 16, 9], part: '' });
+  if (p.get('east') === 'true') out.push({ box: [9, 0, 7, 16, 16, 9], part: '' });
+  return out;
+};
 /** Ступеньки — как у ванильных (StairBlock): плита + ступень по shape */
 const stairs: Shape = (p) => {
   const top = p.get('half') === 'top';
@@ -223,6 +245,8 @@ const SHAPES: Record<string, Shape> = {
   'copycats:copycat_beam': beam,
   'copycats:copycat_board': board,
   'copycats:copycat_slope': slope,
+  'copycats:copycat_slope_layer': slopeLayer,
+  'copycats:copycat_pane': paneShape,
   'copycats:copycat_stairs': stairs,
 };
 
