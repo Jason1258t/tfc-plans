@@ -34,7 +34,7 @@ import { recipeRefs } from '@tfc/core/recipeRefs';
 const NS = 'tfc_plans_smooth';
 const NAME = 'Гладкий камень на камнерезе и в прессе';
 const DESCRIPTION =
-  'Гладкие породы, резные кирпичи, песчаник, алебастр, их плиты, ступени и стены — на камнерезе; гладкие породы — в прессе Create с нагревом (scripts/smooth-stone-datapack.mjs, TFC Планы)';
+  'Гладкие породы, резные кирпичи, песчаник, алебастр, их плиты, ступени и стены — на камнерезе; гладкие породы — в прессе Create с нагревом (scripts/smooth-stone-datapack.mjs, TFC Studio)';
 const args = process.argv.slice(2);
 const upload = args.includes('--upload');
 const out = path.resolve(args.find((a) => !a.startsWith('--')) ?? path.join(ROOT, 'out/smooth_stone.zip'));

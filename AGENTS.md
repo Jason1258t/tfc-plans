@@ -1,4 +1,4 @@
-# TFC Планы — agent notes
+# TFC Studio — agent notes
 
 Source of truth for every coding agent (Claude Code, Codex, Gemini CLI, Cursor, OpenCode, …). Tool-specific additions
 live next to it: Claude Code — [CLAUDE.md](CLAUDE.md); setup for other agents — [docs/agents.md](docs/agents.md).

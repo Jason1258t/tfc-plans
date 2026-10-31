@@ -30,7 +30,7 @@ import { recipeRefs } from '@tfc/core/recipeRefs';
 const NS = 'tfc_plans_pellets';
 const NAME = 'Пеллеты и брикеты в дуговой печи';
 const DESCRIPTION =
-  'Пеллеты и брикеты tfcorewashing плавятся в дуговой печи (scripts/pellet-arc-datapack.mjs, TFC Планы)';
+  'Пеллеты и брикеты tfcorewashing плавятся в дуговой печи (scripts/pellet-arc-datapack.mjs, TFC Studio)';
 const args = process.argv.slice(2);
 const upload = args.includes('--upload');
 const out = path.resolve(args.find((a) => !a.startsWith('--')) ?? path.join(ROOT, 'out/pellet_arc_furnace.zip'));

@@ -2,7 +2,7 @@
   "name": "@tfc/scripts",
   "private": true,
   "version": "0.1.0",
-  "description": "Разборщики сборки «TFC Планы» (данные сайта из jar, KubeJS, конфигов, мира), MCP tfc-pack и tfc-plans-dev, деплой и ui-утилиты",
+  "description": "Разборщики сборки «TFC Studio» (данные сайта из jar, KubeJS, конфигов, мира), MCP tfc-pack и tfc-plans-dev, деплой и ui-утилиты",
   "type": "module",
   "exports": {
     "./*": "./*.mjs"
