@@ -73,7 +73,7 @@ function indentJson(v: unknown, pad: string): string {
 export function kubejsScript(recipes: { id: string; json: unknown }[], title: string): string {
   const body = recipes.map((r) => `  event.custom(${indentJson(r.json, '  ')}).id('${r.id}')`).join('\n\n');
   return `// ${title}
-// Сгенерировано «TFC Планы». Положить в kubejs/server_scripts/ на сервере, затем /reload.
+// Сгенерировано «TFC Studio». Положить в kubejs/server_scripts/ на сервере, затем /reload.
 // Рецепты, добавленные скриптом, не попадают под event.remove — в отличие от рецептов из датапаков.
 
 ServerEvents.recipes(event => {

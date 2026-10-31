@@ -1,18 +1,37 @@
 <!-- Картинка превью ссылки (Open Graph). Пересобрать: rsvg-convert -w 1200 -h 630 scripts/og-image.svg -o public/og.png -->
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <rect width="1200" height="630" fill="#1b140e"/>
-  <rect x="0" y="600" width="1200" height="30" fill="#4c8a2b"/>
-  <rect x="0" y="590" width="1200" height="10" fill="#6cbf44"/>
-  <g transform="translate(80 150) scale(20)" shape-rendering="crispEdges">
-    <rect x="1" y="5" width="14" height="7" fill="#3a2a10"/>
-    <rect x="2" y="5" width="12" height="5" fill="#e77c56"/>
-    <rect x="3" y="5" width="10" height="2" fill="#fcb48b"/>
-    <rect x="2" y="10" width="12" height="1" fill="#a14a2c"/>
+  <defs>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#607784" stroke-opacity=".1" />
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="#15191d" />
+  <rect width="1200" height="630" fill="url(#grid)" />
+  <g transform="translate(86 174) scale(2.25)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <g stroke="#607784" stroke-width="1" opacity=".55">
+      <path d="M12 60H108M60 12V108" stroke-dasharray="3 5" />
+      <circle cx="60" cy="60" r="46" />
+      <path d="M20 101H100M20 97V105M100 97V105" />
+    </g>
+    <g stroke="#d8e2e7" stroke-width="2.4">
+      <path d="M60 19L91 37L60 55L29 37Z" />
+      <path d="M24 49L50 64V96L24 81Z" />
+      <path d="M96 49L70 64V96L96 81Z" />
+      <path d="M60 55V69M50 64L60 69L70 64" opacity=".65" />
+    </g>
+    <path d="M60 19L91 37L60 55Z" fill="#d98c62" fill-opacity=".2" stroke="#d98c62" stroke-width="2.4" />
+    <g fill="#d98c62">
+      <circle cx="60" cy="19" r="3" />
+      <circle cx="24" cy="49" r="3" />
+      <circle cx="96" cy="49" r="3" />
+    </g>
   </g>
   <g font-family="Helvetica Neue, Arial, sans-serif">
-    <text x="440" y="270" font-size="96" font-weight="700" fill="#ecebe8">TFC Планы</text>
-    <text x="444" y="340" font-size="36" fill="#fcb48b">TerraFirmaCraft RealWorld · 1.21.1</text>
-    <text x="444" y="420" font-size="30" fill="#b0aea8">Задачи, схемы Create, датапаки, рецепты,</text>
-    <text x="444" y="462" font-size="30" fill="#b0aea8">справочник и карта мира</text>
+    <text x="420" y="246" font-size="100" font-weight="750" letter-spacing="-3" fill="#edf2f4">TFC</text>
+    <text x="425" y="298" font-size="30" font-weight="650" letter-spacing="13" fill="#9aaab4">STUDIO</text>
+    <text x="424" y="386" font-size="32" fill="#d98c62">Инженерная экосистема для TerraFirmaCraft</text>
+    <text x="424" y="442" font-size="27" fill="#aab6bd">Задачи, схемы Create, датапаки, рецепты,</text>
+    <text x="424" y="482" font-size="27" fill="#aab6bd">справочник, аддоны и карта мира</text>
+    <text x="424" y="548" font-size="22" fill="#71838e">TerraFirmaCraft RealWorld · 1.21.1</text>
   </g>
 </svg>
