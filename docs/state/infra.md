@@ -260,6 +260,25 @@ the host's real folder.
   `~/.config/tfc/config.json` on the Mac (never printed); the old lost `claude` key revoked. First update:
   `u20261022-150945-83a0` (pack-patches/l10n).
 
+## Whole-pack stand (dev #133, 2026-10-31)
+
+`scripts/pack-stand.mjs` (`npm run stand`, MCP `pack_devserver`): production NeoForge dedicated server (installer into
+`~/.cache/tfc-plans/stand/neoforge-<ver>`, version from `.tfc-fetch.json` `loader`, else 21.1.251) with the snapshot
+cache — mods minus client-only, `config/`, `kubejs/`, `world/`; flat world, RCON, then a summary (KubeJS script
+counts and errors, grouped `latest.log` ERROR/FATAL lines, crash report). `overlay=` copies a folder over the run dir
+(test a `tfc admin propose` overlay first), `mods=` replaces pack jars by modId. Production launch avoids both dev-run
+blockers (TFC Registry API on source folders, KubeJS TFC `!isProduction()` assertion).
+
+Client-only mods: `scripts/pack-stand-client.json` + Fabric `environment=client` + anything with a required dependency
+(any side) on an excluded mod. **Roxy** (needs Sodium on the client) was the cause of Create/FTB command
+`BootstrapMethodError → LocalPlayer`: its common mixin makes `CommandSourceStack` implement
+`FabricClientCommandSource`. Mods whose main class is client-only are found from the crash report, dropped and the
+server restarted (reported as «добавьте в pack-stand-client.json»).
+
+Verified on snapshot `20261029-192724-29d7`: 224 of 243 mods, boot 96 s, KubeJS 6/6 startup and 84/84 server scripts,
+FTB commands registered. Stand reports real errors: 16 `concrete_lime.js` cement recipes and one
+`create_flight_control` deploying recipe (the pending #157 fix isn't in that snapshot).
+
 ## Pack patches (`pack-patches/`)
 
 - `l10n/` (2026-10-22): translation of Chinese strings in pack KubeJS scripts. Base — pack snapshot

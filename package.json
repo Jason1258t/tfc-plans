@@ -39,6 +39,7 @@
     "datapack:smooth": "node scripts/smooth-stone-datapack.mjs",
     "pack": "node scripts/pack.mjs",
     "pack:fetch": "node scripts/pack-fetch.mjs",
+    "stand": "node scripts/pack-stand.mjs",
     "pack:publish": "node scripts/publish-data.mjs",
     "tfc": "node cli/tfc.mjs",
     "tfc:dist": "node scripts/tfc-dist.mjs",

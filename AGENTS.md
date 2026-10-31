@@ -167,7 +167,9 @@ not in the pack (integration analysis) → `candidate_get`, then jar tools with 
 resources → `resources_check` + `model_render`; developing an addon (new addon, block, mixin) → skill `addon-dev`;
 releasing an addon to the site → skill `addon-release`
 (`addon_check`). Pack config changes → `config_propose`, not "edit the file". Other pack file changes
-(KubeJS scripts, lang, resources, whole files) → `npm run tfc -- admin propose <overlay dir> --note …` (agent key in
+(KubeJS scripts, lang, resources, whole files) → check the overlay on the whole pack first — `pack_devserver
+overlay=<dir>` (production dedicated server with full KubeJS, no game needed) — then
+`npm run tfc -- admin propose <overlay dir> --note …` (agent key in
 the `tfc` app settings — `%APPDATA%\tfc\config.json` on Windows, `~/.config/tfc/config.json` on macOS/Linux, see
 `cli/lib/config.mjs`; base on the current snapshot, `tfc admin updates` to see status); the host pulls and approves. Site
 tasks/plans/guides/datapacks → its write tools (signed with `TFC_AGENT_NICK`, default `Claude`, with `baseRevision`), not ad-hoc

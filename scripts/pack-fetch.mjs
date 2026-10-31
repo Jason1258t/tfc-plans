@@ -230,7 +230,7 @@ export async function fetchPack({ into = PACK_CACHE, kubejs = false, srv = packS
   );
   fs.writeFileSync(
     path.join(into, '.tfc-fetch.json'),
-    JSON.stringify({ snapshot: snap.id, at: new Date().toISOString() }),
+    JSON.stringify({ snapshot: snap.id, mc: snap.mc, loader: snap.loader, at: new Date().toISOString() }),
   );
 
   if (kubejs) {
