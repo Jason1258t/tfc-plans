@@ -436,6 +436,40 @@
   overflow-y: auto;
 }
 
+/* Свёрнутые блоки «Проверено» / «Не проверено» в статье аддона */
+.addonChecked {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  padding: 6px 10px;
+}
+
+.addonCheckedSummary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  list-style: none;
+}
+
+.addonCheckedSummary::-webkit-details-marker {
+  display: none;
+}
+
+.addonCheckedBody {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.addonCheckedBody .guideBody {
+  gap: 6px;
+  font-size: 13px;
+}
+
+.addonCheckedBody .guideBody li + li {
+  margin-top: 2px;
+}
+
 .guideHelp {
   position: relative;
 }
