@@ -12,7 +12,7 @@ The workflow is in AGENTS.md. This skill drives it with **`tfc-plans-dev`**: wor
 
 - `tfc-plans-dev` `git_state` — main clean, on `main`, in sync with `origin/main`.
 - `dev_list query=<words>` / `dev_create` — take or create the task (kind `fix` for fixes), then `dev_update` with
-  `baseRev`: status `doing`, assignee = your agent name (`TFC_AGENT_NICK`), `branch`.
+  `baseRev`: status `doing`, assignee = your agent name (`TFC_AGENT_NICK`; `"me"` works), `branch`.
 - `tfc-plans-dev` `worktree_add name=<short>` (type `feat`/`refactor`/`fix`, default `feat`) → worktree
   `.claude/worktrees/<short>`, branch `<type>/<short>`. Work only inside it.
 

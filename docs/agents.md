@@ -30,8 +30,11 @@ The server is one command: `node <repo>/scripts/mcp/server.mjs`. Environment:
 - `TFC_FIRESTORE_KEY` — service key for site content (default `~/.config/tfc/mcp-firestore.json`, setup in
   `scripts/mcp/firestore-key.example.md`). Use an absolute path: `${VAR:-default}` expansion is Claude Code syntax.
 - `TFC_AGENT_NICK` — name written as author / `updatedBy` on tasks, plan docs, guides, config proposals and addon
-  versions (default `Claude`). **Every agent sets its own name here** — never leave the default `Claude` unless you
-  are Claude (`Codex`, `Gemini`, `Cursor`, `DeepSeek`…); use the same name as task assignee.
+  versions. **Every agent sets its own name here** (`Codex`, `Gemini`, `Cursor`, `DeepSeek`…). Unset, the servers
+  guess from the launching harness (`scripts/mcp/env.mjs`: Claude Code and Kimi Work checked; `AI_AGENT`, Codex,
+  Gemini, Cursor, OpenCode markers — not checked) and otherwise sign `Агент?` — never a silent `Claude`. An unexpanded
+  `${VAR:-default}` (Kimi Work passes `.mcp.json` literally) is expanded by the server. As dev-task assignee pass
+  `"me"` — the server substitutes this name.
 - The server finds `public/` of the main checkout itself (also from a worktree; override with `TFC_PACK_ROOT`); pack
   jars — from the snapshot cache `~/.cache/tfc-plans/pack/mods` (`npm run pack:fetch`; `TFC_MODS_DIR` overrides).
 

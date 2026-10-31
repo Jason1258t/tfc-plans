@@ -52,18 +52,18 @@ pack:fetch»; data tools (items, recipes, tags) work from `public/`.
 
 Paths can be set via env vars (for running on the pack server):
 
-| Variable                                    | Default                                                                                                                                           |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TFC_PACK_ROOT`                             | main checkout root                                                                                                                                |
-| `TFC_PUBLIC_DIR`                            | `<root>/public`                                                                                                                                   |
-| `TFC_PACK_CACHE`                            | `~/.cache/tfc-plans/pack` (snapshot copy from `npm run pack:fetch`)                                                                               |
-| `TFC_MODS_DIR`                              | `$TFC_PACK_CACHE/mods`; when set, `.cache/mcp`, `instance/`, `tools/` are looked up next to it (pack server)                                      |
-| `TFC_INSTANCE_DIR`                          | `<root>/instance`                                                                                                                                 |
-| `TFC_KUBEJS_DIR`                            | `<root>/instance/kubejs`                                                                                                                          |
-| `TFC_VANILLA_DIR`                           | `<root>/.cache/assets/minecraft-1.21.1`                                                                                                           |
-| `TFC_PLATFORM_JAR` / `TFC_PLATFORM_SOURCES` | newest `neoforge-X.jar` / `-sources.jar` in `tools/*/build/moddev/artifacts`                                                                      |
-| `TFC_DECOMPILER`                            | newest Vineflower in the Gradle cache                                                                                                             |
-| `TFC_AGENT_NICK`                            | `Claude` — author / `updatedBy` of every write (tasks, docs, guides, config proposals, addon versions); set per agent, see [agents.md](agents.md) |
+| Variable                                    | Default                                                                                                                                  |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `TFC_PACK_ROOT`                             | main checkout root                                                                                                                       |
+| `TFC_PUBLIC_DIR`                            | `<root>/public`                                                                                                                          |
+| `TFC_PACK_CACHE`                            | `~/.cache/tfc-plans/pack` (snapshot copy from `npm run pack:fetch`)                                                                      |
+| `TFC_MODS_DIR`                              | `$TFC_PACK_CACHE/mods`; when set, `.cache/mcp`, `instance/`, `tools/` are looked up next to it (pack server)                             |
+| `TFC_INSTANCE_DIR`                          | `<root>/instance`                                                                                                                        |
+| `TFC_KUBEJS_DIR`                            | `<root>/instance/kubejs`                                                                                                                 |
+| `TFC_VANILLA_DIR`                           | `<root>/.cache/assets/minecraft-1.21.1`                                                                                                  |
+| `TFC_PLATFORM_JAR` / `TFC_PLATFORM_SOURCES` | newest `neoforge-X.jar` / `-sources.jar` in `tools/*/build/moddev/artifacts`                                                             |
+| `TFC_DECOMPILER`                            | newest Vineflower in the Gradle cache                                                                                                    |
+| `TFC_AGENT_NICK`                            | launching agent (`Claude`, `Kimi`…; unknown — `Агент?`) — author / `updatedBy` of every write; set per agent, see [agents.md](agents.md) |
 
 ## Tools
 
