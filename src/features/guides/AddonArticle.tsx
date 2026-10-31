@@ -1,7 +1,7 @@
 import { BookOpen, History, Pencil, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { guidesEnabled, subscribeGuide } from '@/data/guides';
+import { guidesEnabled, saveGuide, subscribeGuide } from '@/data/guides';
 import { ADDONS, ADDON_GUIDE_SECTION, addonGuideId, type Addon } from '@/lib/addons';
 import { BASE_DOCS, BASE_VALUES } from '@/lib/guideScope';
 import { readNick } from '@/shared/lib/nick';
@@ -86,6 +86,51 @@ function splitAddonChecked(body: string): { mainBody: string; checkedBody: strin
   };
 }
 
+/** Разбивает текст раздела на отдельные пункты списка (каждый — от «- » до следующего «- ») */
+function splitBullets(text: string): string[] {
+  const lines = text.split('\n');
+  const out: string[] = [];
+  let cur: string[] = [];
+  for (const line of lines) {
+    if (/^\s*[-*+]\s+/.test(line)) {
+      if (cur.length) out.push(cur.join('\n').trim());
+      cur = [line];
+    } else if (cur.length) {
+      cur.push(line);
+    }
+  }
+  if (cur.length) out.push(cur.join('\n').trim());
+  return out.filter((b) => b.trim());
+}
+
+/** Пересобирает тело статьи с новыми текстами разделов «Проверено» / «Не проверено» */
+function rebuildBody(body: string, newChecked: string, newUnchecked: string): string {
+  const lines = body.split('\n');
+  const sections: { title: string; content: string[] }[] = [{ title: '', content: [] }];
+  for (const line of lines) {
+    const m = /^##\s+(.+?)\s*$/.exec(line);
+    if (m) sections.push({ title: m[1].trim(), content: [] });
+    else sections[sections.length - 1].content.push(line);
+  }
+  const result: string[] = [];
+  for (const s of sections) {
+    if (s.title === 'Проверено') {
+      if (newChecked.trim()) result.push(`## Проверено\n${newChecked.trim()}`);
+    } else if (s.title === 'Не проверено') {
+      if (newUnchecked.trim()) result.push(`## Не проверено\n${newUnchecked.trim()}`);
+    } else if (s.title) {
+      result.push(`## ${s.title}\n${s.content.join('\n').trim()}`);
+    } else {
+      const t = s.content.join('\n').trim();
+      if (t) result.push(t);
+    }
+  }
+  return result
+    .join('\n\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 /**
  * Подробное описание аддона — статья Firestore guides/addon-<мод> (раздел addon): правят все, история версий как у
  * гайдов. Отдельный чанк (lazy в AddonPage).
@@ -98,6 +143,7 @@ export default function AddonArticle({ addon }: { addon: Addon }) {
   const [editing, setEditing] = useState<Guide | 'new' | null>(null);
   const [history, setHistory] = useState(false);
   const [restore, setRestore] = useState<Pick<Guide, 'title' | 'summary' | 'body'> | null>(null);
+  const [moving, setMoving] = useState(false);
 
   useEffect(() => {
     setGuide(undefined);
@@ -153,6 +199,39 @@ export default function AddonArticle({ addon }: { addon: Addon }) {
   // занимали больше, чем само описание. Показываем их свёрнутыми блоками в конце статьи.
   const { mainBody, checkedBody, uncheckedBody } = splitAddonChecked(guide.body);
 
+  const markChecked = async (bullet: string) => {
+    const nick = readNick();
+    if (!nick) {
+      alert('Сначала укажите ник (вверху справа) — им подписываются правки');
+      return;
+    }
+    if (moving) return;
+    setMoving(true);
+    try {
+      const { checkedBody: curChecked, uncheckedBody: curUnchecked } = splitAddonChecked(guide.body);
+      const remaining = splitBullets(curUnchecked).filter((b) => b !== bullet);
+      const newChecked = curChecked ? `${curChecked}\n\n${bullet}` : bullet;
+      const newUnchecked = remaining.join('\n\n');
+      const newBody = rebuildBody(guide.body, newChecked, newUnchecked);
+      await saveGuide(guide.id, {
+        section: guide.section,
+        title: guide.title,
+        summary: guide.summary,
+        body: newBody,
+        icon: guide.icon,
+        group: guide.group,
+        order: guide.order,
+        checked: guide.checked,
+        hidden: guide.hidden,
+        updatedBy: nick,
+      });
+    } catch (e) {
+      alert((e as Error).message);
+    } finally {
+      setMoving(false);
+    }
+  };
+
   return (
     <>
       <Card as="article" className={styles.guideArticle}>
@@ -196,7 +275,24 @@ export default function AddonArticle({ addon }: { addon: Addon }) {
           <details className={styles.addonChecked}>
             <summary className={styles.addonCheckedSummary}>Не проверено ({countBullets(uncheckedBody)})</summary>
             <div className={styles.addonCheckedBody}>
-              <GuideBody source={uncheckedBody} kit={KIT} onGuide={onGuide} />
+              <ul className={styles.addonCheckedList}>
+                {splitBullets(uncheckedBody).map((b, i) => (
+                  <li key={i} className={styles.addonCheckedItem}>
+                    <div className={styles.addonCheckedText}>
+                      <GuideBody source={b} kit={KIT} onGuide={onGuide} />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      className="small"
+                      disabled={moving}
+                      onClick={() => markChecked(b)}
+                      title="Перенести в «Проверено»"
+                    >
+                      Отметить проверенным
+                    </Button>
+                  </li>
+                ))}
+              </ul>
             </div>
           </details>
         )}

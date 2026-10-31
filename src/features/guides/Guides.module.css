@@ -470,6 +470,35 @@
   margin-top: 2px;
 }
 
+.addonCheckedList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.addonCheckedItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.addonCheckedText {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.addonCheckedText .guideBody {
+  gap: 4px;
+  font-size: 13px;
+}
+
 .guideHelp {
   position: relative;
 }
