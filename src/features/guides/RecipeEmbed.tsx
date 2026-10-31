@@ -15,7 +15,7 @@ export function RecipeEmbed({ id }: { id: string }) {
       recipe={recipe}
       fallback={
         <div className="empty">
-          У рецепта {id} нет сетки крафта ({recipe.t})
+          Рецепт {id} ({recipe.t}) сайт пока не умеет показать — смотрите JEI в игре
         </div>
       }
       caption={
