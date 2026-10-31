@@ -27,18 +27,57 @@
     {
       "name": "reference.world",
       "path": "/reference?tab=world",
-      "waitFor": "main [role=tablist]"
+      "waitFor": "main"
     },
     {
       "name": "reference.world.dark",
       "path": "/reference?tab=world&sub=geology",
-      "waitFor": "main [role=tablist]",
+      "waitFor": "main",
       "theme": "dark"
     },
     {
       "name": "reference.world-map",
       "path": "/reference?tab=world&sub=map&x=0&z=0",
-      "waitFor": "main [role=tablist]"
+      "waitFor": "main"
+    },
+    {
+      "name": "reference.items",
+      "path": "/reference?tab=items",
+      "waitFor": "main"
+    },
+    {
+      "name": "reference.items.dark",
+      "path": "/reference?tab=items",
+      "waitFor": "main",
+      "theme": "dark"
+    },
+    {
+      "name": "reference.recipes",
+      "path": "/reference?tab=items&sub=recipes",
+      "waitFor": "main"
+    },
+    {
+      "name": "reference.recipes.dark",
+      "path": "/reference?tab=items&sub=recipes",
+      "waitFor": "main",
+      "theme": "dark"
+    },
+    {
+      "name": "reference.power-guides",
+      "path": "/reference?tab=power&sub=guides",
+      "waitFor": "main"
+    },
+    {
+      "name": "reference.power-guides.dark",
+      "path": "/reference?tab=power&sub=guides",
+      "waitFor": "main",
+      "theme": "dark"
+    },
+    {
+      "name": "reference.multiblocks.dark",
+      "path": "/reference?tab=multiblocks",
+      "waitFor": "main",
+      "theme": "dark"
     },
     {
       "name": "tasks",
@@ -142,13 +181,13 @@
     {
       "name": "reference.food.dark",
       "path": "/reference?tab=food",
-      "waitFor": "main [role=tablist]",
+      "waitFor": "main",
       "theme": "dark"
     },
     {
       "name": "reference.guides.dark",
       "path": "/reference?tab=guides",
-      "waitFor": "main [role=tablist]",
+      "waitFor": "main",
       "theme": "dark"
     },
     {
@@ -206,60 +245,66 @@
     {
       "name": "reference",
       "path": "/reference",
-      "waitFor": "main [role=tablist]"
+      "waitFor": "main"
+    },
+    {
+      "name": "reference.dark",
+      "path": "/reference",
+      "waitFor": "main",
+      "theme": "dark"
     },
     {
       "name": "reference.fuel",
       "path": "/reference?tab=fuel",
-      "waitFor": "main [role=tablist]"
+      "waitFor": "main"
     },
     {
       "name": "reference.metals",
       "path": "/reference?tab=metals",
-      "waitFor": "main [role=tablist]"
+      "waitFor": "main"
     },
     {
       "name": "reference.food",
       "path": "/reference?tab=food",
-      "waitFor": "main [role=tablist]"
+      "waitFor": "main"
     },
     {
       "name": "reference.botany",
       "path": "/reference?tab=botany",
-      "waitFor": "main [role=tablist]"
+      "waitFor": "main"
     },
     {
       "name": "reference.power",
       "path": "/reference?tab=power",
-      "waitFor": "main [role=tablist]"
+      "waitFor": "main"
     },
     {
       "name": "reference.power.ie",
       "path": "/reference?tab=power",
-      "waitFor": "main [role=tablist]",
+      "waitFor": "main",
       "actions": [{ "clickText": "Сеть IE" }]
     },
     {
       "name": "reference.multiblocks",
       "path": "/reference?tab=multiblocks",
-      "waitFor": "main [role=tablist]"
+      "waitFor": "main"
     },
     {
       "name": "reference.multiblocks.formed",
       "path": "/reference?tab=multiblocks",
-      "waitFor": "main [role=tablist]",
+      "waitFor": "main",
       "actions": [{ "clickText": "Итог" }, { "wait": "canvas" }],
       "note": "итоговый вид мультиблока"
     },
     {
       "name": "reference.guides",
       "path": "/reference?tab=guides",
-      "waitFor": "main [role=tablist]"
+      "waitFor": "main"
     },
     {
       "name": "reference.guides.ie-load-picker",
       "path": "/reference?tab=guides&g=optimal",
-      "waitFor": "main [role=tablist]",
+      "waitFor": "main",
       "actions": [
         { "clickText": "из машин IE…" },
         { "wait": 500 },
@@ -272,14 +317,14 @@
     {
       "name": "reference.map",
       "path": "/reference?tab=map",
-      "waitFor": "main [role=tablist]",
+      "waitFor": "main",
       "fullPage": false,
       "note": "тайлы карты догружаются — сравнивать по рамке, не по карте"
     },
     {
       "name": "reference.map.settings",
       "path": "/reference?tab=map",
-      "waitFor": "main [role=tablist]",
+      "waitFor": "main",
       "actions": [{ "click": "button[title=\"Профиль и масштаб мира\"]" }, { "wait": "[role=dialog]" }],
       "fullPage": false,
       "note": "настройки профиля и масштабов мира"

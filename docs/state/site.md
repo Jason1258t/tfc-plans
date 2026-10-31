@@ -2,6 +2,13 @@
 
 Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quoted in Russian as they appear in the code.
 
+## Wiki navigation (2026-10-31, #179)
+
+- `/` is a visual directory of the site's main tools; player tasks moved to `/tasks`, with legacy root query links preserved. `/reference` is a card directory of «Мир и ресурсы», «Предметы и рецепты», «Еда и сельское хозяйство», «Электричество», «Мультиблоки» and «Все гайды». Inside a topic the existing sidebar/mobile section list remains, with «Все разделы» leading back to the cards; the old top-level reference tabs are gone.
+- Items, recipes and tags are reference material under `/reference?tab=items`, separate from datapack editing. Item cards link to obtaining/usage recipes and tags. Food and botany share «Еда и сельское хозяйство». Power and multiblock guides live inside their topics as well as in the common guide catalogue; addon authoring stays on `/addons`.
+- Multiblocks have search, mod/purpose filters and four content views: «Обзор и постройка», «Материалы», «Работа», «Гайды». Existing 3D/layer viewers, guide content, game data and theme #178 are unchanged.
+- Legacy `/recipes`, `/tags`, `/map`, old reference tabs and guide links redirect with their query parameters intact. Browser checks covered those redirects, deep item search, browser Back, cards and multiblock views, keyboard Tab/Enter with visible focus, nested-`main`/horizontal-overflow checks, and desktop/mobile light/dark captures. The item search's column-flex sizing was corrected to its normal 32 px height.
+
 ## TFC Studio branding (2026-10-31)
 
 - The header, favicon, welcome copy, generated KubeJS attribution, HTML metadata and Open Graph artwork use the public name **TFC Studio** and the modular blueprint sign. Desktop uses the full sign; narrow screens and favicons use the compact sign. Repository, Firebase, package and URL identifiers are intentionally unchanged.
@@ -51,9 +58,9 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 ## Structure (reworked 2026-10-13)
 
 - Header: Задачи · Документы (file storage) · Схемы · Датапаки · Справочник; on the right — pack-update bell.
-- Markdown plans (formerly «Документы») are the «Планы» section of the tasks page (`/?view=docs`, left, above groups).
-- Datapacks, recipes and tags are one section with a tab chooser on the left (`/datapacks`, `/recipes`, `/tags` unchanged).
-- Map is a reference tab (`/reference?tab=map`). Full-page doc — `/doc/{id}` (old `/docs/{id}` and `/map?x=…` redirect).
+- Markdown plans (formerly «Документы») are the «Планы» section of the tasks page (`/tasks?view=docs`, left, above groups; old `/?view=docs` redirects).
+- Datapack editing stays at `/datapacks`; recipes and tags are reference material at `/reference?tab=items&sub=recipes|tags` (old `/recipes` and `/tags` redirect).
+- Map belongs to «Мир и ресурсы» (`/reference?tab=world&sub=map`). Full-page doc — `/doc/{id}` (old `/docs/{id}` and `/map?x=…` redirect).
 
 ## Styles (CSS Modules migration completed 2026-10-28)
 
@@ -540,7 +547,7 @@ next — photos, MCP, wooden styles.
 
 ## Reference
 
-- Tabs: Руды · Топливо · Металлы · Еда · Ботаника · Карта (+ Мультиблоки, Электричество, Гайды below).
+- Card topics: «Мир и ресурсы», «Предметы и рецепты», «Еда и сельское хозяйство», «Электричество», «Мультиблоки», «Все гайды». Topic contents use the sidebar/mobile section list described in «Wiki navigation» above.
 - Metals and food respect the pack datapack (`kubejs/data`): a record with the same id replaces mod data (aluminium
   1550 °C instead of 1740), metals table shows a «kubejs/data» badge.
 - Ore smelting and chains are recomputed by `npm run kubejs` from recipes that remain in game (mods + `kubejs/data` −
@@ -629,8 +636,7 @@ fertiliser blocks, calendar with month labels. `.class` parsing — `scripts/mod
 
 ## Guides
 
-- Since 2026-10-16 a separate reference tab «Гайды» (`?tab=guides`), sections «Электричество», «Аддоны»
-  (`&sub=addons`, same articles as on `/addons`), «Мультиблоки», «О сайте»; old URLs redirect.
+- «Все гайды» (`?tab=guides`) is the common catalogue with topic filters and «TFC Studio» articles. Power and multiblock articles also open inside `/reference?tab=power&sub=guides` and `/reference?tab=multiblocks&sub=guides`; old guide URLs redirect to the canonical topic. Addon authoring remains at `/addons?sub=guides` rather than duplicating a second list.
 - Section `addon` (2026-10-22) — addon pages `/addons/<mod>` (guide id `addon-<mod>`), not listed under «Гайды»;
   see [addons.md](addons.md).
 - Since 2026-10-15 articles live in Firestore `guides`, editable on the site by anyone, with revision history;

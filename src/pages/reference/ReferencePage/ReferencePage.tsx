@@ -1,5 +1,16 @@
-import { ArrowRight, Search } from 'lucide-react';
-import { SectionShell, Segmented, Select, Card, CardHead, Table, TableWrap, tableStyles } from '@/shared/ui';
+import {
+  ArrowLeft,
+  ArrowRight,
+  BookOpen,
+  Boxes,
+  Globe2,
+  Package,
+  Search,
+  Wheat,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react';
+import { SectionShell, Select, Card, CardHead, Table, TableWrap, tableStyles } from '@/shared/ui';
 import { useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { BotanyTab } from '../tabs/BotanyTab';
@@ -45,13 +56,38 @@ type Tab = 'world' | 'items' | 'food' | 'power' | 'multiblocks' | 'guides';
 type WorldSub = 'ores' | 'geology' | 'map';
 type ItemsSub = 'items' | 'recipes' | 'tags' | 'metals' | 'fuel' | 'liquid';
 type FoodSub = 'food' | 'meals' | 'dishes' | BotanySub;
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'world', label: 'Мир и ресурсы' },
-  { id: 'items', label: 'Предметы и рецепты' },
-  { id: 'food', label: 'Еда и сельское хозяйство' },
-  { id: 'power', label: 'Электричество' },
-  { id: 'multiblocks', label: 'Мультиблоки' },
-  { id: 'guides', label: 'Все гайды' },
+const TABS: { id: Tab; label: string; description: string; icon: LucideIcon }[] = [
+  { id: 'world', label: 'Мир и ресурсы', description: 'Руды, геология и карта мира.', icon: Globe2 },
+  {
+    id: 'items',
+    label: 'Предметы и рецепты',
+    description: 'Предметы, рецепты, теги, металлы и топливо.',
+    icon: Package,
+  },
+  {
+    id: 'food',
+    label: 'Еда и сельское хозяйство',
+    description: 'Продукты, блюда, культуры, деревья и теплица.',
+    icon: Wheat,
+  },
+  {
+    id: 'power',
+    label: 'Электричество',
+    description: 'Системы энергии, сети, нагрузки и профильные гайды.',
+    icon: Zap,
+  },
+  {
+    id: 'multiblocks',
+    label: 'Мультиблоки',
+    description: 'Постройка, материалы, работа машин и гайды.',
+    icon: Boxes,
+  },
+  {
+    id: 'guides',
+    label: 'Все гайды',
+    description: 'Статьи по механизмам, мультиблокам и TFC Studio.',
+    icon: BookOpen,
+  },
 ];
 const MB_SUBS: MultiblockSub[] = ['build', 'materials', 'work', 'guides'];
 const WORLD_SUBS: { id: WorldSub; label: string }[] = [
@@ -95,7 +131,9 @@ export function ReferencePage() {
 function Reference() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
-  const tab = (TABS.find((t) => t.id === params.get('tab'))?.id ?? 'world') as Tab;
+  const section = TABS.find((t) => t.id === params.get('tab'));
+  const tab = section?.id ?? 'world';
+  const home = !section;
   const worldSub = WORLD_SUBS.find((s) => s.id === params.get('sub'))?.id ?? 'ores';
   const ref = useReference();
   const items = useItems();
@@ -105,25 +143,24 @@ function Reference() {
     : 0;
 
   return (
-    <main className={cx(shell.page, tab === 'world' && worldSub === 'map' && shell.pageWide)}>
+    <main className={cx(shell.page, !home && tab === 'world' && worldSub === 'map' && shell.pageWide)}>
+      {!home && (
+        <Link to="/reference" className={styles.back}>
+          <ArrowLeft size={16} aria-hidden /> Все разделы
+        </Link>
+      )}
       <div className={shell.head}>
         <div className="grow">
-          <h1>Справочник</h1>
+          <h1>{section?.label ?? 'Справочник'}</h1>
           <p className="faint small">
             Данные из jar сборки; еда, металлы, плавка руд и жидкости для горелки всполоха — с учётом данных KubeJS
             сборки. Остальное, что сервер переопределяет датапаком или KubeJS, здесь не видно.
           </p>
         </div>
       </div>
-      <Segmented
-        role="tablist"
-        tabs
-        className={styles.tabs}
-        value={tab}
-        onChange={(id) => setParams({ tab: id }, { replace: true })}
-        options={TABS.map((t) => ({ value: t.id, label: t.label }))}
-      />
-      {tab === 'world' ? (
+      {home ? (
+        <ReferenceHome />
+      ) : tab === 'world' ? (
         <SectionShell
           navLabel="Мир и ресурсы"
           nav={WORLD_SUBS.map((s) => (
@@ -240,6 +277,25 @@ function Reference() {
         />
       ) : null}
     </main>
+  );
+}
+
+function ReferenceHome() {
+  return (
+    <nav className={styles.sectionGrid} aria-label="Разделы справочника">
+      {TABS.map((section) => (
+        <Link key={section.id} to={`/reference?tab=${section.id}`} className={styles.sectionCard}>
+          <span className={styles.sectionIcon} aria-hidden>
+            <section.icon size={22} strokeWidth={1.6} />
+          </span>
+          <span className={styles.sectionText}>
+            <span className={styles.sectionTitle}>{section.label}</span>
+            <span className={styles.sectionDescription}>{section.description}</span>
+          </span>
+          <ArrowRight className={styles.sectionArrow} size={17} aria-hidden />
+        </Link>
+      ))}
+    </nav>
   );
 }
 

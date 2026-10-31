@@ -493,7 +493,7 @@ function MachineInfo({ m }: { m: Multiblock }) {
           {m.recipes.map((x, i) => (
             <span key={x.t}>
               {i > 0 && ' · '}
-              <Link to={`/recipes?type=${encodeURIComponent(x.t)}`}>
+              <Link to={`/reference?tab=items&sub=recipes&type=${encodeURIComponent(x.t)}`}>
                 {x.t} ({x.n})
               </Link>
             </span>

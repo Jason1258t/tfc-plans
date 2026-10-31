@@ -34,7 +34,7 @@ const GROUPS: { id: Group; title: string }[] = [
 
 const ITEMS: NavigationItem[] = [
   {
-    to: '/reference?tab=world',
+    to: '/reference',
     title: 'Справочник',
     description: 'Руды, рецепты, предметы, еда, электричество и другие данные сборки.',
     keywords: 'мир ресурсы переработка рецепты предметы теги топливо ботаника мультиблоки вики',
