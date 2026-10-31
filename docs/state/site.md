@@ -40,10 +40,11 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 - Checklist and journal collapse; only the last five completed checklist entries are shown initially, with a toggle
   for the rest. Journal has its own scroll area, keeping the form manageable.
 
-## Dev task indicators (2026-10-28, #131)
+## Dev task indicators (updated 2026-10-31, #182)
 
-- Every priority has a coloured dot: low blue, normal green, high yellow, urgent red; its Russian label is available
-  through a tooltip and accessibility text. The task editor shows the same indicator beside «Важность».
+- Every priority has a coloured dot using the theme's `--imp-*` scale: low grey, normal blue, high amber, urgent red;
+  its Russian label is available through a tooltip and accessibility text. The task editor shows the same indicator
+  beside «Важность».
 - Checklist progress in task rows and the editor uses a circular indicator, percentage and completed/total count.
   Empty checklists have no indicator. Verified with TypeScript, lint, layer boundaries and desktop/mobile browser
   captures; isolated fixtures cover 0%, partial and complete progress in light/dark themes. No game changes.
