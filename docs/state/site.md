@@ -19,6 +19,8 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 
 - The calmer TFC Studio theme is applied site-wide: quieter surfaces and borders, restrained accents, consistent semantic status colours and a solid loading skeleton instead of the animated shimmer.
 - Green marks positive and active work states, including task completion and «в работе». Changed schematic blocks use soft green highlighting rather than copper, keeping replacements distinct from warnings and errors.
+- 2026-10-31 (#182): semantic status colours and their soft backgrounds are more saturated in light and dark themes;
+  priorities use the same shared scale (grey, blue, amber, red), including the dots in «Разработка».
 - The shared 3D editor (`src/entities/schematic/ui/SchematicView3D/`) is unchanged. DOM, layout, routes and behaviour were not altered.
 - Verified with Prettier, oxlint (zero errors), TypeScript, FSD and package boundary checks, and a production build. Browser captures covered desktop/mobile and light/dark themes across the site; keyboard focus, task statuses and schematic replacement colours were also checked.
 
@@ -47,10 +49,11 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 - Checklist and journal collapse; only the last five completed checklist entries are shown initially, with a toggle
   for the rest. Journal has its own scroll area, keeping the form manageable.
 
-## Dev task indicators (2026-10-28, #131)
+## Dev task indicators (updated 2026-10-31, #182)
 
-- Every priority has a coloured dot: low blue, normal green, high yellow, urgent red; its Russian label is available
-  through a tooltip and accessibility text. The task editor shows the same indicator beside «Важность».
+- Every priority has a coloured dot using the theme's `--imp-*` scale: low grey, normal blue, high amber, urgent red;
+  its Russian label is available through a tooltip and accessibility text. The task editor shows the same indicator
+  beside «Важность».
 - Checklist progress in task rows and the editor uses a circular indicator, percentage and completed/total count.
   Empty checklists have no indicator. Verified with TypeScript, lint, layer boundaries and desktop/mobile browser
   captures; isolated fixtures cover 0%, partial and complete progress in light/dark themes. No game changes.

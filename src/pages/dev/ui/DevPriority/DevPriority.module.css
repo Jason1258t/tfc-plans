@@ -4,14 +4,14 @@
   height: 10px;
   flex: none;
   border-radius: 50%;
-  background: #4285d4;
+  background: var(--imp-0);
 }
 .dot[data-priority='1'] {
-  background: var(--accent);
+  background: var(--imp-1);
 }
 .dot[data-priority='2'] {
-  background: #e5b52d;
+  background: var(--imp-2);
 }
 .dot[data-priority='3'] {
-  background: var(--danger);
+  background: var(--imp-3);
 }

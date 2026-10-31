@@ -21,17 +21,17 @@
   --nutrient-protein: #9a6547;
 
   --diamond: #356d8a;
-  --amethyst: #68676c;
-  --amethyst-soft: #eae8e5;
-  --success: #4f7356;
-  --success-soft: #e4ece3;
-  --danger: #b5443a;
+  --amethyst: #76528f;
+  --amethyst-soft: #eadff3;
+  --success: #2c713c;
+  --success-soft: #d9efdd;
+  --danger: #ad3d33;
   --danger-soft: #f5e3df;
 
-  --imp-0: #7b766e;
-  --imp-1: #426f97;
-  --imp-2: #9a6a1f;
-  --imp-3: #b5443a;
+  --imp-0: #6f6a63;
+  --imp-1: #246b9e;
+  --imp-2: #925700;
+  --imp-3: #ad3d33;
 
   --shadow-sm: none;
   --shadow-md: 0 8px 24px rgb(42 35 28 / 0.1);
@@ -72,17 +72,17 @@
     --nutrient-protein: #c18e70;
 
     --diamond: #83afc7;
-    --amethyst: #aaa6ac;
-    --amethyst-soft: #323033;
-    --success: #8faf92;
-    --success-soft: #29372c;
-    --danger: #d68176;
-    --danger-soft: #3d2927;
+    --amethyst: #b69acb;
+    --amethyst-soft: #382c42;
+    --success: #78c786;
+    --success-soft: #233d2a;
+    --danger: #ed8a7c;
+    --danger-soft: #452824;
 
-    --imp-0: #959087;
-    --imp-1: #83a9ca;
-    --imp-2: #c6a061;
-    --imp-3: #d68176;
+    --imp-0: #aaa39a;
+    --imp-1: #72b5e6;
+    --imp-2: #e3ae4f;
+    --imp-3: #ed8a7c;
 
     --shadow-sm: none;
     --shadow-md: 0 8px 24px rgb(0 0 0 / 0.28);
