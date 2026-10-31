@@ -10,7 +10,8 @@ body {
 body {
   font-family: var(--font);
   font-size: 14px;
-  line-height: 1.45;
+  line-height: 1.5;
+  font-optical-sizing: auto;
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;

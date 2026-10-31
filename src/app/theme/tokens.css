@@ -1,37 +1,38 @@
-/* Палитра TFC Studio: бумага и графит, медь для действий, чертёжный синий для информации. */
+/* Палитра TFC Studio: бумага и графит, медь для действий, чертёжный синий для информации.
+   Контраст основного текста ~11:1, а не 14:1: без «свечения» белого на чёрном и бликов белой бумаги. */
 :root {
-  --bg: #f5f3ee;
-  --surface: #fcfbf8;
-  --surface-2: #efede7;
-  --surface-3: #e6e2da;
-  --border: #d9d4ca;
-  --border-strong: #bdb6aa;
-  --text: #27241f;
-  --text-2: #5e5951;
-  --text-3: #767066;
+  --bg: #f0eee9;
+  --surface: #f6f5f1;
+  --surface-2: #e9e6e0;
+  --surface-3: #e1ddd6;
+  --border: #d3cec5;
+  --border-strong: #b7b0a5;
+  --text: #2e2b27;
+  --text-2: #57524b;
+  --text-3: #605a53;
 
-  --accent: #925735;
-  --accent-hover: #774329;
-  --accent-soft: #f0e2d8;
-  --accent-text: #ffffff;
-  --focus: #356d8a;
+  --accent: #84502f;
+  --accent-hover: #6c3f25;
+  --accent-soft: #eadcd1;
+  --accent-text: #fbf8f4;
+  --focus: #2f6380;
 
-  --nutrient-grain: #9a742e;
-  --nutrient-fruit: #a6535d;
-  --nutrient-protein: #9a6547;
+  --nutrient-grain: #8a6727;
+  --nutrient-fruit: #9a4b55;
+  --nutrient-protein: #8d5c40;
 
-  --diamond: #356d8a;
-  --amethyst: #76528f;
+  --diamond: #2f6380;
+  --amethyst: #6e4d86;
   --amethyst-soft: #eadff3;
-  --success: #2c713c;
+  --success: #2a6a38;
   --success-soft: #d9efdd;
-  --danger: #ad3d33;
+  --danger: #a33a30;
   --danger-soft: #f5e3df;
 
-  --imp-0: #6f6a63;
-  --imp-1: #246b9e;
-  --imp-2: #925700;
-  --imp-3: #ad3d33;
+  --imp-0: #625c55;
+  --imp-1: #22629a;
+  --imp-2: #875100;
+  --imp-3: #a33a30;
 
   --shadow-sm: none;
   --shadow-md: 0 8px 24px rgb(42 35 28 / 0.1);
@@ -51,38 +52,38 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #1d1e1f;
-    --surface: #252627;
-    --surface-2: #2c2d2e;
-    --surface-3: #343536;
-    --border: #3b3c3d;
-    --border-strong: #555657;
-    --text: #ece9e3;
-    --text-2: #b7b2aa;
-    --text-3: #918c84;
+    --bg: #1f2022;
+    --surface: #26282a;
+    --surface-2: #2d2f32;
+    --surface-3: #323437;
+    --border: #383a3d;
+    --border-strong: #505358;
+    --text: #d8d5cf;
+    --text-2: #b5b1aa;
+    --text-3: #a09c95;
 
-    --accent: #ce966f;
-    --accent-hover: #deb08c;
-    --accent-soft: #3b3029;
+    --accent: #c4906f;
+    --accent-hover: #d3a685;
+    --accent-soft: #382e28;
     --accent-text: #241812;
-    --focus: #83afc7;
+    --focus: #82a9bf;
 
     --nutrient-grain: #c7a669;
     --nutrient-fruit: #cb8b94;
     --nutrient-protein: #c18e70;
 
-    --diamond: #83afc7;
+    --diamond: #82a9bf;
     --amethyst: #b69acb;
     --amethyst-soft: #382c42;
-    --success: #78c786;
+    --success: #7dbd88;
     --success-soft: #233d2a;
-    --danger: #ed8a7c;
+    --danger: #e08a7e;
     --danger-soft: #452824;
 
-    --imp-0: #aaa39a;
-    --imp-1: #72b5e6;
-    --imp-2: #e3ae4f;
-    --imp-3: #ed8a7c;
+    --imp-0: #a39d95;
+    --imp-1: #79acd6;
+    --imp-2: #d6a755;
+    --imp-3: #e08a7e;
 
     --shadow-sm: none;
     --shadow-md: 0 8px 24px rgb(0 0 0 / 0.28);
