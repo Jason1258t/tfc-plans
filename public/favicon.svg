@@ -1,6 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <style>
+    .outline { stroke: #1c252b; }
+    @media (prefers-color-scheme: dark) { .outline { stroke: #d8e2e7; } }
+  </style>
   <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <g stroke="#d8e2e7" stroke-width="5">
+    <g class="outline" stroke-width="5">
       <path d="M60 19L91 37L60 55L29 37Z" />
       <path d="M24 49L50 64V96L24 81Z" />
       <path d="M96 49L70 64V96L96 81Z" />

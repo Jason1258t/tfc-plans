@@ -2,6 +2,11 @@
 
 Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quoted in Russian as they appear in the code.
 
+## TFC Studio branding (2026-10-31)
+
+- The header, favicon, welcome copy, generated KubeJS attribution, HTML metadata and Open Graph artwork use the public name **TFC Studio** and the modular blueprint sign. Desktop uses the full sign; narrow screens and favicons use the compact sign. Repository, Firebase, package and URL identifiers are intentionally unchanged.
+- Verified with Prettier, oxlint (zero errors), FSD and package boundary checks, TypeScript, a production build, and desktop/mobile light/dark browser captures of the tasks page. Favicon rendering was checked at 16, 24, 32 and 48 px; its outline follows the browser colour scheme.
+
 ## Concrete washing templates (2026-10-27)
 
 - The recipe catalogue includes Create's 16 runtime-generated vanilla concrete washing recipes. The builder reads
