@@ -85,9 +85,9 @@
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--amethyst) 35%, var(--border));
+  border: 0;
   border-radius: var(--radius);
-  background: linear-gradient(to bottom, var(--amethyst-soft), var(--surface) 80px);
+  background: var(--surface);
 }
 
 .aiIco {
@@ -218,7 +218,7 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius);
   background: var(--surface);
 }

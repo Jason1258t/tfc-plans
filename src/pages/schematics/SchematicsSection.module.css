@@ -16,14 +16,14 @@
   align-items: center;
   gap: 10px;
   padding: 8px 8px 8px 12px;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius);
   background: var(--surface);
 }
 
 /* выбранная запись библиотеки — класс идёт вместе с .file */
 .fileSelected {
-  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
 /* Инструменты схемы — своей строкой под именем файла (в одну строку с ним не помещаются) */
@@ -88,7 +88,8 @@
 }
 
 .search:focus-within {
-  border-color: var(--accent);
+  border-color: var(--focus);
+  box-shadow: none;
 }
 
 .search input {

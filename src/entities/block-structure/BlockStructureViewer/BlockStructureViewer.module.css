@@ -194,8 +194,9 @@
   justify-content: center;
   gap: 6px;
   padding: 10px;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius);
+  background: var(--surface);
   overflow-x: auto;
   min-width: 0;
 }
@@ -232,7 +233,7 @@ button.cell {
 }
 
 button.cell:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus);
 }
 
 /* пустая клетка: класс `empty` — глобальный помощник темы */
