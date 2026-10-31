@@ -23,6 +23,7 @@ import {
   tags,
   tagsOf,
 } from './data.mjs';
+import { recipeView, recipeViewLines } from '@tfc/core/recipeView';
 import { siteRecipes } from './site-datapacks.mjs';
 import { FirestoreError, guideDoc, guideDocs, writeGuide } from './firestore.mjs';
 import { clip, dateOf, nameOf, named, NICK, norm, num, page, paging, short, str, userRegex, words } from './fmt.mjs';
@@ -212,6 +213,8 @@ async function recipeGet(a) {
   for (const n of r.kjsChanged) out.push(`меняет: ${ruleRef(n, cat)}`);
   out.push(`выход: ${r.outputs.map(named).join(', ') || '—'}`);
   out.push(`вход: ${r.inputs.map(named).join(', ') || '—'}`);
+  const view = r.removed ? null : recipeView(r);
+  if (view) out.push(...recipeViewLines(view));
   if (r.effInputs.join() !== r.inputs.join() || r.effOutputs.join() !== r.outputs.join())
     out.push(`после замен KubeJS — выход: ${r.effOutputs.join(', ')}; вход: ${r.effInputs.join(', ')}`);
   const file = r.file ?? (r.s.startsWith('kubejs/') ? r.s : `data/${r.i.replace(':', '/recipe/')}.json`);

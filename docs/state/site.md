@@ -53,6 +53,13 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 - Header: Задачи · Документы (file storage) · Схемы · Датапаки · Справочник; on the right — pack-update bell.
 - Markdown plans (formerly «Документы») are the «Планы» section of the tasks page (`/?view=docs`, left, above groups).
 - Datapacks, recipes and tags are one section with a tab chooser on the left (`/datapacks`, `/recipes`, `/tags` unchanged).
+- Recipe layouts (dev #173, plan doc 40): non-grid recipes render as a JEI-like station layout (inputs → station
+  icon + time/temperature/energy/tier → outputs with counts, chances, fluids; anvil rules, glassworking ops, Create
+  assembly as steps; knapping/sewing pattern). Parsing — `@tfc/core/recipeView` (per-mod rule registry; unknown types
+  with plain input/output fields — «по общим полям», others — JSON as before); rendering — `shared/pack-data/RecipeGrid`
+  (catalogue, `::craft` guide embeds, insert picker); MCP `recipe_get` prints the same layout. ~99 % of recipes covered;
+  202 special recipes (plate_cuisine, mineral_mix, ore excavation, special crafts) stay JSON. The 728 empty-type recipes
+  are all removal stubs.
 - Map is a reference tab (`/reference?tab=map`). Full-page doc — `/doc/{id}` (old `/docs/{id}` and `/map?x=…` redirect).
 
 ## Styles (CSS Modules migration completed 2026-10-28)

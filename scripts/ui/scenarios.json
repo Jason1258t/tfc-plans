@@ -166,6 +166,30 @@
       "note": "конструктор удалённого рецепта KubeJS"
     },
     {
+      "name": "recipes.layout-anvil",
+      "path": "/recipes?q=tfc%3Aanvil%2Fmetal%2Fjavelin_head%2Fbismuth_bronze",
+      "waitFor": "main",
+      "actions": [{ "click": "main button[aria-label='Показать JSON']" }, { "wait": "main figure" }],
+      "fullPage": false,
+      "note": "раскладка станции: ковка на наковальне"
+    },
+    {
+      "name": "recipes.layout-knapping",
+      "path": "/recipes?q=tfc%3Aknapping%2Fceramic%2Funfired_saw_blade_mold",
+      "waitFor": "main",
+      "actions": [{ "click": "main button[aria-label='Показать JSON']" }, { "wait": "main figure" }],
+      "fullPage": false,
+      "note": "раскладка с узором: кнаппинг"
+    },
+    {
+      "name": "recipes.layout-crushing",
+      "path": "/recipes?q=create%3Acrushing%2Fcompat%2Felementaryores%2Fore_lapis_end",
+      "waitFor": "main",
+      "actions": [{ "click": "main button[aria-label='Показать JSON']" }, { "wait": "main figure" }],
+      "fullPage": false,
+      "note": "раскладка Create: шансы и время"
+    },
+    {
       "name": "tags",
       "path": "/tags"
     },

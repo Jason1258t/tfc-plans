@@ -84,7 +84,7 @@ src/shared/       общее для всего сайта; снаружи — ч
   pack-data/       данные пакета, нужные почти всем страницам: items (useItems, itemName, searchItems, иконки),
                    recipes (каталог, статусы KubeJS, поиск), recipeFilter/recipeRefs (фильтры и входы/выходы рецепта),
                    tags (слияние источников и KubeJS), fuzzy (fuse.js — только подсказки замен в схемах),
-                   ItemIcon/ItemPicker/ItemIdSearch, RecipeStatusBadge
+                   ItemIcon/ItemPicker/ItemIdSearch, RecipeStatusBadge, RecipeGrid (сетка крафта и раскладки станций)
 src/entities/     сущности: типы, коллекции и zustand-хранилища для страниц
   task/            Task, ChecklistEntry, PRIORITIES/STATUSES, tasksStore, useTasks, describeTask
   group/           Group, groupsStore, useGroups
@@ -131,7 +131,7 @@ src/lib/
 src/features/guides/  GuidesSection, GuideEditor/History/Help, CalcBlock (```calc), GuideBody (Markdown + {{…}} +
                   «::name» widgets), powerWidgets; format — docs/plans/guides.md
 packages/core/    @tfc/core (npm workspace): code both the site and Node run — nbt, schematicFile(+BlockFixes),
-                  datapackFiles, addonVersions, projection, recipeFilter, recipeRefs, liquidFuel, hash, freshness,
+                  datapackFiles, addonVersions, projection, recipeFilter, recipeRefs, recipeView, liquidFuel, hash, freshness,
                   files.config (attachments config; Firestore or own server); rules — packages/core/AGENTS.md
 server/file-server/  file server for Ubuntu (Node, no deps); migration — scripts/files-migrate.mjs
 server/pack-server/  pack server (snapshots, keys); on the VPS — docs/pack-server.md
