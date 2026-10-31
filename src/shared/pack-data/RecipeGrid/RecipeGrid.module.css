@@ -226,3 +226,9 @@
   text-align: center;
   color: var(--text-2);
 }
+
+/* Картинка предмета аддона (из его карточки): нарисована со сглаживанием, уменьшаем гладко */
+.ownIcon {
+  display: block;
+  object-fit: contain;
+}

@@ -42,6 +42,7 @@ export {
   ruleIsIdOnly,
   searchRecipes,
   targetOf,
+  toRecipe,
   typeFieldStats,
   useRecipes,
 } from './recipes';
@@ -74,6 +75,7 @@ export { ItemIdSearch } from './ItemIdSearch';
 export { ItemPicker } from './ItemPicker';
 export { RecipeStatusBadge, RecipeStatusBadges } from './RecipeStatusBadge';
 export { RecipeGrid } from './RecipeGrid';
+export type { IconOverrides } from './RecipeGrid';
 export { ingredientSlot, recipeGrid } from './craftGrid';
 export type { GridSlot, RecipeGrid as CraftGrid } from './craftGrid';
 
