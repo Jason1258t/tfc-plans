@@ -63,7 +63,7 @@ boundary, Extras will own missing machines, and PCBs stay in EE Extras. The owne
   restart 6/6. The deliberate-fail scenario exits nonzero. Build and resources/models pass. Client/JEI was not launched.
 - Not done: M3 etching bath, client/JEI/EMI runtime, full pack/site audit, real old-world migration and load tests.
   Petrolpark's optional JEI integration targets a newer JEI than the pack's 19.44.0.401; client compatibility remains
-  unresolved. Site datapack loading remains blocked by the local `firebase-tools/lib/auth` module error.
+  unresolved. The `firebase-tools/lib/auth` lookup error that blocked site datapack loading is fixed (dev #183).
 
 ## EE Extras (`tools/ee-extras-mod`)
 

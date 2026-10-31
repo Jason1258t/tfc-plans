@@ -7,9 +7,8 @@
  *   node scripts/seed-recipe-hints.mjs            — залить/обновить
  *   node scripts/seed-recipe-hints.mjs --force    — перезаписать и правки людей/агента
  */
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
-import { createRequire } from 'node:module';
+import { firebaseAuth } from './firestore-rest.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -17,9 +16,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PROJECT = JSON.parse(fs.readFileSync(path.join(ROOT, '.firebaserc'), 'utf8')).projects.default;
 const force = process.argv.includes('--force');
 
-const require = createRequire(import.meta.url);
-const fbRoot = execFileSync('npm', ['root', '-g'], { encoding: 'utf8' }).trim();
-const auth = require(path.join(fbRoot, 'firebase-tools/lib/auth'));
+const auth = firebaseAuth();
 
 /** id документа = тип рецепта, где «:» и «/» недопустимы в id Firestore */
 export const hintDocId = (type) => type.replaceAll(':', '__').replaceAll('/', '--');
