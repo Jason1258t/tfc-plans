@@ -4,7 +4,8 @@
  */
 @layer theme, ui;
 
-@import '@fontsource-variable/inter';
+/* Оптическая версия Inter: мелкий текст получает более свободный рисунок и интервалы. */
+@import '@fontsource-variable/inter/opsz.css';
 @import './tokens.css' layer(theme);
 @import './base.css' layer(theme);
 /* Осталась общая анимация появления всплывающих блоков. */

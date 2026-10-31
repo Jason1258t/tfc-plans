@@ -22,6 +22,10 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
 - 2026-10-31 (#182): semantic status colours and their soft backgrounds are more saturated in light and dark themes;
   priorities use the same shared scale (grey, blue, amber, red), including the dots in «Разработка».
 - The shared 3D editor (`src/entities/schematic/ui/SchematicView3D/`) is unchanged. DOM, layout, routes and behaviour were not altered.
+- 2026-10-31 (#185) eye-comfort pass: main text ~11:1 instead of 13.8–15:1 (no white-on-black glow, no bright paper
+  glare), dark semantic colours slightly desaturated, the faintest grey text (`--text-3`) is ≥4.5:1 on every surface
+  incl. `--surface-3` (was 3.7–4.1 — «серое на сером» in counters, authors, meta). Inter switched to the optical-size
+  build (`opsz.css`), body line-height 1.5. Checked with an in-page contrast audit over 14 sections, both themes.
 - Verified with Prettier, oxlint (zero errors), TypeScript, FSD and package boundary checks, and a production build. Browser captures covered desktop/mobile and light/dark themes across the site; keyboard focus, task statuses and schematic replacement colours were also checked.
 
 ## Concrete washing templates (2026-10-27)
