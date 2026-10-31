@@ -48,14 +48,21 @@ boundary, Extras will own missing machines, and PCBs stay in EE Extras. The owne
 - M1: main-code `ProcessPowerDevice` (no world/block/recipe access in simulation methods), `SaltWaterAdapter` (1:1 TFC →
   Destroy mixture, caller-supplied concentrations) and `AtomicFluidOperation` (all outputs simulated before execution).
   Devtest-only blocks use a finite source tank, real NeoForge fluid transfer, EE creative battery and real wires; they
-  are absent from the release jar. No Survival machine or recipe yet.
+  are absent from the release jar. M1 itself contained only the devtest controller; the production machine arrived in M2.
 - Dedicated-server M1 results: 299.827 V / 7.995 A, one 1000 mB batch → 250 mB H₂ + 250 mB Cl₂ + 500 mB NaOH with exact
   components and mass balance (12/12); 200 V sag stops progress after at most one transitional EE tick (7/7); each full
   output blocks the whole operation without partial products (5/5 each); full restart preserves progress, all tanks and
   an exact pre-restart mixture NBT snapshot without repeating output (6/6). Commands and logs are documented in the
   Bridge README.
-- Not done: M2 electrolyzer/membrane/recipe/UI, client/JEI/EMI, full pack/site audit, real old-world migration, load
-  tests. Petrolpark's optional JEI integration targets a newer JEI than the pack's 19.44.0.401; client compatibility is
+- M2: Extras now has the production membrane electrolyzer and 64-batch membrane, a datapack-driven three-output recipe,
+  directional fluid/item capabilities, five translated status states and JEI integration. It uses the real RecipeManager,
+  restores the recipe after reload by id or saved mixture, and executes each batch through Bridge's atomic operation.
+  Destroy 0.4.6's gas fluid id is `destroy:gas` (`DestroyFluids.GAS_MIXTURE`), not `destroy:gas_mixture`.
+- Dedicated-server M2 results: environment 4/4 and ports 5/5; normal batch 13/13 at 299.827 V / 7.995 A with exact
+  products, membrane wear and mass balance; missing/worn membrane 3/3 each; 200 V sag 6/6; each blocked output 6/6;
+  restart 6/6. The deliberate-fail scenario exits nonzero. Build and resources/models pass. Client/JEI was not launched.
+- Not done: M3 etching bath, client/JEI/EMI runtime, full pack/site audit, real old-world migration and load tests.
+  Petrolpark's optional JEI integration targets a newer JEI than the pack's 19.44.0.401; client compatibility remains
   unresolved. Site datapack loading remains blocked by the local `firebase-tools/lib/auth` module error.
 
 ## EE Extras (`tools/ee-extras-mod`)
