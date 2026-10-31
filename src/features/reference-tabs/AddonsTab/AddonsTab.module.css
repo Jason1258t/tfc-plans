@@ -43,24 +43,10 @@
 }
 
 .recipe {
-  display: grid;
-  grid-template-columns: repeat(3, 34px);
-  gap: 2px;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
-.recipeCell {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-}
-
-.recipeCell .pixel {
-  width: 28px;
-  height: 28px;
-  border: 0;
-  border-radius: 0;
+.recipe figure {
+  margin: 0;
 }

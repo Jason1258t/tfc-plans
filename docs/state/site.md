@@ -60,6 +60,9 @@ Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quot
   (catalogue, `::craft` guide embeds, insert picker); MCP `recipe_get` prints the same layout. ~99 % of recipes covered;
   202 special recipes (plate_cuisine, mineral_mix, ore excavation, special crafts) stay JSON. The 728 empty-type recipes
   are all removal stubs.
+- One recipe renderer for guides: `::craft` and `::addon-block` (addon articles, «Аддоны» tab) both use
+  `shared/pack-data/RecipeGrid`; the addon card recipe (`tools/<mod>/addon.json`) is turned into a shaped recipe
+  (`toRecipe`) and addon item pictures are passed as `icons` (dev #180). Don't add separate recipe grids.
 - Map is a reference tab (`/reference?tab=map`). Full-page doc — `/doc/{id}` (old `/docs/{id}` and `/map?x=…` redirect).
 
 ## Styles (CSS Modules migration completed 2026-10-28)

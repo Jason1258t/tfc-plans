@@ -7,7 +7,7 @@ import { ingredientSlot, recipeGrid, type GridSlot } from '../craftGrid';
 import type { Recipe } from '../recipes';
 import { RecipeStatusBadges } from '../RecipeStatusBadge';
 import { useTags, type TagCatalog } from '../tags';
-import { SlotCell } from './SlotCell';
+import { SlotCell, SlotIcon, type IconOverrides } from './SlotCell';
 import { useCycle } from './useCycle';
 import styles from './RecipeGrid.module.css';
 
@@ -28,12 +28,15 @@ export function RecipeGrid({
   caption,
   compact,
   fallback = null,
+  icons,
 }: {
   recipe: Recipe;
   caption?: ReactNode;
   compact?: boolean;
   /** Что показать, если рецепт не разобрать ни сеткой, ни раскладкой */
   fallback?: ReactNode;
+  /** Картинки предметов вне библиотеки (рецепт из карточки аддона) */
+  icons?: IconOverrides;
 }) {
   const tags = useTags();
   const items = useItems();
@@ -57,13 +60,13 @@ export function RecipeGrid({
       />
     );
   if (!grid) return fallback;
-  const name = (id: string) => itemName(items?.byId.get(id), id);
+  const name = (id: string) => icons?.get(id)?.name ?? itemName(items?.byId.get(id), id);
   return (
     <figure className={cx(styles.recipe, compact && styles.compact)} aria-label={`Сетка крафта: ${grid.station}`}>
       <div className={styles.flow}>
         <div className={styles.grid} style={{ gridTemplateColumns: `repeat(${grid.width}, var(--craft-cell))` }}>
           {grid.cells.map((c, i) => (
-            <SlotCell key={i} slot={c} tick={tick} tags={tags} items={items} />
+            <SlotCell key={i} slot={c} tick={tick} tags={tags} items={items} icons={icons} />
           ))}
         </div>
         <span className={styles.arrow} aria-hidden>
@@ -74,7 +77,11 @@ export function RecipeGrid({
           role="img"
           aria-label={grid.result.id ? `${name(grid.result.id)} ×${grid.result.count}` : 'результат'}
         >
-          <ItemIcon id={grid.result.id} size={32} />
+          {grid.result.id && icons?.has(grid.result.id) ? (
+            <SlotIcon id={grid.result.id} icons={icons} />
+          ) : (
+            <ItemIcon id={grid.result.id} size={32} />
+          )}
           {grid.result.count > 1 && <span className={styles.count}>{grid.result.count}</span>}
         </div>
       </div>
@@ -93,6 +100,7 @@ export function RecipeGrid({
 function RecipeProcess({
   recipe,
   view,
+  icons,
   caption,
   compact,
   tick,
@@ -101,6 +109,7 @@ function RecipeProcess({
 }: {
   recipe: Recipe;
   view: RecipeView;
+  icons?: IconOverrides;
   caption?: ReactNode;
   compact?: boolean;
   tick: number;
@@ -121,6 +130,7 @@ function RecipeProcess({
       note={s.note}
       out={out}
       fluidInSlot
+      icons={icons}
     />
   );
   const stationName = view.stationIcon ? itemName(items?.byId.get(view.stationIcon), view.stationIcon) : null;

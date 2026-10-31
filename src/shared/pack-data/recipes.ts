@@ -132,6 +132,33 @@ export function kubejsHits(rules: KjsRule[], target: FilterTarget) {
 /** Чем фильтр задел рецепт: только id (можно обойти другим id) или шире */
 export const ruleIsIdOnly = (rule: KjsRule) => filterKeys(rule.filter).every((k) => k === 'id');
 
+/**
+ * Сырой рецепт → запись каталога: входы/выходы, заглушка, происхождение, правила KubeJS. Отдельно — для рецептов
+ * вне каталога (карточка аддона), чтобы их рисовала та же сетка.
+ */
+export function toRecipe(r: RawRecipe, rules: KjsRule[] = []): Recipe {
+  const outs = new Set<string>();
+  const ins = new Set<string>();
+  collectRefs(r.j, false, outs, ins);
+  const origin: RecipeOrigin = r.k ? 'kubejs-script' : r.s.startsWith('kubejs/') ? 'kubejs-data' : 'mod';
+  const target = { id: r.i, type: r.t, group: typeof r.j.group === 'string' ? r.j.group : undefined };
+  const hits =
+    origin === 'kubejs-script'
+      ? { removed: [], maybe: [], changed: [] }
+      : kubejsHits(rules, { ...target, inputs: [...ins], outputs: [...outs] });
+  return {
+    ...r,
+    outputs: [...outs],
+    inputs: [...ins],
+    removed: isRemoval(r.j),
+    origin,
+    kjsRemoved: hits.removed,
+    kjsMaybe: hits.maybe,
+    kjsChanged: hits.changed,
+    hay: `${r.i} ${r.t} ${[...outs].join(' ')}`.toLowerCase(),
+  };
+}
+
 export function loadRecipes(): Promise<RecipeCatalog> {
   promise ??= Promise.all([
     fetchJson<RawRecipe[]>('recipes.json', []),
@@ -141,28 +168,7 @@ export function loadRecipes(): Promise<RecipeCatalog> {
     const merged = new Map(raw.map((r) => [r.i, r]));
     for (const r of kubejs?.recipes ?? []) merged.set(r.i, r);
     const rules = kubejs?.rules ?? [];
-    const list: Recipe[] = [...merged.values()].map((r) => {
-      const outs = new Set<string>();
-      const ins = new Set<string>();
-      collectRefs(r.j, false, outs, ins);
-      const origin: RecipeOrigin = r.k ? 'kubejs-script' : r.s.startsWith('kubejs/') ? 'kubejs-data' : 'mod';
-      const target = { id: r.i, type: r.t, group: typeof r.j.group === 'string' ? r.j.group : undefined };
-      const hits =
-        origin === 'kubejs-script'
-          ? { removed: [], maybe: [], changed: [] }
-          : kubejsHits(rules, { ...target, inputs: [...ins], outputs: [...outs] });
-      return {
-        ...r,
-        outputs: [...outs],
-        inputs: [...ins],
-        removed: isRemoval(r.j),
-        origin,
-        kjsRemoved: hits.removed,
-        kjsMaybe: hits.maybe,
-        kjsChanged: hits.changed,
-        hay: `${r.i} ${r.t} ${[...outs].join(' ')}`.toLowerCase(),
-      };
-    });
+    const list: Recipe[] = [...merged.values()].map((r) => toRecipe(r, rules));
     const counts = new Map<string, number>();
     for (const r of list) if (r.t) counts.set(r.t, (counts.get(r.t) ?? 0) + 1);
     loaded = {

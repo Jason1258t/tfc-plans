@@ -25,6 +25,19 @@ const fluidName = (id: string, tags: TagCatalog, bucket: string | null) => {
   return f ? (f.r ?? f.e) : (bucket ?? id);
 };
 
+/** Картинки предметов, которых нет в библиотеке (предметы аддона из его карточки): id → адрес и название */
+export type IconOverrides = ReadonlyMap<string, { url: string; name: string }>;
+
+/** Иконка предмета; для предмета из overrides — его картинка */
+export function SlotIcon({ id, icons, size = 32 }: { id?: string; icons?: IconOverrides; size?: number }) {
+  const own = id ? icons?.get(id) : undefined;
+  if (own)
+    return (
+      <img src={own.url} alt={own.name} width={size} height={size} className={styles.ownIcon} data-addon-block-image />
+    );
+  return <ItemIcon id={id} size={size} tip={false} />;
+}
+
 const fmtAmount = (mb: number) => (mb >= 1000 && mb % 100 === 0 ? `${mb / 1000}B` : String(mb));
 
 /**
@@ -42,6 +55,7 @@ export function SlotCell({
   note,
   out,
   fluidInSlot,
+  icons,
 }: {
   slot: GridSlot | null;
   tick: number;
@@ -57,8 +71,9 @@ export function SlotCell({
   out?: boolean;
   /** Жидкость сама по себе (станция), а не ёмкость с ней в сетке крафта */
   fluidInSlot?: boolean;
+  icons?: IconOverrides;
 }) {
-  const name = (id: string) => itemName(items?.byId.get(id), id);
+  const name = (id: string) => icons?.get(id)?.name ?? itemName(items?.byId.get(id), id);
   const extra = [
     count && count > 1 ? `×${count}` : '',
     chance !== undefined ? `шанс ${Math.round(chance * 1000) / 10} %` : '',
@@ -143,7 +158,7 @@ export function SlotCell({
       {...tooltipHandlers(label, [sub, extra, note].filter(Boolean).join(' · '))}
     >
       {id ? (
-        <ItemIcon id={id} size={32} tip={false} />
+        <SlotIcon id={id} icons={icons} />
       ) : (
         // Тег без известного состава или особый ингредиент мода — подписываем хвостом id
         <span className={styles.unknown}>{(slot.tag ?? slot.unknown ?? '?').split(/[/:]/).pop()}</span>
