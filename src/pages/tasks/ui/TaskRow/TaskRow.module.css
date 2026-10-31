@@ -82,8 +82,8 @@
 
 /* Ярлык «в работе» */
 .doing {
-  color: var(--diamond);
-  background: color-mix(in srgb, var(--diamond) 12%, transparent);
+  color: var(--success);
+  background: var(--success-soft);
 }
 
 .taskMeta {
