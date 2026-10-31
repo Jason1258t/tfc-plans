@@ -2,7 +2,7 @@
   "name": "@tfc/cli",
   "private": true,
   "version": "0.1.0",
-  "description": "Программа tfc «TFC Планы»: сборка на ПК игрока и хоста, выгрузка на сервер сборки",
+  "description": "Программа tfc «TFC Studio»: сборка на ПК игрока и хоста, выгрузка на сервер сборки",
   "type": "module",
   "bin": {
     "tfc": "tfc.mjs"

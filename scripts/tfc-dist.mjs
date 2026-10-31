@@ -197,7 +197,7 @@ async function npmPackage(work, version, outDir) {
   const pkg = {
     name: 'tfc-plans',
     version: npmVersion(version.time),
-    description: 'tfc — сборка TFC RealWorld на вашем ПК: моды, конфиги, KubeJS, датапаки и схемы с сайта «TFC Планы»',
+    description: 'tfc — сборка TFC RealWorld на вашем ПК: моды, конфиги, KubeJS, датапаки и схемы с сайта «TFC Studio»',
     homepage: 'https://tfc-plans-fd2c.web.app/updates',
     repository: { type: 'git', url: 'git+https://github.com/Jason1258t/tfc-plans.git', directory: 'cli' },
     type: 'module',

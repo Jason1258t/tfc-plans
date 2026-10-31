@@ -1,4 +1,4 @@
-# TFC Планы
+# TFC Studio
 
 Таск-менеджер в стиле Minecraft для совместной игры в сборку на **TerraFirmaCraft 1.21.1**.
 React + Vite + Firebase (Firestore, Anonymous Auth, AI Logic / Gemini).
@@ -71,7 +71,7 @@ npm run deploy:site     # только сайт (jar не нужны)
 
 ```bash
 firebase projects:create <id>
-firebase apps:create web "TFC Plans Web" --project <id>
+firebase apps:create web "TFC Studio Web" --project <id>
 firebase apps:sdkconfig WEB <appId>          # → .env.local по образцу .env.example
 firebase deploy --only firestore:rules       # заодно включает Firestore API
 firebase firestore:databases:create "(default)" --location eur3

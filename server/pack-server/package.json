@@ -2,7 +2,7 @@
   "name": "@tfc/pack-server",
   "private": true,
   "version": "1.0.0",
-  "description": "Сервер сборки «TFC Планы»: снимки сборки (моды, конфиги, KubeJS, ресурспаки) и раздача программе tfc",
+  "description": "Сервер сборки «TFC Studio»: снимки сборки (моды, конфиги, KubeJS, ресурспаки) и раздача программе tfc",
   "type": "module",
   "exports": {
     "./*": "./lib/*.mjs"
