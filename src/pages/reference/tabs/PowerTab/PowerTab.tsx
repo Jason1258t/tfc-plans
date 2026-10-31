@@ -46,7 +46,15 @@ const EE_BLOCK = {
   transformer: 'electroenergetics:transformer',
 };
 
-export function PowerTab({ sub, onSub }: { sub: PowerSub; onSub: (s: PowerSub) => void }) {
+export function PowerTab({
+  sub,
+  onSub,
+  guides,
+}: {
+  sub: PowerSub | 'guides';
+  onSub: (s: PowerSub | 'guides') => void;
+  guides?: ReactNode;
+}) {
   const data = usePower();
   return (
     <SectionShell
@@ -58,11 +66,16 @@ export function PowerTab({ sub, onSub }: { sub: PowerSub; onSub: (s: PowerSub) =
               <span>{s.label}</span>
             </button>
           ))}
+          <button aria-pressed={sub === 'guides'} onClick={() => onSub('guides')}>
+            <span>Гайды</span>
+          </button>
         </>
       }
     >
       <div className={styles.power}>
-        {data === undefined ? (
+        {sub === 'guides' ? (
+          guides
+        ) : data === undefined ? (
           <div className="empty">Загружаю…</div>
         ) : data === null ? (
           <div className="empty">Данные по электричеству не собраны — выполните npm run mods</div>

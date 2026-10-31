@@ -22,11 +22,11 @@ export function RecipeEmbed({ id }: { id: string }) {
         <>
           {recipe.kjsRemoved.length > 0 && <b> В игре этого рецепта нет — его удаляет KubeJS сборки. </b>}В клетках с
           тегом (#) по очереди показаны допустимые предметы, состав — при наведении.{' '}
-          <Link to={`/recipes?q=${encodeURIComponent(id)}`}>В каталоге рецептов</Link>
+          <Link to={`/reference?tab=items&sub=recipes&q=${encodeURIComponent(id)}`}>В каталоге рецептов</Link>
           {out && (
             <>
               {' · '}
-              <Link to={`/recipes?item=${encodeURIComponent(out)}`}>все рецепты предмета</Link>
+              <Link to={`/reference?tab=items&sub=recipes&item=${encodeURIComponent(out)}`}>все рецепты предмета</Link>
             </>
           )}
         </>

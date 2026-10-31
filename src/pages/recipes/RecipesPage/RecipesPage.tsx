@@ -15,87 +15,87 @@ import styles from './RecipesPage.module.css';
 export type Pending = (pack: Pick<Datapack, 'namespace' | 'entries'>) => DatapackEntry;
 
 /** Каталог рецептов сборки отдельной страницей: с учётом KubeJS, без лимита выдачи */
-export function RecipesPage() {
+export function RecipesPage({ embedded = false }: { embedded?: boolean }) {
   const catalog = useRecipes();
   const [mode, setMode] = useState<'template' | 'existing'>('template');
   /** Рецепт выбран — осталось выбрать датапак */
   const [pending, setPending] = useState<Pending | null>(null);
   const [constructing, setConstructing] = useState<Recipe | null>(null);
   const kubejs = catalog?.kubejs;
-  // Ссылки из справочника: /recipes?item=<id>[&usage=1][&type=<тип>][&q=<поиск>]
+  // Старые /recipes ведут сюда же через канонический адрес справочника
   const [params] = useSearchParams();
+  const Container = embedded ? 'section' : 'main';
 
-  return (
-    <PackSection>
-      <main className={styles.recipesPage}>
-        <div className={styles.recipesHead}>
-          <div className="grow">
-            <h1>Рецепты сборки</h1>
-            <p className="faint small">
-              Рецепты из модов, датапака <code>kubejs/data</code> и скриптов KubeJS. Удалённые и изменённые скриптами
-              отмечены — по ним можно открыть конструктор.
-            </p>
-          </div>
-          <Segmented
-            value={mode}
-            onChange={setMode}
-            options={[
-              { value: 'template', label: 'Шаблон' },
-              { value: 'existing', label: 'Заменить / удалить' },
-            ]}
-          />
-        </div>
-
-        {kubejs ? (
-          <p className={cx(styles.recipesKjs, 'faint', 'small')}>
-            KubeJS:{' '}
-            {kubejs.layers
-              .map((l) => `${l.name} — ${l.scripts} скриптов, ${l.rules} удалений/замен, +${l.added} рецептов`)
-              .join('; ')}
-            . Импорт {timeAgo(kubejs.generatedAt)}
-            {kubejs.errors.length > 0 && `, не выполнились: ${kubejs.errors.map((e) => e.file).join(', ')}`}.
+  const page = (
+    <Container className={cx(styles.recipesPage, embedded && styles.embedded)}>
+      <div className={styles.recipesHead}>
+        <div className="grow">
+          <h1>Рецепты сборки</h1>
+          <p className="faint small">
+            Рецепты из модов, датапака <code>kubejs/data</code> и скриптов KubeJS. Удалённые и изменённые скриптами
+            отмечены — по ним можно открыть конструктор.
           </p>
-        ) : (
-          catalog && (
-            <p className={cx(styles.recipesKjs, 'faint', 'small')}>
-              Скрипты KubeJS не импортированы — удаления сборки не учитываются:{' '}
-              <code>npm run kubejs -- kubejs.zip</code>.
-            </p>
-          )
-        )}
-
-        <RecipeBrowser
-          catalog={catalog}
-          autoFocus
-          initial={{
-            query: params.get('q') ?? undefined,
-            type: params.get('type') ?? undefined,
-            itemId: params.get('item') ?? undefined,
-            usage: params.get('usage') === '1',
-          }}
-          actions={recipeActions(mode, (kind, r) =>
-            setPending(() => (pack: Parameters<Pending>[0]) => entryFromRecipe(kind, r, pack)),
-          )}
-          onConstructor={setConstructing}
+        </div>
+        <Segmented
+          value={mode}
+          onChange={setMode}
+          options={[
+            { value: 'template', label: 'Шаблон' },
+            { value: 'existing', label: 'Заменить / удалить' },
+          ]}
         />
+      </div>
 
-        {constructing && kubejs && (
-          <KubejsConstructor
-            recipeId={constructing.i}
-            json={constructing.j}
-            rules={kubejs.rules}
-            namespace="tfc_plans"
-            onNewEntry={(id, json) => {
-              setConstructing(null);
-              setPending(() => () => entryWithId(JSON.stringify(json, null, 2), id, constructing.i));
-            }}
-            onClose={() => setConstructing(null)}
-          />
+      {kubejs ? (
+        <p className={cx(styles.recipesKjs, 'faint', 'small')}>
+          KubeJS:{' '}
+          {kubejs.layers
+            .map((l) => `${l.name} — ${l.scripts} скриптов, ${l.rules} удалений/замен, +${l.added} рецептов`)
+            .join('; ')}
+          . Импорт {timeAgo(kubejs.generatedAt)}
+          {kubejs.errors.length > 0 && `, не выполнились: ${kubejs.errors.map((e) => e.file).join(', ')}`}.
+        </p>
+      ) : (
+        catalog && (
+          <p className={cx(styles.recipesKjs, 'faint', 'small')}>
+            Скрипты KubeJS не импортированы — удаления сборки не учитываются: <code>npm run kubejs -- kubejs.zip</code>.
+          </p>
+        )
+      )}
+
+      <RecipeBrowser
+        catalog={catalog}
+        autoFocus
+        initial={{
+          query: params.get('q') ?? undefined,
+          type: params.get('type') ?? undefined,
+          itemId: params.get('item') ?? undefined,
+          usage: params.get('usage') === '1',
+        }}
+        actions={recipeActions(mode, (kind, r) =>
+          setPending(() => (pack: Parameters<Pending>[0]) => entryFromRecipe(kind, r, pack)),
         )}
-        {pending && <PackPicker make={pending} onClose={() => setPending(null)} />}
-      </main>
-    </PackSection>
+        onConstructor={setConstructing}
+      />
+
+      {constructing && kubejs && (
+        <KubejsConstructor
+          recipeId={constructing.i}
+          json={constructing.j}
+          rules={kubejs.rules}
+          namespace="tfc_plans"
+          onNewEntry={(id, json) => {
+            setConstructing(null);
+            setPending(() => () => entryWithId(JSON.stringify(json, null, 2), id, constructing.i));
+          }}
+          onClose={() => setConstructing(null)}
+        />
+      )}
+      {pending && <PackPicker make={pending} onClose={() => setPending(null)} />}
+    </Container>
   );
+
+  return embedded ? page : <PackSection>{page}</PackSection>;
 }
 
 /** Куда положить рецепт: существующий датапак или новый */

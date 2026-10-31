@@ -231,7 +231,9 @@ export function DishesTab({ items, foods }: { items: ItemIndex | null; foods: Fo
                       {inputs.length > 6 && <span className="faint">ещё {inputs.length - 6}</span>}
                     </td>
                     <td className="small">
-                      <Link to={`/recipes?item=${encodeURIComponent(r.item)}&type=${encodeURIComponent(r.type)}`}>
+                      <Link
+                        to={`/reference?tab=items&sub=recipes&item=${encodeURIComponent(r.item)}&type=${encodeURIComponent(r.type)}`}
+                      >
                         {r.recipes.length}
                       </Link>
                     </td>

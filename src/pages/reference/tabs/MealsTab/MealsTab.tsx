@@ -264,7 +264,7 @@ function FamilyCard({
         {f.dishes.map((d, i) => (
           <span key={d.item}>
             {i > 0 && ', '}
-            <Link to={`/recipes?item=${encodeURIComponent(d.item)}`}>
+            <Link to={`/reference?tab=items&sub=recipes&item=${encodeURIComponent(d.item)}`}>
               {name(d.item)} ({d.recipes.length})
             </Link>
           </span>

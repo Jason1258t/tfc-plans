@@ -2,6 +2,50 @@
    Глобальными остались:
    — классы темы `.empty / .faint / .small / .grow`; `.empty` на пустой клетке слоя задаёт отступы и её размер. */
 
+.filters {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 4px;
+}
+
+.filters > select {
+  width: 100%;
+  min-width: 0;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.search:focus-within {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.search input {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+}
+
+.subtabs {
+  align-self: flex-start;
+  max-width: 100%;
+}
+
 .navGroup {
   display: flex;
   flex-direction: column;

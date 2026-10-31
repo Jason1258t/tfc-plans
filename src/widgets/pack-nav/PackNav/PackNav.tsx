@@ -6,8 +6,8 @@ import styles from './PackNav.module.css';
 
 const SECTIONS = [
   { to: '/datapacks', label: 'Датапаки', icon: Package },
-  { to: '/recipes', label: 'Рецепты', icon: CookingPot },
-  { to: '/tags', label: 'Теги', icon: Tags },
+  { to: '/reference?tab=items&sub=recipes', label: 'Рецепты', icon: CookingPot },
+  { to: '/reference?tab=items&sub=tags', label: 'Теги', icon: Tags },
 ];
 
 /** Выбор вкладки общего раздела «Датапаки»: сами датапаки, каталог рецептов, теги */

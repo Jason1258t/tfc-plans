@@ -13,10 +13,10 @@ export function DocPage() {
     <ArtifactPane
       artifactId={id}
       variant="full"
-      onClose={() => navigate(`/?doc=${id}${taskId ? '' : '&view=docs'}`)}
-      onToggleSize={() => navigate(`/?doc=${id}${taskId ? '' : '&view=docs'}`)}
-      onOpenTask={(t) => navigate(`/?task=${t}`)}
-      onDeleted={() => navigate(taskId ? '/' : '/?view=docs')}
+      onClose={() => navigate(`/tasks?doc=${id}${taskId ? '' : '&view=docs'}`)}
+      onToggleSize={() => navigate(`/tasks?doc=${id}${taskId ? '' : '&view=docs'}`)}
+      onOpenTask={(t) => navigate(`/tasks?task=${t}`)}
+      onDeleted={() => navigate(taskId ? '/tasks' : '/tasks?view=docs')}
     />
   );
 }

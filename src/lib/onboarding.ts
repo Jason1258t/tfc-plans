@@ -262,13 +262,14 @@ export function tourFor(pathname: string, search: string): Tour | null {
   else if (pathname === '/docs') key = 'docs';
   else if (pathname === '/schematics') key = 'schematics';
   else if (pathname === '/datapacks') key = 'datapacks';
-  else if (pathname === '/recipes') key = 'recipes';
-  else if (pathname === '/tags') key = 'tags';
   else if (pathname === '/addons') key = 'addons';
   else if (pathname === '/updates') key = 'updates';
   else if (pathname === '/reference') {
     const tab = q.get('tab');
-    key = tab === null || tab === 'ores' ? 'ref-ores' : (REF_TABS[tab] ?? null);
+    const sub = q.get('sub');
+    if (tab === 'items' && sub === 'recipes') key = 'recipes';
+    else if (tab === 'items' && sub === 'tags') key = 'tags';
+    else key = tab === null || tab === 'ores' ? 'ref-ores' : (REF_TABS[tab] ?? null);
   }
   return TOURS.find((t) => t.key === key) ?? null;
 }

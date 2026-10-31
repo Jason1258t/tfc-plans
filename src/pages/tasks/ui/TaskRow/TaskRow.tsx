@@ -40,7 +40,7 @@ export function TaskRow({ task, selected, onOpen, onOpenDoc }: Props) {
 
   // Передать задачу агенту: по id её находит MCP task_get, название и ссылка — для человека
   const copyRef = async () => {
-    const text = `Задача «${task.title}» — id ${task.id} — ${location.origin}/?task=${task.id}`;
+    const text = `Задача «${task.title}» — id ${task.id} — ${location.origin}/tasks?task=${task.id}`;
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);

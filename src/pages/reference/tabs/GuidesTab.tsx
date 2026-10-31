@@ -4,11 +4,10 @@ import { SectionShell, contentStyles as content } from '@/shared/ui';
 import { GUIDES_SUBS, type GuidesSub } from '@/features/guides';
 
 const PowerGuidesSection = lazy(() => import('@/features/guides/PowerGuidesSection'));
-const AddonsGuidesSection = lazy(() => import('@/features/guides/AddonsGuidesSection'));
 const SiteGuidesSection = lazy(() => import('@/features/guides/SiteGuidesSection'));
 const MultiblockGuidesSection = lazy(() => import('@/features/guides/MultiblockGuidesSection'));
 
-/** Справочник → «Гайды»: все разделы гайдов. Адрес статьи — ?tab=guides[&sub=multiblocks|addons|site]&g=<id>. */
+/** Справочник → «Все гайды»: общий каталог; аддонные статьи остаются на странице аддонов. */
 export function GuidesTab({
   sub,
   onSub,
@@ -34,11 +33,7 @@ export function GuidesTab({
       }
     >
       <div className={content.stack}>
-        {sub === 'addons' ? (
-          <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>
-            <AddonsGuidesSection guide={guide} onGuide={onGuide} />
-          </Suspense>
-        ) : sub === 'multiblocks' ? (
+        {sub === 'multiblocks' ? (
           <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>
             <MultiblockGuidesSection guide={guide} onGuide={onGuide} />
           </Suspense>
@@ -54,7 +49,7 @@ export function GuidesTab({
   );
 }
 
-function PowerGuidesTab({ guide, onGuide }: { guide: string | null; onGuide: (id: string | null) => void }) {
+export function PowerGuidesTab({ guide, onGuide }: { guide: string | null; onGuide: (id: string | null) => void }) {
   const data = usePower();
   return data === undefined ? (
     <div className="empty">Загружаю…</div>

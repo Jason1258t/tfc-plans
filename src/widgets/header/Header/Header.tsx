@@ -17,8 +17,8 @@ interface Props {
 
 export function Header({ nick, onChangeNick }: Props) {
   const [searching, setSearching] = useState(false);
-  // Датапаки, рецепты и теги — один раздел с тремя вкладками
-  const inPacks = /^\/(datapacks|recipes|tags)\b/.test(useLocation().pathname);
+  // Рецепты и теги — справка; активный редактор датапаков — только на своей странице
+  const inPacks = /^\/datapacks\b/.test(useLocation().pathname);
   const updates = usePackUpdates();
   const [seen, setSeen] = useState(lastSeenUpdate);
   useEffect(() => {
@@ -42,13 +42,11 @@ export function Header({ nick, onChangeNick }: Props) {
 
   return (
     <header className={styles.appHeader}>
-      <NavLink to="/" className={styles.brand} aria-label="TFC Studio — на главную">
+      <NavLink to="/" end className={styles.brand} aria-label="TFC Studio — на главную">
         <BrandLogo />
       </NavLink>
       <nav className={styles.nav} aria-label="Основные разделы">
-        <NavLink to="/" end>
-          Задачи
-        </NavLink>
+        <NavLink to="/tasks">Задачи</NavLink>
         <NavLink to="/docs">Документы</NavLink>
         <NavLink to="/schematics">Схемы</NavLink>
         <NavLink to="/datapacks" data-active={inPacks || undefined}>

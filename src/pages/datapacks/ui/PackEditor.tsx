@@ -142,7 +142,9 @@ export function PackEditor({
   /** Открыть тег записи в редакторе тегов */
   const openTag = (e: DatapackEntry) => {
     const t = tagFromPath(e.path)!;
-    navigate(`/tags?pack=${pack.id}&kind=${t.kind}&tag=${encodeURIComponent(tagKey(t.kind, t.id))}`);
+    navigate(
+      `/reference?tab=items&sub=tags&pack=${pack.id}&kind=${t.kind}&tag=${encodeURIComponent(tagKey(t.kind, t.id))}`,
+    );
   };
 
   /** Новая произвольная запись — файл в namespace датапака */
@@ -160,7 +162,7 @@ export function PackEditor({
         savingBusy={Boolean(saving?.busy)}
         onTemplate={() => setCatalogMode('template')}
         onExisting={() => setCatalogMode('existing')}
-        onOpenTags={() => navigate(`/tags?pack=${pack.id}`)}
+        onOpenTags={() => navigate(`/reference?tab=items&sub=tags&pack=${pack.id}`)}
         onAddFile={addFile}
         onExportScript={exportScript}
         onAttach={() => setAttaching(true)}

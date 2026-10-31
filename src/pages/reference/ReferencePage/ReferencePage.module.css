@@ -2,9 +2,127 @@
    доли руды по сортам, шкала высот, выбор породы. Каркас подразделов — shared/ui/SectionShell,
    таблицы и карточки — shared/ui/Table и Card. */
 
-.tabs {
-  align-self: flex-start;
-  flex-wrap: wrap;
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin-bottom: 12px;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.back:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.back:focus-visible {
+  border-color: var(--focus);
+}
+
+.sectionGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sectionCard {
+  position: relative;
+  min-width: 0;
+  min-height: 146px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+}
+
+.sectionCard:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
+.sectionCard:focus-visible {
+  border-color: var(--focus);
+}
+
+.sectionIcon {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.sectionCard:hover .sectionIcon,
+.sectionCard:focus-visible .sectionIcon {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.sectionText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 10px;
+}
+
+.sectionTitle {
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.sectionDescription {
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.sectionArrow {
+  position: absolute;
+  top: 18px;
+  right: 14px;
+  color: var(--text-3);
+}
+
+@media (max-width: 900px) {
+  .sectionGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .sectionGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .sectionCard {
+    min-height: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sectionCard {
+    transition: none;
+  }
 }
 
 .shares {

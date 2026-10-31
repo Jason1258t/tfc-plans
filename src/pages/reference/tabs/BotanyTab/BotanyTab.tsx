@@ -41,10 +41,13 @@ export function BotanyTab({
   foods,
   sub: subtab,
   onSub,
+  framed = true,
 }: {
   foods: Food[];
   sub: BotanySub;
   onSub: (k: BotanySub) => void;
+  /** В разделе «Еда и сельское хозяйство» меню уже показывает общий SectionShell */
+  framed?: boolean;
 }) {
   // Теплица — отдельная механика со своим списком; остальные подвкладки — растения открытого грунта
   const sub: PlantKind = subtab === 'greenhouse' ? 'crop' : subtab;
@@ -112,6 +115,71 @@ export function BotanyTab({
   if (plants === undefined) return <div className="empty">Загружаю ботанику…</div>;
   if (plants === null) return <div className="empty">Данных о растениях нет — выполните npm run mods</div>;
 
+  const body =
+    subtab === 'greenhouse' ? (
+      <Greenhouse
+        list={botany?.greenhouse ?? []}
+        items={items}
+        config={config}
+        foodBy={foodBy}
+        tiers={meta.greenhouseTiers ?? []}
+        growth={meta.greenhouseGrowth}
+        reasons={meta.greenhouseReasons ?? []}
+        water={meta.greenhouseWater}
+      />
+    ) : (
+      <div>
+        <div className={cx(shell.filters, shell.filtersEnd)}>
+          <label className={cx(shell.search, 'grow')}>
+            <Search size={15} className="faint" />
+            <input
+              placeholder={
+                sub === 'crop' ? 'Пшеница, картофель…' : sub === 'bush' ? 'Малина, черника…' : 'Яблоня, олива…'
+              }
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </label>
+          <label className={styles.field}>
+            <span className="faint small">Температура, °C</span>
+            <Input inputMode="decimal" placeholder="напр. 12" value={temp} onChange={(e) => setTemp(e.target.value)} />
+          </label>
+          <label className={styles.field}>
+            <span className="faint small">Влажность, %</span>
+            <Input inputMode="decimal" placeholder="напр. 40" value={hydr} onChange={(e) => setHydr(e.target.value)} />
+          </label>
+          <Select value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Порядок">
+            <option value="name">По названию</option>
+            <option value="minT">Сначала холодостойкие</option>
+            <option value="maxT">Сначала жаростойкие</option>
+          </Select>
+        </div>
+
+        <Summary meta={meta} sub={sub} config={config} shown={list.length} total={counts[sub]} items={items} />
+
+        {list.length === 0 ? (
+          <div className="empty">Ничего не подходит.</div>
+        ) : (
+          <ul className={styles.grid}>
+            {list.map((p) => (
+              <PlantCard
+                key={p.i}
+                p={p}
+                name={nameOf(p)}
+                food={p.product ? foodBy.get(p.product) : undefined}
+                dishes={mealsBy ? (p.product && mealsBy.get(p.product)) || [] : undefined}
+                items={items}
+                meta={meta}
+                config={config}
+                scale={scale}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+
+  if (!framed) return body;
   return (
     <SectionShell
       navLabel="Разделы ботаники"
@@ -132,78 +200,7 @@ export function BotanyTab({
         </>
       }
     >
-      {subtab === 'greenhouse' ? (
-        <Greenhouse
-          list={botany?.greenhouse ?? []}
-          items={items}
-          config={config}
-          foodBy={foodBy}
-          tiers={meta.greenhouseTiers ?? []}
-          growth={meta.greenhouseGrowth}
-          reasons={meta.greenhouseReasons ?? []}
-          water={meta.greenhouseWater}
-        />
-      ) : (
-        <div>
-          <div className={cx(shell.filters, shell.filtersEnd)}>
-            <label className={cx(shell.search, 'grow')}>
-              <Search size={15} className="faint" />
-              <input
-                placeholder={
-                  sub === 'crop' ? 'Пшеница, картофель…' : sub === 'bush' ? 'Малина, черника…' : 'Яблоня, олива…'
-                }
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </label>
-            <label className={styles.field}>
-              <span className="faint small">Температура, °C</span>
-              <Input
-                inputMode="decimal"
-                placeholder="напр. 12"
-                value={temp}
-                onChange={(e) => setTemp(e.target.value)}
-              />
-            </label>
-            <label className={styles.field}>
-              <span className="faint small">Влажность, %</span>
-              <Input
-                inputMode="decimal"
-                placeholder="напр. 40"
-                value={hydr}
-                onChange={(e) => setHydr(e.target.value)}
-              />
-            </label>
-            <Select value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Порядок">
-              <option value="name">По названию</option>
-              <option value="minT">Сначала холодостойкие</option>
-              <option value="maxT">Сначала жаростойкие</option>
-            </Select>
-          </div>
-
-          <Summary meta={meta} sub={sub} config={config} shown={list.length} total={counts[sub]} items={items} />
-
-          {list.length === 0 ? (
-            <div className="empty">Ничего не подходит.</div>
-          ) : (
-            <ul className={styles.grid}>
-              {list.map((p) => (
-                <PlantCard
-                  key={p.i}
-                  p={p}
-                  name={nameOf(p)}
-                  food={p.product ? foodBy.get(p.product) : undefined}
-                  dishes={mealsBy ? (p.product && mealsBy.get(p.product)) || [] : undefined}
-                  items={items}
-                  meta={meta}
-                  config={config}
-                  scale={scale}
-                />
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+      {body}
     </SectionShell>
   );
 }
