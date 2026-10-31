@@ -55,7 +55,7 @@
 }
 
 .search:focus-within {
-  border-color: var(--accent);
+  border-color: var(--focus);
 }
 
 .search input {

@@ -15,8 +15,8 @@
 }
 
 .taskRow.selected {
-  background: var(--amethyst-soft);
-  box-shadow: inset 3px 0 0 var(--amethyst);
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .taskCheck {
@@ -44,8 +44,8 @@
 }
 
 .taskCheck.on {
-  border-color: var(--accent);
-  background: var(--accent);
+  border-color: var(--success);
+  background: var(--success);
   color: var(--accent-text);
 }
 
