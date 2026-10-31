@@ -14,7 +14,7 @@
 }
 
 .addonVersion {
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius-sm);
   background: var(--surface);
   padding: 6px 8px;
@@ -56,7 +56,7 @@
 }
 
 .addonStatus[data-status='released'] {
-  color: var(--accent);
+  color: var(--success);
 }
 
 .addonStatus[data-status='withdrawn'] {

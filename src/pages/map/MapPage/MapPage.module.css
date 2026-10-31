@@ -40,7 +40,7 @@
 }
 
 .point {
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius-lg);
   background: var(--surface);
   padding: 10px 12px;

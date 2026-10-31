@@ -1,7 +1,7 @@
 /* Вкладка «Геология»: вступление из книги TFC, сетка карточек пород, слои сверху/снизу, руды. */
 
 .intro {
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius);
   background: var(--surface);
   padding: 8px 12px;
