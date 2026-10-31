@@ -8,11 +8,11 @@ export const CHECKED: Record<GuideChecked, { label: string; title: string }> = {
   none: { label: 'не проверено', title: 'Не проверялось ни в игре, ни по коду' },
 };
 
-/** Разделы гайдов справочника; гайды аддонов показаны ещё и на странице «Аддоны» */
+/** Разделы общего каталога; «Аддоны» ведёт на их собственную страницу без дублирования статей. */
 export type GuidesSub = 'power' | 'multiblocks' | 'addons' | 'site';
 export const GUIDES_SUBS: { id: GuidesSub; label: string }[] = [
   { id: 'power', label: 'Электричество' },
   { id: 'multiblocks', label: 'Мультиблоки' },
   { id: 'addons', label: 'Аддоны' },
-  { id: 'site', label: 'О сайте' },
+  { id: 'site', label: 'TFC Studio' },
 ];

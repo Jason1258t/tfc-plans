@@ -1,7 +1,7 @@
 import { ArrowRight, Search } from 'lucide-react';
 import { SectionShell, Segmented, Select, Card, CardHead, Table, TableWrap, tableStyles } from '@/shared/ui';
 import { useMemo, useState } from 'react';
-import { Link, Navigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { BotanyTab } from '../tabs/BotanyTab';
 import { DishesTab } from '../tabs/DishesTab';
 import { MealsTab } from '../tabs/MealsTab';
@@ -14,10 +14,10 @@ import { LiquidFuelTab } from '../tabs/LiquidFuelTab';
 import { GeologyTab } from '../tabs/GeologyTab';
 import { MapPage } from '@/pages/map';
 import { MultiblocksTab } from '@/features/reference-tabs';
-import { GuidesTab } from '../tabs/GuidesTab';
+import { GuidesTab, PowerGuidesTab } from '../tabs/GuidesTab';
 import { GUIDES_SUBS, type GuidesSub } from '@/features/guides';
 import { PowerTab } from '../tabs/PowerTab';
-import { POWER_SUBS, type PowerSub } from '@/lib/power';
+import { POWER_SUBS } from '@/lib/power';
 import type { BotanySub } from '@/lib/botany';
 import {
   formatTicks,
@@ -51,7 +51,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'food', label: 'Еда и сельское хозяйство' },
   { id: 'power', label: 'Электричество' },
   { id: 'multiblocks', label: 'Мультиблоки' },
-  { id: 'guides', label: 'Гайды' },
+  { id: 'guides', label: 'Все гайды' },
 ];
 const WORLD_SUBS: { id: WorldSub; label: string }[] = [
   { id: 'ores', label: 'Руды' },
@@ -82,21 +82,18 @@ export function ReferencePage() {
   const [params] = useSearchParams();
   const legacy = legacyReferenceTarget(params.toString());
   if (legacy) return <Navigate to={legacy} replace />;
-  // Прежние адреса: аддоны — теперь своя страница, гайды электричества — вкладка «Гайды»
+  // Прежний адрес аддонов ведёт на их собственную страницу.
   if (params.get('tab') === 'addons') {
     const rest = new URLSearchParams(params);
     rest.delete('tab');
     return <Navigate to={`/addons${rest.size ? `?${rest}` : ''}`} replace />;
-  }
-  if (params.get('tab') === 'power' && params.get('sub') === 'guides') {
-    const g = params.get('g');
-    return <Navigate to={`/reference?tab=guides${g ? `&g=${encodeURIComponent(g)}` : ''}`} replace />;
   }
   return <Reference />;
 }
 
 function Reference() {
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
   const tab = (TABS.find((t) => t.id === params.get('tab'))?.id ?? 'world') as Tab;
   const worldSub = WORLD_SUBS.find((s) => s.id === params.get('sub'))?.id ?? 'ores';
   const ref = useReference();
@@ -151,9 +148,10 @@ function Reference() {
       ) : tab === 'guides' ? (
         <GuidesTab
           sub={GUIDES_SUBS.find((s) => s.id === params.get('sub'))?.id ?? 'power'}
-          onSub={(k: GuidesSub) =>
-            setParams(k === 'power' ? { tab: 'guides' } : { tab: 'guides', sub: k }, { replace: true })
-          }
+          onSub={(k: GuidesSub) => {
+            if (k === 'addons') navigate('/addons?sub=guides');
+            else setParams(k === 'power' ? { tab: 'guides' } : { tab: 'guides', sub: k }, { replace: true });
+          }}
           guide={params.get('g')}
           onGuide={(g) => {
             const next: Record<string, string> = { tab: 'guides' };
@@ -170,9 +168,17 @@ function Reference() {
         />
       ) : tab === 'power' ? (
         <PowerTab
-          sub={POWER_SUBS.find((s) => s.id === params.get('sub'))?.id ?? 'link'}
-          onSub={(k: PowerSub) =>
-            setParams(k === 'link' ? { tab: 'power' } : { tab: 'power', sub: k }, { replace: true })
+          sub={
+            params.get('sub') === 'guides'
+              ? 'guides'
+              : (POWER_SUBS.find((s) => s.id === params.get('sub'))?.id ?? 'link')
+          }
+          onSub={(sub) => setParams(sub === 'link' ? { tab: 'power' } : { tab: 'power', sub }, { replace: true })}
+          guides={
+            <PowerGuidesTab
+              guide={params.get('g')}
+              onGuide={(g) => setParams({ tab: 'power', sub: 'guides', ...(g ? { g } : {}) })}
+            />
           }
         />
       ) : tab === 'items' ? (
