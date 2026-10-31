@@ -99,8 +99,9 @@ export function massing({ grid: g, boxes }: Layout) {
       for (let x = 0; x < g.X; x++) {
         const i = g.idx(x, y, z);
         if (!g.inside[i]) continue;
-        const b = boxes[g.volume[i] - 1];
-        if (boxes.some((o) => o.y0 === y && inPlan(o, x, z))) {
+        // Основание объёма — фундамент, только если под ним нет постройки; у яруса на другом объёме общий ряд —
+        // перекрытие нижнего, иначе весь этаж яруса был бы из блоков фундамента
+        if (boxes.some((o) => o.y0 === y && inPlan(o, x, z)) && !g.insideAt(x, y - 1, z)) {
           g.set(x, y, z, 'foundation');
           continue;
         }
@@ -115,8 +116,15 @@ export function massing({ grid: g, boxes }: Layout) {
           g.set(x, y, z, 'wall');
           continue;
         }
-        const k = (y - b.y0) / b.floorH;
-        if (Number.isInteger(k) && k >= 1) g.set(x, y, z, k >= b.floors ? 'ceiling' : 'floor');
-        else g.set(x, y, z, 'interior', 'air');
+        // Перекрытие — любой объём, у которого здесь ряд плиты (у ярусов ряд общий: верх нижнего = низ верхнего)
+        if (boxes.some((o) => o.top === y && inPlan(o, x, z))) {
+          g.set(x, y, z, 'ceiling');
+          continue;
+        }
+        if (boxes.some((o) => y > o.y0 && y < o.top && (y - o.y0) % o.floorH === 0 && inPlan(o, x, z))) {
+          g.set(x, y, z, 'floor');
+          continue;
+        }
+        g.set(x, y, z, 'interior', 'air');
       }
 }

@@ -98,6 +98,47 @@ export const STYLES: Record<string, StylePreset> = {
       chimney: one('tfc:rock/bricks/granite'),
     },
   },
+  scandinavian: {
+    name: 'Скандинавский',
+    // Крутая крыша 2:1 — снег скатывается; светлые доски, тёмные углы и обвязка
+    roof: { kind: 'gable', pitch: 2, overhang: 1 },
+    details: { plinthH: 1, quoins: false, openingExt: false, frameEvery: 0 },
+    roles: {
+      foundation: one('tfc:rock/cobble/granite'),
+      wall: one('tfc:wood/planks/birch'),
+      corner: one('tfc:wood/log/spruce'),
+      belt: one('tfc:wood/log/spruce'),
+      plinth: one('tfc:rock/cobble/granite'),
+      lintel: one('tfc:wood/log/spruce'),
+      sill: one('tfc:wood/log/spruce'),
+      gable: one('tfc:wood/planks/birch'),
+      roof: one('tfc:wood/planks/spruce'),
+      floor: one('tfc:wood/planks/birch'),
+      glass: one('minecraft:glass_pane'),
+      door: one('tfc:wood/door/birch'),
+      chimney: one('tfc:rock/bricks/granite'),
+    },
+  },
+  japanese: {
+    name: 'Японский',
+    // Вальма с широким свесом и подъёмом на углах; тёмный каркас, светлое заполнение
+    roof: { kind: 'hip', pitch: 1, overhang: 2, upturned: true },
+    details: { plinthH: 1, quoins: false, openingExt: false, frameEvery: 3 },
+    roles: {
+      foundation: one('tfc:rock/cobble/granite'),
+      wall: one('tfc:wattle/white'),
+      frame: one('tfc:wood/log/rosewood'),
+      plinth: one('tfc:rock/cobble/granite'),
+      lintel: one('tfc:wood/log/rosewood'),
+      sill: one('tfc:wood/log/rosewood'),
+      gable: one('tfc:wood/planks/white_cedar'),
+      roof: one('tfc:rock/bricks/basalt'),
+      floor: one('tfc:wood/planks/maple'),
+      glass: one('minecraft:glass_pane'),
+      door: one('tfc:wood/door/maple'),
+      chimney: one('tfc:rock/bricks/granite'),
+    },
+  },
 };
 
 export interface TypePreset {
@@ -204,9 +245,12 @@ type Rect = Pick<Volume, 'x' | 'z' | 'w' | 'd'> & {
   axis: RoofSpec['axis'];
   /** На сколько этажей ниже главного объёма (пристройка) */
   lower?: number;
+  /** Высота основания и число этажей — у ярусов свои, не от типа */
+  y?: number;
+  floors?: number;
 };
 
-export const FORMS: Record<string, { name: string; rects(w: number, d: number): Rect[] }> = {
+export const FORMS: Record<string, { name: string; rects(w: number, d: number, type: TypePreset): Rect[] }> = {
   rect: { name: 'Прямоугольник', rects: (w, d) => [{ x: 0, z: 0, w, d, axis: 'auto' }] },
   L: {
     name: 'Г',
@@ -241,6 +285,36 @@ export const FORMS: Record<string, { name: string; rects(w: number, d: number): 
   },
   annex: { name: 'С пристройкой', rects: annex },
   court: { name: 'Двор', rects: court },
+  bay: {
+    name: 'С эркером',
+    rects: (w, d, type) => {
+      // Эркер: выступ посередине южного фасада со своей крышей; у многоэтажного — на этаж ниже главного
+      const bw = Math.max(3, Math.min(5, Math.round(w / 3) | 1));
+      return [
+        { x: 0, z: 0, w, d, axis: 'auto' },
+        { x: Math.floor((w - bw) / 2), z: d - 1, w: bw, d: 4, axis: 'x', lower: type.floors > 1 ? 1 : 0 },
+      ];
+    },
+  },
+  tiers: {
+    name: 'Ярусы',
+    rects: (w, d, type) => {
+      // Объёмы друг на друге: каждый следующий уже на 2 клетки с каждой стороны и на этаж ниже, всего до трёх
+      const out: Rect[] = [{ x: 0, z: 0, w, d, axis: 'auto' }];
+      let cw = w;
+      let cd = d;
+      let f = type.floors;
+      let top = f * type.floorH;
+      while (Math.min(cw, cd) > 9 && out.length < 3) {
+        cw -= 4;
+        cd -= 4;
+        f = Math.max(1, f - 1);
+        out.push({ x: (w - cw) / 2, z: (d - cd) / 2, w: cw, d: cd, axis: 'auto', y: top, floors: f });
+        top += f * type.floorH;
+      }
+      return out;
+    },
+  },
 };
 
 /** Ширина крыла — нечётная (конёк по середине), не уже 5 */
@@ -287,7 +361,7 @@ export function makeSpec(opts: MakeSpecOptions = {}): BuildingSpec {
   const typeId = TYPES[opts.type ?? 'house'] ? (opts.type ?? 'house') : 'house';
   const style = STYLES[styleId];
   const type = TYPES[typeId];
-  const grow = form === 'rect' || form === 'annex' ? 1 : 1.5;
+  const grow = form === 'rect' || form === 'annex' || form === 'bay' ? 1 : 1.5;
   const w = opts.w ?? Math.round(type.w * grow);
   const d = opts.d ?? Math.round(type.d * grow);
   const roof = { ...style.roof, ...type.roof };
@@ -297,14 +371,14 @@ export function makeSpec(opts: MakeSpecOptions = {}): BuildingSpec {
     form,
     style: styleId,
     type: typeId,
-    volumes: FORMS[form].rects(w, d).map((r, i) => ({
+    volumes: FORMS[form].rects(w, d, type).map((r, i) => ({
       id: String.fromCharCode(65 + i),
       x: r.x,
       z: r.z,
       w: r.w,
       d: r.d,
-      y: 0,
-      floors: Math.max(1, type.floors - (r.lower ?? 0)),
+      y: r.y ?? 0,
+      floors: r.floors ?? Math.max(1, type.floors - (r.lower ?? 0)),
       floorH: type.floorH,
       roof: { ...roof, axis: r.axis },
       ...(type.shape ? { shape: type.shape } : {}),
