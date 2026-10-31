@@ -53,6 +53,39 @@ const template = (a: Addon) =>
     '',
   ].join('\n');
 
+/** Сколько пунктов списка в тексте (строки, начинающиеся с «- » / «* ») */
+function countBullets(text: string): number {
+  const n = text.split('\n').filter((l) => /^\s*[-*+]\s+/.test(l)).length;
+  return n > 0 ? n : text.trim() ? 1 : 0;
+}
+
+/** Вырезает из тела статьи аддона разделы «Проверено» и «Не проверено», чтобы показать их отдельно, свёрнуто */
+function splitAddonChecked(body: string): { mainBody: string; checkedBody: string; uncheckedBody: string } {
+  const lines = body.split('\n');
+  const sections: { title: string; content: string[] }[] = [{ title: '', content: [] }];
+  for (const line of lines) {
+    const m = /^##\s+(.+?)\s*$/.exec(line);
+    if (m) {
+      sections.push({ title: m[1].trim(), content: [] });
+    } else {
+      sections[sections.length - 1].content.push(line);
+    }
+  }
+  const checked = sections.find((s) => s.title === 'Проверено');
+  const unchecked = sections.find((s) => s.title === 'Не проверено');
+  const mainSections = sections.filter((s) => s.title !== 'Проверено' && s.title !== 'Не проверено');
+  const mainBody = mainSections
+    .map((s) => (s.title ? `## ${s.title}\n${s.content.join('\n')}` : s.content.join('\n')))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  return {
+    mainBody,
+    checkedBody: checked ? checked.content.join('\n').trim() : '',
+    uncheckedBody: unchecked ? unchecked.content.join('\n').trim() : '',
+  };
+}
+
 /**
  * Подробное описание аддона — статья Firestore guides/addon-<мод> (раздел addon): правят все, история версий как у
  * гайдов. Отдельный чанк (lazy в AddonPage).
@@ -116,6 +149,10 @@ export default function AddonArticle({ addon }: { addon: Addon }) {
       </Card>
     );
 
+  // Списки «Проверено» / «Не проверено» вынесены из основного текста — у больших аддонов с историей они
+  // занимали больше, чем само описание. Показываем их свёрнутыми блоками в конце статьи.
+  const { mainBody, checkedBody, uncheckedBody } = splitAddonChecked(guide.body);
+
   return (
     <>
       <Card as="article" className={styles.guideArticle}>
@@ -146,7 +183,23 @@ export default function AddonArticle({ addon }: { addon: Addon }) {
             <GuideBody source={`**Коротко.** ${guide.summary}`} kit={KIT} onGuide={onGuide} />
           </div>
         )}
-        <GuideBody source={guide.body} kit={KIT} onGuide={onGuide} />
+        <GuideBody source={mainBody} kit={KIT} onGuide={onGuide} />
+        {checkedBody && (
+          <details className={styles.addonChecked}>
+            <summary className={styles.addonCheckedSummary}>Проверено ({countBullets(checkedBody)})</summary>
+            <div className={styles.addonCheckedBody}>
+              <GuideBody source={checkedBody} kit={KIT} onGuide={onGuide} />
+            </div>
+          </details>
+        )}
+        {uncheckedBody && (
+          <details className={styles.addonChecked}>
+            <summary className={styles.addonCheckedSummary}>Не проверено ({countBullets(uncheckedBody)})</summary>
+            <div className={styles.addonCheckedBody}>
+              <GuideBody source={uncheckedBody} kit={KIT} onGuide={onGuide} />
+            </div>
+          </details>
+        )}
       </Card>
       {history && (
         <GuideHistory
