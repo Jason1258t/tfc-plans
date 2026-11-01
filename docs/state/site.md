@@ -487,6 +487,21 @@ next — photos, MCP, wooden styles.
   bogus `axis=y`. Checked: 384 style×type×form combos (degree 2) all generate, every emitted block state exists in
   the live block-models, tier shared row is solid slabs with no roof inside the upper volume, bay has its own roof,
   one seed → byte-identical .nbt; browser look of japanese tiers and scandinavian bay, 375 px.
+- **Copycat + material pairs in replacements** (2026-11-01, dev #186): `packages/core/src/copycatPairs.ts`. A filled
+  copycat is counted as one row `block+material` (per filled part), not as the copycat and its material apart; `+`
+  never occurs in a block id, so pairs live in the same `{from,to}` lists (library, favorites, MCP `schematic_put`).
+  `from` pair — only those copycats; `to` pair — place that copycat with that material, works from any block (stairs →
+  `copycats:copycat_slope+<material>`, slab → `copycats:copycat_slab+<material>`). `resolvePairs` applies them per cell
+  on the clone in `applyEdits`, before plain rules; a material chosen by a pair is not touched by plain rules. Plain
+  rules on a copycat or a material still reach pairs without their own rule (row shows «Сейчас: …»,
+  `inheritedTarget`); old saved rules stay valid via `hasBlock` and get their own row. BE data from Copycats+ 3.0.8
+  `CCBlockEntityTypes`/`MaterialItemStorage`: single-state `copycats:copycat` / `create:copycat` with Item + Material,
+  slab `copycats:multistate_copycat` with `material_data.<bottom|top>` by `type`. Other multi-part (byte, board, half
+  layers) depend on properties plain blocks lack, cogwheel/shaft/pipe/sliding door have other BEs, `create_connected`
+  copycats not studied — those stay plain targets (`canHoldMaterial`). 3D with pair rules draws the exported file. Not
+  done: the layer editor picks blocks only (no pair for selected cells), its 2D colours and legend do not reflect
+  rules on a specific pair. Stairs → slope keeps `facing`/`half`, inner/outer corners become straight slopes. Checked
+  in Node on two library schematics and in the browser; not checked in game.
 - Stage 7 (2026-10-31, `feat/building-trim`): copycat trim — `details.trim` {slopes, surround, cornice, lattice}
   (`spec.ts`, `trim.ts`). Slopes: roof/eave/verge stairs → `copycats:copycat_slope`, slabs → `copycat_slope_layer`
   (layers 2), block choice without the family (any full block of the role goes into the cell's `mats[i]`).

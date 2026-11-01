@@ -9,6 +9,8 @@ export {
   editedSource,
   exportSchematic,
   invalidTargets,
+  isReplaceTarget,
+  replaceName,
   loadSchematic,
   viewSchematic,
   shapedSize,

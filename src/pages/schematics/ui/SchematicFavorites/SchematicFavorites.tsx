@@ -1,8 +1,9 @@
 import { ArrowRight, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { replaceFavoritesStore } from '@/entities/schematic';
+import { isReplaceTarget, replaceFavoritesStore, replaceName } from '@/entities/schematic';
+import { BlockIcon } from '../BlockIcon';
 import { deriveVariants } from '../../model/replaceFavorites';
-import { blockEntry, isBlock, itemName, type ItemIndex, ItemIcon } from '@/shared/pack-data';
+import type { ItemIndex } from '@/shared/pack-data';
 import type { ReplaceFavorite } from '@/entities/schematic';
 import { Button, Modal, Tag } from '@/shared/ui';
 import { cx } from '@/shared/lib';
@@ -23,9 +24,9 @@ export interface PlanRow {
 
 const Block = ({ id, items }: { id: string; items: ItemIndex | null }) => (
   <span className={styles.favBlock}>
-    <ItemIcon id={id} size={22} tip={false} />
+    <BlockIcon id={id} size={22} tip={false} />
     <span className={cx('grow', section.names)}>
-      <span className={section.name}>{itemName(blockEntry(items, id), id)}</span>
+      <span className={section.name}>{replaceName(items, id)}</span>
       <code className={section.id}>{id}</code>
     </span>
   </span>
@@ -47,7 +48,7 @@ export function FavoritesPanel({ favorites, items }: { favorites: ReplaceFavorit
               <Block id={f.from} items={items} />
               <ArrowRight size={15} className={section.arrow} />
               <Block id={f.to} items={items} />
-              {items && !isBlock(items, f.to) && (
+              {items && !isReplaceTarget(items, f.to) && (
                 <Tag title="Это предмет, а не блок: в схеме он стал бы пустотой. Замена не подставляется">не блок</Tag>
               )}
               <Button

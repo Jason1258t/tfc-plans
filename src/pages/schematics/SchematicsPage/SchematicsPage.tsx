@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { ErrorBox } from '@/shared/ui';
-import { isBlock, useItems } from '@/shared/pack-data';
+import { parsePair } from '@tfc/core/copycatPairs';
+import { useItems } from '@/shared/pack-data';
 import {
   ApplyFavoritesDialog,
   FavoritesPanel,
@@ -15,7 +16,15 @@ import { SchematicLibrary } from '../ui/SchematicLibrary';
 import { useNick } from '@/entities/user';
 import { filesEnabled } from '@/entities/file';
 import { geminiEnabled } from '@/shared/api';
-import { agentReplace, applyRules, loadSchematic, REMOVE, type Rule, type Schematic } from '@/entities/schematic';
+import {
+  agentReplace,
+  applyRules,
+  isReplaceTarget,
+  loadSchematic,
+  REMOVE,
+  type Rule,
+  type Schematic,
+} from '@/entities/schematic';
 import { aggregateBlocks, visibleBlocks } from '../model/visibleBlocks';
 import { replaceSig, type SmartResult } from '../model/schematicFormat';
 import { useSchematicActions } from '../model/useSchematicActions';
@@ -122,12 +131,12 @@ export function SchematicsPage() {
   };
 
   /** Все блоки всех загруженных схем и строки списка с фильтром */
-  const blocks = useMemo(() => aggregateBlocks(schematics), [schematics]);
+  const blocks = useMemo(() => aggregateBlocks(schematics, replace), [schematics, replace]);
   const shown = useMemo(() => visibleBlocks(blocks, filter, replace, items), [blocks, filter, replace, items]);
 
   const setTarget = (id: string, to: string | null) => {
     // В схему пишем только id из библиотеки сборки (или удаление)
-    if (to && to !== REMOVE && !isBlock(items, to)) return;
+    if (to && to !== REMOVE && !isReplaceTarget(items, to)) return;
     const drop = (m: Map<string, unknown>) => {
       if (!m.has(id)) return m;
       const next = new Map(m);
@@ -146,7 +155,7 @@ export function SchematicsPage() {
 
   /** Пакетно записать замены (из избранного); цели вне библиотеки сборки пропускаются */
   const applyPairs = (pairs: Pair[]) => {
-    const ok = pairs.filter((p) => p.to !== p.from && isBlock(items, p.to));
+    const ok = pairs.filter((p) => p.to !== p.from && isReplaceTarget(items, p.to));
     if (!ok.length) return;
     const ids = new Set(ok.map((p) => p.from));
     const drop = (m: Map<string, unknown>) => new Map([...m].filter(([k]) => !ids.has(k)));
@@ -162,7 +171,12 @@ export function SchematicsPage() {
 
   const runSmart = async () => {
     if (!items || progress) return;
-    const ids = blocks.map((b) => b.id).filter((id) => overwrite || !replace.has(id));
+    // Правила и агент работают по блокам: у пары это сам копикат и его материал
+    const plain = blocks.flatMap((b) => {
+      const p = parsePair(b.id);
+      return p ? [p.block, p.material] : [b.id];
+    });
+    const ids = [...new Set(plain)].filter((id) => overwrite || !replace.has(id));
     if (!useAgent) {
       const r = applyRules(ids, rules, items);
       setReplace((m) => new Map([...m, ...r.applied]));
@@ -194,7 +208,7 @@ export function SchematicsPage() {
     if (!items || !favorites?.length) return [];
     const by = new Map<string, string[]>();
     for (const f of favorites) {
-      if (!isBlock(items, f.to)) continue;
+      if (!isReplaceTarget(items, f.to)) continue;
       const list = by.get(f.from) ?? [];
       if (!list.includes(f.to)) list.push(f.to);
       by.set(f.from, list);

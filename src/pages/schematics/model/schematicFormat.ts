@@ -1,3 +1,4 @@
+import { hasBlock } from '@tfc/core/copycatPairs';
 import type { AgentResult, RuleResult, Schematic } from '@/entities/schematic';
 
 /** Итог умной замены: правила или агент — общая часть для панели и кнопки в панели инструментов */
@@ -8,7 +9,7 @@ export const outName = (name: string) => name.replace(/(\.nbt)?$/i, '_tfc.nbt');
 
 /** Отпечаток замен одной схемы — понять, отличаются ли они от сохранённых в библиотеке */
 export const replaceSig = (s: Schematic, replace: Map<string, string>) =>
-  JSON.stringify([[...replace].filter(([from]) => s.counts.has(from)).sort(), s.shape, s.rev]);
+  JSON.stringify([[...replace].filter(([from]) => hasBlock(s.counts, from)).sort(), s.shape, s.rev]);
 
 /** Коротко о форме схемы — для свёрнутой строки файла */
 export const shapeSummary = (shape: Schematic['shape']) =>

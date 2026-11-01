@@ -1,3 +1,4 @@
+import { pairBlock } from '@tfc/core/copycatPairs';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { blockEntry, isBlock, itemName, useItems } from '@/shared/pack-data';
@@ -89,7 +90,7 @@ export function SchematicLayers({
 
   const layer = grid.layers.get(layerY);
   const below = grid.layers.get(layerY - 1);
-  const effective = useCallback((name: string) => replace.get(name) ?? name, [replace]);
+  const effective = useCallback((name: string) => pairBlock(replace.get(name) ?? name), [replace]);
   const indexAt = (x: number, z: number) => (x >= 0 && z >= 0 && x < sx && z < sz ? (layer?.[x + z * sx] ?? -1) : -1);
 
   const closeMenu = useCallback(() => setMenu(null), []);
