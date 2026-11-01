@@ -75,6 +75,38 @@ export function findInstances() {
   return out;
 }
 
+const mtime = (f) => {
+  try {
+    return fs.statSync(f).mtimeMs;
+  } catch {
+    return 0;
+  }
+};
+
+/** Аргументы последнего запуска из первой строки logs/latest.log: arg('--version') → значение; всегда функция */
+function launchArgs(dir) {
+  let head = '';
+  try {
+    const fd = fs.openSync(path.join(dir, 'logs', 'latest.log'), 'r');
+    try {
+      const buf = Buffer.alloc(8192);
+      head = buf.toString('utf8', 0, fs.readSync(fd, buf, 0, buf.length, 0));
+    } finally {
+      fs.closeSync(fd);
+    }
+  } catch {
+    /* игру тут ещё не запускали */
+  }
+  const args = /ModLauncher running: args \[(.*)\]/.exec(head)?.[1].split(', ') ?? [];
+  return (k) => (args.includes(k) ? args[args.indexOf(k) + 1] : null);
+}
+
+/** Версия NeoForge папки игры: из описания версии рядом, иначе из последнего запуска. «21.1.248» или null */
+export function installedNeoforge(instance) {
+  const loader = detectVersions(instance).loader;
+  return /^neoforge-(.+)$/.exec(loader ?? '')?.[1] ?? launchArgs(instance)('--fml.neoForgeVersion');
+}
+
 /**
  * Запуск мимо папки сборки: профиль tfc смотрит в <.minecraft>/versions/<имя>, а лаунчер запустил эту версию с корнем
  * .minecraft как папкой игры (профиль лаунчера с gameDir соблюдают не все) — моды сборки игра не видит.
@@ -85,26 +117,9 @@ export function launchedElsewhere(instance) {
   const versions = path.dirname(instance);
   if (path.basename(versions) !== 'versions') return null;
   const root = path.dirname(versions);
-  const log = path.join(root, 'logs', 'latest.log');
-  const mtime = (f) => {
-    try {
-      return fs.statSync(f).mtimeMs;
-    } catch {
-      return 0;
-    }
-  };
-  const at = mtime(log);
+  const at = mtime(path.join(root, 'logs', 'latest.log'));
   if (!at || mtime(path.join(instance, 'logs', 'latest.log')) > at) return null;
-  let head;
-  const fd = fs.openSync(log, 'r');
-  try {
-    const buf = Buffer.alloc(8192);
-    head = buf.toString('utf8', 0, fs.readSync(fd, buf, 0, buf.length, 0));
-  } finally {
-    fs.closeSync(fd);
-  }
-  const args = /ModLauncher running: args \[(.*)\]/.exec(head)?.[1].split(', ') ?? [];
-  const arg = (k) => (args.includes(k) ? args[args.indexOf(k) + 1] : null);
+  const arg = launchArgs(root);
   const version = path.basename(instance);
   const gameDir = arg('--gameDir')?.split(/[\\/]/).filter(Boolean).at(-1);
   if (arg('--version') !== version || !gameDir || gameDir === version) return null;
