@@ -284,12 +284,19 @@ async function wantedAddons(api, names, profile) {
   const state = loadState(profile);
   const pins = state.addonPins ?? {};
   let list = null;
+  let serverDown = false;
   if (api) {
     try {
       list = (await api.get('/site/addons')).addons;
     } catch (e) {
-      // старый сервер сборки без /site/addons — как раньше, со статики сайта
-      if (e.status !== 404) throw e;
+      // старый сервер сборки без /site/addons — как раньше, со статики сайта; 503 — у него нет карточек аддонов
+      if (e.status !== 404 && e.status !== 503) throw e;
+      serverDown = e.status === 503;
+    }
+    // Старый сервер без карточек отвечает пустым списком — это сбой, а не «все аддоны убрали с сайта»
+    if (list && !list.length) {
+      list = null;
+      serverDown = true;
     }
   }
   const index = await (await siteFetch('/addons/index.json')).json();
@@ -316,6 +323,9 @@ async function wantedAddons(api, names, profile) {
           { version: s.version, status: 'released', file: s.file, sha256: s.sha256, size: s.size, site: true },
         ],
       }));
+  // Ни с сервера, ни с сайта: по такому списку план снял бы все поставленные аддоны
+  if (!all.length)
+    throw new Error('список аддонов пуст и на сервере сборки, и на сайте — аддоны не трогаю, сообщите хосту');
   if (!api && asked.some((x) => x.version && x.version !== 'latest'))
     throw new Error('другие версии аддонов раздаёт сервер сборки — нужен ключ игрока (tfc login <ключ>)');
   const match = addonMatches;
@@ -325,11 +335,12 @@ async function wantedAddons(api, names, profile) {
   const cacheDir = path.join(stateDir(profile), 'site-files');
   const newPins = {};
   const items = [];
-  const notes = [];
+  const notes = serverDown ? ['сервер сборки не отдал список аддонов — беру последние версии с сайта'] : [];
   for (const a of chosen) {
     const ask = asked.find((x) => match(a, x.name))?.version ?? null;
-    const { v, pin, note } = pickAddonVersion(a, ask, pins[a.id]);
-    if (pin !== undefined) newPins[a.id] = pin;
+    // На сайте только последние версии: закрепления не применяем и не снимаем — вернутся со следующим pull
+    const { v, pin, note } = pickAddonVersion(a, ask, serverDown ? undefined : pins[a.id]);
+    if (pin !== undefined && !serverDown) newPins[a.id] = pin;
     if (note) notes.push(`${a.id}: ${note}`);
     if (!v) {
       notes.push(`${a.id}: выпущенных версий нет — пропускаю`);

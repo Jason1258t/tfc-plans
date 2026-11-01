@@ -78,8 +78,41 @@ export function openJobs(dataDir, { repoDir, managedRepo, repoUrl, repoBranch, h
       execFile(cmd, args, { cwd, encoding: 'utf8' }, (e, out) => (e ? fail(e) : ok(out.trim()))),
     );
 
+  /** Заполнить submodule tools/ своей копии; git — запуск команды git */
+  async function fillTools(git) {
+    if (!fs.existsSync(path.join(repoDir, '.gitmodules'))) return;
+    // В копии до переноса tools/ была обычной папкой: оставшиеся там неотслеживаемые файлы мешают клону
+    const tools = path.join(repoDir, 'tools');
+    if (fs.existsSync(tools) && !fs.existsSync(path.join(tools, '.git')))
+      await fsp.rm(tools, { recursive: true, force: true });
+    await git(['-C', repoDir, 'submodule', 'update', '--init', '--depth', '1', 'tools']);
+  }
+
+  /** Подъём tools/ при старте; сборка ждёт его, чтобы два git не работали с одной копией */
+  let toolsReady = Promise.resolve();
+
+  /**
+   * При старте сервера: копия без карточек аддонов — заполнить, не дожидаясь сборки. Иначе после обновления сервера
+   * /site/addons отвечает ошибкой до первой сборки, а её может не быть днями. Возвращает, заполнял ли.
+   */
+  function ensureTools() {
+    const tools = path.join(repoDir, 'tools');
+    const hasCards = () =>
+      fs.existsSync(tools) &&
+      fs.readdirSync(tools, { withFileTypes: true }).some((d) => {
+        return d.isDirectory() && fs.existsSync(path.join(tools, d.name, 'addon.json'));
+      });
+    if (!managedRepo || !fs.existsSync(path.join(repoDir, '.git')) || hasCards()) return Promise.resolve(false);
+    const git = (args) =>
+      new Promise((ok, fail) => execFile('git', args, { timeout: 120_000 }, (e) => (e ? fail(e) : ok())));
+    const filled = fillTools(git).then(hasCards);
+    toolsReady = filled.catch(() => {});
+    return filled;
+  }
+
   /** Код разборщиков: git pull своей копии и npm ci, если поменялся package-lock.json */
   async function prepareRepo(j) {
+    await toolsReady;
     const hasRepo = fs.existsSync(path.join(repoDir, 'scripts', 'pack.mjs'));
     if (!managedRepo) {
       if (!hasRepo) throw new Error(`в ${repoDir} нет scripts/pack.mjs — укажите REPO_DIR`);
@@ -93,13 +126,7 @@ export function openJobs(dataDir, { repoDir, managedRepo, repoUrl, repoBranch, h
         await run(j, 'git', ['-C', repoDir, 'reset', '--hard', 'FETCH_HEAD']);
       }
       // Аддоны — submodule tools/ (репозиторий tfc-addons): карточки addon.json нужны сайту и проверкам
-      if (fs.existsSync(path.join(repoDir, '.gitmodules'))) {
-        // В копии до переноса tools/ была обычной папкой: оставшиеся там неотслеживаемые файлы мешают клону
-        const tools = path.join(repoDir, 'tools');
-        if (fs.existsSync(tools) && !fs.existsSync(path.join(tools, '.git')))
-          await fsp.rm(tools, { recursive: true, force: true });
-        await run(j, 'git', ['-C', repoDir, 'submodule', 'update', '--init', '--depth', '1', 'tools']);
-      }
+      await fillTools((args) => run(j, 'git', args));
       const lock = path.join(repoDir, 'package-lock.json');
       const stamp = path.join(repoDir, 'node_modules', '.tfc-lock-sha');
       const sha = createHash('sha256').update(fs.readFileSync(lock)).digest('hex');
@@ -251,6 +278,8 @@ export function openJobs(dataDir, { repoDir, managedRepo, repoUrl, repoBranch, h
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
     },
+
+    ensureTools,
 
     busy: () => ({ running: running?.id ?? null, queued: queue.map((q) => q.id) }),
   };

@@ -607,6 +607,10 @@ server.listen(config.port, config.host, async () => {
     `Сборка данных: код — ${repoDir}${inRepo ? ' (репозиторий, без git pull)' : ''}; после смены текущего — ` +
       `${autoBuild ? `сборка, публикация ${autoPublish}` : 'ничего (AUTO_BUILD=off)'}`,
   );
+  jobs
+    .ensureTools()
+    .then((filled) => filled && console.log('Аддоны: папка tools/ в копии репозитория заполнена'))
+    .catch((e) => console.error(`Аддоны: не удалось заполнить tools/ — /site/addons отвечает ошибкой: ${e.message}`));
   if (!(await keys.list()).some((k) => k.role === 'admin'))
     console.warn(
       'Нет ни одного ключа администратора. Создайте: node cli.mjs key add <имя> --role admin (локально — npm run key -- add host --role admin)',

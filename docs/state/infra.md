@@ -167,6 +167,10 @@ addons`; with names — one named site item; `tfc undo` — undo the whole pull 
   `<id>@<version>`; `install <id>@<version>…` = `tfc pull addons …`. `install --host-only` — all host addons; `tfc publish --no-host-addons` drops their jars
   (`isAddonJar`: id or jar name of any version) from the snapshot — checked on a temp folder, no upload. Checked from sources against the prod pack server
   (list, versions, errors) and a stub API for `--host-only`; `install` on a real game folder — not checked.
+- **Empty `tools/` guard** (2026-11-01, dev #189): the server copy `<DATA_DIR>/repo` kept an empty `tools/` after the
+  submodule move, `/site/addons` returned `[]`, `tfc pull` planned removing every addon. Now the server answers 503
+  without cards and fills `tools/` on start; `tfc pull` treats 503/empty as a failure (latest from site static, pins
+  neither applied nor dropped), refuses if the site is empty too. Checked with local servers and stub API.
 - **`tfc report`** (2026-10-25, `cli/lib/reports.mjs`, task BDoIffX3jFbb4laaIr5N): logs and crash reports to the site.
   Types: game-log (`logs/latest.log` + `*.log.gz`), crash-report, debug-log, kubejs-log, jvm-crash (`hs_err_pid*`);
   with a profile server folder — server-log, server-crash. Interactive: type list with counts → Enter latest / N latest /
