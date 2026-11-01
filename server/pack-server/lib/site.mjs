@@ -463,9 +463,16 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
    * программа ставит их, только если версию назвали явно. Аддон без карточки (unlisted, tp_trace) не отдаётся.
    */
   async function addons() {
+    const cards = addonCards();
+    // Пустой список программа поняла бы как «все аддоны убраны с сайта» и предложила бы их удалить
+    if (!cards.length)
+      throw new HttpError(
+        503,
+        `На сервере сборки нет карточек аддонов (${path.join(repoDir, 'tools')}) — сообщите хосту`,
+      );
     const versions = await cached('addonVersions');
     const out = [];
-    for (const c of addonCards()) {
+    for (const c of cards) {
       if (c.unlisted || !ADDON_ID_RE.test(c.id ?? '')) continue;
       const list = versions
         .filter((v) => v.addon === c.id && v.jar?.sha256)
