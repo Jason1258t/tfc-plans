@@ -195,7 +195,10 @@ addons`; with names — one named site item; `tfc undo` — undo the whole pull 
   TLauncher). 2026-11-01: **not universal** — a player's third-party launcher ran version `TFC-RealWorld` with
   `--gameDir .minecraft` despite our profile, so no pack mods loaded (`create_connected:sync_config` refusal).
   `launchedElsewhere` (detect.mjs) reads `<mc>/logs/latest.log`; `status`/`pull`/`report` warn, `report` takes logs from
-  the real folder. `tfc init --instance` also expands `$env:X` / `%X%` left unexpanded by the shell. `tfc init` lists `<.minecraft>/versions/*` with `mods/` (label «TLauncher / .minecraft» + loader);
+  the real folder. `tfc init --instance` also expands `$env:X` / `%X%` left unexpanded by the shell.
+  Snapshot `loader` must cover mods' NeoForge minimum (it was 21.1.248 while pyrofuel/builder_tools need 21.1.251, so
+  new installs crashed): `tfc publish` raises it from the jars and publishes a loader-only change; `init --launcher`
+  upgrades after pull and keeps a pack already moved to the `.minecraft` root; `status`/`pull` warn. `tfc init` lists `<.minecraft>/versions/*` with `mods/` (label «TLauncher / .minecraft» + loader);
   `detectVersions` reads `<dir>/<name>.json` (`--fml.neoForgeVersion`, `--fml.mcVersion`, `inheritsFrom`). Progress: `spinner` /
   `withSpinner` in ui.mjs (prepare, file scan, NeoForge installer phases in Russian, placing files); progress bar
   shows speed and ETA, redraws every second.

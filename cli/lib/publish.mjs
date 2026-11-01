@@ -100,10 +100,12 @@ export async function publish({ api, profile, local, current, note, mc, loader, 
   say(kept.noise, 'Изменила только игра (дата в шапке, пустые строки, время мира) — оставляю версию сервера');
   say(kept.client, 'Клиентские настройки отличаются — у игроков свои, оставляю версию сервера');
   const d = diffFiles(current?.files ?? [], files);
-  if (current && !d.added.length && !d.changed.length && !d.removed.length) {
+  const sameFiles = current && !d.added.length && !d.changed.length && !d.removed.length;
+  if (sameFiles && loader === current.loader) {
     console.log('Сборка на сервере уже такая же — заливать нечего.');
     return null;
   }
+  if (sameFiles) console.log(`Файлы те же, меняется версия загрузчика: ${current.loader || '?'} → ${loader}`);
   console.log(
     current ? `Отличия от сборки на сервере (${dim(current.id)}):` : 'На сервере сборки ещё нет — первая заливка.',
   );

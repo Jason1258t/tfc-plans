@@ -4,6 +4,7 @@
  * Читает из zip только оглавление и один файл, а не весь jar.
  */
 import fs from 'node:fs';
+import path from 'node:path';
 import { inflateRawSync } from 'node:zlib';
 
 const NAMES = ['META-INF/neoforge.mods.toml', 'META-INF/mods.toml'];
@@ -109,4 +110,47 @@ export function modInfoOf(file) {
   } catch {
     return null;
   }
+}
+
+/** Сравнение версий вида 21.1.251: <0, 0, >0 (хвост вроде -beta не учитываем) */
+export function compareVersions(a, b) {
+  const nums = (v) => String(v).split('-')[0].split('.').map(Number);
+  const [x, y] = [nums(a), nums(b)];
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    const d = (x[i] ?? 0) - (y[i] ?? 0);
+    if (d) return d;
+  }
+  return 0;
+}
+
+/** Нижняя граница обязательной зависимости от neoforge в jar: «21.1.251» или null */
+export function neoforgeMinOf(file) {
+  try {
+    const toml = readZipEntry(file, NAMES)?.toString('utf8');
+    if (!toml) return null;
+    let best = null;
+    for (const block of toml.split(/^\s*\[\[?/m).slice(1)) {
+      if (!block.startsWith('dependencies') || !/^\s*modId\s*=\s*["']neoforge["']/m.test(block)) continue;
+      if (/^\s*type\s*=\s*["'](optional|discouraged|incompatible)["']/im.test(block)) continue;
+      if (/^\s*mandatory\s*=\s*false/m.test(block)) continue;
+      const min = /^\s*versionRange\s*=\s*["'][[(]\s*(\d+(?:\.\d+)+)/m.exec(block)?.[1];
+      if (min && (!best || compareVersions(min, best) > 0)) best = min;
+    }
+    return best;
+  } catch {
+    return null;
+  }
+}
+
+/** Какой NeoForge нужен набору jar: { version, by: [имена файлов] } или null, если никто не требует версию */
+export function requiredNeoforge(files) {
+  let need = null;
+  for (const file of files) {
+    const min = neoforgeMinOf(file);
+    if (!min) continue;
+    const d = need ? compareVersions(min, need.version) : 1;
+    if (d > 0) need = { version: min, by: [path.basename(file)] };
+    else if (d === 0) need.by.push(path.basename(file));
+  }
+  return need;
 }
