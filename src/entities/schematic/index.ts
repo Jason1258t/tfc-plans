@@ -30,6 +30,7 @@ export {
   canRedo,
   canUndo,
   cellInfo,
+  cellKey,
   connectedGroup,
   editCells,
   frameObject,

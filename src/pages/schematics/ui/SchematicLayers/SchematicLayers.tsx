@@ -1,17 +1,19 @@
-import { pairBlock } from '@tfc/core/copycatPairs';
+import { cellTarget } from '@tfc/core/copycatPairs';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { blockEntry, isBlock, itemName, useItems } from '@/shared/pack-data';
+import { useItems } from '@/shared/pack-data';
 import {
   buildGrid,
   cellInfo,
+  cellKey,
   editCells,
   EMPTY_BLOCKS,
+  isReplaceTarget,
   namesByState,
   propsByState,
   REMOVE,
+  replaceName,
   revertEdits,
-  stateOf,
   type Schematic,
 } from '@/entities/schematic';
 import type { ReplaceFavorite } from '@/entities/schematic';
@@ -90,7 +92,20 @@ export function SchematicLayers({
 
   const layer = grid.layers.get(layerY);
   const below = grid.layers.get(layerY - 1);
-  const effective = useCallback((name: string) => pairBlock(replace.get(name) ?? name), [replace]);
+  /** Строка замен клетки и что в ней стоит с общими заменами: у копикатов это зависит от материала, поэтому по клетке */
+  const { keyAt, effectiveAt } = useMemo(() => {
+    const keys = new Map<number, string | null>();
+    const keyAt = (index: number) => {
+      let key = keys.get(index);
+      if (key === undefined) keys.set(index, (key = cellKey(s, index, names)));
+      return key;
+    };
+    const effectiveAt = (index: number) => {
+      const key = keyAt(index);
+      return key && cellTarget(key, replace);
+    };
+    return { keyAt, effectiveAt };
+  }, [s, names, replace]);
   const indexAt = (x: number, z: number) => (x >= 0 && z >= 0 && x < sx && z < sz ? (layer?.[x + z * sx] ?? -1) : -1);
 
   const closeMenu = useCallback(() => setMenu(null), []);
@@ -105,7 +120,7 @@ export function SchematicLayers({
     s,
     names,
     grid,
-    effective,
+    effectiveAt,
     favorites,
     items,
     smartTargets,
@@ -115,7 +130,6 @@ export function SchematicLayers({
   const pointer = useLayerPointer({
     s,
     grid,
-    names,
     sx,
     sz,
     layer,
@@ -126,7 +140,7 @@ export function SchematicLayers({
     box,
     canvasRef,
     indexAt,
-    effective,
+    effectiveAt,
     changeCells,
     selected: selection.selected,
     menu,
@@ -223,7 +237,8 @@ export function SchematicLayers({
       below,
       ghost,
       items,
-      effective,
+      effectiveAt,
+      keyAt,
       stroke: pointer.stroke,
       highlight,
       selected: selection.selected,
@@ -242,22 +257,21 @@ export function SchematicLayers({
   const hoverInfo = hoverIdx >= 0 ? cellInfo(s, hoverIdx) : null;
 
   /** Клетки, к которым применяется действие окна */
-  const scopeCells = (name: string): number[] => {
+  const scopeCells = (key: string): number[] => {
     if (!layer || !info) return [];
     if (scope === 'cell') return [info.index];
     const out: number[] = [];
-    for (const idx of layer) if (idx >= 0 && names[stateOf(s, idx)] === name) out.push(idx);
+    for (const idx of layer) if (idx >= 0 && keyAt(idx) === key) out.push(idx);
     return out;
   };
 
-  const sameOnLayer =
-    info && layer ? layer.filter((idx) => idx >= 0 && names[stateOf(s, idx)] === info.name).length : 0;
+  const sameOnLayer = info && layer ? layer.filter((idx) => idx >= 0 && keyAt(idx) === info.key).length : 0;
 
   const apply = (to: string) => {
     if (!info) return;
-    if (to !== REMOVE && !isBlock(items, to)) return;
-    if (scope === 'all') setGlobal(info.name, to);
-    else changeCells(editCells(s, scopeCells(info.name), to));
+    if (to !== REMOVE && !isReplaceTarget(items, to)) return;
+    if (scope === 'all') setGlobal(info.key, to);
+    else changeCells(editCells(s, scopeCells(info.key), to));
     setMenu(null);
   };
 
@@ -267,11 +281,7 @@ export function SchematicLayers({
   const selectedOnLayer = layer ? layer.reduce((a, i) => a + (i >= 0 && selection.selected.has(i) ? 1 : 0), 0) : 0;
 
   const shownName = (id: string) =>
-    id === REMOVE
-      ? 'Удалён из схемы'
-      : EMPTY_BLOCKS.has(id)
-        ? 'Воздух'
-        : itemName(blockEntry(items, id), id.split(':').pop() ?? id);
+    id === REMOVE ? 'Удалён из схемы' : EMPTY_BLOCKS.has(id) ? 'Воздух' : replaceName(items, id);
 
   /** Все блоки схемы (индексы в списке blocks) — для материалов всей схемы и «все такие же» */
   const allCells = useMemo(() => {
@@ -279,17 +289,13 @@ export function SchematicLayers({
     for (const l of grid.layers.values()) for (const i of l) if (i >= 0) out.push(i);
     return out;
   }, [grid]);
-  const effectiveOf = (idx: number) => {
-    const name = names[stateOf(s, idx)];
-    return name ? effective(name) : null;
-  };
   const scopeList = legendScope === 'all' ? allCells : layer ? [...layer].filter((i) => i >= 0) : [];
 
   /** Материалы слоя или всей схемы (с общими заменами), с поиском по названию и id */
   const legend = (() => {
     const m = new Map<string, number>();
     for (const idx of scopeList) {
-      const eff = effectiveOf(idx);
+      const eff = effectiveAt(idx);
       if (eff) m.set(eff, (m.get(eff) ?? 0) + 1);
     }
     const q = legendQuery.trim().toLowerCase();
@@ -299,12 +305,12 @@ export function SchematicLayers({
   })();
 
   /** Вид выделенных блоков, если он один (для строки материалов и панели выделения) */
-  const selectedIds = new Set([...selection.selected].map(effectiveOf));
+  const selectedIds = new Set([...selection.selected].map(effectiveAt));
   const selectedId = selectedIds.size === 1 ? [...selectedIds][0] : null;
   /** Выделить все блоки этого вида — в материалах слоя или всей схемы */
-  const selectSame = (id: string) => selection.selectOnly(scopeList.filter((i) => effectiveOf(i) === id));
+  const selectSame = (id: string) => selection.selectOnly(scopeList.filter((i) => effectiveAt(i) === id));
   /** Расширить выделение на все такие же блоки во всей схеме */
-  const selectAllSame = () => selection.selectOnly(allCells.filter((i) => selectedIds.has(effectiveOf(i))));
+  const selectAllSame = () => selection.selectOnly(allCells.filter((i) => selectedIds.has(effectiveAt(i))));
 
   const layerTotal = layer ? layer.reduce((a, i) => a + (i >= 0 ? 1 : 0), 0) : 0;
   const stepY = (d: number) => {
@@ -373,7 +379,9 @@ export function SchematicLayers({
               onFrame={pointer.frame3d}
             />
           )}
-          {hoverInfo && !menu && <SchematicHoverInfo info={hoverInfo} effective={effective} label={shownName} />}
+          {hoverInfo && !menu && (
+            <SchematicHoverInfo info={hoverInfo} target={cellTarget(hoverInfo.key, replace)} label={shownName} />
+          )}
           <div className={cx(styles.hint, 'faint', 'small', mode === '3d' && styles.hidden)}>
             ЛКМ — заменить · двойной клик — выделить группу · Shift+клик или рамка — выделить, повторно — снять · ПКМ
             (можно провести) — убрать · колесо — масштаб · перетаскивание — сдвиг · ↑↓ — слои · Ctrl+Z / Ctrl+Shift+Z —
@@ -390,6 +398,8 @@ export function SchematicLayers({
             onDismissNote={() => selection.setSelNote(null)}
             onClear={selection.clearSelection}
             onPick={selection.applySelection}
+            items={items}
+            replace={replace}
             onRemove={() => selection.applySelection(REMOVE)}
             onSmart={selection.applySmart}
             onFavorites={selection.applyFavorites}
@@ -398,7 +408,8 @@ export function SchematicLayers({
             <SchematicLayerMenu
               menu={menu}
               info={info}
-              effective={effective}
+              target={cellTarget(info.key, replace)}
+              items={items}
               label={shownName}
               replace={replace}
               scope={scope}
@@ -415,7 +426,7 @@ export function SchematicLayers({
               onSelectGroup={() => (selection.select(menuGroup), setMenu(null))}
               menuGroupLength={menuGroup.length}
               onRemove={() => apply(REMOVE)}
-              onClearGlobal={() => (setGlobal(info.name, null), setMenu(null))}
+              onClearGlobal={() => (setGlobal(info.key, null), setMenu(null))}
             />
           )}
         </div>

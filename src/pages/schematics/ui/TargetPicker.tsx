@@ -12,15 +12,31 @@ interface Props {
   source: string;
   items: ItemIndex | null;
   replace: Map<string, string>;
+  placeholder?: string;
+  /** Фокус в поле сразу; на втором шаге (материал) он есть всегда */
+  autoFocus?: boolean;
   onTarget: (target: string) => void;
-  onCancel: () => void;
+  /** Закрыть выбор; нет — кнопки отмены на первом шаге нет, на втором она возвращает к выбору блока */
+  onCancel?: () => void;
 }
 
 /** Выбор замены: блок, а если он заполняемый — вторым шагом материал (получается пара) */
-export function TargetPicker({ source, items, replace, onTarget, onCancel }: Props) {
+export function TargetPicker({
+  source,
+  items,
+  replace,
+  placeholder = 'На что заменить…',
+  autoFocus = true,
+  onTarget,
+  onCancel,
+}: Props) {
   const [copycat, setCopycat] = useState<string | null>(null);
-  const cancel = (
-    <Button variant="ghost" size="sm" icon onClick={onCancel} aria-label="Отмена">
+  const finish = (target: string) => {
+    setCopycat(null);
+    onTarget(target);
+  };
+  const cancel = (onCancel || copycat) && (
+    <Button variant="ghost" size="sm" icon onClick={onCancel ?? (() => setCopycat(null))} aria-label="Отмена">
       <X size={15} />
     </Button>
   );
@@ -31,9 +47,9 @@ export function TargetPicker({ source, items, replace, onTarget, onCancel }: Pro
           <ItemPicker
             small
             blocksOnly
-            autoFocus
-            placeholder="На что заменить…"
-            onPick={(it) => (canHoldMaterial(it.i) ? setCopycat(it.i) : onTarget(it.i))}
+            autoFocus={autoFocus}
+            placeholder={placeholder}
+            onPick={(it) => (canHoldMaterial(it.i) ? setCopycat(it.i) : finish(it.i))}
           />
         </div>
         {cancel}
@@ -50,19 +66,19 @@ export function TargetPicker({ source, items, replace, onTarget, onCancel }: Pro
             blocksOnly
             autoFocus
             placeholder={`${replaceName(items, copycat)}: чем заполнить…`}
-            onPick={(it) => onTarget(pairKey(copycat, it.i))}
+            onPick={(it) => finish(pairKey(copycat, it.i))}
           />
         </div>
         {cancel}
       </div>
       <div className={styles.pairActions}>
         {suggested && (
-          <Button variant="ghost" size="sm" onClick={() => onTarget(pairKey(copycat, suggested))}>
+          <Button variant="ghost" size="sm" onClick={() => finish(pairKey(copycat, suggested))}>
             <ItemIcon id={suggested} size={16} tip={false} />
             {replaceName(items, suggested)}
           </Button>
         )}
-        <Button variant="ghost" size="sm" onClick={() => onTarget(copycat)}>
+        <Button variant="ghost" size="sm" onClick={() => finish(copycat)}>
           Без материала
         </Button>
       </div>

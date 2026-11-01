@@ -260,7 +260,7 @@ export function copycatMaterialTarget(id: string, replace: Map<string, string>):
 }
 
 /** Предметы в nbt по-старому (Count байтом): схема сохранена до 1.20.5 (DataVersion 3837), игра обновит её при чтении */
-function legacyItems(root: Compound) {
+export function legacyItems(root: Compound) {
   const v = root.get('DataVersion');
   return v?.type === T.Int && v.value < 3837;
 }

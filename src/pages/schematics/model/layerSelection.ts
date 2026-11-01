@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   connectedGroup,
+  cellKey,
   editCells,
+  isReplaceTarget,
   posOfIndex,
   stateOf,
   REMOVE,
@@ -10,7 +12,6 @@ import {
   type Vec,
 } from '@/entities/schematic';
 import type { ItemIndex } from '@/shared/pack-data';
-import { isBlock } from '@/shared/pack-data';
 import type { ReplaceFavorite } from '@/entities/schematic';
 
 export const NO_CELLS: ReadonlySet<number> = new Set();
@@ -30,7 +31,8 @@ interface Args {
   s: Schematic;
   names: (string | null)[];
   grid: Grid;
-  effective: (name: string) => string;
+  /** Что стоит в клетке с учётом общих замен: блок, пара или удаление */
+  effectiveAt: (index: number) => string | null;
   favorites: ReplaceFavorite[];
   items: ItemIndex | null;
   smartTargets: (ids: string[]) => Promise<Map<string, string>>;
@@ -47,7 +49,7 @@ export function useLayerSelection({
   s,
   names,
   grid,
-  effective,
+  effectiveAt,
   favorites,
   items,
   smartTargets,
@@ -85,18 +87,8 @@ export function useLayerSelection({
 
   /** Группа: соединённые блоки того же вида (с общими заменами — как видно на рисунке); на слое или по объёму */
   const groupOf = (index: number, volume = false) => {
-    const name = names[stateOf(s, index)];
-    const eff = name && effective(name);
-    return connectedGroup(
-      s,
-      grid,
-      index,
-      (i) => {
-        const n = names[stateOf(s, i)];
-        return !!n && effective(n) === eff;
-      },
-      !volume,
-    );
+    const eff = effectiveAt(index);
+    return connectedGroup(s, grid, index, (i) => !!eff && effectiveAt(i) === eff, !volume);
   };
 
   /**
@@ -124,22 +116,23 @@ export function useLayerSelection({
   /** Действие над выделением — одна правка, её можно отменить */
   const applySelection = (to: string) => {
     if (!selected.size) return;
-    if (to !== REMOVE && !isBlock(items, to)) return;
+    if (to !== REMOVE && !isReplaceTarget(items, to)) return;
     changeCells(editCells(s, [...selected], to));
     clearSelection();
     closeMenu();
   };
-  /** Избранное: первая избранная цель по id в исходнике (или по общей замене), только из сборки */
+  /** Избранное: первая избранная цель по паре или id в исходнике (или по общей замене), только из сборки */
   const favoriteFor = useMemo(() => {
     const m = new Map<string, string>();
-    for (const f of favorites) if (!m.has(f.from) && isBlock(items, f.to)) m.set(f.from, f.to);
-    return (name: string) => m.get(name) ?? m.get(effective(name));
-  }, [favorites, items, effective]);
+    for (const f of favorites) if (!m.has(f.from) && isReplaceTarget(items, f.to)) m.set(f.from, f.to);
+    return (name: string, index: number) =>
+      m.get(cellKey(s, index, names) ?? name) ?? m.get(name) ?? m.get(effectiveAt(index) ?? name);
+  }, [favorites, items, effectiveAt, s, names]);
   const applyFavorites = () => {
     const cells = [...selected];
     const hit = cells.filter((i) => {
       const n = names[stateOf(s, i)];
-      return !!n && !!favoriteFor(n);
+      return !!n && !!favoriteFor(n, i);
     }).length;
     if (!hit) {
       setSelNote('Для этих блоков нет избранных замен');
@@ -156,7 +149,7 @@ export function useLayerSelection({
     setSelNote(null);
     try {
       const map = await smartTargets(ids);
-      const ok = new Map([...map].filter(([, to]) => isBlock(items, to)));
+      const ok = new Map([...map].filter(([, to]) => isReplaceTarget(items, to)));
       const hit = cells.filter((i) => ok.has(names[stateOf(s, i)] ?? '')).length;
       if (!hit) {
         setSelNote('Умная замена ничего не подобрала');

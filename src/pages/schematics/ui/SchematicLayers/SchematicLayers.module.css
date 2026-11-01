@@ -281,3 +281,15 @@
   flex-wrap: wrap;
   gap: 4px;
 }
+
+/* Длинные id пар «копикат+материал» переносятся, а не вылезают за панель */
+.selection code,
+.menuNames code,
+.note {
+  overflow-wrap: anywhere;
+}
+
+.legend li button > :global(.grow) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
