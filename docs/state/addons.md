@@ -61,7 +61,15 @@ boundary, Extras will own missing machines, and PCBs stay in EE Extras. The owne
 - Dedicated-server M2 results: environment 4/4 and ports 5/5; normal batch 13/13 at 299.827 V / 7.995 A with exact
   products, membrane wear and mass balance; missing/worn membrane 3/3 each; 200 V sag 6/6; each blocked output 6/6;
   restart 6/6. The deliberate-fail scenario exits nonzero. Build and resources/models pass. Client/JEI was not launched.
-- Not done: M3 etching bath, client/JEI/EMI runtime, full pack/site audit, real old-world migration and load tests.
+- M3: the stock 27 000 mB netherite Destroy Vat passes UV HCl synthesis with 1:1:2 stoichiometry (4/4), no-UV control
+  (2/2), and direct iron-powder dissolution to Fe(III) (5/5; 9 Fe(III), 13.5 H₂ and 27 H⁺ per powder within Destroy's
+  3% numerical drift). No FeCl₂ stage or new machine is needed. HCl synthesis requires UV and thermostat-controlled
+  cooling: continuous cooling condenses the gases, while no cooling destroys the Vat by pressure.
+- Free Vat absorption in Destroy 0.4.6-eligibbs failed mole conservation, including for an already dissociated
+  H⁺/Cl⁻/H₂O mixture. M3 therefore adds Bridge's atomic pure-HCl + water adapter instead: 25 mB HCl + 250 mB water →
+  275 mB stock H⁺/Cl⁻/H₂O, exact mole/volume balance (3/3). M4 must use this boundary and not return the acid to free
+  Vat simulation. No new fluids or molecules were added.
+- Not done: M4 etching bath, client/JEI/EMI runtime, full pack/site audit, real old-world migration and load tests.
   Petrolpark's optional JEI integration targets a newer JEI than the pack's 19.44.0.401; client compatibility remains
   unresolved. The `firebase-tools/lib/auth` lookup error that blocked site datapack loading is fixed (dev #183).
 
