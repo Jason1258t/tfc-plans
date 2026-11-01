@@ -192,7 +192,10 @@ addons`; with names — one named site item; `tfc undo` — undo the whole pull 
   1.21.1) so TLauncher lists it; profile `lastVersionId` = name; works without launcher_profiles.json (TLauncher-only
   `.minecraft`: temp file for the installer, no profile written); Java also from `.tlauncher`. TLauncher's
   game dir = the version folder — **confirmed by the host** (plays `.minecraft/versions/TerraFirma Rebirth 2` via
-  TLauncher). `tfc init` lists `<.minecraft>/versions/*` with `mods/` (label «TLauncher / .minecraft» + loader);
+  TLauncher). 2026-11-01: **not universal** — a player's third-party launcher ran version `TFC-RealWorld` with
+  `--gameDir .minecraft` despite our profile, so no pack mods loaded (`create_connected:sync_config` refusal).
+  `launchedElsewhere` (detect.mjs) reads `<mc>/logs/latest.log`; `status`/`pull`/`report` warn, `report` takes logs from
+  the real folder. `tfc init --instance` also expands `$env:X` / `%X%` left unexpanded by the shell. `tfc init` lists `<.minecraft>/versions/*` with `mods/` (label «TLauncher / .minecraft» + loader);
   `detectVersions` reads `<dir>/<name>.json` (`--fml.neoForgeVersion`, `--fml.mcVersion`, `inheritsFrom`). Progress: `spinner` /
   `withSpinner` in ui.mjs (prepare, file scan, NeoForge installer phases in Russian, placing files); progress bar
   shows speed and ETA, redraws every second.
