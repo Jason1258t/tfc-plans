@@ -1,3 +1,4 @@
+import { hasBlock } from '@tfc/core/copycatPairs';
 import { exportSchematic, invalidTargets, type Schematic } from '@/entities/schematic';
 import { isBlock, type ItemIndex } from '@/shared/pack-data';
 import { makePreview, saveToLibrary } from '@/entities/schematic';
@@ -39,7 +40,7 @@ export function useSchematicActions({
 }: Args) {
   const downloadSchematic = async (s: Schematic, rep = replace) => {
     if (!items) return;
-    const bad = invalidTargets(rep, items).filter((b) => s.counts.has(b.from));
+    const bad = invalidTargets(rep, items).filter((b) => hasBlock(s.counts, b.from));
     if (bad.length) {
       setExportError(
         `Не скачано: замены на то, что не ставится блоком (нет в сборке или это только предмет) — ${bad.map((b) => `${b.from} → ${b.to}`).join(', ')}`,

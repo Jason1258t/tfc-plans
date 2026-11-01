@@ -8,6 +8,7 @@ import {
   type RawElement,
 } from './blockModels';
 import { codeParts, hasCodeParts } from './createParts';
+import { hasPairRules, plainRules } from '@tfc/core/copycatPairs';
 import { COPYCAT_BASE, copycatMaterials, copycatParts, isCopycat, type Material } from './copycats';
 import { placedBy, textureUrl, type ItemIndex } from '@/shared/pack-data';
 import { copycatMaterialTarget, EMPTY_BLOCKS, REMOVE, exportSchematic, type Schematic } from './schematic';
@@ -461,7 +462,7 @@ const MAX_CELLS = 16_000_000;
  */
 export async function buildMesh(
   s: Schematic,
-  replace: Map<string, string>,
+  rules: Map<string, string>,
   items: ItemIndex,
   opts: { maxY?: number } = {},
 ): Promise<MeshData> {
@@ -470,9 +471,12 @@ export async function buildMesh(
   const sh = s.shape;
   const shapeChanged =
     !!sh && (sh.crop || sh.clearAir || sh.platform || sh.sides !== 0 || sh.bottom !== 0 || sh.top !== 1);
-  if (shapeChanged) {
+  // Пары «копикат + материал» решаются по клеткам — тоже только в итоговом файле
+  const pairs = hasPairRules(rules);
+  let replace = pairs ? plainRules(rules) : rules;
+  if (shapeChanged || pairs) {
     try {
-      const bytes = await exportSchematic(s, replace);
+      const bytes = await exportSchematic(s, rules);
       const parsed = await readNbt(bytes);
       s = {
         ...s,
@@ -480,8 +484,10 @@ export async function buildMesh(
         size: sizeOf(parsed.root.value) ?? s.size,
         shape: { ...DEFAULT_SHAPE },
       };
-      // replace не меняем: имена блоков уже заменены в parsed, но replace всё ещё нужен
-      // для подстановки материалов копикатов (их id лежат в nbt клетки, а не в палитре)
+      // Без пар replace не меняем: имена блоков уже заменены в parsed, но replace всё ещё нужен
+      // для подстановки материалов копикатов (их id лежат в nbt клетки, а не в палитре).
+      // С парами файл уже итоговый: материал, выбранный парой, обычная замена трогать не должна
+      if (pairs) replace = new Map();
     } catch {
       // оставляем исходник
     }

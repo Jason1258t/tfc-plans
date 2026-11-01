@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { canHoldMaterial, hasBlock, parsePair } from '@tfc/core/copycatPairs';
 import { readNbt, T, writeNbt } from '@tfc/core/nbt';
 import {
   applyEdits,
@@ -45,6 +46,8 @@ const MAX_REPLACE = 2000;
 const MAX_PREVIEW = 280_000;
 const MAX_EDIT_CELLS = 100_000;
 const BLOCK_ID = /^[a-z0-9_.-]+:[a-z0-9_./-]+$/;
+/** Строка замен: блок или пара «копикат+материал» */
+const REPLACE_ID = /^[a-z0-9_.-]+:[a-z0-9_./-]+(\+[a-z0-9_.-]+:[a-z0-9_./-]+)?$/;
 
 const link = (id) => `${SITE}/schematics?id=${id}`;
 const kb = (n) =>
@@ -58,6 +61,11 @@ const kb = (n) =>
 const who = (d) => `${d.author ?? '?'}${d.updatedBy && d.updatedBy !== d.author ? `, правил ${d.updatedBy}` : ''}`;
 const sizeText = (s) => (s?.length ? s.join('×') : '?');
 const nm = (id) => itemName(id) ?? '';
+/** Блок или пара «копикат+материал» */
+const namedRow = (id) => {
+  const p = parsePair(id);
+  return p ? `${named(p.block)} + ${named(p.material)}` : named(id);
+};
 
 // ---------------------------------------------------------------- сервер сборки
 
@@ -287,7 +295,7 @@ function countLines(m, replace) {
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .map(([id, n]) => {
       const to = replace?.get(id);
-      return `${String(n).padStart(6)}  ${named(id)}${to ? ` → ${to === REMOVE ? 'удалить' : named(to)}` : ''}`;
+      return `${String(n).padStart(6)}  ${namedRow(id)}${to ? ` → ${to === REMOVE ? 'удалить' : namedRow(to)}` : ''}`;
     });
 }
 
@@ -337,7 +345,19 @@ async function blocksOf(entry) {
   if (blockText.has(entry.fileId)) return blockText.get(entry.fileId);
   const parsed = await readNbt(await sourceBytes(entry));
   const ids = [...countBlocks(parsed).keys()];
-  const v = { ids, text: norm(ids.map((id) => `${id} ${nm(id)}`).join(' ')) };
+  const v = {
+    ids,
+    text: norm(
+      ids
+        .map((id) =>
+          id
+            .split('+')
+            .map((x) => `${x} ${nm(x)}`)
+            .join(' '),
+        )
+        .join(' '),
+    ),
+  };
   blockText.set(entry.fileId, v);
   return v;
 }
@@ -382,7 +402,7 @@ async function schematicsList(a) {
     return [
       `${s.id} — ${s.name} (${s.fileName}, ${sizeText(s.size)}, ${s.blocks ?? '?'} блоков, замен ${(s.replace ?? []).length}; ${who(s)}, ${dateOf(s.updatedAt)})`,
       ...(s.description ? [`    ${s.description.replace(/\s+/g, ' ').slice(0, 160)}`] : []),
-      ...(hit ? [`    найдено по блокам: ${hit.slice(0, 6).map(named).join(', ')}`] : []),
+      ...(hit ? [`    найдено по блокам: ${hit.slice(0, 6).map(namedRow).join(', ')}`] : []),
       `    ${link(s.id)}`,
     ];
   });
@@ -692,9 +712,13 @@ function nextReplace(current, a, counts, warnings) {
   }
   const bad = [];
   for (const [from, to] of map) {
-    if (!BLOCK_ID.test(from) || (to !== REMOVE && !BLOCK_ID.test(to))) bad.push(`${from} → ${to}`);
-    else if (!counts.has(from)) bad.push(`${from}: такого блока в схеме нет`);
-    else if (to !== REMOVE && !EMPTY_BLOCKS.has(to) && !itemName(to)) warnings.add(`${to}: нет в предметах сборки`);
+    if (!REPLACE_ID.test(from) || (to !== REMOVE && !REPLACE_ID.test(to))) bad.push(`${from} → ${to}`);
+    else if (!hasBlock(counts, from)) bad.push(`${from}: такого блока в схеме нет`);
+    else if (parsePair(to) && !canHoldMaterial(parsePair(to).block))
+      bad.push(`${from} → ${to}: этому блоку нельзя задать материал`);
+    else
+      for (const id of to === REMOVE ? [] : parsePair(to) ? Object.values(parsePair(to)) : [to])
+        if (!EMPTY_BLOCKS.has(id) && !itemName(id)) warnings.add(`${id}: нет в предметах сборки`);
   }
   if (bad.length) throw new Error(`Неверные замены:\n${bad.join('\n')}`);
   if (map.size > MAX_REPLACE) throw new Error(`Замен больше ${MAX_REPLACE}`);
@@ -780,7 +804,7 @@ async function schematicPut(a) {
     if (!sameJson(r, entry?.replace ?? [])) patch.replace = r;
   } else if (entry && bytes) {
     // Новый исходник: замены блоков, которых в нём больше нет, сайт не показывает — убираем
-    const r = (entry.replace ?? []).filter((x) => counts.has(x.from));
+    const r = (entry.replace ?? []).filter((x) => hasBlock(counts, x.from));
     if (r.length !== (entry.replace ?? []).length) {
       patch.replace = r;
       warnings.add(`снято замен блоков, которых нет в новом исходнике: ${(entry.replace ?? []).length - r.length}`);
@@ -919,7 +943,7 @@ export const TOOLS = [
   },
   {
     name: 'schematic_put',
-    description: `Write to the schematic library, signed ${NICK}. Without id — upload a local .nbt (file=) as a new schematic: NBT check, duplicate check against existing sources and their processed copies (pack server), author (default ${NICK}), preview (block-colour isometric). With id + baseRevision (schematic_get fresh=true) — edit: name, description, replace (whole list) / replaceSet (single replacements, "-" removes), shape (crop/padding/platform, merged), blocks (cell edits in the source: [{ pos:"x,y,z", to?:"x,y,z" box corner, block:"ns:id[prop=v]" | "minecraft:air" (explicit air clears space when pasted) | "#remove" (no block) }] — block-entity data of replaced cells is dropped), file (new source). Refuses if the record changed since baseRevision. dryRun=true — check and show without writing.`,
+    description: `Write to the schematic library, signed ${NICK}. Without id — upload a local .nbt (file=) as a new schematic: NBT check, duplicate check against existing sources and their processed copies (pack server), author (default ${NICK}), preview (block-colour isometric). With id + baseRevision (schematic_get fresh=true) — edit: name, description, replace (whole list) / replaceSet (single replacements, "-" removes; a filled copycat is the pair "copycat+material", also usable as a target: "minecraft:brick_stairs" → "copycats:copycat_slope+minecraft:bricks"), shape (crop/padding/platform, merged), blocks (cell edits in the source: [{ pos:"x,y,z", to?:"x,y,z" box corner, block:"ns:id[prop=v]" | "minecraft:air" (explicit air clears space when pasted) | "#remove" (no block) }] — block-entity data of replaced cells is dropped), file (new source). Refuses if the record changed since baseRevision. dryRun=true — check and show without writing.`,
     inputSchema: {
       type: 'object',
       properties: {

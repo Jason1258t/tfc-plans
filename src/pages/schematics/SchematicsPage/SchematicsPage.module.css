@@ -428,3 +428,18 @@
     flex-wrap: wrap;
   }
 }
+
+/* Пара «копикат + материал»: два значка рядом и быстрый выбор материала */
+.pairIcons {
+  display: inline-flex;
+  flex: none;
+  gap: 2px;
+}
+
+.pairActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}

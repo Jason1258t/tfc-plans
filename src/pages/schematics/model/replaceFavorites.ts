@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { replaceFavoritesStore } from '@/entities/schematic';
 import type { ReplaceFavorite } from '@/entities/schematic';
-import type { ItemIndex } from '@/shared/pack-data';
+import { isPair, parsePair } from '@tfc/core/copycatPairs';
+import { isBlock, type ItemIndex } from '@/shared/pack-data';
 
 /** Подписка на избранные замены; null — ещё грузятся */
 export function useFavorites(): ReplaceFavorite[] | null {
@@ -33,6 +34,19 @@ const stems = (id: string): string[] => {
   return out;
 };
 
+/**
+ * Материал по умолчанию для пары: у пары — её материал (с учётом его замены: материала может не быть в сборке),
+ * у производного блока — основа (dolomite_stairs → dolomite, oak_stairs → oak_planks, brick_slab → bricks),
+ * у цельного блока — он сам. Только блоки сборки.
+ */
+export function suggestMaterial(source: string, items: ItemIndex | null, replace: Map<string, string>): string | null {
+  const pair = parsePair(source);
+  if (pair) return [replace.get(pair.material), pair.material].find((id) => id && isBlock(items, id)) ?? null;
+  const base = source.replace(new RegExp(`_(${VARIANT_KINDS.map((k) => k.id).join('|')})$`), '');
+  const options = base === source ? [source] : [base, `${base}s`, `${base}_planks`, `${base}_block`];
+  return options.find((id) => isBlock(items, id)) ?? null;
+}
+
 export interface Variant {
   kind: (typeof VARIANT_KINDS)[number];
   /** Производное от исходного блока (есть в библиотеке сборки) */
@@ -50,6 +64,7 @@ export interface Variant {
  */
 export function deriveVariants(from: string, to: string, items: ItemIndex, present: Set<string>): Variant[] {
   const out: Variant[] = [];
+  if (isPair(from) || isPair(to)) return out;
   for (const kind of VARIANT_KINDS) {
     const src = stems(from)
       .map((s) => `${s}_${kind.id}`)

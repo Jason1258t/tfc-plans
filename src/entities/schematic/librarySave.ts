@@ -1,6 +1,7 @@
 import { fileBlob, removeFile, uploadFile } from '@/entities/file';
 import type { ItemIndex } from '@/shared/pack-data';
 import type { BuildingSpec } from '@tfc/core/building/spec';
+import { hasBlock } from '@tfc/core/copycatPairs';
 import { savedEdits } from '@tfc/core/schematicFile';
 import { editedSource, loadSchematic, type Schematic } from './schematic';
 import { schematicsStore } from './store';
@@ -14,7 +15,7 @@ import type { SavedSchematic } from './types';
 
 /** Только замены блоков, которые есть в этой схеме */
 const replaceList = (s: Schematic, replace: Map<string, string>) =>
-  [...replace].filter(([from]) => s.counts.has(from)).map(([from, to]) => ({ from, to }));
+  [...replace].filter(([from]) => hasBlock(s.counts, from)).map(([from, to]) => ({ from, to }));
 
 const blockTotal = (s: Schematic) => [...s.counts.values()].reduce((a, n) => a + n, 0);
 

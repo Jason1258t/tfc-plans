@@ -6,7 +6,16 @@
  * (`import '@tfc/core/schematicFile'`) — сервер сборки и программа tfc собирают тот же файл, что и сайт.
  */
 import { readNbt, T, writeNbt, type Compound, type ParsedNbt, type Tag } from './nbt.ts';
-import { COPYCAT_BASE, copycatSlots, fixBlockData, replaceCopycatMaterials } from './schematicBlockFixes.ts';
+import {
+  filledMaterials,
+  hasPairRules,
+  pairKey,
+  pairsRemoved,
+  plainRules,
+  resolvePairs,
+  type ResolvedPairs,
+} from './copycatPairs.ts';
+import { COPYCAT_BASE, fixBlockData, replaceCopycatMaterials } from './schematicBlockFixes.ts';
 
 export { COPYCAT_BASE };
 
@@ -72,14 +81,15 @@ export const nameOf = (entry: Tag) => {
 };
 
 /**
- * id блока → сколько раз встречается; блоки палитры без позиций — с нулём. Материалы копикатов тоже считаются
- * (каждый — предмет, который тратит пушка): иначе материал, который есть только внутри копикатов, нельзя заменить.
+ * id блока → сколько раз встречается; блоки палитры без позиций — с нулём. Заполненный копикат считается парой
+ * «копикат+материал» (copycatPairs.ts), по штуке на заполненную часть; пустой — обычным блоком.
  */
 export function countBlocks(parsed: ParsedNbt): Map<string, number> {
   const root = parsed.root.value;
   const palettes = paletteLists(root);
   const palette = palettes[0] ?? [];
   const counts = new Map<string, number>();
+  const placed = new Set<string>();
   const blocks = root.get('blocks');
   if (blocks?.type === T.List) {
     for (const b of blocks.value) {
@@ -87,19 +97,18 @@ export function countBlocks(parsed: ParsedNbt): Map<string, number> {
       const state = b.value.get('state');
       if (state?.type !== T.Int) continue;
       const name = nameOf(palette[state.value]);
-      if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
+      if (!name) continue;
+      placed.add(name);
       const nbt = b.value.get('nbt');
-      if (nbt?.type !== T.Compound) continue;
-      for (const { material } of copycatSlots(nbt.value)) {
-        const m = nameOf({ type: T.Compound, value: material });
-        if (m && m !== COPYCAT_BASE && !EMPTY_BLOCKS.has(m)) counts.set(m, (counts.get(m) ?? 0) + 1);
-      }
+      const materials = nbt?.type === T.Compound ? filledMaterials(nbt.value, (id) => EMPTY_BLOCKS.has(id)) : [];
+      for (const key of materials.length ? materials.map((m) => pairKey(name, m)) : [name])
+        counts.set(key, (counts.get(key) ?? 0) + 1);
     }
   }
   // Блоки палитры, которые не встречаются в blocks (бывает) — тоже показываем
   for (const p of palettes.flat()) {
     const name = nameOf(p);
-    if (name && !counts.has(name)) counts.set(name, 0);
+    if (name && !placed.has(name)) counts.set(name, 0);
   }
   return counts;
 }
@@ -138,6 +147,16 @@ export function shapeBox(
   const blocks = root.get('blocks');
   const list = blocks?.type === T.List ? blocks.value : [];
   const empty = emptyStates(palette, replace);
+  const removedByPair = (entry: Tag | undefined, block: Compound) => {
+    const name = entry && nameOf(entry);
+    const nbt = block.get('nbt');
+    if (!name || nbt?.type !== T.Compound) return false;
+    return pairsRemoved(
+      name,
+      filledMaterials(nbt.value, (id) => EMPTY_BLOCKS.has(id)),
+      replace,
+    );
+  };
 
   const lo: Vec = [Infinity, Infinity, Infinity];
   const hi: Vec = [-Infinity, -Infinity, -Infinity];
@@ -146,7 +165,7 @@ export function shapeBox(
     const p = posOf(b);
     if (!p || b.type !== T.Compound) continue;
     const st = b.value.get('state');
-    const solid = !(st?.type === T.Int && empty.has(st.value));
+    const solid = !(st?.type === T.Int && (empty.has(st.value) || removedByPair(palette[st.value], b.value)));
     for (let i = 0; i < 3; i++) {
       all.lo[i] = Math.min(all.lo[i], p[i]);
       all.hi[i] = Math.max(all.hi[i], p[i]);
@@ -178,9 +197,24 @@ export function shapeBox(
 
 /** Размер файла после обрезки — для показа в списке; null, если форма не меняется */
 /** Новый файл с заменами и формой (исходник в памяти не меняется) */
-export async function applyEdits(parsed: ParsedNbt, replace: Map<string, string>, shape: Shape): Promise<Uint8Array> {
-  // Объём считаем по исходнику и исходным именам: в клоне палитра уже с заменами
-  const box = shapeBox(parsed, shape, replace);
+export async function applyEdits(parsed: ParsedNbt, rules: Map<string, string>, shape: Shape): Promise<Uint8Array> {
+  const root = structuredClone(parsed.root);
+  const palettes = paletteLists(root.value);
+  // Пары решаются по клеткам, остальное — обычными заменами по палитре
+  const replace = plainRules(rules);
+  const legacy = legacyItems(root.value);
+  const resolved: ResolvedPairs | null = hasPairRules(rules)
+    ? resolvePairs(
+        root,
+        palettes,
+        rules,
+        (id) => EMPTY_BLOCKS.has(id),
+        (id) => copycatMaterialTarget(id, replace),
+        legacy,
+      )
+    : null;
+  // Объём считаем по исходным именам (с решёнными парами): дальше в клоне палитра уже с заменами
+  const box = shapeBox({ ...parsed, root }, shape, replace);
   if (box && (shape.clearAir || shape.platform)) {
     const cells = box.size[0] * box.size[1] * box.size[2];
     if (cells > MAX_CLEAR_CELLS)
@@ -188,16 +222,15 @@ export async function applyEdits(parsed: ParsedNbt, replace: Map<string, string>
     if (paletteLists(parsed.root.value).length > 1)
       throw new Error('Площадка и очистка пространства не поддерживаются для схем с несколькими палитрами');
   }
-  const root = structuredClone(parsed.root);
-  const palettes = paletteLists(root.value);
   // Индексы удаляемых блоков — по первой палитре (по ней же считаются блоки в loadSchematic)
   const removed = new Set<number>();
   palettes[0]?.forEach((entry, i) => {
     const name = nameOf(entry);
-    if (name && replace.get(name) === REMOVE) removed.add(i);
+    if (name && replace.get(name) === REMOVE && (!resolved || i < resolved.paletteSize)) removed.add(i);
   });
   for (const palette of palettes) {
-    for (const entry of palette) {
+    // Записи, добавленные парами, — уже итоговые
+    for (const entry of resolved ? palette.slice(0, resolved.paletteSize) : palette) {
       if (entry.type !== T.Compound) continue;
       const name = entry.value.get('Name');
       if (name?.type !== T.String) continue;
@@ -214,7 +247,7 @@ export async function applyEdits(parsed: ParsedNbt, replace: Map<string, string>
       return !(state?.type === T.Int && removed.has(state.value));
     });
   }
-  if (blocks?.type === T.List) fixBlocks(blocks.value, palettes[0] ?? [], replace, legacyItems(root.value));
+  if (blocks?.type === T.List) fixBlocks(blocks.value, palettes[0] ?? [], replace, legacy, resolved?.done);
   if (box) reshape(root.value, box, shape);
   return writeNbt(root, parsed.gzipped);
 }
@@ -233,14 +266,14 @@ function legacyItems(root: Compound) {
 }
 
 /** Материалы копикатов по заменам и данные блок-сущностей, несовместимые с блоком после замен (schematicBlockFixes) */
-function fixBlocks(blocks: Tag[], palette: Tag[], replace: Map<string, string>, legacy: boolean) {
+function fixBlocks(blocks: Tag[], palette: Tag[], replace: Map<string, string>, legacy: boolean, done?: Set<Tag>) {
   const target = (id: string) => copycatMaterialTarget(id, replace);
   for (const b of blocks) {
     if (b.type !== T.Compound) continue;
     const nbt = b.value.get('nbt');
     const state = b.value.get('state');
     if (nbt?.type !== T.Compound || state?.type !== T.Int) continue;
-    if (replace.size) replaceCopycatMaterials(nbt.value, target, legacy);
+    if (replace.size && !done?.has(b)) replaceCopycatMaterials(nbt.value, target, legacy);
     const name = palette[state.value] && nameOf(palette[state.value]);
     if (!name) continue;
     const fixed = fixBlockData(name, nbt.value);

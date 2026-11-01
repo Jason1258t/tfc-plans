@@ -10,7 +10,7 @@ import {
   type Shape,
   type Vec,
 } from '@tfc/core/schematicFile';
-import { fuzzyCandidates, blockEntry, isBlock, type ItemIndex } from '@/shared/pack-data';
+import { fuzzyCandidates, blockEntry, isBlock, itemName, type ItemIndex } from '@/shared/pack-data';
 import {
   geminiErrorText,
   suggestReplacements,
@@ -18,6 +18,8 @@ import {
   type CandidateRow,
   type ReplacementAnswer,
 } from '@/shared/api';
+
+import { canHoldMaterial, inheritedTarget, parsePair } from '@tfc/core/copycatPairs';
 
 // Файл схемы с заменами и формой — общий с Node модуль schematicFile.ts; здесь — то, что нужно только сайту
 export {
@@ -103,7 +105,23 @@ export function viewSchematic(parsed: ParsedNbt, name: string): Schematic {
  * Перед скачиванием — чтобы в схему попадал ровно тот id, что есть в сборке (minecraft:… не станет tfc:…).
  */
 export function invalidTargets(replace: Map<string, string>, items: ItemIndex) {
-  return [...replace].filter(([, to]) => to !== REMOVE && !isBlock(items, to)).map(([from, to]) => ({ from, to }));
+  return [...replace]
+    .filter(([, to]) => to !== REMOVE && !isReplaceTarget(items, to))
+    .map(([from, to]) => ({ from, to }));
+}
+
+/** На это можно заменить: блок сборки или пара «копикат + материал», где оба — блоки сборки */
+export function isReplaceTarget(items: ItemIndex | null | undefined, to: string) {
+  const pair = parsePair(to);
+  if (!pair) return isBlock(items, to);
+  return canHoldMaterial(pair.block) && isBlock(items, pair.block) && isBlock(items, pair.material);
+}
+
+/** Название строки замен для людей: блок или «Заполняемая плита + Кирпичи» */
+export function replaceName(items: ItemIndex | null | undefined, id: string) {
+  const name = (x: string) => itemName(blockEntry(items, x), x);
+  const pair = parsePair(id);
+  return pair ? `${name(pair.block)} + ${name(pair.material)}` : name(id);
 }
 
 /** Исходник с правками слоёв (без замен и формы) — его хранит библиотека */
@@ -126,7 +144,7 @@ export function changesIn(s: Schematic, replace: Map<string, string>) {
   let blocks = 0;
   let removed = 0;
   for (const [id, n] of s.counts) {
-    const to = replace.get(id);
+    const to = replace.get(id) ?? inheritedTarget(id, replace);
     if (!to) continue;
     if (to === REMOVE) removed += n;
     types++;
@@ -161,7 +179,7 @@ export function applyRules(ids: string[], rules: Rule[], items: ItemIndex): Rule
     let target = id;
     for (const r of active) target = target.split(r.from.trim()).join(r.to.trim());
     if (target === id) continue;
-    if (isBlock(items, target)) applied.set(id, target);
+    if (isReplaceTarget(items, target)) applied.set(id, target);
     else failed.push({ source: id, target });
   }
   return { applied, failed };

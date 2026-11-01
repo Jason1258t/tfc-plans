@@ -55,6 +55,7 @@ function buildVersion() {
     'packages/core/src/datapackFiles.ts',
     'packages/core/src/schematicFile.ts',
     'packages/core/src/schematicBlockFixes.ts',
+    'packages/core/src/copycatPairs.ts',
     'packages/core/src/nbt.ts',
     'packages/core/src/addonVersions.ts',
   ];
@@ -129,7 +130,7 @@ async function bundle(work, version, { npm = false } = {}) {
   // Из ядра @tfc/core — только общие модули без импортов (tfc pull) и fflate
   const foreign = Object.keys(res.metafile.inputs).filter(
     (f) =>
-      !/^(cli|server\/pack-server\/lib)\/|^packages\/core\/src\/(datapackFiles|schematicFile|schematicBlockFixes|nbt|addonVersions)\.ts$|(^|\/)node_modules\/fflate\/|^<define:/.test(
+      !/^(cli|server\/pack-server\/lib)\/|^packages\/core\/src\/(datapackFiles|schematicFile|schematicBlockFixes|copycatPairs|nbt|addonVersions)\.ts$|(^|\/)node_modules\/fflate\/|^<define:/.test(
         f,
       ),
   );
