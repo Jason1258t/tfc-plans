@@ -69,7 +69,15 @@ boundary, Extras will own missing machines, and PCBs stay in EE Extras. The owne
   H⁺/Cl⁻/H₂O mixture. M3 therefore adds Bridge's atomic pure-HCl + water adapter instead: 25 mB HCl + 250 mB water →
   275 mB stock H⁺/Cl⁻/H₂O, exact mole/volume balance (3/3). M4 must use this boundary and not return the acid to free
   Vat simulation. No new fluids or molecules were added.
-- Not done: M4 etching bath, client/JEI/EMI runtime, full pack/site audit, real old-world migration and load tests.
+- M4: Extras adds the no-FE etching bath, a narrow two-item + one-fluid JSON recipe type and JEI category. EE Extras
+  owns the development L1 blank/mask/board items and the `pcb_topology` compound component. The bath consumes 250 mB of
+  the actual stock Destroy mixture over 400 ticks, transforms 3 Cu with 6 Fe(III) into 3 Cu(II) + 6 Fe(II), preserves
+  volume, temperature and all other components, and copies the actual mask topology. Inputs/outputs are atomic; restart
+  and block-entity-data loot/replacement preserve tanks, items, recipe and progress. No new fluids or molecules.
+- Dedicated-server M4 results: environment 6/6; devtest and real L1 cycles 10/10 each; blocked output 3/3; insufficient
+  Fe(III) 2/2; break/replacement 6/6; restart 5/5 at 100 ticks followed by a completed L1 cycle 10/10. M2 normal/ports
+  and all M3 regression scenarios still pass. Both addons build; resource and model checks pass. Client/JEI not launched.
+- Not done: M5/M6, client/JEI/EMI runtime, full pack/site audit, real old-world migration and load tests.
   Petrolpark's optional JEI integration targets a newer JEI than the pack's 19.44.0.401; client compatibility remains
   unresolved. The `firebase-tools/lib/auth` lookup error that blocked site datapack loading is fixed (dev #183).
 
