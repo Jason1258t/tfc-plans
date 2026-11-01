@@ -2,7 +2,6 @@ import { useRef, useState } from 'react';
 import {
   editCells,
   frameObject,
-  stateOf,
   EMPTY_BLOCKS,
   REMOVE,
   type Grid,
@@ -33,7 +32,6 @@ const DRAG_PX = 4;
 interface Args {
   s: Schematic;
   grid: Grid;
-  names: (string | null)[];
   sx: number;
   sz: number;
   layer: Int32Array | undefined;
@@ -44,7 +42,8 @@ interface Args {
   box: { w: number; h: number };
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   indexAt: (x: number, z: number) => number;
-  effective: (name: string) => string;
+  /** Что стоит в клетке с учётом общих замен: блок, пара или удаление */
+  effectiveAt: (index: number) => string | null;
   changeCells: (next: Schematic) => void;
   selected: ReadonlySet<number>;
   menu: Menu | null;
@@ -65,7 +64,6 @@ interface Args {
 export function useLayerPointer({
   s,
   grid,
-  names,
   sx,
   sz,
   layer,
@@ -76,7 +74,7 @@ export function useLayerPointer({
   box,
   canvasRef,
   indexAt,
-  effective,
+  effectiveAt,
   changeCells,
   selected,
   menu,
@@ -166,8 +164,8 @@ export function useLayerPointer({
       for (let x = Math.min(a.x0, a.x1); x <= Math.max(a.x0, a.x1); x++) {
         const idx = layer[x + z * sx];
         if (idx < 0) continue;
-        const name = names[stateOf(s, idx)];
-        if (name && !EMPTY_BLOCKS.has(effective(name))) out.push(idx);
+        const eff = effectiveAt(idx);
+        if (eff && !EMPTY_BLOCKS.has(eff)) out.push(idx);
       }
     return out;
   };
@@ -235,11 +233,10 @@ export function useLayerPointer({
   const frame3d = (inFrame: (p: Vec) => boolean, e: { shiftKey: boolean }) => {
     resetClick();
     const solid = (i: number) => {
-      const n = names[stateOf(s, i)];
-      const eff = n && effective(n);
+      const eff = effectiveAt(i);
       return !!eff && eff !== REMOVE && !EMPTY_BLOCKS.has(eff);
     };
-    const kind = (i: number) => effective(names[stateOf(s, i)] ?? '');
+    const kind = (i: number) => effectiveAt(i) ?? '';
     const cells = frameObject(grid, inFrame, solid, kind, cut ? layerY : undefined);
     setSelNote(cells.length ? null : 'В рамке нет отдельного объекта');
     if (!e.shiftKey) setSelection(cells.length ? cells : null);

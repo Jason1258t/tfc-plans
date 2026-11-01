@@ -1,8 +1,10 @@
 import { SquareDashedMousePointer, Trash2, X } from 'lucide-react';
-import { ItemIcon, ItemPicker } from '@/shared/pack-data';
+import type { ItemIndex } from '@/shared/pack-data';
 import type { CellInfo } from '@/entities/schematic';
 import { cx } from '@/shared/lib';
 import { Button } from '@/shared/ui';
+import { BlockIcon } from './BlockIcon';
+import { TargetPicker } from './TargetPicker';
 import styles from './SchematicLayers/SchematicLayers.module.css';
 
 export type Scope = 'cell' | 'layer' | 'all';
@@ -15,7 +17,9 @@ const SCOPES: [Scope, string][] = [
 interface Props {
   menu: { left: number; top: number };
   info: CellInfo;
-  effective: (name: string) => string;
+  /** Что стоит в клетке с учётом общей замены */
+  target: string;
+  items: ItemIndex | null;
   label: (id: string) => string;
   replace: Map<string, string>;
   scope: Scope;
@@ -35,7 +39,8 @@ interface Props {
 export function SchematicLayerMenu({
   menu,
   info,
-  effective,
+  target,
+  items,
   label,
   replace,
   scope,
@@ -53,10 +58,10 @@ export function SchematicLayerMenu({
   return (
     <div className={styles.menu} style={{ left: menu.left, top: menu.top }}>
       <div className="row">
-        <ItemIcon id={effective(info.name)} size={28} />
+        <BlockIcon id={target} size={28} />
         <span className={cx('grow', styles.menuNames)}>
-          <span>{label(effective(info.name))}</span>
-          <code>{effective(info.name)}</code>
+          <span>{label(target)}</span>
+          <code>{target}</code>
         </span>
         <Button variant="ghost" size="sm" icon onClick={onClose} aria-label="Закрыть окно">
           <X size={15} />
@@ -64,7 +69,7 @@ export function SchematicLayerMenu({
       </div>
       <div className="faint small">
         x {info.pos[0]}, y {info.pos[1]}, z {info.pos[2]}
-        {effective(info.name) !== info.name && <> · в исходнике {info.name}</>}
+        {target !== info.key && <> · в исходнике {info.key}</>}
         {info.props.length > 0 && <> · {info.props.map(([k, v]) => `${k}=${v}`).join(', ')}</>}
       </div>
       <div className={styles.scope} role="radiogroup" aria-label="К чему применить">
@@ -76,7 +81,7 @@ export function SchematicLayerMenu({
           </label>
         ))}
       </div>
-      <ItemPicker small blocksOnly autoFocus placeholder="Заменить на…" onPick={(it) => onPick(it.i)} />
+      <TargetPicker source={info.key} items={items} replace={replace} placeholder="Заменить на…" onTarget={onPick} />
       <div className={cx('row', styles.menuSelect)}>
         <Button variant="ghost" size="sm" onClick={onToggleSelect}>
           <SquareDashedMousePointer size={14} />
@@ -96,7 +101,7 @@ export function SchematicLayerMenu({
           <Trash2 size={14} />
           Убрать
         </Button>
-        {scope === 'all' && replace.has(info.name) && (
+        {scope === 'all' && replace.has(info.key) && (
           <Button variant="ghost" size="sm" onClick={onClearGlobal}>
             Отменить общую замену
           </Button>
@@ -104,7 +109,7 @@ export function SchematicLayerMenu({
       </div>
       {scope === 'all' && (
         <p className={cx('faint', 'small', styles.note)}>
-          Общая замена — как в списке блоков: для всех открытых схем, по id {info.name}.
+          Общая замена — как в списке блоков: для всех открытых схем, по {info.key}.
         </p>
       )}
     </div>

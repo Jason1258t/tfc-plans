@@ -169,6 +169,27 @@ export function filledMaterials(nbt: Compound, empty: (id: string) => boolean): 
   return out;
 }
 
+/** Строка замен для клетки: пара по первому заполненному материалу, иначе сам блок */
+export function cellKeyOf(name: string, nbt: Compound | null, empty: (id: string) => boolean) {
+  const [material] = nbt ? filledMaterials(nbt, empty) : [];
+  return material ? pairKey(name, material) : name;
+}
+
+/** Чем станет строка после замен: своё правило, потом замена копиката или материала целиком, иначе она сама */
+export const cellTarget = (key: string, replace: Map<string, string>) =>
+  replace.get(key) ?? inheritedTarget(key, replace) ?? key;
+
+/** Данные копиката с материалом для клетки; свойства материала берутся из старых данных, если он там уже был */
+export function pairData(
+  pair: { block: string; material: string },
+  slabType: string | undefined,
+  old: Compound | null,
+  legacy: boolean,
+) {
+  const source = old ? copycatSlots(old).find((s) => nameOf(s.material) === pair.material) : undefined;
+  return pairNbt(pair.block, pair.material, slabType, source?.material.get('Properties'), legacy);
+}
+
 /** Заполненный копикат целиком удаляется заменами пар: все его материалы → удалить */
 export function pairsRemoved(name: string, materials: string[], replace: Map<string, string>) {
   return materials.length > 0 && materials.every((m) => replace.get(pairKey(name, m)) === REMOVE);
@@ -257,14 +278,12 @@ export function resolvePairs(
     }
     if (target) {
       const pair = parsePair(target);
-      const source = nbt ? copycatSlots(nbt).find((s) => nameOf(s.material) === pair?.material) : undefined;
-      const props = source?.material.get('Properties');
       if (pairBlock(target) !== name)
         b.value.set('state', { type: T.Int, value: stateFor(st.value, pairBlock(target)) });
       if (pair)
         b.value.set('nbt', {
           type: T.Compound,
-          value: pairNbt(pair.block, pair.material, slabTypeOf(st.value), props, legacy),
+          value: pairData(pair, slabTypeOf(st.value), nbt, legacy),
         });
       else b.value.delete('nbt');
       resolved.done.add(b);

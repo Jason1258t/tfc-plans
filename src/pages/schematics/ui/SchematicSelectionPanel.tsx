@@ -1,8 +1,10 @@
 import { CopyCheck, Sparkles, SquareDashedMousePointer, Star, Trash2, X } from 'lucide-react';
-import { ItemIcon, ItemPicker } from '@/shared/pack-data';
+import type { ItemIndex } from '@/shared/pack-data';
 import { cx } from '@/shared/lib';
 import { Button } from '@/shared/ui';
 import { plural } from '../model/layerSelection';
+import { BlockIcon } from './BlockIcon';
+import { TargetPicker } from './TargetPicker';
 import styles from './SchematicLayers/SchematicLayers.module.css';
 
 interface Props {
@@ -18,6 +20,8 @@ interface Props {
   onDismissNote: () => void;
   onClear: () => void;
   onPick: (id: string) => void;
+  items: ItemIndex | null;
+  replace: Map<string, string>;
   onRemove: () => void;
   onSmart: () => void;
   onFavorites: () => void;
@@ -35,6 +39,8 @@ export function SchematicSelectionPanel({
   onDismissNote,
   onClear,
   onPick,
+  items,
+  replace,
   onRemove,
   onSmart,
   onFavorites,
@@ -65,7 +71,7 @@ export function SchematicSelectionPanel({
           </div>
           {selectedName && (
             <div className="row">
-              <ItemIcon id={selectedName.id} size={20} tip={false} />
+              <BlockIcon id={selectedName.id} size={20} tip={false} />
               <span className="grow">
                 {selectedName.label} <code className="faint">{selectedName.id}</code>
               </span>
@@ -73,7 +79,14 @@ export function SchematicSelectionPanel({
           )}
           <div className="row">
             <span className="grow">
-              <ItemPicker small blocksOnly placeholder="Заменить выбранные на…" onPick={(it) => onPick(it.i)} />
+              <TargetPicker
+                source={selectedName?.id ?? ''}
+                items={items}
+                replace={replace}
+                placeholder="Заменить выбранные на…"
+                autoFocus={false}
+                onTarget={onPick}
+              />
             </span>
             <Button variant="danger" size="sm" onClick={onRemove} title="Убрать выбранные (Delete)">
               <Trash2 size={14} />

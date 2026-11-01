@@ -28,6 +28,7 @@ export {
   DEFAULT_SHAPE,
   EMPTY_BLOCKS,
   intList,
+  legacyItems,
   nameOf,
   paletteLists,
   posOf,
@@ -119,7 +120,8 @@ export function isReplaceTarget(items: ItemIndex | null | undefined, to: string)
 
 /** Название строки замен для людей: блок или «Заполняемая плита + Кирпичи» */
 export function replaceName(items: ItemIndex | null | undefined, id: string) {
-  const name = (x: string) => itemName(blockEntry(items, x), x);
+  // Блока нет в сборке — короткое имя: полный id виден рядом, а пара из двух полных id не помещается в строку
+  const name = (x: string) => itemName(blockEntry(items, x), x.split(':').pop() ?? x);
   const pair = parsePair(id);
   return pair ? `${name(pair.block)} + ${name(pair.material)}` : name(id);
 }

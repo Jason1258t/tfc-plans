@@ -1,8 +1,8 @@
 import { Search, Trash2 } from 'lucide-react';
-import { ItemIcon } from '@/shared/pack-data';
 import { REMOVE } from '@/entities/schematic';
 import { cx } from '@/shared/lib';
 import { Segmented } from '@/shared/ui';
+import { BlockIcon } from './BlockIcon';
 import styles from './SchematicLayers/SchematicLayers.module.css';
 
 export type LegendScope = 'layer' | 'all';
@@ -72,7 +72,7 @@ export function SchematicLayerLegend({
               onClick={() => onSelect(id)}
               title={`${id} — выделить все такие${scope === 'layer' ? ' на слое' : ''}`}
             >
-              {id === REMOVE ? <Trash2 size={18} className="faint" /> : <ItemIcon id={id} size={20} tip={false} />}
+              {id === REMOVE ? <Trash2 size={18} className="faint" /> : <BlockIcon id={id} size={20} tip={false} />}
               <span className="grow">{label(id)}</span>
               <span className="faint">×{n}</span>
             </button>

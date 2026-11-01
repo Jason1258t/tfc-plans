@@ -1,4 +1,5 @@
 import { blockEntry, blockIcon, type ItemIndex } from '@/shared/pack-data';
+import { parsePair } from '@tfc/core/copycatPairs';
 import {
   blockTopView,
   drawnByCode,
@@ -49,7 +50,10 @@ export interface PaintOptions {
   below: Int32Array | undefined;
   ghost: boolean;
   items: ItemIndex | null;
-  effective: (name: string) => string;
+  /** Что стоит в клетке с учётом общих замен: блок, пара или удаление */
+  effectiveAt: (index: number) => string | null;
+  /** Строка замен клетки в исходнике: отличается от effectiveAt — клетка заменена */
+  keyAt: (index: number) => string | null;
   /** Клетки под ПКМ, пока кнопку не отпустили */
   stroke: Set<number> | null;
   highlight: string | null;
@@ -79,7 +83,8 @@ export function paintLayer(o: PaintOptions) {
     below,
     ghost,
     items,
-    effective,
+    effectiveAt,
+    keyAt,
     stroke,
     highlight,
     selected,
@@ -135,6 +140,22 @@ export function paintLayer(o: PaintOptions) {
     ctx.globalAlpha = 1;
   };
 
+  /** Пара сверху выглядит как её материал; значок копиката в углу отличает её от цельного блока */
+  const drawCell = (id: string, st: number, px: number, py: number, alpha: number) => {
+    const pair = parsePair(id);
+    if (!pair) return drawBlock(id, st, px, py, alpha);
+    drawBlock(pair.material, -1, px, py, alpha);
+    if (zoom < 14) return;
+    const icon = blockIcon(blockEntry(items, pair.block), false);
+    const img = icon ? image(icon.url, again) : null;
+    if (!img) return;
+    ctx.globalAlpha = alpha;
+    ctx.imageSmoothingEnabled = !!icon?.smooth;
+    ctx.drawImage(img, px + zoom * 0.55, py + zoom * 0.55, zoom * 0.42, zoom * 0.42);
+    ctx.imageSmoothingEnabled = false;
+    ctx.globalAlpha = 1;
+  };
+
   const danger = color('--danger');
   const accent = color('--accent');
   for (let z = z0; z < z1; z++)
@@ -147,16 +168,16 @@ export function paintLayer(o: PaintOptions) {
         const b = ghost ? (below?.[x + z * sx] ?? -1) : -1;
         if (b >= 0) {
           const bst = stateOf(s, b);
-          const name = names[bst];
-          const eff = name && effective(name);
-          if (eff && eff !== REMOVE && !EMPTY_BLOCKS.has(eff)) drawBlock(eff, bst, px, py, 0.18);
+          const eff = names[bst] && effectiveAt(b);
+          if (eff && eff !== REMOVE && !EMPTY_BLOCKS.has(eff)) drawCell(eff, bst, px, py, 0.18);
         }
         continue;
       }
       const st = stateOf(s, idx);
       const name = names[st];
       if (!name) continue;
-      const eff = stroke?.has(idx) ? REMOVE : effective(name);
+      const eff = stroke?.has(idx) ? REMOVE : effectiveAt(idx);
+      if (!eff) continue;
       if (eff === REMOVE) {
         ctx.strokeStyle = danger;
         ctx.globalAlpha = 0.5;
@@ -180,8 +201,8 @@ export function paintLayer(o: PaintOptions) {
         }
         continue;
       }
-      drawBlock(eff, st, px, py, 1);
-      if (eff !== name && zoom >= 10) {
+      drawCell(eff, st, px, py, 1);
+      if (eff !== keyAt(idx) && zoom >= 10) {
         // Блок с общей заменой — уголок
         ctx.fillStyle = accent;
         ctx.beginPath();

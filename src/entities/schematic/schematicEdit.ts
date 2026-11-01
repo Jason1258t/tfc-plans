@@ -1,5 +1,16 @@
 import { T, type Compound, type Tag } from '@tfc/core/nbt';
-import { countBlocks, nameOf, paletteLists, posOf, REMOVE, type Schematic, type Vec } from './schematic';
+import { cellKeyOf, pairData, filledMaterials, parsePair } from '@tfc/core/copycatPairs';
+import {
+  countBlocks,
+  EMPTY_BLOCKS,
+  legacyItems,
+  nameOf,
+  paletteLists,
+  posOf,
+  REMOVE,
+  type Schematic,
+  type Vec,
+} from './schematic';
 
 /**
  * Правка схемы по клеткам (редактор слоёв): меняет parsed на месте — блок получает другую запись палитры
@@ -55,6 +66,8 @@ export interface CellInfo {
   index: number;
   pos: Vec;
   name: string;
+  /** Строка замен этой клетки: пара «копикат+материал» или сам блок */
+  key: string;
   props: [string, string][];
   hasNbt: boolean;
 }
@@ -67,7 +80,17 @@ export function cellInfo(s: Schematic, index: number): CellInfo | null {
   const entry = st?.type === T.Int ? paletteLists(s.parsed.root.value)[0]?.[st.value] : undefined;
   const name = entry ? nameOf(entry) : null;
   if (!entry || !name) return null;
-  return { index, pos, name, props: propsOf(entry), hasNbt: b.value.has('nbt') };
+  const nbt = b.value.get('nbt');
+  const key = cellKeyOf(name, nbt?.type === T.Compound ? nbt.value : null, isEmptyBlock);
+  return { index, pos, name, key, props: propsOf(entry), hasNbt: b.value.has('nbt') };
+}
+
+const isEmptyBlock = (id: string) => EMPTY_BLOCKS.has(id);
+
+/** Строка замен клетки по индексу в списке blocks; null — блока нет */
+export function cellKey(s: Schematic, index: number, names: (string | null)[]): string | null {
+  const name = names[stateOf(s, index)];
+  return name ? cellKeyOf(name, blockNbtOf(s, index), isEmptyBlock) : null;
 }
 
 function propsOf(entry: Tag): [string, string][] {
@@ -331,13 +354,14 @@ const propsKey = (entry: Tag) => JSON.stringify(propsOf(entry).sort(([a], [b]) =
 
 /**
  * Поставить в клетки (индексы в списке blocks) другой блок или убрать их. Свойства (facing, axis…) и NBT
- * блока сохраняются, как при общей замене. Записи палитры добавляются во все палитры с тем же индексом.
- * to — один блок для всех или функция: id в исходнике → новый id (undefined — оставить как есть).
+ * блока сохраняются, как при общей замене; пара «копикат+материал» получает новые данные с этим материалом.
+ * Записи палитры добавляются во все палитры с тем же индексом.
+ * to — один блок или пара для всех либо функция: id в исходнике и индекс клетки → цель (undefined — оставить как есть).
  */
 export function editCells(
   s: Schematic,
   indices: number[],
-  to: string | ((name: string) => string | undefined),
+  to: string | ((name: string, index: number) => string | undefined),
 ): Schematic {
   if (!indices.length) return s;
 
@@ -354,16 +378,26 @@ export function editCells(
 
   const palettes = paletteLists(s.parsed.root.value);
   const palette = palettes[0];
-  const targetName = (state: number) => {
+  const legacy = legacyItems(s.parsed.root.value);
+  const targetOf = (state: number, index: number) => {
     const name = nameOf(palette[state]);
     if (!name) return undefined;
-    const t = typeof to === 'string' ? to : to(name);
-    return t && t !== name ? t : undefined;
+    const t = typeof to === 'string' ? to : to(name, index);
+    if (!t) return undefined;
+    const pair = parsePair(t);
+    const block = pair?.block ?? t;
+    if (block !== name) return { block, pair };
+    if (!pair) return undefined;
+    // Та же форма: меняются только данные, если материал другой
+    const nbt = blockNbtOf(s, index);
+    const materials = nbt ? filledMaterials(nbt, isEmptyBlock) : [];
+    return materials.length && materials.every((m) => m === pair.material) ? undefined : { block, pair };
   };
-  /** Старый индекс палитры → новый (тот же набор свойств, другое имя) */
-  const mapped = new Map<number, number>();
+  /** Старый индекс палитры и новый блок → новый индекс (тот же набор свойств, другое имя) */
+  const mapped = new Map<string, number>();
   const target = (state: number, name: string) => {
-    let n = mapped.get(state);
+    const mapKey = `${state}|${name}`;
+    let n = mapped.get(mapKey);
     if (n !== undefined) return n;
     const src = palette[state];
     const key = propsKey(src);
@@ -377,24 +411,35 @@ export function editCells(
       }
       n = palette.length - 1;
     }
-    mapped.set(state, n);
+    mapped.set(mapKey, n);
     return n;
   };
-  const changes: [number, number, string][] = [];
+  const changes: [number, number, NonNullable<ReturnType<typeof targetOf>>][] = [];
   for (const i of indices) {
     const b = list[i];
     if (b?.type !== T.Compound) continue;
     const st = b.value.get('state');
     if (st?.type !== T.Int) continue;
-    const name = targetName(st.value);
-    if (name) changes.push([i, st.value, name]);
+    const change = targetOf(st.value, i);
+    if (change) changes.push([i, st.value, change]);
   }
   if (!changes.length) return s;
   remember(s);
   const next = [...list];
-  for (const [i, state, name] of changes) {
+  for (const [i, state, { block, pair }] of changes) {
     const b = next[i] as { type: typeof T.Compound; value: Compound };
-    next[i] = { type: T.Compound, value: new Map(b.value).set('state', { type: T.Int, value: target(state, name) }) };
+    const value = new Map(b.value);
+    // Запись палитры нужна только другому блоку; палитра растёт в target, поэтому свойства читаем по старому индексу
+    if (block !== nameOf(palette[state])) value.set('state', { type: T.Int, value: target(state, block) });
+    if (pair) {
+      const slabType = propsOf(palette[state]).find(([k]) => k === 'type')?.[1];
+      const old = b.value.get('nbt');
+      value.set('nbt', {
+        type: T.Compound,
+        value: pairData(pair, slabType, old?.type === T.Compound ? old.value : null, legacy),
+      });
+    }
+    next[i] = { type: T.Compound, value };
   }
   setBlocks(s, next);
   return bumped(s, s.rev + 1);

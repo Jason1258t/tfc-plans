@@ -499,9 +499,10 @@ next — photos, MCP, wooden styles.
   `CCBlockEntityTypes`/`MaterialItemStorage`: single-state `copycats:copycat` / `create:copycat` with Item + Material,
   slab `copycats:multistate_copycat` with `material_data.<bottom|top>` by `type`. Other multi-part (byte, board, half
   layers) depend on properties plain blocks lack, cogwheel/shaft/pipe/sliding door have other BEs, `create_connected`
-  copycats not studied — those stay plain targets (`canHoldMaterial`). 3D with pair rules draws the exported file. Not
-  done: the layer editor picks blocks only (no pair for selected cells), its 2D colours and legend do not reflect
-  rules on a specific pair. Stairs → slope keeps `facing`/`half`, inner/outer corners become straight slopes. Checked
+  copycats not studied — those stay plain targets (`canHoldMaterial`). 3D with pair rules draws the exported file. Layer editor (dev #188): pairs are placed in selected cells, in the menu and via favorites
+  (`editCells` writes the new BE data into the source); selection, groups, legend, hover and «такие же» work per cell
+  by `cellKey`/`cellTarget`, 2D draws the material with a copycat icon in the corner. A cell with different materials
+  in its parts is shown by the first one. Stairs → slope keeps `facing`/`half`, inner/outer corners become straight slopes. Checked
   in Node on two library schematics and in the browser; not checked in game.
 - Stage 7 (2026-10-31, `feat/building-trim`): copycat trim — `details.trim` {slopes, surround, cornice, lattice}
   (`spec.ts`, `trim.ts`). Slopes: roof/eave/verge stairs → `copycats:copycat_slope`, slabs → `copycat_slope_layer`
