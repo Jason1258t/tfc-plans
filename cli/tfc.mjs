@@ -9,7 +9,15 @@ import { parseArgs } from 'node:util';
 import { isPackDatapackPath } from '@tfc/pack-server/datapacks';
 import { Api } from './lib/api.mjs';
 import { configFile, currentProfile, DEFAULT_SERVER, loadConfig, saveConfig } from './lib/config.mjs';
-import { detectVersions, findInstances, findWorlds, gameDirOf, isDir, isServerDir } from './lib/detect.mjs';
+import {
+  detectVersions,
+  findInstances,
+  findWorlds,
+  gameDirOf,
+  isDir,
+  isServerDir,
+  launchedElsewhere,
+} from './lib/detect.mjs';
 import { bytesOf, changes, loadState, makePlan, PARTS, scopeOf } from './lib/plan.mjs';
 import { parseParts, printJobs, PUBLISH, showJob } from './lib/jobs.mjs';
 import { diffFiles, printDiff, publish } from './lib/publish.mjs';
@@ -232,6 +240,12 @@ const profileTitle = (p) => `${bold(p.name)}: ${p.instance}${p.world ? dim(` · 
 
 // ---------------------------------------------------------------- настройка
 
+/** Путь с ~, $env:ИМЯ или %ИМЯ%, если оболочка не раскрыла их сама (команду из PowerShell ввели в cmd и наоборот) */
+const expandPath = (dir) =>
+  dir
+    .replace(/^~(?=$|[\\/])/, process.env.HOME || process.env.USERPROFILE || '~')
+    .replace(/\$env:(\w+)|%(\w+)%/gi, (m, a, b) => process.env[a ?? b] ?? m);
+
 async function cmdInit(v) {
   const cfg = loadConfig();
   if (v.launcher) return initLauncher(v, cfg);
@@ -253,7 +267,7 @@ async function cmdInit(v) {
     if (dir === fresh) return initLauncher(v, cfg);
     if (typeof dir === 'object') dir = dir.dir;
   }
-  dir = path.resolve(dir.replace(/^~(?=$|[\\/])/, process.env.HOME || process.env.USERPROFILE || '~'));
+  dir = path.resolve(expandPath(dir));
   const inst = gameDirOf(dir);
   if (!inst) throw new Error(`в ${dir} нет mods/, config/ или kubejs/ — это не папка версии`);
   const side = isServerDir(inst) ? 'server' : 'client';
@@ -358,12 +372,12 @@ async function initLauncher(v, cfg) {
   console.log(`${green('Сохранено')} — профиль ${profileTitle({ name, ...cfg.profiles[name] })} (текущий)`);
   if (v.yes || !interactive() || (await confirm('Скачать сборку сейчас?', true))) {
     await cmdPull({ ...v, profile: name, yes: true }, []);
-    console.log(launchHint(folder));
-  } else console.log(`Дальше: ${cyan('tfc pull')}. ${launchHint(folder)}`);
+    console.log(launchHint(folder, gameDir));
+  } else console.log(`Дальше: ${cyan('tfc pull')}. ${launchHint(folder, gameDir)}`);
 }
 
-const launchHint = (folder) =>
-  `Играть: Minecraft Launcher — профиль ${bold('TFC RealWorld')}; TLauncher — версия ${bold(folder)} в списке версий.`;
+const launchHint = (folder, gameDir) =>
+  `Играть: Minecraft Launcher — профиль ${bold('TFC RealWorld')}; другой лаунчер — версия ${bold(folder)}, папка игры должна быть ${gameDir} (не корень .minecraft). После первого запуска ${cyan('tfc status')} скажет, если игра запустилась не оттуда.`;
 
 async function cmdLogin(v, [key]) {
   if (!key) throw new Error('tfc login <ключ>');
@@ -588,8 +602,21 @@ function printSite(p, names) {
 }
 
 /** Шапка, план сборки и планы сайта; возвращает, сколько всего изменится */
+/** Предупреждение: игра запускалась не из папки профиля (launchedElsewhere) */
+function warnLaunch(profile, wrong) {
+  console.log(yellow(`Версия ${wrong.version} запускалась ${date(wrong.at)} не из папки сборки, а из ${wrong.root}.`));
+  console.log(yellow(`Сборка лежит в ${profile.instance}: её моды игра не видит, поэтому сервер не пустит.`));
+  console.log(
+    'Исправить: укажите эту папку как папку игры в настройках лаунчера или поставьте сборку туда, откуда он запускает:',
+  );
+  console.log(`  ${cyan(`tfc init --instance "${wrong.root}"`)}`);
+  console.log(`  ${cyan('tfc pull')}`);
+}
+
 function printAll(r, { verbose = false } = {}) {
   printHeader(r.profile, r.current);
+  const wrong = launchedElsewhere(r.profile.instance);
+  if (wrong) warnLaunch(r.profile, wrong);
   for (const n of r.notes) console.log(yellow(n));
   if (r.plan) {
     if (r.state.snapshot && r.state.snapshot !== r.current.id && !r.names.length)
@@ -1113,6 +1140,12 @@ async function cmdReport(v, args) {
   const profile = v.instance ? null : currentProfile(cfg, v.profile);
   const roots = { game: v.instance ? path.resolve(v.instance) : profile.instance, server: profile?.serverDir ?? null };
   if (profile) console.log(dim(`Профиль ${profile.name}: ${roots.game}`));
+  // Логи лежат там, откуда игру реально запускали
+  const wrong = profile && launchedElsewhere(profile.instance);
+  if (wrong) {
+    warnLaunch(profile, wrong);
+    roots.game = wrong.root;
+  }
   await reportUpload(v['dry-run'] ? null : api(cfg), roots, args, {
     note: v.note,
     task: v.task,

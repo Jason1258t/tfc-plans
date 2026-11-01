@@ -75,6 +75,42 @@ export function findInstances() {
   return out;
 }
 
+/**
+ * Запуск мимо папки сборки: профиль tfc смотрит в <.minecraft>/versions/<имя>, а лаунчер запустил эту версию с корнем
+ * .minecraft как папкой игры (профиль лаунчера с gameDir соблюдают не все) — моды сборки игра не видит.
+ * Признак — первая строка <.minecraft>/logs/latest.log. Сравниваем только имя папки: путь в логе может быть в другой
+ * кодировке. Лог в папке версии новее — значит, уже запускают правильно. { root, version, at } или null.
+ */
+export function launchedElsewhere(instance) {
+  const versions = path.dirname(instance);
+  if (path.basename(versions) !== 'versions') return null;
+  const root = path.dirname(versions);
+  const log = path.join(root, 'logs', 'latest.log');
+  const mtime = (f) => {
+    try {
+      return fs.statSync(f).mtimeMs;
+    } catch {
+      return 0;
+    }
+  };
+  const at = mtime(log);
+  if (!at || mtime(path.join(instance, 'logs', 'latest.log')) > at) return null;
+  let head;
+  const fd = fs.openSync(log, 'r');
+  try {
+    const buf = Buffer.alloc(8192);
+    head = buf.toString('utf8', 0, fs.readSync(fd, buf, 0, buf.length, 0));
+  } finally {
+    fs.closeSync(fd);
+  }
+  const args = /ModLauncher running: args \[(.*)\]/.exec(head)?.[1].split(', ') ?? [];
+  const arg = (k) => (args.includes(k) ? args[args.indexOf(k) + 1] : null);
+  const version = path.basename(instance);
+  const gameDir = arg('--gameDir')?.split(/[\\/]/).filter(Boolean).at(-1);
+  if (arg('--version') !== version || !gameDir || gameDir === version) return null;
+  return { root, version, at };
+}
+
 /** level-name из server.properties — остальное из файла не читаем (там пароли RCON) */
 export function levelName(serverDir) {
   try {
