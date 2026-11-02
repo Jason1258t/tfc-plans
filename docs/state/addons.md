@@ -106,6 +106,20 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 - Released Destroy Extras 0.2.0 and EE Extras 2.6.0 with jars, changelogs, cards, icons and `addon-destroy-extras` /
   `addon-ee-extras` guides; both `addon_check` reports are clean. Manual player-driven Survival playthrough remains
   unverified; later #22 milestones have not started.
+- M7 (only #22 checklist item 11) adds the installable site datapack `Destroy — центрифуга: масла и молоко`
+  (`Z960zeYuX8oBCtmSR6Na`), using the stock Destroy centrifuge without production-code or addon-version changes. Recipes:
+  250 mB olive/canola oil-water → 200 mB water + 50 mB oil; 1000 mB milk → 500 mB cream + 500 mB skimmed milk;
+  2000 mB skimmed milk + rennet → 2000 mB curdled milk in a sealed barrel over 4000 ticks; olive paste + 200 mB water →
+  200 mB olive oil-water by Create mixing over 100 ticks. Skimmed milk joins `#tfc:usable_in_barrel`, deliberately not
+  `#firmalife:milks`, avoiding a cream loop. Centrifugation uses `processing_time: 500` (about 125 ticks at the test's
+  64 RPM), Create rotation only and no electricity; input/output volumes balance exactly.
+- M7 server checks pass in minimal, thermal and sable: JSON 3/3, olive 5/5, canola 5/5, milk 4/4, mixture 5/5 and light
+  output 3/3. Restart preserves two 500 mB outputs and their moles without duplication. M2–M6 regressions and old M2/M4
+  world migration pass, including completion of an unfinished M4 batch. Conflict audit is clean.
+- M7 real-client check passes and inspected screenshots show the stock centrifuge category with three recipes. Automatic
+  Destroy JEI discovery and EMI display are supplied only by a devtest plugin and a test Jemi adapter, not by the release
+  jar. Full-pack boot on NeoForge 21.1.251 loads the datapack and 20712 recipes without parse errors in the new files;
+  known pack baseline errors remain. No manual Survival playthrough or pack-wide datapack confirmation was performed.
 
 ## EE Extras (`tools/ee-extras-mod`)
 
