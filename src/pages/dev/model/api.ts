@@ -59,11 +59,31 @@ export interface DevDoc {
   rev: number;
 }
 
+export interface DevLinkEnd {
+  ref: string;
+  type: 'task' | 'check' | 'doc' | 'note' | 'unknown';
+  label?: string;
+  task?: number | null;
+  broken?: boolean;
+  removed?: boolean;
+  note?: string;
+}
+
+export interface DevLink {
+  id: number;
+  source: DevLinkEnd;
+  target: DevLinkEnd;
+  kind: 'mention' | 'related' | 'blocks';
+  author: string;
+  createdAt: number;
+}
+
 export interface DevTaskFull {
   task: DevTask;
   notes: DevNote[];
   noteCount: number;
   docs: DevDoc[];
+  links: DevLink[];
 }
 
 export const STATUSES: { value: DevStatus; label: string }[] = [
@@ -166,4 +186,11 @@ export const devApi = {
     call<{ doc: DevDoc }>('POST', 'docs', { task, title, content: '', by }).then((r) => r.doc),
   saveDoc: (id: number, baseRev: number, patch: { title?: string; content?: string }, by: string) =>
     call<{ doc: DevDoc }>('PATCH', `docs/${id}`, { ...patch, baseRev, by }).then((r) => r.doc),
+  /** Что стоит за ссылкой; сайту нужна только задача записи журнала */
+  noteTask: (ref: string) =>
+    call<{ task: { id: number } }>('GET', `open?ref=${encodeURIComponent(ref)}`).then((r) => r.task.id),
+  link: (from: string, to: string, kind: 'related' | 'blocks', by: string) =>
+    call('POST', 'links', { from, to, kind, by }),
+  unlink: (from: string, to: string, kind: DevLink['kind']) =>
+    call('DELETE', `links?${new URLSearchParams({ from, to, kind })}`),
 };

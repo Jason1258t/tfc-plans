@@ -121,6 +121,9 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   masking missing item/fluid warnings, and outdated duplicate-name wording. Checks: stdio against a temporary pack
   server plus validator fixtures; no production source cards modified. Authoring guide: `docs/agents-datapacks.md`.
 
+- **2026-11-02, dev links** (dev #194): refs in dev texts are indexed by temp triggers + a queue flushed on read, and all
+  sources are re-indexed at startup; `dev_open`, `dev_link`, `dev_unlink`, `item` in `dev_note` / `dev_doc_put`, links in
+  `dev_get`, clickable refs and a links block on `/dev` (`?ref=` in the page address).
 - **2026-10-29, dev attachments** (dev #155): `dev_get` queries Firestore files bound to `dev:<id>`;
   `dev_file_get` returns verified local files and inline images. The dev MCP transport now supports image content.
   Verified over stdio against task #150 (WebP screenshot), an attachment-free task, ownership refusal, and

@@ -1,6 +1,6 @@
 import { FileText, Plus, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Markdown, toggleTaskLine } from '@/components/Markdown';
+import { toggleTaskLine } from '@/components/Markdown';
 import { MarkdownField } from '@/components/MarkdownField';
 import { Attachments, Gallery, useFileIntake } from '@/features/task-files';
 import { filesEnabled, removeFile, useFiles } from '@/entities/file';
@@ -24,12 +24,17 @@ import {
 import { DevPriority } from '../DevPriority';
 import { DevProgress } from '../DevProgress';
 import { CopyRef } from '../CopyRef';
-import { DevDocDialog } from '../DevDocDialog';
+import { DevLinks, brokenRefs } from '../DevLinks';
+import { DevMarkdown } from '../DevMarkdown';
 import styles from './DevTaskDialog.module.css';
 
 interface Props {
   /** null — новая задача */
   id: number | null;
+  /** Куда прокрутить после загрузки: data-dev-focus («note-881», «item-3») */
+  focus?: string | null;
+  /** Открыть ссылку #175, #175.3, doc:12, note:881 */
+  onOpenRef: (ref: string) => void;
   onClose: () => void;
   onSaved: (t: DevTask, created: boolean) => void;
   onDeleted: (id: number) => void;
@@ -78,7 +83,7 @@ const NOTE_CLASS: Record<DevNote['kind'], string | undefined> = {
   report: styles.report,
 };
 
-export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
+export function DevTaskDialog({ id, focus, onOpenRef, onClose, onSaved, onDeleted }: Props) {
   const nick = useNick();
   const [full, setFull] = useState<DevTaskFull | null>(() => (id === null ? null : devApi.cached(id)));
   const [draft, setDraft] = useState<Draft>(() => {
@@ -103,7 +108,6 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
       : { addPending: (list) => setPending((cur) => [...cur, ...list]) },
   );
   const removePending = (file: File) => setPending((cur) => cur.filter((f) => f !== file));
-  const [doc, setDoc] = useState<number | null>(null);
 
   const editing = useRef(false);
   const load = useCallback(async () => {
@@ -210,7 +214,7 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
       const d = await devApi.createDoc(full.task.id, `План: ${full.task.title}`.slice(0, 300), nick);
       const next = await devApi.get(full.task.id);
       setFull((cur) => (cur ? { ...next, task: cur.task } : next));
-      setDoc(d.id);
+      onOpenRef(`doc:${d.id}`);
     });
 
   const toggle = (i: number) =>
@@ -218,6 +222,30 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
       'checklist',
       draft.checklist.map((c, j): DevCheck => (j === i ? { ...c, done: !c.done } : c)),
     );
+
+  const loaded = !!full;
+  useEffect(() => {
+    if (!loaded || !focus) return;
+    const el = document.querySelector<HTMLElement>(`[data-dev-focus="${CSS.escape(focus)}"]`);
+    el?.scrollIntoView({ block: 'center' });
+    el?.animate([{ outline: '2px solid var(--accent)' }, { outline: '2px solid transparent' }], { duration: 1800 });
+  }, [loaded, focus]);
+
+  // Уход на другую задачу теряет несохранённое; документ открывается поверх, он ничего не теряет
+  const openRef = (ref: string) => {
+    if (
+      ref.startsWith('doc:') ||
+      !(dirty || pending.length || note.trim()) ||
+      confirm('Перейти без сохранения изменений?')
+    )
+      onOpenRef(ref);
+  };
+  const reloadLinks = async () => {
+    if (id === null) return;
+    const next = await devApi.get(id);
+    setFull((cur) => (cur ? { ...cur, links: next.links } : next));
+  };
+  const broken = full ? brokenRefs(full.links) : undefined;
 
   const t = full?.task;
   const title = id === null ? 'Новая задача разработки' : t ? `#${t.id}` : `#${id}`;
@@ -411,8 +439,10 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
                 placeholder="Markdown: зачем, что сделать, как проверить"
               />
             ) : draft.body ? (
-              <Markdown
+              <DevMarkdown
                 source={draft.body}
+                onOpenRef={openRef}
+                broken={broken}
                 onToggleTask={(line) => {
                   const next = toggleTaskLine(draft.body, line);
                   if (next !== null) set('body', next);
@@ -532,7 +562,7 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
                   <ul className={styles.docs}>
                     {full.docs.map((d) => (
                       <li key={d.id}>
-                        <button onClick={() => setDoc(d.id)}>
+                        <button onClick={() => openRef(`doc:${d.id}`)}>
                           <FileText size={14} /> {d.title}
                         </button>
                         <span className={styles.muted}>
@@ -546,6 +576,8 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
                 )}
               </section>
 
+              <DevLinks taskId={full.task.id} links={full.links} onOpenRef={openRef} onChanged={reloadLinks} />
+
               <details open>
                 <summary>
                   Журнал{' '}
@@ -557,13 +589,18 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
                 </summary>
                 <ol className={styles.log} tabIndex={0} aria-label="Журнал задачи">
                   {full.notes.map((n) => (
-                    <li key={n.id} className={NOTE_CLASS[n.kind]}>
+                    <li key={n.id} className={NOTE_CLASS[n.kind]} data-dev-focus={`note-${n.id}`}>
                       <div className={styles.logHead}>
                         <b>{n.author}</b>
                         {NOTE_KIND[n.kind] && <span className={styles.logKind}>{NOTE_KIND[n.kind]}</span>}
                         <span className={styles.muted}>{new Date(n.createdAt).toLocaleString('ru-RU')}</span>
+                        <span className={styles.muted}>note:{n.id}</span>
                       </div>
-                      {n.kind === 'status' ? <span>{statusText(n.text)}</span> : <Markdown source={n.text} />}
+                      {n.kind === 'status' ? (
+                        <span>{statusText(n.text)}</span>
+                      ) : (
+                        <DevMarkdown source={n.text} onOpenRef={openRef} broken={broken} />
+                      )}
                     </li>
                   ))}
                 </ol>
@@ -583,15 +620,6 @@ export function DevTaskDialog({ id, onClose, onSaved, onDeleted }: Props) {
             </>
           )}
         </div>
-      )}
-      {doc !== null && (
-        <DevDocDialog
-          id={doc}
-          onClose={() => {
-            setDoc(null);
-            if (!dirty) void load();
-          }}
-        />
       )}
     </Modal>
   );

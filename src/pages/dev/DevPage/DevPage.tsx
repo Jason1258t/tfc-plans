@@ -1,14 +1,16 @@
+import { parseRef } from '@tfc/pack-server/dev-refs';
 import { GitBranch, MessageSquare, Plus, Search as SearchIcon } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useFiles } from '@/entities/file';
 import { firebaseEnabled, useSearchTrack } from '@/shared/api';
 import { cx, timeAgo } from '@/shared/lib';
 import { Button, ErrorBox, Search, Segmented, Select, Tag } from '@/shared/ui';
-import { AREAS, KINDS, label, STATUSES, type DevStatus, type DevTask } from '../model/api';
+import { AREAS, devApi, KINDS, label, STATUSES, type DevStatus, type DevTask } from '../model/api';
 import { useDevTasks } from '../model/useDevTasks';
 import { DevReports } from '../ui/DevReports';
 import { CopyRef } from '../ui/CopyRef';
+import { DevDocDialog } from '../ui/DevDocDialog';
 import { DevTaskDialog } from '../ui/DevTaskDialog';
 import { DevPriority } from '../ui/DevPriority';
 import { DevProgress } from '../ui/DevProgress';
@@ -17,6 +19,7 @@ import styles from './DevPage.module.css';
 /**
  * «Разработка» — задачи и журнал работ агентов и хоста. Данные — на сервере сборки (не Firestore),
  * см. docs/plans/dev-tracker.md. Открытая задача — в адресе (?task=12), так на неё ссылаются агенты.
+ * ?ref=<ссылка> (#175, #175.3, doc:12#Раздел, note:881) разворачивается в задачу или документ.
  */
 
 type View = 'open' | 'doing' | 'closed' | 'all';
@@ -57,12 +60,70 @@ export function DevPage() {
   const setOpen = (id: number | 'new' | null) =>
     setParams(
       (p) => {
+        p.delete('focus');
         if (id === null) p.delete('task');
         else p.set('task', String(id));
         return p;
       },
       { replace: id === null },
     );
+
+  const openRef = (ref: string) =>
+    setParams((p) => {
+      p.set('ref', ref);
+      return p;
+    });
+  const ref = params.get('ref');
+  const [refError, setRefError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!ref) return;
+    const go = (fill: (p: URLSearchParams) => void) =>
+      setParams(
+        (p) => {
+          p.delete('ref');
+          fill(p);
+          return p;
+        },
+        { replace: true },
+      );
+    const leaveDoc = (p: URLSearchParams) => {
+      p.delete('doc');
+      p.delete('section');
+    };
+    const r = parseRef(ref);
+    setRefError(null);
+    if (r?.type === 'task' || r?.type === 'check')
+      go((p) => {
+        leaveDoc(p);
+        p.set('task', String(r.task));
+        if (r.type === 'check') p.set('focus', `item-${r.num}`);
+        else p.delete('focus');
+      });
+    else if (r?.type === 'doc')
+      go((p) => {
+        p.set('doc', String(r.doc));
+        if (r.section) p.set('section', r.section);
+        else p.delete('section');
+      });
+    else if (r?.type === 'note')
+      devApi.noteTask(ref).then(
+        (task) =>
+          go((p) => {
+            leaveDoc(p);
+            p.set('task', String(task));
+            p.set('focus', `note-${r.note}`);
+          }),
+        (e: Error) => {
+          setRefError(`${ref}: ${e.message}`);
+          go(() => undefined);
+        },
+      );
+    else {
+      setRefError(`Не понял ссылку «${ref}»`);
+      go(() => undefined);
+    }
+  }, [ref, setParams]);
+  const docId = Number(params.get('doc')) || null;
 
   const counts = useMemo(() => {
     const c: Record<View, number> = { open: 0, doing: 0, closed: 0, all: tasks?.length ?? 0 };
@@ -194,6 +255,8 @@ export function DevPage() {
         <DevTaskDialog
           key={open}
           id={open === 'new' ? null : Number(open)}
+          focus={params.get('focus')}
+          onOpenRef={openRef}
           onClose={() => setOpen(null)}
           onSaved={(t, created) => {
             put(t);
@@ -203,6 +266,25 @@ export function DevPage() {
             drop(id);
             setOpen(null);
           }}
+        />
+      )}
+      {refError && <ErrorBox>{refError}</ErrorBox>}
+      {docId && (
+        <DevDocDialog
+          key={docId}
+          id={docId}
+          section={params.get('section')}
+          onOpenRef={openRef}
+          onClose={() =>
+            setParams(
+              (p) => {
+                p.delete('doc');
+                p.delete('section');
+                return p;
+              },
+              { replace: true },
+            )
+          }
         />
       )}
     </main>

@@ -489,8 +489,15 @@ login`); writes signed with `TFC_AGENT_NICK`. Plan — [plans/dev-tracker.md](pl
 | `dev_get(id*, notes)`                                                                       | whole task: description, checklist, plan docs, last log entries, `rev`                                              |
 | `dev_create(title*, body, kind, area, status, priority, assignee, branch, checklist, note)` | **write**: new task                                                                                                 |
 | `dev_update(id*, baseRev*, …fields, note, report)`                                          | **write**: passed fields only; 409 if changed since `dev_get`; a status change logs itself; `report` — final report |
-| `dev_note(id*, text*, report)`                                                              | **write**: append a log entry (no rev)                                                                              |
-| `dev_doc_get(id*, offset, limit)` / `dev_doc_put(id, baseRev, title, content, task)`        | plan docs by lines / **write** (without `id` — new)                                                                 |
+| `dev_note(id*, text*, report, item)`                                                        | **write**: append a log entry (no rev)                                                                              |
+| `dev_doc_get(id*, offset, limit)` / `dev_doc_put(id, baseRev, title, content, task, item)`  | plan docs by lines / **write** (without `id` — new)                                                                 |
+| `dev_open(ref*)` / `dev_link(from*, to*, kind)` / `dev_unlink(from*, to*, kind)`            | open by ref with incoming and outgoing links / **write**: explicit `related` or `blocks` link                       |
+
+Refs in task descriptions, checklist items, log entries and docs: `#175`, `#175.3`, `doc:12`, `doc:12#Раздел`,
+`note:881` (not inside code, URLs or markdown links). The server indexes them on write into the `links` table
+(`server/pack-server/lib/dev-refs.mjs` — the only parser, the site imports it too; `dev-links.mjs` — table and routes).
+A ref to something missing never fails a write and shows as broken. `item` links a log entry or doc to a checklist item;
+`dev_link` also relates a doc to more tasks (`docs.task_id` stays the main one). `dev_get` shows a short links block.
 
 Kinds `feature|fix|refactor|docs|infra|idea`, areas `site|mcp|addon|server|pack|app|agents`, statuses
 `backlog|todo|doing|review|done|dropped`. Old tasks from groups «Разработка»/«Фиксы» — `node scripts/dev-migrate.mjs`

@@ -7,6 +7,7 @@
 import { NICK } from '../mcp/env.mjs';
 import { packServer } from '../pack-fetch.mjs';
 import { taskFiles, devFileGet } from './files.mjs';
+import { DEV_LINK_TOOLS, linksBlock } from './devlinks.mjs';
 
 const SITE = 'https://tfc-plans-fd2c.web.app/dev';
 
@@ -21,7 +22,7 @@ const STATUS_RU = {
 const KIND_RU = { feature: 'фича', fix: 'фикс', refactor: 'рефакторинг', docs: 'доки', infra: 'инфра', idea: 'идея' };
 const OPEN = ['backlog', 'todo', 'doing', 'review'];
 
-async function api(method, pathname, body) {
+export async function api(method, pathname, body) {
   const srv = packServer();
   if (!srv) throw new Error('нет адреса сервера сборки: TFC_PACK_URL и TFC_PACK_TOKEN в .env.local или вход в tfc');
   const res = await fetch(`${srv.url}/dev/${pathname}`, {
@@ -52,7 +53,7 @@ function line(t) {
   return `#${t.id} [${tags}] P${t.priority} ${t.title}${who}${extra ? ` (${extra})` : ''} · ${ago(t.updatedAt)}`;
 }
 
-function full({ task: t, notes, noteCount, docs }) {
+function full({ task: t, notes, noteCount, docs, links }) {
   const out = [
     `#${t.id} ${t.title}`,
     `статус: ${STATUS_RU[t.status]} (${t.status}) · вид: ${t.kind} · область: ${t.area ?? '—'} · важность P${t.priority}`,
@@ -64,6 +65,7 @@ function full({ task: t, notes, noteCount, docs }) {
   if (t.checklist.length)
     out.push('', 'Чек-лист:', ...t.checklist.map((c, i) => `${i + 1}. [${c.done ? 'x' : ' '}] ${c.text}`));
   if (docs.length) out.push('', 'Планы:', ...docs.map((d) => `- ${d.id} «${d.title}» (${d.size} симв., rev ${d.rev})`));
+  out.push(...linksBlock(links));
   if (notes.length) {
     out.push('', `Журнал (${notes.length} из ${noteCount}):`);
     for (const n of notes)
@@ -129,7 +131,11 @@ async function devUpdate(a) {
 }
 
 async function devNote(a) {
-  const r = await api('POST', `tasks/${a.id}/notes`, { text: a.text, kind: a.report ? 'report' : 'note' });
+  const r = await api('POST', `tasks/${a.id}/notes`, {
+    text: a.text,
+    kind: a.report ? 'report' : 'note',
+    item: a.item,
+  });
   return `Запись добавлена в #${r.task.id} (всего ${r.noteCount}).`;
 }
 
@@ -145,7 +151,7 @@ async function devDocGet(a) {
 
 async function devDocPut(a) {
   const body = {};
-  for (const k of ['title', 'content', 'task']) if (a[k] !== undefined) body[k] = a[k];
+  for (const k of ['title', 'content', 'task', 'item']) if (a[k] !== undefined) body[k] = a[k];
   if (a.id === undefined) {
     if (!body.title && body.task) body.title = `План: #${body.task}`;
     const { doc } = await api('POST', 'docs', body);
@@ -234,7 +240,12 @@ export const DEV_TOOLS = [
     description: 'Write: append a work-log entry to a dev task (no rev needed).',
     inputSchema: {
       type: 'object',
-      properties: { id: int('task number'), text: str('entry, Russian'), report: { type: 'boolean' } },
+      properties: {
+        id: int('task number'),
+        text: str('entry, Russian'),
+        report: { type: 'boolean' },
+        item: { type: ['integer', 'string'], description: 'checklist item this entry is about: 3 or "#175.3"' },
+      },
       required: ['id', 'text'],
     },
     handler: devNote,
@@ -260,9 +271,11 @@ export const DEV_TOOLS = [
         baseRev: int('rev from dev_doc_get'),
         title: str('title'),
         content: str('whole markdown'),
-        task: { type: ['integer', 'string'], description: 'task number or "-"' },
+        task: { type: ['integer', 'string'], description: 'main task: number or "-"; more tasks — dev_link' },
+        item: { type: ['integer', 'string'], description: 'link to a checklist item: number in the task or "#175.3"' },
       },
     },
     handler: devDocPut,
   },
+  ...DEV_LINK_TOOLS,
 ];

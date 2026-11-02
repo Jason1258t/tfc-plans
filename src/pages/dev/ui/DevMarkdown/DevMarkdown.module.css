@@ -1,0 +1,14 @@
+.ref {
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.ref:hover {
+  text-decoration: underline;
+}
+
+.broken {
+  color: var(--text-3);
+  text-decoration: line-through;
+}

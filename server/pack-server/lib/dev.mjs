@@ -6,6 +6,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { openLinks } from './dev-links.mjs';
 import { HttpError } from './util.mjs';
 
 // node:sqlite в Node 22 печатает ExperimentalWarning на каждый запуск — глушим только его
@@ -310,8 +311,11 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
       notes: q.notes.all(t.id, noteLimit).map(noteOut).reverse(),
       noteCount: q.noteCount.get(t.id).c,
       docs: q.taskDocs.all(t.id).map((d) => docOut(d)),
+      links: links.forTask(t.id),
     };
   }
+
+  const links = openLinks(db, { tx, taskFull });
 
   function docFields(b, creating) {
     const f = {
@@ -418,6 +422,9 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
     const by = typeof b.by === 'string' && b.by.trim().length >= 2 && b.by.length <= 24 ? b.by.trim() : who.name;
     const [res, id, sub] = parts;
 
+    const linked = links.route(method, res, params, b, by);
+    if (linked) return linked;
+
     if (res === 'tasks') {
       if (!id && method === 'GET') {
         const want = (k) => params.get(k)?.split(',').filter(Boolean);
@@ -456,8 +463,10 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
         const t = getTask(id);
         const note = text(b.text, 'text', LIMITS.note, { required: true });
         const now = Date.now();
+        const item = links.itemRef(b.item, t.id);
         tx(() => {
-          q.addNote.run(t.id, by, b.kind === 'report' ? 'report' : 'note', note, now);
+          const r = q.addNote.run(t.id, by, b.kind === 'report' ? 'report' : 'note', note, now);
+          links.attach(`note:${r.lastInsertRowid}`, item, by);
           db.prepare('update tasks set updated_at = ? where id = ?').run(now, t.id);
         });
         return [201, taskFull(t.id, 20)];
@@ -470,9 +479,24 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
         const rows = task ? q.taskDocs.all(intId(task, 'задачи')) : q.docs.all();
         return [200, { docs: rows.map((d) => docOut(d)) }];
       }
-      if (!id && method === 'POST') return [201, { doc: docOut(getDoc(createDoc(b, by)), true) }];
+      if (!id && method === 'POST') {
+        const item = links.itemRef(b.item, Number.isInteger(b.task) ? b.task : null);
+        const did = tx(() => {
+          const d = createDoc(b, by);
+          links.attach(`doc:${d}`, item, by);
+          return d;
+        });
+        return [201, { doc: docOut(getDoc(did), true) }];
+      }
       if (id && method === 'GET') return [200, { doc: docOut(getDoc(id), true) }];
-      if (id && method === 'PATCH') return [200, { doc: docOut(getDoc(updateDoc(id, b)), true) }];
+      if (id && method === 'PATCH') {
+        const item = links.itemRef(b.item, Number.isInteger(b.task) ? b.task : getDoc(id).task_id);
+        tx(() => {
+          updateDoc(id, b);
+          links.attach(`doc:${id}`, item, by);
+        });
+        return [200, { doc: docOut(getDoc(id), true) }];
+      }
       if (id && method === 'DELETE') {
         const cur = getDoc(id);
         checkRev(cur, Number(params.get('baseRev')), `Страница плана ${cur.id}`);
