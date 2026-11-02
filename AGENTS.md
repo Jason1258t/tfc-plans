@@ -76,6 +76,8 @@ comments, commit messages, guides, MCP tool output. Keep Russian UI labels verba
   (also `undone`, `add`, `remove`, `edit`, `move`) — no `baseRev`, nothing else in the task changes. Mark an item right
   after its milestone is verified; a journal note alone marks nothing. Items are created with `dev_create checklist=…`
   or `dev_check add=…`; `dev_update` no longer takes them. Closed tasks with the old format are read-only until reopened.
+- **Tracker reads and small edits:** search — `dev_find`; log pages — `dev_log`; small plan edits — `dev_doc_edit` and
+  `dev_doc_append` instead of `dev_doc_put` with the whole text; a long plan — `dev_doc_get heading=…`.
 - Deploy only from clean `main` after the merge, never from a feature branch (use the dev server to check).
 - Commit message: `Раздел: что сделано`, one line; merge commit `Слияние feat/<short>: что сделано`. Co-author
   trailer — the one your harness uses.
