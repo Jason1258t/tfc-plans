@@ -6,8 +6,10 @@
  */
 import { NICK } from '../mcp/env.mjs';
 import { packServer } from '../pack-fetch.mjs';
+import { logTools, noteLine } from './devlog.mjs';
 import { taskFiles, devFileGet } from './files.mjs';
-import { DEV_LINK_TOOLS, linksBlock } from './devlinks.mjs';
+import { checkTools } from './devchecks.mjs';
+import { linkTools, linksBlock } from './devlinks.mjs';
 
 const SITE = 'https://tfc-plans-fd2c.web.app/dev';
 
@@ -53,7 +55,10 @@ function line(t) {
   return `#${t.id} [${tags}] P${t.priority} ${t.title}${who}${extra ? ` (${extra})` : ''} · ${ago(t.updatedAt)}`;
 }
 
-function full({ task: t, notes, noteCount, docs, links }) {
+/** Журнал в dev_get: длинные записи обрезаются, отчёты — всегда и целиком */
+const NOTE_CLIP = 600;
+
+function full({ task: t, notes, noteCount, docs, links }, reports = []) {
   const out = [
     `#${t.id} ${t.title}`,
     `статус: ${STATUS_RU[t.status]} (${t.status}) · вид: ${t.kind} · область: ${t.area ?? '—'} · важность P${t.priority}`,
@@ -62,21 +67,29 @@ function full({ task: t, notes, noteCount, docs, links }) {
     `rev: ${t.rev} · ${SITE}?task=${t.id}`,
   ];
   if (t.body) out.push('', t.body);
-  if (t.checklist.length)
-    out.push('', 'Чек-лист:', ...t.checklist.map((c, i) => `${i + 1}. [${c.done ? 'x' : ' '}] ${c.text}`));
+  if (t.checklist.length) {
+    const done = t.checklist.filter((c) => c.done).length;
+    out.push(
+      '',
+      t.checklistLegacy
+        ? `Чек-лист ${done}/${t.checklist.length} (старый формат закрытой задачи, только чтение):`
+        : `Чек-лист ${done}/${t.checklist.length} (номера для dev_check, не сдвигаются):`,
+      ...t.checklist.map((c) => `${c.num ?? '—'}. [${c.done ? 'x' : ' '}] ${c.text}`),
+    );
+  }
   if (docs.length) out.push('', 'Планы:', ...docs.map((d) => `- ${d.id} «${d.title}» (${d.size} симв., rev ${d.rev})`));
   out.push(...linksBlock(links));
+  const older = reports.filter((r) => !notes.some((n) => n.id === r.id));
+  if (older.length) out.push('', 'Отчёты:', ...older.map((n) => noteLine(n)));
   if (notes.length) {
-    out.push('', `Журнал (${notes.length} из ${noteCount}):`);
-    for (const n of notes)
-      out.push(
-        `- ${day(n.createdAt)} ${n.author}${n.kind === 'note' ? '' : ` [${n.kind === 'status' ? 'статус' : 'отчёт'}]`}: ${n.text}`,
-      );
+    const more = notes.length < noteCount ? ` — раньше: dev_log id=${t.id} before=${notes[0].id}` : '';
+    out.push('', `Журнал (${notes.length} из ${noteCount})${more}:`);
+    for (const n of notes) out.push(noteLine(n, n.kind === 'report' ? 0 : NOTE_CLIP));
   }
   return out.join('\n');
 }
 
-/** Поля задачи из аргументов: checklist — строки или { text, done } */
+/** Поля задачи из аргументов: checklist — только при создании, потом пункты правит dev_check */
 function fields(a) {
   const f = {};
   for (const k of ['title', 'body', 'kind', 'area', 'status', 'priority', 'assignee', 'branch', 'checklist', 'note'])
@@ -106,10 +119,15 @@ async function devList(a) {
 }
 
 async function devGet(a) {
-  const task = full(await api('GET', `tasks/${a.id}?notes=${a.notes ?? 20}`));
+  const [r, log] = await Promise.all([
+    api('GET', `tasks/${a.id}?notes=${a.notes ?? 5}`),
+    api('GET', `tasks/${a.id}/notes?kind=report&limit=200`),
+  ]);
+  const task = full(r, log.notes);
   try {
     const files = await taskFiles(a.id);
-    return `${task}\n\nВложения (${files.length}):${files.length ? '\n' + files.map((f) => `- ${f.id} «${f.name}» (${f.type}, ${f.size} Б) — dev_file_get task=${a.id} id=${f.id}`).join('\n') : ' нет'}`;
+    if (!files.length) return task;
+    return `${task}\n\nВложения (${files.length}):\n${files.map((f) => `- ${f.id} «${f.name}» (${f.type}, ${f.size} Б) — dev_file_get task=${a.id} id=${f.id}`).join('\n')}`;
   } catch (e) {
     return `${task}\n\nВложения: не удалось проверить (${e.message}). Отсутствие вложений не подтверждено.`;
   }
@@ -136,17 +154,7 @@ async function devNote(a) {
     kind: a.report ? 'report' : 'note',
     item: a.item,
   });
-  return `Запись добавлена в #${r.task.id} (всего ${r.noteCount}).`;
-}
-
-async function devDocGet(a) {
-  const { doc: d } = await api('GET', `docs/${a.id}`);
-  const lines = d.content.split('\n');
-  const from = a.offset ?? 0;
-  const to = Math.min(lines.length, from + (a.limit ?? 400));
-  const head = `План ${d.id} «${d.title}» · задача ${d.task ? `#${d.task}` : '—'} · rev ${d.rev} · ${d.author}, ${day(d.updatedAt)}`;
-  const tail = to < lines.length ? `\n… строки ${from + 1}–${to} из ${lines.length}; дальше — offset=${to}` : '';
-  return `${head}\n\n${lines.slice(from, to).join('\n')}${tail}`;
+  return `Запись note:${r.notes.at(-1).id} добавлена в #${r.task.id} (всего ${r.noteCount}).`;
 }
 
 async function devDocPut(a) {
@@ -172,7 +180,6 @@ const TASK_PROPS = {
   priority: int('0 low … 3 urgent (default 1)'),
   assignee: str(`agent/person nick; "me" = you (${NICK}); "-" clears`),
   branch: str('git branch, e.g. feat/dev-tracker; "-" clears'),
-  checklist: { type: 'array', items: {}, description: 'strings or { text, done }; replaces the whole checklist' },
   note: str('work-log entry added with this change'),
 };
 
@@ -210,10 +217,10 @@ export const DEV_TOOLS = [
   {
     name: 'dev_get',
     description:
-      'Whole dev task: description, checklist, plan docs, last work-log entries, rev for dev_update, attachment metadata from Firestore (cached 1 min). Use dev_file_get to view images/download files.',
+      'Whole dev task: description, checklist, plan docs, all reports, last 5 work-log entries (note:<id>; older — dev_log), rev for dev_update, attachments from Firestore (cached 1 min; dev_file_get opens them).',
     inputSchema: {
       type: 'object',
-      properties: { id: int('task number'), notes: int('how many last log entries (default 20)') },
+      properties: { id: int('task number'), notes: int('how many last log entries (default 5)') },
       required: ['id'],
     },
     handler: devGet,
@@ -221,17 +228,30 @@ export const DEV_TOOLS = [
   {
     name: 'dev_create',
     description: `Write: new dev task signed ${NICK}. Start of work — status "doing", assignee "me" (= ${NICK}), branch.`,
-    inputSchema: { type: 'object', properties: TASK_PROPS, required: ['title'] },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        ...TASK_PROPS,
+        checklist: { type: 'array', items: {}, description: 'initial items: strings or { text, done }' },
+      },
+      required: ['title'],
+    },
     handler: devCreate,
   },
   {
     name: 'dev_update',
     description:
-      'Write: change passed fields (baseRev from dev_get/dev_create; refuses if changed since). A status change logs itself. report — final Russian report into the log (what changed for players, what was checked, what not).',
+      'Write: change passed fields. baseRev from dev_get is required with title or body, optional otherwise; refuses if changed since. A status change logs itself. For routine steps use dev_start, dev_check, dev_finish.',
+    hint: 'Пункты чек-листа — dev_check.',
     inputSchema: {
       type: 'object',
-      properties: { id: int('task number'), baseRev: int('rev'), ...TASK_PROPS, report: str('final report entry') },
-      required: ['id', 'baseRev'],
+      properties: {
+        id: int('task number'),
+        baseRev: int('rev, required with title or body'),
+        ...TASK_PROPS,
+        report: str('final report entry'),
+      },
+      required: ['id'],
     },
     handler: devUpdate,
   },
@@ -251,19 +271,9 @@ export const DEV_TOOLS = [
     handler: devNote,
   },
   {
-    name: 'dev_doc_get',
-    description: 'Dev plan doc by lines and its rev.',
-    inputSchema: {
-      type: 'object',
-      properties: { id: int('doc id'), offset: int('first line (0)'), limit: int('lines (400)') },
-      required: ['id'],
-    },
-    handler: devDocGet,
-  },
-  {
     name: 'dev_doc_put',
     description:
-      'Write: without id — new plan doc (title defaults to «План: #task»); with id + baseRev — edit passed fields. content — whole markdown; task — task number or "-".',
+      'Write: without id — new plan doc (title defaults to «План: #task»); with id + baseRev — edit passed fields. content — whole markdown (one fragment — dev_doc_edit, adding — dev_doc_append); task — task number or "-".',
     inputSchema: {
       type: 'object',
       properties: {
@@ -277,5 +287,7 @@ export const DEV_TOOLS = [
     },
     handler: devDocPut,
   },
-  ...DEV_LINK_TOOLS,
+  ...checkTools({ api, line }),
+  ...logTools(api),
+  ...linkTools(api),
 ];

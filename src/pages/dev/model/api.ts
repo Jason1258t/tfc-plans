@@ -12,8 +12,21 @@ export type DevKind = 'feature' | 'fix' | 'refactor' | 'docs' | 'infra' | 'idea'
 export type DevArea = 'site' | 'mcp' | 'addon' | 'server' | 'pack' | 'app' | 'agents';
 
 export interface DevCheck {
+  /** Номер внутри задачи; нет только у пунктов старого формата и ещё не созданной задачи */
+  num?: number;
   text: string;
   done: boolean;
+  doneAt?: number | null;
+  doneBy?: string | null;
+}
+
+/** Операции над пунктами: всё вместе или ничего, rev задачи не меняется */
+export interface CheckOps {
+  done?: number[];
+  undone?: number[];
+  add?: string[];
+  remove?: number[];
+  edit?: { num: number; text: string }[];
 }
 
 export interface DevTask {
@@ -27,6 +40,8 @@ export interface DevTask {
   assignee: string | null;
   branch: string | null;
   checklist: DevCheck[];
+  /** Закрытая задача со старым чек-листом: только чтение */
+  checklistLegacy?: boolean;
   author: string;
   createdAt: number;
   updatedAt: number;
@@ -156,7 +171,7 @@ async function call<T>(method: string, path: string, body?: object): Promise<T> 
 }
 
 export type TaskPatch = Partial<
-  Pick<DevTask, 'title' | 'body' | 'kind' | 'area' | 'status' | 'priority' | 'assignee' | 'branch' | 'checklist'>
+  Pick<DevTask, 'title' | 'body' | 'kind' | 'area' | 'status' | 'priority' | 'assignee' | 'branch'>
 >;
 
 const taskCache = new Map<number, DevTaskFull>();
@@ -171,10 +186,16 @@ export const devApi = {
   cached: (id: number) => taskCache.get(id) ?? null,
   list: () => call<{ tasks: DevTask[] }>('GET', 'tasks').then((r) => r.tasks),
   get: (id: number) => call<DevTaskFull>('GET', `tasks/${id}?notes=200`).then(cacheTask),
-  create: (t: TaskPatch & { title: string }, by: string) =>
+  create: (t: TaskPatch & { title: string; checklist?: DevCheck[] }, by: string) =>
     call<DevTaskFull>('POST', 'tasks', { ...t, by }).then(cacheTask),
   update: (id: number, baseRev: number, patch: TaskPatch, by: string) =>
     call<DevTaskFull>('PATCH', `tasks/${id}`, { ...patch, baseRev, by }).then(cacheTask),
+  checks: (id: number, ops: CheckOps, by: string) =>
+    call<DevTaskFull>('POST', `tasks/${id}/checks`, { ...ops, by }).then((f) => {
+      const old = taskCache.get(id);
+      if (old) cacheTask({ ...old, task: { ...old.task, checklist: f.task.checklist, checklistLegacy: undefined } });
+      return f;
+    }),
   remove: (id: number, baseRev: number) =>
     call('DELETE', `tasks/${id}?baseRev=${baseRev}`).then((result) => {
       taskCache.delete(id);

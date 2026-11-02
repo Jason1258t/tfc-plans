@@ -231,7 +231,11 @@ export function openLinks(db, { tx, taskFull }) {
   function forRef(ref) {
     flush();
     const r = parseRef(ref);
-    if (r.type === 'task') return { out: q.bySource.all(`#${r.task}`).map(linkOut), in: incoming(`#${r.task}`, true) };
+    if (r.type === 'task') {
+      const own = `#${r.task}`;
+      const out = db.prepare("select * from links where source = ?1 or source glob ?1 || '.*' order by id").all(own);
+      return { out: out.map(linkOut), in: incoming(own, true) };
+    }
     if (r.type === 'doc' && r.section) {
       const whole = `doc:${r.doc}`;
       const d = q.doc.get(r.doc);

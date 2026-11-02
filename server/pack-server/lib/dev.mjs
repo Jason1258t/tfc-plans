@@ -3,11 +3,15 @@
  * Раньше жили в Firestore (группы «Разработка» и «Фиксы») и съедали бесплатный лимит чтений. План —
  * docs/plans/dev-tracker.md. Таблицы: tasks (задачи), notes (журнал по задаче, только дописывается), docs (планы).
  * Правка задачи и плана — с baseRev: изменилось после чтения — 409. Смена статуса сама пишет запись в журнал.
+ * Пункты чек-листа — lib/dev-checks.mjs. Названию и описанию baseRev нужен всегда: их можно затереть, а статус,
+ * исполнитель и ветка — простые значения, для них он необязателен.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { openLinks } from './dev-links.mjs';
+import { devLogRoutes } from './dev-log.mjs';
 import { HttpError } from './util.mjs';
+import { CHECKS_SCHEMA, openChecks, rejectUnknown } from './dev-checks.mjs';
 
 // node:sqlite в Node 22 печатает ExperimentalWarning на каждый запуск — глушим только его
 const emit = process.emitWarning;
@@ -64,7 +68,22 @@ create table if not exists docs (
 create index if not exists docs_task on docs(task_id);
 `;
 
-const LIMITS = { title: 300, body: 200_000, note: 20_000, doc: 1_000_000, checklist: 500, item: 500 };
+const LIMITS = { title: 300, body: 200_000, note: 20_000, doc: 1_000_000 };
+const TASK_WRITE = [
+  'title',
+  'body',
+  'kind',
+  'area',
+  'status',
+  'priority',
+  'assignee',
+  'branch',
+  'checklist',
+  'note',
+  'by',
+];
+const CHECK_HINT = { checklist: 'Пункты правятся через POST /dev/tasks/:id/checks (MCP dev_check).' };
+const ACTIVE = new Set(['doing', 'review']);
 
 // ---------------------------------------------------------------- проверка полей
 
@@ -96,17 +115,6 @@ function short(v, name, max = 80) {
   return v.trim();
 }
 
-function checklist(v) {
-  if (v === undefined) return undefined;
-  if (!Array.isArray(v) || v.length > LIMITS.checklist) throw bad(`checklist — список до ${LIMITS.checklist} пунктов`);
-  return v.map((x) => {
-    const it = typeof x === 'string' ? { text: x, done: false } : x;
-    if (!it || typeof it.text !== 'string' || !it.text.trim() || it.text.length > LIMITS.item)
-      throw bad(`пункт checklist — { text, done }, текст до ${LIMITS.item} символов`);
-    return { text: it.text.trim(), done: it.done === true };
-  });
-}
-
 function priority(v) {
   if (v === undefined) return undefined;
   if (!Number.isInteger(v) || v < 0 || v > 3) throw bad('priority — целое 0…3');
@@ -121,7 +129,7 @@ function intId(s, what) {
 
 // ---------------------------------------------------------------- строки → объекты
 
-const taskOut = (r) =>
+const taskOut = (r, list) =>
   r && {
     id: r.id,
     title: r.title,
@@ -132,7 +140,7 @@ const taskOut = (r) =>
     priority: r.priority,
     assignee: r.assignee,
     branch: r.branch,
-    checklist: JSON.parse(r.checklist),
+    ...list,
     author: r.author,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
@@ -166,6 +174,7 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
   fs.mkdirSync(dataDir, { recursive: true });
   const db = new DatabaseSync(path.join(dataDir, 'dev.db'));
   db.exec(SCHEMA);
+  db.exec(CHECKS_SCHEMA);
 
   const q = {
     list: db.prepare(`
@@ -179,9 +188,6 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
     addNote: db.prepare('insert into notes (task_id, author, kind, text, created_at) values (?, ?, ?, ?, ?)'),
     taskDocs: db.prepare(
       'select id, task_id, title, length(content) size, author, created_at, updated_at, rev from docs where task_id = ? order by id',
-    ),
-    docs: db.prepare(
-      'select id, task_id, title, length(content) size, author, created_at, updated_at, rev from docs order by updated_at desc',
     ),
     doc: db.prepare('select * from docs where id = ?'),
     legacyTask: db.prepare('select id from tasks where legacy = ?'),
@@ -205,6 +211,9 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
       depth--;
     }
   };
+
+  const checks = openChecks(db, tx);
+  const taskView = (r) => taskOut(r, checks.view(r));
 
   const getTask = (id) => {
     const t = q.task.get(intId(id, 'задачи'));
@@ -235,7 +244,6 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
       priority: priority(b.priority),
       assignee: short(b.assignee, 'assignee', 40),
       branch: short(b.branch, 'branch', 120),
-      checklist: checklist(b.checklist),
     };
     if (b.title !== undefined && !f.title) throw bad('title — не пустая строка');
     return Object.fromEntries(Object.entries(f).filter(([, v]) => v !== undefined));
@@ -261,7 +269,7 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
           f.priority,
           f.assignee ?? null,
           f.branch ?? null,
-          JSON.stringify(f.checklist ?? []),
+          '[]',
           by,
           createdAt ?? now,
           updatedAt ?? now,
@@ -269,6 +277,7 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
           legacy,
         );
       const id = Number(r.lastInsertRowid);
+      if (b.checklist !== undefined) checks.addInitial(id, b.checklist, by, createdAt ?? now);
       if (note) q.addNote.run(id, by, 'note', note, now);
       return id;
     });
@@ -276,46 +285,95 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
 
   function updateTask(id, b, by) {
     const cur = getTask(id);
-    checkRev(cur, b.baseRev, `Задача #${cur.id}`);
+    const guarded = b.title !== undefined || b.body !== undefined || b.checklist !== undefined;
+    if (guarded || b.baseRev !== undefined) checkRev(cur, b.baseRev, `Задача #${cur.id}`);
     const f = taskFields(b, false);
     const note = text(b.note, 'note', LIMITS.note);
     const now = Date.now();
-    const changed = Object.keys(f).filter((k) =>
-      k === 'checklist' ? JSON.stringify(f.checklist) !== cur.checklist : f[k] !== cur[k],
-    );
-    if (!changed.length && !note) return cur.id;
+    const changed = Object.keys(f).filter((k) => f[k] !== cur[k]);
+    if (!changed.length && !note && b.checklist === undefined) return cur.id;
     tx(() => {
-      if (changed.length) {
+      const listChanged = b.checklist !== undefined && checks.replace(cur, b.checklist, by, now);
+      if (f.status !== undefined && CLOSED.has(cur.status) && !CLOSED.has(f.status)) checks.migrate(cur);
+      if (changed.length || listChanged) {
         const set = changed.map((k) => `${k} = ?`);
-        const vals = changed.map((k) => (k === 'checklist' ? JSON.stringify(f.checklist) : f[k]));
+        const vals = changed.map((k) => f[k]);
         if (f.status !== undefined && f.status !== cur.status) {
           set.push('done_at = ?');
           vals.push(CLOSED.has(f.status) ? now : null);
           q.addNote.run(cur.id, by, 'status', `${cur.status} → ${f.status}`, now);
         }
-        db.prepare(`update tasks set ${set.join(', ')}, updated_at = ?, rev = rev + 1 where id = ?`).run(
-          ...vals,
-          now,
-          cur.id,
-        );
+        set.push('updated_at = ?', 'rev = rev + 1');
+        db.prepare(`update tasks set ${set.join(', ')} where id = ?`).run(...vals, now, cur.id);
       }
       if (note) q.addNote.run(cur.id, by, b.noteKind === 'report' ? 'report' : 'note', note, now);
     });
     return cur.id;
   }
 
+  /** Задачу ведёт другой агент: чужую не забираем без явного takeover */
+  function checkOwner(t, by, takeover) {
+    const other = t.assignee && t.assignee.toLowerCase() !== by.toLowerCase();
+    if (other && ACTIVE.has(t.status) && takeover !== true)
+      throw new HttpError(409, `Задачу #${t.id} ведёт ${t.assignee} (${t.status}) — спросите пользователя`);
+  }
+
+  function setStatus(t, status, by, now, extra = {}) {
+    const f = { status, ...extra };
+    const keys = Object.keys(f);
+    tx(() => {
+      if (status !== t.status) q.addNote.run(t.id, by, 'status', `${t.status} → ${status}`, now);
+      db.prepare(
+        `update tasks set ${keys.map((k) => `${k} = ?`).join(', ')}, done_at = ?, updated_at = ?, rev = rev + 1 where id = ?`,
+      ).run(...keys.map((k) => f[k]), CLOSED.has(status) ? now : null, now, t.id);
+    });
+  }
+
+  /** Начать работу: в работе, исполнитель — автор запроса, ветка. Закрытую — только с reopen */
+  function startTask(id, b, by) {
+    rejectUnknown(b, ['branch', 'reopen', 'takeover', 'note', 'by']);
+    const t = getTask(id);
+    if (CLOSED.has(t.status) && b.reopen !== true)
+      throw new HttpError(409, `Задача #${t.id} закрыта (${t.status}): переоткрыть — reopen=true`);
+    checkOwner(t, by, b.takeover);
+    const branch = short(b.branch, 'branch', 120);
+    const note = text(b.note, 'note', LIMITS.note);
+    const now = Date.now();
+    tx(() => {
+      checks.migrate(t);
+      setStatus(t, 'doing', by, now, { assignee: by, ...(branch !== undefined && { branch }) });
+      if (note) q.addNote.run(t.id, by, 'note', note, now);
+    });
+    return t.id;
+  }
+
+  /** Закончить работу: отчёт обязателен, незакрытые пункты вернутся в ответе как предупреждение */
+  function finishTask(id, b, by) {
+    rejectUnknown(b, ['report', 'status', 'takeover', 'by']);
+    const t = getTask(id);
+    const report = text(b.report, 'report', LIMITS.note, { required: true });
+    const status = b.status === undefined ? 'done' : oneOf(b.status, 'status', [...CLOSED]);
+    if (CLOSED.has(t.status))
+      throw new HttpError(409, `Задача #${t.id} уже закрыта (${t.status}). Дополнить отчёт — запись журнала с report`);
+    checkOwner(t, by, b.takeover);
+    const now = Date.now();
+    tx(() => {
+      setStatus(t, status, by, now);
+      q.addNote.run(t.id, by, 'report', report, now);
+    });
+    return t.id;
+  }
+
   function taskFull(id, noteLimit) {
     const t = getTask(id);
     return {
-      task: taskOut(t),
+      task: taskView(t),
       notes: q.notes.all(t.id, noteLimit).map(noteOut).reverse(),
       noteCount: q.noteCount.get(t.id).c,
       docs: q.taskDocs.all(t.id).map((d) => docOut(d)),
       links: links.forTask(t.id),
     };
   }
-
-  const links = openLinks(db, { tx, taskFull });
 
   function docFields(b, creating) {
     const f = {
@@ -411,6 +469,28 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
   backup();
   setInterval(backup, 6 * 3600_000).unref();
 
+  // Перенос чек-листов открытых задач на записи; закрытые остаются в старом формате. Снимок — чтобы можно было откатить
+  const pending = checks.pendingTasks();
+  if (pending.length) {
+    fs.mkdirSync(backupDir, { recursive: true });
+    const file = path.join(backupDir, `dev-before-checks-${Date.now()}.db`);
+    db.exec(`vacuum into '${file.replaceAll("'", "''")}'`);
+    for (const t of pending) checks.migrate(t);
+    console.log(`dev: чек-листы перенесены у задач: ${pending.length}, снимок ${file}`);
+  }
+
+  const links = openLinks(db, { tx, taskFull });
+
+  const logRoute = devLogRoutes({
+    db,
+    getTask,
+    getDoc,
+    noteOut,
+    docOut,
+    limits: LIMITS,
+    checkTexts: (t) => checks.view(t).checklist.map((c) => c.text),
+  });
+
   // ---------------------------------------------------------------- маршруты /dev/…
 
   /**
@@ -424,6 +504,9 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
 
     const linked = links.route(method, res, params, b, by);
     if (linked) return linked;
+
+    const logged = logRoute(method, parts, params, body);
+    if (logged) return logged;
 
     if (res === 'tasks') {
       if (!id && method === 'GET') {
@@ -444,14 +527,30 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
             const hay = `#${t.id} ${t.title} ${t.body} ${t.branch ?? ''}`.toLowerCase();
             return words.every((w) => hay.includes(w));
           });
-        return [200, { tasks: list.map(taskOut) }];
+        return [200, { tasks: list.map(taskView) }];
       }
       if (!id && method === 'POST') {
+        rejectUnknown(b, TASK_WRITE);
         const tid = createTask(b, by);
         return [201, taskFull(tid, 20)];
       }
       if (id && !sub && method === 'GET') return [200, taskFull(id, Math.min(500, Number(params.get('notes')) || 50))];
-      if (id && !sub && method === 'PATCH') return [200, taskFull(updateTask(id, b, by), 20)];
+      if (id && !sub && method === 'PATCH') {
+        rejectUnknown(b, [...TASK_WRITE, 'baseRev', 'noteKind'], CHECK_HINT);
+        return [200, taskFull(updateTask(id, b, by), 20)];
+      }
+      if (id && sub === 'checks' && method === 'POST') {
+        const t = getTask(id);
+        const note = text(b.note, 'note', LIMITS.note);
+        const applied = tx(() => {
+          const r = checks.apply(t, b, by);
+          if (note) q.addNote.run(t.id, by, 'note', note, Date.now());
+          return r;
+        });
+        return [200, { ...taskFull(t.id, 20), applied }];
+      }
+      if (id && sub === 'start' && method === 'POST') return [200, taskFull(startTask(id, b, by), 20)];
+      if (id && sub === 'finish' && method === 'POST') return [200, taskFull(finishTask(id, b, by), 20)];
       if (id && !sub && method === 'DELETE') {
         const cur = getTask(id);
         checkRev(cur, Number(params.get('baseRev')), `Задача #${cur.id}`);
@@ -474,11 +573,6 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
     }
 
     if (res === 'docs') {
-      if (!id && method === 'GET') {
-        const task = params.get('task');
-        const rows = task ? q.taskDocs.all(intId(task, 'задачи')) : q.docs.all();
-        return [200, { docs: rows.map((d) => docOut(d)) }];
-      }
       if (!id && method === 'POST') {
         const item = links.itemRef(b.item, Number.isInteger(b.task) ? b.task : null);
         const did = tx(() => {

@@ -1,8 +1,8 @@
 /**
  * Связи задач разработки для tfc-plans-dev: dev_open открывает что угодно по ссылке и показывает обратные связи,
- * dev_link и dev_unlink — явные связи. Сервер — server/pack-server/lib/dev-links.mjs.
+ * dev_link и dev_unlink — явные связи. Сервер — server/pack-server/lib/dev-links.mjs. api передаётся извне, чтобы не
+ * было цикла с devtasks.mjs.
  */
-import { api } from './devtasks.mjs';
 
 const KIND_RU = { mention: 'упоминает', related: 'связано с', blocks: 'блокирует' };
 const KIND_BACK = { mention: 'упомянут в', related: 'связано с', blocks: 'блокируется' };
@@ -25,7 +25,7 @@ export function linksBlock(links) {
 
 function linkedBlock({ out, in: inc }) {
   const lines = [];
-  if (out.length) lines.push('', 'Ссылается на:', ...out.map((l) => `- ${KIND_RU[l.kind]} ${shown(l.target)}`));
+  if (out.length) lines.push('', 'Ссылается на:', ...out.map((l) => `- ${l.source.ref} ${KIND_RU[l.kind]} ${shown(l.target)}`));
   if (inc.length)
     lines.push('', 'Обратные связи:', ...inc.map((l) => `- ${KIND_BACK[l.kind]} ${shown(l.source)} → ${l.target.ref}`));
   if (!lines.length) lines.push('', 'Связей нет.');
@@ -72,21 +72,21 @@ function openText(r) {
   return [...head, '', clip(r.text, 1000), r.text.length > 1000 ? 'Весь текст — dev_doc_get.' : ''];
 }
 
-async function devOpen(a) {
+const devOpen = (api) => async (a) => {
   const r = await api('GET', `open?ref=${encodeURIComponent(a.ref)}`);
   return [...openText(r), ...linkedBlock(r.linked)].join('\n').trimEnd();
-}
+};
 
-async function devLink(a) {
+const devLink = (api) => async (a) => {
   await api('POST', 'links', { from: a.from, to: a.to, kind: a.kind ?? 'related' });
   return `Связь добавлена: ${a.from} ${KIND_RU[a.kind ?? 'related']} ${a.to}.`;
-}
+};
 
-async function devUnlink(a) {
+const devUnlink = (api) => async (a) => {
   const p = new URLSearchParams({ from: a.from, to: a.to, kind: a.kind ?? 'related' });
   await api('DELETE', `links?${p}`);
   return `Связь снята: ${a.from} → ${a.to}.`;
-}
+};
 
 const REF = '#175, #175.3, doc:12, doc:12#Раздел or note:881';
 const LINK_SCHEMA = {
@@ -99,7 +99,7 @@ const LINK_SCHEMA = {
   required: ['from', 'to'],
 };
 
-export const DEV_LINK_TOOLS = [
+export const linkTools = (api) => [
   {
     name: 'dev_open',
     description: `Open anything by ref (${REF}): short content plus outgoing and incoming links. Refs in the text are indexed by the server; a broken one is marked.`,
@@ -108,19 +108,19 @@ export const DEV_LINK_TOOLS = [
       properties: { ref: { type: 'string', description: REF } },
       required: ['ref'],
     },
-    handler: devOpen,
+    handler: devOpen(api),
   },
   {
     name: 'dev_link',
     description:
       'Write: explicit link between two existing objects, also to relate a doc to one more task (docs.task stays the main one). Mentions in text need no call.',
     inputSchema: LINK_SCHEMA,
-    handler: devLink,
+    handler: devLink(api),
   },
   {
     name: 'dev_unlink',
     description: 'Write: remove an explicit link. A mention goes away with the text.',
     inputSchema: LINK_SCHEMA,
-    handler: devUnlink,
+    handler: devUnlink(api),
   },
 ];

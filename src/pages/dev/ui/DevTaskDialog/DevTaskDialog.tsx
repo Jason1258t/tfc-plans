@@ -15,6 +15,7 @@ import {
   KINDS,
   PRIORITY_LABEL,
   STATUSES,
+  type CheckOps,
   type DevCheck,
   type DevNote,
   type DevTask,
@@ -40,7 +41,7 @@ interface Props {
   onDeleted: (id: number) => void;
 }
 
-type Draft = Required<TaskPatch>;
+type Draft = Required<TaskPatch> & { checklist: DevCheck[] };
 
 const EMPTY: Draft = {
   title: '',
@@ -63,7 +64,8 @@ const pick = (t: DevTask): Draft => ({
   priority: t.priority,
   assignee: t.assignee,
   branch: t.branch,
-  checklist: t.checklist,
+  // Пункты существующей задачи сохраняются сразу отдельными операциями, в черновик не входят
+  checklist: [],
 });
 
 /** Только изменённые поля */
@@ -217,16 +219,35 @@ export function DevTaskDialog({ id, focus, onOpenRef, onClose, onSaved, onDelete
       onOpenRef(`doc:${d.id}`);
     });
 
-  const toggle = (i: number) =>
-    set(
-      'checklist',
-      draft.checklist.map((c, j): DevCheck => (j === i ? { ...c, done: !c.done } : c)),
-    );
+  /** Операция над пунктами: сразу на сервер; черновик и журнал не трогаем, берём только новый список */
+  const checkOp = (ops: CheckOps) =>
+    run(async () => {
+      if (!id) return;
+      const f = await devApi.checks(id, ops, nick);
+      setFull((cur) =>
+        cur ? { ...cur, task: { ...cur.task, checklist: f.task.checklist, checklistLegacy: undefined } } : f,
+      );
+    });
+
+  const isNew = id === null;
+  const items = isNew ? draft.checklist : (full?.task.checklist ?? []);
+  const legacy = !!full?.task.checklistLegacy;
+  const toggle = (c: DevCheck, i: number) => {
+    if (isNew)
+      set(
+        'checklist',
+        draft.checklist.map((x, j): DevCheck => (j === i ? { ...x, done: !x.done } : x)),
+      );
+    else if (c.num) void checkOp(c.done ? { undone: [c.num] } : { done: [c.num] });
+  };
 
   const loaded = !!full;
   useEffect(() => {
     if (!loaded || !focus) return;
-    const el = document.querySelector<HTMLElement>(`[data-dev-focus="${CSS.escape(focus)}"]`);
+    const item = /^item-(\d+)$/.exec(focus)?.[1];
+    const el = item
+      ? document.querySelector<HTMLElement>(`input[aria-label="Пункт ${item}"]`)?.closest('li')
+      : document.querySelector<HTMLElement>(`[data-dev-focus="${CSS.escape(focus)}"]`);
     el?.scrollIntoView({ block: 'center' });
     el?.animate([{ outline: '2px solid var(--accent)' }, { outline: '2px solid transparent' }], { duration: 1800 });
   }, [loaded, focus]);
@@ -476,54 +497,80 @@ export function DevTaskDialog({ id, focus, onOpenRef, onClose, onSaved, onDelete
 
           <details open>
             <summary>
-              Чек-лист{' '}
-              <DevProgress done={draft.checklist.filter((c) => c.done).length} total={draft.checklist.length} />
+              Чек-лист <DevProgress done={items.filter((c) => c.done).length} total={items.length} />
             </summary>
-            {draft.checklist.filter((c) => c.done).length > 5 && (
+            {legacy && (
+              <p className={styles.muted}>
+                Старый формат закрытой задачи: только чтение. Переоткройте задачу, чтобы править пункты.
+              </p>
+            )}
+            {items.filter((c) => c.done).length > 5 && (
               <Button size="sm" variant="ghost" onClick={() => setShowCompleted(!showCompleted)}>
                 {showCompleted ? 'Скрыть старые выполненные' : 'Показать все выполненные'}
               </Button>
             )}
             <ul className={styles.checklist}>
-              {draft.checklist.map((c, i) =>
-                !showCompleted &&
-                c.done &&
-                draft.checklist.slice(i + 1).filter((item) => item.done).length >= 5 ? null : (
-                  <li key={i}>
+              {items.map((c, i) =>
+                !showCompleted && c.done && items.slice(i + 1).filter((item) => item.done).length >= 5 ? null : (
+                  <li key={c.num ?? i}>
                     <label className={cx(c.done && styles.checked)}>
                       <input
                         type="checkbox"
-                        aria-label={`Выполнен пункт ${i + 1}`}
+                        aria-label={`Выполнен пункт ${c.num ?? i + 1}`}
                         checked={c.done}
-                        onChange={() => toggle(i)}
+                        disabled={legacy}
+                        title={c.doneBy ? `Отметил ${c.doneBy}` : undefined}
+                        onChange={() => toggle(c, i)}
                       />
                     </label>
-                    <Input
-                      aria-label={`Пункт ${i + 1}`}
-                      className={cx(styles.checkText, c.done && styles.checked)}
-                      value={c.text}
-                      maxLength={500}
-                      onChange={(e) =>
-                        set(
-                          'checklist',
-                          draft.checklist.map((item, j) => (j === i ? { ...item, text: e.target.value } : item)),
-                        )
-                      }
-                    />
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      icon
-                      aria-label="Убрать пункт"
-                      onClick={() =>
-                        set(
-                          'checklist',
-                          draft.checklist.filter((_, j) => j !== i),
-                        )
-                      }
-                    >
-                      ×
-                    </Button>
+                    {isNew ? (
+                      <Input
+                        aria-label={`Пункт ${i + 1}`}
+                        className={cx(styles.checkText, c.done && styles.checked)}
+                        value={c.text}
+                        maxLength={500}
+                        onChange={(e) =>
+                          set(
+                            'checklist',
+                            draft.checklist.map((item, j) => (j === i ? { ...item, text: e.target.value } : item)),
+                          )
+                        }
+                      />
+                    ) : (
+                      // Свой текст до потери фокуса: обновление раз в 10 секунд не сбивает ввод
+                      <Input
+                        key={c.text}
+                        aria-label={`Пункт ${c.num ?? i + 1}`}
+                        className={cx(styles.checkText, c.done && styles.checked)}
+                        defaultValue={c.text}
+                        maxLength={500}
+                        readOnly={legacy}
+                        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                        onBlur={(e) => {
+                          const text = e.target.value.trim();
+                          if (c.num && text && text !== c.text) void checkOp({ edit: [{ num: c.num, text }] });
+                          else e.target.value = c.text;
+                        }}
+                      />
+                    )}
+                    {!legacy && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        icon
+                        aria-label="Убрать пункт"
+                        onClick={() =>
+                          isNew
+                            ? set(
+                                'checklist',
+                                draft.checklist.filter((_, j) => j !== i),
+                              )
+                            : c.num && void checkOp({ remove: [c.num] })
+                        }
+                      >
+                        ×
+                      </Button>
+                    )}
                   </li>
                 ),
               )}
@@ -533,17 +580,19 @@ export function DevTaskDialog({ id, focus, onOpenRef, onClose, onSaved, onDelete
               onSubmit={(e) => {
                 e.preventDefault();
                 if (!newItem.trim()) return;
-                set('checklist', [...draft.checklist, { text: newItem.trim(), done: false }]);
+                if (isNew) set('checklist', [...draft.checklist, { text: newItem.trim(), done: false }]);
+                else void checkOp({ add: [newItem.trim()] });
                 setNewItem('');
               }}
             >
               <Input
+                disabled={legacy}
                 value={newItem}
                 onChange={(e) => setNewItem(e.target.value)}
                 placeholder="Новый пункт"
                 maxLength={500}
               />
-              <Button size="sm" type="submit" disabled={!newItem.trim()}>
+              <Button size="sm" type="submit" disabled={legacy || !newItem.trim()}>
                 <Plus size={14} /> Пункт
               </Button>
             </form>
