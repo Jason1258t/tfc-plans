@@ -89,6 +89,8 @@ its one-liner in STATE.md.
   installs (`tfc pull addons`, server and players) and `tfc publish`. In game: inverters on a real generator grid (2.5.1), block looks, the frequency / mode value
   boxes, goggle readouts, synchronizer «faster/slower» via redstone dust to real EE brushes, the two-block industrial
   cabinet placement and radiators. Details — [addons.md](addons.md).
+- **EE Extras 2.7** (2026-11-03, `ee-extras-2.7.0.jar`, IE floodlight on the duplex cable, cable converter): host runs
+  `tfc pull addons` (server and players) and `tfc publish`. In game: a converter on an IE multiblock power port.
 - **Create Aeronautics Extra 1.0.1** (2026-10-29, `create-aeronautics-extra-1.0.1.jar`, new module textures): host
   installs (`tfc pull addons`, server and players) and `tfc publish`. In game: block looks and rotating half-shaft,
   goggles and tooltips, module insert/remove by hand, JEI/EMI recipes, the block on a flying Aeronautics ship with
