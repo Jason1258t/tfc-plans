@@ -48,6 +48,10 @@ commit) — Russian.
 - Pack KubeJS/datapack files: `npm run tfc -- admin propose <overlay dir> --note …` (host pulls and approves).
 - Pack config: `config_propose`.
 
+KubeJS pitfalls: it removes recipes from datapacks (including ours) but not script-added ones (checked in bytecode).
+Filter `output: 'x'` matches only an explicit `x` in the recipe. `replaceInput({mod: 'electroenergetics'})` applies to
+recipes with ids in that namespace.
+
 ## 5. Recipe type
 
 - From the item's nature — the era table in docs/recipe-canon.md. The exact fields for that type — its hint in

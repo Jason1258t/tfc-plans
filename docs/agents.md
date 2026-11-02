@@ -1,7 +1,7 @@
 # Running other coding agents on this repo
 
-Rules for every agent are in [AGENTS.md](../AGENTS.md) (root and per folder: `scripts/`, `scripts/mcp/`, `server/`,
-`tools/`). Each `CLAUDE.md` is only `@AGENTS.md` plus Claude-only notes, so Claude Code and the rest read the same text.
+Rules for every agent are in [AGENTS.md](../AGENTS.md) (root and per folder: `src/`, `packages/core/`, `scripts/`, `scripts/mcp/`,
+`cli/`, `server/`, `tools/`). Each `CLAUDE.md` is only `@AGENTS.md` plus Claude-only notes, so Claude Code and the rest read the same text.
 Edit rules in `AGENTS.md`, never duplicate them in tool-specific files.
 
 What each agent needs: (1) read `AGENTS.md`, (2) the skills, (3) the `tfc-pack` MCP server, (4) its own name for the

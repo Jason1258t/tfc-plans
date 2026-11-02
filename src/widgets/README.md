@@ -2,4 +2,4 @@
 
 Крупные самостоятельные куски интерфейса, которые стоят на нескольких страницах: шапка, панель агента,
 каталог рецептов, знакомство. Импортировать можно `widgets/*`, `features/*`, `entities/*`, `shared/*`.
-Правила — в AGENTS.md («Where code goes»), проверка — `npm run ui:boundaries`.
+Правила — в [src/AGENTS.md](../AGENTS.md), проверка — `npm run ui:boundaries`.

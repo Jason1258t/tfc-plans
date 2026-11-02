@@ -65,6 +65,32 @@ Paths can be set via env vars (for running on the pack server):
 | `TFC_DECOMPILER`                            | newest Vineflower in the Gradle cache                                                                                                    |
 | `TFC_AGENT_NICK`                            | launching agent (`Claude`, `Kimi`…; unknown — `Агент?`) — author / `updatedBy` of every write; set per agent, see [agents.md](agents.md) |
 
+## Agent's usual path
+
+The server sends a short version of this to agents as its instructions.
+
+- Game facts, recipes, tags, configs, mod code, logs, guides and site content — this server first, not grep over
+  `public/*.json` or unzipping jars. In a worktree it reads `public/` of the main checkout; pack jars — from the snapshot
+  cache `~/.cache/tfc-plans/pack/mods`, filled by `npm run pack:fetch`; there is no `mods/` in the repo.
+- Mod code: `decompile method=` to read; `bytecode` instead of `javap` in a shell — method outline, any jar or classes
+  folder on disk (addon `libs/`, `build/classes`, `.mixin.out`), `diff` of two mod versions.
+- Crash / "what broke" → start with `log_analyze`.
+- A mod not in the pack (integration analysis) → `candidate_get`, then jar tools with `jar=candidate:<file>`.
+- Editing addon resources → `resources_check` + `model_render`. Developing an addon (new addon, block, mixin) → skill
+  `addon-dev`; releasing an addon to the site → skill `addon-release` (`addon_check`).
+- Pack config changes → `config_propose`, not "edit the file".
+- Other pack file changes (KubeJS scripts, lang, resources, whole files) → check the overlay on the whole pack first —
+  `pack_devserver overlay=<dir>` (production dedicated server with full KubeJS, no game needed) — then
+  `npm run tfc -- admin propose <overlay dir> --note …` (agent key in the `tfc` app settings —
+  `%APPDATA%\tfc\config.json` on Windows, `~/.config/tfc/config.json` on macOS/Linux, see `cli/lib/config.mjs`; base on
+  the current snapshot, `tfc admin updates` to see status); the host pulls and approves.
+- Site tasks/plans/guides/datapacks → its write tools (signed with `TFC_AGENT_NICK` or the detected agent, with
+  `baseRevision`), not ad-hoc scripts. Site-content tools cost Firestore reads — don't loop them.
+- A needed tool is missing or answers wrongly, and you had to fall back to grep/unzip/a script → finish the current task
+  by the workaround, then propose a separate session (own worktree, branch `feat/mcp-<short>`) to add the tool per
+  [Adding a tool](#adding-a-tool); in the brief say what you looked for, the workaround, and the desired answer. Bigger
+  things — [plans/mcp-next.md](plans/mcp-next.md).
+
 ## Tools
 
 73 in total. Asterisk — required parameter. Lists have `limit` and `offset`; the answer says «дальше: offset=…».
@@ -575,7 +601,7 @@ handler }]` and an import line in `tools.mjs` (the `TOOLS` list at the end). A t
    `config_propose` / `config_changes cancel=…` (own collection `configChanges`, host applies files). A new write needs
    the same protection against overwriting others.
 6. List the new tool in this file (with parameters); if it changes the agent's usual path (like `log_analyze` for
-   crashes) — also in `INSTRUCTIONS` in `tools.mjs` and the MCP paragraph of `AGENTS.md`.
+   crashes) — also in `INSTRUCTIONS` in `tools.mjs` and «Agent's usual path» above.
 
 ## What's next
 
