@@ -78,6 +78,9 @@ comments, commit messages, guides, MCP tool output. Keep Russian UI labels verba
   or `dev_check add=…`; `dev_update` no longer takes them. Closed tasks with the old format are read-only until reopened.
 - **Tracker reads and small edits:** search — `dev_find`; log pages — `dev_log`; small plan edits — `dev_doc_edit` and
   `dev_doc_append` instead of `dev_doc_put` with the whole text; a long plan — `dev_doc_get heading=…`.
+- **Tracker links:** tie work together with refs `#175`, `#175.3`, `doc:12#Раздел`, `note:881` — the server finds them in
+  texts itself (a ref that is only an example goes in backticks). Follow one — `dev_open`; explicit link — `dev_link`;
+  log entry or doc to a checklist item — field `item`.
 - Deploy only from clean `main` after the merge, never from a feature branch (use the dev server to check).
 - Commit message: `Раздел: что сделано`, one line; merge commit `Слияние feat/<short>: что сделано`. Co-author
   trailer — the one your harness uses.
