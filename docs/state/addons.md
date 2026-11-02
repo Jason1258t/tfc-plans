@@ -35,9 +35,9 @@ addon`, `formerIds` for ee_rectifier → ee_extras, rollback marked); `/updates`
 
 ## Destroy Bridge + Destroy Extras (`tools/destroy-bridge-mod`, `tools/destroy-extras-mod`)
 
-Dev #22, plans 37–38, **0.1.0 development prototypes only** (`unlisted`, no player release or dependency publishing).
-The owner selected the Destroy hybrid: Destroy owns molecules/mixtures/reactions, Bridge owns only the TFC/EE/Create
-boundary, Extras will own missing machines, and PCBs stay in EE Extras. The owner moved the compact EE process from
+Dev #22, plans 37–38. Destroy Bridge remains the 0.1.0 development dependency; **Destroy Extras 0.2.0 and EE Extras
+2.6.0 are the released M6 vertical slice**. The owner selected the Destroy hybrid: Destroy owns molecules/mixtures/reactions,
+Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and PCBs stay in EE Extras. The owner moved the compact EE process from
 240 V to **300 V / 8 A** (37.5 Ω, working zone 270–330 V) on 2026-10-31.
 
 - M0: JDK 21 / NeoForge 21.1.251 projects, exact pack jars plus Destroy 0.4.6-eligibbs and Petrolpark 1.5.11 with
@@ -95,8 +95,17 @@ boundary, Extras will own missing machines, and PCBs stay in EE Extras. The owne
   EMI/Jemi and Ponder: both recipe categories open with recipes in JEI and EMI, and the industrial Ponder opens with
   Russian text. Full-pack production boot passes on NeoForge 21.1.251 with 230 mods: KubeJS startup 6/6 and server 84/84,
   zero script errors; remaining recipe/loot/client-class errors are the known baseline, not M5 regressions.
-- Not done: M6, site audit, real old-world migration and release. No addon version/card/guide/jar was published.
-  The `firebase-tools/lib/auth` lookup error that blocked site datapack loading is fixed (dev #183).
+- M6 adds the installable site datapack `Destroy — Survival-цепочка M6` (`yyMKqD6lIHRQreNWHw6q`) with five recipes:
+  electrolyzer, membrane, bath, L1 blank and L1 mask. Conflict audit is clean among 5389 shaped, 128 pressing,
+  73 compacting and 1994 shapeless recipes. The bath now has dedicated pure-HCl (south) and water (east) tanks; every
+  tick the Bridge atomically converts 25 + 250 mB into 275 mB of stock mixture. North remains spent output and the
+  remaining sides the FeCl3 input. No new fluids or molecules.
+- M6 checks: recipes 6/6 and absorption 6/6; real old-code/old-world migrations preserve M2 state 6/6 and M4 tanks,
+  items and topology 5/5. M2–M5 regression, minimal/thermal/sable, automated real client/JEI/EMI/Ponder and full-pack
+  boot pass. Full pack: 230 mods, NeoForge 21.1.251, startup 6/6, server 84/84; known baseline errors remain.
+- Released Destroy Extras 0.2.0 and EE Extras 2.6.0 with jars, changelogs, cards, icons and `addon-destroy-extras` /
+  `addon-ee-extras` guides; both `addon_check` reports are clean. Manual player-driven Survival playthrough remains
+  unverified; later #22 milestones have not started.
 
 ## EE Extras (`tools/ee-extras-mod`)
 
