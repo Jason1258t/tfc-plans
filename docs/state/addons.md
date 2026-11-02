@@ -77,9 +77,26 @@ boundary, Extras will own missing machines, and PCBs stay in EE Extras. The owne
 - Dedicated-server M4 results: environment 6/6; devtest and real L1 cycles 10/10 each; blocked output 3/3; insufficient
   Fe(III) 2/2; break/replacement 6/6; restart 5/5 at 100 ticks followed by a completed L1 cycle 10/10. M2 normal/ports
   and all M3 regression scenarios still pass. Both addons build; resource and model checks pass. Client/JEI not launched.
-- Not done: M5/M6, client/JEI/EMI runtime, full pack/site audit, real old-world migration and load tests.
-  Petrolpark's optional JEI integration targets a newer JEI than the pack's 19.44.0.401; client compatibility remains
-  unresolved. The `firebase-tools/lib/auth` lookup error that blocked site datapack loading is fixed (dev #183).
+- M5: the electrolyzer is now a 3×3×2 industrial assembly of Create fluid tanks and copper casing with the controller
+  and a real mechanical pump (≥16 RPM) in the divider. Structure and recipe checks run once per 20 ticks; goggles expose
+  status, power, structure and pump speed. Breaking and repairing the assembly stops/resumes safely, and controller loot
+  retains the complete block-entity state. A Create mixer above the etching bath (≥16 RPM) shortens L1 from 400 to 200
+  ticks. The approved chemistry, fluids and mole balances are unchanged.
+- M5 dedicated-server results: shell/RPM 4/4, RPM boundaries 4/4, break/repair 3/3 and controller break 6/6; minimal
+  production batch 3/3; thermal M5 3/3 plus mixed etching 11/11. Sable assembly passes 6/6: EE, Create rotation, tanks,
+  membrane and production survive the move to a plot. (`shatter` creates sub-levels rather than restoring the original
+  world assembly, so it is not an inverse-placement check.)
+- M5 load, three 200-second segments with two restarts each: 8 units — 20.018 TPS, MSPT mean/p50/p95
+  0.637/0.345/1.453 ms, 472 batches (59 each), 968 status-transition syncs and 641400 NBT bytes; 32 units — 20.008 TPS,
+  1.027/0.512/2.247 ms, 1920 batches (60 each), 3840 syncs and 2544160 NBT bytes. Both retain ≥299.752 V and ≤7.993 A;
+  no membrane replacement was needed. Sync figures are server transition counts and update-tag NBT payload sizes, not
+  measured client network packets (RCON, no players).
+- Real dev client passes with JEI 19.56.0.441 (required by Petrolpark 1.5.11, instead of the incompatible pack JEI),
+  EMI/Jemi and Ponder: both recipe categories open with recipes in JEI and EMI, and the industrial Ponder opens with
+  Russian text. Full-pack production boot passes on NeoForge 21.1.251 with 230 mods: KubeJS startup 6/6 and server 84/84,
+  zero script errors; remaining recipe/loot/client-class errors are the known baseline, not M5 regressions.
+- Not done: M6, site audit, real old-world migration and release. No addon version/card/guide/jar was published.
+  The `firebase-tools/lib/auth` lookup error that blocked site datapack loading is fixed (dev #183).
 
 ## EE Extras (`tools/ee-extras-mod`)
 
