@@ -8,6 +8,7 @@ import { NICK } from '../mcp/env.mjs';
 import { packServer } from '../pack-fetch.mjs';
 import { logTools, noteLine } from './devlog.mjs';
 import { taskFiles, devFileGet } from './files.mjs';
+import { checkTools } from './devchecks.mjs';
 
 const SITE = 'https://tfc-plans-fd2c.web.app/dev';
 
@@ -65,8 +66,16 @@ function full({ task: t, notes, noteCount, docs }, reports = []) {
     `rev: ${t.rev} · ${SITE}?task=${t.id}`,
   ];
   if (t.body) out.push('', t.body);
-  if (t.checklist.length)
-    out.push('', 'Чек-лист:', ...t.checklist.map((c, i) => `${i + 1}. [${c.done ? 'x' : ' '}] ${c.text}`));
+  if (t.checklist.length) {
+    const done = t.checklist.filter((c) => c.done).length;
+    out.push(
+      '',
+      t.checklistLegacy
+        ? `Чек-лист ${done}/${t.checklist.length} (старый формат закрытой задачи, только чтение):`
+        : `Чек-лист ${done}/${t.checklist.length} (номера для dev_check, не сдвигаются):`,
+      ...t.checklist.map((c) => `${c.num ?? '—'}. [${c.done ? 'x' : ' '}] ${c.text}`),
+    );
+  }
   if (docs.length) out.push('', 'Планы:', ...docs.map((d) => `- ${d.id} «${d.title}» (${d.size} симв., rev ${d.rev})`));
   const older = reports.filter((r) => !notes.some((n) => n.id === r.id));
   if (older.length) out.push('', 'Отчёты:', ...older.map((n) => noteLine(n)));
@@ -78,7 +87,7 @@ function full({ task: t, notes, noteCount, docs }, reports = []) {
   return out.join('\n');
 }
 
-/** Поля задачи из аргументов: checklist — строки или { text, done } */
+/** Поля задачи из аргументов: checklist — только при создании, потом пункты правит dev_check */
 function fields(a) {
   const f = {};
   for (const k of ['title', 'body', 'kind', 'area', 'status', 'priority', 'assignee', 'branch', 'checklist', 'note'])
@@ -165,7 +174,6 @@ const TASK_PROPS = {
   priority: int('0 low … 3 urgent (default 1)'),
   assignee: str(`agent/person nick; "me" = you (${NICK}); "-" clears`),
   branch: str('git branch, e.g. feat/dev-tracker; "-" clears'),
-  checklist: { type: 'array', items: {}, description: 'strings or { text, done }; replaces the whole checklist' },
   note: str('work-log entry added with this change'),
 };
 
@@ -214,17 +222,30 @@ export const DEV_TOOLS = [
   {
     name: 'dev_create',
     description: `Write: new dev task signed ${NICK}. Start of work — status "doing", assignee "me" (= ${NICK}), branch.`,
-    inputSchema: { type: 'object', properties: TASK_PROPS, required: ['title'] },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        ...TASK_PROPS,
+        checklist: { type: 'array', items: {}, description: 'initial items: strings or { text, done }' },
+      },
+      required: ['title'],
+    },
     handler: devCreate,
   },
   {
     name: 'dev_update',
     description:
-      'Write: change passed fields (baseRev from dev_get/dev_create; refuses if changed since). A status change logs itself. report — final Russian report into the log (what changed for players, what was checked, what not).',
+      'Write: change passed fields. baseRev from dev_get is required with title or body, optional otherwise; refuses if changed since. A status change logs itself. For routine steps use dev_start, dev_check, dev_finish.',
+    hint: 'Пункты чек-листа — dev_check.',
     inputSchema: {
       type: 'object',
-      properties: { id: int('task number'), baseRev: int('rev'), ...TASK_PROPS, report: str('final report entry') },
-      required: ['id', 'baseRev'],
+      properties: {
+        id: int('task number'),
+        baseRev: int('rev, required with title or body'),
+        ...TASK_PROPS,
+        report: str('final report entry'),
+      },
+      required: ['id'],
     },
     handler: devUpdate,
   },
@@ -254,5 +275,6 @@ export const DEV_TOOLS = [
     },
     handler: devDocPut,
   },
+  ...checkTools({ api, line }),
   ...logTools(api),
 ];

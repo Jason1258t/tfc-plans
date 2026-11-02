@@ -113,7 +113,7 @@ function docRef(id, outline, line) {
  * Маршруты журнала и документов. deps — то, что живёт в openDev: база, чтение задачи и документа, вид записи и
  * документа в ответе, предел размера документа и журнала.
  */
-export function devLogRoutes({ db, getTask, getDoc, noteOut, docOut, limits }) {
+export function devLogRoutes({ db, getTask, getDoc, noteOut, docOut, limits, checkTexts }) {
   const q = {
     notes: db.prepare('select * from notes where task_id = ? order by id desc'),
     allNotes: db.prepare(
@@ -162,9 +162,7 @@ export function devLogRoutes({ db, getTask, getDoc, noteOut, docOut, limits }) {
 
     if (want('task'))
       for (const t of q.allTasks.all()) {
-        const checks = JSON.parse(t.checklist)
-          .map((c) => c.text)
-          .join('\n');
+        const checks = checkTexts(t).join('\n');
         const hay = `#${t.id} ${t.title}\n${t.body}\n${t.branch ?? ''}\n${checks}`;
         const f = fold(hay);
         if (!m.every(f)) continue;

@@ -36,6 +36,7 @@
  *   POST   /admin/changes/:id       — { status: applied|rejected, results, updateTime } admin
  *   /dev/…                           — задачи разработки (SQLite, lib/dev.mjs): ключ любой роли или вход сайта
  *     GET|POST /dev/tasks, GET|PATCH|DELETE /dev/tasks/:id, POST /dev/tasks/:id/notes,
+ *     POST /dev/tasks/:id/checks | start | finish (без baseRev),
  *     GET|POST /dev/docs, GET|PATCH|DELETE /dev/docs/:id, GET /dev/meta, POST /dev/import (admin),
  *     журнал и документы (lib/dev-log.mjs): GET /dev/tasks/:id/notes, GET /dev/find, GET /dev/docs/:id/read,
  *     POST /dev/docs/:id/edit, POST /dev/docs/:id/append

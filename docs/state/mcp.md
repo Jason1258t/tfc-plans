@@ -150,3 +150,8 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   docs; JS scan, no dependencies: 3000 entries + 30 docs in about 30 ms), `dev_doc_edit`, `dev_doc_append`, `dev_doc_list`,
   `dev_doc_get heading` + outline; `dev_get` compact (5 entries, all reports, `note:<id>`). Unknown fields are errors. Verified on a
   temporary `openDev` copy through the real MCP server, then live on #193.
+- **2026-11-02, dev checklists** (dev #192): checklist items moved to the `checks` table with stable per-task numbers
+  (`server/pack-server/lib/dev-checks.mjs`); new tools `dev_check`, `dev_start`, `dev_finish` need no `baseRev`; the
+  `tfc-plans-dev` dispatcher rejects unknown arguments. Open tasks migrated on server start (snapshot
+  `dev-backup/dev-before-checks-*.db`); closed ones keep the JSON, read-only, and migrate on reopen or a `dev_check`.
+  `PATCH checklist` stays for stale clients, matching by `num` or text so marks survive.

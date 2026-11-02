@@ -66,17 +66,16 @@ comments, commit messages, guides, MCP tool output. Keep Russian UI labels verba
   branch changed files fail `oxlint` or `prettier --check`; CI (`.github/workflows/ci.yml`) repeats `oxlint`, `tsc` and a changed-file `prettier --check` on every push to `main`.
 - **Work log — dev tracker on the pack server** (site page «Разработка» `/dev`, MCP `tfc-plans-dev` `dev_*`; not
   Firestore — zero reads, [docs/plans/dev-tracker.md](docs/plans/dev-tracker.md)): at the start find the task
-  (`dev_list query=…`) or create one (`dev_create`, kind `fix` for fixes), set `doing` + assignee = **your own agent
-  name** (= `TFC_AGENT_NICK`, or just `assignee: "me"`; never `Claude` unless you are Claude — `Codex`, `Gemini`, `Cursor`, `DeepSeek`…; see
-  [docs/agents.md](docs/agents.md)) + `branch`; progress — `dev_note`; at the end — `dev_update status=done
-report=…`: a short Russian report — what changed for players, what was checked, what wasn't. Plan docs —
+  (`dev_list query=…`) or create one (`dev_create`, kind `fix` for fixes), then `dev_start id branch=…` (status `doing`,
+  assignee = **your own agent name**, signed from `TFC_AGENT_NICK`; see [docs/agents.md](docs/agents.md)); progress —
+  `dev_note`; at the end — `dev_finish id report=…`: a short Russian report — what changed for players, what was checked, what wasn't. Plan docs —
   `dev_doc_put`. A task already `doing` under another agent — don't take it, ask the user. Found a separate problem
   along the way — a new dev task. Players' tasks and pack plans (update/integration plans) stay on the site
   (`tfc-pack` `task_*`).
-- **Dev checklist progress is structured data:** pass checklist items as `{ text, done }`, never as strings containing
-  `[x]` / `[ ]`; `text` is only the label. Immediately after each verified milestone set its `done=true` with the current
-  `baseRev`, preserve every other item, then confirm the checkboxes and progress with `dev_get`. A journal note alone does
-  not mark anything complete.
+- **Dev checklist items have stable numbers** (`#175.3`), shown by `dev_get`. Change them with `dev_check id done=[2,3]`
+  (also `undone`, `add`, `remove`, `edit`, `move`) — no `baseRev`, nothing else in the task changes. Mark an item right
+  after its milestone is verified; a journal note alone marks nothing. Items are created with `dev_create checklist=…`
+  or `dev_check add=…`; `dev_update` no longer takes them. Closed tasks with the old format are read-only until reopened.
 - Deploy only from clean `main` after the merge, never from a feature branch (use the dev server to check).
 - Commit message: `Раздел: что сделано`, one line; merge commit `Слияние feat/<short>: что сделано`. Co-author
   trailer — the one your harness uses.
