@@ -120,6 +120,19 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
   Destroy JEI discovery and EMI display are supplied only by a devtest plugin and a test Jemi adapter, not by the release
   jar. Full-pack boot on NeoForge 21.1.251 loads the datapack and 20712 recipes without parse errors in the new files;
   known pack baseline errors remain. No manual Survival playthrough or pack-wide datapack confirmation was performed.
+- M8 (only #22 checklist item 12) adds the installable site datapack `Destroy — азотная кислота на никеле`
+  (`o7S7tKNgJ18FBdlQBumG`) with one stock Destroy reaction, `tfc_plans:ostwald_process_nickel`. It preserves the faster
+  rhodium Ostwald reaction and adds `#c:dusts/nickel` (including IE nickel dust) at preexponential factor 1000 versus 10000. Catalysts are not consumed. No production code, addon version, items, fluids, blocks or machines changed.
+- Jar audit: an open Vat vent supplies 78.084% N2 + 21.916% O2 without an air-separation machine; sulfur oxidation,
+  platinum-catalysed contact process (not zeolite), SO3 hydration and iron-catalysed Haber are already stock Destroy.
+  AFC latex + TFC sulfur already makes rubber bars, and EE already uses them for insulated/heavily insulated wires, so
+  no rubber recipe changes were needed. Plan 29's zeolite/extra-machine assumptions do not match the candidate jar.
+- M8 dedicated-server checks pass in minimal and thermal: air 2/2, sulfur at 750 K 3/3, contact at 700 K 4/4,
+  hydration 3/3, Haber at 700 K 4/4, rhodium and nickel Ostwald at 400 K 4/4 each (nickel in thermal), no-catalyst
+  controls and restart. M2–M7 regressions, build, devtest compilation and resource checks pass. Destroy phase changes
+  cause numerical mole drift: contact allows 5%, Ostwald is compared with a same-phase no-catalyst control, and restart
+  compares restored substance amounts rather than exact temperature components. No manual Survival playthrough or
+  pack-wide datapack confirmation was performed.
 
 ## EE Extras (`tools/ee-extras-mod`)
 
