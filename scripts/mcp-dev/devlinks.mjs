@@ -25,7 +25,8 @@ export function linksBlock(links) {
 
 function linkedBlock({ out, in: inc }) {
   const lines = [];
-  if (out.length) lines.push('', 'Ссылается на:', ...out.map((l) => `- ${l.source.ref} ${KIND_RU[l.kind]} ${shown(l.target)}`));
+  if (out.length)
+    lines.push('', 'Ссылается на:', ...out.map((l) => `- ${l.source.ref} ${KIND_RU[l.kind]} ${shown(l.target)}`));
   if (inc.length)
     lines.push('', 'Обратные связи:', ...inc.map((l) => `- ${KIND_BACK[l.kind]} ${shown(l.source)} → ${l.target.ref}`));
   if (!lines.length) lines.push('', 'Связей нет.');
