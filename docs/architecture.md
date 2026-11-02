@@ -24,6 +24,19 @@ lost 47 site files on 2026-10-23); `npm run deploy:site` (`deploy-site.mjs`) kee
 --if-older 6h --soft` (network or key problems only warn). `CURSE_FORGE_API_KEY` in `.env.local` (no `VITE_` — never
 in the bundle).
 
+## Packages (npm workspaces, dev task #138)
+
+Table of packages — AGENTS.md. Each has its own `package.json` (own dependencies) and may later become its own repo
+(`git subtree split --prefix=<folder>`, as was done for addons).
+
+- Another package's code — only as `@tfc/<package>/<module>`, by `exports` in its `package.json`: core `./src/*.ts`,
+  scripts `./*.mjs`, cli and pack-server `./lib/*.mjs`. A new external dependency goes into the `package.json` of the
+  package that imports it (the site's — the root one).
+- Check: `npm run boundaries` (`scripts/repo-boundaries.mjs`; also run by CI and the `ship` tool).
+- A deliberate exception — comment `граница-ок: <почему>` on or above the import line (now: pack-server `worker.mjs` →
+  scripts, file-server `auth.mjs` → pack-server; both because the servers are installed on the VPS by copying a folder,
+  without npm).
+
 ## Data: where it comes from
 
 Scripts are organised **by the source they parse**, not by site section: `scripts/mods.mjs` (+ parts in
