@@ -185,6 +185,15 @@ Before 2.0 — EE Rectifiers, `ee_rectifier`; old blocks migrate to new ids via 
   (`rectest lanterns|lanternpower|lanternreport|lanterncut|lanternie`, `KEEP=1`): real click path, 230 V lit
   52.9 W, 30 V dark, 60 V AC lit, cut — IE lantern dropped and the tail dark, IE-wired refused, restart kept. Not in
   game: looks, light, flicker on a real generator.
+- **2.7** (2026-11-03; dev task #198): IE floodlight on the EE duplex cable (`ee_extras:floodlight`, click with the spool;
+  subclass of the IE block, IE block entity, `lantern/EeFloodlight*`; 440 Ω while lit, open otherwise; from 50 V; beam
+  rotation and redstone inversion kept; refused with IE wires; drops the IE floodlight) and `ee_extras:cable_converter`
+  (one duplex cable → FE into the block behind, chainable, same formulas as the bidirectional converter's charge half,
+  floor 20 Ω; recipe: EE converter + duplex termination). Dev server with IE (`rectest floods|floodpower|floodreport|
+floodoff|floodcut|floodie`, `KEEP=1`): 230 V lit 117–119 W, 30 V dark, no redstone no load, heater filled to
+  32000 FE then 0.01 W, capacitor charged at 2.6 kW, cut drops the IE floodlight and the tail goes dark, restart kept,
+  no IE loads. Real dev client (`test-client.sh`, 9 checks, screenshots): conversion by a real click, state and rotation
+  sync, IE model and beam. Not checked: IE multiblock power ports, an IE wire on a converted floodlight, computers.
 - **2.5.1** (2026-10-29; dev task #142): grid inverters (2.2) rebuilt on `ac/Meter` + `ac/Sine` — the 2.2 sync read
   `getVoltageAt` (rms, unsigned at the pack's microTicks = 8) and set the EMF once per tick, so it never locked on the
   server. Now: GRID follows the measured phase (`predict(0)`, signed step — any phase order), ISLAND 1 Hz (3-phase with
