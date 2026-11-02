@@ -146,3 +146,8 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   script download used for #166 stage checks. Verified over stdio: all 26 844 variant states of minecraft + tfc → ✓,
   wrong value / combination / missing block → ✗, waterlogged/natural → note, glass pane parts, missing mod → «нет
   данных», bad input → error; both sources (TFC_PUBLIC_DIR copy and the site).
+- **2026-11-02, dev checklists** (dev #192): checklist items moved to the `checks` table with stable per-task numbers
+  (`server/pack-server/lib/dev-checks.mjs`); new tools `dev_check`, `dev_start`, `dev_finish` need no `baseRev`; the
+  `tfc-plans-dev` dispatcher rejects unknown arguments. Open tasks migrated on server start (snapshot
+  `dev-backup/dev-before-checks-*.db`); closed ones keep the JSON, read-only, and migrate on reopen or a `dev_check`.
+  `PATCH checklist` stays for stale clients, matching by `num` or text so marks survive.

@@ -11,15 +11,17 @@ The workflow is in AGENTS.md. This skill drives it with **`tfc-plans-dev`**: wor
 ## 1. Start
 
 - `tfc-plans-dev` `git_state` — main clean, on `main`, in sync with `origin/main`.
-- `dev_list query=<words>` / `dev_create` — take or create the task (kind `fix` for fixes), then `dev_update` with
-  `baseRev`: status `doing`, assignee = your agent name (`TFC_AGENT_NICK`; `"me"` works), `branch`.
+- `dev_list query=<words>` / `dev_create` — take or create the task (kind `fix` for fixes), then
+  `dev_start id=<id> branch=<branch>`: status `doing`, assignee = you. It refuses a task another agent is working on —
+  ask the user, don't pass `takeover` on your own.
 - `tfc-plans-dev` `worktree_add name=<short>` (type `feat`/`refactor`/`fix`, default `feat`) → worktree
   `.claude/worktrees/<short>`, branch `<type>/<short>`. Work only inside it.
 
 ## 2. Work
 
 - Edit and verify (the relevant skill or MCP tools). Never touch the main checkout; do not take another agent’s task.
-- Milestones and findings — `dev_note`; a bigger plan — `dev_doc_put task=<id>`.
+- Verified milestone — `dev_check id=<id> done=[<item numbers>]`, numbers from `dev_get`; they never shift.
+- Findings — `dev_note`; a bigger plan — `dev_doc_put task=<id>`.
 
 ## 3. Finish
 
@@ -28,5 +30,5 @@ The workflow is in AGENTS.md. This skill drives it with **`tfc-plans-dev`**: wor
 - `tfc-plans-dev` `commit worktree=<short> message="Раздел: что сделано"` (one line, Russian).
 - Skill `ship` — `tfc-plans-dev` `ship worktree=<short>` for the preview, then `confirm=true`; it merges `--no-ff`,
   pushes `origin/main`, removes the worktree and branch. (Deploy needed → ship skill’s raw steps.)
-- `dev_get` → `dev_update id=<id> baseRev=<rev> status=done report="…"` — short Russian report: what changed for
+- `dev_finish id=<id> report="…"` — short Russian report: what changed for
   players, what was checked, what wasn’t (in game — never).

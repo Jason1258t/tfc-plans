@@ -30,6 +30,13 @@ async function handle(req) {
       if (!tool) throw Object.assign(new Error(`нет инструмента ${req.params?.name}`), { code: -32602 });
       const t0 = Date.now();
       try {
+        // Неизвестный аргумент — ошибка: иначе агент думает, что отметил пункт, а его поле просто отброшено
+        const known = Object.keys(tool.inputSchema?.properties ?? {});
+        const extra = Object.keys(req.params.arguments ?? {}).filter((k) => !known.includes(k));
+        if (extra.length)
+          throw new Error(
+            `неизвестные аргументы: ${extra.join(', ')}. Можно: ${known.join(', ')}.${tool.hint ? ` ${tool.hint}` : ''}`,
+          );
         const r = await tool.handler(req.params.arguments ?? {});
         const text = typeof r === 'string' ? r : String(r.text ?? '');
         console.error(`[tfc-plans-dev] ${tool.name} ${Date.now() - t0} мс`);

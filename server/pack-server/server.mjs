@@ -36,6 +36,7 @@
  *   POST   /admin/changes/:id       — { status: applied|rejected, results, updateTime } admin
  *   /dev/…                           — задачи разработки (SQLite, lib/dev.mjs): ключ любой роли или вход сайта
  *     GET|POST /dev/tasks, GET|PATCH|DELETE /dev/tasks/:id, POST /dev/tasks/:id/notes,
+ *     POST /dev/tasks/:id/checks | start | finish (без baseRev),
  *     GET|POST /dev/docs, GET|PATCH|DELETE /dev/docs/:id, GET /dev/meta, POST /dev/import (admin)
  */
 import fs from 'node:fs';

@@ -483,14 +483,17 @@ Development tasks and the agents' work log live on the pack server (SQLite, `/de
 Site page — «Разработка» (`/dev`). Connection — the `tfc` key (`TFC_PACK_URL`/`TFC_PACK_TOKEN`, `.env.local` or `tfc
 login`); writes signed with `TFC_AGENT_NICK`. Plan — [plans/dev-tracker.md](plans/dev-tracker.md).
 
-| Tool                                                                                        | What it does                                                                                                        |
-| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `dev_list(query, status, kind, area, assignee, all, limit, offset)`                         | open tasks by default (backlog/todo/doing/review), in-progress and important first; `#id`, status, branch, notes    |
-| `dev_get(id*, notes)`                                                                       | whole task: description, checklist, plan docs, last log entries, `rev`                                              |
-| `dev_create(title*, body, kind, area, status, priority, assignee, branch, checklist, note)` | **write**: new task                                                                                                 |
-| `dev_update(id*, baseRev*, …fields, note, report)`                                          | **write**: passed fields only; 409 if changed since `dev_get`; a status change logs itself; `report` — final report |
-| `dev_note(id*, text*, report)`                                                              | **write**: append a log entry (no rev)                                                                              |
-| `dev_doc_get(id*, offset, limit)` / `dev_doc_put(id, baseRev, title, content, task)`        | plan docs by lines / **write** (without `id` — new)                                                                 |
+| Tool                                                                                        | What it does                                                                                                                                            |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dev_list(query, status, kind, area, assignee, all, limit, offset)`                         | open tasks by default (backlog/todo/doing/review), in-progress and important first; `#id`, status, branch, notes                                        |
+| `dev_get(id*, notes)`                                                                       | whole task: description, checklist, plan docs, last log entries, `rev`                                                                                  |
+| `dev_create(title*, body, kind, area, status, priority, assignee, branch, checklist, note)` | **write**: new task                                                                                                                                     |
+| `dev_update(id*, baseRev, …fields, note, report)`                                           | **write**: passed fields only, not checklist items; `baseRev` required with `title`/`body`; 409 if changed since `dev_get`; a status change logs itself |
+| `dev_start(id*, branch, reopen, takeover, note)`                                            | **write**: status `doing`, assignee = you, branch; no `baseRev`; refuses another agent's task and a closed one                                          |
+| `dev_check(id*, done, undone, add, remove, edit, move, note)`                               | **write**: checklist items by stable number, all or nothing; no `baseRev`, task `rev` unchanged; unknown arguments are errors                           |
+| `dev_finish(id*, report*, status, takeover)`                                                | **write**: close with a report; no `baseRev`; lists items still open                                                                                    |
+| `dev_note(id*, text*, report)`                                                              | **write**: append a log entry (no rev)                                                                                                                  |
+| `dev_doc_get(id*, offset, limit)` / `dev_doc_put(id, baseRev, title, content, task)`        | plan docs by lines / **write** (without `id` — new)                                                                                                     |
 
 Kinds `feature|fix|refactor|docs|infra|idea`, areas `site|mcp|addon|server|pack|app|agents`, statuses
 `backlog|todo|doing|review|done|dropped`. Old tasks from groups «Разработка»/«Фиксы» — `node scripts/dev-migrate.mjs`
