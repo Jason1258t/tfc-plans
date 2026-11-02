@@ -146,3 +146,7 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   script download used for #166 stage checks. Verified over stdio: all 26 844 variant states of minecraft + tfc → ✓,
   wrong value / combination / missing block → ✗, waterlogged/natural → note, glass pane parts, missing mod → «нет
   данных», bad input → error; both sources (TFC_PUBLIC_DIR copy and the site).
+- Dev #193 (2026-11-02): tracker log and docs without whole-text round trips — `dev_log` (pages, filters), `dev_find` (tasks, log,
+  docs; JS scan, no dependencies: 3000 entries + 30 docs in about 30 ms), `dev_doc_edit`, `dev_doc_append`, `dev_doc_list`,
+  `dev_doc_get heading` + outline; `dev_get` compact (5 entries, all reports, `note:<id>`). Unknown fields are errors. Verified on a
+  temporary `openDev` copy through the real MCP server, then live on #193.
