@@ -133,6 +133,17 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
   cause numerical mole drift: contact allows 5%, Ostwald is compared with a same-phase no-catalyst control, and restart
   compares restored substance amounts rather than exact temperature components. No manual Survival playthrough or
   pack-wide datapack confirmation was performed.
+- M9 (only #22 checklist item 13) adds the installable site datapack `Destroy — нефтехимия и полимеры`
+  (`7IHNTyYMc046lNeC0anS`) with two tags and five Create/EE consumer recipes. Stock Destroy distillation, styrene/cumene
+  chemistry and Vat precipitation produce PE, PP, PVC and SBR; no production code, machines, molecules, fluids, items or
+  addon versions changed. SBR joins `#tfc:rubber`; all four polymers join `#tfc:insulation`; AFC entries are optional.
+  Create belts/hose pulley use rubber and both EE insulated wires use insulation. Fuel fractions and epoxy are out of this
+  slice. IE keeps only its existing acetaldehyde + creosote phenolic-resin route because stock Destroy mixtures cannot be
+  passed losslessly into IE Refinery by plain JSON.
+- M9 dedicated-server checks pass in minimal and thermal: stock chemistry 9/9, consumers 11/11, each polymer 2/2,
+  no-AIBN control 2/2, styrene and cumene 2/2 each. The fixture fills the 27 000 mB Vat: a single bucket dilutes the
+  reaction below Destroy's synchronization threshold and does not produce a reliable assertion. No manual Survival
+  playthrough or pack-wide datapack confirmation was performed.
 
 ## EE Extras (`tools/ee-extras-mod`)
 
