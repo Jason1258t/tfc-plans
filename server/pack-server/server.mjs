@@ -39,7 +39,8 @@
  *     POST /dev/tasks/:id/checks | start | finish (без baseRev),
  *     GET|POST /dev/docs, GET|PATCH|DELETE /dev/docs/:id, GET /dev/meta, POST /dev/import (admin),
  *     журнал и документы (lib/dev-log.mjs): GET /dev/tasks/:id/notes, GET /dev/find, GET /dev/docs/:id/read,
- *     POST /dev/docs/:id/edit, POST /dev/docs/:id/append
+ *     POST /dev/docs/:id/edit, POST /dev/docs/:id/append,
+ *     GET /dev/open?ref=, POST|DELETE /dev/links
  */
 import fs from 'node:fs';
 import http from 'node:http';

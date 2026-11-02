@@ -492,18 +492,25 @@ login`); writes signed with `TFC_AGENT_NICK`. Plan — [plans/dev-tracker.md](pl
 | `dev_start(id*, branch, reopen, takeover, note)`                                            | **write**: status `doing`, assignee = you, branch; no `baseRev`; refuses another agent's task and a closed one                                                                  |
 | `dev_check(id*, done, undone, add, remove, edit, move, note)`                               | **write**: checklist items by stable number, all or nothing; no `baseRev`, task `rev` unchanged; unknown arguments are errors                                                   |
 | `dev_finish(id*, report*, status, takeover)`                                                | **write**: close with a report; no `baseRev`; lists items still open                                                                                                            |
-| `dev_note(id*, text*, report)`                                                              | **write**: append a log entry (no rev)                                                                                                                                          |
+| `dev_note(id*, text*, report, item)`                                                        | **write**: append a log entry (no rev)                                                                                                                                          |
 | `dev_log(id*, before, limit, kind, query)`                                                  | log page, whole texts, `note:<id>`; older page — `before=<id>` from the footer; `kind` — `note,status,report`, `query` — words in the text                                      |
 | `dev_find(query*, kinds, limit)`                                                            | search tasks (with checklist), log (without status changes) and docs at once: all words, case and ё ignored; each hit — link (`#175`, `note:881`, `doc:12#Section`) and excerpt |
 | `dev_doc_list(task, query)`                                                                 | plan docs: of a task (`-` — without one), words in title or text                                                                                                                |
 | `dev_doc_get(id*, heading, offset, limit)`                                                  | plan doc: outline with line numbers (from 1), `rev`, lines (offset from 0); `heading` — one section with subsections, offset/limit count inside it                              |
 | `dev_doc_edit(id*, old*, new*)`                                                             | **write**: replace one fragment, no rev; not found or several occurrences — error saying where                                                                                  |
 | `dev_doc_append(id*, text*, heading)`                                                       | **write**: add to the end of the doc or section (before the next heading of the same or higher level), no rev                                                                   |
-| `dev_doc_put(id, baseRev, title, content, task)`                                            | **write**: whole doc, without `id` — new; with `id` — `baseRev` required                                                                                                        |
+| `dev_doc_put(id, baseRev, title, content, task, item)`                                      | **write**: whole doc, without `id` — new; with `id` — `baseRev` required                                                                                                        |
+| `dev_open(ref*)` / `dev_link(from*, to*, kind)` / `dev_unlink(from*, to*, kind)`            | open by ref with incoming and outgoing links / **write**: explicit `related` or `blocks` link                                                                                   |
 
 Sections are addressed by heading text (case ignored); several equal headings — an error with the list. The new tools
 and `dev_doc_get` refuse unknown fields with a hint, on the server too. Server code — `server/pack-server/lib/dev-log.mjs`,
 tools — `scripts/mcp-dev/devlog.mjs`.
+
+Refs in task descriptions, checklist items, log entries and docs: `#175`, `#175.3`, `doc:12`, `doc:12#Раздел`,
+`note:881` (not inside code, URLs or markdown links). The server indexes them on write into the `links` table
+(`server/pack-server/lib/dev-refs.mjs` — the only parser, the site imports it too; `dev-links.mjs` — table and routes).
+A ref to something missing never fails a write and shows as broken. `item` links a log entry or doc to a checklist item;
+`dev_link` also relates a doc to more tasks (`docs.task_id` stays the main one). `dev_get` shows a short links block.
 
 Kinds `feature|fix|refactor|docs|infra|idea`, areas `site|mcp|addon|server|pack|app|agents`, statuses
 `backlog|todo|doing|review|done|dropped`. Old tasks from groups «Разработка»/«Фиксы» — `node scripts/dev-migrate.mjs`

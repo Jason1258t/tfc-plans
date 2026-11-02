@@ -1,14 +1,26 @@
-import { useEffect, useState } from 'react';
+import { docHeadings, matchSection } from '@tfc/pack-server/dev-refs';
+import { useEffect, useRef, useState } from 'react';
 import { MarkdownField } from '@/components/MarkdownField';
-import { Markdown } from '@/components/Markdown';
 import { useNick } from '@/entities/user';
 import { timeAgo } from '@/shared/lib';
 import { Button, ErrorBox, Input, Modal } from '@/shared/ui';
 import { DevError, devApi, type DevDoc } from '../model/api';
+import { DevMarkdown } from './DevMarkdown';
 import styles from './DevTaskDialog/DevTaskDialog.module.css';
 
 /** План задачи разработки: просмотр markdown и правка целиком (последняя запись не затирает чужую — rev) */
-export function DevDocDialog({ id, onClose }: { id: number; onClose: () => void }) {
+export function DevDocDialog({
+  id,
+  section,
+  onOpenRef,
+  onClose,
+}: {
+  id: number;
+  /** Раздел из ссылки doc:12#Раздел: прокрутить к нему */
+  section?: string | null;
+  onOpenRef: (ref: string) => void;
+  onClose: () => void;
+}) {
   const nick = useNick();
   const [doc, setDoc] = useState<DevDoc | null>(null);
   const [edit, setEdit] = useState<{ title: string; content: string } | null>(null);
@@ -42,6 +54,15 @@ export function DevDocDialog({ id, onClose }: { id: number; onClose: () => void 
       setBusy(false);
     }
   };
+
+  const view = useRef<HTMLDivElement>(null);
+  const content = doc?.content;
+  useEffect(() => {
+    if (!section || !content) return;
+    const headings = docHeadings(content);
+    const hit = matchSection(headings, section)?.heading;
+    if (hit) view.current?.querySelectorAll('h1, h2, h3, h4, h5, h6')[headings.indexOf(hit)]?.scrollIntoView();
+  }, [section, content]);
 
   const dirty = !!doc && !!edit && (edit.title !== doc.title || edit.content !== (doc.content ?? ''));
 
@@ -97,7 +118,11 @@ export function DevDocDialog({ id, onClose }: { id: number; onClose: () => void 
           />
         </div>
       )}
-      {doc && !edit && <Markdown source={doc.content ?? ''} />}
+      {doc && !edit && (
+        <div ref={view}>
+          <DevMarkdown source={doc.content ?? ''} onOpenRef={onOpenRef} />
+        </div>
+      )}
     </Modal>
   );
 }
