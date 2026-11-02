@@ -483,14 +483,24 @@ Development tasks and the agents' work log live on the pack server (SQLite, `/de
 Site page — «Разработка» (`/dev`). Connection — the `tfc` key (`TFC_PACK_URL`/`TFC_PACK_TOKEN`, `.env.local` or `tfc
 login`); writes signed with `TFC_AGENT_NICK`. Plan — [plans/dev-tracker.md](plans/dev-tracker.md).
 
-| Tool                                                                                        | What it does                                                                                                        |
-| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `dev_list(query, status, kind, area, assignee, all, limit, offset)`                         | open tasks by default (backlog/todo/doing/review), in-progress and important first; `#id`, status, branch, notes    |
-| `dev_get(id*, notes)`                                                                       | whole task: description, checklist, plan docs, last log entries, `rev`                                              |
-| `dev_create(title*, body, kind, area, status, priority, assignee, branch, checklist, note)` | **write**: new task                                                                                                 |
-| `dev_update(id*, baseRev*, …fields, note, report)`                                          | **write**: passed fields only; 409 if changed since `dev_get`; a status change logs itself; `report` — final report |
-| `dev_note(id*, text*, report)`                                                              | **write**: append a log entry (no rev)                                                                              |
-| `dev_doc_get(id*, offset, limit)` / `dev_doc_put(id, baseRev, title, content, task)`        | plan docs by lines / **write** (without `id` — new)                                                                 |
+| Tool                                                                                        | What it does                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dev_list(query, status, kind, area, assignee, all, limit, offset)`                         | open tasks by default (backlog/todo/doing/review), in-progress and important first; `#id`, status, branch, notes                                                                |
+| `dev_get(id*, notes)`                                                                       | task: description, checklist, plan docs, all reports, last 5 log entries as `note:<id>` (long ones clipped; `notes` — how many), `rev`                                          |
+| `dev_create(title*, body, kind, area, status, priority, assignee, branch, checklist, note)` | **write**: new task                                                                                                                                                             |
+| `dev_update(id*, baseRev*, …fields, note, report)`                                          | **write**: passed fields only; 409 if changed since `dev_get`; a status change logs itself; `report` — final report                                                             |
+| `dev_note(id*, text*, report)`                                                              | **write**: append a log entry (no rev)                                                                                                                                          |
+| `dev_log(id*, before, limit, kind, query)`                                                  | log page, whole texts, `note:<id>`; older page — `before=<id>` from the footer; `kind` — `note,status,report`, `query` — words in the text                                      |
+| `dev_find(query*, kinds, limit)`                                                            | search tasks (with checklist), log (without status changes) and docs at once: all words, case and ё ignored; each hit — link (`#175`, `note:881`, `doc:12#Section`) and excerpt |
+| `dev_doc_list(task, query)`                                                                 | plan docs: of a task (`-` — without one), words in title or text                                                                                                                |
+| `dev_doc_get(id*, heading, offset, limit)`                                                  | plan doc: outline with line numbers (from 1), `rev`, lines (offset from 0); `heading` — one section with subsections, offset/limit count inside it                              |
+| `dev_doc_edit(id*, old*, new*)`                                                             | **write**: replace one fragment, no rev; not found or several occurrences — error saying where                                                                                  |
+| `dev_doc_append(id*, text*, heading)`                                                       | **write**: add to the end of the doc or section (before the next heading of the same or higher level), no rev                                                                   |
+| `dev_doc_put(id, baseRev, title, content, task)`                                            | **write**: whole doc, without `id` — new; with `id` — `baseRev` required                                                                                                        |
+
+Sections are addressed by heading text (case ignored); several equal headings — an error with the list. The new tools
+and `dev_doc_get` refuse unknown fields with a hint, on the server too. Server code — `server/pack-server/lib/dev-log.mjs`,
+tools — `scripts/mcp-dev/devlog.mjs`.
 
 Kinds `feature|fix|refactor|docs|infra|idea`, areas `site|mcp|addon|server|pack|app|agents`, statuses
 `backlog|todo|doing|review|done|dropped`. Old tasks from groups «Разработка»/«Фиксы» — `node scripts/dev-migrate.mjs`
