@@ -8,6 +8,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { devLogRoutes } from './dev-log.mjs';
 import { HttpError } from './util.mjs';
 import { CHECKS_SCHEMA, openChecks, rejectUnknown } from './dev-checks.mjs';
 
@@ -186,9 +187,6 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
     addNote: db.prepare('insert into notes (task_id, author, kind, text, created_at) values (?, ?, ?, ?, ?)'),
     taskDocs: db.prepare(
       'select id, task_id, title, length(content) size, author, created_at, updated_at, rev from docs where task_id = ? order by id',
-    ),
-    docs: db.prepare(
-      'select id, task_id, title, length(content) size, author, created_at, updated_at, rev from docs order by updated_at desc',
     ),
     doc: db.prepare('select * from docs where id = ?'),
     legacyTask: db.prepare('select id from tasks where legacy = ?'),
@@ -479,6 +477,16 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
     console.log(`dev: чек-листы перенесены у задач: ${pending.length}, снимок ${file}`);
   }
 
+  const logRoute = devLogRoutes({
+    db,
+    getTask,
+    getDoc,
+    noteOut,
+    docOut,
+    limits: LIMITS,
+    checkTexts: (t) => checks.view(t).checklist.map((c) => c.text),
+  });
+
   // ---------------------------------------------------------------- маршруты /dev/…
 
   /**
@@ -489,6 +497,9 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
     const b = body ?? {};
     const by = typeof b.by === 'string' && b.by.trim().length >= 2 && b.by.length <= 24 ? b.by.trim() : who.name;
     const [res, id, sub] = parts;
+
+    const logged = logRoute(method, parts, params, body);
+    if (logged) return logged;
 
     if (res === 'tasks') {
       if (!id && method === 'GET') {
@@ -553,11 +564,6 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
     }
 
     if (res === 'docs') {
-      if (!id && method === 'GET') {
-        const task = params.get('task');
-        const rows = task ? q.taskDocs.all(intId(task, 'задачи')) : q.docs.all();
-        return [200, { docs: rows.map((d) => docOut(d)) }];
-      }
       if (!id && method === 'POST') return [201, { doc: docOut(getDoc(createDoc(b, by)), true) }];
       if (id && method === 'GET') return [200, { doc: docOut(getDoc(id), true) }];
       if (id && method === 'PATCH') return [200, { doc: docOut(getDoc(updateDoc(id, b)), true) }];

@@ -6,6 +6,7 @@
  */
 import { NICK } from '../mcp/env.mjs';
 import { packServer } from '../pack-fetch.mjs';
+import { logTools, noteLine } from './devlog.mjs';
 import { taskFiles, devFileGet } from './files.mjs';
 import { checkTools } from './devchecks.mjs';
 
@@ -53,7 +54,10 @@ function line(t) {
   return `#${t.id} [${tags}] P${t.priority} ${t.title}${who}${extra ? ` (${extra})` : ''} · ${ago(t.updatedAt)}`;
 }
 
-function full({ task: t, notes, noteCount, docs }) {
+/** Журнал в dev_get: длинные записи обрезаются, отчёты — всегда и целиком */
+const NOTE_CLIP = 600;
+
+function full({ task: t, notes, noteCount, docs }, reports = []) {
   const out = [
     `#${t.id} ${t.title}`,
     `статус: ${STATUS_RU[t.status]} (${t.status}) · вид: ${t.kind} · область: ${t.area ?? '—'} · важность P${t.priority}`,
@@ -73,12 +77,12 @@ function full({ task: t, notes, noteCount, docs }) {
     );
   }
   if (docs.length) out.push('', 'Планы:', ...docs.map((d) => `- ${d.id} «${d.title}» (${d.size} симв., rev ${d.rev})`));
+  const older = reports.filter((r) => !notes.some((n) => n.id === r.id));
+  if (older.length) out.push('', 'Отчёты:', ...older.map((n) => noteLine(n)));
   if (notes.length) {
-    out.push('', `Журнал (${notes.length} из ${noteCount}):`);
-    for (const n of notes)
-      out.push(
-        `- ${day(n.createdAt)} ${n.author}${n.kind === 'note' ? '' : ` [${n.kind === 'status' ? 'статус' : 'отчёт'}]`}: ${n.text}`,
-      );
+    const more = notes.length < noteCount ? ` — раньше: dev_log id=${t.id} before=${notes[0].id}` : '';
+    out.push('', `Журнал (${notes.length} из ${noteCount})${more}:`);
+    for (const n of notes) out.push(noteLine(n, n.kind === 'report' ? 0 : NOTE_CLIP));
   }
   return out.join('\n');
 }
@@ -113,10 +117,15 @@ async function devList(a) {
 }
 
 async function devGet(a) {
-  const task = full(await api('GET', `tasks/${a.id}?notes=${a.notes ?? 20}`));
+  const [r, log] = await Promise.all([
+    api('GET', `tasks/${a.id}?notes=${a.notes ?? 5}`),
+    api('GET', `tasks/${a.id}/notes?kind=report&limit=200`),
+  ]);
+  const task = full(r, log.notes);
   try {
     const files = await taskFiles(a.id);
-    return `${task}\n\nВложения (${files.length}):${files.length ? '\n' + files.map((f) => `- ${f.id} «${f.name}» (${f.type}, ${f.size} Б) — dev_file_get task=${a.id} id=${f.id}`).join('\n') : ' нет'}`;
+    if (!files.length) return task;
+    return `${task}\n\nВложения (${files.length}):\n${files.map((f) => `- ${f.id} «${f.name}» (${f.type}, ${f.size} Б) — dev_file_get task=${a.id} id=${f.id}`).join('\n')}`;
   } catch (e) {
     return `${task}\n\nВложения: не удалось проверить (${e.message}). Отсутствие вложений не подтверждено.`;
   }
@@ -139,17 +148,7 @@ async function devUpdate(a) {
 
 async function devNote(a) {
   const r = await api('POST', `tasks/${a.id}/notes`, { text: a.text, kind: a.report ? 'report' : 'note' });
-  return `Запись добавлена в #${r.task.id} (всего ${r.noteCount}).`;
-}
-
-async function devDocGet(a) {
-  const { doc: d } = await api('GET', `docs/${a.id}`);
-  const lines = d.content.split('\n');
-  const from = a.offset ?? 0;
-  const to = Math.min(lines.length, from + (a.limit ?? 400));
-  const head = `План ${d.id} «${d.title}» · задача ${d.task ? `#${d.task}` : '—'} · rev ${d.rev} · ${d.author}, ${day(d.updatedAt)}`;
-  const tail = to < lines.length ? `\n… строки ${from + 1}–${to} из ${lines.length}; дальше — offset=${to}` : '';
-  return `${head}\n\n${lines.slice(from, to).join('\n')}${tail}`;
+  return `Запись note:${r.notes.at(-1).id} добавлена в #${r.task.id} (всего ${r.noteCount}).`;
 }
 
 async function devDocPut(a) {
@@ -212,10 +211,10 @@ export const DEV_TOOLS = [
   {
     name: 'dev_get',
     description:
-      'Whole dev task: description, checklist, plan docs, last work-log entries, rev for dev_update, attachment metadata from Firestore (cached 1 min). Use dev_file_get to view images/download files.',
+      'Whole dev task: description, checklist, plan docs, all reports, last 5 work-log entries (note:<id>; older — dev_log), rev for dev_update, attachments from Firestore (cached 1 min; dev_file_get opens them).',
     inputSchema: {
       type: 'object',
-      properties: { id: int('task number'), notes: int('how many last log entries (default 20)') },
+      properties: { id: int('task number'), notes: int('how many last log entries (default 5)') },
       required: ['id'],
     },
     handler: devGet,
@@ -261,19 +260,9 @@ export const DEV_TOOLS = [
     handler: devNote,
   },
   {
-    name: 'dev_doc_get',
-    description: 'Dev plan doc by lines and its rev.',
-    inputSchema: {
-      type: 'object',
-      properties: { id: int('doc id'), offset: int('first line (0)'), limit: int('lines (400)') },
-      required: ['id'],
-    },
-    handler: devDocGet,
-  },
-  {
     name: 'dev_doc_put',
     description:
-      'Write: without id — new plan doc (title defaults to «План: #task»); with id + baseRev — edit passed fields. content — whole markdown; task — task number or "-".',
+      'Write: without id — new plan doc (title defaults to «План: #task»); with id + baseRev — edit passed fields. content — whole markdown (one fragment — dev_doc_edit, adding — dev_doc_append); task — task number or "-".',
     inputSchema: {
       type: 'object',
       properties: {
@@ -287,4 +276,5 @@ export const DEV_TOOLS = [
     handler: devDocPut,
   },
   ...checkTools({ api, line }),
+  ...logTools(api),
 ];
