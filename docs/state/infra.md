@@ -422,4 +422,8 @@ Cursor configs (shapes from their docs, not tried).
 - NeoForge without maven (2026-11-03, dev #204): `tfc init --launcher` first takes a fat installer from the pack server
   (`tfc admin neoforge build`, `/neoforge/<version>`, record in `neoforge.json`), otherwise maven. Blocked-maven run checked
   with a JVM hosts file on a throwaway server (plain installer: 82 libraries fail; fat: installs); Mojang stays required.
-  Not checked on the affected player's PC. A new NeoForge version needs a new build.
+  Fat download on a real PC installed NeoForge 21.1.251. A new NeoForge version needs a new build.
+- TLauncher game dir (2026-11-03, dev #204): it uses the version folder only for a version with a `modpack` block in
+  `versions/<name>/TLauncherAdditional.json`, otherwise `.minecraft`. `installToLauncher` writes that block with empty lists;
+  the host's TLauncher then loaded 341 mods from `TFC-RealWorld` (block written by hand, not yet by the new `tfc`). Replaces
+  the earlier «TLauncher game dir = version folder»: that was only true for imported packs.
