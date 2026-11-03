@@ -5,17 +5,15 @@ its one-liner in STATE.md.
 
 ## Host actions
 
-- **Destroy slice as one update** (2026-11-03, dev #203, acceptance #199): `u20261103-104332-a97a` adds Destroy,
-  Petrolpark, Destroy Bridge, Destroy Extras and five datapacks (confirmed by approve); updates EE Extras 2.7.0, JEI 19.55.0.431,
-  LDLib 2.2.45, Create Aeronautics 1.3.2. Replaces rejected `u20261103-101026-8f09`. Host: subscribe a separate profile
+- **Destroy slice as one update** (2026-11-03, dev #203, acceptance #199): `u20261103-164054-6977` adds Destroy,
+  Petrolpark, Destroy Bridge, Destroy Extras 0.3.0 and five datapacks (confirmed by approve); updates EE Extras 2.7.0, JEI 19.55.0.431,
+  LDLib 2.2.45, Create Aeronautics 1.3.2. Replaces `u20261103-104332-a97a` (Destroy Extras 0.2.0: Cl₂ port blocked, Vat refused the gases, EMI hid Destroy recipes); the host still has to reject that one. Host: subscribe a separate profile
   on a world copy, run #199, then approve or reject. Bridge jar was rebuilt from source: its sha differs from the stale
   `addon.json` card. Ores: card `mQcIl1urw15ReBw5Xrwh` turns off Destroy nickel and fluorite biome modifiers
   (`neoforge:none`, because `disableWorldGen` is read by nothing in 0.4.6) and adds a TFC fluorite vein; crocoite stays
   in the Nether. Checked: class and mixin links by jar, full-pack server boot, vein registered, ore in
   `#tfc:prospectable`. Not checked: client of the full pack, Survival, veins actually generating in a TFC world,
   override of the biome modifiers taking effect. Polymorph's JEI integration is expected to disable itself.
-
-- **Destroy chain is broken in Survival** (2026-11-03, dev #209, found in #207): the electrolyzer's Cl₂ port is behind the shell, and the Vat refuses its `destroy:gas` H₂/Cl₂. Needs a new Destroy Extras version before #199 can pass; the update `u20261103-104332-a97a` still contains the old one.
 
 - **Building generator colours** (2026-10-30, dev #166): builder `block-colors.json` added to `npm run mods`; reaches
   the site after `tfc admin rebuild --pull` + `tfc admin publish --live`. Until then the generator page (stage 4)
