@@ -109,12 +109,13 @@ async function addonsList(a) {
     const marks = [
       src && src !== c.version ? `в исходниках ${src}` : null,
       c.sha256 ? null : 'нет sha256 в карточке',
-      site ? (deployed === c.version ? null : `на сайте ${deployed ?? 'нет'}`) : null,
+      // В списке сайта manual нет намеренно: его старые версии tfc поставили бы всем
+      site && !c.manual ? (deployed === c.version ? null : `на сайте ${deployed ?? 'нет'}`) : null,
       g ? null : 'нет страницы',
       c.unlisted ? 'скрыт из списка' : null,
     ].filter(Boolean);
     out.push(
-      `${c.id} ${c.version} — ${c.name} [${c.source}, ${c.side}${c.hostOnly ? ', для хоста' : ''}, блоков ${c.blocks.length}]` +
+      `${c.id} ${c.version} — ${c.name} [${c.source}, ${c.side}${c.hostOnly ? ', для хоста' : ''}${c.manual ? ', только вручную' : ''}, блоков ${c.blocks.length}]` +
         `; страница ${guideId(c.id)}${g ? ` (правил ${g.updatedBy} ${dateOf(g.updatedAt)})` : ''}` +
         (marks.length ? `\n    ⚠ ${marks.join('; ')}` : ''),
     );
@@ -240,8 +241,14 @@ async function addonCheck(a) {
   // сайт
   const site = await siteIndex();
   const dep = site?.get(c.id);
+  if (c.manual) info.push(`только вручную: tfc addons install ${c.id}; в обычном pull и списке сайта для tfc его нет`);
   if (!site) info.push(`сайт ${SITE} не ответил — что задеплоено, не проверено`);
-  else if (!dep) info.push('на сайте аддона ещё нет — появится после деплоя (npm run deploy:site из main)');
+  else if (c.manual) {
+    if (dep)
+      warns.push(
+        'карточка manual, а в /addons/index.json аддон есть: старые версии tfc без ключа поставят его всем — нужна выкладка данных',
+      );
+  } else if (!dep) info.push('на сайте аддона ещё нет — появится после деплоя (npm run deploy:site из main)');
   else if (dep.version !== c.version) info.push(`на сайте ${dep.version} — ${c.version} появится после деплоя`);
   else info.push(`на сайте ${dep.version} — задеплоено`);
 

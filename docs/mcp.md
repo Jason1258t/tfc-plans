@@ -83,7 +83,10 @@ The server sends a short version of this to agents as its instructions.
   `pack_devserver overlay=<dir>` (production dedicated server with full KubeJS, no game needed) — then
   `npm run tfc -- admin propose <overlay dir> --note …` (agent key in the `tfc` app settings —
   `%APPDATA%\tfc\config.json` on Windows, `~/.config/tfc/config.json` on macOS/Linux, see `cli/lib/config.mjs`; base on
-  the current snapshot, `tfc admin updates` to see status); the host pulls and approves.
+  the current snapshot, `tfc admin updates` to see status); the host subscribes a test profile
+  (`tfc admin updates subscribe <id> --profile тест`) or pulls, then approves. Jars — `--jar <file>` (old versions of the
+  same jar are removed automatically, shown in the plan; `--keep-old`), site datapacks to confirm with the snapshot —
+  `--datapack <id|name>`, preview — `--dry-run`.
 - Site tasks/plans/guides/datapacks → its write tools (signed with `TFC_AGENT_NICK` or the detected agent, with
   `baseRevision`), not ad-hoc scripts. Site-content tools cost Firestore reads — don't loop them.
 - A needed tool is missing or answers wrongly, and you had to fall back to grep/unzip/a script → finish the current task

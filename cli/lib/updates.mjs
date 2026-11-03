@@ -1,14 +1,22 @@
 /**
  * Предложенные обновления сборки (server/pack-server/lib/updates.mjs).
- *   tfc admin propose <папка> [--remove <путь>…] --note "…" — выложить: файлы из папки (пути как в снимке: kubejs/…,
- *     config/…) и пути, которые убрать. Так обновляет сборку Claude или администратор не с ПК хоста.
- *   tfc admin updates [list] — что ждёт; pull [id…] — забрать в папку игры (и сервера, если она в профиле), с копией
- *     для tfc undo; approve <id> — сделать из текущей сборки с этими изменениями новую текущую; reject <id>.
+ *   tfc admin propose [<папка>] [--jar <файл>…] [--datapack <id|имя>…] [--remove <путь>…] --note "…" — выложить:
+ *     файлы из папки (пути как в снимке: kubejs/…, config/…), jar в mods/, датапаки сайта на подтверждение и пути, которые
+ *     убрать; старые версии предлагаемых jar убираются сами (--keep-old — оставить). Так обновляет сборку Claude или
+ *     администратор не с ПК хоста.
+ *   tfc admin updates [list] — что ждёт; subscribe/unsubscribe <id…> — проверять в профиле поверх сборки (staging.mjs);
+ *     pull [id…] — разово забрать файлами в папку игры (и сервера, если она в профиле), с копией для tfc undo;
+ *     approve <id> — сделать из текущей сборки с этими изменениями новую текущую; reject <id>.
  */
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { classifyPath } from '@tfc/pack-server/paths';
+import { datapackCatalog, resolveDatapacks } from './datapacks.mjs';
 import { loadState, saveState } from './plan.mjs';
+import { datapackZip } from './pull.mjs';
+import { isModJar, jarKey } from './staging.mjs';
 import { localPath, sha256File } from './scan.mjs';
 import { assertNotLocked, beginBackup, editBackup, finishBackup, toBackup } from './sync.mjs';
 import { bold, confirm, cyan, date, dim, green, interactive, mb, progress, yellow } from './ui.mjs';
@@ -30,24 +38,67 @@ function listOverlay(dir) {
 
 const STATUS = { pending: yellow('ждёт'), approved: green('одобрено'), rejected: dim('отклонено') };
 
-export function printUpdate(u, { full = true } = {}) {
+export function printUpdate(u, { full = true, subscribed = false } = {}) {
   console.log(
-    `${bold(u.id)} ${STATUS[u.status] ?? u.status} ${dim(`${date(Date.parse(u.createdAt))}, ${u.author}`)}${u.snapshot ? dim(` → сборка ${u.snapshot}`) : ''}`,
+    `${bold(u.id)} ${STATUS[u.status] ?? u.status}${subscribed ? cyan(' [подписан]') : ''} ${dim(`${date(Date.parse(u.createdAt))}, ${u.author}`)}${u.snapshot ? dim(` → сборка ${u.snapshot}`) : ''}`,
   );
   console.log(`  ${u.note}`);
+  if (u.snapshot && u.parent)
+    console.log(dim(`  откат: tfc admin use ${u.parent} (или tfc admin rollback, если сборка последняя)`));
   if (!full) return;
   for (const f of u.files) console.log(`    ~ ${f.path} ${dim(mb(f.size))}`);
   for (const p of u.remove) console.log(`    − ${p}`);
+  for (const d of u.datapacks ?? [])
+    console.log(`    ◆ датапак «${d.name}» ${dim(`→ ${d.path}, ревизия ${d.revision}, подтвердится при одобрении`)}`);
   if (u.reason) console.log(dim(`  причина: ${u.reason}`));
+  if (u.status === 'pending')
+    console.log(
+      dim(
+        `  откат после одобрения: tfc admin rollback${u.datapacks?.length ? ' (вернёт и подтверждение датапаков)' : ''}`,
+      ),
+    );
 }
 
-export async function propose(api, { dir, remove = [], note, yes, dryRun }) {
-  if (!dir && !remove.length) throw new Error('tfc admin propose <папка> [--remove <путь>…] --note "что и зачем"');
+/** Датапаки сайта для обновления: ZIP как у tfc datapacks. → [{ id, revision, sha256, sourcePath?, name, zip? }] */
+async function datapackItems(api, names) {
+  if (names.includes('all')) throw new Error('--datapack — по одному: id или имя из tfc datapacks list');
+  const c = await datapackCatalog(api, { refresh: true });
+  const out = [];
+  for (const d of await resolveDatapacks(api, c, c.items, names)) {
+    if (d.error) throw new Error(`${d.fileName}: ${d.error}`);
+    if (c.deployed.some((p) => p.id === d.id))
+      throw new Error(`«${d.name}» уже в сборке. Для новой версии: tfc datapacks unconfirm ${d.id}`);
+    const zip = d.snapshotSource ? null : datapackZip(d);
+    out.push({
+      id: d.id,
+      revision: d.revision,
+      sha256: zip ? createHash('sha256').update(zip).digest('hex') : d.sha256,
+      name: d.name,
+      zip,
+      ...(d.snapshotSource ? { sourcePath: d.sourcePath } : {}),
+    });
+  }
+  return out;
+}
+
+export async function propose(api, { dir, remove = [], jars = [], datapacks = [], keepOld, note, yes, dryRun }) {
+  if (!dir && !remove.length && !jars.length && !datapacks.length)
+    throw new Error(
+      'tfc admin propose [<папка>] [--jar <файл>…] [--datapack <id|имя>…] [--remove <путь>…] --note "что и зачем"',
+    );
   if (!note?.trim()) throw new Error('--note "что меняется и зачем" — его увидит хост');
   if (dir && !fs.statSync(dir, { throwIfNoEntry: false })?.isDirectory()) throw new Error(`нет папки ${dir}`);
   const current = await api.get('/pack/current');
   const cur = new Map(current.files.map((f) => [f.path, f.sha256]));
   const overlay = dir ? listOverlay(path.resolve(dir)) : [];
+  for (const jar of jars) {
+    const file = path.resolve(jar);
+    if (!/\.jar$/i.test(file) || !fs.statSync(file, { throwIfNoEntry: false })?.isFile())
+      throw new Error(`--jar: нет такого jar: ${jar}`);
+    const p = `mods/${path.basename(file)}`;
+    if (overlay.some((f) => f.path === p)) throw new Error(`${p} уже есть в папке ${dir} — оставьте что-то одно`);
+    overlay.push({ path: p, file });
+  }
   const bad = overlay.map((f) => [f.path, classifyPath(f.path)]).filter(([, c]) => c.error);
   if (bad.length)
     throw new Error(`эти пути сервер не примет:\n${bad.map(([p, c]) => `  ${p} — ${c.error}`).join('\n')}`);
@@ -58,11 +109,30 @@ export async function propose(api, { dir, remove = [], note, yes, dryRun }) {
   const files = overlay.filter((f) => cur.get(f.path) !== f.sha256);
   const unknown = remove.filter((p) => !cur.has(p));
   if (unknown.length) throw new Error(`в сборке нет: ${unknown.join(', ')}`);
-  if (!files.length && !remove.length) return console.log('В сборке уже всё так — предлагать нечего.');
+  // Старые версии предлагаемых jar: с двумя версиями одного мода игра не запустится
+  const old = new Map();
+  if (!keepOld)
+    for (const f of files.filter((x) => isModJar(x.path)))
+      for (const c of current.files)
+        if (
+          c.kind === 'mod' &&
+          c.path !== f.path &&
+          jarKey(c.path) === jarKey(f.path) &&
+          !overlay.some((x) => x.path === c.path) &&
+          !remove.includes(c.path)
+        )
+          old.set(c.path, f.path);
+  const removing = [...remove, ...old.keys()];
+  const packs = datapacks.length ? await datapackItems(api, datapacks) : [];
+  if (!files.length && !removing.length && !packs.length)
+    return console.log('В сборке уже всё так — предлагать нечего.');
 
   console.log(`К сборке ${dim(current.id)}:`);
   for (const f of files) console.log(`    ${cur.has(f.path) ? '~' : '+'} ${f.path}`);
   for (const p of remove) console.log(`    − ${p}`);
+  for (const [p, by] of old) console.log(`    − ${p} ${dim(`старая версия, вместо неё ${path.posix.basename(by)}`)}`);
+  for (const d of packs)
+    console.log(`    ◆ датапак «${d.name}» ${dim(`→ kubejs/data/tfc-plans-${d.id}.zip, подтвердится при одобрении`)}`);
   const same = overlay.length - files.length;
   if (same) console.log(dim(`  ещё ${same} файлов уже такие же`));
   if (dryRun) return;
@@ -83,13 +153,26 @@ export async function propose(api, { dir, remove = [], note, yes, dryRun }) {
     for (const f of need) await api.upload(f.file, f.sha256, (n) => bar.add(n));
     bar.end();
   }
+  for (const d of packs.filter((x) => x.zip)) {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'tfc-propose-'));
+    try {
+      const file = path.join(tmp, `${d.id}.zip`);
+      fs.writeFileSync(file, d.zip);
+      await api.upload(file, d.sha256);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  }
   const u = await api.post('/admin/updates', {
     note,
     files: files.map((f) => ({ path: f.path, sha256: f.sha256, size: f.size })),
-    remove,
+    remove: removing,
+    ...(packs.length ? { datapacks: packs.map(({ name: _name, zip: _zip, ...d }) => d) } : {}),
   });
+  if (packs.length && !u.datapacks?.length)
+    throw new Error('сервер не понял датапаки обновления — обновите сервер сборки; это обновление отклоните');
   console.log(
-    `${bold('Выложено:')} обновление ${u.id}. Хосту: ${cyan(`tfc admin updates pull ${u.id}`)}, проверить, ${cyan(`tfc admin updates approve ${u.id}`)}.`,
+    `${bold('Выложено:')} обновление ${u.id}. Хосту: ${cyan(`tfc admin updates subscribe ${u.id}`)} (в отдельном профиле — ${cyan('--profile тест')}), проверить, ${cyan(`tfc admin updates approve ${u.id}`)}.`,
   );
   return u;
 }
@@ -173,6 +256,9 @@ export async function pullUpdates(api, profile, list, { yes, dryRun }) {
 export async function markApproved(profile, u, snapshot) {
   const state = loadState(profile);
   state.files ??= {};
+  // Файлы подписки теперь обычные файлы сборки
+  if (state.staging) state.staging = state.staging.filter((x) => x.id !== u.id);
+  if (!state.staging?.length) delete state.staging;
   let all = true;
   for (const f of u.files) {
     const local = localPath(profile, f.path);

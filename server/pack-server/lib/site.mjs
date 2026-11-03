@@ -461,8 +461,10 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
   /**
    * Аддоны для tfc pull: карточка (кому ставить, что заменяет) + версии с jar на этом сервере. Черновики тоже —
    * программа ставит их, только если версию назвали явно. Аддон без карточки (unlisted, tp_trace) не отдаётся.
+   * manual: true в карточке — только ручная установка: отдаётся одним новым версиям программы (manual, ?v=2), они
+   * ставят его, лишь когда его назвали. Старые поставили бы всем — их список такого аддона не видит.
    */
-  async function addons() {
+  async function addons({ manual = false } = {}) {
     const cards = addonCards();
     // Пустой список программа поняла бы как «все аддоны убраны с сайта» и предложила бы их удалить
     if (!cards.length)
@@ -473,7 +475,8 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
     const versions = await cached('addonVersions');
     const out = [];
     for (const c of cards) {
-      if (c.unlisted || !ADDON_ID_RE.test(c.id ?? '')) continue;
+      if (!ADDON_ID_RE.test(c.id ?? '')) continue;
+      if (c.manual === true ? !manual : c.unlisted) continue;
       const list = versions
         .filter((v) => v.addon === c.id && v.jar?.sha256)
         .map((v) => ({
@@ -489,6 +492,7 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
         name: c.name,
         side: c.side,
         hostOnly: c.hostOnly === true,
+        manual: c.manual === true,
         needs: c.needs,
         replaces: c.replaces ?? [],
         formerIds: c.formerIds ?? [],

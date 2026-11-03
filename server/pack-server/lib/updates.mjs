@@ -4,19 +4,25 @@
  * с этими изменениями получается новый снимок. Одобрить может только другой администратор, не автор.
  *
  *   updates/<id>.json — { id, createdAt, author, note, base, files: [{ path, sha256, size, kind }], remove: [path],
- *                         status: pending | approved | rejected, decidedAt?, decidedBy?, snapshot?, reason? }
+ *                         datapacks?: [{ id, revision, sha256, sourcePath?, name, path, contentHash, worldPaths }],
+ *                         status: pending | approved | rejected, decidedAt?, decidedBy?, snapshot?, parent?, reason? }
  * base — текущий снимок на момент предложения: по нему видно, не поменяли ли эти пути с тех пор.
+ * datapacks — подтвердить вместе с новым снимком (как tfc datapacks confirm): ZIP уже в files по пути kubejs/data/…,
+ * ревизию карточки и пересечения данных сервер проверяет и при предложении, и при одобрении. Старые записи без этого
+ * поля одобряются как раньше. parent — снимок, который был текущим до одобрения (откат).
  */
 import { randomBytes } from 'node:crypto';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
+import { confirmDatapackItems } from './datapack-deployment.mjs';
+import { deploymentsOf } from './datapacks.mjs';
 import { classifyPath } from './paths.mjs';
 import { HttpError, SHA256_RE, writeJsonAtomic } from './util.mjs';
 
 const ID_RE = /^u\d{8}-\d{6}-[0-9a-f]{4}$/;
 const MAX_FILES = 2000;
 
-export async function openUpdates(dataDir, store) {
+export async function openUpdates(dataDir, store, site) {
   const dir = path.join(dataDir, 'updates');
   await fsp.mkdir(dir, { recursive: true });
   const file = (id) => path.join(dir, `${id}.json`);
@@ -65,12 +71,17 @@ export async function openUpdates(dataDir, store) {
     },
 
     async create(body, author) {
-      const { note, files = [], remove = [] } = body ?? {};
+      const { note, files = [], remove = [], datapacks = [] } = body ?? {};
       if (typeof note !== 'string' || !note.trim() || note.length > 2000)
         throw new HttpError(400, 'note — что меняется и зачем, строка до 2000 символов');
       if (!Array.isArray(files) || !Array.isArray(remove) || files.length + remove.length > MAX_FILES)
         throw new HttpError(400, `files и remove — массивы, вместе до ${MAX_FILES}`);
-      if (!files.length && !remove.length) throw new HttpError(400, 'Нечего менять: files и remove пустые');
+      if (!Array.isArray(datapacks) || datapacks.length > 100)
+        throw new HttpError(400, 'datapacks — массив, до 100 пакетов');
+      if (new Set(datapacks.map((d) => d?.id)).size !== datapacks.length)
+        throw new HttpError(400, 'Повтор id датапака');
+      if (!files.length && !remove.length && !datapacks.length)
+        throw new HttpError(400, 'Нечего менять: files, remove и datapacks пустые');
       const current = await store.getCurrent();
       if (!current) throw new HttpError(409, 'Текущего снимка ещё нет — сначала tfc publish');
       const inCurrent = new Map(current.files.map((f) => [f.path, f.sha256]));
@@ -93,9 +104,38 @@ export async function openUpdates(dataDir, store) {
         if (typeof p !== 'string' || !inCurrent.has(p)) problems.push({ path: p, reason: 'убрать: в сборке нет' });
         else if (seen.has(p.toLowerCase())) problems.push({ path: p, reason: 'и меняется, и убирается' });
       }
+      for (const d of datapacks) {
+        if (!SHA256_RE.test(d?.sha256 ?? '')) problems.push({ path: d?.id, reason: 'датапак: неверный sha256' });
+        else if (!store.hasBlob(d.sha256)) missing.push(d.sha256);
+      }
       if (problems.length) throw new HttpError(400, `Обновление не принято: ${problems.length} ошибок`, { problems });
       if (missing.length)
         throw new HttpError(409, `Не залито файлов: ${new Set(missing).size}`, { missing: [...new Set(missing)] });
+
+      // Проверяем сразу, как при подтверждении: автор узнаёт о конфликте сейчас, а не хост при одобрении
+      const outDatapacks = [];
+      if (datapacks.length) {
+        const after = new Map(current.files.map((f) => [f.path, f]));
+        for (const f of outFiles) after.set(f.path, f);
+        for (const p of remove) after.delete(p);
+        const deployments = new Map(deploymentsOf(current).map((x) => [x.id, x]));
+        await confirmDatapackItems(store, site, current, datapacks, { files: after, deployments, by: author });
+        for (const { id, revision, sha256, sourcePath } of datapacks) {
+          const { name, path: target, contentHash, worldPaths } = deployments.get(id);
+          outDatapacks.push({
+            id,
+            revision,
+            sha256,
+            ...(sourcePath ? { sourcePath } : {}),
+            name,
+            path: target,
+            contentHash,
+            worldPaths,
+          });
+          if (inCurrent.get(target) !== sha256 && !outFiles.some((f) => f.path === target))
+            outFiles.push({ path: target, sha256, size: store.blobSize(sha256), kind: 'kubejs' });
+        }
+      }
 
       const d = new Date().toISOString().replace(/\D/g, '');
       const u = {
@@ -106,14 +146,18 @@ export async function openUpdates(dataDir, store) {
         base: current.id,
         files: outFiles.sort((a, b) => (a.path < b.path ? -1 : 1)),
         remove: [...remove].sort(),
+        ...(outDatapacks.length ? { datapacks: outDatapacks } : {}),
         status: 'pending',
       };
       await writeJsonAtomic(file(u.id), u);
       return u;
     },
 
-    /** Одобрить: новый снимок = текущий + файлы − remove. Возвращает { update, snapshot } (снимок ещё не текущий) */
-    async approve(id, who, { force = false } = {}) {
+    /**
+     * Одобрить: новый снимок = текущий + файлы − remove, датапаки обновления подтверждаются в нём же. activate делает
+     * снимок текущим; не вышло — обновление остаётся ждущим. Возвращает { update, snapshot, ...итог activate }.
+     */
+    async approve(id, who, { force = false, activate } = {}) {
       const u = await pending(id);
       if (u.author === who)
         throw new HttpError(
@@ -128,6 +172,12 @@ export async function openUpdates(dataDir, store) {
       const files = new Map(current.files.map((f) => [f.path, f]));
       for (const f of u.files) files.set(f.path, f);
       for (const p of u.remove) files.delete(p);
+      let options = {};
+      if (u.datapacks?.length) {
+        const deployments = new Map(deploymentsOf(current).map((d) => [d.id, d]));
+        await confirmDatapackItems(store, site, current, u.datapacks, { files, deployments, by: who });
+        options = { datapacks: [...deployments.values()] };
+      }
       const snapshot = await store.createSnapshot(
         {
           note: `${u.note} (обновление ${u.id} от ${u.author})`.slice(0, 2000),
@@ -136,16 +186,19 @@ export async function openUpdates(dataDir, store) {
           files: [...files.values()],
         },
         who,
+        options,
       );
+      const activated = await activate?.(snapshot);
       const done = {
         ...u,
         status: 'approved',
         decidedAt: new Date().toISOString(),
         decidedBy: who,
         snapshot: snapshot.id,
+        parent: current.id,
       };
       await writeJsonAtomic(file(u.id), done);
-      return { update: done, snapshot };
+      return { update: done, snapshot, ...activated };
     },
 
     async reject(id, who, reason = '') {

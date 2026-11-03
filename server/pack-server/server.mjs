@@ -27,7 +27,7 @@
  *   GET    /site/kubejs?name=…      — скрипты KubeJS «Ставить на сервер» (+ названные) player
  *   GET    /site/schematics         — схемы библиотеки (без превью)              player
  *   GET    /site/files/:id          — исходник схемы (.nbt из хранилища сайта)   player
- *   GET    /site/addons             — аддоны: карточка + версии с jar (Firestore addonVersions) player
+ *   GET    /site/addons?v=2         — аддоны: карточка + версии с jar (Firestore addonVersions); v=2 — и manual  player
  *   POST   /site/reports            — отчёт tfc report (лог, краш, zip пачки): тело — байты, X-Report — JSON
  *                                     { name, kind, type, label, note, files, taskId } → в хранилище сайта  player
  *   POST   /admin/addons            — { addon, version, file, sha256, size }: jar версии (блоб уже залит)
@@ -72,7 +72,6 @@ const config = {
 
 const store = await openStore(config.dataDir, config);
 const keys = openKeys(config.dataDir);
-const updates = await openUpdates(config.dataDir, store);
 const dev = openDev(config.dataDir);
 /** Страница «Разработка» сайта: откуда пускать (CORS) и чей вход принимать */
 const devSite = {
@@ -107,6 +106,7 @@ const site = openSite(config.dataDir, {
   ttlMs: Number(env.SITE_CACHE_SEC ?? 300) * 1000,
   docsUrl: env.SITE_DOCS_URL, // для проверки на заглушке Firestore
 });
+const updates = await openUpdates(config.dataDir, store, site);
 /** После смены текущего снимка: собрать (off — нет) и как публиковать (по умолчанию — только пробно) */
 const autoBuild = env.AUTO_BUILD !== 'off';
 const autoPublish = PUBLISH.includes(env.AUTO_PUBLISH) ? env.AUTO_PUBLISH : 'dry-run';
@@ -438,9 +438,13 @@ async function handle(req, res) {
     }
     if (parts.length === 4 && req.method === 'POST' && parts[3] === 'approve') {
       const body = (await readJsonBody(req)) ?? {};
-      const r = await updates.approve(parts[2], who.name, { force: body.force === true });
+      const r = await updates.approve(parts[2], who.name, {
+        force: body.force === true,
+        // base: пока одобряли, сборку могли поменять — новый снимок её не перекроет
+        activate: (s) => makeCurrent({ id: s.id, base: s.parent }, who.name),
+      });
       console.log(`✔ обновление ${parts[2]} → снимок ${r.snapshot.id} — ${who.name}`);
-      return json(res, 200, { ...r, ...(await makeCurrent({ id: r.snapshot.id }, who.name)) });
+      return json(res, 200, r);
     }
     if (parts.length === 4 && req.method === 'POST' && parts[3] === 'reject') {
       const u = await updates.reject(parts[2], who.name, ((await readJsonBody(req)) ?? {}).reason);
@@ -571,7 +575,9 @@ async function handle(req, res) {
     }
     if (url.pathname === '/site/kubejs') return json(res, 200, await site.kubejs(names));
     if (url.pathname === '/site/schematics') return json(res, 200, await site.schematics());
-    if (url.pathname === '/site/addons') return json(res, 200, await site.addons());
+    // v=2 — новые версии tfc: знают признак manual. Старым такие аддоны не отдаём, иначе поставили бы их всем
+    if (url.pathname === '/site/addons')
+      return json(res, 200, await site.addons({ manual: url.searchParams.get('v') === '2' }));
     if (parts[1] === 'files' && parts.length === 3) {
       const file = await site.filePath(parts[2]);
       const st = await fs.promises.stat(file);

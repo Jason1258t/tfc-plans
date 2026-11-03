@@ -21,7 +21,7 @@ import {
   launchedElsewhere,
 } from './lib/detect.mjs';
 import { compareVersions, requiredNeoforge } from './lib/jarid.mjs';
-import { bytesOf, changes, loadState, makePlan, PARTS, scopeOf } from './lib/plan.mjs';
+import { bytesOf, changes, loadState, makePlan, PARTS, saveState, scopeOf } from './lib/plan.mjs';
 import { parseParts, printJobs, PUBLISH, showJob } from './lib/jobs.mjs';
 import { diffFiles, printDiff, publish } from './lib/publish.mjs';
 import {
@@ -34,12 +34,12 @@ import {
   siteOwned,
 } from './lib/pull.mjs';
 import { scanLocal } from './lib/scan.mjs';
-import { listAddons, showAddons, uploadAddons } from './lib/addons.mjs';
+import { listAddons, removeAddons, showAddons, uploadAddons } from './lib/addons.mjs';
 import { confirmDatapacks, datapackCatalog, datapackIds, listDatapacks, showDatapacks } from './lib/datapacks.mjs';
 import { listSchematics, publishSchematic } from './lib/schematics.mjs';
 import { cmdReport as reportUpload } from './lib/reports.mjs';
 import { applyChange, planChange, resultsOf } from './lib/changes.mjs';
-import { applyPlan, beginBackup, editBackup, finishBackup, undoLast } from './lib/sync.mjs';
+import { applyPlan, beginBackup, editBackup, finishBackup, toBackup, undoLast } from './lib/sync.mjs';
 import {
   ask,
   bold,
@@ -67,6 +67,7 @@ import {
   PROFILE_ID,
   versionId,
 } from './lib/vanilla.mjs';
+import { applyStagingDrops, stagingClashes, stagingOverlay, stagingState, stagingWinsById } from './lib/staging.mjs';
 import { markApproved, printUpdate, propose, pullUpdates } from './lib/updates.mjs';
 import { checkUpdate } from './lib/update.mjs';
 import { autoUpgrade, cleanupOld, upgrade } from './lib/upgrade.mjs';
@@ -111,6 +112,8 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
   tfc addons <мод…>           все версии аддона строками <мод>@<версия> — какие можно поставить
   tfc addons install <мод>@<версия>…   поставить и закрепить версию (= tfc pull addons …); <мод>@latest — последнюю
   tfc addons install --host-only   поставить все аддоны для хоста (последние версии)
+  tfc addons remove <мод…>    убрать аддон, поставленный вручную (в списке — [вручную]: обычный pull такие не ставит
+                              и не убирает, только обновляет поставленные)
   tfc undo                    вернуть как было до прошлого pull
   tfc report                  загрузить на сайт лог или краш-репорт (спросит вид и какие файлы) — для агента
                               и хоста; в конце — строка «Для агента» с id tfc-report:…
@@ -125,7 +128,12 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
   tfc admin keys | invite <ник> [--admin] | revoke <id> | history | use <id> | rollback
   tfc admin updates [pull [id…] | approve <id> | reject <id>]   обновления сборки от Claude: список; pull — забрать
                               в папку игры и сервера (вернуть — tfc undo); approve — сделать новой сборкой для всех
-  tfc admin propose <папка>   предложить обновление: файлы из папки (kubejs/…, config/…), --remove <путь>, --note
+  tfc admin updates subscribe <id…>     staging: этот профиль получает обновление поверх сборки при каждом tfc pull,
+                              обычные файлы сборки обновляются как всегда (--profile тест — только в нём)
+  tfc admin updates unsubscribe <id…|all>   отписаться и вернуть обычное состояние; subscribed — на что подписан профиль
+  tfc admin propose [<папка>] предложить обновление: файлы из папки (kubejs/…, config/…), --jar <файл> (в mods/, старые
+                              версии уберёт сам; --keep-old — оставить), --datapack <id|имя> (подтвердится при одобрении),
+                              --remove <путь>, --note, --dry-run
   tfc admin rebuild [mods,kubejs,config,world]   пересобрать данные сайта на сервере (--pull — свежий код,
                               --publish none|dry-run|live — что потом; по умолчанию dry-run — только показать)
   tfc admin publish           показать, что изменится на сайте; --live — выложить (текущую сборку, с вопросом);
@@ -218,6 +226,9 @@ const opts = {
   'dry-run': { type: 'boolean' },
   'no-current': { type: 'boolean' },
   remove: { type: 'string', multiple: true },
+  jar: { type: 'string', multiple: true },
+  datapack: { type: 'string', multiple: true },
+  'keep-old': { type: 'boolean' },
   admin: { type: 'boolean' },
   pull: { type: 'boolean' },
   publish: { type: 'string' },
@@ -503,16 +514,31 @@ async function prepareSteps(v, args, sp) {
   if (names.length && parts.length === 1 && parts[0] === 'datapacks')
     names = await datapackIds(a, names, { hasWorld: !!profile.world });
   else if (parts.includes('datapacks')) await datapackCatalog(a, { refresh: true });
+  // Подписки профиля: дальше «сборка» — текущая плюс обновления поверх (staging.mjs)
+  const stagingIds = v.stagingIds ?? loadState(profile).staging ?? [];
+  const staging = await stagingOverlay(a, stagingIds, current);
+  if (staging?.snapshot) current = staging.snapshot;
+  applyStagingDrops(staging, loadState(profile).stagingDrop);
+  stagingClashes(profile, staging);
+  if (staging) {
+    for (const d of staging.dropped) notes.push(`Подписка на обновление ${d.id} снята: ${d.why}.`);
+    notes.push(...staging.notes);
+  }
   const sitePlans = [];
   for (const kind of scope.site) {
     sp.update(`Смотрю ${KIND_TITLE[kind] ?? kind}`);
-    const planned = await planPull(a, profile, kind, names, { force: v.force });
+    const planned = await planPull(a, profile, kind, names, { force: v.force, staging });
     if (kind === 'datapacks' && planned.snapshot && planned.snapshot !== current?.id)
       throw new Error('сборка изменилась во время сверки — повторите команду');
     sitePlans.push(planned);
   }
+  stagingWinsById(
+    profile,
+    sitePlans.find((p) => p.kind === 'addons'),
+    staging,
+  );
   const state = loadState(profile);
-  const owned = siteOwned(sitePlans, names.length ? null : current, state);
+  const owned = siteOwned(sitePlans, names.length ? null : current, state, staging?.paths);
   // Аддоны не все (названы) или снимка не знаем — прежние замены не забываем
   if (names.length || !current) owned.overrides = [...new Set([...(state.addonOverrides ?? []), ...owned.overrides])];
   const hasAddons = sitePlans.some((p) => p.kind === 'addons');
@@ -527,8 +553,15 @@ async function prepareSteps(v, args, sp) {
       hasWorld: !!profile.world,
       skip: owned.skip,
       datapacksOnly: parts.includes('datapacks') && !parts.includes('kubejs'),
+      // Без частей — всё, что дают и давали подписки, даже если обычно такие файлы здесь не трогаем (моды на сервере)
+      also: parts.length
+        ? new Set()
+        : new Set([...(staging?.paths ?? []), ...(staging?.removed ?? []), ...(state.stagingPaths ?? [])]),
     });
     plan.extra = plan.extra.filter((f) => !pulled.has(f.path));
+    // jar подписки, с которой сняли: его убирает сверка со снимком, а аддон видит в нём старую версию себя
+    const gone = new Set(plan.remove.map((f) => f.path));
+    for (const p of sitePlans) if (p.obsolete) p.obsolete = p.obsolete.filter((x) => !gone.has(x.path));
   }
   return {
     cfg,
@@ -543,6 +576,8 @@ async function prepareSteps(v, args, sp) {
     parts,
     notes,
     state,
+    staging,
+    stagingIds,
     skip: new Set([...owned.skip, ...pulled]),
     overrides: hasAddons ? owned.overrides : undefined,
   };
@@ -658,6 +693,7 @@ function warnNeoforge(profile) {
 
 function printAll(r, { verbose = false } = {}) {
   printHeader(r.profile, r.current);
+  for (const u of r.staging?.updates ?? []) console.log(`${cyan('Staging')} ${bold(u.id)}: ${u.note}`);
   const wrong = launchedElsewhere(r.profile.instance);
   if (wrong) warnLaunch(r.profile, wrong);
   for (const n of r.notes) console.log(yellow(n));
@@ -697,11 +733,18 @@ async function cmdPull(v, args) {
   const n = printAll(r, { verbose: v['dry-run'] });
   if (v['dry-run']) return console.log(dim('--dry-run: ничего не менял'));
   const backup = beginBackup(profile);
+  // Подписка пишется вместе с файлами: отказ от применения её не меняет, tfc undo возвращает прежнюю (prevState)
+  const saveStaging = () => {
+    if (!r.stagingIds.length && !r.state.staging && !r.state.stagingPaths) return;
+    const state = loadState(profile);
+    saveState(profile, stagingState(state, r.staging, r.stagingIds, { allParts: !r.parts.length }));
+  };
   if (!n) {
     // Запомнить, что всё на месте (state.json)
     if (plan)
       await applyPlan({ api: r.api, profile, plan, snapshot: r.current, cache: r.cache, backup, onlyNew: true });
     applyPull(profile, sitePlans, backup, r.overrides);
+    saveStaging();
     console.log(green('Всё уже на месте.'));
     if (!v['no-neoforge-check']) warnNeoforge(profile);
     return;
@@ -727,11 +770,26 @@ async function cmdPull(v, args) {
       for (const d of res.duplicates)
         console.log(`  ${red('−')} старая версия мода ${d.ids.join(', ')}: ${d.path} ${dim(`(в сборке — ${d.by})`)}`);
       const before = sitePlans.find((p) => p.kind === 'addons')?.obsolete.length ?? 0;
+      const addons = sitePlans.find((p) => p.kind === 'addons');
+      stagingWinsById(profile, addons, r.staging);
+      // jar обновления только что лёг: сборка могла оставить тот же мод под другим именем
+      const removing = new Set(addons?.remove.map((x) => x.path));
+      const clashes = stagingClashes(profile, r.staging, removing);
+      if (clashes.length) {
+        const state = loadState(profile);
+        for (const c of clashes) {
+          toBackup(backup, c.file, c.path, 'removed');
+          delete state.files[c.path];
+          console.log(`  ${red('−')} ${c.path} ${dim(`— тот же мод, что ${c.by} из обновления`)}`);
+        }
+        saveState(profile, state);
+      }
       if (r.overrides) recheckAddons(profile, sitePlans, r.overrides);
       for (const x of sitePlans.find((p) => p.kind === 'addons')?.obsolete.slice(before) ?? [])
         console.log(`  ${red('−')} ${x.path} ${dim(`— ${x.name}, вместо него аддон`)}`);
     }
     applyPull(profile, sitePlans, backup, r.overrides);
+    saveStaging();
   } finally {
     finishBackup(profile, backup);
   }
@@ -795,6 +853,32 @@ async function cmdPublish(v) {
         local.delete(p);
       }
   }
+  // Аддоны только для ручной установки в сборку не идут: у хоста стоят, игрокам не нужны. Уже в сборке — их оставляем
+  const pulledAddons = Object.values(loadState(profile).pulled?.addons ?? {});
+  const manualList = (await a.get('/site/addons?v=2').catch(() => ({ addons: [] }))).addons.filter((x) => x.manual);
+  const manualJars = [];
+  for (const [p, f] of local)
+    if (
+      f.kind === 'mod' &&
+      !current?.files.some((c) => c.path === p) &&
+      (pulledAddons.some((r) => r.manual && r.path === p) || manualList.some((x) => isAddonJar(x, path.basename(p))))
+    ) {
+      manualJars.push(p);
+      local.delete(p);
+    }
+  // Файлы staging-обновлений в заливку не идут: для них остаётся то, что в сборке на сервере
+  const staging = await stagingOverlay(a, loadState(profile).staging, current);
+  applyStagingDrops(staging, loadState(profile).stagingDrop);
+  const stagedOut = [];
+  if (staging?.snapshot) {
+    const base = new Map(current.files.map((f) => [f.path, f]));
+    for (const p of [...staging.paths, ...staging.removed]) {
+      const f = base.get(p);
+      if (f) local.set(p, { ...f, file: undefined });
+      else if (!local.delete(p)) continue;
+      stagedOut.push(p);
+    }
+  }
   if (!local.size) throw new Error(`в ${profile.instance} нечего заливать`);
   const ver = detectVersions(profile.instance);
   const { mc, loader: found } = await gameVersion(a, v, ver, current, profile.instance);
@@ -824,6 +908,17 @@ async function cmdPublish(v) {
           : '(аддонов хоста в папке нет — --no-host-addons ничего не убрал)',
       ),
     );
+  if (manualJars.length)
+    console.log(
+      dim(
+        `(аддоны только для ручной установки в сборку не беру: ${manualJars.map((p) => path.basename(p)).join(', ')})`,
+      ),
+    );
+  if (stagedOut.length) {
+    console.log(dim(`(профиль подписан на обновления, их файлы в сборку не беру: ${stagedOut.length})`));
+    for (const p of stagedOut.slice(0, 6)) console.log(dim(`    = ${p}`));
+    if (stagedOut.length > 6) console.log(dim(`    … ещё ${stagedOut.length - 6}`));
+  }
   if (!profile.world) console.log(yellow('Мир не выбран — датапаки и календарь мира не попадут в сборку (tfc init).'));
   await publish({
     api: a,
@@ -1069,9 +1164,12 @@ async function adminUpdates(a, v, [action, ...ids]) {
       throw new Error(`обновление ${u.id} уже не ждёт (${u.status})`);
     return u;
   };
+  const cfgNow = loadConfig();
+  const subProfile = Object.keys(cfgNow.profiles ?? {}).length ? currentProfile(cfgNow, v.profile) : null;
+  const subs = subProfile ? (loadState(subProfile).staging ?? []) : [];
   if (!action || action === 'list') {
     if (!pending.length) console.log('Ждущих обновлений нет.');
-    for (const u of pending) printUpdate(u);
+    for (const u of pending) printUpdate(u, { subscribed: subs.some((x) => x.id === u.id) });
     const rejected = updates.filter((u) => u.status === 'rejected');
     if (rejected.length) console.log(dim('\nОтклонённые — только явный pull по id:'));
     for (const u of rejected) printUpdate(u);
@@ -1080,9 +1178,43 @@ async function adminUpdates(a, v, [action, ...ids]) {
     for (const u of done) printUpdate(u, { full: false });
     if (pending.length)
       console.log(
-        `\nЗабрать к себе: ${cyan('tfc admin updates pull')}, после проверки — ${cyan('tfc admin updates approve <id>')}`,
+        `\nПроверить поверх сборки: ${cyan('tfc admin updates subscribe <id>')} (--profile тест — только в нём), забрать файлами: ${cyan('tfc admin updates pull')}, после проверки — ${cyan('tfc admin updates approve <id>')}`,
       );
     return;
+  }
+  if (action === 'subscribed') {
+    if (!subProfile) throw new Error('сначала настройте папку игры: tfc init');
+    if (!subs.length) return console.log(`Профиль ${subProfile.name} ни на что не подписан.`);
+    console.log(`Профиль ${profileTitle(subProfile)} подписан:`);
+    for (const s of subs) {
+      const u = updates.find((x) => x.id === s.id);
+      if (u) printUpdate(u, { full: false, subscribed: true });
+      else console.log(`${bold(s.id)} ${dim('нет на сервере')}`);
+    }
+    return;
+  }
+  if (action === 'subscribe' || action === 'unsubscribe') {
+    if (!subProfile) throw new Error('сначала настройте папку игры: tfc init');
+    if (!ids.length) throw new Error(`tfc admin updates ${action} <id…>${action === 'unsubscribe' ? ' | all' : ''}`);
+    let next;
+    if (action === 'subscribe') {
+      next = [...subs];
+      for (const id of ids) {
+        const u = find(id);
+        if (!next.some((x) => x.id === u.id)) next.push({ id: u.id, note: u.note });
+      }
+    } else if (ids.length === 1 && ids[0] === 'all') next = [];
+    else {
+      const absent = ids.filter((id) => !subs.some((x) => x.id === id));
+      if (absent.length) throw new Error(`профиль ${subProfile.name} не подписан на: ${absent.join(', ')}`);
+      next = subs.filter((x) => !ids.includes(x.id));
+    }
+    console.log(
+      action === 'subscribe'
+        ? `Подписываю профиль ${profileTitle(subProfile)} — сборка и обновления поверх:`
+        : `Отписываю профиль ${profileTitle(subProfile)} — файлы обновлений уйдут, файлы сборки вернутся:`,
+    );
+    return cmdPull({ ...v, stagingIds: next }, []);
   }
   if (action === 'pull') {
     const todo = ids.length ? ids.map((id) => find(id, true)) : pending.slice().reverse();
@@ -1125,6 +1257,14 @@ async function adminUpdates(a, v, [action, ...ids]) {
       throw e;
     });
     console.log(`${green('Готово:')} сборка ${r.snapshot.id} — теперь текущая, игроки получат её по tfc pull.`);
+    if (r.update.datapacks?.length)
+      console.log(`Подтверждены в сборке датапаки: ${r.update.datapacks.map((d) => `«${d.name}»`).join(', ')}.`);
+    if (r.previous)
+      console.log(
+        dim(
+          `Откат: tfc admin rollback (сборка ${r.snapshot.id} → ${r.previous}${r.update.datapacks?.length ? ', вернёт и подтверждение датапаков' : ''}).`,
+        ),
+      );
     if (r.job) console.log(dim(`Данные сайта пересобираются: tfc admin jobs ${r.job} --follow`));
     const cfg = loadConfig();
     if (Object.keys(cfg.profiles ?? {}).length)
@@ -1151,6 +1291,10 @@ async function cmdAddons(v, [sub, ...names]) {
   }
   const cfg = loadConfig();
   const profile = Object.keys(cfg.profiles ?? {}).length ? currentProfile(cfg, v.profile) : null;
+  if (sub === 'remove') {
+    if (!profile) throw new Error('сначала настройте папку игры: tfc init');
+    return removeAddons(profile, names, { yes: v.yes, dryRun: v['dry-run'] });
+  }
   if (!sub || sub === 'list') {
     if (names.length) throw new Error('tfc addons list [--host-only] — без имён; версии аддона: tfc addons <мод>');
     return listAddons(api(cfg), profile, { hostOnly: v['host-only'] });
@@ -1237,7 +1381,16 @@ async function cmdAdmin(v, [sub, ...args]) {
         `${s.id === current ? green('●') : ' '} ${s.id}  ${date(s.createdAt)}  ${s.author ?? ''} ${dim(`${s.fileCount} файлов, ${mb(s.totalSize)}`)} ${s.note ?? ''}`,
       );
   } else if (sub === 'propose') {
-    await propose(a, { dir: arg, remove: v.remove ?? [], note: v.note, yes: v.yes, dryRun: v['dry-run'] });
+    await propose(a, {
+      dir: arg,
+      remove: v.remove ?? [],
+      jars: v.jar ?? [],
+      datapacks: v.datapack ?? [],
+      keepOld: v['keep-old'],
+      note: v.note,
+      yes: v.yes,
+      dryRun: v['dry-run'],
+    });
   } else if (sub === 'updates') {
     await adminUpdates(a, v, args);
   } else if (sub === 'use') {

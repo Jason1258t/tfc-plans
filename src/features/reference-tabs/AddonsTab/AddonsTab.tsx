@@ -116,8 +116,22 @@ export function AddonInstall({ a }: { a: Addon }) {
   return (
     <>
       <p className="faint small">Ставить: {a.needs}</p>
+      {a.manual && (
+        <p className="small">
+          Только вручную: обычный <code>tfc pull</code> его не ставит, в мире сервера его нет.
+        </p>
+      )}
       <p className="faint small">
-        Программой: <code>tfc pull addons {a.id}</code>
+        Программой:{' '}
+        <code>
+          {a.manual ? 'tfc addons install' : 'tfc pull addons'} {a.id}
+        </code>
+        {a.manual ? (
+          <>
+            {' '}
+            (убрать — <code>tfc addons remove {a.id}</code>)
+          </>
+        ) : null}
         {a.replaces?.length ? <> — заодно уберёт (с копией) {a.replaces.join(', ')}</> : null}
       </p>
     </>

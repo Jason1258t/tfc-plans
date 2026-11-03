@@ -44,6 +44,8 @@ export interface AddonCard {
   sha256?: string;
   /** Нужен хосту (встроенный сервер в его игре) — фильтр `tfc addons list --host-only`; ставится по side, как все */
   hostOnly?: boolean;
+  /** Только ручная установка: на сайте и в `tfc addons` виден, обычный `tfc pull` его не ставит и не убирает */
+  manual?: boolean;
   /** Не показывать в списке (диагностика): jar на сайте есть, карточки — нет */
   unlisted?: boolean;
   blocks: AddonBlock[];

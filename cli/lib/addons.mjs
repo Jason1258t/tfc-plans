@@ -2,16 +2,18 @@
  * Версии аддонов на сервере сборки: `tfc admin addon upload <jar…>` — залить jar версии (блоб) и записать версию
  * на сайте (Firestore addonVersions, новая — черновик; ченджлог пишут на сайте или MCP addon_version_put);
  * `tfc addons list` — аддоны полными строками `мод@версия` (`--host-only` — только для хоста), `tfc addons <мод>` — его
- * версии, `tfc addons install <мод>@<версия>` — поставить (= `tfc pull addons`, в tfc.mjs).
+ * версии, `tfc addons install <мод>@<версия>` — поставить (= `tfc pull addons`, в tfc.mjs), `tfc addons remove <мод>`
+ * — убрать поставленный вручную.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { compareVersions, sortVersions, STATUS_LABEL } from '@tfc/core/addonVersions';
 import { modInfoOf } from './jarid.mjs';
 import { loadState } from './plan.mjs';
-import { addonMatches } from './pull.mjs';
-import { sha256File } from './scan.mjs';
-import { bold, cyan, dim, green, red, yellow } from './ui.mjs';
+import { addonMatches, applyPull } from './pull.mjs';
+import { localPath, sha256File } from './scan.mjs';
+import { beginBackup, finishBackup } from './sync.mjs';
+import { bold, confirm, cyan, dim, green, interactive, red, yellow } from './ui.mjs';
 
 /** Залить jar версий аддонов: id и версия — из neoforge.mods.toml jar (--id/--ver — вместо них) */
 export async function uploadAddons(api, files, { id, version } = {}) {
@@ -44,7 +46,7 @@ const full = (a, v) => `${a.id}@${v}`;
 
 /** Список с сервера сборки + что стоит в этой папке и что закреплено */
 async function addonsHere(api, profile) {
-  const { addons } = await api.get('/site/addons');
+  const { addons } = await api.get('/site/addons?v=2');
   const state = profile ? loadState(profile) : {};
   const pins = state.addonPins ?? {};
   const pulled = state.pulled?.addons ?? {};
@@ -78,12 +80,14 @@ export async function listAddons(api, profile, { hostOnly = false } = {}) {
     const { a, vs, installed, latest, pin } = x;
     const top = latest ?? vs[0];
     console.log(
-      `  ${bold(str(x).padEnd(width))}  ${a.name}${a.hostOnly ? cyan(' [хосту]') : ''}${top && !latest ? yellow(` (${STATUS_LABEL[top.status]})`) : ''}${hereNote(x)}`,
+      `  ${bold(str(x).padEnd(width))}  ${a.name}${a.hostOnly ? cyan(' [хосту]') : ''}${a.manual ? cyan(' [вручную]') : ''}${top && !latest ? yellow(` (${STATUS_LABEL[top.status]})`) : ''}${hereNote(x)}`,
     );
     if (installed && latest && compareVersions(installed.version, latest.version) < 0 && !pin)
       console.log(dim(`      есть новее — tfc addons install ${full(a, latest.version)}`));
   }
   console.log(dim('\nВерсии аддона: tfc addons <мод>; поставить: tfc addons install <мод>@<версия>'));
+  if (list.some((x) => x.a.manual))
+    console.log(dim('[вручную] — обычный tfc pull не ставит и не убирает; убрать: tfc addons remove <мод>'));
 }
 
 /** tfc addons <мод…>: все версии названных аддонов полными строками */
@@ -96,7 +100,9 @@ export async function showAddons(api, profile, names) {
     );
   for (const x of list.filter((x) => names.some((n) => addonMatches(x.a, n)))) {
     const { a, vs, installed, latest } = x;
-    console.log(`${bold(a.name)} ${dim(a.id)}${a.hostOnly ? cyan(' [хосту]') : ''}${hereNote(x)}`);
+    console.log(
+      `${bold(a.name)} ${dim(a.id)}${a.hostOnly ? cyan(' [хосту]') : ''}${a.manual ? cyan(' [вручную]') : ''}${hereNote(x)}`,
+    );
     if (a.needs) console.log(dim(`  ${a.needs}`));
     const width = Math.max(0, ...vs.map((v) => full(a, v.version).length));
     if (!vs.length) console.log(dim('  версий на сервере сборки нет — ставится последняя со страницы сайта'));
@@ -114,4 +120,49 @@ export async function showAddons(api, profile, names) {
     }
   }
   console.log(dim('\nПоставить и закрепить: tfc addons install <мод>@<версия>; вернуть последнюю — <мод>@latest'));
+}
+
+/**
+ * tfc addons remove <мод…>: убрать поставленное (с копией, tfc undo вернёт) и снять закрепление. Обычный pull вернёт
+ * аддоны, которые ставятся всем, поэтому команда для manual. Замены сборки (state.addonOverrides) сбрасываем: следующий
+ * pull посчитает их заново по оставшимся аддонам.
+ */
+export async function removeAddons(profile, names, { yes, dryRun }) {
+  if (!names.length) throw new Error('tfc addons remove <мод…>');
+  const mine = loadState(profile).pulled?.addons ?? {};
+  const key = (s) =>
+    String(s)
+      .toLowerCase()
+      .replace(/[-_\s]+/g, '');
+  const found = names.map((n) => {
+    const id = Object.keys(mine).find((k) => key(k) === key(n));
+    if (!id) throw new Error(`«${n}» здесь не поставлен (поставленные: ${Object.keys(mine).join(', ') || 'нет'})`);
+    return id;
+  });
+  const remove = found.map((id) => {
+    const rec = mine[id];
+    const file = localPath(profile, rec.path);
+    console.log(`  ${red('−')} ${rec.path} ${dim(`— ${rec.name}`)}`);
+    if (!rec.manual) console.log(yellow(`    ${id} ставится всем: следующий tfc pull поставит его снова`));
+    return { id, name: rec.name, path: rec.path, file, sha256: rec.sha256, gone: !fs.existsSync(file) };
+  });
+  if (dryRun) return console.log(dim('--dry-run: ничего не менял'));
+  if (!yes) {
+    if (!interactive()) throw new Error('подтвердите: tfc addons remove … --yes');
+    if (!(await confirm('Убрать?', true))) return;
+  }
+  const backup = beginBackup(profile);
+  const plan = {
+    kind: 'addons',
+    add: [],
+    update: [],
+    same: [],
+    conflict: [],
+    remove,
+    obsolete: [],
+    pins: Object.fromEntries(found.map((id) => [id, null])),
+  };
+  applyPull(profile, [plan], backup, []);
+  const dir = finishBackup(profile, backup);
+  console.log(`${green('Готово.')}${dir ? dim(` Копия — ${dir}; вернуть: tfc undo`) : ''} Перезапустите игру.`);
 }

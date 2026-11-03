@@ -104,10 +104,12 @@ export async function siteDatapackPaths(api, profile) {
  * Что хотим поставить: [{ id, name, path, bytes() }]; path — как в снимке.
  * unknown — названные, которых на сайте нет; all — для подсказки.
  */
-async function wanted(api, kind, names, profile) {
-  if (kind === 'addons') return wantedAddons(api, names, profile);
+async function wanted(api, kind, names, profile, staging) {
+  if (kind === 'addons') return wantedAddons(api, names, profile, staging);
   if (kind === 'datapacks') {
     const r = await api.get(`/site/datapacks${query(names)}${names.length ? '&' : '?'}v=2`);
+    // Датапак, который подтверждает staging-обновление, приходит файлом обновления в kubejs/data, не копией в мир
+    if (staging && !names.length) r.items = r.items.filter((d) => !staging.datapackIds.has(d.id));
     return {
       ...r,
       items: [
@@ -215,13 +217,13 @@ export async function schematicTargets(api, profile, names = []) {
 }
 
 /** Имя аддона из командной строки: id, имя jar с версией и без; «-», «_» и регистр не важны */
-const addonKey = (s) =>
+export const addonKey = (s) =>
   String(s ?? '')
     .toLowerCase()
     .replace(/\.jar$/, '')
     .replace(/[-_\s]+/g, '');
 /** Имя jar без версии: ee-extras-2.0.1.jar → ee-extras */
-const jarBase = (file) => String(file ?? '').replace(/-\d[\w.+-]*\.jar$/i, '');
+export const jarBase = (file) => String(file ?? '').replace(/-\d[\w.+-]*\.jar$/i, '');
 
 /** Аддон назван этим именем: id или имя jar любой его версии (с версией в имени и без) */
 export const addonMatches = (a, n) =>
@@ -276,9 +278,10 @@ export function pickAddonVersion(a, asked, pinned) {
 /**
  * Аддоны: без имён — все, что ставятся на эту сторону (клиент/сервер), с именами — названные (можно с @версией).
  * С ключом список и jar — с сервера сборки (/site/addons: все версии, откат, закрепление), без ключа — со статики
- * сайта (/addons/index.json: только последние версии).
+ * сайта (/addons/index.json: только последние версии). manual-аддон без имён — только если уже поставлен: обновляем,
+ * не убираем. В статике таких нет: по ней запись поставленного сохраняем (keepManual).
  */
-async function wantedAddons(api, names, profile) {
+async function wantedAddons(api, names, profile, staging) {
   const side = profile.side ?? 'client';
   const asked = names.map(splitAddonName);
   const state = loadState(profile);
@@ -287,7 +290,7 @@ async function wantedAddons(api, names, profile) {
   let serverDown = false;
   if (api) {
     try {
-      list = (await api.get('/site/addons')).addons;
+      list = (await api.get('/site/addons?v=2')).addons;
     } catch (e) {
       // старый сервер сборки без /site/addons — как раньше, со статики сайта; 503 — у него нет карточек аддонов
       if (e.status !== 404 && e.status !== 503) throw e;
@@ -331,12 +334,24 @@ async function wantedAddons(api, names, profile) {
   const match = addonMatches;
   const chosen = asked.length
     ? all.filter((a) => asked.some((x) => match(a, x.name)))
-    : all.filter((a) => a.side === 'both' || a.side === side);
+    : all.filter((a) => (a.manual ? state.pulled?.addons?.[a.id] : a.side === 'both' || a.side === side));
   const cacheDir = path.join(stateDir(profile), 'site-files');
   const newPins = {};
   const items = [];
   const notes = serverDown ? ['сервер сборки не отдал список аддонов — беру последние версии с сайта'] : [];
   for (const a of chosen) {
+    // jar этого мода даёт staging-обновление. Закрепление не трогаем: вернётся после отписки
+    if (
+      staging &&
+      !asked.length &&
+      (staging.jars.some((p) => isAddonJar(a, path.posix.basename(p))) ||
+        (a.versions ?? []).some((v) => staging.removed.has(`mods/${v.file}`)))
+    ) {
+      notes.push(
+        `${a.id}: версию даёт staging-обновление${pins[a.id] ? `, закреплённая ${pins[a.id]} вернётся после отписки` : ''}`,
+      );
+      continue;
+    }
     const ask = asked.find((x) => match(a, x.name))?.version ?? null;
     // На сайте только последние версии: закрепления не применяем и не снимаем — вернутся со следующим pull
     const { v, pin, note } = pickAddonVersion(a, ask, serverDown ? undefined : pins[a.id]);
@@ -350,6 +365,7 @@ async function wantedAddons(api, names, profile) {
     items.push({
       id: a.id,
       name: `${a.name} ${v.version}`,
+      manual: a.manual === true,
       version: v.version,
       path: `mods/${v.file}`,
       note: a.needs,
@@ -375,6 +391,7 @@ async function wantedAddons(api, names, profile) {
     items,
     notes,
     pins: newPins,
+    keepManual: !list,
     unknown: asked.filter((x) => !all.some((a) => match(a, x.name))).map((x) => x.name),
     all: all.map((a) => ({ id: a.id, name: `${a.id} ${sortVersions(a.versions ?? [])[0]?.version ?? ''}`.trim() })),
   };
@@ -418,12 +435,15 @@ function worldZipPaths(profile) {
 
 /**
  * План одного вида. Возвращает { add, update, same, conflict, remove, keptModified, skipped, unknown, all }:
- * элементы — { id, name, path, file, sha256, bytes }.
+ * элементы — { id, name, path, file, sha256, bytes }. staging — подписки профиля (staging.mjs): пути обновлений сайт
+ * не трогает.
  */
-export async function planPull(api, profile, kind, names = [], { force = false } = {}) {
+export async function planPull(api, profile, kind, names = [], { force = false, staging = null } = {}) {
   const state = loadState(profile);
   const mine = state.pulled?.[kind] ?? {};
-  const w = await wanted(api, kind, names, profile);
+  const w = await wanted(api, kind, names, profile, staging);
+  const staged = staging?.paths ?? new Set();
+  if (!names.length) w.items = w.items.filter((it) => !staged.has(it.path));
   const plan = {
     kind,
     add: [],
@@ -471,6 +491,13 @@ export async function planPull(api, profile, kind, names = [], { force = false }
     const still = w.items.find((x) => x.id === id);
     if (still ? still.path === rec.path : names.length) continue;
     if (target.has(rec.path)) continue;
+    // Сервер сборки не ответил — про manual не знаем, это не значит, что его убрали
+    if (rec.manual && w.keepManual) continue;
+    // По этому пути теперь файл обновления: запись сайта снимаем, файл не трогаем
+    if (staged.has(rec.path)) {
+      plan.remove.push({ id, name: rec.name, path: rec.path, gone: true });
+      continue;
+    }
     if (kind === 'datapacks' && still && plan.conflict.some((x) => x.id === id)) continue;
     const file = localPath(profile, rec.path);
     if (!file) continue;
@@ -510,7 +537,12 @@ export async function planPull(api, profile, kind, names = [], { force = false }
     }
   }
   if (kind === 'addons') {
-    const skip = new Set([...target, ...plan.remove.map((x) => x.path), ...plan.keptModified.map((x) => x.path)]);
+    const skip = new Set([
+      ...target,
+      ...staged,
+      ...plan.remove.map((x) => x.path),
+      ...plan.keptModified.map((x) => x.path),
+    ]);
     plan.obsolete = addonObsolete(profile, [...plan.add, ...plan.update, ...plan.same], skip);
     plan.skip = skip;
   }
@@ -580,9 +612,10 @@ const targets = (p) => [...p.add, ...p.update, ...p.same, ...p.conflict];
  * Кто владеет путём, когда файл есть и в снимке, и на сайте. Меняет планы сайта (убирает из них пути снимка
  * у датапаков и скриптов) и возвращает { skip, overrides }: skip — пути, которые план снимка не трогает (их ставит
  * или убирает сайт), overrides — пути снимка, которые заменяют аддоны (запоминаются в state.addonOverrides, чтобы
- * `tfc pull kubejs` без аддонов не вернул скрипт, убранный аддоном).
+ * `tfc pull kubejs` без аддонов не вернул скрипт, убранный аддоном). staged — файлы staging-обновлений: они главнее
+ * сайта, их ставит план снимка.
  */
-export function siteOwned(plans, snapshot, state) {
+export function siteOwned(plans, snapshot, state, staged = new Set()) {
   const snapPaths = new Set((snapshot?.files ?? []).map((f) => f.path));
   for (const p of plans) {
     // У аддонов и датапаков главный сайт — их пути из снимка план сайта не уступает
@@ -609,14 +642,16 @@ export function siteOwned(plans, snapshot, state) {
     );
     const over = new Set();
     for (const f of snapshot?.files ?? [])
-      if (f.kind === 'mod' && !skip.has(f.path) && bases.has(addonKey(jarBase(f.path.slice(5))))) over.add(f.path);
-    for (const x of mine) for (const r of x.replaces ?? []) if (snapPaths.has(r)) over.add(r);
+      if (f.kind === 'mod' && !skip.has(f.path) && !staged.has(f.path) && bases.has(addonKey(jarBase(f.path.slice(5)))))
+        over.add(f.path);
+    for (const x of mine) for (const r of x.replaces ?? []) if (snapPaths.has(r) && !staged.has(r)) over.add(r);
     for (const x of addons.obsolete) if (snapPaths.has(x.path)) over.add(x.path);
     // Заменённое раньше по id мода (имя jar не совпало) — пока стоят аддоны
-    if (mine.length) for (const p of overrides) if (snapPaths.has(p)) over.add(p);
+    if (mine.length) for (const p of overrides) if (snapPaths.has(p) && !staged.has(p)) over.add(p);
     overrides = [...over];
   }
   for (const p of overrides) skip.add(p);
+  for (const p of staged) skip.delete(p);
   return { skip, overrides };
 }
 
@@ -675,7 +710,14 @@ export function applyPull(profile, plans, backup, overrides) {
       delete state.files?.[x.path];
     }
     for (const x of [...p.add, ...p.update, ...p.same]) {
-      if (!x.copy) mine[x.id] = { path: x.path, sha256: x.sha256, name: x.name, world: profile.world ?? null };
+      if (!x.copy)
+        mine[x.id] = {
+          path: x.path,
+          sha256: x.sha256,
+          name: x.name,
+          world: profile.world ?? null,
+          ...(x.manual === true ? { manual: true } : {}),
+        };
       else {
         state.schematicCopies ??= {};
         state.schematicCopies[x.path] = { id: x.schematicId, sha256: x.sha256 };
