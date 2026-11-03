@@ -6,6 +6,7 @@ import { GUIDES_SUBS, type GuidesSub } from '@/features/guides';
 const PowerGuidesSection = lazy(() => import('@/features/guides/PowerGuidesSection'));
 const SiteGuidesSection = lazy(() => import('@/features/guides/SiteGuidesSection'));
 const MultiblockGuidesSection = lazy(() => import('@/features/guides/MultiblockGuidesSection'));
+const ChemistryGuidesSection = lazy(() => import('@/features/guides/ChemistryGuidesSection'));
 
 /** Справочник → «Все гайды»: общий каталог; аддонные статьи остаются на странице аддонов. */
 export function GuidesTab({
@@ -36,6 +37,10 @@ export function GuidesTab({
         {sub === 'multiblocks' ? (
           <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>
             <MultiblockGuidesSection guide={guide} onGuide={onGuide} />
+          </Suspense>
+        ) : sub === 'chemistry' ? (
+          <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>
+            <ChemistryGuidesSection guide={guide} onGuide={onGuide} />
           </Suspense>
         ) : sub === 'site' ? (
           <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>

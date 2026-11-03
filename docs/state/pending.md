@@ -15,6 +15,8 @@ its one-liner in STATE.md.
   `#tfc:prospectable`. Not checked: client of the full pack, Survival, veins actually generating in a TFC world,
   override of the biome modifiers taking effect. Polymorph's JEI integration is expected to disable itself.
 
+- **Destroy chain is broken in Survival** (2026-11-03, dev #209, found in #207): the electrolyzer's Cl₂ port is behind the shell, and the Vat refuses its `destroy:gas` H₂/Cl₂. Needs a new Destroy Extras version before #199 can pass; the update `u20261103-104332-a97a` still contains the old one.
+
 - **Building generator colours** (2026-10-30, dev #166): builder `block-colors.json` added to `npm run mods`; reaches
   the site after `tfc admin rebuild --pull` + `tfc admin publish --live`. Until then the generator page (stage 4)
   computes colours in the browser.

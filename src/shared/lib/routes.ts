@@ -18,7 +18,7 @@ export function legacyReferenceTarget(search: string): string | null {
     params.set('sub', 'guides');
     return `/addons?${params}`;
   }
-  if (tab === 'guides' && params.has('g') && sub !== 'site') {
+  if (tab === 'guides' && params.has('g') && sub !== 'site' && sub !== 'chemistry') {
     params.set('tab', sub === 'multiblocks' ? 'multiblocks' : 'power');
     params.set('sub', 'guides');
     return `/reference?${params}`;
