@@ -43,6 +43,17 @@ its one-liner in STATE.md.
   `recipe_conflicts` clean. Host: flag «ставить», `tfc datapacks install`, check in game, then `confirm`. Not
   checked in game.
 
+- **Кирпичи в прессе и известь из флюса** (2026-11-03, dev #210): site datapack `YHGvlo1ukbFQ5TQAUS3W`
+  (ns `tfc_plans_factory`, built by `npm run datapack:bricks -- --upload`). Every crafting-table 3×3 mortar brick block
+  now also comes out of a Create press over a basin at the hand recipe ratio — 5 bricks + 4 mortar → 4 blocks
+  (Firmalife tile bricks 5 + 4 → 1): 21 TFC rock bricks, clay, fire, alabaster, Firmalife tile, Beneath polished
+  blackstone and nether bricks, 28 recipes, so a factory line no longer needs nine mechanical crafters. Plus Create
+  mixing 500 mB water + 1 flux → 500 mB limewater, the same «flux or lime» input the TFC barrel and the IE mixer use
+  (Create only knew lime). `recipe_conflicts` clean; recipes read as «Прессование в чаше» in JEI. The site editor warns
+  «нет в сборке: tfc:limewater» — a false positive: the checker only knows items, and limewater is a fluid (the same
+  wording appears for any fluid output). Host: flag «ставить» is on, `tfc datapacks install`, check a press cycle and a
+  flux-only mix in game, then `confirm`. Not checked in game.
+
 - **Create Ore Excavation veins** (2026-10-29, dev #136): proposed update `u20261029-091146-275f`, source and
   checks — [pack-patches/coe-vein-ids](../../pack-patches/coe-vein-ids/README.md). COE 1.6.8's KubeJS helper writes
   a component object, but the recipe loader expects a JSON string (`FLAT_CODEC`); all 27 custom veins now use

@@ -37,6 +37,7 @@
     "guides": "node scripts/guides.mjs",
     "datapack:pellets": "node scripts/pellet-arc-datapack.mjs",
     "datapack:smooth": "node scripts/smooth-stone-datapack.mjs",
+    "datapack:bricks": "node scripts/brick-press-datapack.mjs",
     "pack": "node scripts/pack.mjs",
     "pack:fetch": "node scripts/pack-fetch.mjs",
     "stand": "node scripts/pack-stand.mjs",
