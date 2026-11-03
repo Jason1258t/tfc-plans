@@ -5,13 +5,15 @@ its one-liner in STATE.md.
 
 ## Host actions
 
-- **Destroy slice as one update** (2026-11-03, dev #200, acceptance #199): `u20261103-101026-8f09` adds Destroy,
-  Petrolpark, Destroy Bridge, Destroy Extras and four datapacks in `kubejs/data/`; updates EE Extras 2.7.0, JEI 19.55.0.431,
-  LDLib 2.2.45, Create Aeronautics 1.3.2. Host: pull into a separate profile and a world copy, run #199, then approve or
-  reject. Bridge jar was rebuilt from source: its sha differs from the stale `addon.json` card. Checked: class and mixin
-  links by jar, full-pack dedicated-server boot. Not checked: client of the full pack, Survival. Open: Destroy ores
-  (`disableWorldGen=false`); Polymorph's JEI integration is expected to disable itself. The four site cards no longer
-  offer themselves to worlds (`install=false`); approving does not record them as confirmed datapacks yet.
+- **Destroy slice as one update** (2026-11-03, dev #203, acceptance #199): `u20261103-104332-a97a` adds Destroy,
+  Petrolpark, Destroy Bridge, Destroy Extras and five datapacks (confirmed by approve); updates EE Extras 2.7.0, JEI 19.55.0.431,
+  LDLib 2.2.45, Create Aeronautics 1.3.2. Replaces rejected `u20261103-101026-8f09`. Host: subscribe a separate profile
+  on a world copy, run #199, then approve or reject. Bridge jar was rebuilt from source: its sha differs from the stale
+  `addon.json` card. Ores: card `mQcIl1urw15ReBw5Xrwh` turns off Destroy nickel and fluorite biome modifiers
+  (`neoforge:none`, because `disableWorldGen` is read by nothing in 0.4.6) and adds a TFC fluorite vein; crocoite stays
+  in the Nether. Checked: class and mixin links by jar, full-pack server boot, vein registered, ore in
+  `#tfc:prospectable`. Not checked: client of the full pack, Survival, veins actually generating in a TFC world,
+  override of the biome modifiers taking effect. Polymorph's JEI integration is expected to disable itself.
 
 - **Building generator colours** (2026-10-30, dev #166): builder `block-colors.json` added to `npm run mods`; reaches
   the site after `tfc admin rebuild --pull` + `tfc admin publish --live`. Until then the generator page (stage 4)

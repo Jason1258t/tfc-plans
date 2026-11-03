@@ -26,7 +26,7 @@ When finishing work: update the topic file, and this index only if a line below 
 
 - Host: install **Builder Tools 1.0.1** (dev #103) on the server and all players, publish snapshot; check builder belt in game.
 
-- Host: Destroy slice update `u20261103-101026-8f09` (dev #200, #199): pull into a test profile and a world copy, run the
+- Host: Destroy slice update `u20261103-104332-a97a` (dev #203, #199): subscribe a test profile on a world copy, run the
   acceptance, approve or reject.
 
 - Host: COE vein loading fix `u20261029-091146-275f` (dev #136): pull, restart, check command suggestions,
