@@ -187,6 +187,15 @@ Before 2.0 — EE Rectifiers, `ee_rectifier`; old blocks migrate to new ids via 
   (`rectest lanterns|lanternpower|lanternreport|lanterncut|lanternie`, `KEEP=1`): real click path, 230 V lit
   52.9 W, 30 V dark, 60 V AC lit, cut — IE lantern dropped and the tail dark, IE-wired refused, restart kept. Not in
   game: looks, light, flicker on a real generator.
+- **2.8.0** (2026-11-03; dev #22, item 14 / M10): PCB editor (16×16, up to three layers, traces, components,
+  vias and pins; design item; L1 remains compatible with `l1_mask`), base laminate/foil/solder materials and electronic
+  components, L2/L3 blanks, 240 W / 48 V solar panel (rain 35%, thunder 10%) and optional TFC thermometer
+  (0–1600 °C → 0–15 V, 1000 Ω). Draft site datapack `Nh1ATmqCY92Hao48hOAQ` (`EE Extras — электроника M10`, 20 entries)
+  supplies the recipes; it is not confirmed or installed automatically. Industrial L2/L3 production lines remain pending.
+  Gradle check/build and 1344/1344 terminals pass. Dedicated server: PCB 15/15; thermometer 800 °C → 7.493 V
+  (7.500 V EMF), including restart; solar day 47.75 V / 50.61 W at the test load, night/roof zero. Automated client:
+  previous nine floodlight checks plus editor/status/design/L2/via checks pass with zero errors and inspected
+  screenshots. Resources/models checked. No manual Survival playthrough or world confirmation of the datapack.
 - **2.7** (2026-11-03; dev task #198): IE floodlight on the EE duplex cable (`ee_extras:floodlight`, click with the spool;
   subclass of the IE block, IE block entity, `lantern/EeFloodlight*`; 440 Ω while lit, open otherwise; from 50 V; beam
   rotation and redstone inversion kept; refused with IE wires; drops the IE floodlight) and `ee_extras:cable_converter`
