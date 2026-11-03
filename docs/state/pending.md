@@ -5,9 +5,9 @@ its one-liner in STATE.md.
 
 ## Host actions
 
-- **Destroy slice as one update** (2026-11-03, dev #203, acceptance #199): `u20261103-104332-a97a` adds Destroy,
-  Petrolpark, Destroy Bridge, Destroy Extras and five datapacks (confirmed by approve); updates EE Extras 2.7.0, JEI 19.55.0.431,
-  LDLib 2.2.45, Create Aeronautics 1.3.2. Replaces rejected `u20261103-101026-8f09`. Host: subscribe a separate profile
+- **Destroy slice as one update** (2026-11-03, dev #203, acceptance #199): `u20261103-164054-6977` adds Destroy,
+  Petrolpark, Destroy Bridge, Destroy Extras 0.3.0 and five datapacks (confirmed by approve); updates EE Extras 2.7.0, JEI 19.55.0.431,
+  LDLib 2.2.45, Create Aeronautics 1.3.2. Replaces `u20261103-104332-a97a` (Destroy Extras 0.2.0: Cl₂ port blocked, Vat refused the gases, EMI hid Destroy recipes); the host still has to reject that one. Host: subscribe a separate profile
   on a world copy, run #199, then approve or reject. Bridge jar was rebuilt from source: its sha differs from the stale
   `addon.json` card. Ores: card `mQcIl1urw15ReBw5Xrwh` turns off Destroy nickel and fluorite biome modifiers
   (`neoforge:none`, because `disableWorldGen` is read by nothing in 0.4.6) and adds a TFC fluorite vein; crocoite stays
@@ -40,6 +40,17 @@ its one-liner in STATE.md.
   rock, no fluid (a single input no other basin recipe uses, so Create never has to pick between recipes).
   `recipe_conflicts` clean. Host: flag «ставить», `tfc datapacks install`, check in game, then `confirm`. Not
   checked in game.
+
+- **Кирпичи в прессе и известь из флюса** (2026-11-03, dev #210): site datapack `YHGvlo1ukbFQ5TQAUS3W`
+  (ns `tfc_plans_factory`, built by `npm run datapack:bricks -- --upload`). Every crafting-table 3×3 mortar brick block
+  now also comes out of a Create press over a basin at the hand recipe ratio — 5 bricks + 4 mortar → 4 blocks
+  (Firmalife tile bricks 5 + 4 → 1): 21 TFC rock bricks, clay, fire, alabaster, Firmalife tile, Beneath polished
+  blackstone and nether bricks, 28 recipes, so a factory line no longer needs nine mechanical crafters. Plus Create
+  mixing 500 mB water + 1 flux → 500 mB limewater, the same «flux or lime» input the TFC barrel and the IE mixer use
+  (Create only knew lime). `recipe_conflicts` clean; recipes read as «Прессование в чаше» in JEI. The site editor warns
+  «нет в сборке: tfc:limewater» — a false positive: the checker only knows items, and limewater is a fluid (the same
+  wording appears for any fluid output). Host: flag «ставить» is on, `tfc datapacks install`, check a press cycle and a
+  flux-only mix in game, then `confirm`. Not checked in game.
 
 - **Create Ore Excavation veins** (2026-10-29, dev #136): proposed update `u20261029-091146-275f`, source and
   checks — [pack-patches/coe-vein-ids](../../pack-patches/coe-vein-ids/README.md). COE 1.6.8's KubeJS helper writes

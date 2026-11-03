@@ -9,10 +9,11 @@ export const CHECKED: Record<GuideChecked, { label: string; title: string }> = {
 };
 
 /** Разделы общего каталога; «Аддоны» ведёт на их собственную страницу без дублирования статей. */
-export type GuidesSub = 'power' | 'multiblocks' | 'addons' | 'site';
+export type GuidesSub = 'power' | 'multiblocks' | 'chemistry' | 'addons' | 'site';
 export const GUIDES_SUBS: { id: GuidesSub; label: string }[] = [
   { id: 'power', label: 'Электричество' },
   { id: 'multiblocks', label: 'Мультиблоки' },
+  { id: 'chemistry', label: 'Химия' },
   { id: 'addons', label: 'Аддоны' },
   { id: 'site', label: 'TFC Studio' },
 ];

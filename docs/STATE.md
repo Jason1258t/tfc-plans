@@ -21,12 +21,15 @@ When finishing work: update the topic file, and this index only if a line below 
 - Building generator (dev #166): page `/builder` live (stages 0–5, with brush); next — stage 6 forms/styles. Host: rebuild + publish
   for `block-colors.json`.
 
+- Host: brick blocks in the Create press + flux limewater, datapack `YHGvlo1ukbFQ5TQAUS3W` (dev #210): install, check
+  a press cycle and a flux-only mix in game, then `confirm`.
+
 - Host: pack-wide datapacks (dev #125/#154): shared ZIPs are already confirmed in the live snapshot.
   Check old/new worlds in game; retest changed drafts before confirming them again. Named pull needs no manual KubeJS paths.
 
 - Host: install **Builder Tools 1.0.1** (dev #103) on the server and all players, publish snapshot; check builder belt in game.
 
-- Host: Destroy slice update `u20261103-104332-a97a` (dev #203, #199): subscribe a test profile on a world copy, run the
+- Host: Destroy slice update `u20261103-164054-6977` (dev #203, #199): subscribe a test profile on a world copy, run the
   acceptance, approve or reject.
 
 - Host: COE vein loading fix `u20261029-091146-275f` (dev #136): pull, restart, check command suggestions,
