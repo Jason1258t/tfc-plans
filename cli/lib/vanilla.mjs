@@ -3,7 +3,8 @@
  * <.minecraft>/versions, папка игры — <.minecraft>/versions/<имя>/ (моды и конфиги отдельно от обычной игры),
  * профиль в launcher_profiles.json. Дальше папку наполняет обычный `tfc pull`.
  *
- * NeoForge ставит его же установщик (maven.neoforged.net, сверка sha256) без окна: `--install-client <папка>`.
+ * NeoForge ставит его же установщик без окна: `--install-client <папка>`. Сначала — толстый с сервера сборки, с
+ * библиотеками внутри (`tfc admin neoforge build`): maven.neoforged.net открывается не у всех; без него — с maven.
  * Он требует launcher_profiles.json (лаунчер уже запускали) и Java 21+; Java берём ту, что лаунчер скачал себе
  * сам (<.minecraft>/runtime), иначе JAVA_HOME и PATH. Установщик сам добавляет профиль «NeoForge» — его
  * возвращаем как было: игроку нужен наш профиль с отдельной папкой. Старые файлы профилей — копией рядом.
@@ -99,8 +100,29 @@ export function defaultMemoryGb() {
   return gb >= 15 ? 8 : gb >= 11 ? 6 : 4;
 }
 
-/** Установщик NeoForge в кеш (по умолчанию — кеш программы), со сверкой sha256 из maven */
-export async function fetchInstaller(nf, dir = path.join(cacheDir(), 'neoforge')) {
+/** Толстый установщик с сервера сборки в кеш; null — на сервере такого нет или сервер его не отдал */
+async function fetchServerInstaller(api, nf, dir, onBytes) {
+  const meta = await api.get(`/neoforge/${nf}`).catch((e) => {
+    // 404 — не выложен или старый сервер; сеть — попробуем maven
+    if (e.status && e.status !== 404) throw e;
+    return null;
+  });
+  if (!meta) return null;
+  const file = path.join(dir, meta.file);
+  const have = fs.existsSync(file) && createHash('sha256').update(fs.readFileSync(file)).digest('hex') === meta.sha256;
+  if (!have) await api.download(meta.sha256, file, onBytes);
+  return file;
+}
+
+/**
+ * Установщик NeoForge в кеш (по умолчанию — кеш программы): с api — сперва толстый с сервера сборки,
+ * иначе обычный с maven со сверкой sha256.
+ */
+export async function fetchInstaller(nf, dir = path.join(cacheDir(), 'neoforge'), { api, onBytes } = {}) {
+  if (api) {
+    const fat = await fetchServerInstaller(api, nf, dir, onBytes);
+    if (fat) return fat;
+  }
   const name = `neoforge-${nf}-installer.jar`;
   const url = `${MAVEN}/${nf}/${name}`;
   const file = path.join(dir, name);
@@ -109,7 +131,10 @@ export async function fetchInstaller(nf, dir = path.join(cacheDir(), 'neoforge')
     try {
       res = await fetch(u, { signal: AbortSignal.timeout(120_000) });
     } catch (e) {
-      throw new Error(`maven NeoForge недоступен: ${e.cause?.code ?? e.message}`);
+      throw new Error(
+        `сайт NeoForge (maven.neoforged.net) не открывается: ${e.cause?.code ?? e.message}. ` +
+          `Попросите хоста выполнить tfc admin neoforge build ${nf} или повторите через VPN`,
+      );
     }
     if (!res.ok) throw new Error(`maven NeoForge ответил ${res.status} на ${path.basename(u)} — есть ли версия ${nf}?`);
     return res;
@@ -125,6 +150,21 @@ export async function fetchInstaller(nf, dir = path.join(cacheDir(), 'neoforge')
   return file;
 }
 
+/** Собрать толстый установщик: библиотеки NeoForge и Minecraft внутри, сам клиент Minecraft — нет (его качают у Mojang) */
+export async function buildFatInstaller(nf, mcDir, dir = path.join(cacheDir(), 'neoforge')) {
+  const java = findJava(mcDir);
+  if (!java) throw new Error('нет Java 21 или новее (можно указать JAVA_HOME)');
+  const thin = await fetchInstaller(nf, dir);
+  const out = path.join(dir, `neoforge-${nf}-installer-fat.jar`);
+  const args = ['-jar', thin, '--fat', out, '--fat-include-installer-libs', '--fat-include-minecraft-libs'];
+  const r = spawnSync(java.bin, args, { cwd: dir, encoding: 'utf8', windowsHide: true });
+  if (r.status !== 0 || !fs.existsSync(out))
+    throw new Error(
+      `установщик не собрал толстую версию:\n  ${`${r.stdout}${r.stderr}`.trim().split('\n').slice(-4).join('\n  ')}`,
+    );
+  return out;
+}
+
 const readJson = (f) => JSON.parse(fs.readFileSync(f, 'utf8'));
 const writeJson = (f, v) => fs.writeFileSync(f, `${JSON.stringify(v, null, 2)}\n`);
 
@@ -132,7 +172,7 @@ const writeJson = (f, v) => fs.writeFileSync(f, `${JSON.stringify(v, null, 2)}\n
  * Поставить NeoForge nf в mcDir (если ещё нет) и профиль лаунчера на папку gameDir.
  * Возвращает { installed: поставили ли NeoForge сейчас, java, backups: копии файлов профилей, log }.
  */
-export async function installToLauncher({ mcDir, nf, name, title, memoryGb, onStep = () => {} }) {
+export async function installToLauncher({ mcDir, nf, name, title, memoryGb, api, onStep = () => {} }) {
   const gameDir = path.join(mcDir, 'versions', name);
   if (!isDir(mcDir))
     throw new Error(`нет папки Minecraft Launcher ${mcDir} — поставьте лаунчер и запустите его хотя бы раз`);
@@ -163,7 +203,12 @@ export async function installToLauncher({ mcDir, nf, name, title, memoryGb, onSt
           '(лаунчер скачает Java сам), закройте игру и лаунчер и повторите. Или поставьте Java 21 (adoptium.net).',
       );
     onStep(`Скачиваю установщик NeoForge ${nf}`);
-    const jar = await fetchInstaller(nf);
+    onStep(`Скачиваю установщик NeoForge ${nf}`);
+    let got = 0;
+    const jar = await fetchInstaller(nf, undefined, {
+      api,
+      onBytes: (n) => onStep(`Скачиваю установщик NeoForge ${nf}: ${Math.round((got += n) / 1024 ** 2)} МБ`),
+    });
     // Установщику нужен именно launcher_profiles.json; у лаунчера из Store его может не быть
     const main = path.join(mcDir, PROFILE_FILES[0]);
     const madeMain = !fs.existsSync(main);

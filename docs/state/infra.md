@@ -418,3 +418,8 @@ Cursor configs (shapes from their docs, not tried).
   `kubejs/logs/`; `tfc report server-kubejs` uses the profile host server directory. Ambiguous names show
   relative paths for explicit selection. Temporary folders and a stub upload API verified discovery, selection,
   gzip, IP masking, task binding and dry-run. Real game folders/upload and Windows were not checked.
+
+- NeoForge without maven (2026-11-03, dev #204): `tfc init --launcher` first takes a fat installer from the pack server
+  (`tfc admin neoforge build`, `/neoforge/<version>`, record in `neoforge.json`), otherwise maven. Blocked-maven run checked
+  with a JVM hosts file on a throwaway server (plain installer: 82 libraries fail; fat: installs); Mojang stays required.
+  Not checked on the affected player's PC. A new NeoForge version needs a new build.

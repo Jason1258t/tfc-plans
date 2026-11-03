@@ -33,7 +33,7 @@ import {
   siteDatapackPaths,
   siteOwned,
 } from './lib/pull.mjs';
-import { scanLocal } from './lib/scan.mjs';
+import { scanLocal, sha256File } from './lib/scan.mjs';
 import { listAddons, removeAddons, showAddons, uploadAddons } from './lib/addons.mjs';
 import { confirmDatapacks, datapackCatalog, datapackIds, listDatapacks, showDatapacks } from './lib/datapacks.mjs';
 import { listSchematics, publishSchematic } from './lib/schematics.mjs';
@@ -51,6 +51,7 @@ import {
   green,
   interactive,
   mb,
+  progress,
   red,
   withSpinner,
   yellow,
@@ -60,6 +61,7 @@ import {
   DEFAULT_NAME,
   defaultMemoryGb,
   defaultMinecraftDir,
+  buildFatInstaller,
   installToLauncher,
   isNeoforgeInstalled,
   launcherRunning,
@@ -126,6 +128,8 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
                               --no-host-addons — без аддонов хоста (Host Tools и т. п.): они нужны только хосту
   tfc build [mods,kubejs,config,world]   собрать данные сайта локально в ./tfc-out — посмотреть до заливки
   tfc admin keys | invite <ник> [--admin] | revoke <id> | history | use <id> | rollback
+  tfc admin neoforge [list | build [версия]]   установщик NeoForge с библиотеками на сервере сборки: игроки ставят
+                              NeoForge без maven.neoforged.net; собирать после смены версии NeoForge
   tfc admin updates [pull [id…] | approve <id> | reject <id>]   обновления сборки от Claude: список; pull — забрать
                               в папку игры и сервера (вернуть — tfc undo); approve — сделать новой сборкой для всех
   tfc admin updates subscribe <id…>     staging: этот профиль получает обновление поверх сборки при каждом tfc pull,
@@ -375,6 +379,7 @@ async function initLauncher(v, cfg) {
         name: folder,
         title: 'TFC RealWorld',
         memoryGb: memory,
+        api: api(cfg),
         onStep: (s) => sp.update(s),
       }),
     );
@@ -892,6 +897,7 @@ async function cmdPublish(v) {
         `Модам нужен NeoForge ${need.version} (${need.by.join(', ')}), в папке указан ${found} — в сборку пишу ${need.version}.`,
       ),
     );
+  if (raise) console.log(dim(`Игрокам без maven NeoForge: tfc admin neoforge build ${need.version}`));
   const loader = raise ? `neoforge-${need.version}` : found;
   console.log(`Профиль ${profileTitle(profile)}${mc ? dim(` · Minecraft ${mc}${loader ? `, ${loader}` : ''}`) : ''}`);
   if (skipped) console.log(dim(`(пропущено вне белого списка: ${skipped})`));
@@ -1152,6 +1158,32 @@ async function adminChanges(a, v, [action, ...ids]) {
   console.log(
     `${cyan('tfc publish')} (игроки получат конфиг), ${cyan('tfc admin publish --live')} (сайт и Claude увидят новые значения).`,
   );
+}
+
+/** Толстый установщик NeoForge на сервере сборки: для игроков, у которых maven.neoforged.net не открывается */
+async function adminNeoforge(a, v, [action, version]) {
+  if (!action || action === 'list') {
+    const { installers } = await a.get('/admin/neoforge');
+    if (!installers.length) console.log('Установщиков на сервере нет.');
+    for (const i of installers)
+      console.log(`${bold(i.version)} ${i.file} ${dim(`${mb(i.size)}, ${date(i.at)}, ${i.by}`)}`);
+    return;
+  }
+  if (action !== 'build') throw new Error('tfc admin neoforge [list | build [версия]]');
+  const nf = version ?? neoforgeVersion(v.loader || (await a.current())?.loader);
+  if (!nf) throw new Error('какую версию собрать? tfc admin neoforge build 21.1.251');
+  const file = await withSpinner(`Собираю установщик NeoForge ${nf}`, () =>
+    buildFatInstaller(nf, path.resolve(v['mc-dir'] ?? defaultMinecraftDir())),
+  );
+  const sha256 = await sha256File(file);
+  const { missing } = await a.post('/blobs/missing', { sha256: [sha256] });
+  if (missing.length) {
+    const bar = progress('заливка', fs.statSync(file).size);
+    await a.upload(file, sha256, (n) => bar.add(n));
+    bar.end();
+  }
+  const r = await a.post('/admin/neoforge', { version: nf, file: path.basename(file), sha256 });
+  console.log(`${green('Готово:')} установщик NeoForge ${r.version} на сервере, ${mb(r.size)}.`);
 }
 
 async function adminUpdates(a, v, [action, ...ids]) {
@@ -1429,6 +1461,8 @@ async function cmdAdmin(v, [sub, ...args]) {
     await startedJob(a, j, v);
   } else if (sub === 'changes') {
     await adminChanges(a, v, args);
+  } else if (sub === 'neoforge') {
+    await adminNeoforge(a, v, args);
   } else if (sub === 'addon') {
     if (arg !== 'upload') throw new Error('tfc admin addon upload <jar…> [--id <мод>] [--ver <версия>]');
     await uploadAddons(a, args.slice(1), { id: v.id, version: v.ver });
@@ -1445,7 +1479,7 @@ async function cmdAdmin(v, [sub, ...args]) {
     if (j.state === 'failed') process.exitCode = 1;
   } else
     throw new Error(
-      'tfc admin keys | invite <ник> | revoke <id> | history | use <id> | rollback | updates | propose | rebuild | publish | jobs | changes | addon',
+      'tfc admin keys | invite <ник> | revoke <id> | history | use <id> | rollback | updates | propose | rebuild | publish | jobs | changes | addon | neoforge',
     );
 }
 
