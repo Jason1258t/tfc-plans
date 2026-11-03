@@ -672,6 +672,9 @@ function warnLaunch(profile, wrong) {
   );
   console.log(`  ${cyan(`tfc init --instance "${wrong.root}"`)}`);
   console.log(`  ${cyan('tfc pull')}`);
+  console.log(
+    `В TLauncher проще: закройте его и выполните ${cyan('tfc init --launcher')} — версия станет сборкой со своей папкой.`,
+  );
 }
 
 const modJars = (instance) => {

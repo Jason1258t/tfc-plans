@@ -169,6 +169,58 @@ const readJson = (f) => JSON.parse(fs.readFileSync(f, 'utf8'));
 const writeJson = (f, v) => fs.writeFileSync(f, `${JSON.stringify(v, null, 2)}\n`);
 
 /**
+ * TLauncher запускает из папки версии только сборки: их признак — блок modpack в TLauncherAdditional.json рядом с
+ * версией; без него папка игры — корень .minecraft, и моды не видны. Список модов пустой: моды ставит tfc, TLauncher
+ * лишние файлы не трогает (хост, dev #204). Числовые id — как у сборки хоста; другим лаунчерам файл не мешает.
+ */
+function markTlauncherModpack(gameDir, name, mc, nf) {
+  const file = path.join(gameDir, 'TLauncherAdditional.json');
+  let cur = {};
+  try {
+    cur = readJson(file);
+  } catch {
+    /* файла ещё нет или он битый: TLauncher дополнит свой */
+  }
+  writeJson(file, {
+    activateSkinCapeForUserVersion: false,
+    skipHashsumValidation: false,
+    tlauncherVersion: 0,
+    source: 'local_version_repo',
+    jar: mc,
+    skinVersion: false,
+    ...cur,
+    modpack: {
+      modpackMemory: false,
+      memory: 0,
+      id: -57012801480201,
+      favorite: false,
+      userInstall: false,
+      populateStatus: false,
+      available: false,
+      parser: false,
+      notExists: false,
+      totalComments: 0,
+      ...cur.modpack,
+      name,
+      version: {
+        mods: [],
+        resourcePacks: [],
+        maps: [],
+        shaderpacks: [],
+        id: -57012801606102,
+        name: '1.0',
+        available: false,
+        remove: false,
+        minecraftVersionTypes: [{ id: 5, name: 'neoForge' }],
+        ...cur.modpack?.version,
+        gameVersionDTO: { id: 53, name: mc },
+        minecraftVersionName: { id: 1985, name: nf },
+      },
+    },
+  });
+}
+
+/**
  * Поставить NeoForge nf в mcDir (если ещё нет) и профиль лаунчера на папку gameDir.
  * Возвращает { installed: поставили ли NeoForge сейчас, java, backups: копии файлов профилей, log }.
  */
@@ -231,6 +283,7 @@ export async function installToLauncher({ mcDir, nf, name, title, memoryGb, api,
   fs.mkdirSync(path.join(gameDir, 'mods'), { recursive: true });
   const nfJson = readJson(path.join(mcDir, 'versions', versionId(nf), `${versionId(nf)}.json`));
   writeJson(path.join(gameDir, `${name}.json`), { ...nfJson, id: name });
+  markTlauncherModpack(gameDir, name, nfJson.inheritsFrom ?? '1.21.1', nf);
 
   // Профиль: установщик правит «NeoForge» — возвращаем как было, свой профиль добавляем во все файлы профилей
   const now = new Date().toISOString();
