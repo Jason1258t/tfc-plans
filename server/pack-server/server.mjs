@@ -30,6 +30,8 @@
  *   GET    /site/addons?v=2         — аддоны: карточка + версии с jar (Firestore addonVersions); v=2 — и manual  player
  *   POST   /site/reports            — отчёт tfc report (лог, краш, zip пачки): тело — байты, X-Report — JSON
  *                                     { name, kind, type, label, note, files, taskId } → в хранилище сайта  player
+ *   GET    /neoforge/:version       — толстый установщик NeoForge: { file, sha256, size }  player
+ *   POST   /admin/neoforge          — { version, file, sha256 }: установщик (блоб уже залит)  admin
  *   POST   /admin/addons            — { addon, version, file, sha256, size }: jar версии (блоб уже залит)
  *                                     → запись в addonVersions (новая — черновик)          admin
  *   GET    /admin/changes           — правки конфигов от агента (Firestore configChanges) admin
@@ -56,6 +58,7 @@ import { changeDatapacks, snapshotDatapacks } from './lib/datapack-deployment.mj
 import { openKeys } from './lib/keys.mjs';
 import { openSite } from './lib/site.mjs';
 import { openStore } from './lib/store.mjs';
+import { openNeoforge } from './lib/neoforge.mjs';
 import { openUpdates } from './lib/updates.mjs';
 import { HttpError, SHA256_RE } from './lib/util.mjs';
 
@@ -71,6 +74,7 @@ const config = {
 };
 
 const store = await openStore(config.dataDir, config);
+const neoforge = openNeoforge(config.dataDir, store);
 const keys = openKeys(config.dataDir);
 const dev = openDev(config.dataDir);
 /** Страница «Разработка» сайта: откуда пускать (CORS) и чей вход принимать */
@@ -399,6 +403,23 @@ async function handle(req, res) {
       console.log(`− ключ ${k.id} «${k.name}» (${k.role}) — ${who.name}`);
       return json(res, 200, { ok: true, revoked: k });
     }
+  }
+
+  // --- толстые установщики NeoForge: хост заливает блоб, программа качает отсюда, а не с maven
+  if (parts[0] === 'neoforge' && parts.length === 2 && req.method === 'GET') {
+    await authorize(req, 'player');
+    const r = await neoforge.get(parts[1]);
+    return r ? json(res, 200, r) : json(res, 404, { error: `Нет установщика NeoForge ${parts[1]}` });
+  }
+  if (route === 'GET /admin/neoforge' && parts.length === 2) {
+    await authorize(req, 'admin');
+    return json(res, 200, { installers: await neoforge.list() });
+  }
+  if (route === 'POST /admin/neoforge' && parts.length === 2) {
+    const who = await authorize(req, 'admin');
+    const r = await neoforge.put(await readJsonBody(req), who.name);
+    console.log(`+ установщик NeoForge ${r.version} ${r.sha256.slice(0, 12)}… — ${who.name}`);
+    return json(res, 200, r);
   }
 
   // --- версии аддонов: jar заливают блобом (PUT /blobs/:sha256), здесь — запись версии на сайте
