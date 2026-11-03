@@ -112,6 +112,10 @@ its one-liner in STATE.md.
   cabinet placement and radiators. Details — [addons.md](addons.md).
 - **EE Extras 2.7** (2026-11-03, `ee-extras-2.7.0.jar`, IE floodlight on the duplex cable, cable converter): host runs
   `tfc pull addons` (server and players) and `tfc publish`. In game: a converter on an IE multiblock power port.
+- **M11 industrial PCBs** (2026-11-03, dev #22): host installs EE Extras 2.9.0 with `tfc pull addons` and Destroy
+  Extras 0.4.0 with `tfc addons install destroy_extras` on server and players, then runs `tfc publish`. Test complete
+  manual Survival L2/L3 lines with reusable designs and the required EE power. Draft datapack `Nh1ATmqCY92Hao48hOAQ`
+  remains `install=false`: test it in a selected world before live confirmation; no pack-wide confirm was performed.
 - **Create Aeronautics Extra 1.0.1** (2026-10-29, `create-aeronautics-extra-1.0.1.jar`, new module textures): host
   installs (`tfc pull addons`, server and players) and `tfc publish`. In game: block looks and rotating half-shaft,
   goggles and tooltips, module insert/remove by hand, JEI/EMI recipes, the block on a flying Aeronautics ship with

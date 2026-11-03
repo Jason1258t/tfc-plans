@@ -146,6 +146,14 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
   no-AIBN control 2/2, styrene and cumene 2/2 each. The fixture fills the 27 000 mB Vat: a single bucket dilutes the
   reaction below Destroy's synchronization threshold and does not produce a reliable assertion. No manual Survival
   playthrough or pack-wide datapack confirmation was performed.
+- M11 (#22 checklist item 15) releases **Destroy Extras 0.4.0** with L2/L3 etching in the existing bath. A prepared
+  blank and a valid reusable design of the matching level are required; the design is not consumed and the full
+  topology/vias are preserved. Each batch uses 250 mB FeCl3, 800 ticks (400 with a mixer at ≥16 RPM), 6 Cu moles for L2
+  and 9 for L3; the old L1 route and stock Destroy chemistry are unchanged, with no new fluids or molecules. Draft
+  datapack `Nh1ATmqCY92Hao48hOAQ` now contains the twelve M11 recipes and remains unconfirmed with `install=false`.
+- M11 dedicated-server checks pass for complete L2/L3 cycles, invalid/missing inputs, blocked outputs, voltage sag,
+  break/replacement and two-stage restart. L1/M4/M10 regressions, old-world migration, both release builds and resource
+  checks pass. No manual Survival playthrough or live pack-wide datapack confirmation was performed.
 
 ## EE Extras (`tools/ee-extras-mod`)
 
@@ -187,11 +195,18 @@ Before 2.0 — EE Rectifiers, `ee_rectifier`; old blocks migrate to new ids via 
   (`rectest lanterns|lanternpower|lanternreport|lanterncut|lanternie`, `KEEP=1`): real click path, 230 V lit
   52.9 W, 30 V dark, 60 V AC lit, cut — IE lantern dropped and the tail dark, IE-wired refused, restart kept. Not in
   game: looks, light, flicker on a real generator.
+- **2.9.0** (2026-11-03; dev #22, item 15 / M11): industrial L2/L3 PCB production with a photolithographer and via
+  metallizer plus the Destroy Extras 0.4.0 bath. Photolithography consumes one photoresist and reuses a valid design;
+  metallization consumes copper foil. L2 uses 240 V / 4 A and 300 ticks per machine, L3 uses 600 V / 8 A and 450 ticks;
+  the working zone is 80–105%. Prepared/etched/final L2/L3 items preserve exact topology, vias and pins. Inputs,
+  progress and recipe state survive blocked outputs, undervoltage, break/replacement and restart. Dedicated-server
+  L2/L3 cycles and error paths, L1/M10 regressions, automated client PCB checks (zero errors), resources/models,
+  release builds and 1344/1344 terminals pass. Manual Survival and live datapack confirmation remain pending.
 - **2.8.0** (2026-11-03; dev #22, item 14 / M10): PCB editor (16×16, up to three layers, traces, components,
   vias and pins; design item; L1 remains compatible with `l1_mask`), base laminate/foil/solder materials and electronic
   components, L2/L3 blanks, 240 W / 48 V solar panel (rain 35%, thunder 10%) and optional TFC thermometer
-  (0–1600 °C → 0–15 V, 1000 Ω). Draft site datapack `Nh1ATmqCY92Hao48hOAQ` (`EE Extras — электроника M10`, 20 entries)
-  supplies the recipes; it is not confirmed or installed automatically. Industrial L2/L3 production lines remain pending.
+  (0–1600 °C → 0–15 V, 1000 Ω). Draft site datapack `Nh1ATmqCY92Hao48hOAQ` (`EE Extras — электроника M10`)
+  supplies the recipes; it is not confirmed or installed automatically. Industrial production was added in 2.9.0.
   Gradle check/build and 1344/1344 terminals pass. Dedicated server: PCB 15/15; thermometer 800 °C → 7.493 V
   (7.500 V EMF), including restart; solar day 47.75 V / 50.61 W at the test load, night/roof zero. Automated client:
   previous nine floodlight checks plus editor/status/design/L2/via checks pass with zero errors and inspected
