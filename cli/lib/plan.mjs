@@ -124,17 +124,18 @@ function editedByPlayer(state, l) {
  * snapshot — снимок с сервера; local — Map из scanLocal; state — что ставили раньше; skip — пути, которые
  * отдаёт сайт (их ставит и убирает pull сайта, план их не видит).
  * Возвращает { add, update, conflict, keepClient, keptLocal, remove, keptModified, extra, same, noWorld }:
- * элементы — { path, kind, sha256, size, local? }.
+ * элементы — { path, kind, sha256, size, local? }. also — пути сверх частей (kinds): что дали и дают подписки на
+ * обновления (staging.mjs), на сервере в том числе моды.
  */
 export function makePlan(
   snapshot,
   local,
   state,
   kinds,
-  { force = false, hasWorld = true, skip = new Set(), datapacksOnly = false } = {},
+  { force = false, hasWorld = true, skip = new Set(), datapacksOnly = false, also = new Set() } = {},
 ) {
   const inScope = (kind, file) =>
-    kinds.includes(kind) && (!datapacksOnly || kind !== 'kubejs' || isPackDatapackPath(file));
+    also.has(file) || (kinds.includes(kind) && (!datapacksOnly || kind !== 'kubejs' || isPackDatapackPath(file)));
   const plan = {
     add: [],
     update: [],

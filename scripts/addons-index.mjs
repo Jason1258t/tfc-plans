@@ -9,7 +9,7 @@
  * кеш .cache/addons/<sha256>.jar, сервер сборки (/blobs/<sha256>, TFC_PACK_URL и TFC_PACK_TOKEN — как у
  * pack:fetch), иначе — сайт (/addons/<jar>, он там уже лежит); хеш сверяется. Нет jar — аддон в список не попадает
  * (предупреждение), сборка сайта не останавливается. Так же не попадают повтор id, имя jar, которое tfc не примет,
- * и unlisted (jar на сайте есть, но всем его не ставить).
+ * и unlisted или manual (jar на сайте есть, но всем его не ставить).
  */
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -107,7 +107,8 @@ export async function addonsIndex(
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, a.jar), bytes);
     current.add(a.jar);
-    if (a.unlisted) continue;
+    // Список — то, что старые версии tfc без ключа ставят всем; jar на сайте остаётся
+    if (a.unlisted || a.manual) continue;
     addons.push({
       id: a.id,
       name: a.name,

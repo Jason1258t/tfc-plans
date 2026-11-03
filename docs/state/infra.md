@@ -257,6 +257,23 @@ MCP `config_propose` (key, type, range and layer check via `config_get`) → Fir
 mismatch with the old value, reject, cancel from MCP, stale record → 409, undo); JSON5 configs are not edited. Not run on
 the host's real folder.
 
+## Manual addons and staging over pull (dev #201, 2026-11-03)
+
+- Card flag `manual: true`: visible on the site and in `tfc addons`, installed only by name, plain pull keeps and updates
+  an installed one, `tfc addons remove`, not uploaded by `tfc publish` unless already in the snapshot. Old clients: server
+  gates it behind `/site/addons?v=2`, `index.json` omits it (old no-key clients read it). `destroy_extras`, `destroy_bridge`
+  use it (`unlisted` removed from the bridge). Live `index.json` listed `destroy_extras` until the first publish after this.
+- Staging: `tfc admin updates subscribe|unsubscribe|subscribed`, client-only state in `.tfc/state.json` (`staging`,
+  `stagingPaths`, `stagingDrop`), logic in `cli/lib/staging.mjs`. `tfc pull` plans against a virtual snapshot
+  (current + updates), so regular files keep updating and unsubscribing is just the next plain plan. Update wins over the
+  pack and addons; old jars dropped by name, by mod id once on disk. `tfc publish` keeps server versions for staged paths.
+- `tfc admin propose`: `--jar`, `--datapack`, auto `remove` of old jars (`--keep-old`). Server: update field `datapacks`,
+  `confirmDatapackItems` shared with `changeDatapacks`, approve confirms in the same snapshot (`options.datapacks`), activates
+  before writing the status (`activate`, base = parent), stores `parent`. Old records work unchanged.
+- Verified with a throwaway script: local pack server on a temp data dir + Firestore stub (`SITE_DOCS_URL`, fake service
+  key with a local `token_uri`), 81 checks over the full flow. Not verified: in the game; the first real update through
+  the new flow.
+
 ## Proposed pack updates (2026-10-22)
 
 - Server `lib/updates.mjs` + `/admin/updates` (create, list, approve → snapshot = current + files − remove and made

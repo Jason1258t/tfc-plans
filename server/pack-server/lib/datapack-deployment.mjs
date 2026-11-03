@@ -9,18 +9,15 @@ import {
 } from './datapacks.mjs';
 import { HttpError, SHA256_RE } from './util.mjs';
 
-export async function changeDatapacks(store, site, body, who) {
-  const current = await store.getCurrent();
-  if (!current || body?.base !== current.id) throw new HttpError(409, 'Сборка изменилась — перечитайте список');
-  if (!['confirm', 'unconfirm'].includes(body.action)) throw new HttpError(400, 'Нужно confirm или unconfirm');
-  if (!Array.isArray(body.items) || !body.items.length || body.items.length > 100)
-    throw new HttpError(400, 'items — от 1 до 100 пакетов');
-  if (new Set(body.items.map((d) => d.id)).size !== body.items.length) throw new HttpError(400, 'Повтор id');
-  const deployments = new Map(deploymentsOf(current).map((d) => [d.id, d]));
-  const files = new Map(current.files.map((f) => [f.path, f]));
-  if (body.action === 'confirm' && !current.files.some((f) => /^mods\/kubejs-neoforge-2101\./.test(f.path)))
+/**
+ * Подтвердить пакеты поверх набора файлов будущего снимка: проверки ревизии карточки, содержимого ZIP и пересечений
+ * данных. Меняет files (Map путь → файл: кладёт ZIP в kubejs/data, убирает копии из мира) и deployments
+ * (Map id → запись). Общая для tfc datapacks confirm и одобрения обновления (updates.mjs).
+ */
+export async function confirmDatapackItems(store, site, current, items, { files, deployments, by }) {
+  if (![...files.keys()].some((p) => /^mods\/kubejs-neoforge-2101\./.test(p)))
     throw new HttpError(409, 'В снимке нет поддерживаемого KubeJS для 1.21.1');
-  const list = body.action === 'confirm' ? (await site.datapacks([], { all: true, fresh: true })).items : [];
+  const list = (await site.datapacks([], { all: true, fresh: true })).items;
   const resources = new Map();
   const remember = (pack, label) => {
     for (const [file, bytes] of Object.entries(pack.files)) {
@@ -34,40 +31,26 @@ export async function changeDatapacks(store, site, body, who) {
       resources.set(file, { bytes, label });
     }
   };
-  if (body.action === 'confirm') {
-    for (const f of current.files.filter(
-      (f) =>
-        (f.kind === 'world-datapack' || deploymentsOf(current).some((d) => d.path === f.path)) &&
-        f.path.endsWith('.zip'),
-    )) {
-      let pack;
-      try {
-        pack = inspectDatapack(await fs.readFile(store.blobPath(f.sha256)));
-      } catch {
-        continue;
-      }
-      // В старом снимке могли уже быть конфликты. Не объявляем их новой ошибкой до проверки выбранных пакетов.
-      for (const [file, bytes] of Object.entries(pack.files))
-        if (file.startsWith('data/')) {
-          const existing = resources.get(file);
-          if (existing) existing.variants.push({ bytes, label: f.path });
-          else resources.set(file, { bytes, label: f.path, variants: [] });
-        }
-    }
-  }
-  for (const item of body.items) {
-    if (!/^[A-Za-z0-9]{1,64}$/.test(item?.id ?? '')) throw new HttpError(400, 'Неверный id датапака');
-    if (body.action === 'unconfirm') {
-      const d = deployments.get(item.id);
-      if (!d) throw new HttpError(409, 'Датапак уже не включён в сборку');
-      const target = d.snapshotSource && d.fileName ? `world/datapacks/${d.fileName}` : worldDatapackPath(d.id);
-      const existing = files.get(target);
-      if (existing && existing.sha256 !== d.sha256) throw new HttpError(409, `В снимке уже другая копия ${target}`);
-      files.set(target, { ...files.get(d.path), path: target, kind: 'world-datapack' });
-      files.delete(d.path);
-      deployments.delete(d.id);
+  for (const f of [...files.values()].filter(
+    (f) =>
+      (f.kind === 'world-datapack' || deploymentsOf(current).some((d) => d.path === f.path)) && f.path.endsWith('.zip'),
+  )) {
+    let pack;
+    try {
+      pack = inspectDatapack(await fs.readFile(store.blobPath(f.sha256)));
+    } catch {
       continue;
     }
+    // В старом снимке могли уже быть конфликты. Не объявляем их новой ошибкой до проверки выбранных пакетов.
+    for (const [file, bytes] of Object.entries(pack.files))
+      if (file.startsWith('data/')) {
+        const existing = resources.get(file);
+        if (existing) existing.variants.push({ bytes, label: f.path });
+        else resources.set(file, { bytes, label: f.path, variants: [] });
+      }
+  }
+  for (const item of items) {
+    if (!/^[A-Za-z0-9]{1,64}$/.test(item?.id ?? '')) throw new HttpError(400, 'Неверный id датапака');
     let pack = list.find((d) => d.id === item.id);
     let snapshotSource = null;
     if (item.sourcePath) {
@@ -99,7 +82,7 @@ export async function changeDatapacks(store, site, body, who) {
     if (existing && existing.sha256 !== item.sha256) throw new HttpError(409, `Уже есть другой ${target}`);
     const worldPaths = new Set([worldDatapackPath(pack.id)]);
     // В снимке встречаются ZIP с ручными названиями: убираем только совпавшее содержимое.
-    for (const f of current.files.filter((f) => f.kind === 'world-datapack' && f.path.endsWith('.zip'))) {
+    for (const f of [...files.values()].filter((f) => f.kind === 'world-datapack' && f.path.endsWith('.zip'))) {
       try {
         if (inspectDatapack(await fs.readFile(store.blobPath(f.sha256))).contentHash === expected) {
           worldPaths.add(f.path);
@@ -120,10 +103,35 @@ export async function changeDatapacks(store, site, body, who) {
       sourceUpdatedAt: pack.updatedAt ?? 0,
       ...(snapshotSource ? { snapshotSource: true, fileName: snapshotSource.fileName } : {}),
       confirmedAt: Date.now(),
-      confirmedBy: who.name,
+      confirmedBy: by,
       worldPaths: [...worldPaths],
     });
   }
+}
+
+export async function changeDatapacks(store, site, body, who) {
+  const current = await store.getCurrent();
+  if (!current || body?.base !== current.id) throw new HttpError(409, 'Сборка изменилась — перечитайте список');
+  if (!['confirm', 'unconfirm'].includes(body.action)) throw new HttpError(400, 'Нужно confirm или unconfirm');
+  if (!Array.isArray(body.items) || !body.items.length || body.items.length > 100)
+    throw new HttpError(400, 'items — от 1 до 100 пакетов');
+  if (new Set(body.items.map((d) => d.id)).size !== body.items.length) throw new HttpError(400, 'Повтор id');
+  const deployments = new Map(deploymentsOf(current).map((d) => [d.id, d]));
+  const files = new Map(current.files.map((f) => [f.path, f]));
+  if (body.action === 'confirm')
+    await confirmDatapackItems(store, site, current, body.items, { files, deployments, by: who.name });
+  else
+    for (const item of body.items) {
+      if (!/^[A-Za-z0-9]{1,64}$/.test(item?.id ?? '')) throw new HttpError(400, 'Неверный id датапака');
+      const d = deployments.get(item.id);
+      if (!d) throw new HttpError(409, 'Датапак уже не включён в сборку');
+      const target = d.snapshotSource && d.fileName ? `world/datapacks/${d.fileName}` : worldDatapackPath(d.id);
+      const existing = files.get(target);
+      if (existing && existing.sha256 !== d.sha256) throw new HttpError(409, `В снимке уже другая копия ${target}`);
+      files.set(target, { ...files.get(d.path), path: target, kind: 'world-datapack' });
+      files.delete(d.path);
+      deployments.delete(d.id);
+    }
   // Ревизии источников проверены, указатель снимка ещё защищает от параллельного publish/confirm.
   return store.createSnapshot(
     {
