@@ -21,6 +21,9 @@ When finishing work: update the topic file, and this index only if a line below 
 - Host: transformer-oil duplicate disabled in draft `9FCAF769A0A2ODuhbgxU` (dev #215): unconfirm old ZIP,
   pull, check standard heated mixing and absence of the parse error, then confirm.
 
+- Host: Destroy aromatics → gasoline in card `7IHNTyYMc046lNeC0anS` (dev #223): pull into a test world with
+  Destroy + CDG, restart, check valid and unsuitable mixtures, then confirm.
+
 - Building generator (dev #166): page `/builder` live (stages 0–5, with brush); next — stage 6 forms/styles. Host: rebuild + publish
   for `block-colors.json`.
 
