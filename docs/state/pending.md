@@ -5,6 +5,14 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **Going Nuclear M0** (2026-11-05, dev #202, plan doc 50): the gameplay decisions are settled — reactor automation
+  after L3, realistic physics without random failures, radiation enabled, destructive accidents and fallout disabled on
+  the live world. The first slice is the boiling-water reactor, turbines, spent-fuel pool and dry cask; RBMK/reprocessing/MOX
+  are a separate later stage. Jar inspection confirms NeoForge ≥ 21.1.256 is required and the license is All Rights
+  Reserved. Host: update NeoForge on a test profile and obtain the author's written permission for the pack server to
+  redistribute the jar before integration and release. Static dependency checking of the pack against 21.1.256 found no
+  conflicts; runtime and Survival acceptance have not been performed.
+
 - **Transformer oil duplicate** (2026-11-04, dev #215): source card `9FCAF769A0A2ODuhbgxU`
   (`transformer_oil`, revision `2026-11-04T20:35:20.733425Z`) now disables only
   `tfc_plans:transformer_oil` with a `neoforge:false` condition. Its malformed fluid ingredient duplicated
