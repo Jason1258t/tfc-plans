@@ -18,6 +18,8 @@ When finishing work: update the topic file, and this index only if a line below 
 
 ## In progress / waiting (details — [pending.md](state/pending.md))
 
+- Going Nuclear (dev #202): working plan accepted (plan doc 50); gameplay decisions are settled. Host: NeoForge
+  ≥ 21.1.256 and the author's written redistribution permission before the integration build.
 - Host: fluid tank recipe without a barrel, card `2csvwoHPHBhlpqiZTQ4c` (dev #233), is confirmed without an in-game check:
   craft it once in game.
 
@@ -68,9 +70,6 @@ When finishing work: update the topic file, and this index only if a line below 
 - «Coal near X» search with map points — «пока без такого функционала».
 - Real world map zoomable to city level and an in-game explored-map layer (needs a mini-mod or export) — discussed
   only in the abstract.
-- Nuclear power (uses for uranium: Create Nuclear or Going Nuclear, TFC integration) — long-term, discuss with players
-  first. Chosen: Going Nuclear + Create Nuclear mechanics in an own addon; plan — `docs/plans/nuclear.md`, task in group
-  «Фиксы» (2026-10-21).
 
 ## Known limitations
 
