@@ -18,6 +18,16 @@ its one-liner in STATE.md.
   then `tfc datapacks pull 9FCAF769A0A2ODuhbgxU` into the selected test world, restart and check that
   the parse error is gone and standard heated mixing produces oil; only then confirm the new version.
 
+- **Бензин из ароматических фракций Destroy** (2026-11-04, dev #223): карточка `7IHNTyYMc046lNeC0anS`
+  («Destroy — нефтехимия и полимеры», revision `2026-11-04T21:12:27.294657Z`) содержит рецепт
+  `tfc_plans:create/gasoline_from_destroy_aromatics`: отдельно 50 мБ толуольной смеси с толуолом ≥ 9 M и
+  50 мБ ксилольной смеси с этилбензолом ≥ 1.9 M → 100 мБ бензина CDG в Create-мешалке без нагрева.
+  JSON, чтение рецепта, отсутствие конфликтов и поддержка ингредиента `destroy:mixture_with_molecule` проверены;
+  полный производственный цикл в игре не проверялся. Предупреждение редактора об отсутствующих ID ожидаемо:
+  основной snapshot ещё без Destroy, а молекулы — не предметы. Хост: включить «В мир», выполнить
+  `tfc datapacks pull 7IHNTyYMc046lNeC0anS` в выбранный тестовый мир с Destroy + CDG, перезапустить,
+  проверить оба входа и выход 100 мБ, отказ неподходящих смесей и затем `confirm`.
+
 - **Destroy slice as one update** (2026-11-03, dev #203, acceptance #199): `u20261103-164054-6977` adds Destroy,
   Petrolpark, Destroy Bridge, Destroy Extras 0.3.0 and five datapacks (confirmed by approve); updates EE Extras 2.7.0, JEI 19.55.0.431,
   LDLib 2.2.45, Create Aeronautics 1.3.2. Replaces `u20261103-104332-a97a` (Destroy Extras 0.2.0: Cl₂ port blocked, Vat refused the gases, EMI hid Destroy recipes); the host still has to reject that one. Host: subscribe a separate profile
