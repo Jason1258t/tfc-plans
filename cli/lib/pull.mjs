@@ -22,9 +22,16 @@
 import { createHash, randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { deploymentsOf, inspectDatapack, worldDatapackPath } from '@tfc/pack-server/datapacks';
+import {
+  deploymentsOf,
+  inspectDatapack,
+  isPackDatapackPath,
+  PACK_DATAPACK_RE,
+  packDatapackPath,
+  worldDatapackPath,
+} from '@tfc/pack-server/datapacks';
 import { strToU8, zipSync } from 'fflate';
-import { datapackFiles, zipName } from '@tfc/core/datapackFiles';
+import { datapackFiles, datapackInstallMode, zipName } from '@tfc/core/datapackFiles';
 import { schematicFromLibrary } from '@tfc/core/schematicFile';
 import { compareVersions, sortVersions } from '@tfc/core/addonVersions';
 import { modIdsOf } from './jarid.mjs';
@@ -73,17 +80,18 @@ export function datapackZip(pack) {
 
 const KUBEJS_NAME_RE = /^[a-z0-9_][a-z0-9_.-]{0,79}\.js$/;
 
-/** Куда tfc pull ставит датапак сайта */
+/** Куда tfc pull ставит датапак сайта (в мир или в kubejs/data/ сборки по installTarget) */
 const SITE_DATAPACK_RE = /^world\/datapacks\/tfc-plans-[^/]+\.zip$/;
-const datapackPath = (d) => `world/datapacks/tfc-plans-${d.id}.zip`;
+const isPackTarget = (d) => datapackInstallMode(d) === 'pack' || d.installTarget === 'pack';
+const datapackPath = (d) => (isPackTarget(d) ? packDatapackPath(d.id) : worldDatapackPath(d.id));
 /** Как датапак называется, если его скачали с сайта кнопкой «Скачать» и положили в мир руками */
 const manualDatapackPath = (d) => `world/datapacks/${zipName(d)}`;
 
 /**
- * Датапаки сайта в папке мира — их раздаёт сайт (tfc pull), в сборку их не заливаем: иначе в мире у игроков
- * окажется по две копии, а правка на сайте не дойдёт (копия из снимка главнее). Это поставленное tfc pull
- * (`tfc-plans-*.zip`, state.pulled) и ручные копии отмеченных «Ставить в мир» под именем со страницы.
- * Возвращает (путь) → название датапака или null.
+ * Датапаки сайта в папке мира или в kubejs/data/ — их раздаёт сайт (tfc pull), в сборку при tfc publish их не
+ * заливаем (кроме подтверждённых в снимке): иначе в мире у игроков окажется по две копии, а правка на сайте не
+ * дойдёт (копия из снимка главнее). Это поставленное tfc pull (`tfc-plans-*.zip`, state.pulled) и ручные копии
+ * под именем со страницы. Возвращает (путь) → название датапака или null.
  */
 export async function siteDatapackPaths(api, profile) {
   const names = new Map();
@@ -91,13 +99,15 @@ export async function siteDatapackPaths(api, profile) {
   try {
     const { items } = await api.get('/site/datapacks?all=true');
     for (const d of items) {
-      names.set(datapackPath(d), d.name);
+      names.set(worldDatapackPath(d.id), d.name);
+      names.set(packDatapackPath(d.id), d.name);
       names.set(manualDatapackPath(d), d.name);
     }
   } catch {
     // список с сайта не получили — узнаём только по имени tfc-plans-* и по тому, что ставил pull
   }
-  return (p) => names.get(p) ?? (SITE_DATAPACK_RE.test(p) ? p.slice(16) : null);
+  return (p) =>
+    names.get(p) ?? (SITE_DATAPACK_RE.test(p) ? p.slice(16) : PACK_DATAPACK_RE.test(p) ? p.slice(12) : null);
 }
 
 /**
@@ -516,8 +526,14 @@ export async function planPull(api, profile, kind, names = [], { force = false, 
   }
   if (kind === 'datapacks') {
     for (const it of [...plan.add, ...plan.update, ...plan.same]) {
-      const candidates = it.deployment
-        ? new Set([worldDatapackPath(it.id), ...(it.deployment.worldPaths ?? []), ...worldZipPaths(profile)])
+      const inPack = Boolean(it.deployment || isPackDatapackPath(it.path));
+      const candidates = inPack
+        ? new Set([
+            worldDatapackPath(it.id),
+            it.manual,
+            ...(it.deployment?.worldPaths ?? []),
+            ...worldZipPaths(profile),
+          ])
         : new Set([it.manual]);
       for (const p of candidates) {
         if (!p || p === it.path || plan.obsolete.some((x) => x.path === p) || plan.remove.some((x) => x.path === p))
@@ -623,7 +639,10 @@ export function siteOwned(plans, snapshot, state, staged = new Set()) {
     for (const k of ['add', 'update', 'same', 'conflict', 'remove', 'keptModified'])
       p[k] = p[k].filter((x) => !snapPaths.has(x.path));
   }
-  const skip = new Set(deploymentsOf(snapshot).flatMap((d) => [worldDatapackPath(d.id), ...(d.worldPaths ?? [])]));
+  const skip = new Set([
+    ...deploymentsOf(snapshot).flatMap((d) => [worldDatapackPath(d.id), ...(d.worldPaths ?? [])]),
+    ...Object.values(state.pulled?.datapacks ?? {}).map((r) => r.path),
+  ]);
   for (const p of plans) for (const x of [...targets(p), ...p.remove, ...p.keptModified]) skip.add(x.path);
   // Датапаки сайта, залитые в сборку раньше (tfc-plans-*.zip и ручные копии), снимок не ставит и не убирает:
   // ими распоряжается сайт

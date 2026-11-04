@@ -173,11 +173,18 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
       if (!hits.length) unknown.push(n);
       for (const h of hits) found.add(h);
     }
-    const items = want.length ? [...found] : list.filter((x) => x.install === true);
+    const items = want.length
+      ? [...found]
+      : list.filter((x) => x.install === true || x.install === 'pack' || x.install === 'world');
     return {
       items,
       unknown,
-      all: list.map((x) => ({ id: x.id, name: nameOf(x), install: x.install === true })),
+      all: list.map((x) => ({
+        id: x.id,
+        name: nameOf(x),
+        install: x.install === true || x.install === 'pack' || x.install === 'world',
+        ...(x.installTarget === 'pack' || x.install === 'pack' ? { installTarget: 'pack' } : {}),
+      })),
     };
   }
 

@@ -10,7 +10,7 @@ import {
   packDatapackPath,
   worldDatapackPath,
 } from '@tfc/pack-server/datapacks';
-import { datapackFiles, zipName } from '@tfc/core/datapackFiles';
+import { datapackFiles, datapackInstallMode, zipName } from '@tfc/core/datapackFiles';
 import { confirm, dim, interactive } from './ui.mjs';
 
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');
@@ -129,14 +129,20 @@ export async function listDatapacks(api, profile, query = '', filesOnly = false)
     console.log(`\nНа сайте: ${shown.length}`);
     for (const d of shown) {
       const deployed = c.deployed.find((p) => p.id === d.id);
+      const packLocal = local.filter((f) => f.path.startsWith('kubejs/data/') && f.info?.contentHash === d.contentHash);
       const world = local.filter((f) => f.path.startsWith('world/') && f.info?.contentHash === d.contentHash);
+      const mode = datapackInstallMode(d);
       const state = deployed
         ? `в сборке${deployed.contentHash !== d.contentHash ? '; на сайте новая непроверенная редакция' : ''}`
-        : world.length
-          ? 'установлен в мире'
-          : d.install
-            ? 'доступен для мира'
-            : 'тестовый';
+        : packLocal.length
+          ? `установлен в сборку${mode === 'pack' ? ' (с сайта)' : ''}`
+          : world.length
+            ? 'установлен в мире'
+            : mode === 'pack'
+              ? 'ставить в сборку (с сайта)'
+              : mode === 'world'
+                ? 'доступен для мира'
+                : 'тестовый';
       console.log(
         `  ${d.id} | ${d.name} | ${state}${d.sourceMissing ? ' | без карточки сайта' : d.snapshotSource ? ' | ZIP снимка без карточки' : ''}${d.error ? ` | ${d.error}` : ''}`,
       );
@@ -188,15 +194,22 @@ export async function showDatapacks(api, profile, names) {
   const selected = await resolveDatapacks(api, c, c.items, names);
   for (const d of selected) {
     const pin = d.deployment;
+    const inPack = datapackInstallMode(d) === 'pack' || d.installTarget === 'pack';
     console.log(`${d.id} — ${d.name}`);
     console.log(
-      `  ${pin ? `В сборке: ${pin.path}; проверенное содержимое ${short(pin.contentHash)}` : `Для проверки в мире: ${d.sourcePath ?? worldDatapackPath(d.id)}`}`,
+      `  ${
+        pin
+          ? `В сборке: ${pin.path}; проверенное содержимое ${short(pin.contentHash)}`
+          : inPack
+            ? `В сборку (с сайта): ${packDatapackPath(d.id)}`
+            : `Для проверки в мире: ${d.sourcePath ?? worldDatapackPath(d.id)}`
+      }`,
     );
     if (pin && d.contentHash !== pin.contentHash)
       console.log('  На сайте новая редакция; pull получает подтверждённую версию сборки.');
     console.log(`  Догрузить: tfc datapacks pull ${d.id}`);
     if (pin) console.log(`  Для проверки новой версии хостом: tfc datapacks unconfirm ${d.id}`);
-    if (!pin && !profile?.world) console.log('  Для установки выберите мир: tfc init --world <мир>');
+    if (!pin && !inPack && !profile?.world) console.log('  Для установки выберите мир: tfc init --world <мир>');
   }
 }
 
@@ -204,10 +217,12 @@ export async function showDatapacks(api, profile, names) {
 export async function datapackIds(api, names, { hasWorld = true } = {}) {
   const c = await datapackCatalog(api, { refresh: true });
   const selected = await resolveDatapacks(api, c, c.items, names);
-  const needWorld = selected.filter((d) => !d.deployment);
+  const needWorld = selected.filter(
+    (d) => !d.deployment && datapackInstallMode(d) !== 'pack' && d.installTarget !== 'pack',
+  );
   if (!hasWorld && needWorld.length)
     throw new Error(
-      `Для проверки в мире нужен выбранный мир: ${needWorld.map((d) => d.name).join(', ')}. Выполните tfc init --world <мир>. Подтверждённые пакеты сборки можно pull без мира.`,
+      `Для проверки в мире нужен выбранный мир: ${needWorld.map((d) => d.name).join(', ')}. Выполните tfc init --world <мир>. Пакеты уровня сборки можно pull без мира.`,
     );
   return selected.map((d) => d.id);
 }
@@ -239,10 +254,16 @@ export async function confirmDatapacks(api, profile, names, { yes = false, dryRu
         console.log(`«${d.name}» уже в сборке. Для проверки новой версии: tfc datapacks unconfirm ${d.id}`);
         continue;
       }
-      const candidates = local.filter((f) => f.path.startsWith('world/') && f.info?.contentHash === d.contentHash);
-      const canonical = local.find((f) => f.path === worldDatapackPath(d.id));
+      const candidates = local.filter(
+        (f) =>
+          (f.path.startsWith('world/') || f.path === packDatapackPath(d.id)) && f.info?.contentHash === d.contentHash,
+      );
+      const canonical =
+        local.find((f) => f.path === worldDatapackPath(d.id)) ?? local.find((f) => f.path === packDatapackPath(d.id));
       if (canonical && canonical.info?.contentHash !== d.contentHash)
-        throw new Error(`«${d.name}»: копия мира отличается от сайта — сначала сравните и проверьте нужную версию`);
+        throw new Error(
+          `«${d.name}»: локальная копия отличается от сайта — сначала сравните и проверьте нужную версию`,
+        );
       const source = canonical ?? candidates[0];
       if (!source) {
         if (all) {

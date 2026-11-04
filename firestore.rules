@@ -143,6 +143,7 @@ service cloud.firestore {
         && request.resource.data.entries is list
         && request.resource.data.entries.size() <= 300
         && (!('install' in request.resource.data) || request.resource.data.install is bool)
+        && (!('installTarget' in request.resource.data) || request.resource.data.installTarget in ['world', 'pack'])
         && nick(request.resource.data.updatedBy);
       allow delete: if signedIn();
     }
