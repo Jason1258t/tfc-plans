@@ -165,6 +165,16 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-04 (dev #216): **2.10.1** — visual refresh of 33 entries from the L1 blank through the TFC thermometer:
+28 individual RGBA 64×64 item textures and materials/models for five blocks. L1/L2/L3 use yellow/green/blue edge
+stickers; coating, etched traces and plated vias distinguish PCB stages. Fiberglass is a wound bobbin, fabric an
+unrolled roll, capacitor upright. Generated originals, exact prompts, references and reproducible mechanical exports
+are in `art/electronics-v2/`; the old electronics generator now exports those sources instead of restoring old art.
+Checked at 32/64 px on light/dark backgrounds, block renders, resource validation, release build and node check.
+Dedicated server with TFC/IE/CC: PCB 15/15, thermometer 799 °C → 7.483 V, solar 47.75 V / 50.61 W by day and 0 V
+under a roof; photolithographer/metallizer placement and block entities. Client appearance still needs host review.
+Gameplay, ids, recipes and saved PCB data are unchanged.
+
 Before 2.0 — EE Rectifiers, `ee_rectifier`; old blocks migrate to new ids via aliases.
 
 - **1.1**: three- and single-phase rectifiers without diodes — stable at any rpm (solves the microTicks = 1 diode
