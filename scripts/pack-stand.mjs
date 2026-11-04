@@ -14,6 +14,8 @@
  * на сервере падают команды Create/FTB с BootstrapMethodError → LocalPlayer).
  *
  *   npm run stand -- --cmd "kubejs hand" --mod tools/x/build/libs/x.jar --overlay <папка> --keep --list
+ *   --level-type tfc:overworld — настоящая генерация TFC вместо плоского мира (жилы, биомы)
+ *   --port N — другой порт (и N+1 для RCON), вместе с TFC_STAND_DIR — параллельно другому стенду
  */
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -207,7 +209,7 @@ const RCON_PASSWORD = 'check';
 const readText = (f) => (fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '');
 
 /** Папка запуска: ссылки на сервер и моды, копии config/kubejs/world снимка, оверлей, server.properties */
-function prepare({ run, server, cache, sel, overlay, keep, memory, port, rconPort }) {
+function prepare({ run, server, cache, sel, overlay, keep, memory, port, rconPort, levelType }) {
   clean(run, keep ? ['world'] : []);
   link(path.join(server, 'libraries'), path.join(run, 'libraries'));
   fs.mkdirSync(path.join(run, 'mods'));
@@ -224,7 +226,7 @@ function prepare({ run, server, cache, sel, overlay, keep, memory, port, rconPor
   fs.writeFileSync(
     path.join(run, 'server.properties'),
     [
-      'level-type=minecraft\\:flat',
+      `level-type=${levelType.replace(':', '\\:')}`,
       'online-mode=false',
       'spawn-protection=0',
       'generate-structures=false',
@@ -337,6 +339,7 @@ export async function runStand({
   exclude = [],
   include = [],
   overlay = null,
+  levelType = 'minecraft:flat',
   keep = false,
   timeout = 900,
   memory = '6G',
@@ -360,7 +363,7 @@ export async function runStand({
   let r;
   for (let attempt = 0; ; attempt++) {
     sel = selectMods({ modsDir, extra: mods, exclude, include, skip: found });
-    prepare({ run, server, cache, sel, overlay, keep, memory, port, rconPort });
+    prepare({ run, server, cache, sel, overlay, keep, memory, port, rconPort, levelType });
     onLog(`запускаю сервер: модов ${sel.use.length}, исключено ${sel.skipped.length}`);
     r = await launch({ run, java, nf, timeout, rconPort, commands, onLog });
     if (r.booted || attempt >= 4) break;
@@ -424,6 +427,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     exclude: many('--exclude'),
     include: many('--include'),
     overlay: one('--overlay') ?? null,
+    levelType: one('--level-type') ?? 'minecraft:flat',
+    ...(one('--port') ? { port: Number(one('--port')), rconPort: Number(one('--port')) + 1 } : {}),
     keep: argv.includes('--keep'),
     timeout: Number(one('--timeout') ?? 900),
     memory: one('--memory') ?? '6G',

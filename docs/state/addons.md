@@ -33,6 +33,14 @@ addon`, `formerIds` for ee_rectifier → ee_extras, rollback marked); `/updates`
   all versions (401 without a key), `tfc admin addon upload` — same jar «уже записана», mismatched 2.2.0 jar refused
   (409), `tfc pull addons ee_extras@2.3.1` from the live server installed the jar with the recorded hash.
 
+## Debug Tools (`tools/debug-tools-mod`)
+
+2026-11-04 (dev #214, #199): **1.0.0**, manual install, no blocks. TFC 4.2.9 has no vein locate command: only
+`/tfc propick scan` (radius 12) and `/tfc count`; vanilla `/locate` does not see features. Vein centres depend only on the
+world seed and chunk (`VeinFeature.getVeinsAtChunk`, public), so `vein find` computes them without generating chunks;
+`vein check` and `ore` generate chunks one per tick and log results as `[tfcdebug]`, because RCON misses deferred output.
+Checked on the full pack stand with `--level-type tfc:overworld`, not in the client chat.
+
 ## Destroy Bridge + Destroy Extras (`tools/destroy-bridge-mod`, `tools/destroy-extras-mod`)
 
 2026-11-03 (dev #209, #208): **Destroy Extras 0.3.0** — Cl₂ also from the bottom of the controller (the south port is behind the 3×3×2 shell), H₂/Cl₂ as `destroy:mixture` (the Vat refuses `destroy:gas`; old stacks convert on load), EMI shows all Destroy categories via two mixins. Earlier checks put mixtures into the Vat by code and missed this; `M10Test` runs the route through real ports up to an L1 board, client stand uses JEI 19.55 + EMI (centrifuge 3 recipes). Full-pack client, flows through Create pumps and in-game not checked.
