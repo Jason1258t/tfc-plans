@@ -12,6 +12,11 @@ its one-liner in STATE.md.
   Reserved. Host: update NeoForge on a test profile and obtain the author's written permission for the pack server to
   redistribute the jar before integration and release. Static dependency checking of the pack against 21.1.256 found no
   conflicts; runtime and Survival acceptance have not been performed.
+- **Fluid tank recipe without a barrel** (2026-11-05, dev #233 item 1): card `2csvwoHPHBhlpqiZTQ4c` is confirmed for the
+  whole pack at the host's request in snapshot `20261104-223757-c5b3`, without an in-game check: 8
+  `#c:plates/copper` around 1 `#c:glass_panes` → 2 tanks. The 4-tank version loaded on the pack stand; only the count
+  changed after that. Host: craft it once in game. The old route stays: Create: Connected vessel (2 sheets + barrel)
+  converts to a tank.
 
 - **Transformer oil duplicate** (2026-11-04, dev #215): source card `9FCAF769A0A2ODuhbgxU`
   (`transformer_oil`, revision `2026-11-04T20:35:20.733425Z`) now disables only

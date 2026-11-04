@@ -20,6 +20,9 @@ When finishing work: update the topic file, and this index only if a line below 
 
 - Going Nuclear (dev #202): working plan accepted (plan doc 50); gameplay decisions are settled. Host: NeoForge
   ≥ 21.1.256 and the author's written redistribution permission before the integration build.
+- Host: fluid tank recipe without a barrel, card `2csvwoHPHBhlpqiZTQ4c` (dev #233), is confirmed without an in-game check:
+  craft it once in game.
+
 - Host: transformer-oil duplicate disabled in draft `9FCAF769A0A2ODuhbgxU` (dev #215): unconfirm old ZIP,
   pull, check standard heated mixing and absence of the parse error, then confirm.
 
