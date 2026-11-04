@@ -18,6 +18,9 @@ When finishing work: update the topic file, and this index only if a line below 
 
 ## In progress / waiting (details — [pending.md](state/pending.md))
 
+- Host: transformer-oil duplicate disabled in draft `9FCAF769A0A2ODuhbgxU` (dev #215): unconfirm old ZIP,
+  pull, check standard heated mixing and absence of the parse error, then confirm.
+
 - Building generator (dev #166): page `/builder` live (stages 0–5, with brush); next — stage 6 forms/styles. Host: rebuild + publish
   for `block-colors.json`.
 
