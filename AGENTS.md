@@ -78,6 +78,9 @@ comments, commit messages, guides, MCP tool output. Keep Russian UI labels verba
 - Cheap delegation: broad "where is X / how does Y work" searches → a read-only subagent if your harness has one; when
   one session is about to span several unrelated features, finish and start a new session instead of growing the
   context.
+- **Repeatable work is a skill/MCP candidate.** Any action that may recur and needs a new skill or script prepared
+  (a scratch script, a manual multi-step procedure, research you would redo) is a candidate for a skill or an MCP tool.
+  Finish the task, then log the candidate as a dev task: what was done by hand and what the tool should do.
 
 ## Where code goes
 
