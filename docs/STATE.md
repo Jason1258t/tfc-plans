@@ -18,6 +18,9 @@ When finishing work: update the topic file, and this index only if a line below 
 
 ## In progress / waiting (details — [pending.md](state/pending.md))
 
+- Host: fluid tank recipe without a barrel in card `2csvwoHPHBhlpqiZTQ4c` (dev #233): pull, craft it in game, confirm,
+  then update guide `fluid-tanks-compare`.
+
 - Host: transformer-oil duplicate disabled in draft `9FCAF769A0A2ODuhbgxU` (dev #215): unconfirm old ZIP,
   pull, check standard heated mixing and absence of the parse error, then confirm.
 

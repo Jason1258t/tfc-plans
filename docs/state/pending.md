@@ -5,6 +5,14 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **Fluid tank recipe without a barrel** (2026-11-05, dev #233 item 1): card `2csvwoHPHBhlpqiZTQ4c`
+  («Бак Create: крафт без бочки», revision `2026-11-04T22:34:05.404799Z`, not installed) replaces
+  `create:crafting/kinetics/fluid_tank`: 8 `#c:plates/copper` around 1 `#c:glass_panes` → 4 tanks, so copper per tank
+  stays at 2 plates. Output count 4 is the agent's choice, the host may want 1. Checked on the pack stand: the ZIP
+  loads, the old recipe is replaced, no parse error, the tag holds `minecraft:glass_pane`; the stand stopped after that
+  on a busy port, so the crafting grid itself was not exercised. Host: `tfc datapacks pull 2csvwoHPHBhlpqiZTQ4c`,
+  restart, craft it, then `confirm`. After confirming, update the cost section of guide `fluid-tanks-compare`.
+
 - **Transformer oil duplicate** (2026-11-04, dev #215): source card `9FCAF769A0A2ODuhbgxU`
   (`transformer_oil`, revision `2026-11-04T20:35:20.733425Z`) now disables only
   `tfc_plans:transformer_oil` with a `neoforge:false` condition. Its malformed fluid ingredient duplicated
