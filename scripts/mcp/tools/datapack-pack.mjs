@@ -1,5 +1,5 @@
 /** Живой снимок и точный ZIP датапака — отдельно от редактируемой карточки Firestore. Только чтение. */
-import { zipName } from '@tfc/core/datapackFiles';
+import { datapackInstallMode, zipName } from '@tfc/core/datapackFiles';
 import { createHash } from 'node:crypto';
 import { datapackCatalog, resolveDatapacks } from '@tfc/cli/datapacks';
 import { inspectDatapack, isPackDatapackPath } from '@tfc/pack-server/datapacks';
@@ -54,8 +54,9 @@ export async function datapacksInventory(args = {}) {
     `Живой снимок: ${c.snapshot?.id ?? 'не опубликован'}. MCP: 0 прямых чтений Firestore (карточки читает сервер). Карточки: ${args.refresh ? 'перечитаны' : 'серверный кеш до 5 минут; refresh=true — перечитать'}.`,
     page(list, args, (d) => {
       const pin = d.deployment;
+      const mode = datapackInstallMode(d);
       return [
-        `${d.id} — ${d.name}; ${pin ? `В СБОРКЕ: ${pin.path}; ZIP ${pin.sha256}; содержимое ${pin.contentHash}` : d.sourcePath ? `ZIP мира: ${d.sourcePath}; ZIP ${d.sha256}; содержимое ${d.contentHash ?? 'не прочитано'}` : `карточка сайта: ${d.install ? 'предлагать в мир' : 'тестовая'}; содержимое ${d.contentHash}`}`,
+        `${d.id} — ${d.name}; ${pin ? `В СБОРКЕ: ${pin.path}; ZIP ${pin.sha256}; содержимое ${pin.contentHash}` : d.sourcePath ? `ZIP мира: ${d.sourcePath}; ZIP ${d.sha256}; содержимое ${d.contentHash ?? 'не прочитано'}` : `карточка сайта: ${mode === 'pack' ? 'ставить в сборку (kubejs/data/)' : mode === 'world' ? 'предлагать в мир' : 'тестовая'}; содержимое ${d.contentHash}`}`,
         `  ${d.sourceMissing ? 'Карточки сайта нет' : d.snapshotSource ? 'Источник — ZIP снимка, карточки сайта нет' : `Ревизия карточки в ответе сервера (для записи перечитайте datapack_get): ${d.revision}`}${pin && !d.sourceMissing && pin.contentHash !== d.contentHash ? '; есть новая неподтверждённая редакция' : ''}`,
         `  Догрузить: tfc datapacks pull ${d.id}`,
       ];

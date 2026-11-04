@@ -1,4 +1,5 @@
 /** Датапак сайта: записи (рецепты и произвольные файлы) и скрипты KubeJS для сервера. */
+import type { DatapackInstallTarget } from '@tfc/core/datapackFiles';
 
 /**
  * Файл датапака.
@@ -31,8 +32,10 @@ export interface Datapack {
   namespace: string;
   description: string;
   entries: DatapackEntry[];
-  /** Предлагать для проверки в мире. Подтверждённые версии сборки закреплены отдельно в снимке сервера. */
+  /** Ставить ли с сайта через tfc pull (в мир или в сборку по installTarget). Подтверждённые версии закреплены отдельно в снимке сервера. */
   install?: boolean;
+  /** Куда tfc pull ставит датапак с сайта: в мир (`world/datapacks/`) или в сборку (`kubejs/data/`) */
+  installTarget?: DatapackInstallTarget;
   author: string;
   updatedBy: string;
   createdAt: number;

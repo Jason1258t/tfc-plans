@@ -121,6 +121,10 @@ async function bundle(work, version, { npm = false } = {}) {
     platform: 'node',
     format: npm ? 'esm' : 'cjs', // SEA в Node 24 запускает только CommonJS
     target: `node${npm ? NPM_NODE : NODE_VERSION.split('.')[0]}`,
+    alias: {
+      '@tfc/core': path.join(ROOT, 'packages/core/src'),
+      '@tfc/pack-server': path.join(ROOT, 'server/pack-server/lib'),
+    },
     define: { __TFC_BUILD__: JSON.stringify(npm ? { ...version, channel: 'npm' } : version) },
     metafile: true,
     logLevel: 'warning',

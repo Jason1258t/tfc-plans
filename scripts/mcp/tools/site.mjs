@@ -6,7 +6,7 @@
  * В конце каждого ответа — сколько чтений Firestore он стоил (0 — всё из кеша).
  */
 import { DOCS, fromValue } from '../../firestore-rest.mjs';
-import { datapackFiles, zipName } from '@tfc/core/datapackFiles';
+import { datapackFiles, datapackInstallMode, datapackInstallPatch, zipName } from '@tfc/core/datapackFiles';
 import { itemName, readJson } from '../data.mjs';
 import { checkDatapack, deploymentNote, makeEntry, saveDatapack } from '../datapack-write.mjs';
 import { FirestoreError, api, cached, createDoc, listAll, patchDoc } from '../firestore.mjs';
@@ -94,7 +94,16 @@ const artifactsIndex = cached(TTL, () =>
   listCounted('artifacts', ['title', 'taskId', 'author', 'updatedBy', 'createdAt', 'updatedAt']),
 );
 const datapacksIndex = cached(TTL, () =>
-  listCounted('datapacks', ['name', 'namespace', 'description', 'install', 'author', 'updatedBy', 'updatedAt']),
+  listCounted('datapacks', [
+    'name',
+    'namespace',
+    'description',
+    'install',
+    'installTarget',
+    'author',
+    'updatedBy',
+    'updatedAt',
+  ]),
 );
 const scriptsIndex = cached(TTL, () =>
   listCounted('kubejsScripts', ['fileName', 'install', 'author', 'updatedBy', 'updatedAt']),
@@ -580,9 +589,10 @@ export async function mentions(name) {
 
 function deploymentMark(d) {
   const deployment = (readJson('kubejs.json', {}).datapacks ?? []).find((p) => p.id === d.id);
-  return deployment
-    ? `в сборке: ${deployment.path}, содержимое ${deployment.contentHash.slice(0, 12)}, подтвердил ${deployment.confirmedBy}${deployment.sourceUpdatedAt !== d.updatedAt ? '; карточка после подтверждения менялась' : ''}`
-    : `${installMark(d)} в мир`;
+  if (deployment)
+    return `в сборке: ${deployment.path}, содержимое ${deployment.contentHash.slice(0, 12)}, подтвердил ${deployment.confirmedBy}${deployment.sourceUpdatedAt !== d.updatedAt ? '; карточка после подтверждения менялась' : ''}`;
+  const mode = datapackInstallMode(d);
+  return mode === 'pack' ? `${installMark({ install: true })} в сборку` : `${installMark(d)} в мир`;
 }
 
 async function datapacksList(a) {
@@ -670,8 +680,25 @@ async function datapackPut(a) {
   if (a.name != null) p.name = String(a.name).trim();
   if (a.namespace != null) p.namespace = String(a.namespace).trim();
   if (a.description != null) p.description = String(a.description);
-  if (a.install != null) p.install = Boolean(a.install);
-  const pack = { name: '', namespace: 'tfc_plans', description: '', install: false, ...cur, ...p };
+  if (a.installTarget != null) {
+    if (!['world', 'pack'].includes(a.installTarget)) throw new Error('installTarget — world или pack');
+    p.installTarget = a.installTarget;
+    if (a.install == null && a.installTarget === 'pack') p.install = true;
+  }
+  if (a.install != null) {
+    if (a.install === 'world' || a.install === 'pack') Object.assign(p, datapackInstallPatch(a.install));
+    else if (a.install === 'none') Object.assign(p, datapackInstallPatch('none'));
+    else p.install = Boolean(a.install);
+  }
+  const pack = {
+    name: '',
+    namespace: 'tfc_plans',
+    description: '',
+    install: false,
+    installTarget: 'world',
+    ...cur,
+    ...p,
+  };
   const before = cur?.entries ?? [];
   let entries = [...before];
   const ops = [];
@@ -704,7 +731,7 @@ async function datapackPut(a) {
   if (a.entries != null || ops.length) p.entries = entries;
   if (cur && !Object.keys(p).length)
     throw new Error(
-      'нечего менять: передайте name, namespace, description, install, entries, upsert, remove или rename',
+      'нечего менять: передайте name, namespace, description, install, installTarget, entries, upsert, remove или rename',
     );
 
   const { errors, warnings } = checkDatapack(pack);
@@ -725,15 +752,16 @@ async function datapackPut(a) {
   } else if (a.dry_run) out.unshift(`Проверка без записи (dry_run): ${pack.name}, записей ${entries.length}.`);
   else {
     try {
-      const { name, namespace, description, install } = pack;
-      const fields = cur ? p : { name, namespace, description, install, entries };
+      const { name, namespace, description, install, installTarget } = pack;
+      const fields = cur ? p : { name, namespace, description, install, installTarget, entries };
       const r = await saveDatapack({ id: cur?.id, base: cur?.updateTime, fields, nick: NICK });
       datapacksIndex.reset();
       resetSiteRecipes();
+      const mode = datapackInstallMode(pack);
       out.unshift(
         cur
           ? `Сохранено: ${r.id} — ${pack.name}; изменено: ${Object.keys(p).join(', ')}; записей ${entries.length}; подпись ${NICK}.`
-          : `Создан датапак ${r.id} — ${pack.name} (ns ${pack.namespace}, ${pack.install ? 'предлагать в мир' : 'не ставится'}); записей ${entries.length}; автор ${NICK}.`,
+          : `Создан датапак ${r.id} — ${pack.name} (ns ${pack.namespace}, ${mode === 'pack' ? 'ставить в сборку' : mode === 'world' ? 'предлагать в мир' : 'не ставится'}); записей ${entries.length}; автор ${NICK}.`,
         `revision: ${r.updateTime}   ← для следующего datapack_put как baseRevision`,
         `на сайте: ${SITE}/datapacks`,
       );
@@ -980,7 +1008,12 @@ export const TOOLS = [
         name: str('name (zip file name), ≤80'),
         namespace: str('namespace for new recipes'),
         description: str('description (pack.mcmeta)'),
-        install: { type: 'boolean', description: 'offer to install into the world for testing (site checkbox)' },
+        install: { type: 'boolean', description: 'offer to install via tfc pull (site toggle)' },
+        installTarget: {
+          type: 'string',
+          enum: ['world', 'pack'],
+          description: 'where tfc pull installs the datapack: world (world/datapacks/) or pack (kubejs/data/)',
+        },
         entries: { type: 'array', description: 'replace ALL files', items: DP_ENTRY },
         upsert: { type: 'array', description: 'add or replace files by path', items: DP_ENTRY },
         remove: { type: 'array', description: 'paths to delete', items: { type: 'string' } },

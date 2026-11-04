@@ -784,6 +784,11 @@ the step is centred.
   matching CLI delivery. An own block-tag no longer hides a missing item/fluid-tag warning in the recipe editor.
   MCP uses the same path validation and tag-kind rule. Verified with invalid-path and tag-kind fixtures, TypeScript.
 
+- Dev #213 (2026-11-04): datapack cards on `/datapacks` now have a three-way `Segmented` install selector («Не ставить /
+  В мир / В сборку», `installTarget: 'world' | 'pack'` with `install: boolean` kept for backward compatibility). When set
+  to «В сборку», `tfc pull` installs the ZIP directly from the site card into `kubejs/data/tfc-plans-<id>.zip` without
+  requiring a selected world or separate `confirm`, and cleans up matching world duplicates. Verified in browser and CLI/MCP checks.
+
 - Dev #163 (2026-10-30): multiblock guides support `::craft recipe=<id>` (catalogue crafting grid with item/tag
   icons) and `::pumpjack` (small/large CDG structures and layers from the player's NBT files). The layer viewer is
   reused from IE, including the excavator; block-only icons resolve through their placing item. The oil guide's

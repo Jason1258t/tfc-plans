@@ -316,6 +316,13 @@
   margin-top: 2px;
 }
 
+.dp-install-mode {
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  cursor: default;
+}
+
 .dp-field-error {
   margin-top: 4px;
   color: var(--danger);

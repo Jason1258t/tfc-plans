@@ -5,11 +5,13 @@
  *
  * Чтения Firestore (50 тыс. в сутки на всех): коллекция целиком (сейчас ~10 документов) — раз в 10 минут.
  */
-import { datapackFiles } from '@tfc/core/datapackFiles';
+import { datapackFiles, datapackInstallMode } from '@tfc/core/datapackFiles';
 import { datapackRecipe, indexRecipe, recipeRecord, recipes, readJson } from './data.mjs';
 import { cached, listAll } from './firestore.mjs';
 
-const loadDocs = cached(10 * 60_000, () => listAll('datapacks', ['name', 'description', 'install', 'entries']));
+const loadDocs = cached(10 * 60_000, () =>
+  listAll('datapacks', ['name', 'description', 'install', 'installTarget', 'entries']),
+);
 /** После записи датапака (datapack_put) — перечитать слой при следующем вопросе */
 export const resetSiteRecipes = () => loadDocs.reset();
 async function load() {
@@ -18,13 +20,14 @@ async function load() {
   const other = [];
   const deployed = new Set((readJson('kubejs.json', {}).datapacks ?? []).map((d) => d.id));
   for (const d of docs) {
+    const mode = datapackInstallMode(d);
     const files = datapackFiles({ name: d.name, description: d.description, entries: d.entries ?? [] });
     for (const [file, text] of Object.entries(files)) {
       const r = datapackRecipe(file, text);
       if (!r) continue;
-      (d.install && !deployed.has(d.id) ? installed : other).push({
+      (mode !== 'none' && !deployed.has(d.id) ? installed : other).push({
         ...r,
-        s: `датапак сайта ${d.name}`,
+        s: `датапак сайта ${d.name}${mode === 'pack' ? ' (в сборку)' : ''}`,
         dp: d.name,
         dpId: d.id,
         file,

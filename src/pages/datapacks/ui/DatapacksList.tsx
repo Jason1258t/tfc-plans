@@ -1,7 +1,7 @@
 import { FileTerminal, Package, Plus } from 'lucide-react';
 import { PackNav } from '@/widgets/pack-nav';
 import { cx, timeAgo } from '@/shared/lib';
-import type { Datapack, DatapackDeployment, KubejsScript } from '@/entities/datapack';
+import { datapackInstallMode, type Datapack, type DatapackDeployment, type KubejsScript } from '@/entities/datapack';
 import { Button } from '@/shared/ui';
 import styles from '../DatapacksPage/DatapacksPage.module.css';
 
@@ -48,27 +48,37 @@ export function DatapacksList({
         </Button>
       ) : (
         <ul>
-          {packs.map((p) => (
-            <li key={p.id}>
-              <button
-                className={cx(styles.dpItem, p.id === selectedId && styles.active)}
-                onClick={() => onSelectPack(p.id)}
-              >
-                <Package size={15} className="faint" />
-                <span className="grow">
-                  <span className={styles.dpItemName}>{p.name}</span>
-                  <span className="faint small">
-                    {p.entries.length} файл(ов) · {p.updatedBy}, {timeAgo(p.updatedAt)}
+          {packs.map((p) => {
+            const inSnapshot = deployments?.some((d) => d.id === p.id);
+            const mode = datapackInstallMode(p);
+            const badge = inSnapshot ? 'в сборке' : mode === 'pack' ? 'в сборку' : mode === 'world' ? 'в мир' : null;
+            const badgeTitle = inSnapshot
+              ? 'Закреплён в опубликованном снимке сборки (kubejs/data/)'
+              : mode === 'pack'
+                ? 'Отмечен «В сборку»: программа tfc поставит его в kubejs/data/'
+                : 'Отмечен «В мир»: программа tfc поставит его в world/datapacks/';
+            return (
+              <li key={p.id}>
+                <button
+                  className={cx(styles.dpItem, p.id === selectedId && styles.active)}
+                  onClick={() => onSelectPack(p.id)}
+                >
+                  <Package size={15} className="faint" />
+                  <span className="grow">
+                    <span className={styles.dpItemName}>{p.name}</span>
+                    <span className="faint small">
+                      {p.entries.length} файл(ов) · {p.updatedBy}, {timeAgo(p.updatedAt)}
+                    </span>
                   </span>
-                </span>
-                {(p.install || deployments?.some((d) => d.id === p.id)) && (
-                  <span className={styles.dpBadge} title="Уровень установки по опубликованному снимку сборки">
-                    {deployments?.some((d) => d.id === p.id) ? 'в сборке' : 'в мир'}
-                  </span>
-                )}
-              </button>
-            </li>
-          ))}
+                  {badge && (
+                    <span className={styles.dpBadge} title={badgeTitle}>
+                      {badge}
+                    </span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
       <div className={cx(styles.dpListHead, styles.dpListHeadNext)}>

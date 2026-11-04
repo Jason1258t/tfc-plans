@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { isPackDatapackPath } from '@tfc/pack-server/datapacks';
+import { deploymentsOf, isPackDatapackPath } from '@tfc/pack-server/datapacks';
 import { Api } from './lib/api.mjs';
 import { configFile, currentProfile, DEFAULT_SERVER, loadConfig, saveConfig } from './lib/config.mjs';
 import {
@@ -657,7 +657,11 @@ function printSite(p, names) {
   if (p.unknown.length) {
     console.log(red(`  нет на сайте: ${p.unknown.join(', ')}`));
     if (p.all.length)
-      console.log(dim(`  есть: ${p.all.map((x) => `${x.name}${x.install ? ' (в мир)' : ''}`).join(', ')}`));
+      console.log(
+        dim(
+          `  есть: ${p.all.map((x) => `${x.name}${x.install ? (x.installTarget === 'pack' ? ' (в сборку)' : ' (в мир)') : ''}`).join(', ')}`,
+        ),
+      );
   }
   if (!pullChanges(p) && !p.keptModified.length) console.log(dim('  всё на месте'));
 }
@@ -843,12 +847,13 @@ async function cmdPublish(v) {
   const a = api(cfg);
   const current = await a.current();
   const { files: local, skipped, state } = await scan(profile);
-  // Датапаки сайта раздаёт сайт (tfc pull) — в сборку их не берём
+  // Датапаки сайта раздаёт сайт (tfc pull) — в сборку их не берём (кроме уже закреплённых в снимке через confirm)
+  const confirmedPaths = new Set(deploymentsOf(current).map((d) => d.path));
   const siteDp = await siteDatapackPaths(a, profile);
   const fromSite = [];
   for (const [p, f] of local)
-    if (f.kind === 'world-datapack' && siteDp(p)) {
-      fromSite.push(`${p.slice(16)} — «${siteDp(p)}»`);
+    if ((f.kind === 'world-datapack' || (isPackDatapackPath(p) && !confirmedPaths.has(p))) && siteDp(p)) {
+      fromSite.push(`${path.posix.basename(p)} — «${siteDp(p)}»`);
       local.delete(p);
     }
   // --no-host-addons: аддоны хоста (hostOnly) нужны только ему — в сборку для всех их не берём
