@@ -175,6 +175,14 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-05 (dev #224): final Survival integration enabled the existing M10/M11/M12 datapacks for installation through
+`tfc pull`: `Nh1ATmqCY92Hao48hOAQ` (20 entries), `cbH7wTaHOr5vQMs4Usgb` (9) and `tcegd3kspq62oHuM3YmF` (69).
+Together with the already enabled M6 pack they cover all 54 electronics materials/components: 17 M10 recipes, seven M11
+recipes and 30 M12 recipes; `pcb_design` is produced by the design table rather than a crafting recipe. Active-recipe
+queries pass for a resistor, L2/L3 boards, solar panel, CC computer and CCBR integrated circuit. The earlier dedicated
+server checks remain valid because recipe JSON and addon code did not change. No new addon version was released; live
+pack-wide confirmation and a manual Survival playthrough remain pending.
+
 2026-11-04 (dev #216): **2.10.1** — visual refresh of 33 entries from the L1 blank through the TFC thermometer:
 28 individual RGBA 64×64 item textures and materials/models for five blocks. L1/L2/L3 use yellow/green/blue edge
 stickers; coating, etched traces and plated vias distinguish PCB stages. Fiberglass is a wound bobbin, fabric an
