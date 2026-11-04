@@ -5,6 +5,19 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **Transformer oil duplicate** (2026-11-04, dev #215): source card `9FCAF769A0A2ODuhbgxU`
+  (`transformer_oil`, revision `2026-11-04T20:35:20.733425Z`) now disables only
+  `tfc_plans:transformer_oil` with a `neoforge:false` condition. Its malformed fluid ingredient duplicated
+  `electroenergetics:mixing/transformer_oil`: the mod JAR uses 250 mB `#c:plantoil` + 250 mB water →
+  125 mB transformer oil, heated; the tag includes IE plant oil. The user sees the standard mixing recipe
+  during client acceptance; production itself and this new draft have not been checked in game.
+  Checked: exact live ZIP, mod JAR recipe, expanded fluid tag, overlapping inputs, MCP dry-run and readback
+  (duplicate disabled; standard recipe remains). The writer's “recipe absent” warning reflects stale static
+  pack metadata; the live inventory confirms the old ZIP is pinned in snapshot `20261101-190800-fdd3`.
+  Source editing does not replace that ZIP. Host: `tfc datapacks unconfirm 9FCAF769A0A2ODuhbgxU`,
+  then `tfc datapacks pull 9FCAF769A0A2ODuhbgxU` into the selected test world, restart and check that
+  the parse error is gone and standard heated mixing produces oil; only then confirm the new version.
+
 - **Destroy slice as one update** (2026-11-03, dev #203, acceptance #199): `u20261103-164054-6977` adds Destroy,
   Petrolpark, Destroy Bridge, Destroy Extras 0.3.0 and five datapacks (confirmed by approve); updates EE Extras 2.7.0, JEI 19.55.0.431,
   LDLib 2.2.45, Create Aeronautics 1.3.2. Replaces `u20261103-104332-a97a` (Destroy Extras 0.2.0: Cl₂ port blocked, Vat refused the gases, EMI hid Destroy recipes); the host still has to reject that one. Host: subscribe a separate profile

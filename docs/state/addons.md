@@ -162,6 +162,16 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 - M11 dedicated-server checks pass for complete L2/L3 cycles, invalid/missing inputs, blocked outputs, voltage sag,
   break/replacement and two-stage restart. L1/M4/M10 regressions, old-world migration, both release builds and resource
   checks pass. No manual Survival playthrough or live pack-wide datapack confirmation was performed.
+- M13 (#22 checklist item 56) releases **Destroy Extras 0.5.0** and **Destroy Bridge 0.2.0**. The configurable EE rating
+  preserves the old 300 V / 8 A default and adds recipe-driven 240/600 V modes. The metallurgical processor has two item
+  inputs, a reusable catalyst, two item and two fluid outputs; all inputs and output space are checked before consumption,
+  and contents/progress survive restart. Its 23 datapack recipes cover roasting/leaching/electrowinning Cu/Ni/Zn (20 ore
+  powders → 100 mB metal), cementation, nickel sulfide, Bayer/Hall–Héroult with reusable cryolite, tailings, FeCl3
+  regeneration and electronic scrap. Draft datapack `AOCIqlJX84i1BfiWPPsh` has 20 entries and remains `install=false`;
+  it disables all ten direct bauxite routes through TFC, TFC-IE, ore washing and pellet arc-furnace recipes.
+- M13 dedicated-server checks: environment/ingredient matching 30/30, leaching 3/3, electrowinning 3/3, Bayer 2/2,
+  Hall–Héroult 4/4, blocked output 2/2, voltage sag 2/2 and restart 2/2. The M2 regression after the Bridge change passes
+  13/13 at 299.827 V / 7.995 A. No manual Survival playthrough or live pack-wide datapack confirmation was performed.
 
 ## EE Extras (`tools/ee-extras-mod`)
 
