@@ -138,6 +138,12 @@ New editable fixes go to site cards via `datapack_put`; the rest, including depl
 [docs/agents-datapacks.md](docs/agents-datapacks.md). An agent cannot verify in game: **do not declare a version tested
 or run live `confirm` without the host's explicit confirmation.**
 
+## Whole-pack test server
+
+Run full-pack NeoForge checks on Ubuntu `test1a` via Tailscale to keep the Mac free for development.
+See [test stand access and commands](docs/state/infra.md#remote-whole-pack-stand-dev-275) for the remote checkout,
+snapshot and overlay transfer, and the smoke test. AutoLab, Docker, and Ollama on that host are outside the stand.
+
 ## Browser checks
 
 - Dev server on port 5176 (5177 if busy), see Commands; it needs no jars.
