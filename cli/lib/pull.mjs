@@ -138,6 +138,8 @@ async function wanted(api, kind, names, profile, staging) {
           bytes: async () => api.bytes(`/blobs/${d.sha256}`),
         })),
         ...(r.deployed ?? [])
+          // Заменённый staging-обновлением: новый ZIP ставит план снимка, старый с сервера его бы затёр
+          .filter((d) => !staging?.datapackIds.has(d.id))
           .filter(
             (d) =>
               !names.length ||

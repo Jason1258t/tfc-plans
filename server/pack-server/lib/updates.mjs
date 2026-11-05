@@ -4,18 +4,20 @@
  * с этими изменениями получается новый снимок. Одобрить может только другой администратор, не автор.
  *
  *   updates/<id>.json — { id, createdAt, author, note, base, files: [{ path, sha256, size, kind }], remove: [path],
- *                         datapacks?: [{ id, revision, sha256, sourcePath?, name, path, contentHash, worldPaths }],
+ *                         datapacks?: [{ id, revision, sha256, sourcePath?, name, path, contentHash, worldPaths,
+ *                                        replaces?: { sha256, contentHash, revision } }],
  *                         status: pending | approved | rejected, decidedAt?, decidedBy?, snapshot?, parent?, reason? }
  * base — текущий снимок на момент предложения: по нему видно, не поменяли ли эти пути с тех пор.
  * datapacks — подтвердить вместе с новым снимком (как tfc datapacks confirm): ZIP уже в files по пути kubejs/data/…,
- * ревизию карточки и пересечения данных сервер проверяет и при предложении, и при одобрении. Старые записи без этого
- * поля одобряются как раньше. parent — снимок, который был текущим до одобрения (откат).
+ * ревизию карточки и пересечения данных сервер проверяет и при предложении, и при одобрении. replaces — закреплённая
+ * версия, которую заменяет новая; снимок с новым ZIP и новой записью становится текущим сразу целиком. Старые записи без
+ * этого поля одобряются как раньше. parent — снимок, который был текущим до одобрения (откат).
  */
 import { randomBytes } from 'node:crypto';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { confirmDatapackItems } from './datapack-deployment.mjs';
-import { deploymentsOf } from './datapacks.mjs';
+import { deploymentsOf, packDatapackPath } from './datapacks.mjs';
 import { classifyPath, isModJar, jarKey } from './paths.mjs';
 import { HttpError, SHA256_RE, writeJsonAtomic } from './util.mjs';
 
@@ -120,6 +122,12 @@ export async function openUpdates(dataDir, store, site) {
       for (const d of datapacks) {
         if (!SHA256_RE.test(d?.sha256 ?? '')) problems.push({ path: d?.id, reason: 'датапак: неверный sha256' });
         else if (!store.hasBlob(d.sha256)) missing.push(d.sha256);
+        if (!d?.replaces) continue;
+        const { sha256, contentHash, revision } = d.replaces;
+        if (!SHA256_RE.test(sha256 ?? '') || !SHA256_RE.test(contentHash ?? '') || typeof revision !== 'string')
+          problems.push({ path: d.id, reason: 'датапак: неверно указана заменяемая версия' });
+        if (remove.includes(packDatapackPath(d.id)))
+          problems.push({ path: packDatapackPath(d.id), reason: 'и заменяется, и убирается' });
       }
       if (problems.length) throw new HttpError(400, `Обновление не принято: ${problems.length} ошибок`, { problems });
       if (missing.length)
@@ -133,7 +141,7 @@ export async function openUpdates(dataDir, store, site) {
         for (const p of remove) after.delete(p);
         const deployments = new Map(deploymentsOf(current).map((x) => [x.id, x]));
         await confirmDatapackItems(store, site, current, datapacks, { files: after, deployments, by: author });
-        for (const { id, revision, sha256, sourcePath } of datapacks) {
+        for (const { id, revision, sha256, sourcePath, replaces } of datapacks) {
           const { name, path: target, contentHash, worldPaths } = deployments.get(id);
           outDatapacks.push({
             id,
@@ -144,6 +152,7 @@ export async function openUpdates(dataDir, store, site) {
             path: target,
             contentHash,
             worldPaths,
+            ...(replaces ? { replaces } : {}),
           });
           if (inCurrent.get(target) !== sha256 && !outFiles.some((f) => f.path === target))
             outFiles.push({ path: target, sha256, size: store.blobSize(sha256), kind: 'kubejs' });

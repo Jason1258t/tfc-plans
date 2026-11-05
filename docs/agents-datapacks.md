@@ -85,6 +85,10 @@ one requires a selected world (`tfc init --world <world>`). `all` follows defaul
 
 For a pinned card, writing a new draft **does not replace** the confirmed version. Explain this in the report.
 The host uses `unconfirm <id>` to return it to world testing, pulls the draft, checks in game, and confirms it again.
+To ship the new card version together with other pack files in one approval, an agent proposes
+`tfc admin propose --replace-datapack <id> [--remove <path>…] --note …`: the server checks the pinned version it replaces,
+card revision, new hash and data overlaps at propose and at approve, and the switch is one snapshot. Don't patch a pinned
+pack with loose `kubejs/data/` files.
 After the host checks the chosen versions: `tfc datapacks confirm <id> --dry-run`, then `confirm <id> --yes` and
 restart. An agent cannot verify in game or declare that the host has checked a version without their report.
 

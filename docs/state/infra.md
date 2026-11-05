@@ -295,6 +295,9 @@ the host's real folder.
 - `tfc admin propose`: `--jar`, `--datapack`, auto `remove` of old jars (`--keep-old`). Server: update field `datapacks`,
   `confirmDatapackItems` shared with `changeDatapacks`, approve confirms in the same snapshot (`options.datapacks`), activates
   before writing the status (`activate`, base = parent), stores `parent`. Old records work unchanged.
+- `--replace-datapack` (dev #261): swaps a pinned pack for its card version in one approval; update field
+  `datapacks[].replaces` = pinned sha256/contentHash/revision, rechecked at propose and approve, `--force` doesn't bypass it,
+  `tfc datapacks confirm` refuses it. Overlaps ignore the replaced version. Staging keeps the pack pinned with the new ZIP.
 - Verified with a throwaway script: local pack server on a temp data dir + Firestore stub (`SITE_DOCS_URL`, fake service
   key with a local `token_uri`), 81 checks over the full flow. Not verified: in the game; the first real update through
   the new flow.
