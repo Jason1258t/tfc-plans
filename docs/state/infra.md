@@ -186,6 +186,9 @@ addons`; with names — one named site item; `tfc undo` — undo the whole pull 
 - Launcher profile isolation (2026-11-05, dev #242): NeoForge updates use the selected tfc profile's existing game
   folder and version, including legacy profiles inferred from their paths. New copies get separate version folders,
   official launcher profile keys and numeric TLauncher IDs. A matching legacy official launcher key is reused.
+- Installed NeoForge detection (2026-11-05, dev #258): the launcher version JSON beats `minecraftinstance.json`, and a
+  profile with `launcher.version` reads that version even when its game folder is the `.minecraft` root; the highest
+  `libraries` version is compared numerically.
 - **`tfc init --launcher`** (2026-10-22, `cli/lib/vanilla.mjs`): official Minecraft Launcher — NeoForge from the
   snapshot `loader` via its installer (`--install-client <mcDir>`, maven sha256, cached; needs launcher_profiles.json —
   created temporarily if only the Store file exists), Java 21+ from `<mc>/runtime`, Store runtime, JAVA_HOME, PATH;
