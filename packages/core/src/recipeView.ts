@@ -926,7 +926,11 @@ export function hasViewRule(type: string): boolean {
  * который не разобрать: показывать как раньше. Ошибка разбора — тоже null, не падаем.
  */
 export function recipeView(r: { t: string; j: Record<string, unknown> }): RecipeView | null {
-  if (!r.t || (Array.isArray(r.j.pattern) && r.j.key) || (/craft/.test(r.t) && Array.isArray(r.j.ingredients)))
+  if (
+    !r.t ||
+    (Array.isArray(r.j.pattern) && r.j.key) ||
+    (/craft|shapeless/.test(r.t) && Array.isArray(r.j.ingredients))
+  )
     return null;
   const [ns, path] = r.t.split(':');
   try {
