@@ -66,6 +66,11 @@ export async function currentRelease(site = SITE_ID) {
   return j.releases?.[0] ?? null;
 }
 
+/** Последние релизы сайта, новые первыми (сообщение релиза — поле message) */
+export async function listReleases(pageSize = 100, site = SITE_ID) {
+  return (await call('GET', `sites/${site}/releases?pageSize=${pageSize}`)).releases ?? [];
+}
+
 /** Файлы версии: Map путь → хеш */
 export async function versionFiles(versionName) {
   const out = new Map();
@@ -163,8 +168,11 @@ async function checkVersion(version, files) {
   return got.size;
 }
 
-/** Файлы в версию (populateFiles), загрузка недостающих хешей, FINALIZED, релиз */
-export async function release({ version, files, getGz, message, site = SITE_ID, log = () => {} }) {
+/**
+ * Файлы в версию (populateFiles), загрузка недостающих хешей, FINALIZED, релиз. beforeRelease — последняя проверка
+ * прямо перед релизом: если бросит ошибку, версия останется невыпущенной.
+ */
+export async function release({ version, files, getGz, message, beforeRelease, site = SITE_ID, log = () => {} }) {
   const entries = [...files.entries()];
   const required = new Set();
   let uploadUrl = null;
@@ -193,6 +201,7 @@ export async function release({ version, files, getGz, message, site = SITE_ID, 
   const listed = await checkVersion(version, files);
   log(`сверка: все ${files.size} файлов на месте (в версии ${listed})`);
   await call('PATCH', `${version}?update_mask=status`, { status: 'FINALIZED' });
+  await beforeRelease?.();
   const rel = await call('POST', `sites/${site}/releases?versionName=${encodeURIComponent(version)}`, {
     message: message ?? 'сервер сборки',
   });

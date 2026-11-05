@@ -37,9 +37,10 @@ then merge again.
 
 ## 3. Deploy (from clean `main`, never from a branch)
 
-The full safe procedure — skill `deploy` (`.claude/skills/deploy/SKILL.md`): verify access, ensure no parallel
-deploy, pick the route, `firestore:rules` first, `npm run deploy:site -- --dry-run` then real, verify the live URL.
-Pack data is set only by the pack server; `firebase deploy --only hosting` stays blocked.
+The full safe procedure — skill `deploy` (`.claude/skills/deploy/SKILL.md`): verify access, pick the route,
+`firestore:rules` first, `npm run deploy:site -- --dry-run` then real, verify the live URL. Pack data is set only by the
+pack server; `firebase deploy --only hosting` stays blocked. `deploy:site` refuses when another deploy is running or the
+site holds a commit you don't have — then update `main` and rerun (skill `deploy` §6).
 
 ## 4. Push and clean up
 
