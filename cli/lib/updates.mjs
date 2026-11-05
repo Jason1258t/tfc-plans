@@ -1,6 +1,7 @@
 /**
  * Предложенные обновления сборки (server/pack-server/lib/updates.mjs).
- *   tfc admin propose [<папка>] [--jar <файл>…] [--datapack <id|имя>…] [--remove <путь>…] --note "…" — выложить:
+ *   tfc admin propose [<папка>] [--jar <файл>…] [--datapack <id|имя>…] [--replace-datapack <id|имя>…]
+ *                     [--remove <путь>…] --note "…" — выложить:
  *     файлы из папки (пути как в снимке: kubejs/…, config/…), jar в mods/, датапаки сайта на подтверждение и пути, которые
  *     убрать; старые версии предлагаемых jar убираются сами (--keep-old — оставить). Так обновляет сборку Claude или
  *     администратор не с ПК хоста.
@@ -53,7 +54,9 @@ export function printUpdate(u, { full = true, subscribed = false } = {}) {
   for (const f of u.files) console.log(`    ~ ${f.path} ${dim(mb(f.size))}`);
   for (const p of u.remove) console.log(`    − ${p}`);
   for (const d of u.datapacks ?? [])
-    console.log(`    ◆ датапак «${d.name}» ${dim(`→ ${d.path}, ревизия ${d.revision}, подтвердится при одобрении`)}`);
+    console.log(
+      `    ◆ датапак «${d.name}» ${dim(`→ ${d.path}, ревизия ${d.revision}, ${d.replaces ? `заменит закреплённую ${d.replaces.sha256.slice(0, 12)} при одобрении` : 'подтвердится при одобрении'}`)}`,
+    );
   if (u.reason) console.log(dim(`  причина: ${u.reason}`));
   if (u.status === 'pending')
     console.log(
@@ -93,15 +96,20 @@ export function batchProblems(list) {
   return out;
 }
 
-/** Датапаки сайта для обновления: ZIP как у tfc datapacks. → [{ id, revision, sha256, sourcePath?, name, zip? }] */
-async function datapackItems(api, names) {
-  if (names.includes('all')) throw new Error('--datapack — по одному: id или имя из tfc datapacks list');
+/**
+ * Датапаки сайта для обновления: ZIP как у tfc datapacks. → [{ id, revision, sha256, sourcePath?, name, zip?, replaces? }]
+ * names — новые для сборки, replacing — закреплённые, которые надо заменить версией с карточки.
+ */
+async function datapackItems(api, names, replacing) {
+  if ([...names, ...replacing].includes('all'))
+    throw new Error('--datapack и --replace-datapack — по одному: id или имя из tfc datapacks list');
   const c = await datapackCatalog(api, { refresh: true });
   const out = [];
-  for (const d of await resolveDatapacks(api, c, c.items, names)) {
+  // Пустой список для resolveDatapacks значит «все»
+  for (const d of names.length ? await resolveDatapacks(api, c, c.items, names) : []) {
     if (d.error) throw new Error(`${d.fileName}: ${d.error}`);
     if (c.deployed.some((p) => p.id === d.id))
-      throw new Error(`«${d.name}» уже в сборке. Для новой версии: tfc datapacks unconfirm ${d.id}`);
+      throw new Error(`«${d.name}» уже в сборке. Для новой версии: --replace-datapack ${d.id}`);
     const zip = d.snapshotSource ? null : datapackZip(d);
     out.push({
       id: d.id,
@@ -112,13 +120,33 @@ async function datapackItems(api, names) {
       ...(d.snapshotSource ? { sourcePath: d.sourcePath } : {}),
     });
   }
+  for (const d of replacing.length ? await resolveDatapacks(api, c, c.items, replacing) : []) {
+    const pinned = c.deployed.find((p) => p.id === d.id);
+    if (!pinned) throw new Error(`«${d.name}» ещё не закреплён в сборке. Добавить: --datapack ${d.id}`);
+    if (d.sourceMissing || d.snapshotSource || pinned.snapshotSource)
+      throw new Error(`«${d.name}» закреплён без карточки сайта — заменить нечем`);
+    if (out.some((x) => x.id === d.id)) throw new Error(`«${d.name}» указан дважды`);
+    if (d.contentHash === pinned.contentHash) throw new Error(`«${d.name}»: карточка совпадает с закреплённой версией`);
+    const zip = datapackZip(d);
+    out.push({
+      id: d.id,
+      revision: d.revision,
+      sha256: createHash('sha256').update(zip).digest('hex'),
+      name: d.name,
+      zip,
+      replaces: { sha256: pinned.sha256, contentHash: pinned.contentHash, revision: pinned.revision },
+    });
+  }
   return out;
 }
 
-export async function propose(api, { dir, remove = [], jars = [], datapacks = [], keepOld, note, yes, dryRun }) {
-  if (!dir && !remove.length && !jars.length && !datapacks.length)
+export async function propose(
+  api,
+  { dir, remove = [], jars = [], datapacks = [], replaceDatapacks = [], keepOld, note, yes, dryRun },
+) {
+  if (!dir && !remove.length && !jars.length && !datapacks.length && !replaceDatapacks.length)
     throw new Error(
-      'tfc admin propose [<папка>] [--jar <файл>…] [--datapack <id|имя>…] [--remove <путь>…] --note "что и зачем"',
+      'tfc admin propose [<папка>] [--jar <файл>…] [--datapack <id|имя>…] [--replace-datapack <id|имя>…] [--remove <путь>…] --note "что и зачем"',
     );
   if (!note?.trim()) throw new Error('--note "что меняется и зачем" — его увидит хост');
   if (dir && !fs.statSync(dir, { throwIfNoEntry: false })?.isDirectory()) throw new Error(`нет папки ${dir}`);
@@ -157,7 +185,8 @@ export async function propose(api, { dir, remove = [], jars = [], datapacks = []
         )
           old.set(c.path, f.path);
   const removing = [...remove, ...old.keys()];
-  const packs = datapacks.length ? await datapackItems(api, datapacks) : [];
+  const packs =
+    datapacks.length || replaceDatapacks.length ? await datapackItems(api, datapacks, replaceDatapacks) : [];
   if (!files.length && !removing.length && !packs.length)
     return console.log('В сборке уже всё так — предлагать нечего.');
 
@@ -166,7 +195,9 @@ export async function propose(api, { dir, remove = [], jars = [], datapacks = []
   for (const p of remove) console.log(`    − ${p}`);
   for (const [p, by] of old) console.log(`    − ${p} ${dim(`старая версия, вместо неё ${path.posix.basename(by)}`)}`);
   for (const d of packs)
-    console.log(`    ◆ датапак «${d.name}» ${dim(`→ kubejs/data/tfc-plans-${d.id}.zip, подтвердится при одобрении`)}`);
+    console.log(
+      `    ◆ датапак «${d.name}» ${dim(`→ kubejs/data/tfc-plans-${d.id}.zip, ${d.replaces ? `заменит закреплённую ${d.replaces.sha256.slice(0, 12)} при одобрении` : 'подтвердится при одобрении'}`)}`,
+    );
   const same = overlay.length - files.length;
   if (same) console.log(dim(`  ещё ${same} файлов уже такие же`));
   if (dryRun) return;

@@ -51,7 +51,18 @@ export function overlaySnapshot(current, updates) {
       removed.delete(f.path);
     }
   }
-  return { snapshot: { ...current, files: [...files.values()] }, paths, removed, notes };
+  // Заменённый обновлением закреплённый датапак остаётся закреплённым, уже с новым ZIP
+  const replaced = new Map(updates.flatMap((u) => u.datapacks ?? []).flatMap((d) => (d.replaces ? [[d.id, d]] : [])));
+  const datapacks = current.datapacks?.map((d) => {
+    const r = replaced.get(d.id);
+    return r ? { ...d, sha256: r.sha256, contentHash: r.contentHash, revision: r.revision } : d;
+  });
+  return {
+    snapshot: { ...current, files: [...files.values()], ...(datapacks ? { datapacks } : {}) },
+    paths,
+    removed,
+    notes,
+  };
 }
 
 /** Пути обновления, которые в сборке поменялись после предложения */

@@ -144,7 +144,8 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
   tfc admin updates unsubscribe <id…|all>   отписаться и вернуть обычное состояние; subscribed — на что подписан профиль
   tfc admin propose [<папка>] предложить обновление: файлы из папки (kubejs/…, config/…), --jar <файл> (в mods/, старые
                               версии уберёт сам; --keep-old — оставить), --datapack <id|имя> (подтвердится при одобрении),
-                              --remove <путь>, --note, --dry-run
+                              --replace-datapack <id|имя> (заменит закреплённый при одобрении), --remove <путь>,
+                              --note, --dry-run
   tfc admin rebuild [mods,kubejs,config,world]   пересобрать данные сайта на сервере (--pull — свежий код,
                               --publish none|dry-run|live — что потом; по умолчанию dry-run — только показать)
   tfc admin publish           показать, что изменится на сайте; --live — выложить (текущую сборку, с вопросом);
@@ -242,6 +243,7 @@ const opts = {
   remove: { type: 'string', multiple: true },
   jar: { type: 'string', multiple: true },
   datapack: { type: 'string', multiple: true },
+  'replace-datapack': { type: 'string', multiple: true },
   'keep-old': { type: 'boolean' },
   admin: { type: 'boolean' },
   pull: { type: 'boolean' },
@@ -1581,6 +1583,7 @@ async function cmdAdmin(v, [sub, ...args]) {
       remove: v.remove ?? [],
       jars: v.jar ?? [],
       datapacks: v.datapack ?? [],
+      replaceDatapacks: v['replace-datapack'] ?? [],
       keepOld: v['keep-old'],
       note: v.note,
       yes: v.yes,
