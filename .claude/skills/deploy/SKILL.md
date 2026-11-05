@@ -36,6 +36,8 @@ is `ship`, which delegates its step 3 here. Everything players see is Russian.
   user’s go-ahead.
 - Pack data on Hosting is set **only by the pack server** (`scripts/publish-data.mjs`). `npm run deploy:site`
   (`scripts/deploy-site.mjs`) builds with `TFC_SITE_ONLY=1` and keeps the live data roots by hash — no jars, no data.
+- A site deploy and a server publish may overlap: both check for a foreign release around their own and rebuild on top
+  of it (log line «вышел чужой релиз … собираю версию поверх него»). No need to wait for server jobs.
 
 ## 4. Order
 
