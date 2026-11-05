@@ -15,7 +15,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { cacheDir } from './config.mjs';
-import { defaultMinecraftDir, isDir } from './detect.mjs';
+import { defaultMinecraftDir, detectVersions, isDir } from './detect.mjs';
 
 export { defaultMinecraftDir };
 
@@ -341,8 +341,11 @@ export async function installToLauncher({
   } catch {
     /* версии ещё нет или файл битый */
   }
+  // Версию, которую TLauncher уже развернул, не трогаем: короткое описание он разворачивает при запуске заново и
+  // стирает блок modpack (у хоста — дважды). Другой NeoForge без короткого описания не поставить
+  const unfolded = !oldVersion.inheritsFrom && detectVersions(versionDir).loader === versionId(nf);
   // Поля лаунчера и тип версии сохраняем: от NeoForge нужны только его запуск и библиотеки
-  writeJson(versionFile, { ...oldVersion, ...nfJson, id: name, type: oldVersion.type ?? nfJson.type });
+  if (!unfolded) writeJson(versionFile, { ...oldVersion, ...nfJson, id: name, type: oldVersion.type ?? nfJson.type });
   if (gameDir === versionDir) markTlauncherModpack(versionDir, name, nfJson.inheritsFrom ?? '1.21.1', nf);
 
   // Профиль: установщик правит «NeoForge» — возвращаем как было, свой профиль добавляем во все файлы профилей

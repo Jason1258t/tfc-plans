@@ -175,7 +175,8 @@ export function detectVersions(instanceDir) {
   // Раньше minecraftinstance.json: его оставляет импорт сборки, а запускает лаунчер именно это описание
   try {
     const v = JSON.parse(fs.readFileSync(path.join(instanceDir, `${path.basename(instanceDir)}.json`), 'utf8'));
-    const args = (v.arguments?.game ?? []).filter((a) => typeof a === 'string');
+    // TLauncher при запуске разворачивает версию: аргументы становятся объектами { values: [...] }
+    const args = (v.arguments?.game ?? []).flatMap((a) => (typeof a === 'string' ? [a] : (a.values ?? [])));
     const arg = (k) => (args.includes(k) ? args[args.indexOf(k) + 1] : null);
     const nf = arg('--fml.neoForgeVersion') ?? /^neoforge-(.+)$/.exec(v.inheritsFrom ?? '')?.[1];
     if (nf) res.loader ??= `neoforge-${nf}`;

@@ -193,6 +193,10 @@ addons`; with names — one named site item; `tfc undo` — undo the whole pull 
   block gone, closed — pack opens). `launcherRunning` also looks for java processes with `tlauncher` in the command line
   on Windows (**not run on Windows**). `installToLauncher` merges the version JSON (keeps launcher fields and `type`) and
   copies it and `TLauncherAdditional.json` to `*.tfc-<time>`; `tfc status` and `init --launcher` warn if the block is gone.
+- TLauncher unfolded versions (2026-11-05): on launch TLauncher rewrites a short version JSON (`inheritsFrom`) into a full one
+  with `arguments.game` as `{ values: [...] }`, and the host's `modpack` block was gone right after both such rewrites
+  (cause not proven). `detectVersions` reads those arguments; `installToLauncher` leaves an unfolded JSON of the same
+  NeoForge alone. **A real NeoForge change and a fresh install still write the short form.**
 - **`tfc init --launcher`** (2026-10-22, `cli/lib/vanilla.mjs`): official Minecraft Launcher — NeoForge from the
   snapshot `loader` via its installer (`--install-client <mcDir>`, maven sha256, cached; needs launcher_profiles.json —
   created temporarily if only the Store file exists), Java 21+ from `<mc>/runtime`, Store runtime, JAVA_HOME, PATH;
