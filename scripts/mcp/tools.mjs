@@ -4,6 +4,8 @@
  *
  * Ответ — короткий текст: строки вместо JSON, списки — с лимитом и «дальше: offset=…», без выдачи целых файлов.
  */
+import fs from 'node:fs';
+import path from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import {
   PUBLIC,
@@ -26,7 +28,22 @@ import {
 import { recipeView, recipeViewLines } from '@tfc/core/recipeView';
 import { siteRecipes } from './site-datapacks.mjs';
 import { FirestoreError, guideDoc, guideDocs, writeGuide } from './firestore.mjs';
-import { clip, dateOf, nameOf, named, NICK, norm, num, page, paging, short, str, userRegex, words } from './fmt.mjs';
+import {
+  clip,
+  dateOf,
+  MAX,
+  nameOf,
+  named,
+  NICK,
+  norm,
+  num,
+  page,
+  paging,
+  short,
+  str,
+  userRegex,
+  words,
+} from './fmt.mjs';
 import { oneClass, classRecord } from './code-index.mjs';
 import { javap, jarList, jarToc, nestedJars, pathMatcher, readEntry, resolveJar } from './jars.mjs';
 import { TOOLS as datapackPackTools } from './tools/datapack-pack.mjs';
@@ -373,20 +390,57 @@ async function guidesList(a) {
   );
 }
 
+/** Метка обрезанного ответа (clip в fmt.mjs) — такой текст в гайд не пишем */
+const CLIPPED = '… обрезано:';
+
+/** Абсолютный путь файла для guide_get/guide_put file=… */
+function guideFile(f) {
+  const p = String(f);
+  if (!path.isAbsolute(p)) throw new Error('file — абсолютный путь (например, в папке для временных файлов агента)');
+  return p;
+}
+
 async function guideGet(a) {
   const g = await guideDoc(String(a.id ?? ''));
   if (!g) return `Гайда ${a.id} нет. Список — guides_list; новый — guide_put с baseRevision="new".`;
   const md = guideMarkdown(g);
   const lines = md.split('\n');
+  const rev = `revision: ${g.updateTime}   ← передайте в guide_put как baseRevision`;
+  const who = `правил ${g.updatedBy} ${dateOf(g.updatedAt)}`;
+  if (a.file) {
+    const file = guideFile(a.file);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, md);
+    return [
+      rev,
+      `${who}; весь гайд (${lines.length} строк, ${md.length} симв.) записан в ${file}.`,
+      `Правьте файл и сохраняйте: guide_put id=${g.id} file=${file} baseRevision=${g.updateTime}`,
+    ].join('\n');
+  }
   const offset = Math.max(0, Number(a.offset ?? 0) | 0);
   const limit = Number(a.limit ?? 0) | 0;
-  const whole = !offset && !limit && md.length <= 60000;
-  const part = whole ? lines : lines.slice(offset, offset + (limit || 400));
-  const head = [
-    `revision: ${g.updateTime}   ← передайте в guide_put как baseRevision`,
-    `правил ${g.updatedBy} ${dateOf(g.updatedAt)}; строк ${lines.length}${whole ? '' : `; показаны ${offset + 1}–${offset + part.length}${offset + part.length < lines.length ? `, дальше: offset=${offset + part.length}` : ''}`}`,
-    '',
-  ];
+  // Ответ не длиннее MAX (иначе его обрежет обёртка и хвост «обрезано» попадёт в гайд): страница кончается и по limit, и по объёму
+  const budget = MAX - 600;
+  const whole = !offset && !limit && md.length <= budget;
+  let part = lines;
+  if (!whole) {
+    const stop = Math.min(lines.length, offset + (limit || 400));
+    let end = offset;
+    for (let size = 0; end < stop; end++) {
+      size += lines[end].length + 1;
+      if (end > offset && size > budget) break;
+    }
+    part = lines.slice(offset, end);
+  }
+  const shown = offset + part.length;
+  const head = whole
+    ? [rev, `${who}; строк ${lines.length}`, '']
+    : [
+        rev,
+        `${who}; строк ${lines.length}; ЧАСТЬ гайда: строки ${offset + 1}–${shown}${shown < lines.length ? `, дальше: offset=${shown}` : ''}`,
+        `Для guide_put нужен весь текст: guide_get id=${g.id} file=<абсолютный путь> → правка файла → guide_put file=<путь>.`,
+        '',
+      ];
   return [...head, ...part].join('\n');
 }
 
@@ -411,9 +465,12 @@ async function guideSearch(a) {
 async function guidePut(a) {
   const id = String(a.id ?? '');
   const base = String(a.baseRevision ?? '');
-  const md = String(a.markdown ?? '');
+  const md = a.file ? fs.readFileSync(guideFile(a.file), 'utf8') : String(a.markdown ?? '');
   if (!/^[a-z0-9-]+$/.test(id)) throw new Error('id — латиница, цифры и дефис (это адрес статьи)');
   if (!base) throw new Error('нужен baseRevision: revision из guide_get или "new" для новой статьи');
+  if (!md.trim()) throw new Error('нужен markdown или file');
+  if (md.includes(CLIPPED))
+    return `Отказ: в тексте есть «${CLIPPED}» — это хвост обрезанного ответа MCP, часть гайда потеряна. Возьмите весь текст: guide_get id=${id} file=<путь>, правьте файл, guide_put file=<путь>. Ничего не записано.`;
   const cur = await guideDoc(id);
   if (base === 'new' && cur)
     return `Отказ: гайд ${id} уже есть (ревизия ${cur.updateTime}, правил ${cur.updatedBy}). Прочитайте guide_get.`;
@@ -445,6 +502,10 @@ async function guidePut(a) {
   if (g.icon !== null && String(g.icon).length > 200) bad.push('icon — до 200 символов');
   if (!Number.isFinite(g.order)) bad.push('order — число');
   if (bad.length) throw new Error(bad.join('; '));
+  // Заметно короче прежнего — обычно правили часть (страницу) гайда вместо целого; намеренное сокращение — allowShrink
+  const was = cur?.body?.length ?? 0;
+  if (!a.allowShrink && was - g.body.length > 2000 && g.body.length < was * 0.7)
+    return `Отказ: текст стал короче на ${was - g.body.length} симв. (было ${was}, стало ${g.body.length}) — похоже, сохраняется только часть гайда. Возьмите весь: guide_get id=${id} file=<путь>. Если сокращение намеренное — allowShrink=true. Ничего не записано.`;
   const now = Date.now();
   try {
     const rev = await writeGuide(id, { ...g, updatedBy: NICK, createdAt: cur?.createdAt ?? now, updatedAt: now }, base);
@@ -649,10 +710,15 @@ const CORE = [
   {
     name: 'guide_get',
     description:
-      'Whole guide in npm run guides file format (YAML header + Markdown) and its revision for guide_put. Long ones by lines (offset/limit).',
+      'Whole guide in npm run guides file format (YAML header + Markdown) and its revision for guide_put. Long ones come in pages (offset/limit, never clipped) — to edit a long guide use file: the whole text goes to that file, then guide_put file=.',
     inputSchema: {
       type: 'object',
-      properties: { id: str('guide id'), offset: num('start line'), limit: num('how many lines') },
+      properties: {
+        id: str('guide id'),
+        offset: num('start line'),
+        limit: num('how many lines'),
+        file: str('absolute path: write the whole guide there instead of answering with text'),
+      },
       required: ['id'],
     },
     handler: guideGet,
@@ -670,15 +736,17 @@ const CORE = [
   {
     name: 'guide_put',
     description:
-      'Save a guide (write to the shared site database, signed with the agent nick, version goes to history). markdown — as from guide_get (YAML header + text) or text only (other fields unchanged). Refused if the article changed after reading: baseRevision — revision from guide_get, "new" for a new article.',
+      'Save a guide (write to the shared site database, signed with the agent nick, version goes to history). markdown — as from guide_get (YAML header + text) or text only (other fields unchanged); or file — path from guide_get file=. Refused if the article changed after reading: baseRevision — revision from guide_get, "new" for a new article. Also refused if the text holds a clipped-output marker or got >30% shorter (allowShrink=true for an intended cut).',
     inputSchema: {
       type: 'object',
       properties: {
         id: str('id (latin, digits, hyphen)'),
         markdown: str('content'),
+        file: str('absolute path of a file with the content (instead of markdown)'),
         baseRevision: str('revision from guide_get or "new"'),
+        allowShrink: { type: 'boolean', description: 'allow the text to get much shorter' },
       },
-      required: ['id', 'markdown', 'baseRevision'],
+      required: ['id', 'baseRevision'],
     },
     handler: guidePut,
   },
