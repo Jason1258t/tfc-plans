@@ -367,20 +367,33 @@ export JAVA_HOME="$HOME/.local/opt/tfc-stand/java"
 export PATH="$HOME/.local/opt/tfc-stand/node/bin:$PATH"
 cd ~/tfc-stand/repo
 npm ci --ignore-scripts --no-audit --no-fund
-npm run stand -- --port 25617 --cmd list
+cache="$HOME/.cache/tfc-plans"
+loader=$(node -p 'require(process.argv[1]).loader' "$cache/pack/.tfc-fetch.json")
+ram=$(mktemp -d /dev/shm/tfc-stand.XXXXXX)
+trap 'rm -rf -- "$ram"' EXIT
+mkdir "$ram/stand"
+cp -a "$cache/pack" "$ram/pack"
+cp -a "$cache/stand/$loader" "$ram/stand/"
+TFC_PACK_CACHE="$ram/pack" TFC_STAND_DIR="$ram/stand" npm run stand -- --port 25617 --cmd list
 REMOTE
 ```
 
-The smoke test starts NeoForge, sends `list` through RCON and stops the server. Both ports are bound to loopback.
+The smoke test stages the snapshot and loader on tmpfs to avoid slow random reads from the HDD. It starts NeoForge,
+sends `list` through RCON and stops the server. Both ports are bound to loopback. Copy any detailed logs or worlds
+you need out of the run directory before the shell exits and removes the temporary files.
 For an overlay or a replacement jar, copy it to a separate directory on `test1a` and pass its remote path to
 `--overlay` or `--mod`. Use the output summary for KubeJS and startup diagnostics. Run one check at a time on
 the default ports. For concurrent checks use separate `TFC_STAND_DIR` values and separate port pairs.
 The local MCP `pack_devserver` still runs on the host that started the MCP server. Use the SSH command above to run
 the stand on `test1a`.
 
-If `maven.neoforged.net` times out on `test1a`, sync the `libraries/` directory from a working NeoForge stand cache
-for the same loader version. Use `~/.cache/tfc-plans/stand/neoforge-<version>/libraries/` on both hosts and confirm
+Before testing a new loader, install it into the persistent stand cache. If `maven.neoforged.net` times out on
+`test1a`, sync the `libraries/` directory from a working NeoForge stand cache for the same loader version. Use `~/.cache/tfc-plans/stand/neoforge-<version>/libraries/` on both hosts and confirm
 that the source includes the version's `unix_args.txt`. The stand can then start without fetching the installer.
+
+Verified on `20261105-135644-3704` with NeoForge 21.1.251. The RAM-backed run booted in 122 seconds with 231 mods,
+answered RCON `list`, and stopped. Both listeners bound to loopback. The snapshot reported recipe and tag errors
+without blocking startup.
 
 ## Pack patches (`pack-patches/`)
 
