@@ -7,6 +7,9 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **Surface wire** (2026-11-06, dev #205): EE Extras 2.16.0 — `tfc pull addons` on the server and players. Host: in
+  game, lay the surface wire along walls and floors, branch it, cut it, check the junction box and the thin insulated
+  wire, and judge laying comfort and looks (piece 16 m, 1 item per metre — `ee_extras-server.toml`). Remove after.
 - **M12 replacement** (2026-11-05, dev #261): update `u20261105-175613-fa0b` swaps pinned M12 for its card version and removes
   the 32 overlay files in one approval. All 32 match the card as JSON; only the `pack.mcmeta` description also changes.
   Host: `tfc admin updates approve u20261105-175613-fa0b`; rollback — `tfc admin rollback`. Remove this item after approval.
