@@ -7,7 +7,7 @@ Agent reference, read on demand (linked from AGENTS.md). Data-builder rules — 
 ```bash
 npm run mods          # rebuild mod data from the pack jars (snapshot cache; slow, cache in .cache/) — normally the pack server does it
 npm run serverconfig -- <zip|folder>             # server configs (TOML and <mod>.json5) → Firestore config
-npm run kubejs -- <zip|folder> [--layer world]   # KubeJS scripts → public/kubejs.json, own items → kubejs-items.json
+npm run kubejs -- <zip|folder> [--layer world]   # KubeJS scripts → public/kubejs.json, own items → kubejs-items.json (npm run dev replaces them with the snapshot's parse unless TFC_KEEP_MODS=1)
 npm run world -- <world|world/data|tfc_calendar.dat|zip>  # world save → Firestore config (scope world)
 npm run pack -- <version folder|zip> [--world …] [--only …] [--out …] [--dry-run]  # all of the above + instance/sources.json
 npm run guides -- pull <folder> | push <file.md|folder>   # guides ↔ Markdown files (author — TFC_NICK)

@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEV_TOOLS } from './devtasks.mjs';
+import { forgetGonePreviews, previewHint } from './preview.mjs';
 
 const HERE = path.resolve(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -143,7 +144,22 @@ function worktreeAdd(a) {
   const r = git(['worktree', 'add', `.claude/worktrees/${name}`, '-b', branch, 'main'], root);
   if (!r.ok) throw new Error(r.err || r.out);
   const sub = initAddons(root, worktreeDir(root, name));
-  return `Создано: ворктри .claude/worktrees/${name}, ветка ${branch}. Работай только в нём.${sub ? '\n' + sub : ''}`;
+  return [
+    `Создано: ворктри .claude/worktrees/${name}, ветка ${branch}. Работай только в нём.`,
+    previewHint(root, worktreeDir(root, name), name),
+    sub,
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+function worktreePreview(a) {
+  const root = repoRoot();
+  const name = String(a.worktree ?? '').trim();
+  if (!validName(name)) throw new Error('worktree — имя ворктри (kebab-case)');
+  const wt = worktreeDir(root, name);
+  if (!fs.existsSync(wt)) throw new Error(`Ворктри ${name} нет`);
+  return previewHint(root, wt, name);
 }
 
 /**
@@ -270,6 +286,7 @@ function ship(a) {
     m.out,
     p.out,
     sub && !sub.ok ? `⚠ tools/ в основной папке не обновлён: ${sub.err || sub.out}` : '',
+    forgetGonePreviews(root),
     d.ok ? `Ветка ${branch} удалена.` : `Ветка ${branch} НЕ удалена (${d.err || d.out}).`,
   ]
     .filter(Boolean)
@@ -292,7 +309,10 @@ function worktreeRemove(a) {
     d.ok
       ? `Ветка ${branch} удалена.`
       : `Ветка ${branch} НЕ удалена (${d.err || d.out}) — git branch -D вручную, если уверен.`,
-  ].join('\n');
+    forgetGonePreviews(root),
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 const str = (description) => ({ type: 'string', description });
@@ -318,6 +338,17 @@ export const TOOLS = [
       required: ['name'],
     },
     handler: worktreeAdd,
+  },
+  {
+    name: 'worktree_preview',
+    description:
+      'Claude app preview entry for a worktree in the main .claude/launch.json (own port, --prefix): returns the preview_start name. worktree_add does this itself; dead worktree entries are pruned.',
+    inputSchema: {
+      type: 'object',
+      properties: { worktree: str('worktree short name') },
+      required: ['worktree'],
+    },
+    handler: worktreePreview,
   },
   {
     name: 'commit',

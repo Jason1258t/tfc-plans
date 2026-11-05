@@ -13,6 +13,10 @@ Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md)
   `npm run mods` + `kubejs` before/after — 21 074 files identical except build timestamps. The pack server picks
   core modules from its builders copy at `packages/core/src` and falls back to `src/lib` for an old copy; `tfc admin
 rebuild --pull` runs `npm ci` there (lock changed). Not checked: the VPS itself (rebuild/publish after this merge).
+- Worktree preview and data (2026-11-05, dev #251): `worktree_add`/`worktree_preview` write the entry `wt-<name>` to the
+  main `.claude/launch.json`, because the app reads only that file; `ship`/`worktree_remove` prune entries of removed
+  worktrees. `fetchData` also takes the KubeJS outputs, so `npm run dev` has `kubejs.json` with `datapacks` and `snapshot`;
+  a local `npm run kubejs` parse survives only with `TFC_KEEP_MODS=1`.
 - **Stage 3 done (2026-10-29):** addons are the repo [tfc-addons](https://github.com/Jason1258t/tfc-addons) (history of
   `tools/` kept via `git subtree split`, 65 commits), checked out as the `tools/` submodule — every `tools/<mod>` path
   is unchanged. `tfc-plans-dev`: `worktree_add` inits it (objects from `.git/modules/tools` of the main folder),
