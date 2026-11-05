@@ -281,3 +281,5 @@ under `kubejs/data` over the pinned M12, and the M12 site card carries the equiv
 
 - Dev #228: install EE Extras 2.14.1 on the server and clients with the existing pump config. Check goggles and fluid
   transfer on an existing electric pump, then publish the pack snapshot.
+
+- Host: install **Miner Tools 1.2.0** (dev #244) on the server and clients. Open an existing belt and check the group toggles and both list modes in the client.
