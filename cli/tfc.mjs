@@ -67,7 +67,7 @@ import {
   isNeoforgeInstalled,
   launcherRunning,
   neoforgeVersion,
-  versionId,
+  validVersionName,
 } from './lib/vanilla.mjs';
 import { applyStagingDrops, stagingClashes, stagingOverlay, stagingState, stagingWinsById } from './lib/staging.mjs';
 import { markApproved, printUpdate, propose, pullUpdates } from './lib/updates.mjs';
@@ -369,8 +369,10 @@ async function initLauncher(v, cfg, { fresh = false } = {}) {
   if (oldFolder && v.name && oldFolder !== v.name)
     throw new Error(`профиль «${selected}» уже использует версию ${oldFolder}`);
   const base = oldFolder ?? v.name ?? DEFAULT_NAME;
-  if (!/^[\w][\w.-]{0,60}$/.test(base) || base === versionId(nf) || base === current?.mc)
-    throw new Error(`имя папки «${base}» не подходит — латиница, цифры, «-», «_», и не имя версии`);
+  if (!validVersionName(base) || (!oldFolder && base.length > 61) || base === current?.mc)
+    throw new Error(
+      `имя папки «${base}» не подходит — выберите допустимое имя папки, отличное от версии Minecraft и NeoForge`,
+    );
   let folder = base;
   if (!oldFolder) {
     const occupied = new Set(Object.values(cfg.profiles).map((p) => path.resolve(p.instance)));

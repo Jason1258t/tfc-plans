@@ -25,6 +25,17 @@ const PROFILE_FILES = ['launcher_profiles.json', 'launcher_profiles_microsoft_st
 const PROFILE_ID = 'tfc-realworld';
 export const DEFAULT_NAME = 'TFC-RealWorld';
 
+export function validVersionName(name) {
+  return (
+    typeof name === 'string' &&
+    name.length > 0 &&
+    !/[<>:"/\\|?*]/.test(name) &&
+    !/[. ]$/.test(name) &&
+    !/^(?:\d+(?:\.\d+)+$|neoforge-|(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$))/i.test(name) &&
+    [...name].every((char) => char.charCodeAt(0) >= 32)
+  );
+}
+
 /** Файлы профилей, что есть в папке лаунчера */
 export const profileFiles = (mcDir) => PROFILE_FILES.map((n) => path.join(mcDir, n)).filter((f) => fs.existsSync(f));
 

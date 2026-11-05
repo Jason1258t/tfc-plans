@@ -1,10 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { stateDir } from './scan.mjs';
-import { launcherRunning, profileFiles } from './vanilla.mjs';
+import { launcherRunning, profileFiles, validVersionName } from './vanilla.mjs';
 
-const versionName = /^[\w][\w.-]{0,60}$/;
-const reservedVersion = /^(?:\d+(?:\.\d+)+$|neoforge-|(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$))/i;
 const samePath = (a, b) => {
   const normalize = (p) => {
     const resolved = path.resolve(p).normalize('NFC');
@@ -17,7 +15,7 @@ const write = (file, value) => fs.writeFileSync(file, `${JSON.stringify(value, n
 
 function managedVersion(profile) {
   const { mcDir, version = path.basename(profile.instance) } = profile.launcher ?? {};
-  if (profile.side !== 'client' || !mcDir || !versionName.test(version) || reservedVersion.test(version)) return null;
+  if (profile.side !== 'client' || !mcDir || !validVersionName(version)) return null;
   const dir = path.resolve(mcDir, 'versions', version);
   const instance = path.resolve(profile.instance);
   if (!samePath(instance, dir) && !samePath(instance, mcDir)) return null;
@@ -103,10 +101,8 @@ function relocatedState(profile, dir, dest, changes) {
 }
 
 export function renameVersion(profile, name, others, save) {
-  if (!versionName.test(name) || name.endsWith('.') || reservedVersion.test(name))
-    throw new Error(
-      'имя версии — латиница, цифры, «-», «_» или точка. Выберите имя, отличное от версии загрузчика или Minecraft',
-    );
+  if (!validVersionName(name) || name.length > 61)
+    throw new Error('выберите допустимое имя папки до 61 символа, отличное от версии Minecraft и NeoForge');
   const target = managedVersion(profile);
   if (!target) throw new Error('переименование версии доступно для сборок, установленных через tfc init --launcher');
   if (target.version === name) return save(profile);
