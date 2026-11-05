@@ -8,6 +8,10 @@ page `/addons/<mod>`: card `tools/<mod>/addon.json` (+ jar, `icons/`) in git, de
 `addons_list` / `addon_check`. Texts moved from the former `src/lib/addons.ts` as is (signed Claude). What still waits for the host or a
 game check — [pending.md](pending.md).
 
+- EE Extras, dev #271 и #274: подготовлены PNG 16×16 для поверхностного и тонкого провода, распределительной коробки
+  и универсальной крышки. Проверены размеры, прозрачность и повторяемость полос провода; грани и иконки отрисованы
+  проверочными моделями MCP. Интеграция с моделями и просмотр в клиенте относятся к приёмке #205 и #273.
+
 ## Versions (since 2026-10-23)
 
 Task «Написание чендж логов для наших аддонов, и их поддержка в генераторе патчноута» (group «Разработка»), plan doc
