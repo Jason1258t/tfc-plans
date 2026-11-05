@@ -500,3 +500,10 @@ Curios server checks, 26/26 with TFC 4.2.9 + Patchouli 93 (real placement, TFC t
 assertion followed by a clean run; dev client checks ordinary inventory swap and server synchronization.
 ImageGen source and 16×16 runtime texture based on Create goggles in the addon; release jar uploaded to pack server, card/page/version on site.
 Not checked in game: real mouse input, long construction, remote multiplayer and full-pack inventory-mod interactions.
+
+## Better Fluids (`tools/better-fluids-mod`)
+
+1.0.0 (dev #233.2): an iron tank compatible with Create 6.0.10. Square base up to 3×3, 14 buckets per block,
+whole-layer vertical placement, separate textures and block entity type. The dev server verified that a single
+placement builds a 2×2 layer, the resulting 2×2×2 tank accepts 112 buckets through a non-controller part,
+an adjacent copper tank stays separate, and the water survives a restart.
