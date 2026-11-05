@@ -245,6 +245,12 @@ KubeJS folders. Test unconfirmed/changed drafts in a selected world. Preview `tf
 world, recipe overrides and KubeJS priority. Changed world copies remain for manual review. Local `undo` does not
 revert server confirmation; `tfc admin rollback` reverts the whole snapshot. Details: [datapacks-pack.md](../plans/datapacks-pack.md).
 
+## EE Extras 2.12.0 — питание CC: Tweaked (dev #247)
+
+Host: install on the server and clients with `tfc pull addons ee_extras@2.12.0`, then publish the pack snapshot.
+Verify the cable inlet on an existing computer and the charging station with both pocket tiers using the live
+pack profile. Existing desktops need an inlet and existing pocket computers start with an empty battery.
+
 ## EE Extras 2.11.0 — пластики и цветной дисплей CC (dev #246)
 
 Host: install Destroy 0.4.6 + Petrolpark 1.5.11 and EE Extras 2.11.0 on the server and clients, pull the current M12
