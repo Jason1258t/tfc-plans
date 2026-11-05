@@ -19,7 +19,8 @@
     /* Алиас: '@/pages/tasks/ui/TaskRow' = src/pages/tasks/ui/TaskRow (см. vite.config.ts) */
     "paths": {
       "@/*": ["./src/*"],
-      "@tfc/core/*": ["./packages/core/src/*.ts"]
+      "@tfc/core/*": ["./packages/core/src/*.ts"],
+      "@tfc/pack-server/*": ["./server/pack-server/lib/*.d.mts"]
     },
 
     /* Linting */

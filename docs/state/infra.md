@@ -17,6 +17,9 @@ rebuild --pull` runs `npm ci` there (lock changed). Not checked: the VPS itself 
   main `.claude/launch.json`, because the app reads only that file; `ship`/`worktree_remove` prune entries of removed
   worktrees. `fetchData` also takes the KubeJS outputs, so `npm run dev` has `kubejs.json` with `datapacks` and `snapshot`;
   a local `npm run kubejs` parse survives only with `TFC_KEEP_MODS=1`.
+- Worktree preview files (2026-11-05, dev #265): `vite.config.ts` aliases `@tfc/pack-server` to the worktree's
+  `server/pack-server/lib` (`tsconfig.app.json` — to its `.d.mts`), so edits there show in the preview; `server.fs.allow`
+  adds the `node_modules` Node resolves (the main checkout's, only that folder), so Inter loads instead of a 403.
 - **Stage 3 done (2026-10-29):** addons are the repo [tfc-addons](https://github.com/Jason1258t/tfc-addons) (history of
   `tools/` kept via `git subtree split`, 65 commits), checked out as the `tools/` submodule — every `tools/<mod>` path
   is unchanged. `tfc-plans-dev`: `worktree_add` inits it (objects from `.git/modules/tools` of the main folder),
