@@ -10,7 +10,7 @@
  * возвращаем как было: игроку нужен наш профиль с отдельной папкой. Старые файлы профилей — копией рядом.
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -24,6 +24,17 @@ const MAVEN = 'https://maven.neoforged.net/releases/net/neoforged/neoforge';
 const PROFILE_FILES = ['launcher_profiles.json', 'launcher_profiles_microsoft_store.json'];
 const PROFILE_ID = 'tfc-realworld';
 export const DEFAULT_NAME = 'TFC-RealWorld';
+
+export function validVersionName(name) {
+  return (
+    typeof name === 'string' &&
+    name.length > 0 &&
+    !/[<>:"/\\|?*]/.test(name) &&
+    !/[. ]$/.test(name) &&
+    !/^(?:\d+(?:\.\d+)+$|neoforge-|(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$))/i.test(name) &&
+    [...name].every((char) => char.charCodeAt(0) >= 32)
+  );
+}
 
 /** Файлы профилей, что есть в папке лаунчера */
 export const profileFiles = (mcDir) => PROFILE_FILES.map((n) => path.join(mcDir, n)).filter((f) => fs.existsSync(f));
@@ -181,7 +192,9 @@ function markTlauncherModpack(gameDir, name, mc, nf) {
   } catch {
     /* файла ещё нет или он битый: TLauncher дополнит свой */
   }
-  const id = (kind) => -createHash('sha256').update(`${name.toLowerCase()}:${kind}`).digest().readUIntBE(0, 6) - 1;
+  // Старые общие ID заменяем, а локальные сохраняем при обновлении и переименовании.
+  const id = (current, shared) =>
+    Number.isSafeInteger(current) && current < 0 && current !== shared ? current : -randomBytes(6).readUIntBE(0, 6) - 1;
   writeJson(file, {
     activateSkinCapeForUserVersion: false,
     skipHashsumValidation: false,
@@ -201,7 +214,7 @@ function markTlauncherModpack(gameDir, name, mc, nf) {
       notExists: false,
       totalComments: 0,
       ...cur.modpack,
-      id: id('pack'),
+      id: id(cur.modpack?.id, -57012801480201),
       name,
       version: {
         mods: [],
@@ -213,7 +226,7 @@ function markTlauncherModpack(gameDir, name, mc, nf) {
         remove: false,
         minecraftVersionTypes: [{ id: 5, name: 'neoForge' }],
         ...cur.modpack?.version,
-        id: id('version'),
+        id: id(cur.modpack?.version?.id, -57012801606102),
         gameVersionDTO: { id: 53, name: mc },
         minecraftVersionName: { id: 1985, name: nf },
       },
@@ -388,9 +401,9 @@ export function launcherRunning() {
   try {
     if (process.platform === 'win32') {
       const r = spawnSync('tasklist', ['/FO', 'CSV', '/NH'], { encoding: 'utf8', windowsHide: true, timeout: 10_000 });
-      return /"Minecraft(Launcher)?\.exe"/i.test(r.stdout ?? '');
+      return /"(?:Minecraft(?:Launcher)?|TLauncher[^"]*)\.exe"/i.test(r.stdout ?? '');
     }
-    const r = spawnSync('pgrep', ['-if', 'minecraft.?launcher'], { encoding: 'utf8', timeout: 10_000 });
+    const r = spawnSync('pgrep', ['-if', 'minecraft.?launcher|tlauncher'], { encoding: 'utf8', timeout: 10_000 });
     return r.status === 0 && Boolean(r.stdout.trim());
   } catch {
     return false;
