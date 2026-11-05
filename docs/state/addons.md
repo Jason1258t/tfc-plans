@@ -514,3 +514,8 @@ available for extensions. Placing against a detached group preserves its boundar
 are persisted per section, and 1.0.0 tanks migrate when all parts are loaded. The dev server checked an L-shaped
 layer, a three-way split, an extension bordering the old tank, persistence after restart, and 112 buckets
 migrated from 1.0.0.
+
+1.2.0 (dev #233.5): empty iron sections can be reshaped on a stonecutter. Slabs can be placed horizontally
+or vertically and hold 7 buckets, quarter sections hold 3.5, and the 45° bevel section holds 7. The dev
+server checked all six slab orientations, a mixed tank holding 31.5 buckets, wrench separation and
+persistence after restart.
