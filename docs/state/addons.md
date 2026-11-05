@@ -430,6 +430,10 @@ candidate — a heater regulated by an analog lever). Depends on TFC 4.2.9 + IE 
 
 ## Miner Tools (`tools/miner-tools-mod`, 2026-10-21)
 
+- **1.2.0 (dev #244):** five pickup groups and an exact-item allow/block list that overrides group settings.
+  On first opening an existing belt, generalized samples in those groups become toggles and the other samples
+  remain exact blocks. The dev server passed all 34 `belttest` checks, including migration and both list modes.
+
 One mod for all miner gear.
 
 - **1.0.0** — miner belt: don't pick up pebbles/gravel/dirt, 9-sample filter via RMB, Shift+RMB toggles, Curios «belt»
