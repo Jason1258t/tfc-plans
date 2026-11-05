@@ -354,10 +354,10 @@ Cursor configs (shapes from their docs, not tried).
   systemd uses KillMode=mixed/TimeoutStopSec=infinity. Installer serializes updates and stops before replacing code.
   The deployment lock covers worktrees on one machine, not independent hosts. Forced termination is still interrupting.
 - Dev #256 (2026-11-05): `deploy:site` no longer queues. A second run refuses at the lock; `--dry-run` takes no lock; a
-  stale lock (dead process or older than 30 min) clears itself. Before the release it compares the live release with the
-  one the plan was computed from, and before the build it requires `HEAD` to contain the commit in the last
-  `commit=<sha>` release message (`--allow-older` to roll back). Checked on a fake Hosting server in a clone, and a real
-  `--dry-run`. Data publishes (`publish-data.mjs`) don't check for a site release in progress — dev #254.
+  stale lock (dead process or older than 30 min) clears itself. Before the build it requires `HEAD` to contain the commit
+  in the last `commit=<sha>` release message (`--allow-older` to roll back). On top of #254's rebuild after a foreign
+  release: a foreign site deploy whose commit isn't in this build stops the run instead. Checked on a fake Hosting server
+  in a clone, and a real `--dry-run`.
 
 - Dev #134 (2026-10-28): `tfc whoami` shows the server-recognized key name/role and local config path; login and
   self-approval errors identify the key without printing its token. CLI error/auto-upgrade completion uses natural
@@ -438,3 +438,11 @@ Cursor configs (shapes from their docs, not tried).
   `versions/<name>/TLauncherAdditional.json`, otherwise `.minecraft`. `installToLauncher` writes that block with empty lists;
   the host's TLauncher then loaded 341 mods from `TFC-RealWorld` (block written by hand, not yet by the new `tfc`). Replaces
   the earlier «TLauncher game dir = version folder»: that was only true for imported packs.
+
+- Dev #254 (2026-11-05): a site deploy and a server publish no longer undo each other. Hosting has no conditional
+  release, so `release()` in `scripts/hosting-rest.mjs` takes `base` and checks the release list before and after its own
+  release; a foreign release raises `ReleaseConflict`, and `deploy()` / `deploy-site.mjs` rebuild on top of it (up to 5
+  times; releases of their own earlier attempts don't count). Rolled-back case: 2026-11-05 a deploy released seconds after
+  host job j20261105-132601-69d3 and removed its data. Checked with a fake Hosting API (`TFC_HOSTING_API`): overlap before
+  and right before the release, for both writers, no overlap, endless conflicts; the old code fails the same scenarios.
+  Limit: three writers within seconds can still lose the middle one's non-shared files.
