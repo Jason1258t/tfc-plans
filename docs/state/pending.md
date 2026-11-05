@@ -135,6 +135,9 @@ its one-liner in STATE.md.
   survive; 2.0.2 — cable, EE connector terminal, highlight and label, wrench rotation; 2.1 — wires and spools, sag and
   rendering of spans > 128 blocks, clamp by click, spool tooltips, recipes; 2.2 — blocks, JEI, inverters with motors and
   several per grid (grid sync at microTicks > 1 fixed in 2.5.1). Details — [addons.md](addons.md).
+- **Small Diesel 1.0.2** (dev #243): install on the server and clients. Check refueling both blocks by
+  right-clicking with a partly filled IE jerrycan and confirm the client shows the remaining fuel.
+
 - **EE Extras 2.3.1 + Small Diesel 1.0.1** (2026-10-22, `ee-extras-2.3.1.jar`, `small-diesel-1.0.1.jar`; 2.3.1/1.0.1
   — new looks only): host installs both and `tfc publish` (EE Extras 2.3.1 includes 2.2–2.3). In game: new models of the
   generator, rectifiers, inverters, small engine and genset (terminals of both generators moved into terminal boxes —
