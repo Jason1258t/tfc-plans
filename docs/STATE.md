@@ -51,8 +51,9 @@ When finishing work: update the topic file, and this index only if a line below 
   pull both fixes, restart, check cement and both ion thrusters in game before approving/confirming.
 - Host: pack update `u20261022-150945-83a0` (Chinese KubeJS messages → ru/en): `tfc admin updates pull`, check in game,
   `tfc admin updates approve`.
-- Host: install **EE Extras 2.12.0** (dev #247) on the server and clients, publish the snapshot, and check the
-  cable inlet on an existing CC computer and both pocket computer tiers at the charger.
+- Host: install **EE Extras 2.13.0** on the server and clients (dev #248). Test the updated M12 in a world with Destroy
+  and Petrolpark before confirming the pack version. Also check the cable inlet on an existing CC computer and both
+  pocket computer tiers at the charger (dev #247) before publishing the snapshot.
 - Host: install **EE Extras 2.10.2** (wire sag reduction, dev #221; PCB/electronics visual refresh, dev #216), **Small Diesel 1.0.0**, **IE Extras 1.1.0** (basin heating, dev #113) and **Create Aeronautics Extra 1.0.1** + `tfc publish`; warn players
   that rectifiers over 6 kW will burn.
 - Host: **`rw-host-fix`** + delete `eratosthenes_portal_clamp.js`; delete corrupted chunks Z ≈ −22 000…−18 400.

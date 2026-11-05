@@ -269,3 +269,10 @@ Host: install `ee_extras@2.10.1` on the server and clients; inspect the 28 item 
 
 - Better Fluids 1.2.0 (dev #233.2–3, #233.5): host installs the jar on the server and clients, checks connected textures,
   the shapes and slab orientations in the client, wrench interactions and stonecutting in the pack, then publishes a pack snapshot.
+
+## ComputerCraft components (dev #248)
+
+Host: install EE Extras 2.13.0 on the server and clients. Pull M12 (`tfc datapacks pull tcegd3kspq62oHuM3YmF`) into a
+test world with Destroy 0.4.6, Petrolpark 1.5.11 and M6/M10/M11. Test the magnetizing coil, cone, sulfuric acid dilution
+and filling, battery and cartridge in Survival before confirming the pack version. The missing insulation tag for the
+pre-existing cable and storage bay is tracked in #259.
