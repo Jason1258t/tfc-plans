@@ -90,6 +90,75 @@
   height: auto;
 }
 
+.story {
+  padding: clamp(44px, 7vw, 96px) max(24px, calc((100% - 1140px) / 2));
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.storyLabel {
+  margin: 0 0 12px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.story h2 {
+  margin: 0;
+  font-size: clamp(32px, 5vw, 56px);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.storyGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin: 32px 0 28px;
+  padding: 0;
+  list-style: none;
+}
+
+.storyGrid li {
+  padding: 16px 0 0;
+  border-top: 2px solid var(--border);
+}
+
+.storyGrid span {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.storyGrid h3 {
+  margin: 10px 0 8px;
+  font-size: 20px;
+}
+
+.storyGrid p {
+  max-width: 38ch;
+  margin: 0;
+  color: var(--text-2);
+  line-height: 1.55;
+}
+
+.storyLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--accent);
+  font-weight: 650;
+}
+
+@media (max-width: 760px) {
+  .storyGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .directory {
   max-width: 1080px;
   margin: 0 auto;
