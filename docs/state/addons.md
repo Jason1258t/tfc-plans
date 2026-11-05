@@ -8,6 +8,12 @@ page `/addons/<mod>`: card `tools/<mod>/addon.json` (+ jar, `icons/`) in git, de
 `addons_list` / `addon_check`. Texts moved from the former `src/lib/addons.ts` as is (signed Claude). What still waits for the host or a
 game check — [pending.md](pending.md).
 
+## In development
+
+- **Destroy Extras, dev #212**: the local metal-dusts branch carries 18 pure metal and alloy dusts on the 0.6.0 base,
+  with a pack overlay for five briquette sizes, crushing, arc furnace and TFC heating. This is a draft for a separate
+  pack update. The Destroy update already on acceptance (#199) keeps its own version.
+
 ## Versions (since 2026-10-23)
 
 Task «Написание чендж логов для наших аддонов, и их поддержка в генераторе патчноута» (group «Разработка»), plan doc
