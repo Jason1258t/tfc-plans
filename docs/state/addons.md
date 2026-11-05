@@ -8,6 +8,10 @@ page `/addons/<mod>`: card `tools/<mod>/addon.json` (+ jar, `icons/`) in git, de
 `addons_list` / `addon_check`. Texts moved from the former `src/lib/addons.ts` as is (signed Claude). What still waits for the host or a
 game check — [pending.md](pending.md).
 
+- EE Extras, dev #271 и #274: подготовлены PNG 16×16 для поверхностного и тонкого провода, распределительной коробки
+  и универсальной крышки. Проверены размеры, прозрачность и повторяемость полос провода; грани и иконки отрисованы
+  проверочными моделями MCP. Интеграция с моделями и просмотр в клиенте относятся к приёмке #205 и #273.
+
 ## Versions (since 2026-10-23)
 
 Task «Написание чендж логов для наших аддонов, и их поддержка в генераторе патчноута» (group «Разработка»), plan doc
@@ -189,6 +193,19 @@ insulator). Thin insulated wire spool — hanging duplex cable via `CableLaying`
 `surface_wire.itemsPerMeter` 1, `maxLength` 16 m. Checked on the dev server (`wiretest`, `/wiretest thin`) and in the
 dev client (`WIRE=1 ./test-client.sh`); not in game. The site page `addon-ee-extras` had been saved truncated at 2.15.0
 (MCP `guide_get` output with «… обрезано»); restored from revision 2026-11-05T16:26 plus 2.15/2.16 texts.
+
+2026-11-05 (dev #273): **EE Extras 2.15.0** — duplex cable cap `duplex_cable_cap`: an item, not a block (host's
+decision — "a modifier of the device"). `cable/CableCap` keeps the set of capped device positions (SavedData
+`ee_extras_cable_caps`); a device qualifies when it is an EE `ElectricalDeviceBlock` with exactly two accessible nodes
+(`getNodePositions` + `isNodeAccessible`, EE 1.1.2; cable terminations/junctions excluded); contact 1 = lower node id.
+For the cable a capped device is a `CableEnd` with `contacts`: cores go to the device contacts, the sheath to contact 1
+(a foreign block can't get an extra node — EE re-syncs nodes with `getNodePositions` every tick). Cap click and cable
+laying onto 2-contact devices run in a HIGH-priority listener (`CableEvents.capClick`), otherwise Create's
+`ValueSettingsInputHandler` eats clicks on the voltmeter's value box. Shift + empty hand removes (cap and cable spools
+back); a 10-tick check drops the cap when the device is gone. Verified on the dev server (`CapTest`, `KEEP=1`): bulb
+lit, voltmeter reads the battery, core 1 → contact 1 / core 2 → contact 2, refusals (rectifier 4 contacts, connector 1,
+wired contacts, second cap, cable to uncapped device, EE wire onto capped contacts), removal, drop on break, restart.
+Item texture from #274 (`item/duplex_cap`); the block textures `duplex_cap_front/side` from #274 are unused.
 
 2026-11-05 (dev #228): **EE Extras 2.14.1** — EE 1.1.2 electric pumps draw 2.4 times less power at the same
 terminal voltage, preserving their original RPM curve. The patch multiplies the resistance used by the circuit solver
