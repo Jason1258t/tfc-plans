@@ -655,6 +655,10 @@ fertiliser blocks, calendar with month labels. `.class` parsing — `scripts/mod
 - Guides section «Мультиблоки» (`?tab=guides&sub=multiblocks`, `section: multiblocks`): widget `::multiblock id=…
 [full] [materials]`; articles mb-assembly, mb-tfc (what changed: arc furnace from fire bricks, IE blast bricks not
   craftable in the pack, smelter via KubeJS), mb-coke-oven, mb-excavator.
+- 2026-11-05 (dev #264): Firestore guide `ie-mineral-veins` covers surveying, core samples, mineral outputs from IE and
+  TFC-IE Crossover, and `/ie mineral`. The excavator guide links to it. `coe-prospecting` now lists all 27 translated
+  vein names and IDs and documents `/coe locate`, `setvein`, and `removevein`. Checked against snapshot recipes,
+  translations, configs and mod bytecode.
 - Since 2026-10-19 group «Добыча Create» (Create Ore Excavation): coe-prospecting — veins (chunk, «one per square»,
   infinite, Chinese names from the pack script), detector, atlas, sampling drill, table of all veins; coe-drilling —
   setup, iron drill suffices, 30 rpm steps, 256 SU per rpm, calculator. From mod code and pack scripts, not checked in
