@@ -165,3 +165,7 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   Nested jars follow `META-INF/jarjar/metadata.json` (Forgified Fabric API keeps its modules in `META-INF/jars`), adding
   `fabric-convention-tags-v2`. `recipe_conflicts` no longer crashes on a grid cell with alternatives. Verified by a
   scratch rebuild from the pack jars and the real MCP server over stdio.
+- Dev #240 (2026-11-05): `scripts/mcp-call.mjs` (`npm run mcp`) — one call of a `.mcp.json` server tool from a shell with
+  JSON arguments and `--timeout`, instead of temporary JSON-RPC clients (Codex in #218). Verified on both real servers
+  (lists, schema, calls, unknown argument/tool, `@file`, stdin) and on a fake server: crash, missing command, hang
+  (exit 124, process gone), 5 MB answer through a pipe, images, env priority.

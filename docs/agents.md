@@ -150,6 +150,9 @@ servers connected, Firestore read through `groups_list`, `git_state` lists the w
 **Others** — any harness with stdio MCP: same command, args and env; skills load if it scans `.claude/skills` or
 `.agents/skills`, otherwise AGENTS.md tells it to open `SKILL.md` by hand.
 
+**No MCP connection, or a call timeout shorter than the tool** — the same tools from a shell:
+`node scripts/mcp-call.mjs <server> <tool> '<json>' --timeout <s>`, see [mcp.md](mcp.md) «Calling from a shell».
+
 **`tfc-plans-dev`** (git/workflow + dev work log) — a second stdio server `node <repo>/scripts/mcp-dev/server.mjs`. It
 finds the main checkout via `git rev-parse --git-common-dir` (`TFC_PLANS_REPO` overrides). **Set `TFC_AGENT_NICK` here
 too** — the dev log (`dev_*`) signs every write with it, and without it the server falls back to `Claude`. Add it as a
