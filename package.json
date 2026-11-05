@@ -42,6 +42,7 @@
     "pack:fetch": "node scripts/pack-fetch.mjs",
     "stand": "node scripts/pack-stand.mjs",
     "pack:publish": "node scripts/publish-data.mjs",
+    "mcp": "node scripts/mcp-call.mjs",
     "tfc": "node cli/tfc.mjs",
     "tfc:dist": "node scripts/tfc-dist.mjs",
     "ui:classes": "node scripts/ui/classes.mjs",

@@ -122,6 +122,9 @@ No tests. Verification — in the browser (below) and one-off node scripts in a 
 **For game facts, recipes, tags, configs, mod code, logs, guides and site content use it first**, not grep over
 `public/*.json` or unzipping jars. Which tool for what — [docs/mcp.md](docs/mcp.md) «Agent's usual path».
 
+- Tools not connected, or the harness call timeout is shorter than the tool (`pack_devserver`) → the same tools from a
+  shell: `node scripts/mcp-call.mjs <server> <tool> '<json>' [--timeout <s>]`, not a temporary JSON-RPC client —
+  [docs/mcp.md](docs/mcp.md) «Calling from a shell».
 - Pack config changes → `config_propose`. Other pack files (KubeJS, lang, resources) → check with
   `pack_devserver overlay=<dir>`, then `npm run tfc -- admin propose <overlay dir> --note …`; the host approves.
 - Site tasks/plans/guides/datapacks → its write tools with `baseRevision`, not ad-hoc scripts; they cost Firestore reads

@@ -24,6 +24,31 @@ and parameter descriptions are in English (the agent reads them); tool output st
 - **After editing code in `scripts/mcp/`** restart the server: `/mcp` in terminal Claude Code or a new session in the
   app. Data (`public/`, jars, KubeJS) is re-read automatically when files change.
 
+## Calling from a shell
+
+`scripts/mcp-call.mjs` starts a server from `.mcp.json` (`tfc-pack`, `tfc-plans-dev`), makes one call and exits. For an
+agent without the servers connected, or one whose harness call timeout is shorter than the tool. Works from any folder
+and worktree; writes are signed as usual (`TFC_AGENT_NICK` or the detected agent). No need to write a JSON-RPC client.
+
+```bash
+node scripts/mcp-call.mjs                                     # servers
+node scripts/mcp-call.mjs tfc-pack                            # tools of a server
+node scripts/mcp-call.mjs tfc-plans-dev dev_get --schema      # parameters of a tool
+node scripts/mcp-call.mjs tfc-pack item_get '{"id":"tfc:powder/flux"}'
+node scripts/mcp-call.mjs tfc-pack pack_devserver @args.json --timeout 1200
+```
+
+- Arguments: a JSON string, `@file`, or `-` (stdin). A file is the way around shell quoting (PowerShell).
+- `--timeout <s>` — default 300, `0` — no limit. It stops the MCP server, not what the tool has already started: a
+  detached stand keeps running. So keep it above the tool's own `timeout` (`pack_devserver` — 900 s to boot, plus the
+  commands and shutdown).
+- `--out <dir>` — where images go (default a new temp folder); the path is printed. `--json` — the raw result.
+  `--verbose` — the server log on stderr.
+- Tool text goes to stdout, a tool error to stderr. Exit code: `0` success, `1` tool or server error, `2` bad call,
+  `124` timeout.
+- Each call is a new server process (`tfc-pack` code index and caches start cold), so don't loop it where a connected
+  server is available.
+
 ## Data sources
 
 The server builds nothing itself: it reads what the site scripts built. Stale site data → stale answers.
