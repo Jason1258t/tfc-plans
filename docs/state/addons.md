@@ -181,6 +181,12 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-06 (dev #276): **EE Extras 2.18.0** — the duplex cap covers both terminals with an overhanging rim. Caps sync
+with watched chunks, and the spool HUD and click prediction use the synced state. The visible duplex and thin cable
+sheaths use the cap inlet in both EE client renderers. Surface wire routes use the same inlet. EE 1.1.2 still registers
+the original electrical nodes, so the saved cable connections need no migration. Dedicated dev server: cap placement,
+removal and persistence after restart. Dev client: cap sync, screenshots of the bulb, heater and motor, and surface wire.
+
 2026-11-06 (dev #272): **EE Extras 2.17.0** — working L1–L3 boards with up to four EE terminals, component presets,
 and rated voltage, dissipation and current. Assembling consumes parts. Overvoltage and sustained overload char
 the board, which can then be salvaged at the design table. Dedicated-server coverage includes relay transfer,
