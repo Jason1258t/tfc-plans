@@ -177,6 +177,13 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-05 (dev #248): **2.13.0** — magnetized steel, a pressed-paper speaker cone, sulfuric acid electrolyte and
+an ABS ink cartridge. The precision actuator gets its magnet through the motor. The lead battery uses an ABS case and
+a PET separator. M12 `tcegd3kspq62oHuM3YmF` requires EE Extras 2.13.0, Destroy 0.4.6 and Petrolpark 1.5.11.
+Dedicated server: 77/77 CC recipes, 303 checks after restart, reusable magnetizing coil, 125 mB of 4.5 mol/L solution
+bottled by Create; 1 and 10 mol/L rejected. Resource and recipe conflict checks passed. See dev #259 for the missing
+insulation tag in the pre-existing cable and storage bay recipes.
+
 2026-11-05 (dev #247): **2.12.0** — duplex cable power inlet for CC: Tweaked desktops and a pocket computer
 charging station. The inlet tests the network under load before booting and shuts down on loss of power. The
 nominal input is 300 V with an operating range of 240–330 V. Normal/advanced desktops draw 80/180 W at nominal
