@@ -16,7 +16,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { confirmDatapackItems } from './datapack-deployment.mjs';
 import { deploymentsOf } from './datapacks.mjs';
-import { classifyPath } from './paths.mjs';
+import { classifyPath, isModJar, jarKey } from './paths.mjs';
 import { HttpError, SHA256_RE, writeJsonAtomic } from './util.mjs';
 
 const ID_RE = /^u\d{8}-\d{6}-[0-9a-f]{4}$/;
@@ -45,16 +45,27 @@ export async function openUpdates(dataDir, store, site) {
     return u;
   }
 
-  /** Пути обновления, которые в текущем снимке поменялись после base (и не совпадают с предложенным) */
+  /**
+   * Что изменилось в сборке после base. conflicts — пути обновления, которые в текущем снимке поменялись (и не совпадают
+   * с предложенным). jarConflicts — [{ path, current }]: jar обновления и появившийся после base jar того же мода под
+   * другим именем; вместе они дали бы две версии мода, а игра с такой сборкой не запустится.
+   */
   async function conflictsOf(u, current) {
     const base = await store.getSnapshot(u.base);
-    if (!base || !current || base.id === current.id) return [];
+    if (!base || !current || base.id === current.id) return { conflicts: [], jarConflicts: [] };
     const was = new Map(base.files.map((f) => [f.path, f.sha256]));
     const now = new Map(current.files.map((f) => [f.path, f.sha256]));
     const mine = new Map([...u.files.map((f) => [f.path, f.sha256]), ...u.remove.map((p) => [p, null])]);
-    return [...mine]
+    const conflicts = [...mine]
       .filter(([p, sha]) => was.get(p) !== now.get(p) && now.get(p) !== (sha ?? undefined))
       .map(([p]) => p);
+    const added = current.files.filter((f) => isModJar(f.path) && !was.has(f.path) && !mine.has(f.path));
+    const jarConflicts = u.files
+      .filter((f) => isModJar(f.path))
+      .flatMap((f) =>
+        added.filter((c) => jarKey(c.path) === jarKey(f.path)).map((c) => ({ path: f.path, current: c.path })),
+      );
+    return { conflicts, jarConflicts };
   }
 
   return {
@@ -67,6 +78,8 @@ export async function openUpdates(dataDir, store, site) {
         const u = await get(n.slice(0, -5)).catch(() => null);
         if (u) out.push(u);
       }
+      const current = await store.getCurrent();
+      for (const u of out) if (u.status === 'pending') Object.assign(u, await conflictsOf(u, current));
       return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     },
 
@@ -166,7 +179,12 @@ export async function openUpdates(dataDir, store, site) {
         );
       const current = await store.getCurrent();
       if (!current) throw new HttpError(409, 'Текущего снимка нет');
-      const conflicts = await conflictsOf(u, current);
+      const { conflicts, jarConflicts } = await conflictsOf(u, current);
+      if (jarConflicts.length)
+        throw new HttpError(409, `В сборке уже другая версия мода: ${jarConflicts.length}. --force тут не поможет`, {
+          conflicts: jarConflicts.map((j) => `${j.path} — в сборке ${j.current}`),
+          jarConflicts,
+        });
       if (conflicts.length && !force)
         throw new HttpError(409, `Эти файлы в сборке поменяли после предложения: ${conflicts.length}`, { conflicts });
       const files = new Map(current.files.map((f) => [f.path, f]));

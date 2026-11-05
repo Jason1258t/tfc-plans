@@ -4,9 +4,10 @@
  *     файлы из папки (пути как в снимке: kubejs/…, config/…), jar в mods/, датапаки сайта на подтверждение и пути, которые
  *     убрать; старые версии предлагаемых jar убираются сами (--keep-old — оставить). Так обновляет сборку Claude или
  *     администратор не с ПК хоста.
- *   tfc admin updates [list] — что ждёт; subscribe/unsubscribe <id…> — проверять в профиле поверх сборки (staging.mjs);
+ *   tfc admin updates [list] [--rejected] [--approved] — что ждёт (или отклонённые, одобренные);
+ *     subscribe/unsubscribe <id…> — проверять в профиле поверх сборки (staging.mjs);
  *     pull [id…] — разово забрать файлами в папку игры (и сервера, если она в профиле), с копией для tfc undo;
- *     approve <id> — сделать из текущей сборки с этими изменениями новую текущую; reject <id>.
+ *     approve <id|all> — сделать из текущей сборки с этими изменениями новую текущую; reject <id>.
  */
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
@@ -43,6 +44,9 @@ export function printUpdate(u, { full = true, subscribed = false } = {}) {
     `${bold(u.id)} ${STATUS[u.status] ?? u.status}${subscribed ? cyan(' [подписан]') : ''} ${dim(`${date(Date.parse(u.createdAt))}, ${u.author}`)}${u.snapshot ? dim(` → сборка ${u.snapshot}`) : ''}`,
   );
   console.log(`  ${u.note}`);
+  for (const j of u.jarConflicts ?? [])
+    console.log(yellow(`  ! ${j.path}: в сборке уже ${j.current} — обновление устарело, одобрить нельзя`));
+  for (const p of u.conflicts ?? []) console.log(yellow(`  ! ${p}: в сборке поменяли после предложения`));
   if (u.snapshot && u.parent)
     console.log(dim(`  откат: tfc admin use ${u.parent} (или tfc admin rollback, если сборка последняя)`));
   if (!full) return;
@@ -57,6 +61,36 @@ export function printUpdate(u, { full = true, subscribed = false } = {}) {
         `  откат после одобрения: tfc admin rollback${u.datapacks?.length ? ' (вернёт и подтверждение датапаков)' : ''}`,
       ),
     );
+}
+
+/** Почему обновление не одобрить: текст ошибки или null. С force остаются только другие версии модов */
+export function approveBlock(u, force) {
+  const lines = (u.jarConflicts ?? []).map((j) => `  ! ${j.path} — в сборке уже ${j.current}`);
+  if (lines.length)
+    return `Обновление ${u.id} устарело: две версии одного мода не запустятся.\n${lines.join('\n')}\nОтклоните его: tfc admin updates reject ${u.id}`;
+  if (force || !u.conflicts?.length) return null;
+  return `Эти файлы в сборке поменяли после предложения ${u.id}:\n${u.conflicts.map((p) => `  ! ${p}`).join('\n')}\nОтклонить: tfc admin updates reject ${u.id}; поверх них — approve ${u.id} --force`;
+}
+
+/** Почему обновления не одобрить пачкой: свои конфликты и правки одного файла или мода в разных обновлениях */
+export function batchProblems(list) {
+  const out = list.flatMap((u) => approveBlock(u) ?? []);
+  const paths = new Map();
+  const jars = new Map();
+  for (const u of list) {
+    for (const [p, sha] of [...u.files.map((f) => [f.path, f.sha256]), ...u.remove.map((x) => [x, null])]) {
+      const was = paths.get(p);
+      if (was && was.sha !== sha) out.push(`${p} меняют и ${was.id}, и ${u.id}`);
+      paths.set(p, { id: u.id, sha });
+    }
+    for (const f of u.files.filter((x) => isModJar(x.path))) {
+      const was = jars.get(jarKey(f.path));
+      if (was && was.path !== f.path)
+        out.push(`Один мод в двух версиях: ${was.path} (${was.id}) и ${f.path} (${u.id})`);
+      jars.set(jarKey(f.path), { id: u.id, path: f.path });
+    }
+  }
+  return out;
 }
 
 /** Датапаки сайта для обновления: ZIP как у tfc datapacks. → [{ id, revision, sha256, sourcePath?, name, zip? }] */
