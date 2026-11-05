@@ -171,3 +171,7 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   (exit 124, process gone), 5 MB answer through a pipe, images, env priority.
 - Dev #255 (2026-11-05): test servers stop with the process that started them (`stopWithProcess` in `mc-server.mjs`), so a
   broken MCP call no longer leaves a stand running. Not covered: SIGKILL of the MCP server itself.
+- Dev #257 (2026-11-05): `addon_devserver` watches the gradle process: a failed build returns at once with the failed task,
+  deduplicated javac errors and a `libs.sh` hint; a server crash = process exit or an explicit failure line, so `Exception`
+  in a mixin warning no longer stops a healthy server. Verified on `ee-extras-mod` through `mcp-call`: no libs (16 s),
+  boot + RCON (31 s), missing mod dependency (13 s), `timeout=10` (no processes left). Not verified: Windows.
