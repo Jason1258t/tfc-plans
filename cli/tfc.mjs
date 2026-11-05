@@ -784,7 +784,7 @@ const modJars = (instance) => {
 
 /** Предупреждение: моды папки требуют NeoForge новее установленного — игра вылетит при запуске */
 function warnNeoforge(profile) {
-  const have = installedNeoforge(profile.instance);
+  const have = installedNeoforge(profile);
   if (!have) return;
   const need = requiredNeoforge(modJars(profile.instance));
   if (!need || compareVersions(have, need.version) >= 0) return;
