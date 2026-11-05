@@ -7,7 +7,7 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { isWin, javaHome, killTree, runRcon, sleep } from '../../mc-server.mjs';
+import { isWin, javaHome, killTree, runRcon, sleep, stopWithProcess } from '../../mc-server.mjs';
 import { runStand } from '../../pack-stand.mjs';
 import { str, num } from '../fmt.mjs';
 import { TOOLS_DIR } from '../resources.mjs';
@@ -118,6 +118,7 @@ async function devServer(a) {
     detached: !isWin,
   });
   fs.closeSync(fd);
+  stopWithProcess(child);
   const t0 = Date.now();
 
   const tail = () => (fs.existsSync(log) ? fs.readFileSync(log, 'utf8') : '');

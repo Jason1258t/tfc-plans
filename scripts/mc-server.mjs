@@ -92,6 +92,27 @@ export function runRcon(port, password, commands) {
   });
 }
 
+/** Серверы, которых надо погасить вместе с этим процессом */
+const owned = new Set();
+let exitHooked = false;
+
+/**
+ * Погасить сервер вместе с этим процессом. Сервер запущен отдельной группой (detached) и сам не умрёт: при обрыве
+ * вызова MCP (закрытый stdin, SIGTERM) он остался бы работать и занимать папку и порты. После SIGKILL не сработает.
+ */
+export function stopWithProcess(child) {
+  owned.add(child);
+  child.once('exit', () => owned.delete(child));
+  if (exitHooked) return;
+  exitHooked = true;
+  process.on('exit', () => {
+    for (const c of owned) killTree(c.pid);
+  });
+  // Без обработчика сигнал завершает процесс мимо события exit
+  for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP'])
+    process.once(signal, () => process.exit(128 + os.constants.signals[signal]));
+}
+
 /** Завершить дерево процессов gradlew */
 export function killTree(pid) {
   if (isWin) execFile('taskkill', ['/F', '/T', '/PID', String(pid)], () => {});

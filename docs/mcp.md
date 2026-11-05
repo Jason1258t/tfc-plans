@@ -39,9 +39,9 @@ node scripts/mcp-call.mjs tfc-pack pack_devserver @args.json --timeout 1200
 ```
 
 - Arguments: a JSON string, `@file`, or `-` (stdin). A file is the way around shell quoting (PowerShell).
-- `--timeout <s>` — default 300, `0` — no limit. It stops the MCP server, not what the tool has already started: a
-  detached stand keeps running. So keep it above the tool's own `timeout` (`pack_devserver` — 900 s to boot, plus the
-  commands and shutdown).
+- `--timeout <s>` — default 300, `0` — no limit. It stops the MCP server, and the server stops the stand it started. A stand
+  took 478 s in a real run, so pass more than the default for it, above the tool's own `timeout` (`pack_devserver` —
+  900 s to boot, plus the commands and shutdown).
 - `--out <dir>` — where images go (default a new temp folder); the path is printed. `--json` — the raw result.
   `--verbose` — the server log on stderr.
 - Tool text goes to stdout, a tool error to stderr. Exit code: `0` success, `1` tool or server error, `2` bad call,
