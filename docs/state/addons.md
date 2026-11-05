@@ -177,6 +177,19 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-06 (dev #205, plan doc:47): **EE Extras 2.16.0** — surface wire ported from Create: Power Grid 0.6.2
+(Apache-2.0, `META-INF/NOTICE`, package `ee.extras.wire`): one entity per piece, axis segments on a 1/16 grid,
+A* path along surfaces (`BlockTrace`), preview, branches, merge, cutters (`#electroenergetics:wire_cutters`), dye,
+straight mode (left Alt), raycast mixin on `ProjectileUtil.getEntityHitResult` (client, only with wire/cutters/dye in
+hand). Electrics are EE wires, not PG simulation: a piece with both ends connected = 2 EE cores of route length
+(`WireData.ofLength`); a branch node = EE FIXED detached nodes (`InfrastructureSavedData.createDetachedNode`, saved by
+EE), registry in `JunctionData`. Own support check (PG has none). Junction box `junction_box` (like the duplex
+insulator). Thin insulated wire spool — hanging duplex cable via `CableLaying` with a 1-px sheath type
+`thin_insulated_wire`; refused between two cable insulators; works with caps (#273). Config `ee_extras-server.toml`
+`surface_wire.itemsPerMeter` 1, `maxLength` 16 m. Checked on the dev server (`wiretest`, `/wiretest thin`) and in the
+dev client (`WIRE=1 ./test-client.sh`); not in game. The site page `addon-ee-extras` had been saved truncated at 2.15.0
+(MCP `guide_get` output with «… обрезано»); restored from revision 2026-11-05T16:26 plus 2.15/2.16 texts.
+
 2026-11-05 (dev #228): **EE Extras 2.14.1** — EE 1.1.2 electric pumps draw 2.4 times less power at the same
 terminal voltage, preserving their original RPM curve. The patch multiplies the resistance used by the circuit solver
 by 2.4 and adjusts goggles watts by the same factor. At 220 V the dev server reported 480 Ω and 60.5 RPM with the
