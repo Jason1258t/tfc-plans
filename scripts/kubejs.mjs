@@ -151,8 +151,10 @@ function itemOf(id, count) {
 const stackJson = (v) => {
   const s = ser(v);
   if (typeof s === 'string') {
-    const count = v?.__count ?? 1;
-    return s.startsWith('#') ? { tag: s.slice(1) } : { id: s, ...(count > 1 ? { count } : {}) };
+    const m = /^(\d+)x\s+(.+)$/.exec(s);
+    const count = m ? Number(m[1]) : (v?.__count ?? 1);
+    const ref = m ? m[2] : s;
+    return ref.startsWith('#') ? { tag: ref.slice(1) } : { id: ref, ...(count > 1 ? { count } : {}) };
   }
   return s;
 };
@@ -172,7 +174,23 @@ const fluidJson = (v) => {
  * tfc.heating — по схеме KubeJS TFC (data/tfc/kubejs/recipe_schema/heating.json): конструктор
  * (ingredient, temperature), выходы — .resultFluid/.fluidOutput, .resultItem/.itemOutput, .results/.outputs(предмет, жидкость).
  */
+const shapedJson = (type, out, pattern, key) => ({
+  type,
+  pattern: ser(pattern),
+  key: Object.fromEntries(Object.entries(key ?? {}).map(([k, v]) => [k, ingJson(v)])),
+  result: stackJson(out),
+});
+const shapelessJson = (type, out, ins) => ({
+  type,
+  ingredients: (Array.isArray(ins) ? ins : [ins]).map(ingJson),
+  result: stackJson(out),
+});
+
 const HELPERS = {
+  'kubejs:shaped': (addRecipe, out, pattern, key) =>
+    addRecipe('kubejs:shaped', shapedJson('kubejs:shaped', out, pattern, key)),
+  'kubejs:shapeless': (addRecipe, out, ins) =>
+    addRecipe('kubejs:shapeless', shapelessJson('kubejs:shapeless', out, ins)),
   'tfc:heating': (addRecipe, ingredient, temperature) => {
     const fluid = (j, f) => (j.result_fluid = fluidJson(f));
     const item = (j, i) => (j.result_item = stackJson(i));
@@ -267,18 +285,9 @@ function runLayer(layer) {
       rules.push({ kind: 'replaceOutput', filter: ser(filter), from: ser(from), to: ser(to), ...where() }),
     custom: (json) => addRecipe(ser(json)?.type ?? 'unknown', ser(json)),
     shaped: (out, pattern, key) =>
-      addRecipe('minecraft:crafting_shaped', {
-        type: 'minecraft:crafting_shaped',
-        pattern: ser(pattern),
-        key: Object.fromEntries(Object.entries(key ?? {}).map(([k, v]) => [k, ingJson(v)])),
-        result: stackJson(out),
-      }),
+      addRecipe('minecraft:crafting_shaped', shapedJson('minecraft:crafting_shaped', out, pattern, key)),
     shapeless: (out, ins) =>
-      addRecipe('minecraft:crafting_shapeless', {
-        type: 'minecraft:crafting_shapeless',
-        ingredients: (Array.isArray(ins) ? ins : [ins]).map(ingJson),
-        result: stackJson(out),
-      }),
+      addRecipe('minecraft:crafting_shapeless', shapelessJson('minecraft:crafting_shapeless', out, ins)),
     // Ванильные «печные» и прочие хелперы: (выход, вход)
     ...Object.fromEntries(
       ['smelting', 'blasting', 'smoking', 'campfireCooking', 'stonecutting'].map((t) => [

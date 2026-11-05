@@ -158,3 +158,10 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   `tfc-plans-dev` dispatcher rejects unknown arguments. Open tasks migrated on server start (snapshot
   `dev-backup/dev-before-checks-*.db`); closed ones keep the JSON, read-only, and migrate on reopen or a `dev_check`.
   `PATCH checklist` stays for stale clients, matching by `num` or text so marks survive.
+- **2026-11-05, recipe and tag gaps** (dev #235): `collectRefs` (`@tfc/core/recipeRefs`) now reads KubeJS argument strings
+  «4x mod:item» and «#tag», which brought back outputs of 222 script recipes (`create:milling`, `create:cutting`,
+  `tfc:quern`, `kubejs:shaped`…). `kubejs:shaped`/`kubejs:shapeless` are built as normal `pattern`/`key`/`result` JSON, so
+  they get a crafting grid on the site and grid comparison in `recipe_conflicts`; `stackJson` splits a count out of the id.
+  Nested jars follow `META-INF/jarjar/metadata.json` (Forgified Fabric API keeps its modules in `META-INF/jars`), adding
+  `fabric-convention-tags-v2`. `recipe_conflicts` no longer crashes on a grid cell with alternatives. Verified by a
+  scratch rebuild from the pack jars and the real MCP server over stdio.
