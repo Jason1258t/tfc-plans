@@ -585,6 +585,7 @@ next — photos, MCP, wooden styles.
   `remove` format was not checked against NeoForge code or in game. Tag kind is a coloured label (items / blocks /
   fluids / entities); same id in another kind links to it. Datapack check warns when a recipe references a tag absent
   from items and fluids (block tag or non-existent) — the slot would be empty in game.
+- 2026-11-05 (dev #239): the «Куда ставить датапак» switch follows the published snapshot: a card in `kubejs.json` → `datapacks` shows «В сборку», locked, with a `tfc datapacks unconfirm <id>` hint. The value is derived on render; the card's `install`/`installTarget` are not written. The site learns of a confirm only after pack data is published.
 
 ## Reference
 

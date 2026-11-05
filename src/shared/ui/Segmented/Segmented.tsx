@@ -25,6 +25,8 @@ interface Props<T extends string | number | boolean | null> {
   role?: 'group' | 'tablist';
   /** Кнопки — вкладки: role="tab" и aria-selected вместо aria-pressed */
   tabs?: boolean;
+  /** Заблокировать все кнопки: значение видно, сменить нельзя */
+  disabled?: boolean;
   className?: string;
 }
 
@@ -36,6 +38,7 @@ export function Segmented<T extends string | number | boolean | null>({
   label,
   role = 'group',
   tabs = false,
+  disabled = false,
   className,
 }: Props<T>) {
   return (
@@ -46,6 +49,7 @@ export function Segmented<T extends string | number | boolean | null>({
           role={tabs ? 'tab' : undefined}
           aria-selected={tabs ? value === o.value : undefined}
           aria-pressed={tabs ? undefined : value === o.value}
+          disabled={disabled}
           onClick={() => onChange(o.value)}
           aria-label={o.ariaLabel}
           title={o.title}

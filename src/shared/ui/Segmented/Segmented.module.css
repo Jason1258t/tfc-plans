@@ -24,8 +24,16 @@
   white-space: nowrap;
 }
 
-.seg button:hover {
+.seg button:hover:not(:disabled) {
   color: var(--text);
+}
+
+.seg button:disabled {
+  cursor: not-allowed;
+}
+
+.seg button:disabled:not([aria-pressed='true']) {
+  opacity: 0.5;
 }
 
 .seg button[aria-pressed='true'] {
