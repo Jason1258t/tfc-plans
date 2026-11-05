@@ -274,16 +274,27 @@ function prepareJar(file) {
   return { root: assets, namespaces, data: path.join(dir, 'data') };
 }
 
+/** Пути вложенных jar по META-INF/jarjar/metadata.json */
+function jarJarPaths(zip) {
+  const meta = zip.getEntry('META-INF/jarjar/metadata.json');
+  if (!meta) return new Set();
+  const jars = parseLooseJson(meta.getData().toString('utf8'))?.jars;
+  return new Set((Array.isArray(jars) ? jars : []).map((j) => j?.path).filter((p) => typeof p === 'string'));
+}
+
 /**
- * Моды внутри jar (META-INF/jarjar/*.jar): бандлы вроде Create Aeronautics кладут туда целые моды со своими
- * предметами и рецептами (aeronautics, simulated, offroad). Берём только вложенные моды (есть neoforge.mods.toml)
- * с assets/ или data/ — библиотеки пропускаем. Распакованные jar кешируются по имени+размеру+дате родителя.
+ * Моды внутри jar: бандлы вроде Create Aeronautics кладут туда целые моды со своими предметами и рецептами
+ * (aeronautics, simulated, offroad), Forgified Fabric API — теги c:*. Какие jar загрузит NeoForge, написано в
+ * META-INF/jarjar/metadata.json (пути бывают и вне META-INF/jarjar/). Берём только вложенные моды (есть
+ * neoforge.mods.toml) с assets/ или data/ — библиотеки пропускаем. Распакованные jar кешируются по
+ * имени+размеру+дате родителя.
  */
 function nestedModJars(file) {
   const st = fs.statSync(file);
   const key = `${path.basename(file, '.jar')}-${st.size}-${Math.round(st.mtimeMs)}`.replace(/[^\w.+-]/g, '_');
   const dir = path.join(CACHE, 'nested', key);
-  const done = path.join(dir, '.done-v1');
+  // v2 — пути из metadata.json
+  const done = path.join(dir, '.done-v2');
   if (!fs.existsSync(done) || fresh) {
     fs.rmSync(dir, { recursive: true, force: true });
     fs.mkdirSync(dir, { recursive: true });
@@ -293,8 +304,9 @@ function nestedModJars(file) {
     } catch {
       return [];
     }
+    const listed = jarJarPaths(zip);
     for (const entry of zip.getEntries()) {
-      if (entry.isDirectory || !/^META-INF\/jarjar\/[^/]+\.jar$/.test(entry.entryName)) continue;
+      if (entry.isDirectory || !listed.has(entry.entryName)) continue;
       const data = entry.getData();
       let inner;
       try {
