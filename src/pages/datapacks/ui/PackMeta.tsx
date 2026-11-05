@@ -24,12 +24,16 @@ const INSTALL_OPTIONS: SegmentedOption<DatapackInstallMode>[] = [
   { value: 'pack', label: 'В сборку', title: 'tfc pull положит ZIP в kubejs/data/ для всех миров сборки' },
 ];
 
+/** Подсказки про tfc pull неверны для датапака из снимка: кнопки заблокированы, выбор не действует */
+const LOCKED_OPTIONS = INSTALL_OPTIONS.map((o) => ({ ...o, title: 'Датапак в снимке сборки, выбор заблокирован' }));
+
 /** Паспорт датапака: название, namespace, описание и выбор места установки («Не ставить / В мир / В сборку») */
 export function PackMeta({ pack, deployment, onUpdate }: Props) {
   const [name, setName] = useState(pack.name);
   const [namespace, setNamespace] = useState(pack.namespace);
   const [description, setDescription] = useState(pack.description);
-  const mode = datapackInstallMode(pack);
+  // В снимке сборки решает снимок, а не отметка на карточке; значение только для показа, в карточку не пишем
+  const mode: DatapackInstallMode = deployment ? 'pack' : datapackInstallMode(pack);
 
   return (
     <section className={styles.dpMeta}>
@@ -76,7 +80,7 @@ export function PackMeta({ pack, deployment, onUpdate }: Props) {
           <strong>В сборке</strong> · по опубликованному снимку. Подтвердил {deployment.confirmedBy}, версия{' '}
           <code>{deployment.contentHash.slice(0, 12)}</code>.
           <div>
-            Путь: <code>{deployment.path}</code>. Переключатель ниже не снимает подтверждение в снимке.
+            Путь: <code>{deployment.path}</code>. Переключатель ниже заблокирован, пока датапак в снимке.
           </div>
           {pack.updatedAt !== deployment.sourceUpdatedAt && (
             <div>После подтверждения карточка менялась. В снимке остаётся проверенная версия.</div>
@@ -90,7 +94,12 @@ export function PackMeta({ pack, deployment, onUpdate }: Props) {
         <div className="grow">
           <b>Куда ставить датапак</b>
           <div className="faint small">
-            {mode === 'pack' ? (
+            {deployment ? (
+              <>
+                Подтверждён в снимке сборки: <code>tfc pull</code> ставит проверенную версию в <code>kubejs/data/</code>{' '}
+                для всех миров. Снять можно только командой <code>tfc datapacks unconfirm {pack.id}</code>
+              </>
+            ) : mode === 'pack' ? (
               <>
                 Программа <code>tfc pull</code> поставит его в <code>kubejs/data/</code> (для всех миров сборки, мир
                 выбирать не нужно)
@@ -108,8 +117,9 @@ export function PackMeta({ pack, deployment, onUpdate }: Props) {
           </div>
         </div>
         <Segmented
-          options={INSTALL_OPTIONS}
+          options={deployment ? LOCKED_OPTIONS : INSTALL_OPTIONS}
           value={mode}
+          disabled={!!deployment}
           onChange={(next) => onUpdate(datapackInstallPatch(next))}
           label="Куда ставить датапак"
         />
