@@ -73,6 +73,11 @@
   max-width: 1000px;
 }
 
+/* Пути вида data/<мод>/recipe/... в замечаниях и подсказках длиннее ширины телефона */
+.dp-main code {
+  overflow-wrap: anywhere;
+}
+
 .dp-empty {
   display: flex;
   flex-direction: column;
@@ -215,6 +220,7 @@
   border: 0;
   background: none;
   text-align: left;
+  overflow-wrap: anywhere;
   cursor: pointer;
 }
 
