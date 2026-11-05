@@ -175,3 +175,8 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   deduplicated javac errors and a `libs.sh` hint; a server crash = process exit or an explicit failure line, so `Exception`
   in a mixin warning no longer stops a healthy server. Verified on `ee-extras-mod` through `mcp-call`: no libs (16 s),
   boot + RCON (31 s), missing mod dependency (13 s), `timeout=10` (no processes left). Not verified: Windows.
+- Dev #266 (2026-11-05): `addon_devserver` picks mods from the `cp` lines of `test-server.sh` under `env` (simple `if` on a
+  variable, `else`, `$MODS`, `$OLD_JAR`); what it can't parse or run (`for` loops, `PROFILE`, datapack copies, `MICROTICKS`)
+  is listed in the answer. `ee-extras-mod` devtest builds without Destroy jars. Verified on it: plain, `IE=1 TFC=1`, `CC=1`,
+  `DESTROY=1 TFC=1` (`rectest petprepare` registered), `DESTROY=1` alone (missing deps shown), `OLD_JAR`; the parser dry-run
+  on 8 more addons. Not verified: Windows. Not run: `destroy-bridge-mod`, `destroy-extras-mod` still need `./test-server.sh`.
