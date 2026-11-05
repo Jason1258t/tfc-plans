@@ -66,7 +66,6 @@ import {
   isNeoforgeInstalled,
   launcherRunning,
   neoforgeVersion,
-  PROFILE_ID,
   versionId,
 } from './lib/vanilla.mjs';
 import { applyStagingDrops, stagingClashes, stagingOverlay, stagingState, stagingWinsById } from './lib/staging.mjs';
@@ -282,7 +281,7 @@ async function cmdInit(v) {
           : `${f.name} ${dim(`${[f.launcher, detectVersions(f.dir).loader].filter(Boolean).join(', ')} · ${f.dir}`)}`,
       { allowOther: true },
     );
-    if (dir === fresh) return initLauncher(v, cfg);
+    if (dir === fresh) return initLauncher(v, cfg, { fresh: true });
     if (typeof dir === 'object') dir = dir.dir;
   }
   dir = path.resolve(expandPath(dir));
@@ -328,7 +327,7 @@ async function cmdInit(v) {
  * tfc init --launcher: своя версия в .minecraft/versions (официальный лаунчер и TLauncher; cli/lib/vanilla.mjs),
  * профиль tfc на её папку, pull
  */
-async function initLauncher(v, cfg) {
+async function initLauncher(v, cfg, { fresh = false } = {}) {
   if (!cfg.token) {
     if (!interactive()) throw new Error('сначала ключ: tfc login <ключ>, потом tfc init --launcher');
     const key = await ask('Ключ от хоста сборки (начинается с tfc_)');
@@ -344,32 +343,61 @@ async function initLauncher(v, cfg) {
         : 'на сервере ещё нет сборки',
     );
   if (current?.mc && current.mc !== '1.21.1') console.log(yellow(`Сборка для Minecraft ${current.mc}.`));
-  const mcDir = path.resolve(v['mc-dir'] ?? defaultMinecraftDir());
-  const folder = v.name ?? DEFAULT_NAME;
-  if (!/^[\w][\w.-]{0,60}$/.test(folder) || folder === versionId(nf) || folder === current?.mc)
-    throw new Error(`имя папки «${folder}» не подходит — латиница, цифры, «-», «_», и не имя версии`);
-  const gameDir = path.join(mcDir, 'versions', folder);
-  let memory = Number(v.memory ?? defaultMemoryGb());
-  if (!v.memory && interactive()) memory = Number(await ask('Сколько памяти отдать игре, ГБ', String(memory)));
-  if (!Number.isInteger(memory) || memory < 2 || memory > 64) throw new Error('память — целое число ГБ, 2–64');
+  const selected = v.profile ?? cfg.profile ?? Object.keys(cfg.profiles)[0];
+  const existing = Object.hasOwn(cfg.profiles, selected) ? cfg.profiles[selected] : null;
+  const instance = existing && path.resolve(existing.instance);
+  const parent = instance && path.dirname(instance);
+  const versionFolder = parent && path.basename(parent) === 'versions' ? path.basename(instance) : null;
+  const update = existing && (v.profile || (!fresh && (!v.name || v.name === versionFolder)));
+  const mcDir = path.resolve(
+    v['mc-dir'] ??
+      (update ? (existing.launcher?.mcDir ?? (versionFolder && path.dirname(parent))) : null) ??
+      defaultMinecraftDir(),
+  );
+  const versions = path.join(mcDir, 'versions');
+  const inRoot = update && instance === mcDir;
+  if (update && (existing.side === 'server' || (!inRoot && parent !== versions)))
+    throw new Error(`профиль «${selected}» находится в ${instance} — обновите NeoForge в его лаунчере`);
+  const oldFolder = update ? (inRoot ? existing.launcher?.version : versionFolder) : null;
+  if (oldFolder && v.name && oldFolder !== v.name)
+    throw new Error(`профиль «${selected}» уже использует версию ${oldFolder}`);
+  const base = oldFolder ?? v.name ?? DEFAULT_NAME;
+  if (!/^[\w][\w.-]{0,60}$/.test(base) || base === versionId(nf) || base === current?.mc)
+    throw new Error(`имя папки «${base}» не подходит — латиница, цифры, «-», «_», и не имя версии`);
+  let folder = base;
+  if (!oldFolder) {
+    const occupied = new Set(Object.values(cfg.profiles).map((p) => path.resolve(p.instance)));
+    const taken = (name) => {
+      const dir = path.join(versions, name);
+      return occupied.has(dir) || fs.existsSync(dir);
+    };
+    for (let i = 2; taken(folder); i++) folder = `${base.slice(0, 55)}-${i}`;
+  }
+  const gameDir = inRoot ? instance : path.join(versions, folder);
+  let name = update || v.profile ? selected : Object.keys(cfg.profiles).length ? folder : 'main';
+  if (!update && !v.profile) {
+    const baseName = name;
+    for (let i = 2; Object.hasOwn(cfg.profiles, name); i++) name = `${baseName}-${i}`;
+  }
+  if (!name || ['__proto__', 'constructor', 'prototype'].includes(name)) throw new Error('недопустимое имя профиля');
+  let memory = v.memory === undefined ? undefined : Number(v.memory);
+  if (!update && memory === undefined) {
+    memory = defaultMemoryGb();
+    if (interactive()) memory = Number(await ask('Сколько памяти отдать игре, ГБ', String(memory)));
+  }
+  if (memory !== undefined && (!Number.isInteger(memory) || memory < 2 || memory > 64))
+    throw new Error('память — целое число ГБ, 2–64');
 
   console.log(`Папка Minecraft: ${mcDir}`);
   console.log(`  NeoForge ${nf}${isNeoforgeInstalled(mcDir, nf) ? dim(' — уже стоит') : ''}`);
-  // Сборка уже перенесена в корень .minecraft (лаунчер запускает оттуда, см. launchedElsewhere): меняем только NeoForge
-  const inRoot = !v.profile && cfg.profiles[cfg.profile]?.instance === mcDir;
-  console.log(
-    inRoot
-      ? `  версия ${bold(folder)}, папка игры остаётся: ${mcDir}`
-      : `  версия ${bold(folder)} — её папка и будет папкой игры: ${gameDir}`,
-  );
-  console.log(`  профиль Minecraft Launcher «TFC RealWorld», память ${memory} ГБ`);
+  console.log(`  профиль «${name}», версия ${bold(folder)}, папка игры: ${gameDir}`);
   if (launcherRunning()) {
     console.log(yellow('Minecraft Launcher открыт — закройте его: при выходе он перепишет профили своей копией.'));
     if (!interactive()) throw new Error('закройте Minecraft Launcher и повторите');
     await ask('Закройте лаунчер и нажмите Enter');
     if (launcherRunning()) throw new Error('лаунчер всё ещё открыт — закройте его и повторите');
   }
-  if (!v.yes && interactive() && !(await confirm('Поставить?', true))) return;
+  if (!v.yes && interactive() && !(await confirm(update ? 'Обновить профиль?' : 'Поставить?', true))) return;
 
   const install = (version) =>
     withSpinner('Готовлю установку', (sp) =>
@@ -377,7 +405,8 @@ async function initLauncher(v, cfg) {
         mcDir,
         nf: version,
         name: folder,
-        title: 'TFC RealWorld',
+        gameDir,
+        profileId: update ? existing.launcher?.profile : undefined,
         memoryGb: memory,
         api: api(cfg),
         onStep: (s) => sp.update(s),
@@ -386,22 +415,26 @@ async function initLauncher(v, cfg) {
   const r = await install(nf);
   console.log(`${green(r.installed ? 'NeoForge поставлен' : 'NeoForge уже был')}, версия ${bold(folder)} готова.`);
   if (r.profiles) {
-    console.log(`Профиль Minecraft Launcher «TFC RealWorld» — на ${gameDir}`);
+    console.log(`Профиль Minecraft Launcher «${r.title}» — на ${gameDir}`);
     console.log(dim(`Прежние профили лаунчера — копией: ${r.backups.map((b) => path.basename(b)).join(', ')}`));
   }
 
-  // Повторный запуск — тот же профиль tfc, а не новый
-  const same = Object.keys(cfg.profiles).find((n) => cfg.profiles[n].instance === gameDir);
-  const name = inRoot ? cfg.profile : v.profile || same || (cfg.profiles.main ? 'launcher' : 'main');
-  if (inRoot) console.log(`Папка игры остаётся прежней: ${mcDir}`);
-  else {
-    cfg.profiles[name] = { instance: gameDir, world: null, side: 'client', launcher: { mcDir, profile: PROFILE_ID } };
-    cfg.profile = name;
-    saveConfig(cfg);
-    console.log(`${green('Сохранено')} — профиль ${profileTitle({ name, ...cfg.profiles[name] })} (текущий)`);
-  }
-  const hint = inRoot ? `Играть: версия ${bold(folder)}.` : launchHint(folder, gameDir);
-  if (v.yes || !interactive() || (await confirm('Скачать сборку сейчас?', true))) {
+  cfg.profiles[name] = {
+    world: null,
+    side: 'client',
+    ...(update ? existing : {}),
+    instance: gameDir,
+    launcher: { mcDir, profile: r.profileId, version: folder },
+  };
+  if (!update) cfg.profile = name;
+  saveConfig(cfg);
+  console.log(`${green('Сохранено')} — профиль ${profileTitle({ name, ...cfg.profiles[name] })}`);
+  const hint = launchHint(folder, gameDir, r.title);
+  if (
+    v.yes ||
+    !interactive() ||
+    (await confirm(update ? 'Обновить файлы сборки сейчас?' : 'Скачать сборку сейчас?', true))
+  ) {
     await cmdPull({ ...v, profile: name, yes: true, 'no-neoforge-check': true }, []);
     // Моды сборки могут требовать NeoForge новее указанного в ней (аддон выпущен после заливки)
     const need = requiredNeoforge(modJars(cfg.profiles[name].instance));
@@ -413,8 +446,8 @@ async function initLauncher(v, cfg) {
   } else console.log(`Дальше: ${cyan('tfc pull')}. ${hint}`);
 }
 
-const launchHint = (folder, gameDir) =>
-  `Играть: Minecraft Launcher — профиль ${bold('TFC RealWorld')}; другой лаунчер — версия ${bold(folder)}, папка игры должна быть ${gameDir} (не корень .minecraft). После первого запуска ${cyan('tfc status')} скажет, если игра запустилась не оттуда.`;
+const launchHint = (folder, gameDir, title) =>
+  `Играть: Minecraft Launcher — профиль ${bold(title)}; другой лаунчер — версия ${bold(folder)}, папка игры должна быть ${gameDir}. После первого запуска ${cyan('tfc status')} скажет, если игра запустилась не оттуда.`;
 
 async function cmdLogin(v, [key]) {
   if (!key) throw new Error('tfc login <ключ>');
@@ -700,7 +733,10 @@ function warnNeoforge(profile) {
   const by = need.by.slice(0, 3).join(', ') + (need.by.length > 3 ? ` и ещё ${need.by.length - 3}` : '');
   console.log(yellow(`Стоит NeoForge ${have}, а модам нужен ${need.version} (${by}) — игра вылетит при запуске.`));
   if (profile.side === 'server') console.log(`Обновите NeoForge на сервере до ${need.version}.`);
-  else console.log(`Поставить нужный: ${cyan(`tfc init --launcher --loader ${need.version}`)}`);
+  else
+    console.log(
+      `Поставить нужный: ${cyan(`tfc init --launcher --profile ${JSON.stringify(profile.name)} --loader ${need.version}`)}`,
+    );
 }
 
 function printAll(r, { verbose = false } = {}) {
