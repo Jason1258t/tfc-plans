@@ -88,9 +88,9 @@ export function DatapacksPage() {
             <Package size={36} className="faint" />
             <h2>Датапаки</h2>
             <p className="muted">
-              Новые рецепты по шаблону из сборки, замена и удаление существующих, произвольные файлы. Для проверки
-              используйте <code>tfc datapacks install</code>. После проверки хост может подтвердить датапак для всех
-              миров сборки командой <code>tfc datapacks confirm</code>.
+              Новые рецепты по шаблону из сборки, замена и удаление существующих, произвольные файлы. В карточке можно
+              выбрать установку через <code>tfc pull</code> в мир (<code>world/datapacks/</code>) или сразу в сборку (
+              <code>kubejs/data/</code>), либо догрузить вручную через <code>tfc datapacks install</code>.
             </p>
             <Button variant="primary" data-tour="dp-new" onClick={create}>
               <Plus size={16} /> Новый датапак

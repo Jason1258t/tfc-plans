@@ -8,6 +8,31 @@
 /** pack_format датапаков Minecraft 1.21.1 */
 export const PACK_FORMAT = 48;
 
+/** Режим установки карточки датапака с сайта: не ставить, в мир (`world/datapacks/`) или в сборку (`kubejs/data/`) */
+export type DatapackInstallMode = 'none' | 'world' | 'pack';
+export type DatapackInstallTarget = 'world' | 'pack';
+
+/** Режим установки карточки датапака (совместимо со старыми записями, где только install?: boolean) */
+export function datapackInstallMode(pack: {
+  install?: boolean | string | null;
+  installTarget?: string | null;
+}): DatapackInstallMode {
+  if (pack.install === 'pack') return 'pack';
+  if (pack.install === 'world') return 'world';
+  if (!pack.install) return 'none';
+  return pack.installTarget === 'pack' ? 'pack' : 'world';
+}
+
+/** Поля карточки в Firestore для выбранного режима (`install: boolean` сохранён для совместимости со старым сервером/CLI) */
+export function datapackInstallPatch(mode: DatapackInstallMode): {
+  install: boolean;
+  installTarget: DatapackInstallTarget;
+} {
+  if (mode === 'pack') return { install: true, installTarget: 'pack' };
+  if (mode === 'world') return { install: true, installTarget: 'world' };
+  return { install: false, installTarget: 'world' };
+}
+
 /** Сколько нужно от документа датапака, чтобы собрать файлы */
 export interface DatapackSource {
   name: string;

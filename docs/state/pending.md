@@ -7,6 +7,43 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **Polymer names** (2026-11-04, dev #218): translation update `u20261104-203745-9a77` supplies full Russian names for four Destroy polymers and fixes «Полиропилен». Host: subscribe a profile with Destroy, reload client resources, check the four names, then approve. The three guides are already live. JSON/jar keys checked; full-pack MCP run exceeded the caller’s 180-second timeout and was stopped, so no successful server/client verification is claimed.
+- **Going Nuclear M0** (2026-11-05, dev #202, plan doc 50): the gameplay decisions are settled — reactor automation
+  after L3, realistic physics without random failures, radiation enabled, destructive accidents and fallout disabled on
+  the live world. The first slice is the boiling-water reactor, turbines, spent-fuel pool and dry cask; RBMK/reprocessing/MOX
+  are a separate later stage. Jar inspection confirms NeoForge ≥ 21.1.256 is required and the license is All Rights
+  Reserved. Host: update NeoForge on a test profile and obtain the author's written permission for the pack server to
+  redistribute the jar before integration and release. Static dependency checking of the pack against 21.1.256 found no
+  conflicts; runtime and Survival acceptance have not been performed.
+- **Fluid tank recipe without a barrel** (2026-11-05, dev #233 item 1): card `2csvwoHPHBhlpqiZTQ4c` is confirmed for the
+  whole pack at the host's request in snapshot `20261104-223757-c5b3`, without an in-game check: 8
+  `#c:plates/copper` around 1 `#c:glass_panes` → 2 tanks. The 4-tank version loaded on the pack stand; only the count
+  changed after that. Host: craft it once in game. The old route stays: Create: Connected vessel (2 sheets + barrel)
+  converts to a tank.
+
+- **Transformer oil duplicate** (2026-11-04, dev #215): source card `9FCAF769A0A2ODuhbgxU`
+  (`transformer_oil`, revision `2026-11-04T20:35:20.733425Z`) now disables only
+  `tfc_plans:transformer_oil` with a `neoforge:false` condition. Its malformed fluid ingredient duplicated
+  `electroenergetics:mixing/transformer_oil`: the mod JAR uses 250 mB `#c:plantoil` + 250 mB water →
+  125 mB transformer oil, heated; the tag includes IE plant oil. The user sees the standard mixing recipe
+  during client acceptance; production itself and this new draft have not been checked in game.
+  Checked: exact live ZIP, mod JAR recipe, expanded fluid tag, overlapping inputs, MCP dry-run and readback
+  (duplicate disabled; standard recipe remains). The writer's “recipe absent” warning reflects stale static
+  pack metadata; the live inventory confirms the old ZIP is pinned in snapshot `20261101-190800-fdd3`.
+  Source editing does not replace that ZIP. Host: `tfc datapacks unconfirm 9FCAF769A0A2ODuhbgxU`,
+  then `tfc datapacks pull 9FCAF769A0A2ODuhbgxU` into the selected test world, restart and check that
+  the parse error is gone and standard heated mixing produces oil; only then confirm the new version.
+
+- **Бензин из ароматических фракций Destroy** (2026-11-04, dev #223): карточка `7IHNTyYMc046lNeC0anS`
+  («Destroy — нефтехимия и полимеры», revision `2026-11-04T21:12:27.294657Z`) содержит рецепт
+  `tfc_plans:create/gasoline_from_destroy_aromatics`: отдельно 50 мБ толуольной смеси с толуолом ≥ 9 M и
+  50 мБ ксилольной смеси с этилбензолом ≥ 1.9 M → 100 мБ бензина CDG в Create-мешалке без нагрева.
+  JSON, чтение рецепта, отсутствие конфликтов и поддержка ингредиента `destroy:mixture_with_molecule` проверены;
+  полный производственный цикл в игре не проверялся. Предупреждение редактора об отсутствующих ID ожидаемо:
+  основной snapshot ещё без Destroy, а молекулы — не предметы. Хост: включить «В мир», выполнить
+  `tfc datapacks pull 7IHNTyYMc046lNeC0anS` в выбранный тестовый мир с Destroy + CDG, перезапустить,
+  проверить оба входа и выход 100 мБ, отказ неподходящих смесей и затем `confirm`.
+
 - **Destroy slice as one update** (2026-11-03, dev #203, acceptance #199): `u20261103-164054-6977` adds Destroy,
   Petrolpark, Destroy Bridge, Destroy Extras 0.3.0 and five datapacks (confirmed by approve); updates EE Extras 2.7.0, JEI 19.55.0.431,
   LDLib 2.2.45, Create Aeronautics 1.3.2. Replaces `u20261103-104332-a97a` (Destroy Extras 0.2.0: Cl₂ port blocked, Vat refused the gases, EMI hid Destroy recipes); the host still has to reject that one. Host: subscribe a separate profile
@@ -204,3 +241,9 @@ KubeJS folders. Test unconfirmed/changed drafts in a selected world. Preview `tf
 --dry-run`; after verifying the selected versions, confirm one/all and restart. Check both an existing and a new
 world, recipe overrides and KubeJS priority. Changed world copies remain for manual review. Local `undo` does not
 revert server confirmation; `tfc admin rollback` reverts the whole snapshot. Details: [datapacks-pack.md](../plans/datapacks-pack.md).
+
+## EE Extras 2.10.1 — внешний вид электроники (dev #216)
+
+Host: install `ee_extras@2.10.1` on the server and clients; inspect the 28 item textures and five block models in the client. Dedicated-server behavior, resources and offline renders were checked. No recipe or gameplay changes.
+
+- Dev #221: install EE Extras 2.10.2 on the server and all clients; check steel PS and stranded copper M wire appearance, including existing tensioned lines.

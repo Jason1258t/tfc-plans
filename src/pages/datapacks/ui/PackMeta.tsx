@@ -1,8 +1,14 @@
 import { useState } from 'react';
 import { sanitizeNamespace } from '@/lib/datapack';
-import type { Datapack, DatapackDeployment } from '@/entities/datapack';
-import { InstallToggle } from './KubejsScripts';
-import { Input, Label } from '@/shared/ui';
+import {
+  datapackInstallMode,
+  datapackInstallPatch,
+  type Datapack,
+  type DatapackDeployment,
+  type DatapackInstallMode,
+} from '@/entities/datapack';
+import { cx } from '@/shared/lib';
+import { Input, Label, Segmented, type SegmentedOption } from '@/shared/ui';
 import styles from '../DatapacksPage/DatapacksPage.module.css';
 
 interface Props {
@@ -12,11 +18,18 @@ interface Props {
   onUpdate: (patch: Partial<Datapack>) => void;
 }
 
-/** Паспорт датапака: название, namespace, описание и отметка «Ставить в мир» */
+const INSTALL_OPTIONS: SegmentedOption<DatapackInstallMode>[] = [
+  { value: 'none', label: 'Не ставить', title: 'Черновик — обычный tfc pull его не ставит' },
+  { value: 'world', label: 'В мир', title: 'tfc pull положит ZIP в world/datapacks/ выбранного мира' },
+  { value: 'pack', label: 'В сборку', title: 'tfc pull положит ZIP в kubejs/data/ для всех миров сборки' },
+];
+
+/** Паспорт датапака: название, namespace, описание и выбор места установки («Не ставить / В мир / В сборку») */
 export function PackMeta({ pack, deployment, onUpdate }: Props) {
   const [name, setName] = useState(pack.name);
   const [namespace, setNamespace] = useState(pack.namespace);
   const [description, setDescription] = useState(pack.description);
+  const mode = datapackInstallMode(pack);
 
   return (
     <section className={styles.dpMeta}>
@@ -63,22 +76,44 @@ export function PackMeta({ pack, deployment, onUpdate }: Props) {
           <strong>В сборке</strong> · по опубликованному снимку. Подтвердил {deployment.confirmedBy}, версия{' '}
           <code>{deployment.contentHash.slice(0, 12)}</code>.
           <div>
-            Путь: <code>{deployment.path}</code>. Отметка ниже не снимает подтверждение.
+            Путь: <code>{deployment.path}</code>. Переключатель ниже не снимает подтверждение в снимке.
           </div>
           {pack.updatedAt !== deployment.sourceUpdatedAt && (
-            <div>После подтверждения карточка менялась. В сборке остаётся проверенная версия.</div>
+            <div>После подтверждения карточка менялась. В снимке остаётся проверенная версия.</div>
           )}
           <div>
             Для проверки новой версии хост сначала выполняет <code>tfc datapacks unconfirm {pack.id}</code>.
           </div>
         </div>
       )}
-      <InstallToggle
-        checked={!!pack.install}
-        label="Предлагать установку в мир"
-        where="в мир, если он ещё не включён в сборку"
-        onChange={(install) => onUpdate({ install })}
-      />
+      <div className={cx(styles.dpInstall, styles.dpInstallMode, mode !== 'none' && styles.on)}>
+        <div className="grow">
+          <b>Куда ставить датапак</b>
+          <div className="faint small">
+            {mode === 'pack' ? (
+              <>
+                Программа <code>tfc pull</code> поставит его в <code>kubejs/data/</code> (для всех миров сборки, мир
+                выбирать не нужно)
+              </>
+            ) : mode === 'world' ? (
+              <>
+                Программа <code>tfc pull</code> поставит его в <code>world/datapacks/</code> выбранного мира
+              </>
+            ) : (
+              <>
+                Черновик — обычный <code>tfc pull</code> его не ставит (по имени:{' '}
+                <code>tfc datapacks pull {pack.id}</code>)
+              </>
+            )}
+          </div>
+        </div>
+        <Segmented
+          options={INSTALL_OPTIONS}
+          value={mode}
+          onChange={(next) => onUpdate(datapackInstallPatch(next))}
+          label="Куда ставить датапак"
+        />
+      </div>
     </section>
   );
 }

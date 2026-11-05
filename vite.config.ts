@@ -7,7 +7,10 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     // '@/…' = src/…; тот же алиас в tsconfig.app.json (paths)
-    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@tfc/core': fileURLToPath(new URL('./packages/core/src', import.meta.url)),
+    },
   },
   css: {
     // В .module.css классы в kebab-case, в коде — styles.taskRow (скил css-modules)

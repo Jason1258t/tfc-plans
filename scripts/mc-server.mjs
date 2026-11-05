@@ -33,6 +33,9 @@ function rconPacket(id, type, body) {
   return out;
 }
 
+/** Сколько ждать ответа: первая команда в новом мире TFC идёт, пока сервер догоняет генерацию спавна */
+const RCON_IDLE_MS = 180000;
+
 /** RCON-клиент: авторизация, команды по очереди («sleep N» — пауза), ответы текстом */
 export function runRcon(port, password, commands) {
   return new Promise((resolve, reject) => {
@@ -50,7 +53,11 @@ export function runRcon(port, password, commands) {
       }
       const c = commands[idx++];
       if (/^sleep\s/.test(c)) {
-        sleep(Number(c.split(/\s+/)[1]) * 1000).then(next);
+        sock.setTimeout(0); // пауза не считается зависшим сервером
+        sleep(Number(c.split(/\s+/)[1]) * 1000).then(() => {
+          sock.setTimeout(RCON_IDLE_MS);
+          next();
+        });
         return;
       }
       waiting = c;
@@ -76,7 +83,8 @@ export function runRcon(port, password, commands) {
       }
     });
     sock.on('error', (e) => reject(e));
-    sock.setTimeout(10000, () => {
+    sock.setTimeout(RCON_IDLE_MS);
+    sock.on('timeout', () => {
       sock.destroy();
       if (authed) resolve(replies.join('\n'));
       else reject(new Error('RCON: сервер не ответил на авторизацию'));

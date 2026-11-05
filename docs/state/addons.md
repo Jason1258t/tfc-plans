@@ -33,6 +33,14 @@ addon`, `formerIds` for ee_rectifier → ee_extras, rollback marked); `/updates`
   all versions (401 without a key), `tfc admin addon upload` — same jar «уже записана», mismatched 2.2.0 jar refused
   (409), `tfc pull addons ee_extras@2.3.1` from the live server installed the jar with the recorded hash.
 
+## Debug Tools (`tools/debug-tools-mod`)
+
+2026-11-04 (dev #214, #199): **1.0.0**, manual install, no blocks. TFC 4.2.9 has no vein locate command: only
+`/tfc propick scan` (radius 12) and `/tfc count`; vanilla `/locate` does not see features. Vein centres depend only on the
+world seed and chunk (`VeinFeature.getVeinsAtChunk`, public), so `vein find` computes them without generating chunks;
+`vein check` and `ore` generate chunks one per tick and log results as `[tfcdebug]`, because RCON misses deferred output.
+Checked on the full pack stand with `--level-type tfc:overworld`, not in the client chat.
+
 ## Destroy Bridge + Destroy Extras (`tools/destroy-bridge-mod`, `tools/destroy-extras-mod`)
 
 2026-11-05 (dev #211): **Destroy Extras 0.6.0** — Create wrench rotation for the electrolyzer and etching bath, with relative ports and rotating EE contacts. The electrolyzer shell needs rebuilding after rotation. The bath rear port takes pure HCl. Stand checks covered all four directions, pipe reconnection and migration of a 0.3.0 world with a running batch. Full-pack client and live fluid flows after rotation await host acceptance.
@@ -156,8 +164,40 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 - M11 dedicated-server checks pass for complete L2/L3 cycles, invalid/missing inputs, blocked outputs, voltage sag,
   break/replacement and two-stage restart. L1/M4/M10 regressions, old-world migration, both release builds and resource
   checks pass. No manual Survival playthrough or live pack-wide datapack confirmation was performed.
+- M13 (#22 checklist item 56) releases **Destroy Extras 0.5.0** and **Destroy Bridge 0.2.0**. The configurable EE rating
+  preserves the old 300 V / 8 A default and adds recipe-driven 240/600 V modes. The metallurgical processor has two item
+  inputs, a reusable catalyst, two item and two fluid outputs; all inputs and output space are checked before consumption,
+  and contents/progress survive restart. Its 23 datapack recipes cover roasting/leaching/electrowinning Cu/Ni/Zn (20 ore
+  powders → 100 mB metal), cementation, nickel sulfide, Bayer/Hall–Héroult with reusable cryolite, tailings, FeCl3
+  regeneration and electronic scrap. Draft datapack `AOCIqlJX84i1BfiWPPsh` has 20 entries and remains `install=false`;
+  it disables all ten direct bauxite routes through TFC, TFC-IE, ore washing and pellet arc-furnace recipes.
+- M13 dedicated-server checks: environment/ingredient matching 30/30, leaching 3/3, electrowinning 3/3, Bayer 2/2,
+  Hall–Héroult 4/4, blocked output 2/2, voltage sag 2/2 and restart 2/2. The M2 regression after the Bridge change passes
+  13/13 at 299.827 V / 7.995 A. No manual Survival playthrough or live pack-wide datapack confirmation was performed.
 
 ## EE Extras (`tools/ee-extras-mod`)
+
+2026-11-04 (dev #221): **2.10.2** — steel PS wire sag divided by three (0.4 → 0.4/3);
+stranded copper M sag reduced by 40% (1 → 0.6). ACSR and other wires unchanged.
+EE 1.1.2 WireData.getSag confirms linear scaling for existing wires, including tensioned ones. Temporary dev-server assertions passed 24/24 (8/60/128-block spans, automatic/normal/tensioned/long wire lengths). Existing lines test: PS sag 0.40 blocks loose and 0.08 clamped on a ~60-block span; voltages matched calculations. The reduced dependency fixture logged unrelated missing IE/TFC/CC recipes; A restart with IE/TFC/CC preserved the lines, tension and measured voltages (dependency client-class warnings remained, server ran successfully). No client visual check.
+
+2026-11-05 (dev #224): final Survival integration enabled the existing M10/M11/M12 datapacks for installation through
+`tfc pull`: `Nh1ATmqCY92Hao48hOAQ` (20 entries), `cbH7wTaHOr5vQMs4Usgb` (9) and `tcegd3kspq62oHuM3YmF` (69).
+Together with the already enabled M6 pack they cover all 54 electronics materials/components: 17 M10 recipes, seven M11
+recipes and 30 M12 recipes; `pcb_design` is produced by the design table rather than a crafting recipe. Active-recipe
+queries pass for a resistor, L2/L3 boards, solar panel, CC computer and CCBR integrated circuit. The earlier dedicated
+server checks remain valid because recipe JSON and addon code did not change. No new addon version was released; live
+pack-wide confirmation and a manual Survival playthrough remain pending.
+
+2026-11-04 (dev #216): **2.10.1** — visual refresh of 33 entries from the L1 blank through the TFC thermometer:
+28 individual RGBA 64×64 item textures and materials/models for five blocks. L1/L2/L3 use yellow/green/blue edge
+stickers; coating, etched traces and plated vias distinguish PCB stages. Fiberglass is a wound bobbin, fabric an
+unrolled roll, capacitor upright. Generated originals, exact prompts, references and reproducible mechanical exports
+are in `art/electronics-v2/`; the old electronics generator now exports those sources instead of restoring old art.
+Checked at 32/64 px on light/dark backgrounds, block renders, resource validation, release build and node check.
+Dedicated server with TFC/IE/CC: PCB 15/15, thermometer 799 °C → 7.483 V, solar 47.75 V / 50.61 W by day and 0 V
+under a roof; photolithographer/metallizer placement and block entities. Client appearance still needs host review.
+Gameplay, ids, recipes and saved PCB data are unchanged.
 
 Before 2.0 — EE Rectifiers, `ee_rectifier`; old blocks migrate to new ids via aliases.
 
@@ -197,6 +237,7 @@ Before 2.0 — EE Rectifiers, `ee_rectifier`; old blocks migrate to new ids via 
   (`rectest lanterns|lanternpower|lanternreport|lanterncut|lanternie`, `KEEP=1`): real click path, 230 V lit
   52.9 W, 30 V dark, 60 V AC lit, cut — IE lantern dropped and the tail dark, IE-wired refused, restart kept. Not in
   game: looks, light, flicker on a real generator.
+- **2.10.0** (2026-11-04; dev #22, item 55 / M12): thirty CC/CCBR components built on the L1/L2/L3 PCB chain, a magnetic disk medium and industrial recipes for all stock CC devices and both CCBR circuits. Device and circuit ids, Lua/API, TFC turtle tools, components, disk contents and saved world data remain compatible; upgrades copy data components. A targeted upgrade-manager compatibility fix restores CC peripheral attachment under TFC stack-size changes without altering explicit turtle-tool checks. Draft datapacks: M10 `Nh1ATmqCY92Hao48hOAQ`, M11 `cbH7wTaHOr5vQMs4Usgb`, M12 `tcegd3kspq62oHuM3YmF` (69 entries, `install=false`). Dedicated-server audit passes 68/68 recipes: 265 checks in a new world and 275 after restart, including computers, disks, peripherals, turtle inventory/tools/fuel and migration. Full production-pack boot passes with 226 mods, the new jar and `file/cc-cbr`; conflict audit is clean. Manual Survival playthrough and live datapack confirmation remain pending.
 - **2.9.0** (2026-11-03; dev #22, item 15 / M11): industrial L2/L3 PCB production with a photolithographer and via
   metallizer plus the Destroy Extras 0.4.0 bath. Photolithography consumes one photoresist and reuses a valid design;
   metallization consumes copper foil. L2 uses 240 V / 4 A and 300 ticks per machine, L3 uses 600 V / 8 A and 450 ticks;
