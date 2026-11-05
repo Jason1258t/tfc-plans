@@ -7,6 +7,9 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **M12 replacement** (2026-11-05, dev #261): update `u20261105-175613-fa0b` swaps pinned M12 for its card version and removes
+  the 32 overlay files in one approval. All 32 match the card as JSON; only the `pack.mcmeta` description also changes.
+  Host: `tfc admin updates approve u20261105-175613-fa0b`; rollback — `tfc admin rollback`. Remove this item after approval.
 - **Create Deco bricks** (2026-11-05, dev #222): world-test draft `GHltHxk6T0WJ2gbyAOGi` replaces scoria with
   brown dye in the umber brick recipe and adds hammer recipes for all eight cracked variants. The static conflict
   check found only the intended override. Host: pull into a test world, craft four umber bricks and check that

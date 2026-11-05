@@ -54,6 +54,7 @@ When finishing work: update the topic file, and this index only if a line below 
   pull both fixes, restart, check cement and both ion thrusters in game before approving/confirming.
 - Host: pack update `u20261022-150945-83a0` (Chinese KubeJS messages → ru/en): `tfc admin updates pull`, check in game,
   `tfc admin updates approve`.
+- Host: approve M12 replacement `u20261105-175613-fa0b`, which removes its 32 overlay files (dev #261).
 - Host: test **EE Extras 2.14.0** with the proposed pack update (dev #248, #249, #259) before approval. Also check the cable inlet on an existing CC computer and both
   pocket computer tiers at the charger (dev #247) before publishing the snapshot.
 - Host: install **EE Extras 2.10.2** (wire sag reduction, dev #221; PCB/electronics visual refresh, dev #216), **Small Diesel 1.0.0**, **IE Extras 1.1.0** (basin heating, dev #113) and **Create Aeronautics Extra 1.0.1** + `tfc publish`; warn players
