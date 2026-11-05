@@ -35,6 +35,8 @@ addon`, `formerIds` for ee_rectifier → ee_extras, rollback marked); `/updates`
 
 ## Destroy Bridge + Destroy Extras (`tools/destroy-bridge-mod`, `tools/destroy-extras-mod`)
 
+2026-11-05 (dev #211): **Destroy Extras 0.6.0** — Create wrench rotation for the electrolyzer and etching bath, with relative ports and rotating EE contacts. The electrolyzer shell needs rebuilding after rotation. The bath rear port takes pure HCl. Stand checks covered all four directions, pipe reconnection and migration of a 0.3.0 world with a running batch. Full-pack client and live fluid flows after rotation await host acceptance.
+
 2026-11-03 (dev #209, #208): **Destroy Extras 0.3.0** — Cl₂ also from the bottom of the controller (the south port is behind the 3×3×2 shell), H₂/Cl₂ as `destroy:mixture` (the Vat refuses `destroy:gas`; old stacks convert on load), EMI shows all Destroy categories via two mixins. Earlier checks put mixtures into the Vat by code and missed this; `M10Test` runs the route through real ports up to an L1 board, client stand uses JEI 19.55 + EMI (centrifuge 3 recipes). Full-pack client, flows through Create pumps and in-game not checked.
 
 Dev #22, plans 37–38. Destroy Bridge remains the 0.1.0 development dependency; **Destroy Extras 0.2.0 and EE Extras
