@@ -321,7 +321,14 @@ island`, now with EE frequency meters): microTicks 8, 64 rpm — 3-phase off bel
   louvres or fan, heatsink, bushings). Models built by `art/machines.py` on `art/kit.py` (per-face materials, auto
   atlas, roll transform; same kit in small-diesel-mod). Terminals 720/720, resources_check clean; not checked in game.
 
-## Small Diesel (`tools/small-diesel-mod`, 2026-10-22)
+## Small Diesel (`tools/small-diesel-mod`, 2026-11-05)
+
+- **1.0.3** (dev #243): a partly filled IE jerrycan tops up from a full tank, limited by free space in the can.
+  Dev server with IE 12.4.2-194: both blocks accepted 600 mB from a partly filled can, a full can transferred
+  nothing with a full tank, a can with 9,500 mB withdrew 500 mB, and an empty can withdrew the remaining 500 mB.
+- **1.0.2** (dev #243): a filled IE jerrycan refuels either machine on right-click. An empty can withdraws fuel.
+  Dev server with IE 12.4.2-194: 600 mB transferred into a tank with 400 mB, no transfer with the tank full,
+  and 1,000 mB recovered into an empty can. IE remains optional.
 
 Addon to Create Diesel Generators (a separate mod at the user's request; same task as EE Extras 2.3). Fuels and their
 numbers come from the CDG registry `createdieselgenerators:fuel_type` (`normal` engine: 1 mB = strength / burn_rate

@@ -201,29 +201,25 @@ export function uninstall() {
   const dir = installDir();
   const dest = installedPath();
   const files = WIN ? (winPath('remove', dir) === 'changed' ? ['PATH пользователя'] : []) : removeShellPath();
-  let removed = false;
-  if (fs.existsSync(dest)) {
-    if (WIN && isInstalled()) {
-      // Запущенный exe не удалить — уберёт отдельный процесс, когда этот завершится
-      // Строка для cmd — как есть (windowsVerbatimArguments): экранирование Node \" cmd не понимает
-      const del = `ping -n 3 127.0.0.1 >nul & del /f /q "${dest}" "${dest}.old" & rmdir "${dir}"`;
-      spawn('cmd.exe', ['/d', '/s', '/c', `"${del}"`], {
-        detached: true,
-        stdio: 'ignore',
-        windowsHide: true,
-        windowsVerbatimArguments: true,
-      }).unref();
-    } else {
-      fs.rmSync(dest, { force: true });
-      fs.rmSync(`${dest}.old`, { force: true });
-      if (WIN)
-        try {
-          fs.rmdirSync(dir);
-        } catch {
-          // в папке что-то ещё — оставляем
-        }
+  const removed = fs.existsSync(dest);
+  if (WIN && isInstalled() && removed) {
+    // Запущенный exe не удалить — уберёт отдельный процесс, когда этот завершится.
+    const del = `ping -n 3 127.0.0.1 >nul & del /f /q "${dest}" "${dest}.old" "${dest}.new" & rmdir "${dir}"`;
+    spawn('cmd.exe', ['/d', '/s', '/c', `"${del}"`], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+      windowsVerbatimArguments: true,
+    }).unref();
+  } else {
+    for (const file of [dest, `${dest}.old`, `${dest}.new`]) fs.rmSync(file, { force: true });
+    if (WIN || process.env.TFC_INSTALL_DIR) {
+      try {
+        fs.rmdirSync(dir);
+      } catch (error) {
+        if (!['ENOENT', 'ENOTEMPTY', 'EEXIST'].includes(error.code)) throw error;
+      }
     }
-    removed = true;
   }
   return { path: dest, removed, files };
 }

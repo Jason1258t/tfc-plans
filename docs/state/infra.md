@@ -180,6 +180,9 @@ addons`; with names — one named site item; `tfc undo` — undo the whole pull 
   700 KB chunks → complete:true, cleanup on failure). Checked: dry-run scenarios, interactive flow via `expect`, real
   uploads through a local pack server to prod Firestore (1 file, 2-file zip, 3-chunk 1.6 MB zip), read back by MCP
   byte-identical, deleted. VPS server updated by the host 2026-10-25; a real upload through prod read back by MCP and deleted. **Not checked:** Windows paths/consoles, a real game folder.
+- Profile maintenance (2026-11-05, dev #219/#237): `tfc rename` changes the CLI profile key and optionally renames a
+  managed launcher version in place. `tfc delete` uninstalls the program; `--versions` also removes separate managed
+  version folders after confirmation, optionally limited by `--profile`.
 - Launcher profile isolation (2026-11-05, dev #242): NeoForge updates use the selected tfc profile's existing game
   folder and version, including legacy profiles inferred from their paths. New copies get separate version folders,
   official launcher profile keys and numeric TLauncher IDs. A matching legacy official launcher key is reused.

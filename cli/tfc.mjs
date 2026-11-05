@@ -56,6 +56,7 @@ import {
   withSpinner,
   yellow,
 } from './lib/ui.mjs';
+import { deleteVersions, deletableVersions, renameVersion } from './lib/profile-versions.mjs';
 import { install, installedPath, isInstalled, uninstall } from './lib/install.mjs';
 import {
   DEFAULT_NAME,
@@ -66,7 +67,7 @@ import {
   isNeoforgeInstalled,
   launcherRunning,
   neoforgeVersion,
-  versionId,
+  validVersionName,
 } from './lib/vanilla.mjs';
 import { applyStagingDrops, stagingClashes, stagingOverlay, stagingState, stagingWinsById } from './lib/staging.mjs';
 import { markApproved, printUpdate, propose, pullUpdates } from './lib/updates.mjs';
@@ -86,6 +87,11 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
   tfc login <ключ>            ключ от хоста сборки (--server <адрес>, если сервер другой)
   tfc whoami                  имя и права текущего ключа на сервере, путь к настройкам (сам ключ не выводится)
   tfc profiles                профили; tfc use <профиль> — сделать текущим
+  tfc rename [новое имя]      переименовать профиль; --profile <старое имя> — выбрать другой
+             --name <версия>  переименовать папку и версию сборки в лаунчере
+  tfc delete                  убрать программу и её запись из PATH
+             --versions      также удалить папки версий tfc, включая миры в них
+             --profile <имя>  с --versions удалить только указанную версию
 
 Игрокам:
   tfc status [что]            что изменится — ничего не меняет
@@ -206,6 +212,7 @@ async function offerInstall() {
 
 const opts = {
   profile: { type: 'string' },
+  versions: { type: 'boolean' },
   server: { type: 'string' },
   instance: { type: 'string' },
   world: { type: 'string' },
@@ -362,8 +369,10 @@ async function initLauncher(v, cfg, { fresh = false } = {}) {
   if (oldFolder && v.name && oldFolder !== v.name)
     throw new Error(`профиль «${selected}» уже использует версию ${oldFolder}`);
   const base = oldFolder ?? v.name ?? DEFAULT_NAME;
-  if (!/^[\w][\w.-]{0,60}$/.test(base) || base === versionId(nf) || base === current?.mc)
-    throw new Error(`имя папки «${base}» не подходит — латиница, цифры, «-», «_», и не имя версии`);
+  if (!validVersionName(base) || (!oldFolder && base.length > 61) || base === current?.mc)
+    throw new Error(
+      `имя папки «${base}» не подходит — выберите допустимое имя папки, отличное от версии Minecraft и NeoForge`,
+    );
   let folder = base;
   if (!oldFolder) {
     const occupied = new Set(Object.values(cfg.profiles).map((p) => path.resolve(p.instance)));
@@ -484,6 +493,55 @@ function cmdProfiles() {
   if (!names.length) return console.log('Профилей нет — tfc init');
   for (const n of names)
     console.log(`${n === cfg.profile ? green('●') : ' '} ${profileTitle({ name: n, ...cfg.profiles[n] })}`);
+}
+
+function cmdRename(v, args) {
+  const [name] = args;
+  if (args.length > 1 || (!name && !v.name))
+    throw new Error('tfc rename [новое имя профиля] [--profile <текущий профиль>] [--name <новая версия>]');
+  const cfg = loadConfig();
+  const profile = currentProfile(cfg, v.profile);
+  const key = name ?? profile.name;
+  if (!key.trim() || ['__proto__', 'constructor', 'prototype'].includes(key))
+    throw new Error('недопустимое имя профиля');
+  if (key !== profile.name && Object.hasOwn(cfg.profiles, key)) throw new Error(`профиль «${key}» уже существует`);
+
+  const save = ({ name: old, ...next }) => {
+    cfg.profiles = Object.fromEntries(Object.entries(cfg.profiles).map(([n, p]) => (n === old ? [key, next] : [n, p])));
+    if (cfg.profile === old) cfg.profile = key;
+    saveConfig(cfg);
+  };
+  if (v.name) {
+    const others = Object.entries(cfg.profiles)
+      .filter(([n]) => n !== profile.name)
+      .map(([, p]) => p);
+    renameVersion(profile, v.name, others, save);
+  } else save(profile);
+  console.log(`Профиль «${key}»${v.name ? `, версия ${v.name}` : ''}.`);
+}
+
+async function cmdDelete(v, args) {
+  if (args.length || (v.profile && !v.versions)) throw new Error('tfc delete [--versions [--profile <имя>]] [--yes]');
+  if (!v.versions) {
+    if (v['dry-run']) return console.log(`Будет удалён tfc: ${installedPath()}`);
+    if (!v.yes && !interactive()) throw new Error('подтвердите удаление: tfc delete --yes');
+    return cmdUninstall(v);
+  }
+  const cfg = loadConfig();
+  if (v.profile) currentProfile(cfg, v.profile);
+  const targets = deletableVersions(cfg.profiles, v.profile);
+  for (const { name, dir } of targets) console.log(`  «${name}» — ${dir}`);
+  if (!targets.length) console.log('Отдельных версий, установленных через tfc, нет.');
+  if (v['dry-run']) return console.log('Предварительный просмотр удаления завершён.');
+  if (!v.yes && !interactive()) throw new Error('подтвердите удаление флагом --yes');
+  if (!v.yes && !(await confirm('Удалить tfc и перечисленные папки целиком, включая миры в них?', false))) return;
+  deleteVersions(targets, () => {
+    for (const { name } of targets) delete cfg.profiles[name];
+    if (!Object.hasOwn(cfg.profiles, cfg.profile)) cfg.profile = Object.keys(cfg.profiles)[0] ?? null;
+    saveConfig(cfg);
+  });
+  console.log(`Удалено версий: ${targets.length}.`);
+  if (IS_BINARY || CHANNEL === 'npm') return cmdUninstall({ ...v, yes: true });
 }
 
 function cmdUse(v, [name]) {
@@ -1562,6 +1620,8 @@ const COMMANDS = {
   pull: cmdPull,
   install: cmdInstall,
   uninstall: cmdUninstall,
+  delete: cmdDelete,
+  rename: cmdRename,
   undo: cmdUndo,
   sync: cmdSync,
   publish: cmdPublish,
