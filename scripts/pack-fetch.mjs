@@ -6,7 +6,7 @@
  *   npm run pack:fetch                 — текущий снимок → кеш вне репозитория (~/.cache/tfc-plans/pack или
  *                                        TFC_PACK_CACHE, папка версии как есть: jar в mods/) — для MCP, npm run mods, аддонов
  *   npm run pack:fetch -- --kubejs     — ещё и kubejs/ снимка → слой KubeJS pack (instance/kubejs/pack/)
- *   npm run pack:fetch -- --data       — ещё и собранные сервером данные модов → public/ (без npm run mods)
+ *   npm run pack:fetch -- --data       — ещё и собранные сервером данные модов и KubeJS → public/ (без npm run mods)
  *   npm run pack:fetch -- --data-only  — только данные
  *
  * Адрес и ключ — TFC_PACK_URL и TFC_PACK_TOKEN (ключ игрока подходит) в окружении или в .env.local, иначе — из
@@ -15,7 +15,7 @@
  * Кеш — точная копия снимка: файлы, которых в снимке нет, удаляются. Jar, уже лежащие в старой папке mods/
  * репозитория (основной копии), не качаются, а копируются оттуда (жёсткой ссылкой, если можно).
  *
- * Из кода: fetchData({ outDir }) — данные модов (это зовёт ensure-mods.mjs перед npm run dev),
+ * Из кода: fetchData({ outDir }) — данные модов и KubeJS (это зовёт ensure-mods.mjs перед npm run dev),
  * fetchPack({ into, kubejs }).
  */
 import { createHash } from 'node:crypto';
@@ -24,7 +24,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadConfig } from '@tfc/cli/config';
 import { ROOT } from './firestore-rest.mjs';
-import { MODS_OUTPUTS } from './data-roots.mjs';
+import { DATA_ROOTS } from './data-roots.mjs';
 import { PACK_CACHE, mainCheckoutRoot } from './pack-cache.mjs';
 
 const log = (...a) => console.log('[pack:fetch]', ...a);
@@ -165,15 +165,15 @@ function prune(dir, roots, keep) {
 const mb = (n) => `${(n / 1024 / 1024).toFixed(1)} МБ`;
 
 /**
- * Данные модов, собранные сервером для текущего снимка → outDir (public/).
+ * Данные снимка, собранные сервером (моды и KubeJS) → outDir (public/).
  * Качаем во временную папку рядом и переносим на место только когда всё скачалось: таймаут или ошибка сети
  * (signal) оставляют прежние данные как есть, а не половину нового снимка.
  */
 export async function fetchData({ outDir = path.join(ROOT, 'public'), srv = packServer(), signal } = {}) {
   if (!srv) throw new Error('нет TFC_PACK_URL / TFC_PACK_TOKEN (окружение или .env.local) и входа в программу tfc');
   const idx = await api(srv, '/data', { signal });
-  // Только то, что собирает npm run mods (scripts/data-roots.mjs)
-  const files = idx.files.filter((f) => MODS_OUTPUTS.includes(f.path.split('/')[0]));
+  // Данные модов и разбор KubeJS (scripts/data-roots.mjs): в kubejs.json сервер кладёт ещё и уровни установки датапаков
+  const files = idx.files.filter((f) => DATA_ROOTS.includes(f.path.split('/')[0]));
   if (!files.some((f) => f.path === 'items.json')) throw new Error(`в данных снимка ${idx.snapshot} нет данных модов`);
   const stage = path.join(outDir, '.tfc-data-new');
   fs.rmSync(stage, { recursive: true, force: true });

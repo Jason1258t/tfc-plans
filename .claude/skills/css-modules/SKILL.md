@@ -133,8 +133,8 @@ page branch.
 - For temporary React fixtures, use a root HTML entry so Vite injects the React Refresh preamble; raw HTML served
   from `public/` does not receive it. Remove fixture files before commit. Prefer local data/fixtures for large
   screenshot matrices to conserve Firestore reads; do not create shared test records.
-- Dev server on 5176 (`npm run dev -- --port 5176 --strictPort`, Claude: `preview_start dev-alt`). **Stop it before
-  `ship`** — otherwise Vite recreates `node_modules/.vite` and `git worktree remove` fails with «Directory not empty».
+- Dev server on 5176 (`npm run dev -- --port 5176 --strictPort`, Claude: `preview_start name=wt-<short>`). **Stop it before
+  `ship`** — otherwise Vite recreates `node_modules/.vite` and the worktree removal fails with «Directory not empty».
 
 ### 2. Inventory — never delete what is used
 

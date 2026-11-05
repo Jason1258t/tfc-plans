@@ -18,7 +18,8 @@ Finish/deploy — skill `ship`; this skill only hands it off. Players' tasks and
   ([docs/agents.md](../../../docs/agents.md)). It refuses a task another agent is working on —
   ask the user, don't pass `takeover` on your own.
 - `tfc-plans-dev` `worktree_add name=<short>` (type `feat`/`refactor`/`fix`, default `feat`) → worktree
-  `.claude/worktrees/<short>`, branch `<type>/<short>`. Work only inside it.
+  `.claude/worktrees/<short>`, branch `<type>/<short>`. Work only inside it. Its answer names the preview entry
+  (Claude app: `preview_start name=wt-<short>`; `dev-alt` shows `main`, not the worktree).
 
 ## 2. Work
 

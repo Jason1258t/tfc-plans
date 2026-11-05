@@ -15,7 +15,7 @@ Main folder: `MAIN=/Users/ivan/vscodeProjects/tfc-taskmanager` (always on `main`
 - Everything committed: `git status --short` is empty. Commit message `Раздел: что сделано` (Russian, one line).
 - **Dev server started from this worktree is stopped** (Claude: `preview_stop`; otherwise kill the `vite` process
   whose cwd is the worktree). A running Vite recreates `node_modules/.vite` while the worktree is being deleted, and
-  `git worktree remove` fails with «Directory not empty».
+  the worktree removal fails with «Directory not empty».
 - Checks relevant to the change passed: `npx tsc -b` (TS), `npm run lint` (oxlint, zero errors), `prettier --check`
   on changed files (`npx prettier --write <files>` to fix). The `ship` tool runs `oxlint` + `prettier --check` on the branch changed
   files and refuses on failure.
@@ -46,9 +46,11 @@ site holds a commit you don't have — then update `main` and rerun (skill `depl
 
 ```bash
 git -C $MAIN push
-git -C $MAIN worktree remove .claude/worktrees/<short>
-git -C $MAIN branch -d <branch>
 ```
+
+Then `tfc-plans-dev` `worktree_remove worktree=<short>`: it removes the worktree and the merged branch. Not plain
+`git worktree remove` — git refuses a worktree with the `tools/` submodule («working trees containing submodules cannot
+be moved or removed»), and the tool releases the submodule first (it refuses on uncommitted or unpushed `tools/` work).
 
 ## 5. Report (in Russian)
 

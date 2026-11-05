@@ -173,7 +173,8 @@ Recipe status: «работает», «изменён KubeJS», «удалён K
 ### KubeJS sources
 
 Marks in answers: `−` remove, `~` replaceInput/Output, `+` recipe, `#` tag, `@` own item — what the site parsed from the
-line. If files are newer than the parse, the tool warns: time for `npm run kubejs`.
+line. If files are newer than the parse, the tool warns: time for `npm run kubejs` (`npm run dev` replaces a local parse
+with the snapshot's unless `TFC_KEEP_MODS=1`).
 
 | Tool                                                         | Does                                                                            |
 | ------------------------------------------------------------ | ------------------------------------------------------------------------------- |

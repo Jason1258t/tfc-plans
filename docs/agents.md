@@ -9,12 +9,12 @@ site work log.
 
 ## Shared pieces
 
-| Piece         | Where                                                                    | Who reads it as is                                                                                                                 |
-| ------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Rules         | `AGENTS.md` (+ nested)                                                   | Codex, Cursor, OpenCode, Copilot, Zed, … natively; Claude Code via `@AGENTS.md` in `CLAUDE.md`; Gemini CLI after the setting below |
-| Skills        | `.claude/skills/<name>/SKILL.md`, symlink `.agents/skills` → same folder | Claude Code (`.claude/skills`), Codex (`.agents/skills`); others — open the file by hand, AGENTS.md lists them                     |
-| MCP server    | `scripts/mcp/server.mjs` (stdio, no deps, Node 24)                       | Claude Code via `.mcp.json`; others — own config, below                                                                            |
-| Preview ports | `.claude/launch.json` (local, gitignored)                                | Claude Code app only; others run `npm run dev -- --port 5176 --strictPort`                                                         |
+| Piece         | Where                                                                    | Who reads it as is                                                                                                                                                        |
+| ------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rules         | `AGENTS.md` (+ nested)                                                   | Codex, Cursor, OpenCode, Copilot, Zed, … natively; Claude Code via `@AGENTS.md` in `CLAUDE.md`; Gemini CLI after the setting below                                        |
+| Skills        | `.claude/skills/<name>/SKILL.md`, symlink `.agents/skills` → same folder | Claude Code (`.claude/skills`), Codex (`.agents/skills`); others — open the file by hand, AGENTS.md lists them                                                            |
+| MCP server    | `scripts/mcp/server.mjs` (stdio, no deps, Node 24)                       | Claude Code via `.mcp.json`; others — own config, below                                                                                                                   |
+| Preview ports | `.claude/launch.json` (local, gitignored)                                | Claude Code app only (the app reads the main checkout's file; worktree entries — `worktree_add`/`worktree_preview`); others run `npm run dev -- --port 5176 --strictPort` |
 
 `.agents/skills` is a git symlink: on Windows it needs `git config core.symlinks true` (Developer Mode), otherwise it
 checks out as a text file — then point the agent at `.claude/skills` directly.
@@ -166,7 +166,7 @@ Personal configs (absolute paths, keys) stay out of git; commit a shared one onl
 - One site task per session: take it with `doing` + your name; a task `doing` under another name is someone's work.
 - Shared agent files (`AGENTS.md`, `.claude/skills/`, `docs/mcp.md`, `docs/STATE.md`) — small, focused edits; merge
   conflicts there are resolved by keeping both sides' rules.
-- Dev servers: one port per session (5176, 5177, 5179); a taken port means another agent is running — pick the next.
+- Dev servers: one port per session (5176, 5177, 5179; Claude app worktree entries — from 5190); a taken port means another agent is running — pick the next.
 - Firestore reads are shared (50k/day free) — the "don't loop" rule matters more with several agents.
 
 ## Datapack authoring and delivery
