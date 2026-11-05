@@ -1,5 +1,8 @@
 # State: waiting for the host or an in-game check
 
+- Host (dev #272): install EE Extras 2.17.0 on the server and clients, check one working board and a charred-board
+  salvage in the pack profile, then publish the pack snapshot.
+
 - Host (dev #211): accept Destroy Extras 0.6.0 on a test-world copy. Rotate both machines, rebuild the electrolyzer shell, verify fluid flow through the rotated ports and the goggles tooltip.
 
 Part of [STATE.md](../STATE.md). The agent can't check anything in game. When an item is resolved, remove it here and

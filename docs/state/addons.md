@@ -181,6 +181,13 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-06 (dev #272): **EE Extras 2.17.0** — working L1–L3 boards with up to four EE terminals, component presets,
+and rated voltage, dissipation and current. Assembling consumes parts. Overvoltage and sustained overload char
+the board, which can then be salvaged at the design table. Dedicated-server coverage includes relay transfer,
+RC timing, forward and reverse diode, fuse, transistor, meters and Create display source, all three item tiers,
+and 16 boards at the 32-node / 64-part limit through a restart and on a shared bus. The old editor checks passed 15/15,
+CC compatibility passed 83/83 recipes, and the development client assembled a board through the editor.
+
 2026-11-06 (dev #205, plan doc:47): **EE Extras 2.16.0** — surface wire ported from Create: Power Grid 0.6.2
 (Apache-2.0, `META-INF/NOTICE`, package `ee.extras.wire`): one entity per piece, axis segments on a 1/16 grid,
 A* path along surfaces (`BlockTrace`), preview, branches, merge, cutters (`#electroenergetics:wire_cutters`), dye,
