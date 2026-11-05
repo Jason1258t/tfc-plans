@@ -173,6 +173,8 @@ its one-liner in STATE.md.
   installs (`tfc pull addons`, server and players) and `tfc publish`. In game: block looks and rotating half-shaft,
   goggles and tooltips, module insert/remove by hand, JEI/EMI recipes, the block on a flying Aeronautics ship with
   propellers. Details — [addons.md](addons.md).
+- **IE Extras 1.2.0** (dev #268): install on the server and clients; verify attached ear defenders render and muffle
+  sound while engineer's goggles still show Create information in the head armor slot.
 - **IE Extras 1.1.0** (2026-10-29, `ie-extras-1.1.0.jar`; 1.0.0 — analog heater, 1.1.0 — basin heating by IE external,
   EE and analog heaters, dev #113): in game — basin temperature line in goggles, heated/superheated basin recipes (steel,
   kaolinite) on the IE external heater and the EE heater. Host installs (`tfc pull addons`, server and

@@ -401,6 +401,9 @@ Blocks and features for Immersive Engineering (task «Аддон для блок
 candidate — a heater regulated by an analog lever). Depends on TFC 4.2.9 + IE 12.4.2 (both required), NeoForge 21.1.234+
 (TFC's own minimum; built on 21.1.251 from the Gradle cache).
 
+- **1.2.0** (dev #268): IE's crafting recipe attaches its ear defenders to Create engineer's goggles and returns them
+  unchanged on removal. The combined item goes in the head armor slot. Dev server: `ietest earmuffs` checks both directions
+  and rejects extra ingredients or a second attachment. Client sound and rendering still need a game check.
 - **1.0.0**: analog heater `ie_extras:analog_heater` — FE in from any face but the grille (1024 FE/t, 32 000 buffer, no
   output), target = redstone signal / 15 × `maxTemperature` (1600), draw = `fePerTickAtMax` (32) × signal / 15 per tick;
   own temperature follows `HeatCapability.adjustTempTowards` (1 °C/t) and is pushed each tick to the block in front by
