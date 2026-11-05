@@ -199,6 +199,8 @@ addons`; with names — one named site item; `tfc undo` — undo the whole pull 
   `detectVersions` reads those arguments; `installToLauncher` leaves an unfolded JSON of the same NeoForge alone and, when
   a `.tlauncher` folder exists and `versions/<parent>` is there, writes NeoForge + parent merged without `inheritsFrom`
   (order and arguments match TLauncher's file). Without them — the short form, as the official launcher expects.
+  Host's TLauncher on 2026-11-05: `tfc`'s own full JSON, all mods on first launch, block kept. Not run: an official launcher
+  with a `.tlauncher` folder alongside, a real NeoForge version change.
 - **`tfc init --launcher`** (2026-10-22, `cli/lib/vanilla.mjs`): official Minecraft Launcher — NeoForge from the
   snapshot `loader` via its installer (`--install-client <mcDir>`, maven sha256, cached; needs launcher_profiles.json —
   created temporarily if only the Store file exists), Java 21+ from `<mc>/runtime`, Store runtime, JAVA_HOME, PATH;
