@@ -67,6 +67,7 @@ import {
   isNeoforgeInstalled,
   launcherRunning,
   neoforgeVersion,
+  tlauncherModpackLost,
   validVersionName,
 } from './lib/vanilla.mjs';
 import { applyStagingDrops, stagingClashes, stagingOverlay, stagingState, stagingWinsById } from './lib/staging.mjs';
@@ -401,7 +402,7 @@ async function initLauncher(v, cfg, { fresh = false } = {}) {
   console.log(`  NeoForge ${nf}${isNeoforgeInstalled(mcDir, nf) ? dim(' — уже стоит') : ''}`);
   console.log(`  профиль «${name}», версия ${bold(folder)}, папка игры: ${gameDir}`);
   if (launcherRunning()) {
-    console.log(yellow('Minecraft Launcher открыт — закройте его: при выходе он перепишет профили своей копией.'));
+    console.log(yellow('Лаунчер открыт — закройте его полностью: он перепишет файлы версии и профили своими копиями.'));
     if (!interactive()) throw new Error('закройте Minecraft Launcher и повторите');
     await ask('Закройте лаунчер и нажмите Enter');
     if (launcherRunning()) throw new Error('лаунчер всё ещё открыт — закройте его и повторите');
@@ -427,6 +428,8 @@ async function initLauncher(v, cfg, { fresh = false } = {}) {
     console.log(`Профиль Minecraft Launcher «${r.title}» — на ${gameDir}`);
     console.log(dim(`Прежние профили лаунчера — копией: ${r.backups.map((b) => path.basename(b)).join(', ')}`));
   }
+  if (r.versionBackups.length)
+    console.log(dim(`Прежние файлы версии — копией: ${r.versionBackups.map((b) => path.basename(b)).join(', ')}`));
 
   cfg.profiles[name] = {
     world: null,
@@ -453,6 +456,7 @@ async function initLauncher(v, cfg, { fresh = false } = {}) {
     }
     console.log(hint);
   } else console.log(`Дальше: ${cyan('tfc pull')}. ${hint}`);
+  warnModpackLost({ name, ...cfg.profiles[name] });
 }
 
 const launchHint = (folder, gameDir, title) =>
@@ -758,6 +762,15 @@ function printSite(p, names) {
 }
 
 /** Шапка, план сборки и планы сайта; возвращает, сколько всего изменится */
+/** Предупреждение: TLauncher убрал отметку сборки, пока был открыт, и запустит игру не из папки версии */
+function warnModpackLost(profile) {
+  if (profile.side === 'server' || !tlauncherModpackLost(profile.instance)) return;
+  console.log(yellow('TLauncher не считает эту версию сборкой: игра запустится не из её папки и не увидит моды.'));
+  console.log(
+    `Закройте TLauncher полностью и выполните: ${cyan(`tfc init --launcher --profile ${JSON.stringify(profile.name)}`)}`,
+  );
+}
+
 /** Предупреждение: игра запускалась не из папки профиля (launchedElsewhere) */
 function warnLaunch(profile, wrong) {
   console.log(yellow(`Версия ${wrong.version} запускалась ${date(wrong.at)} не из папки сборки, а из ${wrong.root}.`));
@@ -802,6 +815,7 @@ function printAll(r, { verbose = false } = {}) {
   for (const u of r.staging?.updates ?? []) console.log(`${cyan('Staging')} ${bold(u.id)}: ${u.note}`);
   const wrong = launchedElsewhere(r.profile.instance);
   if (wrong) warnLaunch(r.profile, wrong);
+  warnModpackLost(r.profile);
   for (const n of r.notes) console.log(yellow(n));
   if (r.plan) {
     if (r.state.snapshot && r.state.snapshot !== r.current.id && !r.names.length)
