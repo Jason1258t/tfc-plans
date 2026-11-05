@@ -2,6 +2,11 @@
 
 Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quoted in Russian as they appear in the code.
 
+## Polymer names (2026-11-04, dev #218)
+
+- Live guides `chem-polymers`, `chem-start` and `addon-destroy-extras` use full Russian names for polyethylene, polypropylene, polyvinyl chloride and styrene-butadiene rubber. The polymer article includes an abbreviation glossary and familiar everyday examples; its title is «Нефть, пластики и синтетическая резина». Existing reaction verification limits are preserved.
+- Pack overlay `pack-patches/polymer-names` supplies four Russian item translations, including the polypropylene typo fix. Keys were checked in the exact Destroy 0.4.6-eligibbs candidate jar used by the pending chemistry update. The live guide was checked in the browser; game translation delivery requires host acceptance.
+
 ## Wiki navigation (2026-10-31, #179)
 
 - `/` is a visual directory of the site's main tools; player tasks moved to `/tasks`, with legacy root query links preserved. `/reference` is a card directory of «Мир и ресурсы», «Предметы и рецепты», «Еда и сельское хозяйство», «Электричество», «Мультиблоки» and «Все гайды». Inside a topic the existing sidebar/mobile section list remains, with «Все разделы» leading back to the cards; the old top-level reference tabs are gone.
