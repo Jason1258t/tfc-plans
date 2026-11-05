@@ -544,3 +544,7 @@ migrated from 1.0.0.
 or vertically and hold 7 buckets, quarter sections hold 3.5, and the 45° bevel section holds 7. The dev
 server checked all six slab orientations, a mixed tank holding 31.5 buckets, wrench separation and
 persistence after restart.
+
+1.3.0 (dev #253): a fluid tap attaches to any face of a Create or Better Fluids tank and fills held containers
+through the NeoForge fluid capability in survival. The dev server tested a bucket and an IE jerrycan on all
+six faces of both tank types, fluid accounting and detachment when the tank is broken.
