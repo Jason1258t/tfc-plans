@@ -10,9 +10,10 @@ game check — [pending.md](pending.md).
 
 ## In development
 
-- **Destroy Extras, dev #212**: the local metal-dusts branch carries 18 pure metal and alloy dusts on the 0.6.0 base,
-  with a pack overlay for five briquette sizes, crushing, arc furnace and TFC heating. This is a draft for a separate
-  pack update. The Destroy update already on acceptance (#199) keeps its own version.
+- **Destroy Extras 0.7.0, dev #212**: 18 pure metal and alloy dusts and a pack overlay for five briquette sizes,
+  crushing, arc furnace and TFC heating. The full dedicated stand registered all 543 audited recipes, with the old
+  crushing and 1:1 smelting recipes absent. Candidate `u20261105-181849-3fa9` includes both the jar and recipes and
+  awaits test-profile acceptance. The Destroy update already on acceptance (#199) keeps its own version.
 
 ## Versions (since 2026-10-23)
 

@@ -2,18 +2,17 @@
   "type": "createdieselgenerators:bulk_fermenting",
   "ingredients": [
     {
-      "type": "fluid_tag",
-      "fluidTag": "c:ethanol",
+      "type": "neoforge:tag",
+      "tag": "c:ethanol",
       "amount": 500
     },
     {
-      "item": "kubejs:dust_briquette/ingot/sulfur"
+      "tag": "c:dusts/sulfur"
     },
     {
       "item": "kubejs:dust_briquette/ingot/copper"
     }
   ],
-  "processingTime": 400,
   "results": [
     {
       "id": "immersiveengineering:herbicide",
@@ -25,5 +24,6 @@
       "type": "neoforge:mod_loaded",
       "modid": "immersiveengineering"
     }
-  ]
+  ],
+  "processing_time": 400
 }

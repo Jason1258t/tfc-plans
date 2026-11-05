@@ -290,7 +290,8 @@ ServerEvents.recipes((event) => {
       const ingredient = { item: item };
       const source = index < 2 ? row.dust : dustBriquette(row.metal, DUST_BRIQUETTES[index - 1].size);
       const count = index < 2 ? form.count : 2;
-      const inputs = Array(count).fill(source);
+      const inputs = [];
+      for (let i = 0; i < count; i++) inputs.push(source);
       event.shapeless(item, inputs).id(formId + '/pack');
       event.recipes.create.compacting(item, inputs).id(formId + '/compact');
       event.shapeless(Item.of(source, count), [item]).id(formId + '/unpack');
