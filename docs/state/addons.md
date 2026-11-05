@@ -507,3 +507,10 @@ Not checked in game: real mouse input, long construction, remote multiplayer and
 whole-layer vertical placement, separate textures and block entity type. The dev server verified that a single
 placement builds a 2×2 layer, the resulting 2×2×2 tank accepts 112 buckets through a non-controller part,
 an adjacent copper tank stays separate, and the water survives a restart.
+
+1.1.0 (dev #233.3): face-connected sections replace rectangular assembly. Layer placement follows the connected
+horizontal cross-section. A side wrench click cuts existing connections at one section while leaving free faces
+available for extensions. Placing against a detached group preserves its boundary with adjoining tanks. Fluids
+are persisted per section, and 1.0.0 tanks migrate when all parts are loaded. The dev server checked an L-shaped
+layer, a three-way split, an extension bordering the old tank, persistence after restart, and 112 buckets
+migrated from 1.0.0.
