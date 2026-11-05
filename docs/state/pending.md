@@ -135,6 +135,9 @@ its one-liner in STATE.md.
   survive; 2.0.2 — cable, EE connector terminal, highlight and label, wrench rotation; 2.1 — wires and spools, sag and
   rendering of spans > 128 blocks, clamp by click, spool tooltips, recipes; 2.2 — blocks, JEI, inverters with motors and
   several per grid (grid sync at microTicks > 1 fixed in 2.5.1). Details — [addons.md](addons.md).
+- **Better Fluids 1.3.0** (dev #253): install on the server and clients. In survival, check the fluid tap's model
+  and filling an IE jerrycan from a Create tank.
+
 - **Small Diesel 1.0.3** (dev #243): install on the server and clients. Check refueling both blocks by
   right-clicking with a partly filled IE jerrycan, then check withdrawal from a full tank and the client tooltip.
 
