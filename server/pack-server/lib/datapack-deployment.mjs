@@ -9,6 +9,20 @@ import {
 } from './datapacks.mjs';
 import { HttpError, SHA256_RE } from './util.mjs';
 
+/** Тег только добавляет значения: без replace и remove итог игры (TagLoader) не зависит от порядка пакетов. */
+function isAdditiveTag(file, bytes) {
+  if (!/^data\/[^/]+\/tags\/.+\.json$/.test(file)) return false;
+  try {
+    const tag = JSON.parse(bytes.toString('utf8'));
+    return Array.isArray(tag.values) && tag.replace !== true && !tag.remove?.length;
+  } catch {
+    return false;
+  }
+}
+
+/** Два пакета с одним файлом данных уживаются, если файл одинаковый или оба — добавляющие теги, которые игра сложит. */
+const canCoexist = (file, a, b) => a.equals(b) || (isAdditiveTag(file, a) && isAdditiveTag(file, b));
+
 /**
  * Подтвердить пакеты поверх набора файлов будущего снимка: проверки ревизии карточки, содержимого ZIP и пересечений
  * данных. Меняет files (Map путь → файл: кладёт ZIP в kubejs/data, убирает копии из мира) и deployments
@@ -26,7 +40,7 @@ export async function confirmDatapackItems(store, site, current, items, { files,
     for (const [file, bytes] of Object.entries(pack.files)) {
       if (!file.startsWith('data/')) continue;
       const old = resources.get(file);
-      if (old && !old.bytes.equals(bytes))
+      if (old && !canCoexist(file, old.bytes, bytes))
         throw new HttpError(
           409,
           `Пересекаются данные ${file}: ${old.label} и ${label}. Сначала устраните разные копии/уточните порядок пакетов`,
@@ -83,7 +97,7 @@ export async function confirmDatapackItems(store, site, current, items, { files,
       throw new HttpError(409, `«${pack.name}»: в сборке уже такое содержимое, заменять нечем`);
     for (const [file, bytes] of Object.entries(inspected.files))
       for (const old of resources.get(file)?.variants ?? [])
-        if (!old.bytes.equals(bytes))
+        if (!canCoexist(file, old.bytes, bytes))
           throw new HttpError(409, `Пересекаются данные ${file}: ${old.label} и ${pack.name}`);
     remember(inspected, pack.name);
     const target = packDatapackPath(pack.id);
