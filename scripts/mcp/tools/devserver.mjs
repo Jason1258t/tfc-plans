@@ -64,6 +64,38 @@ function copyLibs(dir, runMods) {
   return copied;
 }
 
+/** Вывод самого сервера: всё после начала задачи runServer; null — gradle до неё не дошёл */
+function serverOutput(text) {
+  const i = text.search(/^> Task :runServer/m);
+  return i < 0 ? null : text.slice(i);
+}
+
+/** Причина неудачной сборки из вывода gradle: упавшая задача, ошибки javac без повторов, блок What went wrong */
+function buildFailure(text, dir) {
+  const rows = text.split(/\r?\n/);
+  const tasks = rows.filter((l) => /^> Task \S+ FAILED/.test(l));
+  const errors = [
+    ...new Set(rows.filter((l) => /\.java:\d+: error: /.test(l)).map((l) => l.trim().replaceAll(dir + path.sep, ''))),
+  ];
+  const out = [...tasks];
+  if (errors.length) {
+    out.push('Ошибки компиляции (' + errors.length + '):', ...errors.slice(0, 15).map((l) => '  ' + l));
+    if (errors.length > 15) out.push('  … и ещё ' + (errors.length - 15));
+  } else {
+    const start = rows.findIndex((l) => /What went wrong/.test(l));
+    if (start >= 0) {
+      const end = rows.findIndex((l, i) => i > start && /^\* Try:/.test(l));
+      const block = rows.slice(start + 1, end < 0 ? undefined : end).filter((l) => l.trim());
+      out.push('Что сломалось:', ...block.slice(0, 20).map((l) => '  ' + l.trim()));
+    }
+  }
+  if (errors.some((l) => /error: package \S+ does not exist/.test(l)) && fs.existsSync(path.join(dir, 'libs.sh')))
+    out.push(
+      'Похоже, в libs/ не хватает jar: выполни ./libs.sh в папке аддона (кеш модов — npm run pack:fetch; необязательные наборы — см. переменные в начале скрипта).',
+    );
+  return out;
+}
+
 async function devServer(a) {
   const dir = resolveAddon(a.addon);
   const gradlew = path.join(dir, isWin ? 'gradlew.bat' : 'gradlew');
@@ -124,16 +156,21 @@ async function devServer(a) {
   const tail = () => (fs.existsSync(log) ? fs.readFileSync(log, 'utf8') : '');
   let booted = false;
   let crashed = false;
+  const exited = () => child.exitCode !== null || child.signalCode !== null;
   while (Date.now() - t0 < timeout * 1000) {
-    const text = tail();
-    if (/Done\s*\([^)]*\)!/.test(text)) {
+    // Выход читается до лога: всё, что процесс успел написать, уже попадёт в эту проверку
+    const over = exited();
+    const server = serverOutput(tail());
+    if (server !== null && /Done\s*\([^)]*\)!/.test(server)) {
       booted = true;
       break;
     }
-    if (/ERROR|Exception|Caused by|Failed to start/.test(text)) {
+    // Только явный сбой: ERROR и Exception бывают и у живого сервера (предупреждения миксинов о необязательных модах)
+    if (server !== null && /Failed to start the minecraft server|crash report has been saved/i.test(server)) {
       crashed = true;
       break;
     }
+    if (over) break;
     await sleep(1000);
   }
 
@@ -153,22 +190,41 @@ async function devServer(a) {
       /* уже не отвечает */
     }
   }
-  await sleep(3000);
-  if (child.exitCode === null) killTree(child.pid);
+  if (!exited()) {
+    await sleep(3000);
+    if (!exited()) killTree(child.pid);
+  }
 
-  const errLines = tail()
+  const seconds = Math.round((Date.now() - t0) / 1000);
+  const text = tail();
+  if (exited() && !booted && serverOutput(text) === null) {
+    return [
+      'Сервер разработки ' + path.basename(dir) + ' (' + dir + '):',
+      'сборка не удалась за ' +
+        seconds +
+        ' с (gradle: код ' +
+        (child.exitCode ?? child.signalCode) +
+        '), сервер не запускался',
+      ...buildFailure(text, dir),
+      'Полный лог: ' + log,
+    ].join('\n');
+  }
+
+  const errLines = (serverOutput(text) ?? text)
     .split(/\r?\n/)
-    .filter((l) => /ERROR|Exception|Caused by/.test(l))
+    .filter((l) => /ERROR|Exception|Caused by/.test(l) && !/\/(WARN|INFO|DEBUG)\]/.test(l))
     .slice(0, 30);
   const mods = copied.length ? copied.join(', ') : '—';
 
   const out = [
     'Сервер разработки ' + path.basename(dir) + ' (' + dir + '):',
     booted
-      ? 'загрузился за ' + Math.round((Date.now() - t0) / 1000) + ' с'
+      ? 'загрузился за ' + seconds + ' с'
       : crashed
         ? 'упал при запуске'
-        : 'не поднялся за ' + timeout + ' с',
+        : exited()
+          ? 'сервер завершился за ' + seconds + ' с, не загрузившись (код ' + (child.exitCode ?? child.signalCode) + ')'
+          : 'не поднялся за ' + timeout + ' с',
     'моды в run/mods: ' + mods,
     'RCON ' + port + ' (' + password + '):',
     ...(rconText ? rconText.split('\n').map((l) => '  ' + l) : ['  (команд не было)']),
@@ -201,7 +257,7 @@ export const TOOLS = [
   {
     name: 'addon_devserver',
     description:
-      'Run an addon test server (tools/<mod>/test-server.sh) — gradlew runServer with the mods from libs/, wait for it, send RCON commands and return their replies plus error lines from run/check.log. Long (1–2 min), call directly only. Cross-platform (gradlew.bat on Windows), no python.',
+      'Run an addon test server (tools/<mod>/test-server.sh) — gradlew runServer with the mods from libs/, wait for it, send RCON commands and return their replies plus error lines from run/check.log. A failed gradle build returns at once with the cause. Long (1–2 min), call directly only. Cross-platform (gradlew.bat on Windows), no python.',
     inputSchema: {
       type: 'object',
       properties: {
