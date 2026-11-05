@@ -179,6 +179,16 @@ export async function buildFatInstaller(nf, mcDir, dir = path.join(cacheDir(), '
 const readJson = (f) => JSON.parse(fs.readFileSync(f, 'utf8'));
 const writeJson = (f, v) => fs.writeFileSync(f, `${JSON.stringify(v, null, 2)}\n`);
 
+/** TLauncher завёл свой файл у версии, а блока сборки в нём нет: игра пойдёт не из папки версии */
+export function tlauncherModpackLost(instance) {
+  if (path.basename(path.dirname(path.resolve(instance))) !== 'versions') return false;
+  try {
+    return !readJson(path.join(instance, 'TLauncherAdditional.json')).modpack;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * TLauncher запускает из папки версии только сборки: их признак — блок modpack в TLauncherAdditional.json рядом с
  * версией; без него папка игры — корень .minecraft, и моды не видны. Список модов пустой: моды ставит tfc, TLauncher
@@ -318,7 +328,21 @@ export async function installToLauncher({
   fs.mkdirSync(path.join(gameDir, 'mods'), { recursive: true });
   const nfJson = readJson(path.join(mcDir, 'versions', versionId(nf), `${versionId(nf)}.json`));
   fs.mkdirSync(versionDir, { recursive: true });
-  writeJson(path.join(versionDir, `${name}.json`), { ...nfJson, id: name });
+  const versionFile = path.join(versionDir, `${name}.json`);
+  const versionBackups = [versionFile, path.join(versionDir, 'TLauncherAdditional.json')]
+    .filter((f) => fs.existsSync(f))
+    .map((f) => {
+      fs.copyFileSync(f, `${f}.tfc-${stamp}`);
+      return `${f}.tfc-${stamp}`;
+    });
+  let oldVersion = {};
+  try {
+    oldVersion = readJson(versionFile);
+  } catch {
+    /* версии ещё нет или файл битый */
+  }
+  // Поля лаунчера и тип версии сохраняем: от NeoForge нужны только его запуск и библиотеки
+  writeJson(versionFile, { ...oldVersion, ...nfJson, id: name, type: oldVersion.type ?? nfJson.type });
   if (gameDir === versionDir) markTlauncherModpack(versionDir, name, nfJson.inheritsFrom ?? '1.21.1', nf);
 
   // Профиль: установщик правит «NeoForge» — возвращаем как было, свой профиль добавляем во все файлы профилей
@@ -337,7 +361,7 @@ export async function installToLauncher({
       icon: old.icon ?? 'Furnace',
       lastVersionId: name,
       gameDir,
-      javaArgs: javaArgs(old.javaArgs, memoryGb),
+      javaArgs: javaArgs(old.javaArgs, memoryGb ?? (old.javaArgs ? undefined : defaultMemoryGb())),
       created: old.created ?? now,
       lastUsed: old.lastUsed ?? now,
     };
@@ -347,6 +371,7 @@ export async function installToLauncher({
     installed,
     java,
     backups,
+    versionBackups,
     log,
     gameDir,
     profileId: id,
@@ -396,12 +421,24 @@ export function javaArgs(prev, memoryGb) {
   return /-Xmx\S+/.test(base) ? base.replace(/-Xmx\S+/, `-Xmx${memoryGb}G`) : `-Xmx${memoryGb}G ${base}`;
 }
 
-/** Запущен ли сейчас лаунчер: при выходе он перепишет launcher_profiles.json своей копией */
+/** Запущен ли сейчас лаунчер: он перепишет launcher_profiles.json и TLauncherAdditional.json своими копиями */
 export function launcherRunning() {
   try {
     if (process.platform === 'win32') {
       const r = spawnSync('tasklist', ['/FO', 'CSV', '/NH'], { encoding: 'utf8', windowsHide: true, timeout: 10_000 });
-      return /"(?:Minecraft(?:Launcher)?|TLauncher[^"]*)\.exe"/i.test(r.stdout ?? '');
+      if (/"(?:Minecraft(?:Launcher)?|TLauncher[^"]*)\.exe"/i.test(r.stdout ?? '')) return true;
+      // TLauncher может работать как java.exe/javaw.exe: тогда его видно только по командной строке процесса
+      const java = spawnSync(
+        'powershell',
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          `@(Get-CimInstance Win32_Process -Filter "Name='java.exe' OR Name='javaw.exe'" | Where-Object { $_.CommandLine -match 'tlauncher' }).Count`,
+        ],
+        { encoding: 'utf8', windowsHide: true, timeout: 15_000 },
+      );
+      return Number(java.stdout) > 0;
     }
     const r = spawnSync('pgrep', ['-if', 'minecraft.?launcher|tlauncher'], { encoding: 'utf8', timeout: 10_000 });
     return r.status === 0 && Boolean(r.stdout.trim());
