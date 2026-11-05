@@ -79,6 +79,18 @@ const RULES = [
 
 export const KINDS = RULES.map((r) => r.kind);
 
+/** jar в mods/ (не глубже) */
+export const isModJar = (p) => /^mods\/[^/]+\.jar$/i.test(p);
+/** Имя jar без версии и написания: mods/ee-extras-2.0.1.jar → eeextras */
+export const jarKey = (p) =>
+  String(p ?? '')
+    .split('/')
+    .pop()
+    .replace(/-\d[\w.+-]*\.jar$/i, '')
+    .toLowerCase()
+    .replace(/\.jar$/, '')
+    .replace(/[-_\s]+/g, '');
+
 /** Возвращает { kind } или { error } — почему путь не принят */
 export function classifyPath(p) {
   if (typeof p !== 'string' || !p) return { error: 'пустой путь' };

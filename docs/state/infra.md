@@ -299,7 +299,10 @@ the host's real folder.
 
 - Server `lib/updates.mjs` + `/admin/updates` (create, list, approve → snapshot = current + files − remove and made
   current with the site build job, reject); author can't approve (403); paths changed in the pack since the proposal →
-  409 `conflicts` (`--force`). CLI: `tfc admin propose <dir>`, `tfc admin updates [pull|approve|reject]`; pull writes
+  409 `conflicts` (`--force`); another version of an update's mod jar added since the proposal → 409 `jarConflicts`, not
+  forceable (dev #263: the path check missed these, approve would have left two versions of a mod). `GET` returns both
+  for pending updates. `tfc admin updates` lists pending only (`--rejected`, `--approved`), `approve all` checks the whole
+  batch first and refuses `--force`. CLI: `tfc admin propose <dir>`, `tfc admin updates [pull|approve|reject]`; pull writes
   into the game folder (backup for `tfc undo`) and `mods|config|defaultconfigs|kubejs` of the server dir; approve marks
   the host's state in sync (next `publish` — nothing to upload). Verified end-to-end on a local server (scratch dirs):
   propose, self-approve refused, pull into both folders, undo, approve, host status/publish clean, player pull, conflict

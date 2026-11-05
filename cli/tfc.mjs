@@ -71,7 +71,7 @@ import {
   validVersionName,
 } from './lib/vanilla.mjs';
 import { applyStagingDrops, stagingClashes, stagingOverlay, stagingState, stagingWinsById } from './lib/staging.mjs';
-import { markApproved, printUpdate, propose, pullUpdates } from './lib/updates.mjs';
+import { approveBlock, batchProblems, markApproved, printUpdate, propose, pullUpdates } from './lib/updates.mjs';
 import { checkUpdate } from './lib/update.mjs';
 import { autoUpgrade, cleanupOld, upgrade } from './lib/upgrade.mjs';
 import { BUILD, CHANNEL, IS_BINARY } from './lib/version.mjs';
@@ -136,8 +136,9 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
   tfc admin keys | invite <ник> [--admin] | revoke <id> | history | use <id> | rollback
   tfc admin neoforge [list | build [версия]]   установщик NeoForge с библиотеками на сервере сборки: игроки ставят
                               NeoForge без maven.neoforged.net; собирать после смены версии NeoForge
-  tfc admin updates [pull [id…] | approve <id> | reject <id>]   обновления сборки от Claude: список; pull — забрать
-                              в папку игры и сервера (вернуть — tfc undo); approve — сделать новой сборкой для всех
+  tfc admin updates [pull [id…] | approve <id|all> | reject <id>]   обновления сборки от Claude: что ждёт
+                              (--rejected — отклонённые, --approved — одобренные); pull — забрать в папку игры и
+                              сервера (вернуть — tfc undo); approve — сделать новой сборкой для всех (all — все ждущие)
   tfc admin updates subscribe <id…>     staging: этот профиль получает обновление поверх сборки при каждом tfc pull,
                               обычные файлы сборки обновляются как всегда (--profile тест — только в нём)
   tfc admin updates unsubscribe <id…|all>   отписаться и вернуть обычное состояние; subscribed — на что подписан профиль
@@ -233,6 +234,8 @@ const opts = {
   out: { type: 'string' },
   yes: { type: 'boolean', short: 'y' },
   force: { type: 'boolean' },
+  rejected: { type: 'boolean' },
+  approved: { type: 'boolean' },
   undo: { type: 'boolean' },
   'dry-run': { type: 'boolean' },
   'no-current': { type: 'boolean' },
@@ -1302,6 +1305,25 @@ async function adminNeoforge(a, v, [action, version]) {
   console.log(`${green('Готово:')} установщик NeoForge ${r.version} на сервере, ${mb(r.size)}.`);
 }
 
+async function approveUpdate(a, u, v) {
+  const r = await a.post(`/admin/updates/${u.id}/approve`, { force: !!v.force }).catch((e) => {
+    if (e.status === 403)
+      throw new Error(`${e.message}\nНастройки: ${configFile()}. Проверить текущий ключ: tfc whoami`);
+    if (e.data?.conflicts)
+      throw new Error(
+        `${e.message}:\n${e.data.conflicts.map((p) => `  ! ${p}`).join('\n')}${e.data.jarConflicts ? '' : '\nПоверх них — с --force'}`,
+      );
+    throw e;
+  });
+  console.log(`${green('Готово:')} сборка ${r.snapshot.id} — теперь текущая, игроки получат её по tfc pull.`);
+  if (r.update.datapacks?.length)
+    console.log(`Подтверждены в сборке датапаки: ${r.update.datapacks.map((d) => `«${d.name}»`).join(', ')}.`);
+  if (r.job) console.log(dim(`Данные сайта пересобираются: tfc admin jobs ${r.job} --follow`));
+  const cfg = loadConfig();
+  if (Object.keys(cfg.profiles ?? {}).length) await markApproved(currentProfile(cfg, v.profile), r.update, r.snapshot);
+  return r;
+}
+
 async function adminUpdates(a, v, [action, ...ids]) {
   const { updates } = await a.get('/admin/updates');
   const pending = updates.filter((u) => u.status === 'pending');
@@ -1316,18 +1338,26 @@ async function adminUpdates(a, v, [action, ...ids]) {
   const subProfile = Object.keys(cfgNow.profiles ?? {}).length ? currentProfile(cfgNow, v.profile) : null;
   const subs = subProfile ? (loadState(subProfile).staging ?? []) : [];
   if (!action || action === 'list') {
+    const rejected = updates.filter((u) => u.status === 'rejected');
+    const done = updates.filter((u) => u.status === 'approved');
+    if (v.rejected || v.approved) {
+      if (v.rejected) {
+        console.log(rejected.length ? dim('Отклонённые — только явный pull по id:') : 'Отклонённых нет.');
+        for (const u of rejected) printUpdate(u);
+      }
+      if (v.approved) {
+        console.log(done.length ? dim('Одобренные:') : 'Одобренных нет.');
+        for (const u of done) printUpdate(u, { full: false });
+      }
+      return;
+    }
     if (!pending.length) console.log('Ждущих обновлений нет.');
     for (const u of pending) printUpdate(u, { subscribed: subs.some((x) => x.id === u.id) });
-    const rejected = updates.filter((u) => u.status === 'rejected');
-    if (rejected.length) console.log(dim('\nОтклонённые — только явный pull по id:'));
-    for (const u of rejected) printUpdate(u);
-    const done = updates.filter((u) => u.status === 'approved').slice(0, 5);
-    if (done.length) console.log(dim('\nНедавно одобренные:'));
-    for (const u of done) printUpdate(u, { full: false });
     if (pending.length)
       console.log(
-        `\nПроверить поверх сборки: ${cyan('tfc admin updates subscribe <id>')} (--profile тест — только в нём), забрать файлами: ${cyan('tfc admin updates pull')}, после проверки — ${cyan('tfc admin updates approve <id>')}`,
+        `\nПроверить поверх сборки: ${cyan('tfc admin updates subscribe <id>')} (--profile тест — только в нём), забрать файлами: ${cyan('tfc admin updates pull')}, после проверки — ${cyan('tfc admin updates approve <id>')} или ${cyan('approve all')}`,
       );
+    console.log(dim(`Ещё: отклонённых ${rejected.length} (--rejected), одобренных ${done.length} (--approved).`));
     return;
   }
   if (action === 'subscribed') {
@@ -1378,10 +1408,40 @@ async function adminUpdates(a, v, [action, ...ids]) {
     console.log(`Профиль ${profileTitle(profile)}${profile.serverDir ? dim(` · сервер ${profile.serverDir}`) : ''}`);
     return pullUpdates(a, profile, todo, { yes: v.yes, dryRun: v['dry-run'] });
   }
+  if (action === 'approve' && ids[0] === 'all') {
+    if (ids.length !== 1) throw new Error('tfc admin updates approve all — без других id');
+    if (v.force) throw new Error('--force — только для одного обновления: approve <id> --force');
+    if (!pending.length) return console.log('Ждущих обновлений нет.');
+    // От старых к новым: так же, как их предлагали
+    const todo = pending.slice().reverse();
+    for (const u of todo) printUpdate(u);
+    const problems = batchProblems(todo);
+    if (problems.length)
+      throw new Error(`Пачкой одобрить нельзя, ничего не менял:\n${problems.join('\n')}\nРазберите их по одному.`);
+    if (!v.yes) {
+      if (!interactive()) throw new Error('Для approve нужен --yes: статус обновлений не изменён.');
+      if (!(await confirm(`Одобрить все (${todo.length}) и сделать новой сборкой для всех игроков?`, true)))
+        return console.log('Статус обновлений не изменён.');
+    }
+    let first = null;
+    for (const [i, u] of todo.entries()) {
+      console.log(`\n${bold(u.id)}`);
+      const r = await approveUpdate(a, u, v).catch((e) => {
+        throw new Error(
+          `${e.message}\nОдобрено ${i} из ${todo.length}, остальные ждут.${first ? ` Откат: tfc admin use ${first}` : ''}`,
+        );
+      });
+      first ??= r.previous;
+    }
+    if (first) console.log(dim(`\nОткат всей пачки: tfc admin use ${first}`));
+    return;
+  }
   if (action === 'approve' || action === 'reject') {
     if (ids.length !== 1) throw new Error(`tfc admin updates ${action} <id> — укажите ровно одно обновление`);
     const u = find(ids[0]);
     printUpdate(u);
+    const blocked = action === 'approve' && approveBlock(u, v.force);
+    if (blocked) throw new Error(blocked);
     const q = action === 'approve' ? 'Сделать новой сборкой для всех игроков?' : 'Отклонить?';
     if (!v.yes) {
       if (!interactive()) throw new Error(`Для ${action} нужен --yes: статус обновления не изменён.`);
@@ -1397,29 +1457,16 @@ async function adminUpdates(a, v, [action, ...ids]) {
           '\nЕсли забирали его к себе — вернуть файлы: tfc undo',
       );
     }
-    const r = await a.post(`/admin/updates/${u.id}/approve`, { force: !!v.force }).catch((e) => {
-      if (e.status === 403)
-        throw new Error(`${e.message}\nНастройки: ${configFile()}. Проверить текущий ключ: tfc whoami`);
-      if (e.data?.conflicts)
-        throw new Error(`${e.message}:\n${e.data.conflicts.map((p) => `  ! ${p}`).join('\n')}\nПоверх них — с --force`);
-      throw e;
-    });
-    console.log(`${green('Готово:')} сборка ${r.snapshot.id} — теперь текущая, игроки получат её по tfc pull.`);
-    if (r.update.datapacks?.length)
-      console.log(`Подтверждены в сборке датапаки: ${r.update.datapacks.map((d) => `«${d.name}»`).join(', ')}.`);
+    const r = await approveUpdate(a, u, v);
     if (r.previous)
       console.log(
         dim(
           `Откат: tfc admin rollback (сборка ${r.snapshot.id} → ${r.previous}${r.update.datapacks?.length ? ', вернёт и подтверждение датапаков' : ''}).`,
         ),
       );
-    if (r.job) console.log(dim(`Данные сайта пересобираются: tfc admin jobs ${r.job} --follow`));
-    const cfg = loadConfig();
-    if (Object.keys(cfg.profiles ?? {}).length)
-      await markApproved(currentProfile(cfg, v.profile), r.update, r.snapshot);
     return;
   }
-  throw new Error('tfc admin updates [pull [id…] | approve <id> | reject <id>]');
+  throw new Error('tfc admin updates [--rejected] [--approved] [pull [id…] | approve <id|all> | reject <id>]');
 }
 
 async function cmdAddons(v, [sub, ...names]) {

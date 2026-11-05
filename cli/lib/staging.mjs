@@ -13,15 +13,11 @@
  * отписки. Обновление одобрено или отклонено — подписка снимается сама. См. docs/tfc-app.md.
  */
 import fs from 'node:fs';
-import path from 'node:path';
+import { isModJar, jarKey } from '@tfc/pack-server/paths';
 import { modIdsOf } from './jarid.mjs';
-import { addonKey, jarBase } from './pull.mjs';
 import { localPath } from './scan.mjs';
 
-/** jar в mods/ (не глубже) */
-export const isModJar = (p) => /^mods\/[^/]+\.jar$/i.test(p);
-/** Имя jar без версии и написания: mods/ee-extras-2.0.1.jar → eeextras */
-export const jarKey = (p) => addonKey(jarBase(path.posix.basename(p)));
+export { isModJar, jarKey };
 
 /**
  * Снимок + обновления по порядку. → { snapshot, paths: файлы обновлений, removed: что они убрали, notes }.
