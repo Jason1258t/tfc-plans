@@ -453,3 +453,14 @@ Cursor configs (shapes from their docs, not tried).
   host job j20261105-132601-69d3 and removed its data. Checked with a fake Hosting API (`TFC_HOSTING_API`): overlap before
   and right before the release, for both writers, no overlap, endless conflicts; the old code fails the same scenarios.
   Limit: three writers within seconds can still lose the middle one's non-shared files.
+
+### Electric pump balance (dev #228)
+
+Pending config proposal `HPnhxqfnFrUSjHTYcEKG`: EE pump resistance 200 → 480 Ω. In EE 1.1.2, the pump draws
+`V²/R` watts and uses that same number divided by Create's mechanical pump impact (4) as its RPM, capped at 300.
+At 220 V this is 242 → 101 W and 60.5 → 25.2 RPM; at 110 V the new speed is 6.3 RPM. At equal voltage, the new
+pump draws 1/20 of a fully loaded EE motor (24 Ω effective) or 30% of its idle draw (144 Ω effective). This is a
+comparison of electrical loads, not a count of mechanical pumps the motor can drive.
+
+Host: pull the proposal with `tfc admin changes pull`, restart and check goggles readings and actual transfer at the
+installation's working voltage, including the weakest line; publish the snapshot if the flow is sufficient.
