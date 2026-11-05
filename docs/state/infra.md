@@ -433,3 +433,11 @@ Cursor configs (shapes from their docs, not tried).
   `versions/<name>/TLauncherAdditional.json`, otherwise `.minecraft`. `installToLauncher` writes that block with empty lists;
   the host's TLauncher then loaded 341 mods from `TFC-RealWorld` (block written by hand, not yet by the new `tfc`). Replaces
   the earlier «TLauncher game dir = version folder»: that was only true for imported packs.
+
+- Dev #254 (2026-11-05): a site deploy and a server publish no longer undo each other. Hosting has no conditional
+  release, so `release()` in `scripts/hosting-rest.mjs` takes `base` and checks the release list before and after its own
+  release; a foreign release raises `ReleaseConflict`, and `deploy()` / `deploy-site.mjs` rebuild on top of it (up to 5
+  times; releases of their own earlier attempts don't count). Rolled-back case: 2026-11-05 a deploy released seconds after
+  host job j20261105-132601-69d3 and removed its data. Checked with a fake Hosting API (`TFC_HOSTING_API`): overlap before
+  and right before the release, for both writers, no overlap, endless conflicts; the old code fails the same scenarios.
+  Limit: three writers within seconds can still lose the middle one's non-shared files.

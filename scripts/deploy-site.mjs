@@ -10,7 +10,8 @@
  *      Hosting, ничего не скачивается и не загружается заново. Так же как есть переносятся файлы, которых в сборке
  *      сайта нет вовсе, — tfc (собран на Mac), датапаки из packs/ и старые иконки аддонов /addons/*.png: иначе
  *      выкладка со свежего checkout'а убрала бы их с сайта;
- *   4. загрузка недостающих файлов сайта, FINALIZED, релиз.
+ *   4. загрузка недостающих файлов сайта, FINALIZED, релиз. Вышел чужой релиз (публикация сервера сборки) —
+ *      шаги 2–4 заново поверх него, иначе его данные откатились бы.
  * packUpdates не пишет — это делает публикация сервера сборки.
  *
  *   npm run deploy:site                 — собрать и выложить
@@ -26,7 +27,16 @@ import os from 'node:os';
 import { deployLock } from './deploy-lock.mjs';
 import { ROOT } from './firestore-rest.mjs';
 import { isDataPath } from './data-roots.mjs';
-import { createVersion, currentRelease, hostingConfig, hostingFile, release, versionFiles } from './hosting-rest.mjs';
+import {
+  createVersion,
+  currentRelease,
+  hostingConfig,
+  hostingFile,
+  release,
+  ReleaseConflict,
+  RELEASE_RETRIES,
+  versionFiles,
+} from './hosting-rest.mjs';
 
 const log = (...a) => console.log('[deploy-site]', ...a);
 const argv = process.argv.slice(2);
@@ -94,8 +104,24 @@ async function deploy() {
   });
   if (!fs.existsSync(path.join(DIST, 'index.html'))) throw new Error('в dist/ нет index.html — сайт не собран');
 
-  const cur = await currentRelease();
+  let cur = await currentRelease();
   if (!cur) throw new Error('у сайта нет ни одного релиза — первую выкладку делайте firebase deploy');
+  let must = argv.includes('--force');
+  const own = new Set();
+  for (let retries = RELEASE_RETRIES; ; retries--) {
+    try {
+      return await deployOnto(cur, config, must, own);
+    } catch (e) {
+      if (!(e instanceof ReleaseConflict) || !retries) throw e;
+      log(`${e.message} — собираю версию поверх него`);
+      cur = e.other;
+      must = must || e.released;
+    }
+  }
+}
+
+/** Новая версия поверх релиза cur: файлы сайта из dist/, остальное из cur. must — выложить, даже если отличий нет */
+async function deployOnto(cur, config, must, own) {
   const published = await versionFiles(cur.version.name);
   // Файлы не из сборки сайта: их кладут tfc-dist и сервер сборки — не убираем, если в dist/ их нет
   const serverFile = /^\/(tfc|packs)\//;
@@ -155,7 +181,7 @@ async function deploy() {
     for (const p of list.slice(0, 20)) log(`  ${sign} ${p}`);
     if (list.length > 20) log(`  ${sign} … и ещё ${list.length - 20}`);
   }
-  if (!site.added.length && !site.changed.length && !site.removed.length && sameConfig && !argv.includes('--force')) {
+  if (!site.added.length && !site.changed.length && !site.removed.length && sameConfig && !must) {
     log('на сайте уже это — выкладывать нечего');
     return;
   }
@@ -168,6 +194,8 @@ async function deploy() {
   log(`новая версия ${version.split('/').pop()}`);
   await release({
     version,
+    base: cur.version.name,
+    own,
     files,
     getGz: (p) => {
       const f = local.get(p);
