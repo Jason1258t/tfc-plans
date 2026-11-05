@@ -177,6 +177,11 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-05 (dev #249, #259): **2.14.0** — a steel whip antenna for both wireless modem tiers via the base
+transceiver, a miniature colour display for direct and upgrade recipes of the advanced pocket computer, and
+industrial RedRouter, Animatronic, Scroller and Source Block recipes. Source and Target still convert 1:1.
+The M12 item insulation tag accepts ABS sheets and available plastics for the cable and storage bay.
+
 2026-11-05 (dev #248): **2.13.0** — magnetized steel, a pressed-paper speaker cone, sulfuric acid electrolyte and
 an ABS ink cartridge. The precision actuator gets its magnet through the motor. The lead battery uses an ABS case and
 a PET separator. M12 `tcegd3kspq62oHuM3YmF` requires EE Extras 2.13.0, Destroy 0.4.6 and Petrolpark 1.5.11.
