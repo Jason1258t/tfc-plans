@@ -278,3 +278,6 @@ for the cable and storage bay. Approve the update after the Survival check. The 
 update overlay and selected all nine probed recipe changes. The dev stand loaded 83 recipes and passed 324 checks after
 restart. The pack server requires a separate unconfirm to replace a pinned ZIP. This update adds the changed files
 under `kubejs/data` over the pinned M12, and the M12 site card carries the equivalent 85 entries.
+
+- Dev #228: install EE Extras 2.14.1 on the server and clients with the existing pump config. Check goggles and fluid
+  transfer on an existing electric pump, then publish the pack snapshot.
