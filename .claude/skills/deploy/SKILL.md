@@ -1,6 +1,6 @@
 ---
 name: deploy
-description: Deploy to Firebase safely — verify access (firebase login / service key), ensure no parallel deploy, pick the route (firestore:rules first, site via deploy:site, pack data only via the pack server), dry-run, deploy, verify the live URL. Use for «задеплой», «выкати сайт», «обнови правила», or the deploy step of `ship`.
+description: Deploy to Firebase safely — verify access (firebase login / service key), pick the route (firestore:rules first, site via deploy:site, pack data only via the pack server), dry-run, deploy, verify the live URL. Use for «задеплой», «выкати сайт», «обнови правила», or the deploy step of `ship`.
 ---
 
 # Deploy: access → route → order → dry-run → deploy → verify
@@ -12,8 +12,8 @@ is `ship`, which delegates its step 3 here. Everything players see is Russian.
 
 - Clean `main`, on `main` — deploy **never** from a feature branch or a dirty checkout.
 - `ship` gate / CI green.
-- No parallel deploy: nobody else deploying at the same time (pack server or another agent). Hosting releases are
-  last-write-wins — two concurrent deploys race. Ask the host if unsure.
+- Parallel deploys: Hosting releases are last-write-wins, so `npm run deploy:site` guards itself (§6). No manual check
+  is needed; a refusal is the normal signal that someone else got there first.
 
 ## 2. Access
 
@@ -57,3 +57,24 @@ is `ship`, which delegates its step 3 here. Everything players see is Russian.
   first (pack server), then `deploy:site`.
 - predeploy «в dist/ нет настроек Firebase …» → `.env.local` missing: build from a checkout that has it and redeploy.
 - 401 / «Authentication Error» → §2.
+
+### Race guards in `deploy:site`
+
+Each refusal comes with the site unchanged, except where noted. **Don't retry the same checkout blindly** — bring it up
+to date first.
+
+| Message                                               | What happened                                                                                                                                      | Do                                                                                    |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| «выкладку сайта уже ведёт процесс …»                  | Another worktree of this repo holds the lock (`deploy-site.lock` in the git common dir, for build + release).                                      | Wait for it, update your checkout (it must contain that commit), rerun.               |
+| «сайт выпущен из коммита …, а в этой копии … его нет» | The commit in the last `commit=<sha>` release message is not in your `HEAD`, so your build would drop someone's changes. Checked before the build. | `git pull` / `git merge main`, rerun. `--allow-older` only for a deliberate rollback. |
+| «пока шла выкладка, вышел деплой сайта …»             | Another machine released the site mid-run, and its commit isn't in your build.                                                                     | Update your checkout, rerun.                                                          |
+| «этот релиз вышел поверх чужого: …»                   | Same, but found only after our release: **the site changed**, and their changes are off it.                                                        | Update your checkout and deploy again right away.                                     |
+
+- A foreign data publish, or a site deploy whose commit your build contains, is not a refusal: the run rebuilds on top
+  of it (the log line above).
+- A stale lock clears itself: its process is dead, or it is older than 30 minutes (the release checks still protect a
+  run that outlives that). Don't delete the file by hand while a deploy may be running.
+- `--dry-run` takes no lock and works next to a running deploy; a commit mismatch is only a warning there
+  («настоящая выкладка отказалась бы»).
+- `--no-build` releases carry no `commit=` mark, since `dist/` may be from another commit; the next deploy compares with
+  the last marked release. Pack-server data releases carry no mark either and don't change site files.

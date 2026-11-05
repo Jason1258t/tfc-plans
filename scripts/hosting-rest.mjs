@@ -70,6 +70,11 @@ export async function currentRelease(site = SITE_ID) {
   return j.releases?.[0] ?? null;
 }
 
+/** Последние релизы сайта, новые первыми (сообщение релиза — поле message) */
+export async function listReleases(pageSize = 100, site = SITE_ID) {
+  return (await call('GET', `sites/${site}/releases?pageSize=${pageSize}`)).releases ?? [];
+}
+
 /** Сколько раз пересобирать версию поверх чужого релиза */
 export const RELEASE_RETRIES = 5;
 

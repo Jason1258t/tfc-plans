@@ -353,6 +353,11 @@ Cursor configs (shapes from their docs, not tried).
   directory and use a private temporary dist. Pack-server shutdown drains accepted jobs and rejects new ones;
   systemd uses KillMode=mixed/TimeoutStopSec=infinity. Installer serializes updates and stops before replacing code.
   The deployment lock covers worktrees on one machine, not independent hosts. Forced termination is still interrupting.
+- Dev #256 (2026-11-05): `deploy:site` no longer queues. A second run refuses at the lock; `--dry-run` takes no lock; a
+  stale lock (dead process or older than 30 min) clears itself. Before the build it requires `HEAD` to contain the commit
+  in the last `commit=<sha>` release message (`--allow-older` to roll back). On top of #254's rebuild after a foreign
+  release: a foreign site deploy whose commit isn't in this build stops the run instead. Checked on a fake Hosting server
+  in a clone, and a real `--dry-run`.
 
 - Dev #134 (2026-10-28): `tfc whoami` shows the server-recognized key name/role and local config path; login and
   self-approval errors identify the key without printing its token. CLI error/auto-upgrade completion uses natural
