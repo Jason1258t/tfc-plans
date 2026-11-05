@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 import AdmZip from 'adm-zip';
 import { parse as parseToml } from 'smol-toml';
 import { fetchInstaller, neoforgeVersion } from '@tfc/cli/vanilla';
-import { isWin, javaHome, killTree, runRcon, sleep } from './mc-server.mjs';
+import { isWin, javaHome, killTree, runRcon, sleep, stopWithProcess } from './mc-server.mjs';
 import { PACK_CACHE, PACK_MODS } from './pack-cache.mjs';
 
 export const STAND = path.resolve(process.env.TFC_STAND_DIR ?? path.join(os.homedir(), '.cache', 'tfc-plans', 'stand'));
@@ -256,6 +256,7 @@ async function launch({ run, java, nf, timeout, rconPort, commands, onLog }) {
     windowsHide: true,
   });
   fs.closeSync(fd);
+  stopWithProcess(child);
   let exited = false;
   child.on('exit', () => (exited = true));
   const t0 = Date.now();

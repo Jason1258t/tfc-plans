@@ -169,3 +169,5 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   JSON arguments and `--timeout`, instead of temporary JSON-RPC clients (Codex in #218). Verified on both real servers
   (lists, schema, calls, unknown argument/tool, `@file`, stdin) and on a fake server: crash, missing command, hang
   (exit 124, process gone), 5 MB answer through a pipe, images, env priority.
+- Dev #255 (2026-11-05): test servers stop with the process that started them (`stopWithProcess` in `mc-server.mjs`), so a
+  broken MCP call no longer leaves a stand running. Not covered: SIGKILL of the MCP server itself.
