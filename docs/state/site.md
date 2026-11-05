@@ -836,3 +836,5 @@ the step is centred.
   > `fluid_content` as the fluid's bucket with mB and unknown mod ingredients by type name with a JEI hint.
 
 - Home (dev #252): a full-height introduction presents TFC Studio as the team’s development of TerraFirmaCraft RealWorld. The existing section directory and search sit below it.
+
+- Home (dev #270): the pack story sits between the introduction and the directory. The directory jump scrolls smoothly and respects reduced motion.

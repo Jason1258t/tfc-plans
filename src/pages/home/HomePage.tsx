@@ -159,7 +159,8 @@ export function HomePage() {
                 event.preventDefault();
                 const target = document.getElementById('home-sections');
                 target?.focus({ preventScroll: true });
-                target?.scrollIntoView();
+                const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                target?.scrollIntoView({ behavior: reduceMotion ? 'instant' : 'smooth' });
               }}
             >
               К разделам <ArrowDown size={18} aria-hidden />
@@ -170,6 +171,36 @@ export function HomePage() {
           </div>
         </div>
         <img className={styles.illustration} src={foundry} width={520} height={420} alt="" />
+      </section>
+
+      <section className={styles.story} aria-labelledby="home-story">
+        <p className={styles.storyLabel}>О сборке</p>
+        <h2 id="home-story">Как растёт производство</h2>
+        <ol className={styles.storyGrid}>
+          <li>
+            <span aria-hidden>01</span>
+            <h3>Основа RealWorld</h3>
+            <p>
+              Начинаете с выживания и поиска ресурсов. Осваиваете обработку руды и металлургию, чтобы перейти к машинам.
+            </p>
+          </li>
+          <li>
+            <span aria-hidden>02</span>
+            <h3>Аддоны команды</h3>
+            <p>Мы добавляем оборудование и меняем рецепты. Среди наших проектов — Small Diesel и EE Extras.</p>
+          </li>
+          <li>
+            <span aria-hidden>03</span>
+            <h3>Свой завод</h3>
+            <p>
+              Соединяете добычу, переработку и выпуск деталей. Когда производство растёт, планируете линии, транспорт и
+              питание машин.
+            </p>
+          </li>
+        </ol>
+        <Link className={styles.storyLink} to="/addons">
+          Посмотреть аддоны команды <ArrowRight size={16} aria-hidden />
+        </Link>
       </section>
 
       <section id="home-sections" className={styles.directory} aria-labelledby="home-directory" tabIndex={-1}>
