@@ -181,6 +181,19 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-05 (dev #273): **EE Extras 2.15.0** — duplex cable cap `duplex_cable_cap`: an item, not a block (host's
+decision — "a modifier of the device"). `cable/CableCap` keeps the set of capped device positions (SavedData
+`ee_extras_cable_caps`); a device qualifies when it is an EE `ElectricalDeviceBlock` with exactly two accessible nodes
+(`getNodePositions` + `isNodeAccessible`, EE 1.1.2; cable terminations/junctions excluded); contact 1 = lower node id.
+For the cable a capped device is a `CableEnd` with `contacts`: cores go to the device contacts, the sheath to contact 1
+(a foreign block can't get an extra node — EE re-syncs nodes with `getNodePositions` every tick). Cap click and cable
+laying onto 2-contact devices run in a HIGH-priority listener (`CableEvents.capClick`), otherwise Create's
+`ValueSettingsInputHandler` eats clicks on the voltmeter's value box. Shift + empty hand removes (cap and cable spools
+back); a 10-tick check drops the cap when the device is gone. Verified on the dev server (`CapTest`, `KEEP=1`): bulb
+lit, voltmeter reads the battery, core 1 → contact 1 / core 2 → contact 2, refusals (rectifier 4 contacts, connector 1,
+wired contacts, second cap, cable to uncapped device, EE wire onto capped contacts), removal, drop on break, restart.
+Item texture from #274 (`item/duplex_cap`); the block textures `duplex_cap_front/side` from #274 are unused.
+
 2026-11-05 (dev #228): **EE Extras 2.14.1** — EE 1.1.2 electric pumps draw 2.4 times less power at the same
 terminal voltage, preserving their original RPM curve. The patch multiplies the resistance used by the circuit solver
 by 2.4 and adjusts goggles watts by the same factor. At 220 V the dev server reported 480 Ω and 60.5 RPM with the
