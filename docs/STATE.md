@@ -18,8 +18,16 @@ When finishing work: update the topic file, and this index only if a line below 
 
 ## In progress / waiting (details — [pending.md](state/pending.md))
 
+- Going Nuclear (dev #202): working plan accepted (plan doc 50); gameplay decisions are settled. Host: NeoForge
+  ≥ 21.1.256 and the author's written redistribution permission before the integration build.
+- Host: fluid tank recipe without a barrel, card `2csvwoHPHBhlpqiZTQ4c` (dev #233), is confirmed without an in-game check:
+  craft it once in game.
+
 - Host: transformer-oil duplicate disabled in draft `9FCAF769A0A2ODuhbgxU` (dev #215): unconfirm old ZIP,
   pull, check standard heated mixing and absence of the parse error, then confirm.
+
+- Host: Destroy aromatics → gasoline in card `7IHNTyYMc046lNeC0anS` (dev #223): pull into a test world with
+  Destroy + CDG, restart, check valid and unsuitable mixtures, then confirm.
 
 - Building generator (dev #166): page `/builder` live (stages 0–5, with brush); next — stage 6 forms/styles. Host: rebuild + publish
   for `block-colors.json`.
@@ -62,9 +70,6 @@ When finishing work: update the topic file, and this index only if a line below 
 - «Coal near X» search with map points — «пока без такого функционала».
 - Real world map zoomable to city level and an in-game explored-map layer (needs a mini-mod or export) — discussed
   only in the abstract.
-- Nuclear power (uses for uranium: Create Nuclear or Going Nuclear, TFC integration) — long-term, discuss with players
-  first. Chosen: Going Nuclear + Create Nuclear mechanics in an own addon; plan — `docs/plans/nuclear.md`, task in group
-  «Фиксы» (2026-10-21).
 
 ## Known limitations
 

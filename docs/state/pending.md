@@ -5,6 +5,19 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **Going Nuclear M0** (2026-11-05, dev #202, plan doc 50): the gameplay decisions are settled — reactor automation
+  after L3, realistic physics without random failures, radiation enabled, destructive accidents and fallout disabled on
+  the live world. The first slice is the boiling-water reactor, turbines, spent-fuel pool and dry cask; RBMK/reprocessing/MOX
+  are a separate later stage. Jar inspection confirms NeoForge ≥ 21.1.256 is required and the license is All Rights
+  Reserved. Host: update NeoForge on a test profile and obtain the author's written permission for the pack server to
+  redistribute the jar before integration and release. Static dependency checking of the pack against 21.1.256 found no
+  conflicts; runtime and Survival acceptance have not been performed.
+- **Fluid tank recipe without a barrel** (2026-11-05, dev #233 item 1): card `2csvwoHPHBhlpqiZTQ4c` is confirmed for the
+  whole pack at the host's request in snapshot `20261104-223757-c5b3`, without an in-game check: 8
+  `#c:plates/copper` around 1 `#c:glass_panes` → 2 tanks. The 4-tank version loaded on the pack stand; only the count
+  changed after that. Host: craft it once in game. The old route stays: Create: Connected vessel (2 sheets + barrel)
+  converts to a tank.
+
 - **Transformer oil duplicate** (2026-11-04, dev #215): source card `9FCAF769A0A2ODuhbgxU`
   (`transformer_oil`, revision `2026-11-04T20:35:20.733425Z`) now disables only
   `tfc_plans:transformer_oil` with a `neoforge:false` condition. Its malformed fluid ingredient duplicated
@@ -17,6 +30,16 @@ its one-liner in STATE.md.
   Source editing does not replace that ZIP. Host: `tfc datapacks unconfirm 9FCAF769A0A2ODuhbgxU`,
   then `tfc datapacks pull 9FCAF769A0A2ODuhbgxU` into the selected test world, restart and check that
   the parse error is gone and standard heated mixing produces oil; only then confirm the new version.
+
+- **Бензин из ароматических фракций Destroy** (2026-11-04, dev #223): карточка `7IHNTyYMc046lNeC0anS`
+  («Destroy — нефтехимия и полимеры», revision `2026-11-04T21:12:27.294657Z`) содержит рецепт
+  `tfc_plans:create/gasoline_from_destroy_aromatics`: отдельно 50 мБ толуольной смеси с толуолом ≥ 9 M и
+  50 мБ ксилольной смеси с этилбензолом ≥ 1.9 M → 100 мБ бензина CDG в Create-мешалке без нагрева.
+  JSON, чтение рецепта, отсутствие конфликтов и поддержка ингредиента `destroy:mixture_with_molecule` проверены;
+  полный производственный цикл в игре не проверялся. Предупреждение редактора об отсутствующих ID ожидаемо:
+  основной snapshot ещё без Destroy, а молекулы — не предметы. Хост: включить «В мир», выполнить
+  `tfc datapacks pull 7IHNTyYMc046lNeC0anS` в выбранный тестовый мир с Destroy + CDG, перезапустить,
+  проверить оба входа и выход 100 мБ, отказ неподходящих смесей и затем `confirm`.
 
 - **Destroy slice as one update** (2026-11-03, dev #203, acceptance #199): `u20261103-164054-6977` adds Destroy,
   Petrolpark, Destroy Bridge, Destroy Extras 0.3.0 and five datapacks (confirmed by approve); updates EE Extras 2.7.0, JEI 19.55.0.431,
