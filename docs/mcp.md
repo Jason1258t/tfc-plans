@@ -462,15 +462,18 @@ a region is named by the nearest city. Climate and rocks not compared with the g
 
 ### Reference guides
 
-| Tool                                       | Does                                                                 |
-| ------------------------------------------ | -------------------------------------------------------------------- |
-| `guides_list(section, query)`              | guides: id, title, section, verified flag, editors                   |
-| `guide_search(query*, section)`            | search guide text                                                    |
-| `guide_get(id*)`                           | guide in `npm run guides` format and its `revision`                  |
-| `guide_put(id*, markdown*, baseRevision*)` | **write to the shared DB**: signed `Claude`, version goes to history |
+| Tool                                                        | Does                                                                 |
+| ----------------------------------------------------------- | -------------------------------------------------------------------- |
+| `guides_list(section, query)`                               | guides: id, title, section, verified flag, editors                   |
+| `guide_search(query*, section)`                             | search guide text                                                    |
+| `guide_get(id*, offset, limit, file)`                       | guide in `npm run guides` format and its `revision`                  |
+| `guide_put(id*, markdown/file, baseRevision*, allowShrink)` | **write to the shared DB**: signed `Claude`, version goes to history |
 
 `guide_put` refuses if the article changed after `guide_get` (Firestore precondition on `updateTime`); for a new article
-`baseRevision` is `"new"`.
+`baseRevision` is `"new"`. A long guide comes in pages that are never clipped (header «ЧАСТЬ гайда»); to edit one, use
+`guide_get file=<abs path>` → edit the file → `guide_put file=<path>`. `guide_put` also refuses text with the clipped-output
+marker «… обрезано:» and text more than 30% (and 2000+ chars) shorter than the stored one unless `allowShrink=true`
+(dev task #278: a page saved from a clipped answer lost 30k chars).
 
 ### Pack addons
 
