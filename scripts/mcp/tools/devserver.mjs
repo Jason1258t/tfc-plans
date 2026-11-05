@@ -8,6 +8,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { isWin, javaHome, killTree, runRcon, sleep, stopWithProcess } from '../../mc-server.mjs';
+import { PACK_CACHE } from '../../pack-cache.mjs';
 import { runStand } from '../../pack-stand.mjs';
 import { str, num } from '../fmt.mjs';
 import { TOOLS_DIR } from '../resources.mjs';
@@ -42,26 +43,98 @@ function globMatch(pattern, name) {
   return name.startsWith(pattern.slice(0, idx)) && name.endsWith(pattern.slice(idx + 1));
 }
 
-/** Моды в run/mods — как в test-server.sh: по cp-строкам (libs/<glob>), иначе все jar из libs/ */
-function copyLibs(dir, runMods) {
-  const libs = path.join(dir, 'libs');
-  if (!fs.existsSync(libs)) return [];
+/** Условие if из test-server.sh: true / false, null — такого вида инструмент не разбирает */
+function shellCondition(line, env) {
+  const m = line.match(/^if \[ (-[nz] )?"\$\{(\w+):-([^}]*)\}"(?: = "?(\w+)"?)? \]; then/);
+  if (!m) return null;
+  const value = env[m[2]] ?? m[3];
+  if (m[1] === '-n ') return Boolean(value);
+  if (m[1] === '-z ') return !value;
+  return m[4] === undefined ? null : value === m[4];
+}
+
+/** Источник из строки cp: путь с раскрытыми MODS и переменными окружения; null — переменная неизвестна */
+function shellSource(word, dir, modsDir, env) {
+  let unknown = false;
+  const p = word
+    .replace(/^"?\$\{MODS:-.*\}"?/, modsDir)
+    .replace(/\$\{?(\w+)\}?/g, (_, name) => {
+      if (name === 'MODS') return modsDir;
+      if (env[name] === undefined) unknown = true;
+      return env[name] ?? '';
+    })
+    .replaceAll('"', '');
+  return unknown ? null : path.resolve(dir, p);
+}
+
+/**
+ * Моды в run/mods — как в test-server.sh: строки cp с учётом условий на переменные (IE=1, NO_EE=1, DESTROY=1…), иначе
+ * все jar из libs/. Остальные шаги скрипта не выполняются: что пропущено в условных блоках — в notes.
+ */
+function copyMods(dir, runMods, env) {
+  for (const f of fs.readdirSync(runMods)) if (f.endsWith('.jar')) fs.rmSync(path.join(runMods, f));
+  const modsDir = env.MODS ?? env.TFC_MODS_DIR ?? path.join(PACK_CACHE, 'mods');
   const ts = path.join(dir, 'test-server.sh');
-  let patterns = [];
-  if (fs.existsSync(ts)) {
-    for (const line of fs.readFileSync(ts, 'utf8').split(/\r?\n/)) {
-      const m = line.match(/cp\s+([^;\n]+?)\s+run\/mods\//);
-      if (m) for (const arg of m[1].trim().split(/\s+/)) if (arg.startsWith('libs/')) patterns.push(arg.slice(5));
+  const script = fs.existsSync(ts) ? fs.readFileSync(ts, 'utf8') : '';
+  const lines = script.replace(/\\\r?\n\s*/g, ' ').split(/\r?\n/);
+  const sources = [];
+  const notes = [];
+  const stack = [];
+  let heredoc = null;
+  let found = false;
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (heredoc) {
+      if (line === heredoc) heredoc = null;
+      continue;
+    }
+    heredoc = line.match(/<<-?\s*'?"?(\w+)'?"?/)?.[1] ?? null;
+    let body = line;
+    if (line.startsWith('if ')) {
+      stack.push(shellCondition(line, env));
+      const oneLine = line.match(/; then (.*); fi$/);
+      if (!oneLine) continue;
+      body = oneLine[1];
+    } else if (line === 'else') {
+      const cond = stack.pop();
+      stack.push(cond === null ? null : !cond);
+      continue;
+    } else if (line === 'fi') {
+      stack.pop();
+      continue;
+    }
+    const known = !stack.includes(null);
+    const active = known && !stack.includes(false);
+    const cp = body.match(/^cp\s+(.+?)\s+\S*mods\/"?$/);
+    if (cp) {
+      found = true;
+      if (!known) notes.push('условие не разобрано, пропущено: ' + body);
+      else if (active)
+        for (const word of cp[1].split(/\s+/)) {
+          const src = shellSource(word, dir, modsDir, env);
+          if (src && !src.includes('$')) sources.push(src);
+          else notes.push('не раскрыто, пропущено: ' + word);
+        }
+    } else if (active && stack.length && /\brun\//.test(body) && !/^(mkdir|rm) /.test(body)) {
+      notes.push('шаг скрипта не выполнен: ' + body);
+    }
+    if (line.startsWith('if ') && body !== line) stack.pop();
+  }
+  if (!found) sources.push(path.join(dir, 'libs', '*.jar'));
+
+  const copied = new Set();
+  for (const src of sources) {
+    const from = path.dirname(src);
+    const names = fs.existsSync(from)
+      ? fs.readdirSync(from).filter((f) => f.endsWith('.jar') && globMatch(path.basename(src), f))
+      : [];
+    if (!names.length && found) notes.push('нет jar: ' + src);
+    for (const f of names) {
+      fs.copyFileSync(path.join(from, f), path.join(runMods, f));
+      copied.add(f);
     }
   }
-  if (!patterns.length) patterns = ['*.jar'];
-  const copied = [];
-  for (const f of fs.readdirSync(libs))
-    if (f.endsWith('.jar') && patterns.some((p) => globMatch(p, f))) {
-      fs.copyFileSync(path.join(libs, f), path.join(runMods, f));
-      copied.push(f);
-    }
-  return copied;
+  return { copied: [...copied], notes };
 }
 
 /** Вывод самого сервера: всё после начала задачи runServer; null — gradle до неё не дошёл */
@@ -123,7 +196,8 @@ async function devServer(a) {
     }
   }
   fs.mkdirSync(path.join(run, 'mods'), { recursive: true });
-  const copied = copyLibs(dir, path.join(run, 'mods'));
+  const childEnv = { ...process.env, JAVA_HOME: javaHome(), ...env };
+  const { copied, notes } = copyMods(dir, path.join(run, 'mods'), childEnv);
   fs.writeFileSync(path.join(run, 'eula.txt'), 'eula=true');
   fs.writeFileSync(
     path.join(run, 'server.properties'),
@@ -138,7 +212,6 @@ async function devServer(a) {
     ].join('\n'),
   );
 
-  const childEnv = { ...process.env, JAVA_HOME: javaHome(), ...env };
   const fd = fs.openSync(log, 'w');
   // На Windows .bat запускается через cmd.exe (spawn его сам не исполнит)
   const cmd = isWin ? 'cmd.exe' : './gradlew';
@@ -212,7 +285,7 @@ async function devServer(a) {
 
   const errLines = (serverOutput(text) ?? text)
     .split(/\r?\n/)
-    .filter((l) => /ERROR|Exception|Caused by/.test(l) && !/\/(WARN|INFO|DEBUG)\]/.test(l))
+    .filter((l) => /ERROR|FATAL|Exception|Caused by|^\s+Mod ID:/.test(l) && !/\/(WARN|INFO|DEBUG)\]/.test(l))
     .slice(0, 30);
   const mods = copied.length ? copied.join(', ') : '—';
 
@@ -226,6 +299,7 @@ async function devServer(a) {
           ? 'сервер завершился за ' + seconds + ' с, не загрузившись (код ' + (child.exitCode ?? child.signalCode) + ')'
           : 'не поднялся за ' + timeout + ' с',
     'моды в run/mods: ' + mods,
+    ...notes.map((l) => 'test-server.sh: ' + l),
     'RCON ' + port + ' (' + password + '):',
     ...(rconText ? rconText.split('\n').map((l) => '  ' + l) : ['  (команд не было)']),
     errLines.length ? 'Ошибки из лога:' : 'Ошибок в логе нет.',
@@ -257,7 +331,7 @@ export const TOOLS = [
   {
     name: 'addon_devserver',
     description:
-      'Run an addon test server (tools/<mod>/test-server.sh) — gradlew runServer with the mods from libs/, wait for it, send RCON commands and return their replies plus error lines from run/check.log. A failed gradle build returns at once with the cause. Long (1–2 min), call directly only. Cross-platform (gradlew.bat on Windows), no python.',
+      'Run an addon test server (tools/<mod>/test-server.sh) — gradlew runServer with the mods its cp lines select under env (other script steps are reported, not run), wait for it, send RCON commands and return their replies plus error lines from run/check.log. A failed gradle build returns at once with the cause. Long (1–2 min), call directly only. Cross-platform (gradlew.bat on Windows), no python.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -267,7 +341,9 @@ export const TOOLS = [
           items: { type: 'string' },
           description: 'RCON commands to run once the server is up ("sleep N" — pause, seconds)',
         },
-        env: str('extra env KEY=VALUE per line (IE=1, KEEP=1, NO_EE=1, OLD_JAR=…, MODS=…, MICROTICKS=…)'),
+        env: str(
+          'extra env KEY=VALUE per line, selects cp lines of test-server.sh (IE=1, CC=1, DESTROY=1, NO_EE=1, OLD_JAR=…, MODS=…); KEEP=1 keeps the world',
+        ),
         timeout: num('max seconds to wait for the server (240)'),
       },
       required: ['addon'],
