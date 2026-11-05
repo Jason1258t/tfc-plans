@@ -823,9 +823,12 @@ the step is centred.
   `BlockStructureViewer` in `viewer` mode (LMB/finger rotate, Ctrl+wheel/pinch zoom, plain wheel scrolls the page,
   «Вернуть вид», mirror via a holder group, hammer-block outline, layer slider = cut, selection = marks). Guides pass
   the card's parsed NBT; IE shapes go through `nbtFromShape`. So models, partial blocks, copycats by material and
+
   > 3000-block schematics are drawn as in the editor. CSS 3D stays only as the no-WebGL fallback (≤3000 blocks, rough
   > forms). Editor gained: materials of the layer or whole schematic with search, click selects all such blocks,
   > «Все такие же» and the selected block's name/id in the selection panel, x/z axes on the layer canvas, materials
   > under the view on phones. Builder: `scripts/mods.mjs` adds NeoForge universal jar data (`c:*` tags) right after
   > vanilla (version from the snapshot's loader, locally from the addon platform); recipe grid shows TFC
   > `fluid_content` as the fluid's bucket with mB and unknown mod ingredients by type name with a JEI hint.
+
+- Home (dev #252): a full-height introduction presents TFC Studio as the team’s development of TerraFirmaCraft RealWorld. The existing section directory and search sit below it.
