@@ -177,6 +177,14 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-05 (dev #247): **2.12.0** — duplex cable power inlet for CC: Tweaked desktops and a pocket computer
+charging station. The inlet tests the network under load before booting and shuts down on loss of power. The
+nominal input is 300 V with an operating range of 240–330 V. Normal/advanced desktops draw 80/180 W at nominal
+voltage. Pocket devices store an 18 Wh battery on the item. Input damage follows the EE component damage setting.
+Dedicated server: 80/180 W at 300 V, refused startup at 180 V, shutdown after cable removal, Lua disk drive and file
+write, desktop and charger persistence after restart, pocket shutdown at zero charge, inlet and PC destroyed at 600 V.
+Release build and resource checks passed. The reduced stand does not cover manual play on the production profile.
+
 2026-11-05 (dev #246): **2.11.0** — five ComputerCraft materials: ABS sheets and keyboard blanks, PET film,
 RGB phosphor and a steel shadow mask. Stock Destroy ABS is used directly. A stock Vat reaction converts paraxylene,
 ethene and oxygen into PET and water; heated Create pressing/mixing forms the new materials. Computer/peripheral cases,
