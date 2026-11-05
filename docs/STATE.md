@@ -18,6 +18,9 @@ When finishing work: update the topic file, and this index only if a line below 
 
 ## In progress / waiting (details — [pending.md](state/pending.md))
 
+- Host: Create Deco bricks (dev #222), draft `GHltHxk6T0WJ2gbyAOGi`: pull into a test world, check umber and
+  cracked brick crafting, then confirm.
+
 - Going Nuclear (dev #202): working plan accepted (plan doc 50); gameplay decisions are settled. Host: NeoForge
   ≥ 21.1.256 and the author's written redistribution permission before the integration build.
 - Host: fluid tank recipe without a barrel, card `2csvwoHPHBhlpqiZTQ4c` (dev #233), is confirmed without an in-game check:

@@ -7,6 +7,11 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **Create Deco bricks** (2026-11-05, dev #222): world-test draft `GHltHxk6T0WJ2gbyAOGi` replaces scoria with
+  brown dye in the umber brick recipe and adds hammer recipes for all eight cracked variants. The static conflict
+  check found only the intended override. Host: pull into a test world, craft four umber bricks and check that
+  cracking a block returns the hammer with reduced durability, then confirm.
+
 - **Polymer names** (2026-11-04, dev #218): translation update `u20261104-203745-9a77` supplies full Russian names for four Destroy polymers and fixes «Полиропилен». Host: subscribe a profile with Destroy, reload client resources, check the four names, then approve. The three guides are already live. JSON/jar keys checked; full-pack MCP run exceeded the caller’s 180-second timeout and was stopped, so no successful server/client verification is claimed.
 - **Going Nuclear M0** (2026-11-05, dev #202, plan doc 50): the gameplay decisions are settled — reactor automation
   after L3, realistic physics without random failures, radiation enabled, destructive accidents and fallout disabled on
