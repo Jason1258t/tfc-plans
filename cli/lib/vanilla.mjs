@@ -179,6 +179,36 @@ export async function buildFatInstaller(nf, mcDir, dir = path.join(cacheDir(), '
 const readJson = (f) => JSON.parse(fs.readFileSync(f, 'utf8'));
 const writeJson = (f, v) => fs.writeFileSync(f, `${JSON.stringify(v, null, 2)}\n`);
 
+const tlauncherDirs = () => [
+  path.join(process.env.APPDATA || os.homedir(), '.tlauncher'),
+  path.join(os.homedir(), '.tlauncher'),
+];
+const hasTlauncher = () => tlauncherDirs().some(isDir);
+
+/**
+ * Версия NeoForge вместе с родительской Minecraft, без inheritsFrom. Короткое описание TLauncher разворачивает при
+ * первом запуске и стирает блок modpack, а игра идёт на 2 модах (у хоста, dev #262); развёрнутое сразу он не трогает.
+ * Родителя нет — null.
+ */
+function unfoldVersion(mcDir, { inheritsFrom, ...own }) {
+  let parent;
+  try {
+    parent = readJson(path.join(mcDir, 'versions', inheritsFrom, `${inheritsFrom}.json`));
+  } catch {
+    return null;
+  }
+  const names = new Set(own.libraries.map((l) => l.name));
+  return {
+    ...parent,
+    ...own,
+    arguments: {
+      game: [...(parent.arguments?.game ?? []), ...(own.arguments?.game ?? [])],
+      jvm: [...(parent.arguments?.jvm ?? []), ...(own.arguments?.jvm ?? [])],
+    },
+    libraries: [...own.libraries, ...parent.libraries.filter((l) => !names.has(l.name))],
+  };
+}
+
 /** TLauncher завёл свой файл у версии, а блока сборки в нём нет: игра пойдёт не из папки версии */
 export function tlauncherModpackLost(instance) {
   if (path.basename(path.dirname(path.resolve(instance))) !== 'versions') return false;
@@ -344,8 +374,13 @@ export async function installToLauncher({
   // Версию, которую TLauncher уже развернул, не трогаем: короткое описание он разворачивает при запуске заново и
   // стирает блок modpack (у хоста — дважды). Другой NeoForge без короткого описания не поставить
   const unfolded = !oldVersion.inheritsFrom && detectVersions(versionDir).loader === versionId(nf);
-  // Поля лаунчера и тип версии сохраняем: от NeoForge нужны только его запуск и библиотеки
-  if (!unfolded) writeJson(versionFile, { ...oldVersion, ...nfJson, id: name, type: oldVersion.type ?? nfJson.type });
+  if (!unfolded) {
+    const next = (hasTlauncher() && unfoldVersion(mcDir, nfJson)) || nfJson;
+    // Поля лаунчера и тип версии сохраняем: от NeoForge нужны только его запуск и библиотеки
+    const kept = { ...oldVersion };
+    if (!next.inheritsFrom) delete kept.inheritsFrom;
+    writeJson(versionFile, { ...kept, ...next, id: name, type: oldVersion.type ?? next.type });
+  }
   if (gameDir === versionDir) markTlauncherModpack(versionDir, name, nfJson.inheritsFrom ?? '1.21.1', nf);
 
   // Профиль: установщик правит «NeoForge» — возвращаем как было, свой профиль добавляем во все файлы профилей
