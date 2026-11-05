@@ -175,6 +175,10 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-04 (dev #221): **2.10.2** — steel PS wire sag divided by three (0.4 → 0.4/3);
+stranded copper M sag reduced by 40% (1 → 0.6). ACSR and other wires unchanged.
+EE 1.1.2 WireData.getSag confirms linear scaling for existing wires, including tensioned ones. Temporary dev-server assertions passed 24/24 (8/60/128-block spans, automatic/normal/tensioned/long wire lengths). Existing lines test: PS sag 0.40 blocks loose and 0.08 clamped on a ~60-block span; voltages matched calculations. The reduced dependency fixture logged unrelated missing IE/TFC/CC recipes; A restart with IE/TFC/CC preserved the lines, tension and measured voltages (dependency client-class warnings remained, server ran successfully). No client visual check.
+
 2026-11-05 (dev #224): final Survival integration enabled the existing M10/M11/M12 datapacks for installation through
 `tfc pull`: `Nh1ATmqCY92Hao48hOAQ` (20 entries), `cbH7wTaHOr5vQMs4Usgb` (9) and `tcegd3kspq62oHuM3YmF` (69).
 Together with the already enabled M6 pack they cover all 54 electronics materials/components: 17 M10 recipes, seven M11
