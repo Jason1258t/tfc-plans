@@ -158,3 +158,7 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   `tfc-plans-dev` dispatcher rejects unknown arguments. Open tasks migrated on server start (snapshot
   `dev-backup/dev-before-checks-*.db`); closed ones keep the JSON, read-only, and migrate on reopen or a `dev_check`.
   `PATCH checklist` stays for stale clients, matching by `num` or text so marks survive.
+- Dev #240 (2026-11-05): `scripts/mcp-call.mjs` (`npm run mcp`) — one call of a `.mcp.json` server tool from a shell with
+  JSON arguments and `--timeout`, instead of temporary JSON-RPC clients (Codex in #218). Verified on both real servers
+  (lists, schema, calls, unknown argument/tool, `@file`, stdin) and on a fake server: crash, missing command, hang
+  (exit 124, process gone), 5 MB answer through a pipe, images, env priority.
