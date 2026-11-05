@@ -242,6 +242,13 @@ KubeJS folders. Test unconfirmed/changed drafts in a selected world. Preview `tf
 world, recipe overrides and KubeJS priority. Changed world copies remain for manual review. Local `undo` does not
 revert server confirmation; `tfc admin rollback` reverts the whole snapshot. Details: [datapacks-pack.md](../plans/datapacks-pack.md).
 
+## EE Extras 2.11.0 — пластики и цветной дисплей CC (dev #246)
+
+Host: install Destroy 0.4.6 + Petrolpark 1.5.11 and EE Extras 2.11.0 on the server and clients, pull the current M12
+datapack `tcegd3kspq62oHuM3YmF` into a test world and check the heated ABS/PET processes, the 450 K Vat PET reaction,
+RGB phosphor and the updated computer/case/display recipes in Survival. Only then confirm the datapack for the pack.
+The reduced dedicated-server stand passed 73/73 recipes, 280 CC checks and produced 7 PET; it was not a full pack boot.
+
 ## EE Extras 2.10.1 — внешний вид электроники (dev #216)
 
 Host: install `ee_extras@2.10.1` on the server and clients; inspect the 28 item textures and five block models in the client. Dedicated-server behavior, resources and offline renders were checked. No recipe or gameplay changes.
