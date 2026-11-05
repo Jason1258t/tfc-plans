@@ -247,3 +247,6 @@ revert server confirmation; `tfc admin rollback` reverts the whole snapshot. Det
 Host: install `ee_extras@2.10.1` on the server and clients; inspect the 28 item textures and five block models in the client. Dedicated-server behavior, resources and offline renders were checked. No recipe or gameplay changes.
 
 - Dev #221: install EE Extras 2.10.2 on the server and all clients; check steel PS and stranded copper M wire appearance, including existing tensioned lines.
+
+- Better Fluids 1.0.0 (dev #233.2): host installs the jar on the server and clients, checks the tank appearance
+  and crafting in the pack, then publishes a pack snapshot.
