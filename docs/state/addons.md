@@ -177,6 +177,12 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-05 (dev #228): **EE Extras 2.14.1** — EE 1.1.2 electric pumps draw 2.4 times less power at the same
+terminal voltage, preserving their original RPM curve. The patch multiplies the resistance used by the circuit solver
+by 2.4 and adjusts goggles watts by the same factor. At 220 V the dev server reported 480 Ω and 60.5 RPM with the
+stock 200 Ω config and mechanical pump impact 4, corresponding to about 101 W instead of 242 W. Both injections
+were verified in the exported class. Config proposal `HPnhxqfnFrUSjHTYcEKG` was cancelled.
+
 2026-11-05 (dev #249, #259): **2.14.0** — a steel whip antenna for both wireless modem tiers via the base
 transceiver, a miniature colour display for direct and upgrade recipes of the advanced pocket computer, and
 industrial RedRouter, Animatronic, Scroller and Source Block recipes. Source and Target still convert 1:1.
