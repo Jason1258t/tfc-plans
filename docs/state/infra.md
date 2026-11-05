@@ -340,6 +340,48 @@ Verified on snapshot `20261029-192724-29d7`: 224 of 243 mods, boot 96 s, KubeJS 
 FTB commands registered. Stand reports real errors: 16 `concrete_lime.js` cement recipes and one
 `create_flight_control` deploying recipe (the pending #157 fix isn't in that snapshot).
 
+## Remote whole-pack stand (dev #275)
+
+The stand runs as `master` on Ubuntu `test1a` (`100.109.147.20` in the owner's Tailscale network).
+SSH from the Mac was verified over Tailscale. Join the same tailnet before connecting. The Mac already has the host
+key under its LAN address, so reuse that entry with `HostKeyAlias` and keep host key checking enabled.
+AutoLab, its Docker containers, and Ollama are outside this workflow.
+
+Node.js 24 and Java 21 are installed under `~/.local/opt/tfc-stand/{node,java}`. The server runs from a source
+export in `~/tfc-stand/repo`, with the pack snapshot in `~/.cache/tfc-plans/pack`. Update the export from the revision
+being tested. If the revision removes source files, use a fresh export directory. For uncommitted changes, sync the
+files needed by the test. Refresh the pack cache on the Mac with `npm run pack:fetch` when a test needs a newer
+snapshot. Sync it into the dedicated pack cache with `--delete` to remove jars from older snapshots.
+
+```bash
+tfc_ssh() {
+  ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o HostKeyAlias=192.168.0.101 "$@"
+}
+tfc_host=master@100.109.147.20
+tfc_ssh "$tfc_host" 'mkdir -p ~/tfc-stand/repo ~/.cache/tfc-plans/pack'
+git archive HEAD | tfc_ssh "$tfc_host" 'tar -xf - -C ~/tfc-stand/repo'
+rsync -a --delete -e 'ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o HostKeyAlias=192.168.0.101' \
+  ~/.cache/tfc-plans/pack/ "$tfc_host:.cache/tfc-plans/pack/"
+tfc_ssh "$tfc_host" 'bash -se' <<'REMOTE'
+export JAVA_HOME="$HOME/.local/opt/tfc-stand/java"
+export PATH="$HOME/.local/opt/tfc-stand/node/bin:$PATH"
+cd ~/tfc-stand/repo
+npm ci --ignore-scripts --no-audit --no-fund
+npm run stand -- --port 25617 --cmd list
+REMOTE
+```
+
+The smoke test starts NeoForge, sends `list` through RCON and stops the server. Both ports are bound to loopback.
+For an overlay or a replacement jar, copy it to a separate directory on `test1a` and pass its remote path to
+`--overlay` or `--mod`. Use the output summary for KubeJS and startup diagnostics. Run one check at a time on
+the default ports. For concurrent checks use separate `TFC_STAND_DIR` values and separate port pairs.
+The local MCP `pack_devserver` still runs on the host that started the MCP server. Use the SSH command above to run
+the stand on `test1a`.
+
+If `maven.neoforged.net` times out on `test1a`, sync the `libraries/` directory from a working NeoForge stand cache
+for the same loader version. Use `~/.cache/tfc-plans/stand/neoforge-<version>/libraries/` on both hosts and confirm
+that the source includes the version's `unix_args.txt`. The stand can then start without fetching the installer.
+
 ## Pack patches (`pack-patches/`)
 
 - `l10n/` (2026-10-22): translation of Chinese strings in pack KubeJS scripts. Base — pack snapshot

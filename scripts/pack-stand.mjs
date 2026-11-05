@@ -234,6 +234,7 @@ function prepare({ run, server, cache, sel, overlay, keep, memory, port, rconPor
       'view-distance=4',
       'simulation-distance=4',
       'max-tick-time=-1',
+      'server-ip=127.0.0.1',
       `server-port=${port}`,
       'enable-rcon=true',
       `rcon.port=${rconPort}`,
