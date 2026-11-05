@@ -175,6 +175,18 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-04 (dev #221): **2.10.2** — steel PS wire sag divided by three (0.4 → 0.4/3);
+stranded copper M sag reduced by 40% (1 → 0.6). ACSR and other wires unchanged.
+EE 1.1.2 WireData.getSag confirms linear scaling for existing wires, including tensioned ones. Temporary dev-server assertions passed 24/24 (8/60/128-block spans, automatic/normal/tensioned/long wire lengths). Existing lines test: PS sag 0.40 blocks loose and 0.08 clamped on a ~60-block span; voltages matched calculations. The reduced dependency fixture logged unrelated missing IE/TFC/CC recipes; A restart with IE/TFC/CC preserved the lines, tension and measured voltages (dependency client-class warnings remained, server ran successfully). No client visual check.
+
+2026-11-05 (dev #224): final Survival integration enabled the existing M10/M11/M12 datapacks for installation through
+`tfc pull`: `Nh1ATmqCY92Hao48hOAQ` (20 entries), `cbH7wTaHOr5vQMs4Usgb` (9) and `tcegd3kspq62oHuM3YmF` (69).
+Together with the already enabled M6 pack they cover all 54 electronics materials/components: 17 M10 recipes, seven M11
+recipes and 30 M12 recipes; `pcb_design` is produced by the design table rather than a crafting recipe. Active-recipe
+queries pass for a resistor, L2/L3 boards, solar panel, CC computer and CCBR integrated circuit. The earlier dedicated
+server checks remain valid because recipe JSON and addon code did not change. No new addon version was released; live
+pack-wide confirmation and a manual Survival playthrough remain pending.
+
 2026-11-04 (dev #216): **2.10.1** — visual refresh of 33 entries from the L1 blank through the TFC thermometer:
 28 individual RGBA 64×64 item textures and materials/models for five blocks. L1/L2/L3 use yellow/green/blue edge
 stickers; coating, etched traces and plated vias distinguish PCB stages. Fiberglass is a wound bobbin, fabric an
