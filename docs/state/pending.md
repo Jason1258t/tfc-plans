@@ -1,5 +1,8 @@
 # State: waiting for the host or an in-game check
 
+- Host (dev #283): install EE Extras 2.18.1 on the server and clients. Check that a newly placed cable and one
+  migrated from an existing world both appear between the cap inlets.
+
 - Host (dev #272): install EE Extras 2.17.0 on the server and clients, check one working board and a charred-board
   salvage in the pack profile, then publish the pack snapshot.
 

@@ -181,6 +181,11 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-06 (dev #283): **EE Extras 2.18.1** — the duplex cable sheath between two caps uses a different EE node pair
+from either conductor. EE 1.1.2 keeps one connection per pair, so the first conductor previously overwrote the sheath.
+Existing links with both conductors intact regain a standard duplex sheath during the server integrity check.
+The dedicated server verified fresh placement, migration of a saved cable, and removal of a cap with two attached cables.
+
 2026-11-06 (dev #276): **EE Extras 2.18.0** — the duplex cap covers both terminals with an overhanging rim. Caps sync
 with watched chunks, and the spool HUD and click prediction use the synced state. The visible duplex and thin cable
 sheaths use the cap inlet in both EE client renderers. Surface wire routes use the same inlet. EE 1.1.2 still registers
