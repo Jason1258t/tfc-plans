@@ -395,6 +395,45 @@ Verified on `20261105-135644-3704` with NeoForge 21.1.251. The RAM-backed run bo
 answered RCON `list`, and stopped. Both listeners bound to loopback. The snapshot reported recipe and tag errors
 without blocking startup.
 
+## Remote Minecraft client stand (dev #279)
+
+The client stand on `test1a` lives in `~/tfc-stand/client`, separate from the server stand. It uses Java 21,
+NeoForge 21.1.251, and the Ubuntu `xvfb` and `x11-apps` packages extracted into `client/x11` with `dpkg-deb -x`.
+The launcher starts an authenticated 1280×720 Xvfb display on `:91` with TCP disabled, uses Mesa software
+rendering, and stops Xvfb when the command exits. Run one client at a time.
+
+```bash
+tfc_ssh "$tfc_host" '~/tfc-stand/client/run-builder-test.sh'
+tfc_ssh -t "$tfc_host" '~/tfc-stand/client/run-full-pack.sh'
+```
+
+The Builder Tools check uses the addon's existing `test-client.sh` and writes
+`builder-tools-mod/run/client-check.log` and `builder-tools-mod/run/screenshots/buildertest.png`. It passed all
+six assertions and saved an 854×480 frame from the test world.
+
+The full profile copies the snapshot's `mods`, `config`, `kubejs`, and `resourcepacks` under `full-pack/run`.
+It launches the installed NeoForge client with a local test profile and writes `full-pack/run/client-check.log`.
+Keep the launch command in the foreground. To capture its display during a run, use a second SSH session:
+
+```bash
+tfc_ssh "$tfc_host" 'cd ~/tfc-stand/client &&
+  DISPLAY=:91 XAUTHORITY="$PWD/Xauthority" \
+    ~/.local/opt/tfc-stand/java/bin/java Capture.java frames/full-pack.png'
+```
+
+The Builder Tools Gradle run resolves dependencies offline from `client/gradle` because the NeoForge Maven host
+times out on `test1a`. The cache was seeded from the Mac. The Gradle init script in `gradle/init.d/stand.gradle` resolves LWJGL
+from `lwjgl-repo`, which also contains the Linux natives fetched from `libraries.minecraft.net`.
+Refresh the dependency cache when changing the loader. The full profile uses the NeoForge installer and
+the launch metadata under `client/launcher`. Running the full snapshot through ModDevGradle triggered an
+assertion in KubeJS TFC 2.0.2 that its bytecode gates to development runs.
+
+The full profile uses snapshot `20261105-135644-3704` with all 250 mod jars. It sets
+`-Dcustomskinloader.ignorePatchFailure=true` to continue when CustomSkinLoader 15.0.1 fails to patch
+`SkinManager`. The test copy of the FancyMenu config skips its first-run welcome screen.
+The GTX 1650 is visible to `nvidia-smi`. Xvfb uses Mesa llvmpipe (OpenGL 4.5), and the log reports a
+GLSL 4.60 shader compilation error during startup.
+
 ## Pack patches (`pack-patches/`)
 
 - `l10n/` (2026-10-22): translation of Chinese strings in pack KubeJS scripts. Base — pack snapshot
