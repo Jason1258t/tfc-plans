@@ -3,12 +3,14 @@
  * модами из libs/, ждёт готовности, шлёт команды через RCON и возвращает ответы и ошибки из лога. Долгий (минута-две)
  * — вызывать только напрямую, не в фоне. Работает на любой ОС (на Windows — через gradlew.bat) и не требует python.
  * pack_devserver — стенд всей сборки (scripts/pack-stand.mjs): production-сервер со снимком и полным KubeJS.
+ * pack_client — клиентский стенд на test1a (scripts/client-stand-remote.mjs): полный клиент, меню или мир, PNG.
  */
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { isWin, javaHome, killTree, runRcon, sleep, stopWithProcess } from '../../mc-server.mjs';
 import { PACK_CACHE } from '../../pack-cache.mjs';
+import { clientStand, worldKeyword } from '../../client-stand-remote.mjs';
 import { runStand } from '../../pack-stand.mjs';
 import { str, num } from '../fmt.mjs';
 import { TOOLS_DIR } from '../resources.mjs';
@@ -327,6 +329,42 @@ async function packDevServer(a) {
   return r.text;
 }
 
+/** Флаги client-stand.mjs из параметров инструмента */
+function clientArgs(a) {
+  const out = [];
+  for (const m of lines(a.mods)) out.push('--mod', path.resolve(m));
+  for (const x of lines(a.exclude)) out.push('--exclude', x);
+  if (a.overlay) out.push('--overlay', path.resolve(String(a.overlay)));
+  if (a.world) out.push('--world', worldKeyword(String(a.world)) ? String(a.world) : path.resolve(String(a.world)));
+  for (const k of ['timeout', 'settle', 'load', 'shots', 'interval'])
+    if (a[k] !== undefined && a[k] !== null) out.push(`--${k}`, String(Math.max(0, Number(a[k]) | 0)));
+  if (a.memory) out.push('--memory', String(a.memory));
+  if (a.ready) out.push('--ready', String(a.ready));
+  if (a.ram) out.push('--ram');
+  return out;
+}
+
+async function packClient(a) {
+  const r = await clientStand('run', clientArgs(a), { noPack: Boolean(a.noPack) });
+  const summary = r.local ? path.join(r.local, 'summary.txt') : null;
+  const text =
+    summary && fs.existsSync(summary)
+      ? fs.readFileSync(summary, 'utf8').trim()
+      : r.out.replace(/^RESULT .*$/m, '').trim() || `прогон не дал сводки (код ${r.code})`;
+  const max = Math.min(4, Math.max(0, Number(a.images ?? 2) | 0));
+  const shown = max ? r.pngs.slice(-max) : [];
+  return {
+    text: [
+      text,
+      ...(r.local
+        ? [`На Mac: ${r.local}${r.pngs.length ? ` (PNG: ${r.pngs.length}, здесь последние ${shown.length})` : ''}`]
+        : []),
+      ...(r.local ? [`Журнал: log_analyze path=${path.join(r.local, 'latest.log')}`] : []),
+    ].join('\n'),
+    images: shown.map((f) => fs.readFileSync(f)),
+  };
+}
+
 export const TOOLS = [
   {
     name: 'addon_devserver',
@@ -381,5 +419,38 @@ export const TOOLS = [
       },
     },
     handler: packDevServer,
+  },
+  {
+    name: 'pack_client',
+    description:
+      'Run the full pack client (NeoForge, current snapshot, all mods incl. client-only) on the remote Linux stand test1a over SSH (scripts/client-stand-remote.mjs; Xvfb, software GL): wait for the title screen or, with world, join a singleplayer world; PNG screenshots (returned as images), clean exit, then a summary — KubeJS script counts, deduplicated latest.log errors, crash report; logs copied to ~/.cache/tfc-plans/client-stand/results/<id> on the Mac. For client-side checks: textures/models/GUI of an addon, client crashes, KubeJS client scripts. Syncs the local pack cache first (npm run pack:fetch; noPack skips). Slow (4–8 min) — call directly only; stand must be prepared once (npm run client-stand -- prepare). One run at a time.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        world: str(
+          'join a singleplayer world: "new" — fresh creative world (cheats on) from the pack default preset (tfc:overworld; "new:<preset id>" — another), "flat" — vanilla flat (TFC Eratosthenes errors there: no map projection), or a local save folder with level.dat (a server world works); omit — title screen only',
+        ),
+        mods: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'own jar paths added to mods/ (drop the pack version with exclude)',
+        },
+        exclude: { type: 'array', items: { type: 'string' }, description: 'drop snapshot jars by file name part' },
+        overlay: str('local folder copied over the game dir (config/…, kubejs/…, resourcepacks/…)'),
+        shots: num('screenshots (1)'),
+        interval: num('seconds between screenshots (10)'),
+        settle: num('seconds after ready (with world: after the world shows up) before the first screenshot (20)'),
+        load: num(
+          'with world: max seconds after login to wait for the loading screen to go (picture changes; 300 — software GL is slow)',
+        ),
+        timeout: num('max seconds to reach the menu/world (900)'),
+        ready: str('regex on client.log that means ready (default: title screen, or player login with world)'),
+        memory: str('-Xmx (8G)'),
+        ram: { type: 'boolean', description: 'run from /dev/shm (copies mods to RAM; faster load)' },
+        noPack: { type: 'boolean', description: 'skip syncing the pack cache (already on the host)' },
+        images: num('how many last PNGs to return as images (2, max 4)'),
+      },
+    },
+    handler: packClient,
   },
 ];

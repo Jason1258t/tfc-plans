@@ -4,7 +4,8 @@
  * запускает scripts/client-stand.mjs там и забирает результаты прогона (журналы, PNG) сюда.
  *
  *   npm run client-stand -- prepare [--assets base|all|none]   — Xvfb, Minecraft, NeoForge на хосте (один раз на версию)
- *   npm run client-stand -- run [--mod <jar>]… [--overlay <папка>] [--exclude …] [--timeout …] [--shots N] [--ram] …
+ *   npm run client-stand -- run [--mod <jar>]… [--overlay <папка>] [--world new|flat|<папка мира>] [--exclude …]
+ *        [--timeout …] [--shots N] [--ram] …
  *   npm run client-stand -- clean [--results 10]                — брошенные прогоны, лишние Xvfb, старые результаты
  *   --no-pack — не синхронизировать снимок (уже залит); остальные флаги run — как у client-stand.mjs
  *
@@ -14,6 +15,7 @@
  *   TFC_CLIENT_OPT        — где на хосте Node и Java (по умолчанию ~/.local/opt/tfc-stand: node/, java/)
  *
  * Результаты — в ~/.cache/tfc-plans/client-stand/results/<id> на Mac (summary.txt, latest.log, PNG).
+ * Библиотека для MCP pack_client — clientStand(); в stdout она сама не пишет (там протокол MCP).
  */
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -50,8 +52,11 @@ function ssh(script) {
 }
 
 function rsync(args) {
-  const r = spawnSync('rsync', ['-a', '-e', ['ssh', ...SSH].join(' '), ...args], { stdio: 'inherit' });
-  if (r.status !== 0) throw new Error(`rsync ${args.at(-1)}: код ${r.status}`);
+  const r = spawnSync('rsync', ['-a', '-e', ['ssh', ...SSH].join(' '), ...args], {
+    stdio: ['ignore', 'ignore', 'pipe'],
+    encoding: 'utf8',
+  });
+  if (r.status !== 0) throw new Error(`rsync ${args.at(-1)}: код ${r.status} ${(r.stderr ?? '').trim()}`);
 }
 
 /** Код стенда — каждый раз заново, из рабочей копии (проверяем ровно то, что лежит здесь) */
@@ -92,8 +97,11 @@ async function pushInstaller(nf) {
   rsync([jar, `${HOST}:${REMOTE_STAND}/installers/`]);
 }
 
-/** Команда client-stand.mjs на хосте; вывод — сюда же потоком. stdin держим открытым: оборвался — хост убирает прогон */
-function remote(args) {
+/**
+ * Команда client-stand.mjs на хосте; stdout — в onOutput потоком, журнал хоста — в stderr. stdin держим открытым:
+ * закрыли (signal, обрыв) — хост штатно останавливает игру и убирает прогон.
+ */
+function remote(args, { onOutput, signal }) {
   const cmd = [
     `export JAVA_HOME=${OPT}/java PATH=${OPT}/node/bin:${OPT}/java/bin:$PATH`,
     `cd ${REMOTE_CODE}`,
@@ -106,22 +114,26 @@ function remote(args) {
     let out = '';
     child.stdout.on('data', (d) => {
       out += d;
-      process.stdout.write(d);
+      onOutput?.(d);
     });
-    for (const s of ['SIGINT', 'SIGTERM']) process.once(s, () => child.stdin.end());
+    if (signal?.aborted) child.stdin.end();
+    else signal?.addEventListener('abort', () => child.stdin.end(), { once: true });
     child.on('error', reject);
     child.on('exit', (code) => resolve({ code, out }));
   });
 }
 
-/** Свои jar и оверлей — в папку входов прогона на хосте; аргументы — уже с путями там */
+/** --world new, new:<пресет>, flat — мир создаёт стенд; иное — локальная папка мира */
+export const worldKeyword = (v) => v === 'flat' || v === 'new' || String(v).startsWith('new:');
+
+/** Свои jar, оверлей и папка мира — в папку входов прогона на хосте; аргументы — уже с путями там */
 function pushInputs(argv) {
   const inputs = `${REMOTE_STAND}/inputs/${Date.now()}`;
   let home = null;
   const out = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if ((a === '--mod' || a === '--overlay') && argv[i + 1]) {
+    if ((a === '--mod' || a === '--overlay' || (a === '--world' && !worldKeyword(argv[i + 1]))) && argv[i + 1]) {
       const local = path.resolve(argv[++i]);
       if (!fs.existsSync(local)) throw new Error(`нет ${local}`);
       home ??= ssh(`mkdir -p ~/${inputs} && printf %s "$HOME"`);
@@ -135,45 +147,64 @@ function pushInputs(argv) {
   return { args: out, inputs: home ? inputs : null };
 }
 
-async function main() {
-  const [cmd, ...rest] = process.argv.slice(2);
-  const noPack = rest.includes('--no-pack');
-  const argv = rest.filter((a) => a !== '--no-pack');
+/**
+ * prepare | run | clean на хосте. argv — флаги client-stand.mjs с локальными путями (--mod, --overlay, --world).
+ * → { code, out (stdout хоста), local (папка результатов на Mac или null), pngs (пути на Mac) }
+ */
+export async function clientStand(cmd, argv = [], { noPack = false, onOutput = null, signal = null } = {}) {
   if (!['prepare', 'run', 'clean'].includes(cmd))
     throw new Error('команда: prepare | run | clean (см. начало scripts/client-stand-remote.mjs)');
+  const io = { onOutput, signal };
+  const done = (r) => ({ code: r.code, out: r.out, local: null, pngs: [] });
   pushCode();
   if (cmd === 'clean') {
-    const r = await remote(['clean', ...argv]);
+    const r = await remote(['clean', ...argv], io);
     ssh(`rm -rf ~/${REMOTE_STAND}/inputs`);
-    return r.code;
+    return done(r);
   }
   if (!noPack) pushPack();
   if (cmd === 'prepare') {
     const i = argv.indexOf('--neoforge');
     const nf = (i >= 0 && argv[i + 1]) || packNf() || DEFAULT_NF;
     await pushInstaller(nf);
-    return (await remote(['prepare', ...argv])).code;
+    return done(await remote(['prepare', ...argv], io));
   }
   const { args, inputs } = pushInputs(argv);
-  const r = await remote(['run', ...args]);
-  if (inputs) ssh(`rm -rf ~/${inputs}`);
-  const res = /^RESULT (.+)$/m.exec(r.out)?.[1];
-  if (res) {
-    const local = path.join(LOCAL, 'results', path.basename(res));
-    fs.mkdirSync(local, { recursive: true });
-    rsync([`${HOST}:${res}/`, `${local}/`]);
-    const pngs = fs.readdirSync(local).filter((f) => f.endsWith('.png'));
-    console.log(`\nНа Mac: ${local}${pngs.length ? `\n  ${pngs.map((f) => path.join(local, f)).join('\n  ')}` : ''}`);
+  let r;
+  try {
+    r = await remote(['run', ...args], io);
+  } finally {
+    if (inputs) ssh(`rm -rf ~/${inputs}`);
   }
-  return r.code;
+  const res = /^RESULT (.+)$/m.exec(r.out)?.[1];
+  if (!res) return done(r);
+  const local = path.join(LOCAL, 'results', path.basename(res));
+  fs.mkdirSync(local, { recursive: true });
+  rsync([`${HOST}:${res}/`, `${local}/`]);
+  const pngs = fs
+    .readdirSync(local)
+    .filter((f) => f.endsWith('.png'))
+    .sort()
+    .map((f) => path.join(local, f));
+  return { code: r.code, out: r.out, local, pngs };
 }
 
-main().then(
-  (code) => {
-    process.exitCode = code ?? 1;
-  },
-  (e) => {
-    console.error(e.message);
-    process.exitCode = 1;
-  },
-);
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  const [cmd, ...rest] = process.argv.slice(2);
+  const abort = new AbortController();
+  for (const s of ['SIGINT', 'SIGTERM']) process.once(s, () => abort.abort());
+  clientStand(
+    cmd,
+    rest.filter((a) => a !== '--no-pack'),
+    { noPack: rest.includes('--no-pack'), onOutput: (d) => process.stdout.write(d), signal: abort.signal },
+  ).then(
+    (r) => {
+      if (r.local) console.log(`\nНа Mac: ${r.local}${r.pngs.length ? `\n  ${r.pngs.join('\n  ')}` : ''}`);
+      process.exitCode = r.code ?? 1;
+    },
+    (e) => {
+      console.error(e.message);
+      process.exitCode = 1;
+    },
+  );
+}
