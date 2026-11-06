@@ -11,6 +11,8 @@
 Part of [STATE.md](../STATE.md). The agent can't check anything in game. When an item is resolved, remove it here and
 its one-liner in STATE.md.
 
+- Host: install **EE Extras 2.18.2** on the server and clients (dev #286) and check the original fence and heater setup.
+
 ## Host actions
 
 - **Surface wire** (2026-11-06, dev #205): EE Extras 2.16.0 — `tfc pull addons` on the server and players. Host: in

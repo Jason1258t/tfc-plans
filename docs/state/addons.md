@@ -181,6 +181,11 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-06 (dev #286): **EE Extras 2.18.2** — renamed the surface wire in Russian. Routing and periodic support checks
+use the outline of fence posts and rails. On the dev server, a 6.13 m line over oak fences survived the periodic
+checks without drops. Removing three fence blocks dropped only the unsupported section. A separate heater circuit
+with 7.25 m of surface wire held both cores and delivered 211.7 V RMS from an AC source set to 300 V peak.
+
 2026-11-06 (dev #283): **EE Extras 2.18.1** — the duplex cable sheath between two caps uses a different EE node pair
 from either conductor. EE 1.1.2 keeps one connection per pair, so the first conductor previously overwrote the sheath.
 Existing links with both conductors intact regain a standard duplex sheath during the server integrity check.
