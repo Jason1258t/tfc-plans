@@ -380,7 +380,15 @@ function runLayer(layer) {
   };
   // Item.of / Ingredient.of / Fluid.of — значения, которые идут в фильтры и JSON
   const ItemApi = new Proxy(
-    { of: itemOf, empty: '' },
+    {
+      // Item.of(...).toJson() — ItemStack, как в KubeJS 1.21: { id, count }, а не ингредиент { item }
+      of: (id, count) => {
+        const s = itemOf(id, count);
+        if (s instanceof String) s.toJson = () => stackJson(s);
+        return s;
+      },
+      empty: '',
+    },
     { get: (t, k) => (k in t ? t[k] : anything(`Item.${String(k)}`)) },
   );
   const IngredientApi = new Proxy(
