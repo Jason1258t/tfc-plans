@@ -5,7 +5,7 @@
  *
  *   npm run client-stand -- prepare [--assets base|all|none]   — Xvfb, Minecraft, NeoForge на хосте (один раз на версию)
  *   npm run client-stand -- run [--mod <jar>]… [--overlay <папка>] [--world new|flat|<папка мира>] [--exclude …]
- *        [--timeout …] [--shots N] [--ram] …
+ *        [--timeout …] [--shots N] [--ram] [--game-shots <префикс>]… …
  *   npm run client-stand -- clean [--results 10]                — брошенные прогоны, лишние Xvfb, старые результаты
  *   --no-pack — не синхронизировать снимок (уже залит); остальные флаги run — как у client-stand.mjs
  *
@@ -14,7 +14,8 @@
  *                           локальной сети; проверку ключа не отключаем)
  *   TFC_CLIENT_OPT        — где на хосте Node и Java (по умолчанию ~/.local/opt/tfc-stand: node/, java/)
  *
- * Результаты — в ~/.cache/tfc-plans/client-stand/results/<id> на Mac (summary.txt, latest.log, PNG).
+ * Результаты — в ~/.cache/tfc-plans/client-stand/results/<id> на Mac (summary.txt, latest.log, PNG; игровые снимки
+ * --game-shots — в screenshots/ там же, --keep для этого не нужен).
  * Библиотека для MCP pack_client — clientStand(); в stdout она сама не пишет (там протокол MCP).
  */
 import { spawn, spawnSync } from 'node:child_process';
@@ -24,6 +25,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Api } from '@tfc/cli/api';
 import { fetchInstaller, neoforgeVersion } from '@tfc/cli/vanilla';
+import { badShotPrefixes } from './client-stand.mjs';
 import { PACK_CACHE } from './pack-cache.mjs';
 import { packServer } from './pack-fetch.mjs';
 
@@ -149,13 +151,16 @@ function pushInputs(argv) {
 
 /**
  * prepare | run | clean на хосте. argv — флаги client-stand.mjs с локальными путями (--mod, --overlay, --world).
- * → { code, out (stdout хоста), local (папка результатов на Mac или null), pngs (пути на Mac) }
+ * → { code, out (stdout хоста), local (папка результатов на Mac или null), pngs (снимки стенда на Mac),
+ *     gameShots (игровые снимки --game-shots на Mac) }
  */
 export async function clientStand(cmd, argv = [], { noPack = false, onOutput = null, signal = null } = {}) {
   if (!['prepare', 'run', 'clean'].includes(cmd))
     throw new Error('команда: prepare | run | clean (см. начало scripts/client-stand-remote.mjs)');
+  const bad = badShotPrefixes(argv.flatMap((x, i) => (argv[i - 1] === '--game-shots' ? [x] : [])));
+  if (bad) throw new Error(bad);
   const io = { onOutput, signal };
-  const done = (r) => ({ code: r.code, out: r.out, local: null, pngs: [] });
+  const done = (r) => ({ code: r.code, out: r.out, local: null, pngs: [], gameShots: [] });
   pushCode();
   if (cmd === 'clean') {
     const r = await remote(['clean', ...argv], io);
@@ -181,12 +186,15 @@ export async function clientStand(cmd, argv = [], { noPack = false, onOutput = n
   const local = path.join(LOCAL, 'results', path.basename(res));
   fs.mkdirSync(local, { recursive: true });
   rsync([`${HOST}:${res}/`, `${local}/`]);
-  const pngs = fs
-    .readdirSync(local)
-    .filter((f) => f.endsWith('.png'))
-    .sort()
-    .map((f) => path.join(local, f));
-  return { code: r.code, out: r.out, local, pngs };
+  const listPng = (dir) =>
+    fs.existsSync(dir)
+      ? fs
+          .readdirSync(dir)
+          .filter((f) => f.endsWith('.png'))
+          .sort()
+          .map((f) => path.join(dir, f))
+      : [];
+  return { code: r.code, out: r.out, local, pngs: listPng(local), gameShots: listPng(path.join(local, 'screenshots')) };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
@@ -199,7 +207,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     { noPack: rest.includes('--no-pack'), onOutput: (d) => process.stdout.write(d), signal: abort.signal },
   ).then(
     (r) => {
-      if (r.local) console.log(`\nНа Mac: ${r.local}${r.pngs.length ? `\n  ${r.pngs.join('\n  ')}` : ''}`);
+      const all = [...r.pngs, ...r.gameShots];
+      if (r.local) console.log(`\nНа Mac: ${r.local}${all.length ? `\n  ${all.join('\n  ')}` : ''}`);
       process.exitCode = r.code ?? 1;
     },
     (e) => {

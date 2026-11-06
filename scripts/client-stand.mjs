@@ -11,13 +11,14 @@
  *     launcher/     — versions/, libraries/, assets/ — Minecraft и NeoForge (ставит prepare)
  *     installers/   — установщики NeoForge (толстый с сервера сборки кладёт client-stand-remote.mjs)
  *     runs/<id>/    — папка прогона: свой профиль игры, свой экран и Xauthority; удаляется после прогона
- *     results/<id>/ — что осталось от прогона: summary.txt, журналы, crash-reports, PNG
+ *     results/<id>/ — что осталось от прогона: summary.txt, журналы, crash-reports, PNG; screenshots/ — игровые
+ *                     снимки из game/screenshots по префиксам --game-shots
  *   TFC_PACK_CACHE — снимок сборки (как у pack-stand.mjs)
  *
  *   node scripts/client-stand.mjs prepare [--neoforge 21.1.251] [--installer <jar>] [--assets base|all|none]
  *   node scripts/client-stand.mjs run [--mod <jar>]… [--exclude <часть имени jar>]… [--overlay <папка>]
  *        [--timeout 900] [--settle 20] [--load 300] [--shots 1] [--interval 10] [--memory 8G] [--ready <regex>] [--ram] [--keep]
- *        [--parallel] [--size 1280x720] [--world new[:<пресет>]|flat|<папка мира>]
+ *        [--parallel] [--game-shots <префикс имени PNG>]… [--size 1280x720] [--world new[:<пресет>]|flat|<папка мира>]
  *   node scripts/client-stand.mjs clean [--results 10]
  *
  * Почему не runClient (ModDevGradle): в dev-запуске KubeJS TFC бросает AssertionError (!isProduction()), как у
@@ -672,6 +673,60 @@ async function stopGame(child, exited) {
   return 'не вышла за минуту — убита';
 }
 
+/** Префикс игровых снимков: только имя файла без путей и масок */
+const SHOT_PREFIX = /^[\w.-]+$/;
+/** Неверные префиксы --game-shots → текст ошибки или null */
+export function badShotPrefixes(prefixes) {
+  const bad = prefixes.filter((p) => !SHOT_PREFIX.test(p));
+  return bad.length
+    ? `--game-shots: префикс — начало имени файла (буквы, цифры, . _ -), не путь и не маска: ${bad.join(', ')}`
+    : null;
+}
+/** Больше кадров не копируем: снимки — для отчёта, не архив */
+const MAX_GAME_SHOTS = 100;
+
+/** Ширина и высота PNG из заголовка IHDR; не PNG — null */
+function pngSize(file) {
+  const fd = fs.openSync(file, 'r');
+  try {
+    const b = Buffer.alloc(24);
+    if (fs.readSync(fd, b, 0, 24, 0) < 24 || b.toString('latin1', 12, 16) !== 'IHDR') return null;
+    return [b.readUInt32BE(16), b.readUInt32BE(20)];
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+/**
+ * Игровые PNG из game/screenshots с именами на один из префиксов → out/screenshots. Берём только обычные файлы .png с
+ * простым именем (без ссылок и подпапок). → { files: [{ name, size, dims }], skipped }
+ */
+function collectGameShots(game, out, prefixes) {
+  const res = { files: [], skipped: 0 };
+  const dir = path.join(game, 'screenshots');
+  if (!prefixes.length || !fs.existsSync(dir)) return res;
+  const names = fs
+    .readdirSync(dir, { withFileTypes: true })
+    .filter((e) => e.isFile() && SHOT_PREFIX.test(e.name) && e.name.toLowerCase().endsWith('.png'))
+    .map((e) => e.name)
+    .filter((n) => prefixes.some((p) => n.startsWith(p)))
+    .sort();
+  res.skipped = Math.max(0, names.length - MAX_GAME_SHOTS);
+  const to = path.join(out, 'screenshots');
+  for (const name of names.slice(0, MAX_GAME_SHOTS)) {
+    const from = path.join(dir, name);
+    const dims = pngSize(from);
+    if (!dims) {
+      res.skipped++;
+      continue;
+    }
+    fs.mkdirSync(to, { recursive: true });
+    fs.copyFileSync(from, path.join(to, name));
+    res.files.push({ name, size: fs.statSync(from).size, dims });
+  }
+  return res;
+}
+
 function collect(game, run, out) {
   fs.mkdirSync(out, { recursive: true });
   const take = (from, to = path.basename(from)) => {
@@ -708,6 +763,7 @@ export async function runClient({
   ram = false,
   keep = false,
   parallel = false,
+  gameShots = [],
   signal = null,
   size = [1280, 720],
   cache = PACK_CACHE,
@@ -718,6 +774,11 @@ export async function runClient({
   const nf = neoforgeOf(ver.loader) || DEFAULT_NF;
   if (!fs.existsSync(XVFB) || !fs.existsSync(path.join(LAUNCHER, 'versions', `neoforge-${nf}`)))
     throw new Error(`стенд не готов для NeoForge ${nf}: сначала prepare`);
+  const bad = badShotPrefixes(gameShots);
+  if (bad)
+    throw new Error(
+      `--game-shots: префикс — часть имени файла (буквы, цифры, . _ -), не путь и не маска: ${bad.join(', ')}`,
+    );
   const busy = liveRuns().filter((r) => r.live);
   if (busy.length && !parallel)
     throw new Error(
@@ -743,6 +804,7 @@ export async function runClient({
   let failScreen = null;
   let shownSec = null;
   let stopped = '';
+  let shotsOut = { files: [], skipped: 0 };
   try {
     profile = buildProfile({ game, cache, mods, exclude, overlay, copyMods: ram });
     if (world) worldNote = setupWorld(game, world, versionJson(`neoforge-${nf}`).inheritsFrom);
@@ -839,6 +901,7 @@ export async function runClient({
   } finally {
     if (display) await stopDisplay(display);
     collect(game, run, out);
+    shotsOut = collectGameShots(game, out, gameShots);
     for (const f of pngs) fs.copyFileSync(f, path.join(out, path.basename(f)));
     if (!keep) fs.rmSync(run, { recursive: true, force: true, maxRetries: 3 });
   }
@@ -863,6 +926,17 @@ export async function runClient({
     ...(logErr.noise ? [`  (+ ${logErr.noise} строк шума: звук, /dev/dri, пустые AT модов)`] : []),
     ...crashes.map((c) => `Краш: ${path.join(out, 'crash-reports', c)}`),
     ...notes,
+    ...(gameShots.length
+      ? [
+          shotsOut.files.length
+            ? `Игровые снимки (${gameShots.join(', ')}): ${shotsOut.files.length} в ${path.join(out, 'screenshots')}`
+            : `Игровых снимков с префиксом ${gameShots.join(', ')} в game/screenshots нет`,
+          ...shotsOut.files.map(
+            (f) => `  ${f.name} — ${f.dims.join('×')}, ${Math.max(1, Math.round(f.size / 1024))} КБ`,
+          ),
+          ...(shotsOut.skipped ? [`  пропущено ${shotsOut.skipped} (сверх ${MAX_GAME_SHOTS} или не PNG)`] : []),
+        ]
+      : []),
     `PNG: ${pngs.length ? pngs.map((f) => path.join(out, path.basename(f))).join(', ') : 'нет'}`,
     `Журналы: ${out}${keep ? `; папка прогона оставлена: ${run}` : ''}`,
   ].join('\n');
@@ -946,6 +1020,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
             ram: argv.includes('--ram'),
             keep: argv.includes('--keep'),
             parallel: argv.includes('--parallel'),
+            gameShots: many('--game-shots'),
             size: (one('--size') ?? '1280x720').split('x').map(Number),
             signal: abort.signal,
           }).then((r) => {

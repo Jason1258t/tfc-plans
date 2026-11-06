@@ -448,6 +448,13 @@ MCP `tfc-pack` `pack_client` runs the same from the Mac and returns the summary 
 (`scripts/mcp/tools/devserver.mjs` → `clientStand()` in `client-stand-remote.mjs`, which writes nothing to stdout — that
 is the MCP channel). From a shell: `node scripts/mcp-call.mjs tfc-pack pack_client '{"world":"new"}' --timeout 1500`.
 
+**In-game screenshots (dev #294).** `run --game-shots <prefix>` (repeatable; MCP `pack_client gameShots=[…]`) copies
+PNGs that the run itself left in `game/screenshots` (F2 from an overlay script, a mod) whose names start with a prefix
+into `results/<id>/screenshots/`, so they reach the Mac with the logs — no `--keep`, no manual SSH. A prefix is a plain
+name start (`[\w.-]+`, no paths or globs), checked on the Mac before anything is uploaded; only regular `.png` files with
+a valid PNG header are taken, at most 100. The summary lists each frame with size and dimensions; `pack_client` returns
+in-game shots after the stand's own shots, so `images` shows them first.
+
 **Builder Tools check stays separate.** `tools/builder-tools-mod/test-client.sh` is an addon dev test, not a pack
 check: ModDevGradle `runClient` from sources with the `devtest` source set (not in the release jar), a few mods
 (addon `libs/`, optionally TFC + Patchouli), assertions in code (`BTCLIENT OK/FAIL`, six of them), about a minute. The

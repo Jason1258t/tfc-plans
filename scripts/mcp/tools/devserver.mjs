@@ -341,6 +341,7 @@ function clientArgs(a) {
   if (a.memory) out.push('--memory', String(a.memory));
   if (a.ready) out.push('--ready', String(a.ready));
   if (a.ram) out.push('--ram');
+  for (const p of lines(a.gameShots)) out.push('--game-shots', p);
   return out;
 }
 
@@ -352,12 +353,16 @@ async function packClient(a) {
       ? fs.readFileSync(summary, 'utf8').trim()
       : r.out.replace(/^RESULT .*$/m, '').trim() || `прогон не дал сводки (код ${r.code})`;
   const max = Math.min(4, Math.max(0, Number(a.images ?? 2) | 0));
-  const shown = max ? r.pngs.slice(-max) : [];
+  // Игровые снимки идут после снимков стенда: просили их — показываем их первыми
+  const all = [...r.pngs, ...r.gameShots];
+  const shown = max ? all.slice(-max) : [];
   return {
     text: [
       text,
       ...(r.local
-        ? [`На Mac: ${r.local}${r.pngs.length ? ` (PNG: ${r.pngs.length}, здесь последние ${shown.length})` : ''}`]
+        ? [
+            `На Mac: ${r.local}${all.length ? ` (PNG: ${r.pngs.length}${r.gameShots.length ? ` + игровых ${r.gameShots.length} в screenshots/` : ''}, здесь последние ${shown.length})` : ''}`,
+          ]
         : []),
       ...(r.local ? [`Журнал: log_analyze path=${path.join(r.local, 'latest.log')}`] : []),
     ].join('\n'),
@@ -447,6 +452,12 @@ export const TOOLS = [
         ready: str('regex on client.log that means ready (default: title screen, or player login with world)'),
         memory: str('-Xmx (8G)'),
         ram: { type: 'boolean', description: 'run from /dev/shm (copies mods to RAM; faster load)' },
+        gameShots: {
+          type: 'array',
+          items: { type: 'string' },
+          description:
+            'file name prefixes of in-game PNGs in game/screenshots (made by the overlay/KubeJS during the run) to copy into results/<id>/screenshots on the Mac; plain names only',
+        },
         noPack: { type: 'boolean', description: 'skip syncing the pack cache (already on the host)' },
         images: num('how many last PNGs to return as images (2, max 4)'),
       },
