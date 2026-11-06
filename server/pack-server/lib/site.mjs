@@ -629,6 +629,8 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
   }
 
   return {
+    /** Токен Google сервисного ключа (cloud-platform) — для Identity Toolkit во входе сайта */
+    googleToken: async () => (await firestore()).auth(),
     addons,
     registerAddonVersion,
     publishSchematic,

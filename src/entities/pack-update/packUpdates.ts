@@ -1,6 +1,6 @@
 import { collection, doc, onSnapshot, orderBy, query, updateDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
-import { authReady, db } from '@/shared/api';
+import { authReady, db, requirePlayer } from '@/shared/api';
 import type { Datapack } from '@/entities/datapack';
 import { loadAddonVersions } from '@/data/addonVersions';
 import { ADDONS } from '@/lib/addons';
@@ -83,6 +83,7 @@ export function usePackUpdates(): PackUpdate[] | null {
 }
 
 export async function saveNotes(id: string, body: string, source: PatchNotes['source'], nick: string) {
+  requirePlayer('Сохранить патчноут');
   await authReady;
   await updateDoc(doc(db!, 'packUpdates', id), {
     notes: { body, source, updatedBy: nick, updatedAt: Date.now() } satisfies PatchNotes,

@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from '
 import { Header } from '@/widgets/header';
 import { Onboarding } from '@/widgets/onboarding';
 import { NickDialog } from '@/components/NickDialog';
+import { KeyDialog, KeyRequired } from '@/features/player-key';
 import { TooltipLayer } from '@/shared/ui';
 import { useStartData } from '@/app';
 import { useNick, useSaveNick } from '@/entities/user';
@@ -68,10 +69,31 @@ export default function App() {
       <ErrorBoundary>
         <Routes>
           <Route path="/" element={<RootPage />} />
-          <Route path="/tasks" element={<TasksPage />} />
-          <Route path="/docs" element={<FilesPage />} />
+          <Route
+            path="/tasks"
+            element={
+              <KeyRequired section="Задачи">
+                <TasksPage />
+              </KeyRequired>
+            }
+          />
+          <Route
+            path="/docs"
+            element={
+              <KeyRequired section="Документы">
+                <FilesPage />
+              </KeyRequired>
+            }
+          />
           <Route path="/files" element={<Navigate to="/docs" replace />} />
-          <Route path="/doc/:id" element={<DocPage />} />
+          <Route
+            path="/doc/:id"
+            element={
+              <KeyRequired section="Документы">
+                <DocPage />
+              </KeyRequired>
+            }
+          />
           <Route path="/docs/:id" element={<OldDocRedirect />} />
           <Route path="/schematics" element={<SchematicsPage />} />
           <Route path="/builder" element={<BuilderPage />} />
@@ -85,12 +107,20 @@ export default function App() {
           <Route path="/freshness" element={<FreshnessPage />} />
           {/* Статистика — только по прямой ссылке, в меню её нет */}
           <Route path="/stats" element={<StatsPage />} />
-          <Route path="/dev" element={<DevPage />} />
+          <Route
+            path="/dev"
+            element={
+              <KeyRequired section="Разработка">
+                <DevPage />
+              </KeyRequired>
+            }
+          />
           <Route path="/map" element={<MapRedirect />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </ErrorBoundary>
       {changingNick && <NickDialog initial={nick} onSave={save} onCancel={() => setChangingNick(false)} />}
+      <KeyDialog />
       <Onboarding />
       <TooltipLayer />
     </BrowserRouter>

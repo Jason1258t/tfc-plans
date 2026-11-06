@@ -1,5 +1,5 @@
 import { getToken } from 'firebase/app-check';
-import { appCheck, auth, authReady } from '@/shared/api';
+import { appCheck, auth, authReady, PACK_SERVER_URL } from '@/shared/api';
 
 /**
  * Задачи разработки живут не в Firestore, а на сервере сборки (SQLite, /dev/…) — чтобы журнал работ агентов
@@ -130,8 +130,7 @@ export const PRIORITY_LABEL = ['Низкая', 'Обычная', 'Высокая
 export const label = <T extends string>(list: { value: T; label: string }[], v: T | null) =>
   list.find((x) => x.value === v)?.label ?? '—';
 
-/** Адрес сервера сборки; VITE_DEV_API — другой (свой сервер при разработке) */
-const BASE = (import.meta.env.VITE_DEV_API?.trim() || 'https://tfc-pack.duckdns.org:28788').replace(/\/+$/, '');
+const BASE = PACK_SERVER_URL;
 
 async function headers(): Promise<Record<string, string>> {
   await authReady;

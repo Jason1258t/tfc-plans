@@ -1,12 +1,12 @@
-import { createCollectionStore, createLiveList } from '@/shared/api';
+import { createCollectionStore, createLiveList, playerOnly } from '@/shared/api';
 import type { NewTask, Task } from './types';
 
 /** Коллекция задач: Firestore `tasks`, без Firebase — localStorage (см. `shared/api/store.ts`) */
 export const tasksStore = createCollectionStore<Task, NewTask>('tasks');
 
-/** Задачи: источник работает, пока список нужен хотя бы одному потребителю. */
+/** Задачи: источник работает, пока список нужен хотя бы одному потребителю; без ключа игрока — пусто. */
 export const useTasks = createLiveList<Task>(
-  (onItems, onError) => tasksStore.subscribe(onItems, onError),
+  playerOnly((onItems, onError) => tasksStore.subscribe(onItems, onError)),
   (tasks) => tasks.map(normalizeTask),
 );
 

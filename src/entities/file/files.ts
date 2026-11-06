@@ -1,5 +1,5 @@
 import { getToken } from 'firebase/app-check';
-import { appCheck, auth, authReady, db, track } from '@/shared/api';
+import { appCheck, auth, authReady, db, requirePlayer, track } from '@/shared/api';
 import filesConfig from '@tfc/core/files.config';
 import { firestoreAdapter } from './fileStorage/firestore';
 import { serverAdapter } from './fileStorage/server';
@@ -91,6 +91,7 @@ export async function uploadFile(
   opts: { taskId: string | null; author: string; artifactId?: string; descTaskId?: string },
   onProgress?: (fraction: number) => void,
 ): Promise<string> {
+  requirePlayer('Загрузить файл');
   if (file.size > MAX_FILE_SIZE) throw new Error(`Файл больше ${formatSize(MAX_FILE_SIZE)}`);
   track('file.upload', { ext: file.name.split('.').pop()?.toLowerCase().slice(0, 10) ?? '' });
   const f = await requireStore().upload(file, { meta: opts, onProgress });
@@ -102,4 +103,7 @@ export const fileBlob = (f: FileMeta | string) => requireStore().read(f);
 /** object URL для показа картинки в <img> (кешируется хранилищем) */
 export const fileUrl = (f: FileMeta | string) => requireStore().objectUrl(f);
 export const downloadFile = (f: FileMeta) => requireStore().download(f);
-export const removeFile = (f: FileMeta | string) => requireStore().remove(f);
+export const removeFile = (f: FileMeta | string) => {
+  requirePlayer('Удалить файл');
+  return requireStore().remove(f);
+};

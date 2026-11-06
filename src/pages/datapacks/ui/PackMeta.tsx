@@ -1,14 +1,18 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { sanitizeNamespace } from '@/lib/datapack';
 import {
   datapackInstallMode,
   datapackInstallPatch,
+  publishTemporaryDatapack,
   type Datapack,
   type DatapackDeployment,
   type DatapackInstallMode,
 } from '@/entities/datapack';
+import { useNick } from '@/entities/user';
+import { requestKey, useAccess } from '@/shared/api';
 import { cx } from '@/shared/lib';
-import { Input, Label, Segmented, type SegmentedOption } from '@/shared/ui';
+import { Button, Input, Label, Segmented, type SegmentedOption } from '@/shared/ui';
 import styles from '../DatapacksPage/DatapacksPage.module.css';
 
 interface Props {
@@ -26,6 +30,8 @@ const INSTALL_OPTIONS: SegmentedOption<DatapackInstallMode>[] = [
 
 /** Подсказки про tfc pull неверны для датапака из снимка: кнопки заблокированы, выбор не действует */
 const LOCKED_OPTIONS = INSTALL_OPTIONS.map((o) => ({ ...o, title: 'Датапак в снимке сборки, выбор заблокирован' }));
+/** Без ключа игрока место установки не меняется: временный датапак вообще не ставится, общий правят игроки */
+const GUEST_OPTIONS = INSTALL_OPTIONS.map((o) => ({ ...o, title: 'Нужен ключ игрока' }));
 
 /** Паспорт датапака: название, namespace, описание и выбор места установки («Не ставить / В мир / В сборку») */
 export function PackMeta({ pack, deployment, onUpdate }: Props) {
@@ -33,7 +39,21 @@ export function PackMeta({ pack, deployment, onUpdate }: Props) {
   const [namespace, setNamespace] = useState(pack.namespace);
   const [description, setDescription] = useState(pack.description);
   // В снимке сборки решает снимок, а не отметка на карточке; значение только для показа, в карточку не пишем
-  const mode: DatapackInstallMode = deployment ? 'pack' : datapackInstallMode(pack);
+  const mode: DatapackInstallMode = deployment ? 'pack' : pack.temporary ? 'none' : datapackInstallMode(pack);
+  const player = useAccess() === 'player';
+  const nick = useNick();
+  const [, setParams] = useSearchParams();
+  const [publishing, setPublishing] = useState<string | null>(null);
+  const locked = !!deployment || !!pack.temporary || !player;
+
+  const publish = async () => {
+    setPublishing('');
+    try {
+      setParams({ pack: await publishTemporaryDatapack(pack, nick) });
+    } catch (e) {
+      setPublishing(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   return (
     <section className={styles.dpMeta}>
@@ -75,6 +95,29 @@ export function PackMeta({ pack, deployment, onUpdate }: Props) {
           onBlur={() => description !== pack.description && onUpdate({ description })}
         />
       </div>
+      {pack.temporary && (
+        <div className={styles.dpDeployment} role="status">
+          <strong>Временный датапак</strong> · хранится только в этом браузере. Его можно править и скачать ZIP, но
+          программа <code>tfc pull</code> его не видит.
+          <div>
+            {player ? (
+              <>
+                <Button size="sm" variant="primary" disabled={publishing === ''} onClick={publish}>
+                  {publishing === '' ? 'Сохраняю…' : 'Сохранить на сайте'}
+                </Button>{' '}
+                {publishing && <span className="small">Не сохранилось: {publishing}</span>}
+              </>
+            ) : (
+              <>
+                Чтобы сохранить его на сайте и выбрать установку —{' '}
+                <Button size="sm" onClick={() => requestKey('Сохранить датапак на сайте')}>
+                  войдите с ключом игрока
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       {deployment && (
         <div className={styles.dpDeployment} role="status">
           <strong>В сборке</strong> · по опубликованному снимку. Подтвердил {deployment.confirmedBy}, версия{' '}
@@ -94,7 +137,11 @@ export function PackMeta({ pack, deployment, onUpdate }: Props) {
         <div className="grow">
           <b>Куда ставить датапак</b>
           <div className="faint small">
-            {deployment ? (
+            {pack.temporary ? (
+              <>Временный датапак не ставится — только скачать ZIP</>
+            ) : !player && !deployment ? (
+              <>Менять место установки можно только с ключом игрока</>
+            ) : deployment ? (
               <>
                 Подтверждён в снимке сборки: <code>tfc pull</code> ставит проверенную версию в <code>kubejs/data/</code>{' '}
                 для всех миров. Снять можно только командой <code>tfc datapacks unconfirm {pack.id}</code>
@@ -117,9 +164,9 @@ export function PackMeta({ pack, deployment, onUpdate }: Props) {
           </div>
         </div>
         <Segmented
-          options={deployment ? LOCKED_OPTIONS : INSTALL_OPTIONS}
+          options={deployment ? LOCKED_OPTIONS : locked ? GUEST_OPTIONS : INSTALL_OPTIONS}
           value={mode}
-          disabled={!!deployment}
+          disabled={locked}
           onChange={(next) => onUpdate(datapackInstallPatch(next))}
           label="Куда ставить датапак"
         />

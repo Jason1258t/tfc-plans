@@ -36,6 +36,8 @@ export interface Datapack {
   install?: boolean;
   /** Куда tfc pull ставит датапак с сайта: в мир (`world/datapacks/`) или в сборку (`kubejs/data/`) */
   installTarget?: DatapackInstallTarget;
+  /** Временный: создан без ключа игрока и хранится только в этом браузере (в Firestore не пишется) */
+  temporary?: boolean;
   author: string;
   updatedBy: string;
   createdAt: number;

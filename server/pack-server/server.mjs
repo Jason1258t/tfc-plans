@@ -15,6 +15,8 @@
  *   POST   /pack/snapshots          — создать снимок                         admin
  *   POST   /pack/current            — { id } или { rollback: true }          admin
  *   GET    /auth/me                 — имя, id и роль текущего ключа         player
+ *   POST   /site/login              — вход сайта ключом: { idToken } анонимного входа → отметка player (CORS)  player
+ *   POST   /site/logout             — снять отметку: Authorization — ID-токен сайта (CORS)
  *   GET    /admin/keys              — ключи (без самих ключей)               admin
  *   POST   /admin/keys              — { name, role } → { key, ... }          admin
  *   DELETE /admin/keys/:id          — отозвать ключ                          admin
@@ -51,12 +53,13 @@ import { pipeline } from 'node:stream/promises';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { openDev } from './lib/dev.mjs';
-import { verifyAppCheck, verifyIdToken } from './lib/firebase-auth.mjs';
+import { verifyAppCheck, verifyIdTokenClaims } from './lib/firebase-auth.mjs';
 import { openJobs, PUBLISH } from './lib/jobs.mjs';
 import { deploymentsOf } from './lib/datapacks.mjs';
 import { changeDatapacks, snapshotDatapacks } from './lib/datapack-deployment.mjs';
 import { openKeys } from './lib/keys.mjs';
 import { openSite } from './lib/site.mjs';
+import { openSiteLogins } from './lib/site-login.mjs';
 import { openStore } from './lib/store.mjs';
 import { openNeoforge } from './lib/neoforge.mjs';
 import { openUpdates } from './lib/updates.mjs';
@@ -110,6 +113,7 @@ const site = openSite(config.dataDir, {
   ttlMs: Number(env.SITE_CACHE_SEC ?? 300) * 1000,
   docsUrl: env.SITE_DOCS_URL, // для проверки на заглушке Firestore
 });
+const siteLogins = openSiteLogins(config.dataDir, { projectId: devSite.projectId, googleToken: site.googleToken });
 const updates = await openUpdates(config.dataDir, store, site);
 /** После смены текущего снимка: собрать (off — нет) и как публиковать (по умолчанию — только пробно) */
 const autoBuild = env.AUTO_BUILD !== 'off';
@@ -128,21 +132,27 @@ async function authorize(req, role) {
   return who;
 }
 
+/** Вход сайта: ID-токен Firebase (+ App Check) → его поля; token — сам JWT */
+async function siteClaims(req, token) {
+  try {
+    const c = await verifyIdTokenClaims(token, devSite.projectId);
+    if (devSite.appCheckProject) await verifyAppCheck(req.headers['x-firebase-appcheck'], devSite.appCheckProject);
+    return c;
+  } catch (e) {
+    throw new HttpError(401, `Вход сайта не принят: ${e.message}`);
+  }
+}
+
 /**
- * Задачи разработки: ключ сервера сборки любой роли или ID-токен входа сайта (+ App Check) — как правила Firestore.
- * JWT отличаем по виду: три части через точку.
+ * Задачи разработки: ключ сервера сборки любой роли или ID-токен входа сайта (+ App Check) с отметкой
+ * игрока (вход ключом, POST /site/login) — как правила Firestore. JWT отличаем по виду: три части через точку.
  */
 async function authorizeDev(req) {
   const m = /^Bearer (.+)$/.exec(req.headers.authorization ?? '');
   if (m && m[1].split('.').length === 3) {
-    let uid;
-    try {
-      uid = await verifyIdToken(m[1], devSite.projectId);
-      if (devSite.appCheckProject) await verifyAppCheck(req.headers['x-firebase-appcheck'], devSite.appCheckProject);
-    } catch (e) {
-      throw new HttpError(401, `Вход сайта не принят: ${e.message}`);
-    }
-    return { id: uid, name: 'сайт', role: 'site', via: 'site' };
+    const c = await siteClaims(req, m[1]);
+    if (c.player !== true) throw new HttpError(403, 'Нужен ключ игрока: войдите на сайте с ключом');
+    return { id: c.sub, name: c.keyName ?? 'сайт', role: 'site', via: 'site' };
   }
   return { ...(await authorize(req, 'player')), via: 'key' };
 }
@@ -307,6 +317,29 @@ async function handle(req, res) {
     return json(res, 200, await authorize(req, 'player'));
   }
 
+  // --- вход сайта ключом игрока: отметка на анонимном пользователе Firebase
+  if (url.pathname === '/site/login' || url.pathname === '/site/logout') {
+    devCors(req, res);
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      return res.end();
+    }
+    if (req.method !== 'POST') throw new HttpError(405, 'Метод не поддерживается');
+    if (url.pathname === '/site/logout') {
+      const m = /^Bearer (.+)$/.exec(req.headers.authorization ?? '');
+      if (!m) throw new HttpError(401, 'Нужен ID-токен сайта');
+      const c = await siteClaims(req, m[1]);
+      await siteLogins.logout(c.sub);
+      return json(res, 200, { ok: true });
+    }
+    const who = await authorize(req, 'player');
+    const body = await readJsonBody(req);
+    const c = await siteClaims(req, String(body?.idToken ?? ''));
+    const r = await siteLogins.login(who, c.sub);
+    console.log(`→ вход сайта ${c.sub.slice(0, 8)}… ключом «${who.name}» (${who.role})`);
+    return json(res, 200, r);
+  }
+
   // --- задачи разработки
   if (parts[0] === 'dev') {
     devCors(req, res);
@@ -400,8 +433,9 @@ async function handle(req, res) {
     }
     if (parts.length === 3 && req.method === 'DELETE') {
       const k = await keys.revoke(parts[2]);
-      console.log(`− ключ ${k.id} «${k.name}» (${k.role}) — ${who.name}`);
-      return json(res, 200, { ok: true, revoked: k });
+      const site = await siteLogins.revokeKey(k.id);
+      console.log(`− ключ ${k.id} «${k.name}» (${k.role}) — ${who.name}; входов сайта снято: ${site.cleared}`);
+      return json(res, 200, { ok: true, revoked: k, site });
     }
   }
 

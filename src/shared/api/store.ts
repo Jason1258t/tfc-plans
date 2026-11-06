@@ -3,6 +3,7 @@ import { authReady, db } from './firebase';
 import { forgetSubscription, reportError, reportSnapshot, syncKey } from './sync';
 import { track } from './analytics';
 import { recoverSession, subscribeSessionRecovery } from './sessionRecovery';
+import { requirePlayer } from './access';
 
 /** Минимальный CRUD + подписка на коллекцию. Реализации: Firestore и localStorage. */
 export interface CollectionStore<T extends { id: string }, N> {
@@ -84,6 +85,7 @@ function firestoreStore<T extends { id: string }, N extends object>(name: string
     },
     async add(data) {
       await authReady;
+      requirePlayer();
       const now = Date.now();
       // id известен сразу, запись применяется локально мгновенно — не ждём подтверждения сервера
       const created = doc(ref);
@@ -93,11 +95,13 @@ function firestoreStore<T extends { id: string }, N extends object>(name: string
     },
     async update(id, patch) {
       await authReady;
+      requirePlayer();
       trackUpdate(name, patch);
       await updateDoc(doc(ref, id), { ...patch, updatedAt: Date.now() }).catch(failed);
     },
     async remove(ids) {
       await authReady;
+      requirePlayer();
       const list = Array.isArray(ids) ? ids : [ids];
       track(`${name}.delete`, { n: list.length });
       if (list.length === 1) return deleteDoc(doc(ref, list[0])).catch(failed);
@@ -108,7 +112,8 @@ function firestoreStore<T extends { id: string }, N extends object>(name: string
   };
 }
 
-function localStore<T extends { id: string }, N extends object>(name: string): CollectionStore<T, N> {
+/** Коллекция в localStorage этого браузера (ключ `tfc-tm:<name>`): без Firebase и для временных черновиков гостя */
+export function createLocalStore<T extends { id: string }, N extends object>(name: string): CollectionStore<T, N> {
   const key = `tfc-tm:${name}`;
   const listeners = new Set<(items: T[]) => void>();
   const read = (): T[] => {
@@ -152,4 +157,4 @@ function localStore<T extends { id: string }, N extends object>(name: string): C
  * Сами коллекции создаёт сущность, которой они принадлежат (`entities/<x>/store.ts`) — общий слой не знает
  * о задачах, датапаках и схемах.
  */
-export const createCollectionStore = db ? firestoreStore : localStore;
+export const createCollectionStore = db ? firestoreStore : createLocalStore;

@@ -61,13 +61,18 @@ async function verifyJwt(token, getKey) {
   return claims;
 }
 
-/** Возвращает uid или бросает ошибку */
-export async function verifyIdToken(token, projectId) {
+/** Все поля ID-токена (sub — uid, свои отметки — player, keyName…) или ошибка */
+export async function verifyIdTokenClaims(token, projectId) {
   const c = await verifyJwt(token, idTokenKey);
   if (c.aud !== projectId || c.iss !== `https://securetoken.google.com/${projectId}`)
     throw new Error('токен другого проекта');
   if (typeof c.sub !== 'string' || !c.sub) throw new Error('нет пользователя');
-  return c.sub;
+  return c;
+}
+
+/** Возвращает uid или бросает ошибку */
+export async function verifyIdToken(token, projectId) {
+  return (await verifyIdTokenClaims(token, projectId)).sub;
 }
 
 export async function verifyAppCheck(token, projectNumber) {

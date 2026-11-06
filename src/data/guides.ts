@@ -1,5 +1,5 @@
 import { collection, doc, getDocs, limit, onSnapshot, orderBy, query, where, writeBatch } from 'firebase/firestore';
-import { authReady, db, track } from '@/shared/api';
+import { authReady, db, requirePlayer, track } from '@/shared/api';
 import type { Guide, GuideRevision } from '@/entities/guide';
 
 /**
@@ -57,6 +57,7 @@ export type GuideDraft = Omit<Guide, 'id' | 'createdAt' | 'updatedAt'>;
 
 /** Сохранить гайд и его версию одной записью; id === null — новый. Возвращает id */
 export async function saveGuide(id: string | null, draft: GuideDraft, createdAt?: number): Promise<string> {
+  requirePlayer('Сохранить гайд');
   track(id ? 'guides.edit' : 'guides.create');
   await authReady;
   const ref = id ? doc(db!, 'guides', id) : doc(collection(db!, 'guides'));

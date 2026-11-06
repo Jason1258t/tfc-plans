@@ -1,6 +1,6 @@
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { useEffect, useMemo, useState } from 'react';
-import { authReady, db } from '@/shared/api';
+import { authReady, db, requirePlayer } from '@/shared/api';
 import { configValue, useModConfig, type ModConfig } from '@/entities/pack-config';
 import { blockToGeo, geoToBlock, greatCircleKm, insideMap, type WorldProjection } from '@tfc/core/projection';
 
@@ -141,6 +141,7 @@ function useManualWorldSettings(): WorldSettings {
 }
 
 export async function saveWorldSettings(s: WorldSettings, nick: string) {
+  requirePlayer('Сохранить настройки карты');
   await authReady;
   await setDoc(doc(db!, 'settings', 'world'), { ...s, updatedBy: nick, updatedAt: Date.now() });
 }
