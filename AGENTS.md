@@ -142,7 +142,9 @@ or run live `confirm` without the host's explicit confirmation.**
 
 Run full-pack NeoForge checks on Ubuntu `test1a` via Tailscale to keep the Mac free for development.
 See [test stand access and commands](docs/state/infra.md#remote-whole-pack-stand-dev-275) for the remote checkout,
-snapshot and overlay transfer, and the smoke test. AutoLab, Docker, and Ollama on that host are outside the stand.
+snapshot and overlay transfer, and the smoke test. Full Minecraft client with the pack on a virtual display there:
+`npm run client-stand -- prepare` once, then `npm run client-stand -- run` (title screen PNG, logs, summary) —
+[client stand](docs/state/infra.md#remote-minecraft-client-stand--scripted-dev-284). AutoLab, Docker, and Ollama on that host are outside the stand.
 
 ## Browser checks
 

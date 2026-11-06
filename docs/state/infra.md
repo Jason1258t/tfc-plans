@@ -395,9 +395,40 @@ Verified on `20261105-135644-3704` with NeoForge 21.1.251. The RAM-backed run bo
 answered RCON `list`, and stopped. Both listeners bound to loopback. The snapshot reported recipe and tag errors
 without blocking startup.
 
-## Remote Minecraft client stand (dev #279)
+## Remote Minecraft client stand — scripted (dev #284)
 
-The client stand on `test1a` lives in `~/tfc-stand/client`, separate from the server stand. It uses Java 21,
+`npm run client-stand -- <prepare|run|clean>` on the Mac (`scripts/client-stand-remote.mjs`) drives
+`scripts/client-stand.mjs` on `test1a` over the same SSH entry as the server stand (`TFC_CLIENT_HOST`,
+`TFC_CLIENT_HOST_ALIAS` override it). Every call pushes the stand code from the working tree to
+`~/tfc-stand/client-stand-code` (only built-in Node modules, no `npm ci`) and, unless `--no-pack`, rsyncs the Mac pack
+cache with `--delete`. Stand files on the host: `~/.cache/tfc-plans/client-stand` (`TFC_CLIENT_STAND`).
+
+- `prepare` (once per loader): Xvfb via `apt-get download xvfb` + `dpkg-deb -x` (no sudo; needs the system `xauth`,
+  `xkbcomp`, `xkb-data`, already there), vanilla version + client jar from Mojang, NeoForge from the **fat installer**
+  the Mac takes from the pack server (`/neoforge/<ver>`, `tfc admin neoforge build`) — `maven.neoforged.net` times out
+  on `test1a`, the fat jar carries its libraries. Missing libraries (Linux LWJGL natives) come from
+  `libraries.minecraft.net` with sha1 checks. Assets: `--assets base` (default, ~110 MB: language list, translations,
+  title panorama, built-in packs — no sounds), `all`, `none`.
+- `run`: own profile per run (`runs/<id>/game`, mods symlinked, `--ram` copies them to `/dev/shm`), first-run screens
+  off (`options.txt`, FancyMenu welcome), CustomSkinLoader flag, own Xvfb display (first free from `:90`, own
+  Xauthority, no TCP), production launch built from the version JSONs (no Python launcher, no ModDevGradle). Waits for
+  FancyMenu's `title_screen` layer (`--ready <regex>`), waits `--settle` s, takes `--shots` PNGs (`client-stand/
+Capture.java`), SIGTERM for a clean exit (kill after a minute), stops Xvfb with SIGTERM, deletes the run folder
+  (`--keep`), and leaves `results/<id>/` (`summary.txt`, `client.log`, `latest.log`, `debug.log`, `kubejs/`,
+  `crash-reports/`, PNG). The Mac copies it to `~/.cache/tfc-plans/client-stand/results/<id>`. `--mod <jar>` /
+  `--overlay <dir>` are uploaded first; `--exclude <name part>` drops snapshot jars. A dropped SSH session closes stdin
+  and the host side stops the game and Xvfb. A second run while one is live is refused unless `--parallel`.
+- `clean`: abandoned run folders, stray stand Xvfb processes, results beyond `--results 10`.
+
+Verified 2026-11-06 from an empty stand dir on snapshot `20261105-135644-3704`: `prepare` passed (fat installer,
+44 libraries fetched), the full client reached the title screen in ~130 s with 342 mods (250 jars), two PNGs, clean
+SIGTERM exit, no leftover Xvfb or run folder. The first try caught a real launch bug in seconds (vanilla jar on the
+classpath next to NeoForge's patched client → module resolution error), with the cause in `summary.txt`.
+Not automated yet: the Builder Tools Gradle check (below) and loading a world.
+
+## Remote Minecraft client stand (dev #279, manual)
+
+The manual stand on `test1a` lives in `~/tfc-stand/client`, separate from the server stand. It uses Java 21,
 NeoForge 21.1.251, and the Ubuntu `xvfb` and `x11-apps` packages extracted into `client/x11` with `dpkg-deb -x`.
 The launcher starts an authenticated 1280×720 Xvfb display on `:91` with TCP disabled, uses Mesa software
 rendering, and stops Xvfb when the command exits. Run one client at a time.

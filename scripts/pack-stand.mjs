@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 import AdmZip from 'adm-zip';
 import { parse as parseToml } from 'smol-toml';
 import { fetchInstaller, neoforgeVersion } from '@tfc/cli/vanilla';
-import { isWin, javaHome, killTree, runRcon, sleep, stopWithProcess } from './mc-server.mjs';
+import { errorLines as groupErrors, isWin, javaHome, killTree, runRcon, sleep, stopWithProcess } from './mc-server.mjs';
 import { PACK_CACHE, PACK_MODS } from './pack-cache.mjs';
 
 export const STAND = path.resolve(process.env.TFC_STAND_DIR ?? path.join(os.homedir(), '.cache', 'tfc-plans', 'stand'));
@@ -34,6 +34,7 @@ const DEFAULT_NF = '21.1.251';
 const CLIENT_LIST = path.join(path.dirname(fileURLToPath(import.meta.url)), 'pack-stand-client.json');
 /** Шум выделенного сервера в latest.log: клиентские классы, которые моды трогают и обходят сами */
 const NOISE = [/invalid dist DEDICATED_SERVER/, /Access transformer file .* does not exist/];
+const errorLines = (text, re, limit) => groupErrors(text, re, limit, NOISE);
 
 /** Версия снимка из .tfc-fetch.json (кладёт npm run pack:fetch) */
 function packVersion(cache) {
@@ -182,27 +183,6 @@ function link(target, dest) {
   const dir = fs.statSync(target).isDirectory();
   if (isWin && !dir) fs.copyFileSync(target, dest);
   else fs.symlinkSync(target, dest, dir && isWin ? 'junction' : undefined);
-}
-
-/** Строки ошибок без повторов: «×N» у повторяющихся, шум отдельно счётчиком */
-function errorLines(text, re, limit) {
-  const counts = new Map();
-  let noise = 0;
-  for (const l of text.split(/\r?\n/)) {
-    if (!re.test(l)) continue;
-    if (NOISE.some((n) => n.test(l))) {
-      noise++;
-      continue;
-    }
-    // Без метки времени, JSON рецепта и id: однотипные ошибки (16 цветов цемента, таблицы добычи) — одна группа
-    const msg = l.replace(/^\[[^\]]*\]\s*/, '').trim();
-    const key = msg.replace(/ from json \{.*$/, ' from json …').replace(/[a-z0-9_.-]+:[a-z0-9_/.-]+/g, '<id>');
-    const g = counts.get(key);
-    if (g) g.n++;
-    else counts.set(key, { n: 1, first: msg.length > 300 ? msg.slice(0, 300) + '…' : msg });
-  }
-  const lines = [...counts.values()].map(({ n, first }) => (n > 1 ? `${first} ×${n}` : first));
-  return { lines: lines.slice(0, limit), more: Math.max(0, lines.length - limit), noise };
 }
 
 const RCON_PASSWORD = 'check';
