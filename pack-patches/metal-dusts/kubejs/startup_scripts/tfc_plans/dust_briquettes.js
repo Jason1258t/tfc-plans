@@ -32,7 +32,7 @@ StartupEvents.registry('item', (event) => {
       event
         .create('dust_briquette/' + size + '/' + metal)
         .displayName(label + ' чистой пыли ' + name)
-        .texture('destroy_extras:item/metal_dust');
+        .texture('destroy_extras:item/dust_briquette/' + size + '/' + metal);
     });
   });
 });

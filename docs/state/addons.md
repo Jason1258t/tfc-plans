@@ -465,3 +465,9 @@ Curios server checks, 26/26 with TFC 4.2.9 + Patchouli 93 (real placement, TFC t
 assertion followed by a clean run; dev client checks ordinary inventory swap and server synchronization.
 ImageGen source and 16×16 runtime texture based on Create goggles in the addon; release jar uploaded to pack server, card/page/version on site.
 Not checked in game: real mouse input, long construction, remote multiplayer and full-pack inventory-mod interactions.
+
+### Destroy Extras — текстуры чистой пыли (dev #293)
+
+В ветке на базе кандидата #212 подготовлены цветные спрайты 16 × 16 для 18 пылей и 90 брикетов.
+Модели пылей берут цвет из PNG. KubeJS выбирает текстуру брикета по размеру и металлу.
+ID предметов сохранены. Опубликованный кандидат #212 не заменён.
