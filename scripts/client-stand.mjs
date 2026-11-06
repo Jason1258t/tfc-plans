@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Клиентский стенд сборки (dev #279, #284): полный клиент NeoForge со снимком сборки на виртуальном экране Xvfb, без
- * sudo и без окна. Запускает игру, ждёт главное меню, снимает экран в PNG, выходит штатно и складывает журналы.
+ * Клиентский стенд сборки (dev #279, #284, #288): полный клиент NeoForge со снимком сборки на виртуальном экране Xvfb,
+ * без sudo и без окна. Запускает игру, ждёт главное меню (или вход в одиночный мир — --world), снимает экран в PNG,
+ * выходит штатно и складывает журналы.
  * Работает на Linux (test1a); с Mac его зовёт client-stand-remote.mjs (npm run client-stand). Только встроенные
  * модули Node: на хосте не нужен npm ci.
  *
@@ -15,8 +16,8 @@
  *
  *   node scripts/client-stand.mjs prepare [--neoforge 21.1.251] [--installer <jar>] [--assets base|all|none]
  *   node scripts/client-stand.mjs run [--mod <jar>]… [--exclude <часть имени jar>]… [--overlay <папка>]
- *        [--timeout 900] [--settle 20] [--shots 1] [--interval 10] [--memory 8G] [--ready <regex>] [--ram] [--keep]
- *        [--parallel] [--size 1280x720]
+ *        [--timeout 900] [--settle 20] [--load 300] [--shots 1] [--interval 10] [--memory 8G] [--ready <regex>] [--ram] [--keep]
+ *        [--parallel] [--size 1280x720] [--world new[:<пресет>]|flat|<папка мира>]
  *   node scripts/client-stand.mjs clean [--results 10]
  *
  * Почему не runClient (ModDevGradle): в dev-запуске KubeJS TFC бросает AssertionError (!isProduction()), как у
@@ -28,6 +29,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { gzipSync, inflateRawSync } from 'node:zlib';
 import { errorLines, javaHome, killTree, sleep, stopWithProcess } from './mc-server.mjs';
 import { PACK_CACHE } from './pack-cache.mjs';
 
@@ -42,6 +44,23 @@ const MANIFEST = 'https://piston-meta.mojang.com/mc/game/version_manifest_v2.jso
 const ASSETS_URL = 'https://resources.download.minecraft.net';
 /** Главное меню: FancyMenu регистрирует слой титульного экрана, когда тот открылся */
 const READY = /ScreenCustomizationLayer registered: title_screen/;
+/** В мире: встроенный сервер впустил игрока стенда (строка PlayerList — без перевода, в отличие от чата) */
+const READY_WORLD = /StandTest\[[^\]]*\] logged in with entity id/;
+/**
+ * UUID игрока как у офлайн-входа (UUID v3 от «OfflinePlayer:<ник>»): нулевой FTB Chunks считает «никем» и сыплет
+ * исключениями при входе
+ */
+const OFFLINE_UUID = (() => {
+  const b = createHash('md5').update('OfflinePlayer:StandTest').digest();
+  b[6] = (b[6] & 0x0f) | 0x30;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  return b.toString('hex');
+})();
+/** Мир не открылся: экран ошибки или вопроса вместо мира (FancyMenu пишет каждый новый класс экрана) */
+const WORLD_FAIL =
+  /ScreenCustomizationLayer registered: (\S*(?:RecoverWorldData|Disconnected|DatapackLoadFailure|Alert|BackupConfirm|Confirm)Screen)/;
+/** Имя мира стенда в saves/ */
+const WORLD = 'stand';
 /** Шум: llvmpipe без /dev/dri, Xvfb без звуковой карты, моды с объявленным, но пустым AT */
 const NOISE = [/libEGL warning/, /OpenAL|SoundEngine|sound system/i, /Access transformer file .* does not exist/];
 /** Флаги тестового профиля: CustomSkinLoader 15.0.1 не патчит SkinManager и без флага останавливает запуск */
@@ -263,8 +282,209 @@ export async function prepare({ neoforge = null, installer = null, assets = 'bas
 
 // ------------------------------------------------------------------ прогон
 
+/** Один файл из zip (jar) встроенными средствами, чтением по смещениям: хвост → центральный каталог → запись */
+function zipEntry(file, name) {
+  const fd = fs.openSync(file, 'r');
+  try {
+    const read = (pos, len) => {
+      const b = Buffer.alloc(len);
+      fs.readSync(fd, b, 0, len, pos);
+      return b;
+    };
+    const size = fs.fstatSync(fd).size;
+    const tail = read(Math.max(0, size - 65_557), Math.min(size, 65_557));
+    let eocd = tail.length - 22;
+    while (eocd >= 0 && tail.readUInt32LE(eocd) !== 0x06054b50) eocd--;
+    if (eocd < 0) return null;
+    const dir = read(tail.readUInt32LE(eocd + 16), tail.readUInt32LE(eocd + 12));
+    for (let p = 0; p + 46 <= dir.length;) {
+      const len = dir.readUInt16LE(p + 28);
+      if (dir.toString('utf8', p + 46, p + 46 + len) === name) {
+        const head = read(dir.readUInt32LE(p + 42), 30);
+        const data = read(
+          dir.readUInt32LE(p + 42) + 30 + head.readUInt16LE(26) + head.readUInt16LE(28),
+          dir.readUInt32LE(p + 20),
+        );
+        return dir.readUInt16LE(p + 10) === 8 ? inflateRawSync(data) : data;
+      }
+      p += 46 + len + dir.readUInt16LE(p + 30) + dir.readUInt16LE(p + 32);
+    }
+    return null;
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+/** NBT из помеченных значений: [тип, значение(, тип элементов списка)] */
+const tag = {
+  byte: (v) => [1, v],
+  int: (v) => [3, v],
+  long: (v) => [4, BigInt(v)],
+  double: (v) => [6, v],
+  str: (v) => [8, v],
+  list: (type, items) => [9, items, type],
+  comp: (obj) => [10, obj],
+};
+
+/** JSON датапака → NBT: кодеки Minecraft читают числа через NbtOps без оглядки на точный тип */
+function jsonTag(v) {
+  if (typeof v === 'boolean') return tag.byte(v ? 1 : 0);
+  if (typeof v === 'string') return tag.str(v);
+  if (typeof v === 'number')
+    return Number.isInteger(v) ? (Math.abs(v) < 2 ** 31 ? tag.int(v) : tag.long(v)) : tag.double(v);
+  if (Array.isArray(v)) {
+    // Список NBT однороден: целые рядом с дробными — все дробные
+    const fractional = v.some((x) => typeof x === 'number' && !Number.isInteger(x));
+    const items = v.map((x) => (fractional && typeof x === 'number' ? tag.double(x) : jsonTag(x)));
+    return tag.list(items[0]?.[0] ?? 0, items);
+  }
+  return tag.comp(Object.fromEntries(Object.entries(v).map(([k, x]) => [k, jsonTag(x)])));
+}
+
+function nbtFile(root) {
+  const parts = [];
+  const num = (size, write) => {
+    const b = Buffer.alloc(size);
+    write(b);
+    parts.push(b);
+  };
+  const str = (s) => {
+    const b = Buffer.from(s, 'utf8');
+    num(2, (h) => h.writeUInt16BE(b.length));
+    parts.push(b);
+  };
+  const payload = ([t, v, elem]) => {
+    if (t === 1) num(1, (b) => b.writeInt8(v));
+    else if (t === 3) num(4, (b) => b.writeInt32BE(v));
+    else if (t === 4) num(8, (b) => b.writeBigInt64BE(v));
+    else if (t === 6) num(8, (b) => b.writeDoubleBE(v));
+    else if (t === 8) str(v);
+    else if (t === 9) {
+      num(1, (b) => b.writeUInt8(v.length ? elem : 0));
+      num(4, (b) => b.writeInt32BE(v.length));
+      v.forEach(payload);
+    } else {
+      for (const [k, x] of Object.entries(v)) {
+        num(1, (b) => b.writeUInt8(x[0]));
+        str(k);
+        payload(x);
+      }
+      num(1, (b) => b.writeUInt8(0));
+    }
+  };
+  num(1, (b) => b.writeUInt8(10));
+  str('');
+  payload(tag.comp(root));
+  return gzipSync(Buffer.concat(parts));
+}
+
+/**
+ * Пресет мира сборки: из конфига (TFC делает свой пресетом по умолчанию — defaultWorldPreset), иначе
+ * minecraft:normal. JSON пресета — по слоям, как у игры: kubejs/data, jar модов, клиент Minecraft. → { id, json }
+ */
+function packPreset(game, mcJar, id = null) {
+  id ??= /^\s*defaultWorldPreset\s*=\s*"([^"]+)"/m.exec(readText(path.join(game, 'config', 'tfc-common.toml')))?.[1];
+  id ??= 'minecraft:normal';
+  const [ns, name] = id.includes(':') ? id.split(':') : ['minecraft', id];
+  const rel = `data/${ns}/worldgen/world_preset/${name}.json`;
+  const kjs = path.join(game, 'kubejs', rel);
+  if (fs.existsSync(kjs)) return { id, json: readJson(kjs) };
+  const mods = path.join(game, 'mods');
+  for (const jar of [...fs.readdirSync(mods).map((f) => path.join(mods, f)), mcJar]) {
+    const b = jar.endsWith('.jar') ? zipEntry(jar, rel) : null;
+    if (b) return { id, json: JSON.parse(b.toString('utf8')) };
+  }
+  throw new Error(`нет пресета мира ${id} (${rel}) ни в kubejs/data, ни в jar модов, ни в Minecraft`);
+}
+
+/** Плоский верхний мир, как у ванильного пресета flat без построек */
+const FLAT = {
+  'minecraft:overworld': {
+    type: 'minecraft:overworld',
+    generator: {
+      type: 'minecraft:flat',
+      settings: {
+        biome: 'minecraft:plains',
+        features: false,
+        lakes: false,
+        structure_overrides: [],
+        layers: [
+          { block: 'minecraft:bedrock', height: 1 },
+          { block: 'minecraft:dirt', height: 2 },
+          { block: 'minecraft:grass_block', height: 1 },
+        ],
+      },
+    },
+  },
+};
+
+/**
+ * Новый творческий мир для входа: только level.dat, остальное игра создаст сама. Версия данных — из version.json
+ * клиента Minecraft (иначе DataFixer примет мир за древний и начнёт его переделывать). Измерений, которых нет в файле
+ * (у flat — все, кроме верхнего), при загрузке добавляет реестр измерений из датапаков. initialized=0 — точку
+ * появления ищет игра (у TFC — своим поиском по климату).
+ */
+function newWorld(dir, mcJar, dimensions) {
+  const ver = JSON.parse(zipEntry(mcJar, 'version.json') ?? 'null');
+  if (!ver?.world_version) throw new Error(`в ${mcJar} нет version.json с world_version`);
+  const data = {
+    DataVersion: tag.int(ver.world_version),
+    Version: tag.comp({
+      Id: tag.int(ver.world_version),
+      Name: tag.str(ver.name ?? ver.id),
+      Series: tag.str(ver.series_id ?? 'main'),
+      Snapshot: tag.byte(ver.stable === false ? 1 : 0),
+    }),
+    // Формат хранения Anvil: без него LevelStorageSource.makeLevelSummary — «Unknown data version: 0»
+    version: tag.int(19133),
+    LevelName: tag.str(WORLD),
+    GameType: tag.int(1),
+    Difficulty: tag.byte(0),
+    allowCommands: tag.byte(1),
+    hardcore: tag.byte(0),
+    initialized: tag.byte(0),
+    confirmedExperimentalSettings: tag.byte(1),
+    Time: tag.long(0),
+    DayTime: tag.long(6000),
+    LastPlayed: tag.long(Date.now()),
+    GameRules: tag.comp({
+      doDaylightCycle: tag.str('false'),
+      doWeatherCycle: tag.str('false'),
+      doMobSpawning: tag.str('false'),
+    }),
+    WorldGenSettings: tag.comp({
+      seed: tag.long(randomBytes(6).readUIntBE(0, 6)),
+      generate_features: tag.byte(1),
+      bonus_chest: tag.byte(0),
+      dimensions: jsonTag(dimensions),
+    }),
+  };
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'level.dat'), nbtFile({ Data: tag.comp(data) }));
+}
+
+/**
+ * Мир стенда в saves/: new[:<пресет>] — новый мир пресетом сборки, flat — плоский, иначе копия папки мира (с level.dat;
+ * мир сервера тоже подходит). → строка для сводки
+ */
+function setupWorld(game, world, mc) {
+  const dir = path.join(game, 'saves', WORLD);
+  const mcJar = path.join(LAUNCHER, 'versions', mc, `${mc}.jar`);
+  if (world === 'flat') return (newWorld(dir, mcJar, FLAT), 'новый плоский (творческий)');
+  if (world === 'new' || world.startsWith('new:')) {
+    const preset = packPreset(game, mcJar, world.slice(4) || null);
+    newWorld(dir, mcJar, preset.json.dimensions);
+    return `новый, пресет ${preset.id} (творческий)`;
+  }
+  if (!fs.existsSync(path.join(world, 'level.dat'))) throw new Error(`в ${world} нет level.dat — это не папка мира`);
+  fs.cpSync(path.resolve(world), dir, { recursive: true });
+  // session.lock прошлого владельца мешает открыть мир
+  fs.rmSync(path.join(dir, 'session.lock'), { force: true });
+  return `копия ${path.basename(path.resolve(world))}`;
+}
+
 /** Команда запуска по описаниям версий — как у официального лаунчера */
-function launchCommand({ nf, game, natives, memory, size: [w, h] }) {
+function launchCommand({ nf, game, natives, memory, size: [w, h], world }) {
   const id = `neoforge-${nf}`;
   const child = versionJson(id);
   const parent = versionJson(child.inheritsFrom);
@@ -284,7 +504,7 @@ function launchCommand({ nf, game, natives, memory, size: [w, h] }) {
     assets_root: path.join(LAUNCHER, 'assets'),
     assets_index_name: parent.assetIndex.id,
     auth_player_name: 'StandTest',
-    auth_uuid: '00000000000000000000000000000000',
+    auth_uuid: OFFLINE_UUID,
     auth_access_token: '0',
     auth_xuid: '0',
     clientid: '0',
@@ -309,6 +529,7 @@ function launchCommand({ nf, game, natives, memory, size: [w, h] }) {
     ...expand(child.arguments?.game),
     '--disableMultiplayer',
     '--disableChat',
+    ...(world ? ['--quickPlaySingleplayer', WORLD] : []),
   ];
 }
 
@@ -467,8 +688,10 @@ function collect(game, run, out) {
 }
 
 /**
- * Прогон: профиль → экран → игра → главное меню → PNG → выход → журналы в results/<id>. → { ok, text, out }
- * mods — свои jar в моды, exclude — убрать jar снимка по части имени, overlay — папка поверх профиля игры.
+ * Прогон: профиль → экран → игра → главное меню (или мир) → PNG → выход → журналы в results/<id>. → { ok, text, out }
+ * mods — свои jar в моды, exclude — убрать jar снимка по части имени, overlay — папка поверх профиля игры,
+ * world — войти в одиночный мир: 'new' (пресет сборки, 'new:<id>' — другой), 'flat' или папка мира; ready тогда по
+ * умолчанию — вход игрока.
  */
 export async function runClient({
   mods = [],
@@ -476,10 +699,12 @@ export async function runClient({
   overlay = null,
   timeout = 900,
   settle = 20,
+  load = 300,
   shots = 1,
   interval = 10,
   memory = '8G',
-  ready = READY,
+  ready = null,
+  world = null,
   ram = false,
   keep = false,
   parallel = false,
@@ -511,21 +736,29 @@ export async function runClient({
   const notes = [];
   let display;
   let profile;
+  let worldNote = null;
+  ready ??= world ? READY_WORLD : READY;
   let state = 'не запускалась';
   let readySec = null;
+  let failScreen = null;
+  let shownSec = null;
   let stopped = '';
   try {
     profile = buildProfile({ game, cache, mods, exclude, overlay, copyMods: ram });
+    if (world) worldNote = setupWorld(game, world, versionJson(`neoforge-${nf}`).inheritsFrom);
     display = await startDisplay(run, size);
     const env = {
       ...process.env,
       DISPLAY: display.display,
       XAUTHORITY: display.auth,
       LIBGL_ALWAYS_SOFTWARE: '1',
+      // llvmpipe отдаёт OpenGL 4.5, а Voxy компилирует шейдеры GLSL 4.60 и роняет клиент при входе в мир
+      MESA_GL_VERSION_OVERRIDE: '4.6',
+      MESA_GLSL_VERSION_OVERRIDE: '460',
     };
     log(`прогон ${id}: экран ${display.display}, модов ${profile.used}, NeoForge ${nf}`);
     const fd = fs.openSync(path.join(run, 'client.log'), 'w');
-    const child = spawn(java(), launchCommand({ nf, game, natives: path.join(run, 'natives'), memory, size }), {
+    const child = spawn(java(), launchCommand({ nf, game, natives: path.join(run, 'natives'), memory, size, world }), {
       cwd: game,
       env,
       stdio: ['ignore', fd, fd],
@@ -536,7 +769,7 @@ export async function runClient({
     let exitCode;
     child.once('exit', (code, signal) => (exitCode = signal ?? code));
     const exited = () => exitCode !== undefined;
-    state = 'не дошла до меню';
+    state = `не дошла до ${world ? 'мира' : 'меню'}`;
     const deadline = started + timeout * 1000;
     let lastNote = 0;
     const aborted = () => Boolean(signal?.aborted);
@@ -545,31 +778,60 @@ export async function runClient({
       for (const end = Date.now() + ms; Date.now() < end && !aborted();) await sleep(Math.min(500, end - Date.now()));
     };
     while (!exited() && !aborted() && Date.now() < deadline) {
-      if (ready.test(readText(path.join(run, 'client.log')))) {
+      const text = readText(path.join(run, 'client.log'));
+      if (ready.test(text)) {
         readySec = secs();
         break;
       }
+      failScreen = world ? (WORLD_FAIL.exec(text)?.[1] ?? null) : null;
+      if (failScreen) break;
       if (secs() - lastNote >= 60) {
         lastNote = secs();
-        log(`жду главное меню: ${lastNote} с`);
+        log(`жду ${world ? 'вход в мир' : 'главное меню'}: ${lastNote} с`);
       }
       await sleep(2000);
     }
     if (readySec !== null) {
-      state = 'главное меню';
-      log(`главное меню через ${readySec} с, снимаю экран через ${settle} с`);
+      state = world ? 'в мире' : 'главное меню';
+      if (world) {
+        // Игрок вошёл раньше, чем мир на экране: на программном OpenGL «Загрузка территории…» висит минутами, и этот
+        // кадр неподвижен. Пробные снимки раз в 10 с, пока картинка не сменится (не дольше load)
+        log(`игрок вошёл через ${readySec} с, жду мир на экране (до ${load} с)`);
+        let first = null;
+        for (let n = 0; !exited() && !aborted(); n++) {
+          const probe = path.join(run, 'probe.png');
+          if (capture(env, probe)) break;
+          const hash = sha1(fs.readFileSync(probe));
+          if (first !== null && hash !== first) {
+            shownSec = secs();
+            break;
+          }
+          first ??= hash;
+          if (secs() - readySec >= load) {
+            notes.push(`картинка не менялась ${load} с после входа — вероятно, всё ещё «Загрузка территории…»`);
+            break;
+          }
+          await wait(10_000);
+        }
+      }
+      log(`${state} через ${shownSec ?? readySec} с, снимаю экран через ${settle} с`);
       await wait(settle * 1000);
       for (let i = 1; i <= shots && !exited() && !aborted(); i++) {
-        const file = path.join(run, `menu-${String(i).padStart(2, '0')}.png`);
+        const file = path.join(run, `${world ? 'world' : 'menu'}-${String(i).padStart(2, '0')}.png`);
         const err = capture(env, file);
         if (err) notes.push(`снимок ${i} не вышел: ${err.split('\n').at(-1)}`);
         else pngs.push(file);
         if (i < shots) await wait(interval * 1000);
       }
+    } else if (failScreen) {
+      state = `мир не открылся: экран ${failScreen.split('.').at(-1)} через ${secs()} с`;
+      await wait(5000);
+      const file = path.join(run, 'world-error.png');
+      if (!capture(env, file)) pngs.push(file);
     } else if (aborted()) state = 'прерван (оборвался вызов)';
-    else if (exited()) state = `вышла до меню (код ${exitCode})`;
+    else if (exited()) state = `вышла до ${world ? 'входа в мир' : 'меню'} (код ${exitCode})`;
     else {
-      state = `не дошла до меню за ${timeout} с`;
+      state = `не дошла до ${world ? 'мира' : 'меню'} за ${timeout} с`;
       const file = path.join(run, 'timeout.png');
       if (!capture(env, file)) pngs.push(file);
     }
@@ -589,10 +851,11 @@ export async function runClient({
   const ok = readySec !== null && pngs.length > 0 && !crashes.length;
   const text = [
     `Клиентский стенд: снимок ${ver.snapshot ?? '?'}, NeoForge ${nf}, прогон ${id}`,
-    `итог: ${state}${readySec !== null ? ` за ${readySec} с` : ''}; ${stopped || 'не запускалась'}; всего ${secs()} с`,
+    `итог: ${state}${readySec !== null ? ` за ${readySec} с` : ''}${shownSec !== null ? `, мир на экране через ${shownSec} с` : ''}; ${stopped || 'не запускалась'}; всего ${secs()} с`,
     profile
       ? `моды: ${profile.used} в профиле${profile.excluded ? `, убрано --exclude: ${profile.excluded}` : ''}${mods.length ? `, свои: ${mods.map((m) => path.basename(m)).join(', ')}` : ''}`
       : 'профиль не собран',
+    ...(worldNote ? [`мир: ${worldNote}`] : []),
     ...(kjs.length ? ['KubeJS:', ...kjs.slice(-2).map((l) => '  ' + l)] : []),
     logErr.lines.length ? 'Ошибки latest.log (без повторов):' : 'Ошибок в latest.log нет.',
     ...logErr.lines.map((l) => '  ' + l),
@@ -674,10 +937,12 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
             overlay: one('--overlay') ?? null,
             timeout: num('--timeout', 900),
             settle: num('--settle', 20),
+            load: num('--load', 300),
             shots: num('--shots', 1),
             interval: num('--interval', 10),
             memory: one('--memory') ?? '8G',
-            ready: one('--ready') ? new RegExp(one('--ready')) : READY,
+            ready: one('--ready') ? new RegExp(one('--ready')) : null,
+            world: one('--world') ?? null,
             ram: argv.includes('--ram'),
             keep: argv.includes('--keep'),
             parallel: argv.includes('--parallel'),

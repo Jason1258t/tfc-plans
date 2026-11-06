@@ -424,7 +424,36 @@ Verified 2026-11-06 from an empty stand dir on snapshot `20261105-135644-3704`: 
 44 libraries fetched), the full client reached the title screen in ~130 s with 342 mods (250 jars), two PNGs, clean
 SIGTERM exit, no leftover Xvfb or run folder. The first try caught a real launch bug in seconds (vanilla jar on the
 classpath next to NeoForge's patched client → module resolution error), with the cause in `summary.txt`.
-Not automated yet: the Builder Tools Gradle check (below) and loading a world.
+
+**World and MCP (dev #288).** `run --world new` writes a minimal `saves/stand/level.dat` and launches with
+`--quickPlaySingleplayer stand`. The file: creative, cheats on, peaceful, no daylight/weather/mob cycle, random seed,
+`initialized=0` (the game picks the spawn — TFC by climate), data version from the client jar's `version.json` (else
+DataFixer treats it as ancient), storage `version` 19133 (Anvil; without it the world list rejects the save with
+«Unknown data version: 0»), and `WorldGenSettings.dimensions` from the pack's world preset — TFC's `defaultWorldPreset`
+(`tfc:overworld`), looked up in `kubejs/data`, mod jars, then Minecraft, JSON converted to NBT; `new:<preset id>` picks
+another. Dimensions missing from the file (nether, end, mod ones) are added from the dimension registry at load.
+`--world flat` is a vanilla flat overworld — **not usable for this pack**: TFC Eratosthenes sets its map projection only
+when TFC's `RegionGenerator`/`OverworldClimateModel` are built, so it throws «No MapProjection set» every player tick.
+`--world <save folder>` copies a save (uploaded from the Mac like `--overlay`; a server world works). Ready means the
+integrated server's `StandTest[…] logged in with entity id` line (not the chat line — it's translated); a failure screen
+(`RecoverWorldDataScreen`, `DisconnectedScreen`, … — FancyMenu logs each new screen class) stops the run at once with
+`world-error.png`. The login comes long before the world is drawn — on llvmpipe «Загрузка территории…» stays for
+a minute or more and that frame is static — so after login the stand takes a probe shot every 10 s until the picture
+changes (`--load`, 300 s max; the summary says «мир на экране через N с» or notes the timeout), then `--settle` and the
+shots. PNGs are `world-NN.png`. The stand player has the offline UUID of `StandTest` (all-zero UUID made
+FTB Chunks throw on login). Software GL: llvmpipe reports OpenGL 4.5, Voxy compiles GLSL 4.60 shaders and force-crashes
+the client on join, so runs set `MESA_GL_VERSION_OVERRIDE=4.6` / `MESA_GLSL_VERSION_OVERRIDE=460`.
+
+MCP `tfc-pack` `pack_client` runs the same from the Mac and returns the summary plus the last PNGs as images
+(`scripts/mcp/tools/devserver.mjs` → `clientStand()` in `client-stand-remote.mjs`, which writes nothing to stdout — that
+is the MCP channel). From a shell: `node scripts/mcp-call.mjs tfc-pack pack_client '{"world":"new"}' --timeout 1500`.
+
+**Builder Tools check stays separate.** `tools/builder-tools-mod/test-client.sh` is an addon dev test, not a pack
+check: ModDevGradle `runClient` from sources with the `devtest` source set (not in the release jar), a few mods
+(addon `libs/`, optionally TFC + Patchouli), assertions in code (`BTCLIENT OK/FAIL`, six of them), about a minute. The
+pack client stand answers a different question — does the released jar work in the full pack (250 jars, KubeJS,
+production launch). To run an addon's in-game assertions inside the full pack, build its devtest classes into a jar
+and pass it with `pack_client mods=[…] world=flat`; none of the addons builds such a jar yet.
 
 ## Remote Minecraft client stand (dev #279, manual)
 
