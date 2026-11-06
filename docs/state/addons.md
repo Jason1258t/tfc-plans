@@ -181,6 +181,10 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-06 (dev #295): **EE Extras 2.21.2** — stronger on/off contrast for PCB LEDs, plus separate craftable
+pushbutton and switch caps. Existing caps retain their mounted positions and drop the corresponding new item.
+The local NeoForge control circuit confirmed installation and operation of both caps.
+
 2026-11-06 (dev #292): **EE Extras 2.21.1** — single-core insulated and decorative leads, 300 V duplex-input
 PCB supply modules with selectable 3–36 V and an optional rectifier, per-component controls with attachable caps,
 polarized miniature LED, and boards on all six faces with a two-pixel border. Local NeoForge tests covered
