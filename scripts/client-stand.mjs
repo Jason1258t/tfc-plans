@@ -64,8 +64,6 @@ const WORLD_FAIL =
 const WORLD = 'stand';
 /** Шум: llvmpipe без /dev/dri, Xvfb без звуковой карты, моды с объявленным, но пустым AT */
 const NOISE = [/libEGL warning/, /OpenAL|SoundEngine|sound system/i, /Access transformer file .* does not exist/];
-/** Флаги тестового профиля: CustomSkinLoader 15.0.1 не патчит SkinManager и без флага останавливает запуск */
-const JVM_FLAGS = ['-Dcustomskinloader.ignorePatchFailure=true'];
 
 const log = (s) => console.error(`[client-stand] ${s}`);
 const readJson = (f) => JSON.parse(fs.readFileSync(f, 'utf8'));
@@ -484,14 +482,24 @@ function setupWorld(game, world, mc) {
   return `копия ${path.basename(path.resolve(world))}`;
 }
 
+/** versions/<id>/<id>.jar — копия ванильного клиента родительской версии, как её делает официальный лаунчер */
+function versionJar(id, mc) {
+  const src = path.join(LAUNCHER, 'versions', mc, `${mc}.jar`);
+  const dst = path.join(LAUNCHER, 'versions', id, `${id}.jar`);
+  if (!fs.existsSync(dst) || fs.statSync(dst).size !== fs.statSync(src).size) fs.copyFileSync(src, dst);
+  return dst;
+}
+
 /** Команда запуска по описаниям версий — как у официального лаунчера */
 function launchCommand({ nf, game, natives, memory, size: [w, h], world }) {
   const id = `neoforge-${nf}`;
   const child = versionJson(id);
   const parent = versionJson(child.inheritsFrom);
   const libs = path.join(LAUNCHER, 'libraries');
-  // Без ванильного <mc>.jar: клиент NeoForge собран установщиком в libraries/, второй minecraft ломает модули
-  const cp = libraries(child, parent).map((l) => path.join(libs, l.path));
+  // Как официальный лаунчер: ванильный клиент копией versions/<id>/<id>.jar в конце classpath. В модули он не попадает
+  // (-DignoreList=…,${version_name}.jar), но его version.json читают моды: CustomSkinLoader без него берёт протокол 0
+  // и патчит SkinManager как в старых версиях
+  const cp = [...libraries(child, parent).map((l) => path.join(libs, l.path)), versionJar(id, child.inheritsFrom)];
   const vars = {
     natives_directory: natives,
     launcher_name: 'tfc-client-stand',
@@ -524,7 +532,6 @@ function launchCommand({ nf, game, natives, memory, size: [w, h], world }) {
     ...expand(parent.arguments.jvm),
     ...expand(child.arguments?.jvm),
     `-Xmx${memory}`,
-    ...JVM_FLAGS,
     child.mainClass,
     ...expand(parent.arguments.game),
     ...expand(child.arguments?.game),

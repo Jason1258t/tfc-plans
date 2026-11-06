@@ -410,8 +410,9 @@ cache with `--delete`. Stand files on the host: `~/.cache/tfc-plans/client-stand
   `libraries.minecraft.net` with sha1 checks. Assets: `--assets base` (default, ~110 MB: language list, translations,
   title panorama, built-in packs — no sounds), `all`, `none`.
 - `run`: own profile per run (`runs/<id>/game`, mods symlinked, `--ram` copies them to `/dev/shm`), first-run screens
-  off (`options.txt`, FancyMenu welcome), CustomSkinLoader flag, own Xvfb display (first free from `:90`, own
-  Xauthority, no TCP), production launch built from the version JSONs (no Python launcher, no ModDevGradle). Waits for
+  off (`options.txt`, FancyMenu welcome), own Xvfb display (first free from `:90`, own Xauthority, no TCP), production
+  launch built from the version JSONs (no Python launcher, no ModDevGradle) with the vanilla client copied to
+  `versions/neoforge-<v>/neoforge-<v>.jar` at the end of the classpath like the official launcher (dev-285). Waits for
   FancyMenu's `title_screen` layer (`--ready <regex>`), waits `--settle` s, takes `--shots` PNGs (`client-stand/
 Capture.java`), SIGTERM for a clean exit (kill after a minute), stops Xvfb with SIGTERM, deletes the run folder
   (`--keep`), and leaves `results/<id>/` (`summary.txt`, `client.log`, `latest.log`, `debug.log`, `kubejs/`,
@@ -496,8 +497,9 @@ the launch metadata under `client/launcher`. Running the full snapshot through M
 assertion in KubeJS TFC 2.0.2 that its bytecode gates to development runs.
 
 The full profile uses snapshot `20261105-135644-3704` with all 250 mod jars. It sets
-`-Dcustomskinloader.ignorePatchFailure=true` to continue when CustomSkinLoader 15.0.1 fails to patch
-`SkinManager`. The test copy of the FancyMenu config skips its first-run welcome screen.
+`-Dcustomskinloader.ignorePatchFailure=true`: its classpath lacks the vanilla client jar, so CustomSkinLoader 15.0.1
+reads no `version.json`, takes protocol 0 and applies its pre-1.20.2 `SkinManager` / `PlayerTabOverlay` patches (dev-285).
+The official launcher and `client-stand` add that jar, so the flag is not needed there. The test copy of the FancyMenu config skips its first-run welcome screen.
 The GTX 1650 is visible to `nvidia-smi`. Xvfb uses Mesa llvmpipe (OpenGL 4.5), and the log reports a
 GLSL 4.60 shader compilation error during startup.
 
