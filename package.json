@@ -41,6 +41,7 @@
     "pack": "node scripts/pack.mjs",
     "pack:fetch": "node scripts/pack-fetch.mjs",
     "stand": "node scripts/pack-stand.mjs",
+    "client-stand": "node scripts/client-stand-remote.mjs",
     "pack:publish": "node scripts/publish-data.mjs",
     "mcp": "node scripts/mcp-call.mjs",
     "tfc": "node cli/tfc.mjs",

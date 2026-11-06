@@ -1,6 +1,6 @@
 /**
- * Общее для тестовых серверов Minecraft (addon_devserver, стенд сборки pack-stand.mjs): Java 21, RCON-клиент,
- * завершение дерева процессов. Без зависимостей, на любой ОС.
+ * Общее для тестовых серверов Minecraft (addon_devserver, стенды сборки pack-stand.mjs и client-stand.mjs): Java 21,
+ * RCON-клиент, сводка ошибок лога, завершение дерева процессов. Без зависимостей, на любой ОС.
  */
 import { execFile } from 'node:child_process';
 import fs from 'node:fs';
@@ -90,6 +90,27 @@ export function runRcon(port, password, commands) {
       else reject(new Error('RCON: сервер не ответил на авторизацию'));
     });
   });
+}
+
+/** Строки ошибок без повторов: «×N» у повторяющихся, шум (noiseRes) отдельно счётчиком */
+export function errorLines(text, re, limit, noiseRes = []) {
+  const counts = new Map();
+  let noise = 0;
+  for (const l of text.split(/\r?\n/)) {
+    if (!re.test(l)) continue;
+    if (noiseRes.some((n) => n.test(l))) {
+      noise++;
+      continue;
+    }
+    // Без метки времени, JSON рецепта и id: однотипные ошибки (16 цветов цемента, таблицы добычи) — одна группа
+    const msg = l.replace(/^\[[^\]]*\]\s*/, '').trim();
+    const key = msg.replace(/ from json \{.*$/, ' from json …').replace(/[a-z0-9_.-]+:[a-z0-9_/.-]+/g, '<id>');
+    const g = counts.get(key);
+    if (g) g.n++;
+    else counts.set(key, { n: 1, first: msg.length > 300 ? msg.slice(0, 300) + '…' : msg });
+  }
+  const lines = [...counts.values()].map(({ n, first }) => (n > 1 ? `${first} ×${n}` : first));
+  return { lines: lines.slice(0, limit), more: Math.max(0, lines.length - limit), noise };
 }
 
 /** Серверы, которых надо погасить вместе с этим процессом */
