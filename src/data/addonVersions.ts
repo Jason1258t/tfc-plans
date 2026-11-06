@@ -1,5 +1,5 @@
 import { collection, doc, getDocs, limit, onSnapshot, orderBy, query, where, writeBatch } from 'firebase/firestore';
-import { authReady, db } from '@/shared/api';
+import { authReady, db, requirePlayer } from '@/shared/api';
 import { ADDON_VERSIONS, sortVersions, type AddonVersion, type AddonVersionRevision } from '@tfc/core/addonVersions';
 
 /**
@@ -53,6 +53,7 @@ export type AddonVersionEdit = Pick<AddonVersion, 'changelog' | 'status' | 'chec
 
 /** Сохранить правку версии и запись в её истории одной записью */
 export async function saveAddonVersion(v: AddonVersion, edit: AddonVersionEdit, nick: string) {
+  requirePlayer('Сохранить версию аддона');
   await authReady;
   const ref = doc(db!, ADDON_VERSIONS, v.id);
   const now = Date.now();

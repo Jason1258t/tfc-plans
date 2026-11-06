@@ -1,47 +1,51 @@
 rules_version = '2';
 
-// Настоящей авторизации нет: ник — это подпись, хранится в куке.
-// Приложение входит анонимно, поэтому требуем request.auth != null —
-// это отсекает голые запросы к REST API без SDK, но не является защитой от «своих».
+// Приложение входит анонимно (request.auth != null отсекает голые запросы к REST API без SDK).
+// Ник — подпись, хранится в куке. Вход ключом игрока (dev #281): сервер сборки (POST /site/login) ставит
+// анонимному пользователю отметку player — без неё сайт только для чтения справки, а задачи, планы и любые
+// правки (кроме своего ника, статистики и подсказок знакомства) закрыты.
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() {
       return request.auth != null;
+    }
+    function player() {
+      return signedIn() && request.auth.token.player == true;
     }
     function nick(v) {
       return v is string && v.size() >= 2 && v.size() <= 24;
     }
 
     match /tasks/{id} {
-      allow read: if signedIn();
-      allow create: if signedIn()
+      allow read: if player();
+      allow create: if player()
         && request.resource.data.title is string
         && request.resource.data.title.size() > 0
         && request.resource.data.title.size() <= 300
         && nick(request.resource.data.author)
         && request.resource.data.checklist is list
         && request.resource.data.checklist.size() <= 500;
-      allow update: if signedIn()
+      allow update: if player()
         && request.resource.data.author == resource.data.author
         && request.resource.data.title is string
         && request.resource.data.title.size() <= 300
         && request.resource.data.checklist.size() <= 500;
-      allow delete: if signedIn();
+      allow delete: if player();
     }
 
     match /groups/{id} {
-      allow read: if signedIn();
-      allow create, update: if signedIn()
+      allow read: if player();
+      allow create, update: if player()
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 40;
-      allow delete: if signedIn();
+      allow delete: if player();
     }
 
     // Общие настройки сайта: settings/world — профиль и масштаб мира TFC Real World для карты
     match /settings/{id} {
       allow read: if signedIn();
-      allow write: if signedIn()
+      allow write: if player()
         && id == 'world'
         && request.resource.data.profile is string
         && request.resource.data.profile.size() <= 100
@@ -57,7 +61,7 @@ service cloud.firestore {
     // С сайта можно только записать/поправить патчноут (поле notes).
     match /packUpdates/{id} {
       allow read: if signedIn();
-      allow update: if signedIn()
+      allow update: if player()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['notes'])
         && request.resource.data.notes.body is string
         && request.resource.data.notes.body.size() <= 30000
@@ -92,18 +96,18 @@ service cloud.firestore {
       }
 
       allow read: if signedIn();
-      allow create: if (signedIn()) && ffValidNew() && (nick(request.resource.data.author) && (request.resource.data.taskId == null || request.resource.data.taskId is string));
+      allow create: if (player()) && ffValidNew() && (nick(request.resource.data.author) && (request.resource.data.taskId == null || request.resource.data.taskId is string));
       // The only allowed update — marking "all chunks written"
-      allow update: if (signedIn())
+      allow update: if (player())
         && resource.data.complete == false
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['complete'])
         && request.resource.data.complete == true;
-      allow delete: if signedIn();
+      allow delete: if player();
 
       match /chunks/{n} {
         allow read: if signedIn();
         // Chunks go only into an incomplete file, under their own index and no larger than chunkSize
-        allow create: if (signedIn())
+        allow create: if (player())
           && ffParent().complete == false
           && request.resource.data.keys().hasOnly(['i', 'data'])
           && request.resource.data.i is int
@@ -113,7 +117,7 @@ service cloud.firestore {
           && request.resource.data.data is bytes
           && request.resource.data.data.size() <= 716800;
         // Orphaned chunks (metadata already deleted) can be removed by anyone
-        allow delete: if !exists(ffParentPath()) || signedIn();
+        allow delete: if !exists(ffParentPath()) || player();
       }
     }
     // firestore-files:end files
@@ -122,7 +126,7 @@ service cloud.firestore {
     // дальше правят люди и агент с сайта
     match /recipeHints/{id} {
       allow read: if signedIn();
-      allow create, update: if signedIn()
+      allow create, update: if player()
         && request.resource.data.type is string
         && request.resource.data.title is string
         && request.resource.data.title.size() <= 120
@@ -130,13 +134,13 @@ service cloud.firestore {
         && request.resource.data.body.size() <= 20000
         && request.resource.data.source in ['agent', 'manual', 'claude']
         && nick(request.resource.data.updatedBy);
-      allow delete: if signedIn();
+      allow delete: if player();
     }
 
     // Черновики датапаков: файлы хранятся текстом внутри документа
     match /datapacks/{id} {
       allow read: if signedIn();
-      allow create, update: if signedIn()
+      allow create, update: if player()
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 80
@@ -145,20 +149,20 @@ service cloud.firestore {
         && (!('install' in request.resource.data) || request.resource.data.install is bool)
         && (!('installTarget' in request.resource.data) || request.resource.data.installTarget in ['world', 'pack'])
         && nick(request.resource.data.updatedBy);
-      allow delete: if signedIn();
+      allow delete: if player();
     }
 
     // Скрипты KubeJS (kubejs/server_scripts/): текст внутри документа, «Ставить на сервер» — install
     match /kubejsScripts/{id} {
       allow read: if signedIn();
-      allow create, update: if signedIn()
+      allow create, update: if player()
         && request.resource.data.fileName is string
         && request.resource.data.fileName.matches('[a-z0-9_][a-z0-9_.-]{0,79}[.]js')
         && request.resource.data.text is string
         && request.resource.data.text.size() <= 200000
         && (!('install' in request.resource.data) || request.resource.data.install is bool)
         && nick(request.resource.data.updatedBy);
-      allow delete: if signedIn();
+      allow delete: if player();
     }
 
     // Конфиги модов с сервера/инстанса — пишет только scripts/import-config.mjs (от имени владельца проекта)
@@ -170,7 +174,7 @@ service cloud.firestore {
     // Библиотека схем: исходник — в files/{fileId}, здесь имя и замены
     match /schematics/{id} {
       allow read: if signedIn();
-      allow create, update: if signedIn()
+      allow create, update: if player()
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 120
@@ -182,12 +186,12 @@ service cloud.firestore {
         && (!('description' in request.resource.data)
           || (request.resource.data.description is string && request.resource.data.description.size() <= 4000))
         && nick(request.resource.data.updatedBy);
-      allow delete: if signedIn();
+      allow delete: if player();
     }
 
     match /replaceFavorites/{id} {
       allow read: if signedIn();
-      allow create, update: if signedIn()
+      allow create, update: if player()
         && request.resource.data.from is string
         && request.resource.data.from.size() > 0
         && request.resource.data.from.size() <= 200
@@ -195,14 +199,14 @@ service cloud.firestore {
         && request.resource.data.to.size() > 0
         && request.resource.data.to.size() <= 200
         && nick(request.resource.data.updatedBy);
-      allow delete: if signedIn();
+      allow delete: if player();
     }
 
     // Гайды справочника: правят все, стирать нельзя (снимают с публикации — hidden).
     // Каждое сохранение пишет и версию в revisions — их только добавляют.
     match /guides/{id} {
       allow read: if signedIn();
-      allow create, update: if signedIn()
+      allow create, update: if player()
         && request.resource.data.section is string
         && request.resource.data.section.size() > 0
         && request.resource.data.section.size() <= 40
@@ -225,7 +229,7 @@ service cloud.firestore {
 
       match /revisions/{rid} {
         allow read: if signedIn();
-        allow create: if signedIn()
+        allow create: if player()
           && request.resource.data.title is string
           && request.resource.data.title.size() <= 200
           && request.resource.data.summary is string
@@ -251,7 +255,7 @@ service cloud.firestore {
     match /addonVersions/{id} {
       allow read: if signedIn();
       allow create: if false;
-      allow update: if signedIn()
+      allow update: if player()
         && addonVersionText(request.resource.data)
         && request.resource.data.addon == resource.data.addon
         && request.resource.data.version == resource.data.version
@@ -263,7 +267,7 @@ service cloud.firestore {
 
       match /revisions/{rid} {
         allow read: if signedIn();
-        allow create: if signedIn()
+        allow create: if player()
           && addonVersionText(request.resource.data)
           && request.resource.data.at is number
           && nick(request.resource.data.updatedBy);
@@ -283,12 +287,12 @@ service cloud.firestore {
     }
 
     match /artifacts/{id} {
-      allow read: if signedIn();
-      allow create, update: if signedIn()
+      allow read: if player();
+      allow create, update: if player()
         && request.resource.data.content is string
         && request.resource.data.content.size() <= 900000
         && nick(request.resource.data.updatedBy);
-      allow delete: if signedIn();
+      allow delete: if player();
     }
 
     // Справочник участников сайта (src/data/users.ts): пишется при заходе, ключ — ник.

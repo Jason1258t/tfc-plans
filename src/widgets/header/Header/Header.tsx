@@ -1,7 +1,7 @@
-import { Bell, Search } from 'lucide-react';
+import { Bell, KeyRound, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { firebaseEnabled } from '@/shared/api';
+import { firebaseEnabled, requestKey, useAccess } from '@/shared/api';
 import { lastSeenUpdate, usePackUpdates } from '@/entities/pack-update';
 import styles from './Header.module.css';
 import { OnboardingMenu } from '@/widgets/onboarding';
@@ -20,6 +20,8 @@ export function Header({ nick, onChangeNick }: Props) {
   // Рецепты и теги — справка; активный редактор датапаков — только на своей странице
   const inPacks = /^\/datapacks\b/.test(useLocation().pathname);
   const updates = usePackUpdates();
+  // Задачи, документы и разработка — только с ключом игрока (dev #281)
+  const player = useAccess() === 'player';
   const [seen, setSeen] = useState(lastSeenUpdate);
   useEffect(() => {
     const on = () => setSeen(lastSeenUpdate());
@@ -46,15 +48,15 @@ export function Header({ nick, onChangeNick }: Props) {
         <BrandLogo />
       </NavLink>
       <nav className={styles.nav} aria-label="Основные разделы">
-        <NavLink to="/tasks">Задачи</NavLink>
-        <NavLink to="/docs">Документы</NavLink>
+        {player && <NavLink to="/tasks">Задачи</NavLink>}
+        {player && <NavLink to="/docs">Документы</NavLink>}
         <NavLink to="/schematics">Схемы</NavLink>
         <NavLink to="/datapacks" data-active={inPacks || undefined}>
           Датапаки
         </NavLink>
         <NavLink to="/reference">Справочник</NavLink>
         <NavLink to="/addons">Аддоны</NavLink>
-        <NavLink to="/dev">Разработка</NavLink>
+        {player && <NavLink to="/dev">Разработка</NavLink>}
       </nav>
       <span className="grow" />
       {!firebaseEnabled && (
@@ -82,6 +84,17 @@ export function Header({ nick, onChangeNick }: Props) {
           <ItemIdSearch autoFocus />
         </Modal>
       )}
+      {!player && firebaseEnabled && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => requestKey()}
+          {...tooltipHandlers('Войти с ключом игрока', 'Открывает задачи, документы, разработку и правки')}
+        >
+          <KeyRound size={15} />
+          <span className={styles.searchLabel}>Ключ</span>
+        </Button>
+      )}
       <OnboardingMenu />
       <ButtonLink
         to="/updates"
@@ -97,9 +110,9 @@ export function Header({ nick, onChangeNick }: Props) {
       </ButtonLink>
       <button
         className={styles.nick}
-        aria-label="Сменить ник"
+        aria-label="Ник и ключ игрока"
         onClick={onChangeNick}
-        {...tooltipHandlers('Сменить ник')}
+        {...tooltipHandlers('Ник и ключ игрока', player ? 'Вошли с ключом игрока' : 'Без ключа — только просмотр')}
       >
         <span className={styles.avatar} aria-hidden>
           {nick.slice(0, 1).toUpperCase()}

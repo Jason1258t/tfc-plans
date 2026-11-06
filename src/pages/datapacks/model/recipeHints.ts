@@ -1,5 +1,5 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { authReady, db } from '@/shared/api';
+import { authReady, db, requirePlayer } from '@/shared/api';
 
 /** Подсказка по заполнению рецептов одного типа (коллекция recipeHints) */
 export interface RecipeHint {
@@ -32,6 +32,7 @@ export async function getHint(type: string): Promise<RecipeHint | null> {
 
 export async function saveHint(hint: Omit<RecipeHint, 'updatedAt'>): Promise<RecipeHint> {
   if (!db) throw new Error('Подсказки хранятся в Firebase — он не подключён');
+  requirePlayer('Сохранить подсказку');
   await authReady;
   const full = { ...hint, updatedAt: Date.now() };
   await setDoc(doc(db, 'recipeHints', hintDocId(hint.type)), full);

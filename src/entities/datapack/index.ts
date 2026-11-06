@@ -6,6 +6,6 @@ export {
   type DatapackInstallMode,
   type DatapackInstallTarget,
 } from '@tfc/core/datapackFiles';
-export { datapacksStore, kubejsScriptsStore } from './store';
+export { datapacksStore, kubejsScriptsStore, publishTemporaryDatapack } from './store';
 export { useDatapackDeployments } from './deployments';
 export type { DatapackDeployment } from './deployments';

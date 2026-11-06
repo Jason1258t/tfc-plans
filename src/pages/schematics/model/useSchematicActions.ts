@@ -1,5 +1,6 @@
 import { hasBlock } from '@tfc/core/copycatPairs';
 import { exportSchematic, invalidTargets, type Schematic } from '@/entities/schematic';
+import { isPlayer, requestKey } from '@/shared/api';
 import { isBlock, type ItemIndex } from '@/shared/pack-data';
 import { makePreview, saveToLibrary } from '@/entities/schematic';
 import { outName, replaceSig } from './schematicFormat';
@@ -60,6 +61,8 @@ export function useSchematicActions({
   };
 
   const save = async (s: Schematic) => {
+    // Общая библиотека — только с ключом игрока; без него схему можно открыть, поправить и скачать
+    if (!isPlayer()) return requestKey('Сохранить схему в библиотеку');
     setSaving((m) => ({ ...m, [s.key]: 'saving' }));
     try {
       // Превью — с заменами, как схема будет выглядеть после скачивания

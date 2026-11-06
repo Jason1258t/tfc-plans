@@ -5,6 +5,7 @@ import { freeScriptName, NEW_SCRIPT_TEXT } from '@/lib/kubejsScripts';
 import { useNick } from '@/entities/user';
 import { datapacksStore, kubejsScriptsStore, useDatapackDeployments } from '@/entities/datapack';
 import type { Datapack, KubejsScript } from '@/entities/datapack';
+import { isPlayer, requestKey } from '@/shared/api';
 import { Button } from '@/shared/ui';
 import { DatapacksList } from '../ui/DatapacksList';
 import { PackEditor } from '../ui/PackEditor';
@@ -37,6 +38,8 @@ export function DatapacksPage() {
   const script = scripts?.find((s) => s.id === scriptId) ?? null;
 
   const createScript = async () => {
+    // Скрипт KubeJS временным не бывает: его ставит tfc pull с сайта
+    if (!isPlayer()) return requestKey('Создать скрипт KubeJS');
     const id = await kubejsScriptsStore.add({
       fileName: freeScriptName('tfc_plans.js', scripts ?? []),
       text: NEW_SCRIPT_TEXT,

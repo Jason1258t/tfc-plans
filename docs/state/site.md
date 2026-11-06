@@ -2,6 +2,22 @@
 
 Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quoted in Russian as they appear in the code.
 
+## Player key login (2026-11-06, dev #281)
+
+- The nick dialog has an optional «Ключ игрока» field (the `tfc_…` pack-server key, same as `tfc login`). The pack
+  server (`POST /site/login`, `server/pack-server/lib/site-login.mjs`) checks the key + the anonymous Firebase ID
+  token and sets custom claims `{ player, keyId, keyName, role }` on that anonymous user; the browser never stores the
+  key. Logout — «Выйти из ключа» (claims cleared, new anonymous sign-in). Revoking a key via the API clears its claims.
+- `firestore.rules`: `player()` for every write except `users`, `onboarding`, `visits`, `visitDays`; reads of `tasks`,
+  `groups`, `artifacts` also need it. `/dev` on the pack server requires the claim for site tokens.
+- Site: `src/shared/api/access.ts` (`useAccess`, `requirePlayer`, `requestKey`, `playerOnly`), UI in
+  `src/features/player-key`. Without a key: «Задачи», «Документы», «Разработка» are hidden from the header and their
+  routes show a key form; every collection-store write and direct save (guides, addon versions, map settings, hints,
+  patch notes, files) opens the key dialog instead; «В библиотеку» on schematics asks for the key; a new datapack is
+  temporary (`localStorage` `tfc-tm:datapacks-temp`, install toggle locked, ZIP download only; «Сохранить на сайте»
+  after login); KubeJS scripts need the key.
+- Not covered: `server/file-server` (unused, `VITE_FILES_SERVER` empty) still accepts any anonymous token.
+
 ## Polymer names (2026-11-04, dev #218)
 
 - Live guides `chem-polymers`, `chem-start` and `addon-destroy-extras` use full Russian names for polyethylene, polypropylene, polyvinyl chloride and styrene-butadiene rubber. The polymer article includes an abbreviation glossary and familiar everyday examples; its title is «Нефть, пластики и синтетическая резина». Existing reaction verification limits are preserved.

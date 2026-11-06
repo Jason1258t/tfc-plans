@@ -1,6 +1,22 @@
 /** Общий слой API: Firebase, подписки Firestore, состояние синхронизации и аналитика. Снаружи — `@/shared/api`. */
 export { app, appCheck, auth, authReady, db, firebaseEnabled } from './firebase';
-export { createCollectionStore, type CollectionStore } from './store';
+export { createCollectionStore, createLocalStore, type CollectionStore } from './store';
+export {
+  closeKeyRequest,
+  isPlayer,
+  KeyRequiredError,
+  loginWithKey,
+  logout,
+  PACK_SERVER_URL,
+  playerOnly,
+  requestKey,
+  requirePlayer,
+  subscribeAccess,
+  useAccess,
+  useKeyName,
+  useKeyRequest,
+  type AccessStatus,
+} from './access';
 export { createLiveList } from './liveList';
 export type {
   AskParams,

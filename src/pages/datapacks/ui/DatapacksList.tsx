@@ -67,6 +67,7 @@ export function DatapacksList({
                   <span className="grow">
                     <span className={styles.dpItemName}>{p.name}</span>
                     <span className="faint small">
+                      {p.temporary ? 'временный · ' : ''}
                       {p.entries.length} файл(ов) · {p.updatedBy}, {timeAgo(p.updatedAt)}
                     </span>
                   </span>
