@@ -15,6 +15,9 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **PCB wiring and mounting** (dev #292): install EE Extras 2.21.1 on the server and clients with `tfc pull addons`.
+  The release was exercised on the isolated `test1a` client stand. The live pack installation is the host's step.
+
 - **Working boards** (dev #280): install EE Extras 2.19.0 on the server and clients. In the pack profile, assemble a board
   using a stack from the inventory, place a trimmed board and connect a thin lead to a terminal.
 

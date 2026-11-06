@@ -181,6 +181,14 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-06 (dev #292): **EE Extras 2.21.1** — single-core insulated and decorative leads, 300 V duplex-input
+PCB supply modules with selectable 3–36 V and an optional rectifier, per-component controls with attachable caps,
+polarized miniature LED, and boards on all six faces with a two-pixel border. Local NeoForge tests covered
+resistance persistence, controls, LED polarity, the 25 V indicator circuit and overload protection, and output
+waveforms with 16 microticks. The full client on `test1a` verified both wire types and their rendering, supply
+settings and output, switch caps, the 25 V legacy-lead indicator and 60 V protection, LED polarity, and placement,
+aiming, and wire attachment on every face (runs `20261106-131001-fd67` and `20261106-131831-4769`).
+
 2026-11-06 (dev #289): **EE Extras 2.20.0** — installed boards display scaled Create: Power Grid component models
 (Apache-2.0), thinner visible traces and a tier-specific substrate. The editor offers direct component selection and
 highlights the pins of the preview. New placements of capacitors, diodes and meters require L2, transistors L3.
