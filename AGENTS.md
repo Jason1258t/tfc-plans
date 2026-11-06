@@ -78,6 +78,9 @@ comments, commit messages, guides, MCP tool output. Keep Russian UI labels verba
 - Cheap delegation: broad "where is X / how does Y work" searches → a read-only subagent if your harness has one; when
   one session is about to span several unrelated features, finish and start a new session instead of growing the
   context.
+- **Repeatable work is a skill/MCP candidate.** Any action that may recur and needs a new skill or script prepared
+  (a scratch script, a manual multi-step procedure, research you would redo) is a candidate for a skill or an MCP tool.
+  Finish the task, then log the candidate as a dev task: what was done by hand and what the tool should do.
 
 ## Where code goes
 
@@ -119,6 +122,9 @@ No tests. Verification — in the browser (below) and one-off node scripts in a 
 **For game facts, recipes, tags, configs, mod code, logs, guides and site content use it first**, not grep over
 `public/*.json` or unzipping jars. Which tool for what — [docs/mcp.md](docs/mcp.md) «Agent's usual path».
 
+- Tools not connected, or the harness call timeout is shorter than the tool (`pack_devserver`) → the same tools from a
+  shell: `node scripts/mcp-call.mjs <server> <tool> '<json>' [--timeout <s>]`, not a temporary JSON-RPC client —
+  [docs/mcp.md](docs/mcp.md) «Calling from a shell».
 - Pack config changes → `config_propose`. Other pack files (KubeJS, lang, resources) → check with
   `pack_devserver overlay=<dir>`, then `npm run tfc -- admin propose <overlay dir> --note …`; the host approves.
 - Site tasks/plans/guides/datapacks → its write tools with `baseRevision`, not ad-hoc scripts; they cost Firestore reads
@@ -131,6 +137,14 @@ No tests. Verification — in the browser (below) and one-off node scripts in a 
 New editable fixes go to site cards via `datapack_put`; the rest, including deployment levels —
 [docs/agents-datapacks.md](docs/agents-datapacks.md). An agent cannot verify in game: **do not declare a version tested
 or run live `confirm` without the host's explicit confirmation.**
+
+## Whole-pack test server
+
+Run full-pack NeoForge checks on Ubuntu `test1a` via Tailscale to keep the Mac free for development.
+See [test stand access and commands](docs/state/infra.md#remote-whole-pack-stand-dev-275) for the remote checkout,
+snapshot and overlay transfer, and the smoke test. Full Minecraft client with the pack on a virtual display there:
+`npm run client-stand -- prepare` once, then `npm run client-stand -- run` (title screen PNG, logs, summary) —
+[client stand](docs/state/infra.md#remote-minecraft-client-stand--scripted-dev-284). AutoLab, Docker, and Ollama on that host are outside the stand.
 
 ## Browser checks
 

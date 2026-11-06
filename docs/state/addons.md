@@ -8,12 +8,9 @@ page `/addons/<mod>`: card `tools/<mod>/addon.json` (+ jar, `icons/`) in git, de
 `addons_list` / `addon_check`. Texts moved from the former `src/lib/addons.ts` as is (signed Claude). What still waits for the host or a
 game check — [pending.md](pending.md).
 
-## In development
-
-- **Destroy Extras 0.7.0, dev #212**: 18 pure metal and alloy dusts and a pack overlay for five briquette sizes,
-  crushing, arc furnace and TFC heating. The full dedicated stand registered all 543 audited recipes, with the old
-  crushing and 1:1 smelting recipes absent. Candidate `u20261105-181849-3fa9` includes both the jar and recipes and
-  awaits test-profile acceptance. The Destroy update already on acceptance (#199) keeps its own version.
+- EE Extras, dev #271 и #274: подготовлены PNG 16×16 для поверхностного и тонкого провода, распределительной коробки
+  и универсальной крышки. Проверены размеры, прозрачность и повторяемость полос провода; грани и иконки отрисованы
+  проверочными моделями MCP. Интеграция с моделями и просмотр в клиенте относятся к приёмке #205 и #273.
 
 ## Versions (since 2026-10-23)
 
@@ -40,7 +37,17 @@ addon`, `formerIds` for ee_rectifier → ee_extras, rollback marked); `/updates`
   all versions (401 without a key), `tfc admin addon upload` — same jar «уже записана», mismatched 2.2.0 jar refused
   (409), `tfc pull addons ee_extras@2.3.1` from the live server installed the jar with the recorded hash.
 
+## Debug Tools (`tools/debug-tools-mod`)
+
+2026-11-04 (dev #214, #199): **1.0.0**, manual install, no blocks. TFC 4.2.9 has no vein locate command: only
+`/tfc propick scan` (radius 12) and `/tfc count`; vanilla `/locate` does not see features. Vein centres depend only on the
+world seed and chunk (`VeinFeature.getVeinsAtChunk`, public), so `vein find` computes them without generating chunks;
+`vein check` and `ore` generate chunks one per tick and log results as `[tfcdebug]`, because RCON misses deferred output.
+Checked on the full pack stand with `--level-type tfc:overworld`, not in the client chat.
+
 ## Destroy Bridge + Destroy Extras (`tools/destroy-bridge-mod`, `tools/destroy-extras-mod`)
+
+2026-11-05 (dev #211): **Destroy Extras 0.6.0** — Create wrench rotation for the electrolyzer and etching bath, with relative ports and rotating EE contacts. The electrolyzer shell needs rebuilding after rotation. The bath rear port takes pure HCl. Stand checks covered all four directions, pipe reconnection and migration of a 0.3.0 world with a running batch. Full-pack client and live fluid flows after rotation await host acceptance.
 
 2026-11-03 (dev #209, #208): **Destroy Extras 0.3.0** — Cl₂ also from the bottom of the controller (the south port is behind the 3×3×2 shell), H₂/Cl₂ as `destroy:mixture` (the Vat refuses `destroy:gas`; old stacks convert on load), EMI shows all Destroy categories via two mixins. Earlier checks put mixtures into the Vat by code and missed this; `M10Test` runs the route through real ports up to an L1 board, client stand uses JEI 19.55 + EMI (centrifuge 3 recipes). Full-pack client, flows through Create pumps and in-game not checked.
 
@@ -161,8 +168,146 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 - M11 dedicated-server checks pass for complete L2/L3 cycles, invalid/missing inputs, blocked outputs, voltage sag,
   break/replacement and two-stage restart. L1/M4/M10 regressions, old-world migration, both release builds and resource
   checks pass. No manual Survival playthrough or live pack-wide datapack confirmation was performed.
+- M13 (#22 checklist item 56) releases **Destroy Extras 0.5.0** and **Destroy Bridge 0.2.0**. The configurable EE rating
+  preserves the old 300 V / 8 A default and adds recipe-driven 240/600 V modes. The metallurgical processor has two item
+  inputs, a reusable catalyst, two item and two fluid outputs; all inputs and output space are checked before consumption,
+  and contents/progress survive restart. Its 23 datapack recipes cover roasting/leaching/electrowinning Cu/Ni/Zn (20 ore
+  powders → 100 mB metal), cementation, nickel sulfide, Bayer/Hall–Héroult with reusable cryolite, tailings, FeCl3
+  regeneration and electronic scrap. Draft datapack `AOCIqlJX84i1BfiWPPsh` has 20 entries and remains `install=false`;
+  it disables all ten direct bauxite routes through TFC, TFC-IE, ore washing and pellet arc-furnace recipes.
+- M13 dedicated-server checks: environment/ingredient matching 30/30, leaching 3/3, electrowinning 3/3, Bayer 2/2,
+  Hall–Héroult 4/4, blocked output 2/2, voltage sag 2/2 and restart 2/2. The M2 regression after the Bridge change passes
+  13/13 at 299.827 V / 7.995 A. No manual Survival playthrough or live pack-wide datapack confirmation was performed.
 
 ## EE Extras (`tools/ee-extras-mod`)
+
+2026-11-06 (dev #292): **EE Extras 2.21.1** — single-core insulated and decorative leads, 300 V duplex-input
+PCB supply modules with selectable 3–36 V and an optional rectifier, per-component controls with attachable caps,
+polarized miniature LED, and boards on all six faces with a two-pixel border. Local NeoForge tests covered
+resistance persistence, controls, LED polarity, the 25 V indicator circuit and overload protection, and output
+waveforms with 16 microticks. The full client on `test1a` verified both wire types and their rendering, supply
+settings and output, switch caps, the 25 V legacy-lead indicator and 60 V protection, LED polarity, and placement,
+aiming, and wire attachment on every face (runs `20261106-131001-fd67` and `20261106-131831-4769`).
+
+2026-11-06 (dev #289): **EE Extras 2.20.0** — installed boards display scaled Create: Power Grid component models
+(Apache-2.0), thinner visible traces and a tier-specific substrate. The editor offers direct component selection and
+highlights the pins of the preview. New placements of capacitors, diodes and meters require L2, transistors L3.
+The EE simulation and the existing topology format are preserved. Dev server: topology 15/15, L1–L3 placement and
+removal, relay indicator at 24.00 V. Dev client: 10 PCB checks passed, including L1 palette lock and installed board.
+
+2026-11-06 (dev #280): **EE Extras 2.19.0** — the editor takes one blank of the design tier from the inventory or table
+slot. Assembled boards render their thin cuttable outline and one-pixel contacts from the design. The thin spool
+connects individual contacts to another contact or EE device. The editor has a direct tool palette, and the table
+has an updated inventory model. Legacy boards keep their terminal IDs. The dedicated server checked L1–L3
+assembly, six positioned contacts, the cut outline, the thin lead, and item drops. The dev client checked design
+saving, assembly, and the installed outline and contacts.
+
+2026-11-06 (dev #286): **EE Extras 2.18.2** — renamed the surface wire in Russian. Routing and periodic support checks
+use the outline of fence posts and rails. On the dev server, a 6.13 m line over oak fences survived the periodic
+checks without drops. Removing three fence blocks dropped only the unsupported section. A separate heater circuit
+with 7.25 m of surface wire held both cores and delivered 211.7 V RMS from an AC source set to 300 V peak.
+
+2026-11-06 (dev #283): **EE Extras 2.18.1** — the duplex cable sheath between two caps uses a different EE node pair
+from either conductor. EE 1.1.2 keeps one connection per pair, so the first conductor previously overwrote the sheath.
+Existing links with both conductors intact regain a standard duplex sheath during the server integrity check.
+The dedicated server verified fresh placement, migration of a saved cable, and removal of a cap with two attached cables.
+
+2026-11-06 (dev #276): **EE Extras 2.18.0** — the duplex cap covers both terminals with an overhanging rim. Caps sync
+with watched chunks, and the spool HUD and click prediction use the synced state. The visible duplex and thin cable
+sheaths use the cap inlet in both EE client renderers. Surface wire routes use the same inlet. EE 1.1.2 still registers
+the original electrical nodes, so the saved cable connections need no migration. Dedicated dev server: cap placement,
+removal and persistence after restart. Dev client: cap sync, screenshots of the bulb, heater and motor, and surface wire.
+
+2026-11-06 (dev #272): **EE Extras 2.17.0** — working L1–L3 boards with up to four EE terminals, component presets,
+and rated voltage, dissipation and current. Assembling consumes parts. Overvoltage and sustained overload char
+the board, which can then be salvaged at the design table. Dedicated-server coverage includes relay transfer,
+RC timing, forward and reverse diode, fuse, transistor, meters and Create display source, all three item tiers,
+and 16 boards at the 32-node / 64-part limit through a restart and on a shared bus. The old editor checks passed 15/15,
+CC compatibility passed 83/83 recipes, and the development client assembled a board through the editor.
+
+2026-11-06 (dev #205, plan doc:47): **EE Extras 2.16.0** — surface wire ported from Create: Power Grid 0.6.2
+(Apache-2.0, `META-INF/NOTICE`, package `ee.extras.wire`): one entity per piece, axis segments on a 1/16 grid,
+A* path along surfaces (`BlockTrace`), preview, branches, merge, cutters (`#electroenergetics:wire_cutters`), dye,
+straight mode (left Alt), raycast mixin on `ProjectileUtil.getEntityHitResult` (client, only with wire/cutters/dye in
+hand). Electrics are EE wires, not PG simulation: a piece with both ends connected = 2 EE cores of route length
+(`WireData.ofLength`); a branch node = EE FIXED detached nodes (`InfrastructureSavedData.createDetachedNode`, saved by
+EE), registry in `JunctionData`. Own support check (PG has none). Junction box `junction_box` (like the duplex
+insulator). Thin insulated wire spool — hanging duplex cable via `CableLaying` with a 1-px sheath type
+`thin_insulated_wire`; refused between two cable insulators; works with caps (#273). Config `ee_extras-server.toml`
+`surface_wire.itemsPerMeter` 1, `maxLength` 16 m. Checked on the dev server (`wiretest`, `/wiretest thin`) and in the
+dev client (`WIRE=1 ./test-client.sh`); not in game. The site page `addon-ee-extras` had been saved truncated at 2.15.0
+(MCP `guide_get` output with «… обрезано»); restored from revision 2026-11-05T16:26 plus 2.15/2.16 texts.
+
+2026-11-05 (dev #273): **EE Extras 2.15.0** — duplex cable cap `duplex_cable_cap`: an item, not a block (host's
+decision — "a modifier of the device"). `cable/CableCap` keeps the set of capped device positions (SavedData
+`ee_extras_cable_caps`); a device qualifies when it is an EE `ElectricalDeviceBlock` with exactly two accessible nodes
+(`getNodePositions` + `isNodeAccessible`, EE 1.1.2; cable terminations/junctions excluded); contact 1 = lower node id.
+For the cable a capped device is a `CableEnd` with `contacts`: cores go to the device contacts, the sheath to contact 1
+(a foreign block can't get an extra node — EE re-syncs nodes with `getNodePositions` every tick). Cap click and cable
+laying onto 2-contact devices run in a HIGH-priority listener (`CableEvents.capClick`), otherwise Create's
+`ValueSettingsInputHandler` eats clicks on the voltmeter's value box. Shift + empty hand removes (cap and cable spools
+back); a 10-tick check drops the cap when the device is gone. Verified on the dev server (`CapTest`, `KEEP=1`): bulb
+lit, voltmeter reads the battery, core 1 → contact 1 / core 2 → contact 2, refusals (rectifier 4 contacts, connector 1,
+wired contacts, second cap, cable to uncapped device, EE wire onto capped contacts), removal, drop on break, restart.
+Item texture from #274 (`item/duplex_cap`); the block textures `duplex_cap_front/side` from #274 are unused.
+
+2026-11-05 (dev #228): **EE Extras 2.14.1** — EE 1.1.2 electric pumps draw 2.4 times less power at the same
+terminal voltage, preserving their original RPM curve. The patch multiplies the resistance used by the circuit solver
+by 2.4 and adjusts goggles watts by the same factor. At 220 V the dev server reported 480 Ω and 60.5 RPM with the
+stock 200 Ω config and mechanical pump impact 4, corresponding to about 101 W instead of 242 W. Both injections
+were verified in the exported class. Config proposal `HPnhxqfnFrUSjHTYcEKG` was cancelled.
+
+2026-11-05 (dev #249, #259): **2.14.0** — a steel whip antenna for both wireless modem tiers via the base
+transceiver, a miniature colour display for direct and upgrade recipes of the advanced pocket computer, and
+industrial RedRouter, Animatronic, Scroller and Source Block recipes. Source and Target still convert 1:1.
+The M12 item insulation tag accepts ABS sheets and available plastics for the cable and storage bay.
+
+2026-11-05 (dev #248): **2.13.0** — magnetized steel, a pressed-paper speaker cone, sulfuric acid electrolyte and
+an ABS ink cartridge. The precision actuator gets its magnet through the motor. The lead battery uses an ABS case and
+a PET separator. M12 `tcegd3kspq62oHuM3YmF` requires EE Extras 2.13.0, Destroy 0.4.6 and Petrolpark 1.5.11.
+Dedicated server: 77/77 CC recipes, 303 checks after restart, reusable magnetizing coil, 125 mB of 4.5 mol/L solution
+bottled by Create; 1 and 10 mol/L rejected. Resource and recipe conflict checks passed. See dev #259 for the missing
+insulation tag in the pre-existing cable and storage bay recipes.
+
+2026-11-05 (dev #247): **2.12.0** — duplex cable power inlet for CC: Tweaked desktops and a pocket computer
+charging station. The inlet tests the network under load before booting and shuts down on loss of power. The
+nominal input is 300 V with an operating range of 240–330 V. Normal/advanced desktops draw 80/180 W at nominal
+voltage. Pocket devices store an 18 Wh battery on the item. Input damage follows the EE component damage setting.
+Dedicated server: 80/180 W at 300 V, refused startup at 180 V, shutdown after cable removal, Lua disk drive and file
+write, desktop and charger persistence after restart, pocket shutdown at zero charge, inlet and PC destroyed at 600 V.
+Release build and resource checks passed. The reduced stand does not cover manual play on the production profile.
+
+2026-11-05 (dev #246): **2.11.0** — five ComputerCraft materials: ABS sheets and keyboard blanks, PET film,
+RGB phosphor and a steel shadow mask. Stock Destroy ABS is used directly. A stock Vat reaction converts paraxylene,
+ethene and oxygen into PET and water; heated Create pressing/mixing forms the new materials. Computer/peripheral cases,
+the keyboard and magnetic disk medium now use ABS/PET while retaining their metal frames and magnetite layer; the
+colour display uses phosphor and shadow mask instead of dyes. M12 `tcegd3kspq62oHuM3YmF` has 74 entries and requires
+EE Extras 2.11.0+, Destroy 0.4.6 and Petrolpark 1.5.11. Dedicated-server checks: 73/73 CC recipes, 280 assertions and
+7 PET produced at 450 K with temperature control. Release build, 153 JSON files, resources, models, recipe conflicts
+and 1344/1344 terminals pass. The reduced stand is not a full production-pack boot; host Survival acceptance and live
+datapack confirmation remain pending.
+
+2026-11-04 (dev #221): **2.10.2** — steel PS wire sag divided by three (0.4 → 0.4/3);
+stranded copper M sag reduced by 40% (1 → 0.6). ACSR and other wires unchanged.
+EE 1.1.2 WireData.getSag confirms linear scaling for existing wires, including tensioned ones. Temporary dev-server assertions passed 24/24 (8/60/128-block spans, automatic/normal/tensioned/long wire lengths). Existing lines test: PS sag 0.40 blocks loose and 0.08 clamped on a ~60-block span; voltages matched calculations. The reduced dependency fixture logged unrelated missing IE/TFC/CC recipes; A restart with IE/TFC/CC preserved the lines, tension and measured voltages (dependency client-class warnings remained, server ran successfully). No client visual check.
+
+2026-11-05 (dev #224): final Survival integration enabled the existing M10/M11/M12 datapacks for installation through
+`tfc pull`: `Nh1ATmqCY92Hao48hOAQ` (20 entries), `cbH7wTaHOr5vQMs4Usgb` (9) and `tcegd3kspq62oHuM3YmF` (69).
+Together with the already enabled M6 pack they cover all 54 electronics materials/components: 17 M10 recipes, seven M11
+recipes and 30 M12 recipes; `pcb_design` is produced by the design table rather than a crafting recipe. Active-recipe
+queries pass for a resistor, L2/L3 boards, solar panel, CC computer and CCBR integrated circuit. The earlier dedicated
+server checks remain valid because recipe JSON and addon code did not change. No new addon version was released; live
+pack-wide confirmation and a manual Survival playthrough remain pending.
+
+2026-11-04 (dev #216): **2.10.1** — visual refresh of 33 entries from the L1 blank through the TFC thermometer:
+28 individual RGBA 64×64 item textures and materials/models for five blocks. L1/L2/L3 use yellow/green/blue edge
+stickers; coating, etched traces and plated vias distinguish PCB stages. Fiberglass is a wound bobbin, fabric an
+unrolled roll, capacitor upright. Generated originals, exact prompts, references and reproducible mechanical exports
+are in `art/electronics-v2/`; the old electronics generator now exports those sources instead of restoring old art.
+Checked at 32/64 px on light/dark backgrounds, block renders, resource validation, release build and node check.
+Dedicated server with TFC/IE/CC: PCB 15/15, thermometer 799 °C → 7.483 V, solar 47.75 V / 50.61 W by day and 0 V
+under a roof; photolithographer/metallizer placement and block entities. Client appearance still needs host review.
+Gameplay, ids, recipes and saved PCB data are unchanged.
 
 Before 2.0 — EE Rectifiers, `ee_rectifier`; old blocks migrate to new ids via aliases.
 
@@ -276,7 +421,14 @@ island`, now with EE frequency meters): microTicks 8, 64 rpm — 3-phase off bel
   louvres or fan, heatsink, bushings). Models built by `art/machines.py` on `art/kit.py` (per-face materials, auto
   atlas, roll transform; same kit in small-diesel-mod). Terminals 720/720, resources_check clean; not checked in game.
 
-## Small Diesel (`tools/small-diesel-mod`, 2026-10-22)
+## Small Diesel (`tools/small-diesel-mod`, 2026-11-05)
+
+- **1.0.3** (dev #243): a partly filled IE jerrycan tops up from a full tank, limited by free space in the can.
+  Dev server with IE 12.4.2-194: both blocks accepted 600 mB from a partly filled can, a full can transferred
+  nothing with a full tank, a can with 9,500 mB withdrew 500 mB, and an empty can withdrew the remaining 500 mB.
+- **1.0.2** (dev #243): a filled IE jerrycan refuels either machine on right-click. An empty can withdraws fuel.
+  Dev server with IE 12.4.2-194: 600 mB transferred into a tank with 400 mB, no transfer with the tank full,
+  and 1,000 mB recovered into an empty can. IE remains optional.
 
 Addon to Create Diesel Generators (a separate mod at the user's request; same task as EE Extras 2.3). Fuels and their
 numbers come from the CDG registry `createdieselgenerators:fuel_type` (`normal` engine: 1 mB = strength / burn_rate
@@ -323,6 +475,9 @@ Blocks and features for Immersive Engineering (task «Аддон для блок
 candidate — a heater regulated by an analog lever). Depends on TFC 4.2.9 + IE 12.4.2 (both required), NeoForge 21.1.234+
 (TFC's own minimum; built on 21.1.251 from the Gradle cache).
 
+- **1.2.0** (dev #268): IE's crafting recipe attaches its ear defenders to Create engineer's goggles and returns them
+  unchanged on removal. The combined item goes in the head armor slot. Dev server: `ietest earmuffs` checks both directions
+  and rejects extra ingredients or a second attachment. Client sound and rendering still need a game check.
 - **1.0.0**: analog heater `ie_extras:analog_heater` — FE in from any face but the grille (1024 FE/t, 32 000 buffer, no
   output), target = redstone signal / 15 × `maxTemperature` (1600), draw = `fePerTickAtMax` (32) × signal / 15 per tick;
   own temperature follows `HeatCapability.adjustTempTowards` (1 °C/t) and is pushed each tick to the block in front by
@@ -351,6 +506,10 @@ candidate — a heater regulated by an analog lever). Depends on TFC 4.2.9 + IE 
   expected (README). Not in game: goggle line on the client, real basin recipes, basin on a Sable ship.
 
 ## Miner Tools (`tools/miner-tools-mod`, 2026-10-21)
+
+- **1.2.0 (dev #244):** five pickup groups and an exact-item allow/block list that overrides group settings.
+  On first opening an existing belt, generalized samples in those groups become toggles and the other samples
+  remain exact blocks. The dev server passed all 34 `belttest` checks, including migration and both list modes.
 
 One mod for all miner gear.
 
@@ -466,8 +625,31 @@ assertion followed by a clean run; dev client checks ordinary inventory swap and
 ImageGen source and 16×16 runtime texture based on Create goggles in the addon; release jar uploaded to pack server, card/page/version on site.
 Not checked in game: real mouse input, long construction, remote multiplayer and full-pack inventory-mod interactions.
 
-### Destroy Extras — текстуры чистой пыли (dev #293)
+## Better Fluids (`tools/better-fluids-mod`)
 
-В ветке на базе кандидата #212 подготовлены цветные спрайты 16 × 16 для 18 пылей и 90 брикетов.
-Модели пылей берут цвет из PNG. KubeJS выбирает текстуру брикета по размеру и металлу.
-ID предметов сохранены. Опубликованный кандидат #212 не заменён.
+1.0.0 (dev #233.2): an iron tank compatible with Create 6.0.10. Square base up to 3×3, 14 buckets per block,
+whole-layer vertical placement, separate textures and block entity type. The dev server verified that a single
+placement builds a 2×2 layer, the resulting 2×2×2 tank accepts 112 buckets through a non-controller part,
+an adjacent copper tank stays separate, and the water survives a restart.
+
+1.1.0 (dev #233.3): face-connected sections replace rectangular assembly. Layer placement follows the connected
+horizontal cross-section. A side wrench click cuts existing connections at one section while leaving free faces
+available for extensions. Placing against a detached group preserves its boundary with adjoining tanks. Fluids
+are persisted per section, and 1.0.0 tanks migrate when all parts are loaded. The dev server checked an L-shaped
+layer, a three-way split, an extension bordering the old tank, persistence after restart, and 112 buckets
+migrated from 1.0.0.
+
+1.2.0 (dev #233.5): empty iron sections can be reshaped on a stonecutter. Slabs can be placed horizontally
+or vertically and hold 7 buckets, quarter sections hold 3.5, and the 45° bevel section holds 7. The dev
+server checked all six slab orientations, a mixed tank holding 31.5 buckets, wrench separation and
+persistence after restart.
+
+1.3.0 (dev #253): a fluid tap attaches to any face of a Create or Better Fluids tank and fills held containers
+through the NeoForge fluid capability in survival. The dev server tested a bucket and an IE jerrycan on all
+six faces of both tank types, fluid accounting and detachment when the tank is broken.
+
+### Destroy Extras 0.7.1 — текстуры чистой пыли (dev #293)
+
+18 пылей и 90 брикетов получили цветные спрайты 16 × 16. Модели пылей берут цвет из PNG.
+Обновление сборки `u20261106-133656-3ca6` включает JAR и скрипт KubeJS, который выбирает спрайт брикета
+по размеру и металлу. ID и рецепты сохранены. Gradle и проверка ресурсов прошли, отображение проверит хост.

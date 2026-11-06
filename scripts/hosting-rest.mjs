@@ -11,6 +11,10 @@
  * текущей версии вне корней данных с их хешами + файлы данных → загрузка только тех, чьих хешей у Hosting нет →
  * сверка списка файлов новой версии → status FINALIZED → releases.create.
  * Выкладка сайта (scripts/deploy-site.mjs): новая версия с настройками из firebase.json (createVersion) → те же шаги.
+ * Релиз Hosting нельзя выпустить условно, а выкладка от чтения текущего релиза до выпуска идёт минуты: два писателя
+ * (сервер сборки и деплой сайта) затирали бы работу друг друга (2026-11-05: деплой сайта откатил публикацию данных).
+ * Поэтому release с base сверяется с текущим релизом перед выпуском и с предыдущим после него; расхождение —
+ * ReleaseConflict, вызывающий пересобирает версию поверх чужого релиза.
  * versions:clone не используем: 2026-10-23 копия с exclude корней данных вышла без 47 файлов сайта (index-*.js,
  * favicon.svg, tfc/, addons/…), и сайт не открывался до следующего деплоя.
  */
@@ -64,6 +68,26 @@ async function call(method, url, body, { raw = false } = {}) {
 export async function currentRelease(site = SITE_ID) {
   const j = await call('GET', `sites/${site}/releases?pageSize=1`);
   return j.releases?.[0] ?? null;
+}
+
+/** Последние релизы сайта, новые первыми (сообщение релиза — поле message) */
+export async function listReleases(pageSize = 100, site = SITE_ID) {
+  return (await call('GET', `sites/${site}/releases?pageSize=${pageSize}`)).releases ?? [];
+}
+
+/** Сколько раз пересобирать версию поверх чужого релиза */
+export const RELEASE_RETRIES = 5;
+
+/**
+ * Пока шла выкладка, вышел чужой релиз. other — этот релиз: новую версию надо собирать поверх него.
+ * released — наш релиз уже вышел и затёр чужой, повторная выкладка обязательна.
+ */
+export class ReleaseConflict extends Error {
+  constructor(other, released) {
+    super(`вышел чужой релиз ${other.version.name.split('/').pop()}`);
+    this.other = other;
+    this.released = released;
+  }
 }
 
 /** Файлы версии: Map путь → хеш */
@@ -120,6 +144,19 @@ export async function createVersion({ config, site = SITE_ID }) {
  * Возвращает { version, release, uploaded, populated, kept }.
  */
 export async function deploy({ sourceVersion, roots, files, getGz, message, site = SITE_ID, log = () => {} }) {
+  const own = new Set();
+  for (let source = sourceVersion, retries = RELEASE_RETRIES; ; retries--) {
+    try {
+      return await deployOnto({ sourceVersion: source, own, roots, files, getGz, message, site, log });
+    } catch (e) {
+      if (!(e instanceof ReleaseConflict) || !retries) throw e;
+      log(`${e.message} — собираю версию поверх него`);
+      source = e.other.version.name;
+    }
+  }
+}
+
+async function deployOnto({ sourceVersion, own, roots, files, getGz, message, site, log }) {
   const source = await call('GET', sourceVersion);
   const published = await versionFiles(sourceVersion);
   const re = new RegExp(rootsRegex(roots));
@@ -136,6 +173,8 @@ export async function deploy({ sourceVersion, roots, files, getGz, message, site
   log(`новая версия ${version.split('/').pop()}`);
   const res = await release({
     version,
+    base: sourceVersion,
+    own,
     files: all,
     getGz: (p, h) => {
       // тот же хеш может быть и у файла сайта, и у файла данных — загружаем файл данных
@@ -163,8 +202,25 @@ async function checkVersion(version, files) {
   return got.size;
 }
 
-/** Файлы в версию (populateFiles), загрузка недостающих хешей, FINALIZED, релиз */
-export async function release({ version, files, getGz, message, site = SITE_ID, log = () => {} }) {
+/** Вышел ли после base чужой релиз: сразу перед нашим (rel) или, пока rel нет, просто последний. Свои (own) не в счёт */
+async function checkBase(base, own, rel, site, log) {
+  const { releases = [] } = await call('GET', `sites/${site}/releases?pageSize=20`);
+  const at = rel ? releases.findIndex((r) => r.name === rel) : -1;
+  if (rel && at < 0) {
+    // Релиз уже вышел: падать незачем, но и проверить чужие релизы нечем
+    log(`внимание: релиза ${rel} нет среди последних — чужие релизы не проверены`);
+    return;
+  }
+  const before = releases.slice(at + 1).find((r) => !own.has(r.version?.name));
+  if (before && before.version?.name !== base) throw new ReleaseConflict(before, Boolean(rel));
+}
+
+/**
+ * Файлы в версию (populateFiles), загрузка недостающих хешей, FINALIZED, релиз.
+ * base — версия, из которой собрана эта; вышел чужой релиз — ReleaseConflict (см. начало файла). own — версии
+ * прошлых попыток этой выкладки: наш релиз, затёрший чужой, чужим не считается, иначе чужие файлы потерялись бы.
+ */
+export async function release({ version, base, own, files, getGz, message, site = SITE_ID, log = () => {} }) {
   const entries = [...files.entries()];
   const required = new Set();
   let uploadUrl = null;
@@ -192,10 +248,13 @@ export async function release({ version, files, getGz, message, site = SITE_ID, 
 
   const listed = await checkVersion(version, files);
   log(`сверка: все ${files.size} файлов на месте (в версии ${listed})`);
+  await checkBase(base, own, null, site, log);
   await call('PATCH', `${version}?update_mask=status`, { status: 'FINALIZED' });
   const rel = await call('POST', `sites/${site}/releases?versionName=${encodeURIComponent(version)}`, {
     message: message ?? 'сервер сборки',
   });
   log(`выпущено: ${rel.name}`);
+  own.add(version);
+  await checkBase(base, own, rel.name, site, log);
   return { version, release: rel.name, uploaded, populated: entries.length };
 }

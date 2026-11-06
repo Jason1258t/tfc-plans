@@ -13,6 +13,13 @@ Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md)
   `npm run mods` + `kubejs` before/after — 21 074 files identical except build timestamps. The pack server picks
   core modules from its builders copy at `packages/core/src` and falls back to `src/lib` for an old copy; `tfc admin
 rebuild --pull` runs `npm ci` there (lock changed). Not checked: the VPS itself (rebuild/publish after this merge).
+- Worktree preview and data (2026-11-05, dev #251): `worktree_add`/`worktree_preview` write the entry `wt-<name>` to the
+  main `.claude/launch.json`, because the app reads only that file; `ship`/`worktree_remove` prune entries of removed
+  worktrees. `fetchData` also takes the KubeJS outputs, so `npm run dev` has `kubejs.json` with `datapacks` and `snapshot`;
+  a local `npm run kubejs` parse survives only with `TFC_KEEP_MODS=1`.
+- Worktree preview files (2026-11-05, dev #265): `vite.config.ts` aliases `@tfc/pack-server` to the worktree's
+  `server/pack-server/lib` (`tsconfig.app.json` — to its `.d.mts`), so edits there show in the preview; `server.fs.allow`
+  adds the `node_modules` Node resolves (the main checkout's, only that folder), so Inter loads instead of a 403.
 - **Stage 3 done (2026-10-29):** addons are the repo [tfc-addons](https://github.com/Jason1258t/tfc-addons) (history of
   `tools/` kept via `git subtree split`, 65 commits), checked out as the `tools/` submodule — every `tools/<mod>` path
   is unchanged. `tfc-plans-dev`: `worktree_add` inits it (objects from `.git/modules/tools` of the main folder),
@@ -180,6 +187,27 @@ addons`; with names — one named site item; `tfc undo` — undo the whole pull 
   700 KB chunks → complete:true, cleanup on failure). Checked: dry-run scenarios, interactive flow via `expect`, real
   uploads through a local pack server to prod Firestore (1 file, 2-file zip, 3-chunk 1.6 MB zip), read back by MCP
   byte-identical, deleted. VPS server updated by the host 2026-10-25; a real upload through prod read back by MCP and deleted. **Not checked:** Windows paths/consoles, a real game folder.
+- Profile maintenance (2026-11-05, dev #219/#237): `tfc rename` changes the CLI profile key and optionally renames a
+  managed launcher version in place. `tfc delete` uninstalls the program; `--versions` also removes separate managed
+  version folders after confirmation, optionally limited by `--profile`.
+- Launcher profile isolation (2026-11-05, dev #242): NeoForge updates use the selected tfc profile's existing game
+  folder and version, including legacy profiles inferred from their paths. New copies get separate version folders,
+  official launcher profile keys and numeric TLauncher IDs. A matching legacy official launcher key is reused.
+- Installed NeoForge detection (2026-11-05, dev #258): the launcher version JSON beats `minecraftinstance.json`, and a
+  profile with `launcher.version` reads that version even when its game folder is the `.minecraft` root; the highest
+  `libraries` version is compared numerically.
+- TLauncher update safety (2026-11-05, dev #260): an open TLauncher strips the `modpack` block (seen on the host: open —
+  block gone, closed — pack opens). `launcherRunning` also looks for java processes with `tlauncher` in the command line
+  on Windows (**not run on Windows**). `installToLauncher` merges the version JSON (keeps launcher fields and `type`) and
+  copies it and `TLauncherAdditional.json` to `*.tfc-<time>`; `tfc status` and `init --launcher` warn if the block is gone.
+- TLauncher unfolded versions (2026-11-05): on launch TLauncher rewrites a short version JSON (`inheritsFrom`) into a full one
+  with `arguments.game` as `{ values: [...] }` and drops the `modpack` block, so the first launch has 2 mods. Host's test
+  on `TFC-RealWorld`: short JSON — 2 mods and block gone; TLauncher's own full JSON + block — pack loads, block kept.
+  `detectVersions` reads those arguments; `installToLauncher` leaves an unfolded JSON of the same NeoForge alone and, when
+  a `.tlauncher` folder exists and `versions/<parent>` is there, writes NeoForge + parent merged without `inheritsFrom`
+  (order and arguments match TLauncher's file). Without them — the short form, as the official launcher expects.
+  Host's TLauncher on 2026-11-05: `tfc`'s own full JSON, all mods on first launch, block kept. Not run: an official launcher
+  with a `.tlauncher` folder alongside, a real NeoForge version change.
 - **`tfc init --launcher`** (2026-10-22, `cli/lib/vanilla.mjs`): official Minecraft Launcher — NeoForge from the
   snapshot `loader` via its installer (`--install-client <mcDir>`, maven sha256, cached; needs launcher_profiles.json —
   created temporarily if only the Store file exists), Java 21+ from `<mc>/runtime`, Store runtime, JAVA_HOME, PATH;
@@ -270,6 +298,9 @@ the host's real folder.
 - `tfc admin propose`: `--jar`, `--datapack`, auto `remove` of old jars (`--keep-old`). Server: update field `datapacks`,
   `confirmDatapackItems` shared with `changeDatapacks`, approve confirms in the same snapshot (`options.datapacks`), activates
   before writing the status (`activate`, base = parent), stores `parent`. Old records work unchanged.
+- `--replace-datapack` (dev #261): swaps a pinned pack for its card version in one approval; update field
+  `datapacks[].replaces` = pinned sha256/contentHash/revision, rechecked at propose and approve, `--force` doesn't bypass it,
+  `tfc datapacks confirm` refuses it. Overlaps ignore the replaced version. Staging keeps the pack pinned with the new ZIP.
 - Verified with a throwaway script: local pack server on a temp data dir + Firestore stub (`SITE_DOCS_URL`, fake service
   key with a local `token_uri`), 81 checks over the full flow. Not verified: in the game; the first real update through
   the new flow.
@@ -278,7 +309,10 @@ the host's real folder.
 
 - Server `lib/updates.mjs` + `/admin/updates` (create, list, approve → snapshot = current + files − remove and made
   current with the site build job, reject); author can't approve (403); paths changed in the pack since the proposal →
-  409 `conflicts` (`--force`). CLI: `tfc admin propose <dir>`, `tfc admin updates [pull|approve|reject]`; pull writes
+  409 `conflicts` (`--force`); another version of an update's mod jar added since the proposal → 409 `jarConflicts`, not
+  forceable (dev #263: the path check missed these, approve would have left two versions of a mod). `GET` returns both
+  for pending updates. `tfc admin updates` lists pending only (`--rejected`, `--approved`), `approve all` checks the whole
+  batch first and refuses `--force`. CLI: `tfc admin propose <dir>`, `tfc admin updates [pull|approve|reject]`; pull writes
   into the game folder (backup for `tfc undo`) and `mods|config|defaultconfigs|kubejs` of the server dir; approve marks
   the host's state in sync (next `publish` — nothing to upload). Verified end-to-end on a local server (scratch dirs):
   propose, self-approve refused, pull into both folders, undo, approve, host status/publish clean, player pull, conflict
@@ -305,6 +339,160 @@ server restarted (reported as «добавьте в pack-stand-client.json»).
 Verified on snapshot `20261029-192724-29d7`: 224 of 243 mods, boot 96 s, KubeJS 6/6 startup and 84/84 server scripts,
 FTB commands registered. Stand reports real errors: 16 `concrete_lime.js` cement recipes and one
 `create_flight_control` deploying recipe (the pending #157 fix isn't in that snapshot).
+
+## Remote whole-pack stand (dev #275)
+
+The stand runs as `master` on Ubuntu `test1a` (`100.109.147.20` in the owner's Tailscale network).
+SSH from the Mac was verified over Tailscale. Join the same tailnet before connecting. The Mac already has the host
+key under its LAN address, so reuse that entry with `HostKeyAlias` and keep host key checking enabled.
+AutoLab, its Docker containers, and Ollama are outside this workflow.
+
+Node.js 24 and Java 21 are installed under `~/.local/opt/tfc-stand/{node,java}`. The server runs from a source
+export in `~/tfc-stand/repo`, with the pack snapshot in `~/.cache/tfc-plans/pack`. Update the export from the revision
+being tested. If the revision removes source files, use a fresh export directory. For uncommitted changes, sync the
+files needed by the test. Refresh the pack cache on the Mac with `npm run pack:fetch` when a test needs a newer
+snapshot. Sync it into the dedicated pack cache with `--delete` to remove jars from older snapshots.
+
+```bash
+tfc_ssh() {
+  ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o HostKeyAlias=192.168.0.101 "$@"
+}
+tfc_host=master@100.109.147.20
+tfc_ssh "$tfc_host" 'mkdir -p ~/tfc-stand/repo ~/.cache/tfc-plans/pack'
+git archive HEAD | tfc_ssh "$tfc_host" 'tar -xf - -C ~/tfc-stand/repo'
+rsync -a --delete -e 'ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o HostKeyAlias=192.168.0.101' \
+  ~/.cache/tfc-plans/pack/ "$tfc_host:.cache/tfc-plans/pack/"
+tfc_ssh "$tfc_host" 'bash -se' <<'REMOTE'
+export JAVA_HOME="$HOME/.local/opt/tfc-stand/java"
+export PATH="$HOME/.local/opt/tfc-stand/node/bin:$PATH"
+cd ~/tfc-stand/repo
+npm ci --ignore-scripts --no-audit --no-fund
+cache="$HOME/.cache/tfc-plans"
+loader=$(node -p 'require(process.argv[1]).loader' "$cache/pack/.tfc-fetch.json")
+ram=$(mktemp -d /dev/shm/tfc-stand.XXXXXX)
+trap 'rm -rf -- "$ram"' EXIT
+mkdir "$ram/stand"
+cp -a "$cache/pack" "$ram/pack"
+cp -a "$cache/stand/$loader" "$ram/stand/"
+TFC_PACK_CACHE="$ram/pack" TFC_STAND_DIR="$ram/stand" npm run stand -- --port 25617 --cmd list
+REMOTE
+```
+
+The smoke test stages the snapshot and loader on tmpfs to avoid slow random reads from the HDD. It starts NeoForge,
+sends `list` through RCON and stops the server. Both ports are bound to loopback. Copy any detailed logs or worlds
+you need out of the run directory before the shell exits and removes the temporary files.
+For an overlay or a replacement jar, copy it to a separate directory on `test1a` and pass its remote path to
+`--overlay` or `--mod`. Use the output summary for KubeJS and startup diagnostics. Run one check at a time on
+the default ports. For concurrent checks use separate `TFC_STAND_DIR` values and separate port pairs.
+The local MCP `pack_devserver` still runs on the host that started the MCP server. Use the SSH command above to run
+the stand on `test1a`.
+
+Before testing a new loader, install it into the persistent stand cache. If `maven.neoforged.net` times out on
+`test1a`, sync the `libraries/` directory from a working NeoForge stand cache for the same loader version. Use `~/.cache/tfc-plans/stand/neoforge-<version>/libraries/` on both hosts and confirm
+that the source includes the version's `unix_args.txt`. The stand can then start without fetching the installer.
+
+Verified on `20261105-135644-3704` with NeoForge 21.1.251. The RAM-backed run booted in 122 seconds with 231 mods,
+answered RCON `list`, and stopped. Both listeners bound to loopback. The snapshot reported recipe and tag errors
+without blocking startup.
+
+## Remote Minecraft client stand — scripted (dev #284)
+
+`npm run client-stand -- <prepare|run|clean>` on the Mac (`scripts/client-stand-remote.mjs`) drives
+`scripts/client-stand.mjs` on `test1a` over the same SSH entry as the server stand (`TFC_CLIENT_HOST`,
+`TFC_CLIENT_HOST_ALIAS` override it). Every call pushes the stand code from the working tree to
+`~/tfc-stand/client-stand-code` (only built-in Node modules, no `npm ci`) and, unless `--no-pack`, rsyncs the Mac pack
+cache with `--delete`. Stand files on the host: `~/.cache/tfc-plans/client-stand` (`TFC_CLIENT_STAND`).
+
+- `prepare` (once per loader): Xvfb via `apt-get download xvfb` + `dpkg-deb -x` (no sudo; needs the system `xauth`,
+  `xkbcomp`, `xkb-data`, already there), vanilla version + client jar from Mojang, NeoForge from the **fat installer**
+  the Mac takes from the pack server (`/neoforge/<ver>`, `tfc admin neoforge build`) — `maven.neoforged.net` times out
+  on `test1a`, the fat jar carries its libraries. Missing libraries (Linux LWJGL natives) come from
+  `libraries.minecraft.net` with sha1 checks. Assets: `--assets base` (default, ~110 MB: language list, translations,
+  title panorama, built-in packs — no sounds), `all`, `none`.
+- `run`: own profile per run (`runs/<id>/game`, mods symlinked, `--ram` copies them to `/dev/shm`), first-run screens
+  off (`options.txt`, FancyMenu welcome), CustomSkinLoader flag, own Xvfb display (first free from `:90`, own
+  Xauthority, no TCP), production launch built from the version JSONs (no Python launcher, no ModDevGradle). Waits for
+  FancyMenu's `title_screen` layer (`--ready <regex>`), waits `--settle` s, takes `--shots` PNGs (`client-stand/
+Capture.java`), SIGTERM for a clean exit (kill after a minute), stops Xvfb with SIGTERM, deletes the run folder
+  (`--keep`), and leaves `results/<id>/` (`summary.txt`, `client.log`, `latest.log`, `debug.log`, `kubejs/`,
+  `crash-reports/`, PNG). The Mac copies it to `~/.cache/tfc-plans/client-stand/results/<id>`. `--mod <jar>` /
+  `--overlay <dir>` are uploaded first; `--exclude <name part>` drops snapshot jars. A dropped SSH session closes stdin
+  and the host side stops the game and Xvfb. A second run while one is live is refused unless `--parallel`.
+- `clean`: abandoned run folders, stray stand Xvfb processes, results beyond `--results 10`.
+
+Verified 2026-11-06 from an empty stand dir on snapshot `20261105-135644-3704`: `prepare` passed (fat installer,
+44 libraries fetched), the full client reached the title screen in ~130 s with 342 mods (250 jars), two PNGs, clean
+SIGTERM exit, no leftover Xvfb or run folder. The first try caught a real launch bug in seconds (vanilla jar on the
+classpath next to NeoForge's patched client → module resolution error), with the cause in `summary.txt`.
+
+**World and MCP (dev #288).** `run --world new` writes a minimal `saves/stand/level.dat` and launches with
+`--quickPlaySingleplayer stand`. The file: creative, cheats on, peaceful, no daylight/weather/mob cycle, random seed,
+`initialized=0` (the game picks the spawn — TFC by climate), data version from the client jar's `version.json` (else
+DataFixer treats it as ancient), storage `version` 19133 (Anvil; without it the world list rejects the save with
+«Unknown data version: 0»), and `WorldGenSettings.dimensions` from the pack's world preset — TFC's `defaultWorldPreset`
+(`tfc:overworld`), looked up in `kubejs/data`, mod jars, then Minecraft, JSON converted to NBT; `new:<preset id>` picks
+another. Dimensions missing from the file (nether, end, mod ones) are added from the dimension registry at load.
+`--world flat` is a vanilla flat overworld — **not usable for this pack**: TFC Eratosthenes sets its map projection only
+when TFC's `RegionGenerator`/`OverworldClimateModel` are built, so it throws «No MapProjection set» every player tick.
+`--world <save folder>` copies a save (uploaded from the Mac like `--overlay`; a server world works). Ready means the
+integrated server's `StandTest[…] logged in with entity id` line (not the chat line — it's translated); a failure screen
+(`RecoverWorldDataScreen`, `DisconnectedScreen`, … — FancyMenu logs each new screen class) stops the run at once with
+`world-error.png`. The login comes long before the world is drawn — on llvmpipe «Загрузка территории…» stays for
+a minute or more and that frame is static — so after login the stand takes a probe shot every 10 s until the picture
+changes (`--load`, 300 s max; the summary says «мир на экране через N с» or notes the timeout), then `--settle` and the
+shots. PNGs are `world-NN.png`. The stand player has the offline UUID of `StandTest` (all-zero UUID made
+FTB Chunks throw on login). Software GL: llvmpipe reports OpenGL 4.5, Voxy compiles GLSL 4.60 shaders and force-crashes
+the client on join, so runs set `MESA_GL_VERSION_OVERRIDE=4.6` / `MESA_GLSL_VERSION_OVERRIDE=460`.
+
+MCP `tfc-pack` `pack_client` runs the same from the Mac and returns the summary plus the last PNGs as images
+(`scripts/mcp/tools/devserver.mjs` → `clientStand()` in `client-stand-remote.mjs`, which writes nothing to stdout — that
+is the MCP channel). From a shell: `node scripts/mcp-call.mjs tfc-pack pack_client '{"world":"new"}' --timeout 1500`.
+
+**Builder Tools check stays separate.** `tools/builder-tools-mod/test-client.sh` is an addon dev test, not a pack
+check: ModDevGradle `runClient` from sources with the `devtest` source set (not in the release jar), a few mods
+(addon `libs/`, optionally TFC + Patchouli), assertions in code (`BTCLIENT OK/FAIL`, six of them), about a minute. The
+pack client stand answers a different question — does the released jar work in the full pack (250 jars, KubeJS,
+production launch). To run an addon's in-game assertions inside the full pack, build its devtest classes into a jar
+and pass it with `pack_client mods=[…] world=flat`; none of the addons builds such a jar yet.
+
+## Remote Minecraft client stand (dev #279, manual)
+
+The manual stand on `test1a` lives in `~/tfc-stand/client`, separate from the server stand. It uses Java 21,
+NeoForge 21.1.251, and the Ubuntu `xvfb` and `x11-apps` packages extracted into `client/x11` with `dpkg-deb -x`.
+The launcher starts an authenticated 1280×720 Xvfb display on `:91` with TCP disabled, uses Mesa software
+rendering, and stops Xvfb when the command exits. Run one client at a time.
+
+```bash
+tfc_ssh "$tfc_host" '~/tfc-stand/client/run-builder-test.sh'
+tfc_ssh -t "$tfc_host" '~/tfc-stand/client/run-full-pack.sh'
+```
+
+The Builder Tools check uses the addon's existing `test-client.sh` and writes
+`builder-tools-mod/run/client-check.log` and `builder-tools-mod/run/screenshots/buildertest.png`. It passed all
+six assertions and saved an 854×480 frame from the test world.
+
+The full profile copies the snapshot's `mods`, `config`, `kubejs`, and `resourcepacks` under `full-pack/run`.
+It launches the installed NeoForge client with a local test profile and writes `full-pack/run/client-check.log`.
+Keep the launch command in the foreground. To capture its display during a run, use a second SSH session:
+
+```bash
+tfc_ssh "$tfc_host" 'cd ~/tfc-stand/client &&
+  DISPLAY=:91 XAUTHORITY="$PWD/Xauthority" \
+    ~/.local/opt/tfc-stand/java/bin/java Capture.java frames/full-pack.png'
+```
+
+The Builder Tools Gradle run resolves dependencies offline from `client/gradle` because the NeoForge Maven host
+times out on `test1a`. The cache was seeded from the Mac. The Gradle init script in `gradle/init.d/stand.gradle` resolves LWJGL
+from `lwjgl-repo`, which also contains the Linux natives fetched from `libraries.minecraft.net`.
+Refresh the dependency cache when changing the loader. The full profile uses the NeoForge installer and
+the launch metadata under `client/launcher`. Running the full snapshot through ModDevGradle triggered an
+assertion in KubeJS TFC 2.0.2 that its bytecode gates to development runs.
+
+The full profile uses snapshot `20261105-135644-3704` with all 250 mod jars. It sets
+`-Dcustomskinloader.ignorePatchFailure=true` to continue when CustomSkinLoader 15.0.1 fails to patch
+`SkinManager`. The test copy of the FancyMenu config skips its first-run welcome screen.
+The GTX 1650 is visible to `nvidia-smi`. Xvfb uses Mesa llvmpipe (OpenGL 4.5), and the log reports a
+GLSL 4.60 shader compilation error during startup.
 
 ## Pack patches (`pack-patches/`)
 
@@ -347,6 +535,11 @@ Cursor configs (shapes from their docs, not tried).
   directory and use a private temporary dist. Pack-server shutdown drains accepted jobs and rejects new ones;
   systemd uses KillMode=mixed/TimeoutStopSec=infinity. Installer serializes updates and stops before replacing code.
   The deployment lock covers worktrees on one machine, not independent hosts. Forced termination is still interrupting.
+- Dev #256 (2026-11-05): `deploy:site` no longer queues. A second run refuses at the lock; `--dry-run` takes no lock; a
+  stale lock (dead process or older than 30 min) clears itself. Before the build it requires `HEAD` to contain the commit
+  in the last `commit=<sha>` release message (`--allow-older` to roll back). On top of #254's rebuild after a foreign
+  release: a foreign site deploy whose commit isn't in this build stops the run instead. Checked on a fake Hosting server
+  in a clone, and a real `--dry-run`.
 
 - Dev #134 (2026-10-28): `tfc whoami` shows the server-recognized key name/role and local config path; login and
   self-approval errors identify the key without printing its token. CLI error/auto-upgrade completion uses natural
@@ -427,3 +620,11 @@ Cursor configs (shapes from their docs, not tried).
   `versions/<name>/TLauncherAdditional.json`, otherwise `.minecraft`. `installToLauncher` writes that block with empty lists;
   the host's TLauncher then loaded 341 mods from `TFC-RealWorld` (block written by hand, not yet by the new `tfc`). Replaces
   the earlier «TLauncher game dir = version folder»: that was only true for imported packs.
+
+- Dev #254 (2026-11-05): a site deploy and a server publish no longer undo each other. Hosting has no conditional
+  release, so `release()` in `scripts/hosting-rest.mjs` takes `base` and checks the release list before and after its own
+  release; a foreign release raises `ReleaseConflict`, and `deploy()` / `deploy-site.mjs` rebuild on top of it (up to 5
+  times; releases of their own earlier attempts don't count). Rolled-back case: 2026-11-05 a deploy released seconds after
+  host job j20261105-132601-69d3 and removed its data. Checked with a fake Hosting API (`TFC_HOSTING_API`): overlap before
+  and right before the release, for both writers, no overlap, endless conflicts; the old code fails the same scenarios.
+  Limit: three writers within seconds can still lose the middle one's non-shared files.

@@ -63,8 +63,8 @@ function gridOf(j) {
     [...row].map((ch) => {
       if (ch === ' ') return null;
       const k = key[ch];
-      if (k == null) return ch; // символ без ключа — не разобрать
-      return typeof k === 'string' ? k : k.tag ? `#${k.tag}` : (k.item ?? k);
+      if (k == null) return [ch]; // символ без ключа — не разобрать
+      return recipeRefs({ k }).inputs; // варианты клетки: предмет, тег, список
     }),
   );
 }
@@ -79,7 +79,7 @@ function gridEqual(a, b) {
       const ca = a[i][k];
       const cb = b[i][k];
       if (ca == null && cb == null) continue;
-      if (ca == null || cb == null || !overlap(ca, cb)) return false;
+      if (ca == null || cb == null || !ca.some((x) => cb.some((y) => overlap(x, y)))) return false;
     }
   }
   return true;

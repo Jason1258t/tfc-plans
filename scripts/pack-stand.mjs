@@ -14,6 +14,8 @@
  * на сервере падают команды Create/FTB с BootstrapMethodError → LocalPlayer).
  *
  *   npm run stand -- --cmd "kubejs hand" --mod tools/x/build/libs/x.jar --overlay <папка> --keep --list
+ *   --level-type tfc:overworld — настоящая генерация TFC вместо плоского мира (жилы, биомы)
+ *   --port N — другой порт (и N+1 для RCON), вместе с TFC_STAND_DIR — параллельно другому стенду
  */
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -23,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 import AdmZip from 'adm-zip';
 import { parse as parseToml } from 'smol-toml';
 import { fetchInstaller, neoforgeVersion } from '@tfc/cli/vanilla';
-import { isWin, javaHome, killTree, runRcon, sleep } from './mc-server.mjs';
+import { errorLines as groupErrors, isWin, javaHome, killTree, runRcon, sleep, stopWithProcess } from './mc-server.mjs';
 import { PACK_CACHE, PACK_MODS } from './pack-cache.mjs';
 
 export const STAND = path.resolve(process.env.TFC_STAND_DIR ?? path.join(os.homedir(), '.cache', 'tfc-plans', 'stand'));
@@ -32,6 +34,7 @@ const DEFAULT_NF = '21.1.251';
 const CLIENT_LIST = path.join(path.dirname(fileURLToPath(import.meta.url)), 'pack-stand-client.json');
 /** Шум выделенного сервера в latest.log: клиентские классы, которые моды трогают и обходят сами */
 const NOISE = [/invalid dist DEDICATED_SERVER/, /Access transformer file .* does not exist/];
+const errorLines = (text, re, limit) => groupErrors(text, re, limit, NOISE);
 
 /** Версия снимка из .tfc-fetch.json (кладёт npm run pack:fetch) */
 function packVersion(cache) {
@@ -182,32 +185,11 @@ function link(target, dest) {
   else fs.symlinkSync(target, dest, dir && isWin ? 'junction' : undefined);
 }
 
-/** Строки ошибок без повторов: «×N» у повторяющихся, шум отдельно счётчиком */
-function errorLines(text, re, limit) {
-  const counts = new Map();
-  let noise = 0;
-  for (const l of text.split(/\r?\n/)) {
-    if (!re.test(l)) continue;
-    if (NOISE.some((n) => n.test(l))) {
-      noise++;
-      continue;
-    }
-    // Без метки времени, JSON рецепта и id: однотипные ошибки (16 цветов цемента, таблицы добычи) — одна группа
-    const msg = l.replace(/^\[[^\]]*\]\s*/, '').trim();
-    const key = msg.replace(/ from json \{.*$/, ' from json …').replace(/[a-z0-9_.-]+:[a-z0-9_/.-]+/g, '<id>');
-    const g = counts.get(key);
-    if (g) g.n++;
-    else counts.set(key, { n: 1, first: msg.length > 300 ? msg.slice(0, 300) + '…' : msg });
-  }
-  const lines = [...counts.values()].map(({ n, first }) => (n > 1 ? `${first} ×${n}` : first));
-  return { lines: lines.slice(0, limit), more: Math.max(0, lines.length - limit), noise };
-}
-
 const RCON_PASSWORD = 'check';
 const readText = (f) => (fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '');
 
 /** Папка запуска: ссылки на сервер и моды, копии config/kubejs/world снимка, оверлей, server.properties */
-function prepare({ run, server, cache, sel, overlay, keep, memory, port, rconPort }) {
+function prepare({ run, server, cache, sel, overlay, keep, memory, port, rconPort, levelType }) {
   clean(run, keep ? ['world'] : []);
   link(path.join(server, 'libraries'), path.join(run, 'libraries'));
   fs.mkdirSync(path.join(run, 'mods'));
@@ -224,7 +206,7 @@ function prepare({ run, server, cache, sel, overlay, keep, memory, port, rconPor
   fs.writeFileSync(
     path.join(run, 'server.properties'),
     [
-      'level-type=minecraft\\:flat',
+      `level-type=${levelType.replace(':', '\\:')}`,
       'online-mode=false',
       'spawn-protection=0',
       'generate-structures=false',
@@ -232,6 +214,7 @@ function prepare({ run, server, cache, sel, overlay, keep, memory, port, rconPor
       'view-distance=4',
       'simulation-distance=4',
       'max-tick-time=-1',
+      'server-ip=127.0.0.1',
       `server-port=${port}`,
       'enable-rcon=true',
       `rcon.port=${rconPort}`,
@@ -254,6 +237,7 @@ async function launch({ run, java, nf, timeout, rconPort, commands, onLog }) {
     windowsHide: true,
   });
   fs.closeSync(fd);
+  stopWithProcess(child);
   let exited = false;
   child.on('exit', () => (exited = true));
   const t0 = Date.now();
@@ -337,6 +321,7 @@ export async function runStand({
   exclude = [],
   include = [],
   overlay = null,
+  levelType = 'minecraft:flat',
   keep = false,
   timeout = 900,
   memory = '6G',
@@ -360,7 +345,7 @@ export async function runStand({
   let r;
   for (let attempt = 0; ; attempt++) {
     sel = selectMods({ modsDir, extra: mods, exclude, include, skip: found });
-    prepare({ run, server, cache, sel, overlay, keep, memory, port, rconPort });
+    prepare({ run, server, cache, sel, overlay, keep, memory, port, rconPort, levelType });
     onLog(`запускаю сервер: модов ${sel.use.length}, исключено ${sel.skipped.length}`);
     r = await launch({ run, java, nf, timeout, rconPort, commands, onLog });
     if (r.booted || attempt >= 4) break;
@@ -424,6 +409,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     exclude: many('--exclude'),
     include: many('--include'),
     overlay: one('--overlay') ?? null,
+    levelType: one('--level-type') ?? 'minecraft:flat',
+    ...(one('--port') ? { port: Number(one('--port')), rconPort: Number(one('--port')) + 1 } : {}),
     keep: argv.includes('--keep'),
     timeout: Number(one('--timeout') ?? 900),
     memory: one('--memory') ?? '6G',

@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { compareVersions } from './jarid.mjs';
 
 export const isDir = (p) => {
   try {
@@ -101,9 +102,13 @@ function launchArgs(dir) {
   return (k) => (args.includes(k) ? args[args.indexOf(k) + 1] : null);
 }
 
-/** Версия NeoForge папки игры: из описания версии рядом, иначе из последнего запуска. «21.1.248» или null */
-export function installedNeoforge(instance) {
-  const loader = detectVersions(instance).loader;
+/**
+ * Версия NeoForge профиля: из описания его версии (папка игры может быть корнем .minecraft — версию знает
+ * profile.launcher), иначе из последнего запуска. «21.1.248» или null
+ */
+export function installedNeoforge({ instance, launcher }) {
+  const dir = launcher?.mcDir && launcher.version ? path.join(launcher.mcDir, 'versions', launcher.version) : instance;
+  const loader = detectVersions(dir).loader;
   return /^neoforge-(.+)$/.exec(loader ?? '')?.[1] ?? launchArgs(instance)('--fml.neoForgeVersion');
 }
 
@@ -166,6 +171,19 @@ export function detectVersions(instanceDir) {
   } catch {
     /* не Prism */
   }
+  // Папка версии в .minecraft/versions (TLauncher): рядом лежит <имя>.json — NeoForge в аргументах или в родителе.
+  // Раньше minecraftinstance.json: его оставляет импорт сборки, а запускает лаунчер именно это описание
+  try {
+    const v = JSON.parse(fs.readFileSync(path.join(instanceDir, `${path.basename(instanceDir)}.json`), 'utf8'));
+    // TLauncher при запуске разворачивает версию: аргументы становятся объектами { values: [...] }
+    const args = (v.arguments?.game ?? []).flatMap((a) => (typeof a === 'string' ? [a] : (a.values ?? [])));
+    const arg = (k) => (args.includes(k) ? args[args.indexOf(k) + 1] : null);
+    const nf = arg('--fml.neoForgeVersion') ?? /^neoforge-(.+)$/.exec(v.inheritsFrom ?? '')?.[1];
+    if (nf) res.loader ??= `neoforge-${nf}`;
+    res.mc ??= arg('--fml.mcVersion') ?? (/^\d+\.\d+(\.\d+)?$/.test(v.inheritsFrom ?? '') ? v.inheritsFrom : null);
+  } catch {
+    /* не папка версии */
+  }
   try {
     const cf = JSON.parse(fs.readFileSync(path.join(instanceDir, 'minecraftinstance.json'), 'utf8'));
     res.mc ??= cf.gameVersion ?? null;
@@ -174,20 +192,9 @@ export function detectVersions(instanceDir) {
   } catch {
     /* не CurseForge */
   }
-  // Папка версии в .minecraft/versions (TLauncher): рядом лежит <имя>.json — NeoForge в аргументах или в родителе
-  try {
-    const v = JSON.parse(fs.readFileSync(path.join(instanceDir, `${path.basename(instanceDir)}.json`), 'utf8'));
-    const args = (v.arguments?.game ?? []).filter((a) => typeof a === 'string');
-    const arg = (k) => (args.includes(k) ? args[args.indexOf(k) + 1] : null);
-    const nf = arg('--fml.neoForgeVersion') ?? /^neoforge-(.+)$/.exec(v.inheritsFrom ?? '')?.[1];
-    if (nf) res.loader ??= `neoforge-${nf}`;
-    res.mc ??= arg('--fml.mcVersion') ?? (/^\d+\.\d+(\.\d+)?$/.test(v.inheritsFrom ?? '') ? v.inheritsFrom : null);
-  } catch {
-    /* не папка версии */
-  }
   const libs = path.join(instanceDir, 'libraries', 'net', 'neoforged', 'neoforge');
   if (!res.loader && isDir(libs)) {
-    const v = fs.readdirSync(libs).sort().at(-1);
+    const v = fs.readdirSync(libs).sort(compareVersions).at(-1);
     if (v) res.loader = `neoforge-${v}`;
   }
   // NeoForge 21.1.x — это Minecraft 1.21.1

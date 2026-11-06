@@ -126,15 +126,15 @@ page branch.
 ### 1. Task, worktree, dev server
 
 - `dev-session`: dev task («CSS Modules: <страница>», kind `refactor`), worktree `refactor/css-<page>`.
-- **`npm ci` in the worktree**. Don't symlink `node_modules` from the main checkout: Vite then serves
-  fonts via `/@fs/<main checkout>/…`, gets 403, and the shots use a fallback font instead of Inter.
+- No `npm ci` or `node_modules` symlink needed for fonts: the worktree uses the main checkout's `node_modules`,
+  `vite.config.ts` allows it in `server.fs.allow`, so the shots use Inter.
 - Copy generated pack data with source `public/.` into the worktree's `public/`, not `cp -R public public`: the
   latter can create an unignored `public/public` tree that `git add -A` would include. Inspect `git status` before commit.
 - For temporary React fixtures, use a root HTML entry so Vite injects the React Refresh preamble; raw HTML served
   from `public/` does not receive it. Remove fixture files before commit. Prefer local data/fixtures for large
   screenshot matrices to conserve Firestore reads; do not create shared test records.
-- Dev server on 5176 (`npm run dev -- --port 5176 --strictPort`, Claude: `preview_start dev-alt`). **Stop it before
-  `ship`** — otherwise Vite recreates `node_modules/.vite` and `git worktree remove` fails with «Directory not empty».
+- Dev server on 5176 (`npm run dev -- --port 5176 --strictPort`, Claude: `preview_start name=wt-<short>`). **Stop it before
+  `ship`** — otherwise Vite recreates `node_modules/.vite` and the worktree removal fails with «Directory not empty».
 
 ### 2. Inventory — never delete what is used
 

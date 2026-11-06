@@ -2,11 +2,17 @@
 
 Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quoted in Russian as they appear in the code.
 
+## Polymer names (2026-11-04, dev #218)
+
+- Live guides `chem-polymers`, `chem-start` and `addon-destroy-extras` use full Russian names for polyethylene, polypropylene, polyvinyl chloride and styrene-butadiene rubber. The polymer article includes an abbreviation glossary and familiar everyday examples; its title is «Нефть, пластики и синтетическая резина». Existing reaction verification limits are preserved.
+- Pack overlay `pack-patches/polymer-names` supplies four Russian item translations, including the polypropylene typo fix. Keys were checked in the exact Destroy 0.4.6-eligibbs candidate jar used by the pending chemistry update. The live guide was checked in the browser; game translation delivery requires host acceptance.
+
 ## Wiki navigation (2026-10-31, #179)
 
 - `/` is a visual directory of the site's main tools; player tasks moved to `/tasks`, with legacy root query links preserved. `/reference` is a card directory of «Мир и ресурсы», «Предметы и рецепты», «Еда и сельское хозяйство», «Электричество», «Мультиблоки» and «Все гайды». Inside a topic the existing sidebar/mobile section list remains, with «Все разделы» leading back to the cards; the old top-level reference tabs are gone.
 - Items, recipes and tags are reference material under `/reference?tab=items`, separate from datapack editing. Item cards link to obtaining/usage recipes and tags. Food and botany share «Еда и сельское хозяйство». Power and multiblock guides live inside their topics as well as in the common guide catalogue; addon authoring stays on `/addons`.
 - «Все гайды» → «Химия» (`section: chemistry`, `ChemistryGuidesSection.tsx`, 2026-11-03, dev #207): `chem-start` is the entry point with a what-can-be-made table, then `chem-vat`, `chem-electrolysis`, `chem-etchant`, `chem-acids`, `chem-oils`, `chem-polymers`. Articles state each branch's status and need Destroy Extras 0.3.0. Quantities in `chem-etchant` come from a stand run through real ports (`M10Test`); flows through Create pumps and any manual Survival pass are not checked.
+- 2026-11-04 (dev #223): `chem-fuels` documents CDG oil distillation, gasoline from real Destroy aromatic fractions and kerosene; `chem-start` and `chem-polymers` link to it and show the six-tray column outputs. Draft `7IHNTyYMc046lNeC0anS` adds Create mixing `tfc_plans:create/gasoline_from_destroy_aromatics`: 50 mB toluene ≥ 9 M + 50 mB ethylbenzene ≥ 1.9 M → 100 mB CDG gasoline. Recipe JSON, conflict check and mod-code support were checked; the full production cycle was not checked in game. Naphtha, gas oil, refinery gas and higher-grade gasoline/diesel are explicitly future plan 48, not working recipes.
 - Multiblocks have search, mod/purpose filters and four content views: «Обзор и постройка», «Материалы», «Работа», «Гайды». Existing 3D/layer viewers, guide content, game data and theme #178 are unchanged.
 - Legacy `/recipes`, `/tags`, `/map`, old reference tabs and guide links redirect with their query parameters intact. Browser checks covered those redirects, deep item search, browser Back, cards and multiblock views, keyboard Tab/Enter with visible focus, nested-`main`/horizontal-overflow checks, and desktop/mobile light/dark captures. The item search's column-flex sizing was corrected to its normal 32 px height.
 
@@ -579,6 +585,7 @@ next — photos, MCP, wooden styles.
   `remove` format was not checked against NeoForge code or in game. Tag kind is a coloured label (items / blocks /
   fluids / entities); same id in another kind links to it. Datapack check warns when a recipe references a tag absent
   from items and fluids (block tag or non-existent) — the slot would be empty in game.
+- 2026-11-05 (dev #239): the «Куда ставить датапак» switch follows the published snapshot: a card in `kubejs.json` → `datapacks` shows «В сборку», locked, with a `tfc datapacks unconfirm <id>` hint. The value is derived on render; the card's `install`/`installTarget` are not written. The site learns of a confirm only after pack data is published.
 
 ## Reference
 
@@ -648,6 +655,10 @@ fertiliser blocks, calendar with month labels. `.class` parsing — `scripts/mod
 - Guides section «Мультиблоки» (`?tab=guides&sub=multiblocks`, `section: multiblocks`): widget `::multiblock id=…
 [full] [materials]`; articles mb-assembly, mb-tfc (what changed: arc furnace from fire bricks, IE blast bricks not
   craftable in the pack, smelter via KubeJS), mb-coke-oven, mb-excavator.
+- 2026-11-05 (dev #264): Firestore guide `ie-mineral-veins` covers surveying, core samples, mineral outputs from IE and
+  TFC-IE Crossover, and `/ie mineral`. The excavator guide links to it. `coe-prospecting` now lists all 27 translated
+  vein names and IDs and documents `/coe locate`, `setvein`, and `removevein`. Checked against snapshot recipes,
+  translations, configs and mod bytecode.
 - Since 2026-10-19 group «Добыча Create» (Create Ore Excavation): coe-prospecting — veins (chunk, «one per square»,
   infinite, Chinese names from the pack script), detector, atlas, sampling drill, table of all veins; coe-drilling —
   setup, iron drill suffices, 30 rpm steps, 256 SU per rpm, calculator. From mod code and pack scripts, not checked in
@@ -784,6 +795,11 @@ the step is centred.
   matching CLI delivery. An own block-tag no longer hides a missing item/fluid-tag warning in the recipe editor.
   MCP uses the same path validation and tag-kind rule. Verified with invalid-path and tag-kind fixtures, TypeScript.
 
+- Dev #213 (2026-11-04): datapack cards on `/datapacks` now have a three-way `Segmented` install selector («Не ставить /
+  В мир / В сборку», `installTarget: 'world' | 'pack'` with `install: boolean` kept for backward compatibility). When set
+  to «В сборку», `tfc pull` installs the ZIP directly from the site card into `kubejs/data/tfc-plans-<id>.zip` without
+  requiring a selected world or separate `confirm`, and cleans up matching world duplicates. Verified in browser and CLI/MCP checks.
+
 - Dev #163 (2026-10-30): multiblock guides support `::craft recipe=<id>` (catalogue crafting grid with item/tag
   icons) and `::pumpjack` (small/large CDG structures and layers from the player's NBT files). The layer viewer is
   reused from IE, including the excavator; block-only icons resolve through their placing item. The oil guide's
@@ -811,9 +827,14 @@ the step is centred.
   `BlockStructureViewer` in `viewer` mode (LMB/finger rotate, Ctrl+wheel/pinch zoom, plain wheel scrolls the page,
   «Вернуть вид», mirror via a holder group, hammer-block outline, layer slider = cut, selection = marks). Guides pass
   the card's parsed NBT; IE shapes go through `nbtFromShape`. So models, partial blocks, copycats by material and
+
   > 3000-block schematics are drawn as in the editor. CSS 3D stays only as the no-WebGL fallback (≤3000 blocks, rough
   > forms). Editor gained: materials of the layer or whole schematic with search, click selects all such blocks,
   > «Все такие же» and the selected block's name/id in the selection panel, x/z axes on the layer canvas, materials
   > under the view on phones. Builder: `scripts/mods.mjs` adds NeoForge universal jar data (`c:*` tags) right after
   > vanilla (version from the snapshot's loader, locally from the addon platform); recipe grid shows TFC
   > `fluid_content` as the fluid's bucket with mB and unknown mod ingredients by type name with a JEI hint.
+
+- Home (dev #252): a full-height introduction presents TFC Studio as the team’s development of TerraFirmaCraft RealWorld. The existing section directory and search sit below it.
+
+- Home (dev #270): the pack story sits between the introduction and the directory. The directory jump scrolls smoothly and respects reduced motion.

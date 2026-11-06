@@ -175,7 +175,42 @@
   color: var(--text-2);
 }
 
+.later {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.laterHead {
+  margin: 0;
+  color: var(--text-3);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Без своей подложки — блок лежит прямо на фоне страницы и не спорит с основным списком */
+.laterList {
+  border-style: dashed;
+  background: none;
+}
+
+.quiet {
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  padding-block: 5px;
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+.quiet .meta {
+  opacity: 0.8;
+}
+
 @media (max-width: 760px) {
+  .quiet {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
   .row {
     grid-template-columns: 40px minmax(0, 1fr);
     row-gap: 4px;

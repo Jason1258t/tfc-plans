@@ -3,7 +3,8 @@
  * и scripts/kubejs.mjs (Node запускает .ts напрямую).
  */
 
-const ID_RE = /^[a-z0-9_.-]+:[a-z0-9_./-]+$/;
+/** id предмета или жидкости; в аргументах хелперов KubeJS бывает с количеством и тегом: «4x mod:item», «#c:tag» */
+const REF_RE = /^(?:\d+x\s+)?(#?)([a-z0-9_.-]+:[a-z0-9_./-]+)$/;
 /** Ключи, где лежат служебные строки, а не предметы */
 const NON_ITEM_KEYS = new Set([
   'type',
@@ -23,8 +24,10 @@ const NON_ITEM_KEYS = new Set([
 
 export function collectRefs(node: unknown, isOut: boolean, outs: Set<string>, ins: Set<string>, key = '') {
   if (typeof node === 'string') {
-    if (NON_ITEM_KEYS.has(key) || !ID_RE.test(node)) return;
-    const ref = key === 'tag' || key === 'fluid_tag' || key === 'fluidTag' ? `#${node}` : node;
+    const m = NON_ITEM_KEYS.has(key) ? null : REF_RE.exec(node);
+    if (!m) return;
+    const isTag = m[1] || key === 'tag' || key === 'fluid_tag' || key === 'fluidTag';
+    const ref = isTag ? `#${m[2]}` : m[2];
     (isOut ? outs : ins).add(ref);
     return;
   }

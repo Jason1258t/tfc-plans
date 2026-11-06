@@ -9,7 +9,7 @@ task touches it. History — `git log`.
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [site.md](state/site.md)       | Site sections: structure, documents, tasks/plans, analytics (`/stats`), schematics, datapacks/KubeJS/recipes/tags, reference (botany, multiblocks, electricity), guides, onboarding, map, updates |
 | [addons.md](state/addons.md)   | Pack addons in `tools/`: versions, what each does, how it was verified                                                                                                                            |
-| [infra.md](state/infra.md)     | Data builders, imported configs, file storage, pack server (VPS), `tfc` app, agent config edits                                                                                                   |
+| [infra.md](state/infra.md)     | Data builders, configs, file storage, pack server (VPS), `tfc` app, agent config, test1a stands                                                                                                   |
 | [mcp.md](state/mcp.md)         | MCP `tfc-pack` history: what was added when and how it was verified                                                                                                                               |
 | [icons.md](state/icons.md)     | Item icons: 3D renderer, hidden items, known gaps                                                                                                                                                 |
 | [pending.md](state/pending.md) | Full details of everything waiting for the host or an in-game check                                                                                                                               |
@@ -17,6 +17,20 @@ task touches it. History — `git log`.
 When finishing work: update the topic file, and this index only if a line below changes.
 
 ## In progress / waiting (details — [pending.md](state/pending.md))
+
+- Host: Create Deco bricks (dev #222), draft `GHltHxk6T0WJ2gbyAOGi`: pull into a test world, check umber and
+  cracked brick crafting, then confirm.
+
+- Going Nuclear (dev #202): working plan accepted (plan doc 50); gameplay decisions are settled. Host: NeoForge
+  ≥ 21.1.256 and the author's written redistribution permission before the integration build.
+- Host: fluid tank recipe without a barrel, card `2csvwoHPHBhlpqiZTQ4c` (dev #233), is confirmed without an in-game check:
+  craft it once in game.
+
+- Host: transformer-oil duplicate disabled in draft `9FCAF769A0A2ODuhbgxU` (dev #215): unconfirm old ZIP,
+  pull, check standard heated mixing and absence of the parse error, then confirm.
+
+- Host: Destroy aromatics → gasoline in card `7IHNTyYMc046lNeC0anS` (dev #223): pull into a test world with
+  Destroy + CDG, restart, check valid and unsuitable mixtures, then confirm.
 
 - Building generator (dev #166): page `/builder` live (stages 0–5, with brush); next — stage 6 forms/styles. Host: rebuild + publish
   for `block-colors.json`.
@@ -40,7 +54,10 @@ When finishing work: update the topic file, and this index only if a line below 
   pull both fixes, restart, check cement and both ion thrusters in game before approving/confirming.
 - Host: pack update `u20261022-150945-83a0` (Chinese KubeJS messages → ru/en): `tfc admin updates pull`, check in game,
   `tfc admin updates approve`.
-- Host: install **EE Extras 2.3** (2.2 + compact generator), **Small Diesel 1.0.0**, **IE Extras 1.1.0** (basin heating, dev #113) and **Create Aeronautics Extra 1.0.1** + `tfc publish`; warn players
+- Host: approve M12 replacement `u20261105-175613-fa0b`, which removes its 32 overlay files (dev #261).
+- Host: test **EE Extras 2.14.0** with the proposed pack update (dev #248, #249, #259) before approval. Also check the cable inlet on an existing CC computer and both
+  pocket computer tiers at the charger (dev #247) before publishing the snapshot.
+- Host: install **EE Extras 2.10.2** (wire sag reduction, dev #221; PCB/electronics visual refresh, dev #216), **Small Diesel 1.0.0**, **IE Extras 1.1.0** (basin heating, dev #113) and **Create Aeronautics Extra 1.0.1** + `tfc publish`; warn players
   that rectifiers over 6 kW will burn.
 - Host: **`rw-host-fix`** + delete `eratosthenes_portal_clamp.js`; delete corrupted chunks Z ≈ −22 000…−18 400.
 - Host: **World Border** nether limit (`worldborder.json5`) → disable or widen; remove `tp-trace`.
@@ -59,9 +76,6 @@ When finishing work: update the topic file, and this index only if a line below 
 - «Coal near X» search with map points — «пока без такого функционала».
 - Real world map zoomable to city level and an in-game explored-map layer (needs a mini-mod or export) — discussed
   only in the abstract.
-- Nuclear power (uses for uranium: Create Nuclear or Going Nuclear, TFC integration) — long-term, discuss with players
-  first. Chosen: Going Nuclear + Create Nuclear mechanics in an own addon; plan — `docs/plans/nuclear.md`, task in group
-  «Фиксы» (2026-10-21).
 
 ## Known limitations
 

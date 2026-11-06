@@ -10,27 +10,49 @@
  *      Hosting, ничего не скачивается и не загружается заново. Так же как есть переносятся файлы, которых в сборке
  *      сайта нет вовсе, — tfc (собран на Mac), датапаки из packs/ и старые иконки аддонов /addons/*.png: иначе
  *      выкладка со свежего checkout'а убрала бы их с сайта;
- *   4. загрузка недостающих файлов сайта, FINALIZED, релиз.
+ *   4. загрузка недостающих файлов сайта, FINALIZED, релиз. Вышел чужой релиз — см. ниже про гонки.
  * packUpdates не пишет — это делает публикация сервера сборки.
+ *
+ * Защита от гонок (релизы Hosting — «последний выигрывает», 2026-11-05 чужой релиз затёр свежий):
+ *   - блокировка на сборку и выпуск, общая для ворктри (deploy-lock.mjs): второй запуск отказывается;
+ *   - перед релизом и после него — сверка с текущим релизом (hosting-rest.mjs). Вышла публикация данных или деплой из
+ *     коммита, который в этой сборке есть, — шаги 2–4 заново поверх него, иначе его файлы откатились бы. Вышел деплой
+ *     сайта без этого коммита — стоп: пересборка поверх него всё равно убрала бы его изменения;
+ *   - коммит сборки пишется в сообщение релиза (commit=…), и новый деплой обязан его содержать — иначе он откатил бы
+ *     чужие изменения. Чтений Firestore нет: только список релизов Hosting. Публикации данных файлы сайта не меняют
+ *     и коммита не пишут, поэтому берём последний релиз с отметкой.
  *
  *   npm run deploy:site                 — собрать и выложить
  *   npm run deploy:site -- --dry-run    — что будет выложено, ничего не меняя
  *   … --no-build                        — взять готовую dist/
  *   … --force                           — выложить, даже если ничего не изменилось (проверка выкладки)
+ *   … --allow-older                     — выложить сборку без коммита текущего релиза (нарочный откат сайта)
  * Авторизация — как у scripts/firestore-rest.mjs (сервисный ключ или firebase login).
  */
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { deployLock } from './deploy-lock.mjs';
 import { ROOT } from './firestore-rest.mjs';
 import { isDataPath } from './data-roots.mjs';
-import { createVersion, currentRelease, hostingConfig, hostingFile, release, versionFiles } from './hosting-rest.mjs';
+import {
+  createVersion,
+  currentRelease,
+  hostingConfig,
+  hostingFile,
+  listReleases,
+  release,
+  ReleaseConflict,
+  RELEASE_RETRIES,
+  versionFiles,
+} from './hosting-rest.mjs';
 
 const log = (...a) => console.log('[deploy-site]', ...a);
 const argv = process.argv.slice(2);
 const dryRun = argv.includes('--dry-run');
+const noBuild = argv.includes('--no-build');
+const short = (sha) => sha.slice(0, 8);
 let DIST;
 
 /** Файлы dist/ как у firebase CLI: без firebase.json и скрытых (ignore в firebase.json) */
@@ -61,8 +83,44 @@ const canon = (v) =>
         )
       : v;
 
+const COMMIT_MARK = /\bcommit=([0-9a-f]{40})\b/;
+const SITE_RELEASE = 'деплой сайта (без данных сборки)';
+const contains = (head, sha) =>
+  spawnSync('git', ['merge-base', '--is-ancestor', sha, head], { cwd: ROOT }).status === 0;
+
+/** Вышел чужой релиз: стоп, если это деплой сайта с изменениями, которых в сборке нет. Иначе можно собирать поверх. */
+function checkForeignRelease({ other, released }, head) {
+  if (!other.message?.startsWith(SITE_RELEASE) || argv.includes('--allow-older')) return;
+  const sha = COMMIT_MARK.exec(other.message)?.[1];
+  if (sha && contains(head, sha)) return;
+  const who = `деплой сайта ${other.version.name.split('/').pop()} (${sha ? short(sha) : 'коммит неизвестен'})`;
+  throw new Error(
+    released
+      ? `этот релиз вышел поверх чужого: ${who}. Его изменения сейчас не на сайте. Обновите копию и выложите снова.`
+      : `пока шла выкладка, вышел ${who}, а в этой сборке его изменений нет. Эта версия не выпущена, сайт не менялся. ` +
+          'Обновите копию и запустите снова; нарочный откат — --allow-older',
+  );
+}
+
+/** Стоп, если эта копия не содержит коммит, из которого выпущен сайт. При --dry-run только предупреждение. */
+async function checkPublishedCommit(head) {
+  const releases = await listReleases();
+  const marked = releases.find((r) => COMMIT_MARK.test(r.message ?? ''));
+  if (!marked) return log(`в последних ${releases.length} релизах нет отметки коммита — сверку пропускаю`);
+  const published = COMMIT_MARK.exec(marked.message)[1];
+  if (contains(head, published)) return log(`сайт выпущен из ${short(published)}, он есть в сборке ${short(head)}`);
+  const text =
+    `сайт выпущен из коммита ${short(published)} (${marked.releaseTime}), а в этой копии (${short(head)}) его нет — ` +
+    'выкладка убрала бы чужие изменения. Обновите копию (git pull или git merge main) и запустите снова; ' +
+    'нарочный откат — --allow-older';
+  if (argv.includes('--allow-older')) log(`--allow-older: ${text}`);
+  else if (dryRun) log(`настоящая выкладка отказалась бы: ${text}`);
+  else throw new Error(text);
+}
+
 async function main() {
-  const unlock = await deployLock(ROOT, log);
+  // --dry-run ничего не выпускает и собирает во временную папку — другим выкладкам не мешает
+  const unlock = dryRun ? () => {} : deployLock(ROOT, log);
   const staging = fs.mkdtempSync(path.join(os.tmpdir(), 'tfc-site-'));
   DIST = path.join(staging, 'dist');
   try {
@@ -76,8 +134,10 @@ async function main() {
 async function deploy() {
   const firebase = JSON.parse(fs.readFileSync(path.join(ROOT, 'firebase.json'), 'utf8'));
   const config = hostingConfig(firebase.hosting);
+  const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim();
+  await checkPublishedCommit(head); // до сборки: отказ не должен стоить минуты ожидания
 
-  if (!argv.includes('--no-build')) {
+  if (!noBuild) {
     log('собираю сайт (без данных сборки)…');
     // На Windows npm — это npm.cmd: без shell execFile его не находит
     execFileSync('npm', ['run', 'build', '--', '--outDir', DIST], {
@@ -87,15 +147,32 @@ async function deploy() {
       shell: process.platform === 'win32',
     });
   }
-  if (argv.includes('--no-build')) fs.cpSync(path.join(ROOT, 'dist'), DIST, { recursive: true });
+  if (noBuild) fs.cpSync(path.join(ROOT, 'dist'), DIST, { recursive: true });
   execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'predeploy-check.mjs')], {
     stdio: 'inherit',
     env: { ...process.env, TFC_DEPLOY_DIST: DIST },
   });
   if (!fs.existsSync(path.join(DIST, 'index.html'))) throw new Error('в dist/ нет index.html — сайт не собран');
 
-  const cur = await currentRelease();
+  let cur = await currentRelease();
   if (!cur) throw new Error('у сайта нет ни одного релиза — первую выкладку делайте firebase deploy');
+  let must = argv.includes('--force');
+  const own = new Set();
+  for (let retries = RELEASE_RETRIES; ; retries--) {
+    try {
+      return await deployOnto(cur, config, must, own, head);
+    } catch (e) {
+      if (!(e instanceof ReleaseConflict) || !retries) throw e;
+      checkForeignRelease(e, head);
+      log(`${e.message} — собираю версию поверх него`);
+      cur = e.other;
+      must = must || e.released;
+    }
+  }
+}
+
+/** Новая версия поверх релиза cur: файлы сайта из dist/, остальное из cur. must — выложить, даже если отличий нет */
+async function deployOnto(cur, config, must, own, head) {
   const published = await versionFiles(cur.version.name);
   // Файлы не из сборки сайта: их кладут tfc-dist и сервер сборки — не убираем, если в dist/ их нет
   const serverFile = /^\/(tfc|packs)\//;
@@ -155,7 +232,7 @@ async function deploy() {
     for (const p of list.slice(0, 20)) log(`  ${sign} ${p}`);
     if (list.length > 20) log(`  ${sign} … и ещё ${list.length - 20}`);
   }
-  if (!site.added.length && !site.changed.length && !site.removed.length && sameConfig && !argv.includes('--force')) {
+  if (!site.added.length && !site.changed.length && !site.removed.length && sameConfig && !must) {
     log('на сайте уже это — выкладывать нечего');
     return;
   }
@@ -168,13 +245,16 @@ async function deploy() {
   log(`новая версия ${version.split('/').pop()}`);
   await release({
     version,
+    base: cur.version.name,
+    own,
     files,
     getGz: (p) => {
       const f = local.get(p);
       if (!f) throw new Error(`Hosting просит загрузить ${p} — это файл данных, его нет на Hosting`);
       return hostingFile(fs.readFileSync(f)).gz;
     },
-    message: 'деплой сайта (без данных сборки)',
+    // Готовая dist/ могла быть собрана из другого коммита — такой релиз коммитом не отмечаем
+    message: `${SITE_RELEASE}${noBuild ? '' : ` commit=${head}`}`,
     log: (m) => log(m),
   });
 }

@@ -9,21 +9,38 @@ import {
 } from './datapacks.mjs';
 import { HttpError, SHA256_RE } from './util.mjs';
 
+/** Тег только добавляет значения: без replace и remove итог игры (TagLoader) не зависит от порядка пакетов. */
+function isAdditiveTag(file, bytes) {
+  if (!/^data\/[^/]+\/tags\/.+\.json$/.test(file)) return false;
+  try {
+    const tag = JSON.parse(bytes.toString('utf8'));
+    return Array.isArray(tag.values) && tag.replace !== true && !tag.remove?.length;
+  } catch {
+    return false;
+  }
+}
+
+/** Два пакета с одним файлом данных уживаются, если файл одинаковый или оба — добавляющие теги, которые игра сложит. */
+const canCoexist = (file, a, b) => a.equals(b) || (isAdditiveTag(file, a) && isAdditiveTag(file, b));
+
 /**
  * Подтвердить пакеты поверх набора файлов будущего снимка: проверки ревизии карточки, содержимого ZIP и пересечений
  * данных. Меняет files (Map путь → файл: кладёт ZIP в kubejs/data, убирает копии из мира) и deployments
  * (Map id → запись). Общая для tfc datapacks confirm и одобрения обновления (updates.mjs).
+ * item.replaces = { sha256, contentHash, revision } — заменить закреплённую версию: она должна совпасть с записью снимка,
+ * а её данные не считаются пересечением с новой версией.
  */
 export async function confirmDatapackItems(store, site, current, items, { files, deployments, by }) {
   if (![...files.keys()].some((p) => /^mods\/kubejs-neoforge-2101\./.test(p)))
     throw new HttpError(409, 'В снимке нет поддерживаемого KubeJS для 1.21.1');
   const list = (await site.datapacks([], { all: true, fresh: true })).items;
+  const replacedPaths = new Set(items.filter((d) => d?.replaces).map((d) => packDatapackPath(d.id)));
   const resources = new Map();
   const remember = (pack, label) => {
     for (const [file, bytes] of Object.entries(pack.files)) {
       if (!file.startsWith('data/')) continue;
       const old = resources.get(file);
-      if (old && !old.bytes.equals(bytes))
+      if (old && !canCoexist(file, old.bytes, bytes))
         throw new HttpError(
           409,
           `Пересекаются данные ${file}: ${old.label} и ${label}. Сначала устраните разные копии/уточните порядок пакетов`,
@@ -33,7 +50,9 @@ export async function confirmDatapackItems(store, site, current, items, { files,
   };
   for (const f of [...files.values()].filter(
     (f) =>
-      (f.kind === 'world-datapack' || deploymentsOf(current).some((d) => d.path === f.path)) && f.path.endsWith('.zip'),
+      (f.kind === 'world-datapack' || deploymentsOf(current).some((d) => d.path === f.path)) &&
+      f.path.endsWith('.zip') &&
+      !replacedPaths.has(f.path),
   )) {
     let pack;
     try {
@@ -61,7 +80,9 @@ export async function confirmDatapackItems(store, site, current, items, { files,
     }
     if (!pack || !item.revision || pack.revision !== item.revision)
       throw new HttpError(409, 'Карточку датапака изменили — перечитайте её и проверьте новую версию');
-    if (deployments.has(item.id)) throw new HttpError(409, 'Датапак уже включён в сборку');
+    const pinned = deployments.get(item.id);
+    if (item.replaces) checkReplacement(item, pinned);
+    else if (pinned) throw new HttpError(409, 'Датапак уже включён в сборку');
     if (!SHA256_RE.test(item.sha256 ?? '') || !store.hasBlob(item.sha256)) throw new HttpError(400, 'ZIP не загружен');
     let inspected;
     try {
@@ -72,15 +93,18 @@ export async function confirmDatapackItems(store, site, current, items, { files,
     const expected = snapshotSource?.contentHash ?? datapackContentHash(await site.datapackSource(pack));
     if (inspected.contentHash !== expected)
       throw new HttpError(409, `«${pack.name}»: проверенная копия не совпадает с карточкой сайта`);
+    if (pinned && inspected.contentHash === pinned.contentHash)
+      throw new HttpError(409, `«${pack.name}»: в сборке уже такое содержимое, заменять нечем`);
     for (const [file, bytes] of Object.entries(inspected.files))
       for (const old of resources.get(file)?.variants ?? [])
-        if (!old.bytes.equals(bytes))
+        if (!canCoexist(file, old.bytes, bytes))
           throw new HttpError(409, `Пересекаются данные ${file}: ${old.label} и ${pack.name}`);
     remember(inspected, pack.name);
     const target = packDatapackPath(pack.id);
     const existing = files.get(target);
-    if (existing && existing.sha256 !== item.sha256) throw new HttpError(409, `Уже есть другой ${target}`);
-    const worldPaths = new Set([worldDatapackPath(pack.id)]);
+    if (existing && existing.sha256 !== item.sha256 && existing.sha256 !== item.replaces?.sha256)
+      throw new HttpError(409, `Уже есть другой ${target}`);
+    const worldPaths = new Set([worldDatapackPath(pack.id), ...(pinned?.worldPaths ?? [])]);
     // В снимке встречаются ZIP с ручными названиями: убираем только совпавшее содержимое.
     for (const f of [...files.values()].filter((f) => f.kind === 'world-datapack' && f.path.endsWith('.zip'))) {
       try {
@@ -109,6 +133,16 @@ export async function confirmDatapackItems(store, site, current, items, { files,
   }
 }
 
+/** Заменить можно только закреплённую версию с карточки, которую видел автор: иначе он проверял не то, что заменяет. */
+function checkReplacement(item, pinned) {
+  if (item.sourcePath) throw new HttpError(400, 'Заменить можно только датапак с карточкой сайта');
+  if (!pinned) throw new HttpError(409, 'Датапак уже не закреплён в сборке — заменять нечего');
+  if (pinned.snapshotSource) throw new HttpError(409, `«${pinned.name}» закреплён без карточки сайта — заменить нечем`);
+  const { sha256, contentHash, revision } = item.replaces;
+  if (pinned.sha256 !== sha256 || pinned.contentHash !== contentHash || pinned.revision !== revision)
+    throw new HttpError(409, `«${pinned.name}»: закреплённую версию поменяли после предложения`);
+}
+
 export async function changeDatapacks(store, site, body, who) {
   const current = await store.getCurrent();
   if (!current || body?.base !== current.id) throw new HttpError(409, 'Сборка изменилась — перечитайте список');
@@ -116,6 +150,8 @@ export async function changeDatapacks(store, site, body, who) {
   if (!Array.isArray(body.items) || !body.items.length || body.items.length > 100)
     throw new HttpError(400, 'items — от 1 до 100 пакетов');
   if (new Set(body.items.map((d) => d.id)).size !== body.items.length) throw new HttpError(400, 'Повтор id');
+  // Замена идёт только через обновление: его одобряет другой администратор
+  if (body.items.some((d) => d.replaces)) throw new HttpError(400, 'Заменить датапак можно только обновлением сборки');
   const deployments = new Map(deploymentsOf(current).map((d) => [d.id, d]));
   const files = new Map(current.files.map((f) => [f.path, f]));
   if (body.action === 'confirm')

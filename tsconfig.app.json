@@ -17,7 +17,11 @@
     "jsx": "react-jsx",
 
     /* Алиас: '@/pages/tasks/ui/TaskRow' = src/pages/tasks/ui/TaskRow (см. vite.config.ts) */
-    "paths": { "@/*": ["./src/*"] },
+    "paths": {
+      "@/*": ["./src/*"],
+      "@tfc/core/*": ["./packages/core/src/*.ts"],
+      "@tfc/pack-server/*": ["./server/pack-server/lib/*.d.mts"]
+    },
 
     /* Linting */
     "noUnusedLocals": true,

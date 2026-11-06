@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { isPackDatapackPath } from '@tfc/pack-server/datapacks';
+import { deploymentsOf, isPackDatapackPath } from '@tfc/pack-server/datapacks';
 import { Api } from './lib/api.mjs';
 import { configFile, currentProfile, DEFAULT_SERVER, loadConfig, saveConfig } from './lib/config.mjs';
 import {
@@ -56,6 +56,7 @@ import {
   withSpinner,
   yellow,
 } from './lib/ui.mjs';
+import { deleteVersions, deletableVersions, renameVersion } from './lib/profile-versions.mjs';
 import { install, installedPath, isInstalled, uninstall } from './lib/install.mjs';
 import {
   DEFAULT_NAME,
@@ -66,11 +67,11 @@ import {
   isNeoforgeInstalled,
   launcherRunning,
   neoforgeVersion,
-  PROFILE_ID,
-  versionId,
+  tlauncherModpackLost,
+  validVersionName,
 } from './lib/vanilla.mjs';
 import { applyStagingDrops, stagingClashes, stagingOverlay, stagingState, stagingWinsById } from './lib/staging.mjs';
-import { markApproved, printUpdate, propose, pullUpdates } from './lib/updates.mjs';
+import { approveBlock, batchProblems, markApproved, printUpdate, propose, pullUpdates } from './lib/updates.mjs';
 import { checkUpdate } from './lib/update.mjs';
 import { autoUpgrade, cleanupOld, upgrade } from './lib/upgrade.mjs';
 import { BUILD, CHANNEL, IS_BINARY } from './lib/version.mjs';
@@ -87,6 +88,11 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
   tfc login <ключ>            ключ от хоста сборки (--server <адрес>, если сервер другой)
   tfc whoami                  имя и права текущего ключа на сервере, путь к настройкам (сам ключ не выводится)
   tfc profiles                профили; tfc use <профиль> — сделать текущим
+  tfc rename [новое имя]      переименовать профиль; --profile <старое имя> — выбрать другой
+             --name <версия>  переименовать папку и версию сборки в лаунчере
+  tfc delete                  убрать программу и её запись из PATH
+             --versions      также удалить папки версий tfc, включая миры в них
+             --profile <имя>  с --versions удалить только указанную версию
 
 Игрокам:
   tfc status [что]            что изменится — ничего не меняет
@@ -130,14 +136,16 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
   tfc admin keys | invite <ник> [--admin] | revoke <id> | history | use <id> | rollback
   tfc admin neoforge [list | build [версия]]   установщик NeoForge с библиотеками на сервере сборки: игроки ставят
                               NeoForge без maven.neoforged.net; собирать после смены версии NeoForge
-  tfc admin updates [pull [id…] | approve <id> | reject <id>]   обновления сборки от Claude: список; pull — забрать
-                              в папку игры и сервера (вернуть — tfc undo); approve — сделать новой сборкой для всех
+  tfc admin updates [pull [id…] | approve <id|all> | reject <id>]   обновления сборки от Claude: что ждёт
+                              (--rejected — отклонённые, --approved — одобренные); pull — забрать в папку игры и
+                              сервера (вернуть — tfc undo); approve — сделать новой сборкой для всех (all — все ждущие)
   tfc admin updates subscribe <id…>     staging: этот профиль получает обновление поверх сборки при каждом tfc pull,
                               обычные файлы сборки обновляются как всегда (--profile тест — только в нём)
   tfc admin updates unsubscribe <id…|all>   отписаться и вернуть обычное состояние; subscribed — на что подписан профиль
   tfc admin propose [<папка>] предложить обновление: файлы из папки (kubejs/…, config/…), --jar <файл> (в mods/, старые
                               версии уберёт сам; --keep-old — оставить), --datapack <id|имя> (подтвердится при одобрении),
-                              --remove <путь>, --note, --dry-run
+                              --replace-datapack <id|имя> (заменит закреплённый при одобрении), --remove <путь>,
+                              --note, --dry-run
   tfc admin rebuild [mods,kubejs,config,world]   пересобрать данные сайта на сервере (--pull — свежий код,
                               --publish none|dry-run|live — что потом; по умолчанию dry-run — только показать)
   tfc admin publish           показать, что изменится на сайте; --live — выложить (текущую сборку, с вопросом);
@@ -207,6 +215,7 @@ async function offerInstall() {
 
 const opts = {
   profile: { type: 'string' },
+  versions: { type: 'boolean' },
   server: { type: 'string' },
   instance: { type: 'string' },
   world: { type: 'string' },
@@ -226,12 +235,15 @@ const opts = {
   out: { type: 'string' },
   yes: { type: 'boolean', short: 'y' },
   force: { type: 'boolean' },
+  rejected: { type: 'boolean' },
+  approved: { type: 'boolean' },
   undo: { type: 'boolean' },
   'dry-run': { type: 'boolean' },
   'no-current': { type: 'boolean' },
   remove: { type: 'string', multiple: true },
   jar: { type: 'string', multiple: true },
   datapack: { type: 'string', multiple: true },
+  'replace-datapack': { type: 'string', multiple: true },
   'keep-old': { type: 'boolean' },
   admin: { type: 'boolean' },
   pull: { type: 'boolean' },
@@ -282,7 +294,7 @@ async function cmdInit(v) {
           : `${f.name} ${dim(`${[f.launcher, detectVersions(f.dir).loader].filter(Boolean).join(', ')} · ${f.dir}`)}`,
       { allowOther: true },
     );
-    if (dir === fresh) return initLauncher(v, cfg);
+    if (dir === fresh) return initLauncher(v, cfg, { fresh: true });
     if (typeof dir === 'object') dir = dir.dir;
   }
   dir = path.resolve(expandPath(dir));
@@ -328,7 +340,7 @@ async function cmdInit(v) {
  * tfc init --launcher: своя версия в .minecraft/versions (официальный лаунчер и TLauncher; cli/lib/vanilla.mjs),
  * профиль tfc на её папку, pull
  */
-async function initLauncher(v, cfg) {
+async function initLauncher(v, cfg, { fresh = false } = {}) {
   if (!cfg.token) {
     if (!interactive()) throw new Error('сначала ключ: tfc login <ключ>, потом tfc init --launcher');
     const key = await ask('Ключ от хоста сборки (начинается с tfc_)');
@@ -344,32 +356,63 @@ async function initLauncher(v, cfg) {
         : 'на сервере ещё нет сборки',
     );
   if (current?.mc && current.mc !== '1.21.1') console.log(yellow(`Сборка для Minecraft ${current.mc}.`));
-  const mcDir = path.resolve(v['mc-dir'] ?? defaultMinecraftDir());
-  const folder = v.name ?? DEFAULT_NAME;
-  if (!/^[\w][\w.-]{0,60}$/.test(folder) || folder === versionId(nf) || folder === current?.mc)
-    throw new Error(`имя папки «${folder}» не подходит — латиница, цифры, «-», «_», и не имя версии`);
-  const gameDir = path.join(mcDir, 'versions', folder);
-  let memory = Number(v.memory ?? defaultMemoryGb());
-  if (!v.memory && interactive()) memory = Number(await ask('Сколько памяти отдать игре, ГБ', String(memory)));
-  if (!Number.isInteger(memory) || memory < 2 || memory > 64) throw new Error('память — целое число ГБ, 2–64');
+  const selected = v.profile ?? cfg.profile ?? Object.keys(cfg.profiles)[0];
+  const existing = Object.hasOwn(cfg.profiles, selected) ? cfg.profiles[selected] : null;
+  const instance = existing && path.resolve(existing.instance);
+  const parent = instance && path.dirname(instance);
+  const versionFolder = parent && path.basename(parent) === 'versions' ? path.basename(instance) : null;
+  const update = existing && (v.profile || (!fresh && (!v.name || v.name === versionFolder)));
+  const mcDir = path.resolve(
+    v['mc-dir'] ??
+      (update ? (existing.launcher?.mcDir ?? (versionFolder && path.dirname(parent))) : null) ??
+      defaultMinecraftDir(),
+  );
+  const versions = path.join(mcDir, 'versions');
+  const inRoot = update && instance === mcDir;
+  if (update && (existing.side === 'server' || (!inRoot && parent !== versions)))
+    throw new Error(`профиль «${selected}» находится в ${instance} — обновите NeoForge в его лаунчере`);
+  const oldFolder = update ? (inRoot ? existing.launcher?.version : versionFolder) : null;
+  if (oldFolder && v.name && oldFolder !== v.name)
+    throw new Error(`профиль «${selected}» уже использует версию ${oldFolder}`);
+  const base = oldFolder ?? v.name ?? DEFAULT_NAME;
+  if (!validVersionName(base) || (!oldFolder && base.length > 61) || base === current?.mc)
+    throw new Error(
+      `имя папки «${base}» не подходит — выберите допустимое имя папки, отличное от версии Minecraft и NeoForge`,
+    );
+  let folder = base;
+  if (!oldFolder) {
+    const occupied = new Set(Object.values(cfg.profiles).map((p) => path.resolve(p.instance)));
+    const taken = (name) => {
+      const dir = path.join(versions, name);
+      return occupied.has(dir) || fs.existsSync(dir);
+    };
+    for (let i = 2; taken(folder); i++) folder = `${base.slice(0, 55)}-${i}`;
+  }
+  const gameDir = inRoot ? instance : path.join(versions, folder);
+  let name = update || v.profile ? selected : Object.keys(cfg.profiles).length ? folder : 'main';
+  if (!update && !v.profile) {
+    const baseName = name;
+    for (let i = 2; Object.hasOwn(cfg.profiles, name); i++) name = `${baseName}-${i}`;
+  }
+  if (!name || ['__proto__', 'constructor', 'prototype'].includes(name)) throw new Error('недопустимое имя профиля');
+  let memory = v.memory === undefined ? undefined : Number(v.memory);
+  if (!update && memory === undefined) {
+    memory = defaultMemoryGb();
+    if (interactive()) memory = Number(await ask('Сколько памяти отдать игре, ГБ', String(memory)));
+  }
+  if (memory !== undefined && (!Number.isInteger(memory) || memory < 2 || memory > 64))
+    throw new Error('память — целое число ГБ, 2–64');
 
   console.log(`Папка Minecraft: ${mcDir}`);
   console.log(`  NeoForge ${nf}${isNeoforgeInstalled(mcDir, nf) ? dim(' — уже стоит') : ''}`);
-  // Сборка уже перенесена в корень .minecraft (лаунчер запускает оттуда, см. launchedElsewhere): меняем только NeoForge
-  const inRoot = !v.profile && cfg.profiles[cfg.profile]?.instance === mcDir;
-  console.log(
-    inRoot
-      ? `  версия ${bold(folder)}, папка игры остаётся: ${mcDir}`
-      : `  версия ${bold(folder)} — её папка и будет папкой игры: ${gameDir}`,
-  );
-  console.log(`  профиль Minecraft Launcher «TFC RealWorld», память ${memory} ГБ`);
+  console.log(`  профиль «${name}», версия ${bold(folder)}, папка игры: ${gameDir}`);
   if (launcherRunning()) {
-    console.log(yellow('Minecraft Launcher открыт — закройте его: при выходе он перепишет профили своей копией.'));
+    console.log(yellow('Лаунчер открыт — закройте его полностью: он перепишет файлы версии и профили своими копиями.'));
     if (!interactive()) throw new Error('закройте Minecraft Launcher и повторите');
     await ask('Закройте лаунчер и нажмите Enter');
     if (launcherRunning()) throw new Error('лаунчер всё ещё открыт — закройте его и повторите');
   }
-  if (!v.yes && interactive() && !(await confirm('Поставить?', true))) return;
+  if (!v.yes && interactive() && !(await confirm(update ? 'Обновить профиль?' : 'Поставить?', true))) return;
 
   const install = (version) =>
     withSpinner('Готовлю установку', (sp) =>
@@ -377,7 +420,8 @@ async function initLauncher(v, cfg) {
         mcDir,
         nf: version,
         name: folder,
-        title: 'TFC RealWorld',
+        gameDir,
+        profileId: update ? existing.launcher?.profile : undefined,
         memoryGb: memory,
         api: api(cfg),
         onStep: (s) => sp.update(s),
@@ -386,22 +430,28 @@ async function initLauncher(v, cfg) {
   const r = await install(nf);
   console.log(`${green(r.installed ? 'NeoForge поставлен' : 'NeoForge уже был')}, версия ${bold(folder)} готова.`);
   if (r.profiles) {
-    console.log(`Профиль Minecraft Launcher «TFC RealWorld» — на ${gameDir}`);
+    console.log(`Профиль Minecraft Launcher «${r.title}» — на ${gameDir}`);
     console.log(dim(`Прежние профили лаунчера — копией: ${r.backups.map((b) => path.basename(b)).join(', ')}`));
   }
+  if (r.versionBackups.length)
+    console.log(dim(`Прежние файлы версии — копией: ${r.versionBackups.map((b) => path.basename(b)).join(', ')}`));
 
-  // Повторный запуск — тот же профиль tfc, а не новый
-  const same = Object.keys(cfg.profiles).find((n) => cfg.profiles[n].instance === gameDir);
-  const name = inRoot ? cfg.profile : v.profile || same || (cfg.profiles.main ? 'launcher' : 'main');
-  if (inRoot) console.log(`Папка игры остаётся прежней: ${mcDir}`);
-  else {
-    cfg.profiles[name] = { instance: gameDir, world: null, side: 'client', launcher: { mcDir, profile: PROFILE_ID } };
-    cfg.profile = name;
-    saveConfig(cfg);
-    console.log(`${green('Сохранено')} — профиль ${profileTitle({ name, ...cfg.profiles[name] })} (текущий)`);
-  }
-  const hint = inRoot ? `Играть: версия ${bold(folder)}.` : launchHint(folder, gameDir);
-  if (v.yes || !interactive() || (await confirm('Скачать сборку сейчас?', true))) {
+  cfg.profiles[name] = {
+    world: null,
+    side: 'client',
+    ...(update ? existing : {}),
+    instance: gameDir,
+    launcher: { mcDir, profile: r.profileId, version: folder },
+  };
+  if (!update) cfg.profile = name;
+  saveConfig(cfg);
+  console.log(`${green('Сохранено')} — профиль ${profileTitle({ name, ...cfg.profiles[name] })}`);
+  const hint = launchHint(folder, gameDir, r.title);
+  if (
+    v.yes ||
+    !interactive() ||
+    (await confirm(update ? 'Обновить файлы сборки сейчас?' : 'Скачать сборку сейчас?', true))
+  ) {
     await cmdPull({ ...v, profile: name, yes: true, 'no-neoforge-check': true }, []);
     // Моды сборки могут требовать NeoForge новее указанного в ней (аддон выпущен после заливки)
     const need = requiredNeoforge(modJars(cfg.profiles[name].instance));
@@ -411,10 +461,11 @@ async function initLauncher(v, cfg) {
     }
     console.log(hint);
   } else console.log(`Дальше: ${cyan('tfc pull')}. ${hint}`);
+  warnModpackLost({ name, ...cfg.profiles[name] });
 }
 
-const launchHint = (folder, gameDir) =>
-  `Играть: Minecraft Launcher — профиль ${bold('TFC RealWorld')}; другой лаунчер — версия ${bold(folder)}, папка игры должна быть ${gameDir} (не корень .minecraft). После первого запуска ${cyan('tfc status')} скажет, если игра запустилась не оттуда.`;
+const launchHint = (folder, gameDir, title) =>
+  `Играть: Minecraft Launcher — профиль ${bold(title)}; другой лаунчер — версия ${bold(folder)}, папка игры должна быть ${gameDir}. После первого запуска ${cyan('tfc status')} скажет, если игра запустилась не оттуда.`;
 
 async function cmdLogin(v, [key]) {
   if (!key) throw new Error('tfc login <ключ>');
@@ -451,6 +502,55 @@ function cmdProfiles() {
   if (!names.length) return console.log('Профилей нет — tfc init');
   for (const n of names)
     console.log(`${n === cfg.profile ? green('●') : ' '} ${profileTitle({ name: n, ...cfg.profiles[n] })}`);
+}
+
+function cmdRename(v, args) {
+  const [name] = args;
+  if (args.length > 1 || (!name && !v.name))
+    throw new Error('tfc rename [новое имя профиля] [--profile <текущий профиль>] [--name <новая версия>]');
+  const cfg = loadConfig();
+  const profile = currentProfile(cfg, v.profile);
+  const key = name ?? profile.name;
+  if (!key.trim() || ['__proto__', 'constructor', 'prototype'].includes(key))
+    throw new Error('недопустимое имя профиля');
+  if (key !== profile.name && Object.hasOwn(cfg.profiles, key)) throw new Error(`профиль «${key}» уже существует`);
+
+  const save = ({ name: old, ...next }) => {
+    cfg.profiles = Object.fromEntries(Object.entries(cfg.profiles).map(([n, p]) => (n === old ? [key, next] : [n, p])));
+    if (cfg.profile === old) cfg.profile = key;
+    saveConfig(cfg);
+  };
+  if (v.name) {
+    const others = Object.entries(cfg.profiles)
+      .filter(([n]) => n !== profile.name)
+      .map(([, p]) => p);
+    renameVersion(profile, v.name, others, save);
+  } else save(profile);
+  console.log(`Профиль «${key}»${v.name ? `, версия ${v.name}` : ''}.`);
+}
+
+async function cmdDelete(v, args) {
+  if (args.length || (v.profile && !v.versions)) throw new Error('tfc delete [--versions [--profile <имя>]] [--yes]');
+  if (!v.versions) {
+    if (v['dry-run']) return console.log(`Будет удалён tfc: ${installedPath()}`);
+    if (!v.yes && !interactive()) throw new Error('подтвердите удаление: tfc delete --yes');
+    return cmdUninstall(v);
+  }
+  const cfg = loadConfig();
+  if (v.profile) currentProfile(cfg, v.profile);
+  const targets = deletableVersions(cfg.profiles, v.profile);
+  for (const { name, dir } of targets) console.log(`  «${name}» — ${dir}`);
+  if (!targets.length) console.log('Отдельных версий, установленных через tfc, нет.');
+  if (v['dry-run']) return console.log('Предварительный просмотр удаления завершён.');
+  if (!v.yes && !interactive()) throw new Error('подтвердите удаление флагом --yes');
+  if (!v.yes && !(await confirm('Удалить tfc и перечисленные папки целиком, включая миры в них?', false))) return;
+  deleteVersions(targets, () => {
+    for (const { name } of targets) delete cfg.profiles[name];
+    if (!Object.hasOwn(cfg.profiles, cfg.profile)) cfg.profile = Object.keys(cfg.profiles)[0] ?? null;
+    saveConfig(cfg);
+  });
+  console.log(`Удалено версий: ${targets.length}.`);
+  if (IS_BINARY || CHANNEL === 'npm') return cmdUninstall({ ...v, yes: true });
 }
 
 function cmdUse(v, [name]) {
@@ -657,12 +757,25 @@ function printSite(p, names) {
   if (p.unknown.length) {
     console.log(red(`  нет на сайте: ${p.unknown.join(', ')}`));
     if (p.all.length)
-      console.log(dim(`  есть: ${p.all.map((x) => `${x.name}${x.install ? ' (в мир)' : ''}`).join(', ')}`));
+      console.log(
+        dim(
+          `  есть: ${p.all.map((x) => `${x.name}${x.install ? (x.installTarget === 'pack' ? ' (в сборку)' : ' (в мир)') : ''}`).join(', ')}`,
+        ),
+      );
   }
   if (!pullChanges(p) && !p.keptModified.length) console.log(dim('  всё на месте'));
 }
 
 /** Шапка, план сборки и планы сайта; возвращает, сколько всего изменится */
+/** Предупреждение: TLauncher убрал отметку сборки, пока был открыт, и запустит игру не из папки версии */
+function warnModpackLost(profile) {
+  if (profile.side === 'server' || !tlauncherModpackLost(profile.instance)) return;
+  console.log(yellow('TLauncher не считает эту версию сборкой: игра запустится не из её папки и не увидит моды.'));
+  console.log(
+    `Закройте TLauncher полностью и выполните: ${cyan(`tfc init --launcher --profile ${JSON.stringify(profile.name)}`)}`,
+  );
+}
+
 /** Предупреждение: игра запускалась не из папки профиля (launchedElsewhere) */
 function warnLaunch(profile, wrong) {
   console.log(yellow(`Версия ${wrong.version} запускалась ${date(wrong.at)} не из папки сборки, а из ${wrong.root}.`));
@@ -689,14 +802,17 @@ const modJars = (instance) => {
 
 /** Предупреждение: моды папки требуют NeoForge новее установленного — игра вылетит при запуске */
 function warnNeoforge(profile) {
-  const have = installedNeoforge(profile.instance);
+  const have = installedNeoforge(profile);
   if (!have) return;
   const need = requiredNeoforge(modJars(profile.instance));
   if (!need || compareVersions(have, need.version) >= 0) return;
   const by = need.by.slice(0, 3).join(', ') + (need.by.length > 3 ? ` и ещё ${need.by.length - 3}` : '');
   console.log(yellow(`Стоит NeoForge ${have}, а модам нужен ${need.version} (${by}) — игра вылетит при запуске.`));
   if (profile.side === 'server') console.log(`Обновите NeoForge на сервере до ${need.version}.`);
-  else console.log(`Поставить нужный: ${cyan(`tfc init --launcher --loader ${need.version}`)}`);
+  else
+    console.log(
+      `Поставить нужный: ${cyan(`tfc init --launcher --profile ${JSON.stringify(profile.name)} --loader ${need.version}`)}`,
+    );
 }
 
 function printAll(r, { verbose = false } = {}) {
@@ -704,6 +820,7 @@ function printAll(r, { verbose = false } = {}) {
   for (const u of r.staging?.updates ?? []) console.log(`${cyan('Staging')} ${bold(u.id)}: ${u.note}`);
   const wrong = launchedElsewhere(r.profile.instance);
   if (wrong) warnLaunch(r.profile, wrong);
+  warnModpackLost(r.profile);
   for (const n of r.notes) console.log(yellow(n));
   if (r.plan) {
     if (r.state.snapshot && r.state.snapshot !== r.current.id && !r.names.length)
@@ -843,12 +960,13 @@ async function cmdPublish(v) {
   const a = api(cfg);
   const current = await a.current();
   const { files: local, skipped, state } = await scan(profile);
-  // Датапаки сайта раздаёт сайт (tfc pull) — в сборку их не берём
+  // Датапаки сайта раздаёт сайт (tfc pull) — в сборку их не берём (кроме уже закреплённых в снимке через confirm)
+  const confirmedPaths = new Set(deploymentsOf(current).map((d) => d.path));
   const siteDp = await siteDatapackPaths(a, profile);
   const fromSite = [];
   for (const [p, f] of local)
-    if (f.kind === 'world-datapack' && siteDp(p)) {
-      fromSite.push(`${p.slice(16)} — «${siteDp(p)}»`);
+    if ((f.kind === 'world-datapack' || (isPackDatapackPath(p) && !confirmedPaths.has(p))) && siteDp(p)) {
+      fromSite.push(`${path.posix.basename(p)} — «${siteDp(p)}»`);
       local.delete(p);
     }
   // --no-host-addons: аддоны хоста (hostOnly) нужны только ему — в сборку для всех их не берём
@@ -1189,6 +1307,25 @@ async function adminNeoforge(a, v, [action, version]) {
   console.log(`${green('Готово:')} установщик NeoForge ${r.version} на сервере, ${mb(r.size)}.`);
 }
 
+async function approveUpdate(a, u, v) {
+  const r = await a.post(`/admin/updates/${u.id}/approve`, { force: !!v.force }).catch((e) => {
+    if (e.status === 403)
+      throw new Error(`${e.message}\nНастройки: ${configFile()}. Проверить текущий ключ: tfc whoami`);
+    if (e.data?.conflicts)
+      throw new Error(
+        `${e.message}:\n${e.data.conflicts.map((p) => `  ! ${p}`).join('\n')}${e.data.jarConflicts ? '' : '\nПоверх них — с --force'}`,
+      );
+    throw e;
+  });
+  console.log(`${green('Готово:')} сборка ${r.snapshot.id} — теперь текущая, игроки получат её по tfc pull.`);
+  if (r.update.datapacks?.length)
+    console.log(`Подтверждены в сборке датапаки: ${r.update.datapacks.map((d) => `«${d.name}»`).join(', ')}.`);
+  if (r.job) console.log(dim(`Данные сайта пересобираются: tfc admin jobs ${r.job} --follow`));
+  const cfg = loadConfig();
+  if (Object.keys(cfg.profiles ?? {}).length) await markApproved(currentProfile(cfg, v.profile), r.update, r.snapshot);
+  return r;
+}
+
 async function adminUpdates(a, v, [action, ...ids]) {
   const { updates } = await a.get('/admin/updates');
   const pending = updates.filter((u) => u.status === 'pending');
@@ -1203,18 +1340,26 @@ async function adminUpdates(a, v, [action, ...ids]) {
   const subProfile = Object.keys(cfgNow.profiles ?? {}).length ? currentProfile(cfgNow, v.profile) : null;
   const subs = subProfile ? (loadState(subProfile).staging ?? []) : [];
   if (!action || action === 'list') {
+    const rejected = updates.filter((u) => u.status === 'rejected');
+    const done = updates.filter((u) => u.status === 'approved');
+    if (v.rejected || v.approved) {
+      if (v.rejected) {
+        console.log(rejected.length ? dim('Отклонённые — только явный pull по id:') : 'Отклонённых нет.');
+        for (const u of rejected) printUpdate(u);
+      }
+      if (v.approved) {
+        console.log(done.length ? dim('Одобренные:') : 'Одобренных нет.');
+        for (const u of done) printUpdate(u, { full: false });
+      }
+      return;
+    }
     if (!pending.length) console.log('Ждущих обновлений нет.');
     for (const u of pending) printUpdate(u, { subscribed: subs.some((x) => x.id === u.id) });
-    const rejected = updates.filter((u) => u.status === 'rejected');
-    if (rejected.length) console.log(dim('\nОтклонённые — только явный pull по id:'));
-    for (const u of rejected) printUpdate(u);
-    const done = updates.filter((u) => u.status === 'approved').slice(0, 5);
-    if (done.length) console.log(dim('\nНедавно одобренные:'));
-    for (const u of done) printUpdate(u, { full: false });
     if (pending.length)
       console.log(
-        `\nПроверить поверх сборки: ${cyan('tfc admin updates subscribe <id>')} (--profile тест — только в нём), забрать файлами: ${cyan('tfc admin updates pull')}, после проверки — ${cyan('tfc admin updates approve <id>')}`,
+        `\nПроверить поверх сборки: ${cyan('tfc admin updates subscribe <id>')} (--profile тест — только в нём), забрать файлами: ${cyan('tfc admin updates pull')}, после проверки — ${cyan('tfc admin updates approve <id>')} или ${cyan('approve all')}`,
       );
+    console.log(dim(`Ещё: отклонённых ${rejected.length} (--rejected), одобренных ${done.length} (--approved).`));
     return;
   }
   if (action === 'subscribed') {
@@ -1265,10 +1410,40 @@ async function adminUpdates(a, v, [action, ...ids]) {
     console.log(`Профиль ${profileTitle(profile)}${profile.serverDir ? dim(` · сервер ${profile.serverDir}`) : ''}`);
     return pullUpdates(a, profile, todo, { yes: v.yes, dryRun: v['dry-run'] });
   }
+  if (action === 'approve' && ids[0] === 'all') {
+    if (ids.length !== 1) throw new Error('tfc admin updates approve all — без других id');
+    if (v.force) throw new Error('--force — только для одного обновления: approve <id> --force');
+    if (!pending.length) return console.log('Ждущих обновлений нет.');
+    // От старых к новым: так же, как их предлагали
+    const todo = pending.slice().reverse();
+    for (const u of todo) printUpdate(u);
+    const problems = batchProblems(todo);
+    if (problems.length)
+      throw new Error(`Пачкой одобрить нельзя, ничего не менял:\n${problems.join('\n')}\nРазберите их по одному.`);
+    if (!v.yes) {
+      if (!interactive()) throw new Error('Для approve нужен --yes: статус обновлений не изменён.');
+      if (!(await confirm(`Одобрить все (${todo.length}) и сделать новой сборкой для всех игроков?`, true)))
+        return console.log('Статус обновлений не изменён.');
+    }
+    let first = null;
+    for (const [i, u] of todo.entries()) {
+      console.log(`\n${bold(u.id)}`);
+      const r = await approveUpdate(a, u, v).catch((e) => {
+        throw new Error(
+          `${e.message}\nОдобрено ${i} из ${todo.length}, остальные ждут.${first ? ` Откат: tfc admin use ${first}` : ''}`,
+        );
+      });
+      first ??= r.previous;
+    }
+    if (first) console.log(dim(`\nОткат всей пачки: tfc admin use ${first}`));
+    return;
+  }
   if (action === 'approve' || action === 'reject') {
     if (ids.length !== 1) throw new Error(`tfc admin updates ${action} <id> — укажите ровно одно обновление`);
     const u = find(ids[0]);
     printUpdate(u);
+    const blocked = action === 'approve' && approveBlock(u, v.force);
+    if (blocked) throw new Error(blocked);
     const q = action === 'approve' ? 'Сделать новой сборкой для всех игроков?' : 'Отклонить?';
     if (!v.yes) {
       if (!interactive()) throw new Error(`Для ${action} нужен --yes: статус обновления не изменён.`);
@@ -1284,29 +1459,16 @@ async function adminUpdates(a, v, [action, ...ids]) {
           '\nЕсли забирали его к себе — вернуть файлы: tfc undo',
       );
     }
-    const r = await a.post(`/admin/updates/${u.id}/approve`, { force: !!v.force }).catch((e) => {
-      if (e.status === 403)
-        throw new Error(`${e.message}\nНастройки: ${configFile()}. Проверить текущий ключ: tfc whoami`);
-      if (e.data?.conflicts)
-        throw new Error(`${e.message}:\n${e.data.conflicts.map((p) => `  ! ${p}`).join('\n')}\nПоверх них — с --force`);
-      throw e;
-    });
-    console.log(`${green('Готово:')} сборка ${r.snapshot.id} — теперь текущая, игроки получат её по tfc pull.`);
-    if (r.update.datapacks?.length)
-      console.log(`Подтверждены в сборке датапаки: ${r.update.datapacks.map((d) => `«${d.name}»`).join(', ')}.`);
+    const r = await approveUpdate(a, u, v);
     if (r.previous)
       console.log(
         dim(
           `Откат: tfc admin rollback (сборка ${r.snapshot.id} → ${r.previous}${r.update.datapacks?.length ? ', вернёт и подтверждение датапаков' : ''}).`,
         ),
       );
-    if (r.job) console.log(dim(`Данные сайта пересобираются: tfc admin jobs ${r.job} --follow`));
-    const cfg = loadConfig();
-    if (Object.keys(cfg.profiles ?? {}).length)
-      await markApproved(currentProfile(cfg, v.profile), r.update, r.snapshot);
     return;
   }
-  throw new Error('tfc admin updates [pull [id…] | approve <id> | reject <id>]');
+  throw new Error('tfc admin updates [--rejected] [--approved] [pull [id…] | approve <id|all> | reject <id>]');
 }
 
 async function cmdAddons(v, [sub, ...names]) {
@@ -1421,6 +1583,7 @@ async function cmdAdmin(v, [sub, ...args]) {
       remove: v.remove ?? [],
       jars: v.jar ?? [],
       datapacks: v.datapack ?? [],
+      replaceDatapacks: v['replace-datapack'] ?? [],
       keepOld: v['keep-old'],
       note: v.note,
       yes: v.yes,
@@ -1521,6 +1684,8 @@ const COMMANDS = {
   pull: cmdPull,
   install: cmdInstall,
   uninstall: cmdUninstall,
+  delete: cmdDelete,
+  rename: cmdRename,
   undo: cmdUndo,
   sync: cmdSync,
   publish: cmdPublish,

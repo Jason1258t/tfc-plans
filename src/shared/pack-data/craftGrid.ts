@@ -128,7 +128,7 @@ export function recipeGrid(r: { t: string; j: Record<string, unknown> }, tags: T
     Array.isArray(ingredients) &&
     ingredients.length &&
     ingredients.length <= MAX_GRID * MAX_GRID &&
-    /craft/.test(r.t)
+    /craft|shapeless/.test(r.t)
   ) {
     const width = ingredients.length <= 4 ? 2 : ingredients.length <= 9 ? 3 : Math.ceil(Math.sqrt(ingredients.length));
     const height = Math.ceil(ingredients.length / width);

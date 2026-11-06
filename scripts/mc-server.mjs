@@ -1,6 +1,6 @@
 /**
- * Общее для тестовых серверов Minecraft (addon_devserver, стенд сборки pack-stand.mjs): Java 21, RCON-клиент,
- * завершение дерева процессов. Без зависимостей, на любой ОС.
+ * Общее для тестовых серверов Minecraft (addon_devserver, стенды сборки pack-stand.mjs и client-stand.mjs): Java 21,
+ * RCON-клиент, сводка ошибок лога, завершение дерева процессов. Без зависимостей, на любой ОС.
  */
 import { execFile } from 'node:child_process';
 import fs from 'node:fs';
@@ -33,6 +33,9 @@ function rconPacket(id, type, body) {
   return out;
 }
 
+/** Сколько ждать ответа: первая команда в новом мире TFC идёт, пока сервер догоняет генерацию спавна */
+const RCON_IDLE_MS = 180000;
+
 /** RCON-клиент: авторизация, команды по очереди («sleep N» — пауза), ответы текстом */
 export function runRcon(port, password, commands) {
   return new Promise((resolve, reject) => {
@@ -50,7 +53,11 @@ export function runRcon(port, password, commands) {
       }
       const c = commands[idx++];
       if (/^sleep\s/.test(c)) {
-        sleep(Number(c.split(/\s+/)[1]) * 1000).then(next);
+        sock.setTimeout(0); // пауза не считается зависшим сервером
+        sleep(Number(c.split(/\s+/)[1]) * 1000).then(() => {
+          sock.setTimeout(RCON_IDLE_MS);
+          next();
+        });
         return;
       }
       waiting = c;
@@ -76,12 +83,55 @@ export function runRcon(port, password, commands) {
       }
     });
     sock.on('error', (e) => reject(e));
-    sock.setTimeout(10000, () => {
+    sock.setTimeout(RCON_IDLE_MS);
+    sock.on('timeout', () => {
       sock.destroy();
       if (authed) resolve(replies.join('\n'));
       else reject(new Error('RCON: сервер не ответил на авторизацию'));
     });
   });
+}
+
+/** Строки ошибок без повторов: «×N» у повторяющихся, шум (noiseRes) отдельно счётчиком */
+export function errorLines(text, re, limit, noiseRes = []) {
+  const counts = new Map();
+  let noise = 0;
+  for (const l of text.split(/\r?\n/)) {
+    if (!re.test(l)) continue;
+    if (noiseRes.some((n) => n.test(l))) {
+      noise++;
+      continue;
+    }
+    // Без метки времени, JSON рецепта и id: однотипные ошибки (16 цветов цемента, таблицы добычи) — одна группа
+    const msg = l.replace(/^\[[^\]]*\]\s*/, '').trim();
+    const key = msg.replace(/ from json \{.*$/, ' from json …').replace(/[a-z0-9_.-]+:[a-z0-9_/.-]+/g, '<id>');
+    const g = counts.get(key);
+    if (g) g.n++;
+    else counts.set(key, { n: 1, first: msg.length > 300 ? msg.slice(0, 300) + '…' : msg });
+  }
+  const lines = [...counts.values()].map(({ n, first }) => (n > 1 ? `${first} ×${n}` : first));
+  return { lines: lines.slice(0, limit), more: Math.max(0, lines.length - limit), noise };
+}
+
+/** Серверы, которых надо погасить вместе с этим процессом */
+const owned = new Set();
+let exitHooked = false;
+
+/**
+ * Погасить сервер вместе с этим процессом. Сервер запущен отдельной группой (detached) и сам не умрёт: при обрыве
+ * вызова MCP (закрытый stdin, SIGTERM) он остался бы работать и занимать папку и порты. После SIGKILL не сработает.
+ */
+export function stopWithProcess(child) {
+  owned.add(child);
+  child.once('exit', () => owned.delete(child));
+  if (exitHooked) return;
+  exitHooked = true;
+  process.on('exit', () => {
+    for (const c of owned) killTree(c.pid);
+  });
+  // Без обработчика сигнал завершает процесс мимо события exit
+  for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP'])
+    process.once(signal, () => process.exit(128 + os.constants.signals[signal]));
 }
 
 /** Завершить дерево процессов gradlew */

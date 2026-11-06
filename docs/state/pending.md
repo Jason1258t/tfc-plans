@@ -1,9 +1,73 @@
 # State: waiting for the host or an in-game check
 
+- Host (dev #283): install EE Extras 2.18.1 on the server and clients. Check that a newly placed cable and one
+  migrated from an existing world both appear between the cap inlets.
+
+- Host (dev #272): install EE Extras 2.17.0 on the server and clients, check one working board and a charred-board
+  salvage in the pack profile, then publish the pack snapshot.
+
+- Host (dev #211): accept Destroy Extras 0.6.0 on a test-world copy. Rotate both machines, rebuild the electrolyzer shell, verify fluid flow through the rotated ports and the goggles tooltip.
+
 Part of [STATE.md](../STATE.md). The agent can't check anything in game. When an item is resolved, remove it here and
 its one-liner in STATE.md.
 
+- Host: install **EE Extras 2.18.2** on the server and clients (dev #286) and check the original fence and heater setup.
+
 ## Host actions
+
+- **PCB wiring and mounting** (dev #292): install EE Extras 2.21.1 on the server and clients with `tfc pull addons`.
+  The release was exercised on the isolated `test1a` client stand. The live pack installation is the host's step.
+
+- **Working boards** (dev #280): install EE Extras 2.19.0 on the server and clients. In the pack profile, assemble a board
+  using a stack from the inventory, place a trimmed board and connect a thin lead to a terminal.
+
+- **Surface wire** (2026-11-06, dev #205): EE Extras 2.16.0 — `tfc pull addons` on the server and players. Host: in
+  game, lay the surface wire along walls and floors, branch it, cut it, check the junction box and the thin insulated
+  wire, and judge laying comfort and looks (piece 16 m, 1 item per metre — `ee_extras-server.toml`). Remove after.
+- **M12 replacement** (2026-11-05, dev #261): update `u20261105-175613-fa0b` swaps pinned M12 for its card version and removes
+  the 32 overlay files in one approval. All 32 match the card as JSON; only the `pack.mcmeta` description also changes.
+  Host: `tfc admin updates approve u20261105-175613-fa0b`; rollback — `tfc admin rollback`. Remove this item after approval.
+- **Create Deco bricks** (2026-11-05, dev #222): world-test draft `GHltHxk6T0WJ2gbyAOGi` replaces scoria with
+  brown dye in the umber brick recipe and adds hammer recipes for all eight cracked variants. The static conflict
+  check found only the intended override. Host: pull into a test world, craft four umber bricks and check that
+  cracking a block returns the hammer with reduced durability, then confirm.
+
+- **Polymer names** (2026-11-04, dev #218): translation update `u20261104-203745-9a77` supplies full Russian names for four Destroy polymers and fixes «Полиропилен». Host: subscribe a profile with Destroy, reload client resources, check the four names, then approve. The three guides are already live. JSON/jar keys checked; full-pack MCP run exceeded the caller’s 180-second timeout and was stopped, so no successful server/client verification is claimed.
+- **Going Nuclear M0** (2026-11-05, dev #202, plan doc 50): the gameplay decisions are settled — reactor automation
+  after L3, realistic physics without random failures, radiation enabled, destructive accidents and fallout disabled on
+  the live world. The first slice is the boiling-water reactor, turbines, spent-fuel pool and dry cask; RBMK/reprocessing/MOX
+  are a separate later stage. Jar inspection confirms NeoForge ≥ 21.1.256 is required and the license is All Rights
+  Reserved. Host: update NeoForge on a test profile and obtain the author's written permission for the pack server to
+  redistribute the jar before integration and release. Static dependency checking of the pack against 21.1.256 found no
+  conflicts; runtime and Survival acceptance have not been performed.
+- **Fluid tank recipe without a barrel** (2026-11-05, dev #233 item 1): card `2csvwoHPHBhlpqiZTQ4c` is confirmed for the
+  whole pack at the host's request in snapshot `20261104-223757-c5b3`, without an in-game check: 8
+  `#c:plates/copper` around 1 `#c:glass_panes` → 2 tanks. The 4-tank version loaded on the pack stand; only the count
+  changed after that. Host: craft it once in game. The old route stays: Create: Connected vessel (2 sheets + barrel)
+  converts to a tank.
+
+- **Transformer oil duplicate** (2026-11-04, dev #215): source card `9FCAF769A0A2ODuhbgxU`
+  (`transformer_oil`, revision `2026-11-04T20:35:20.733425Z`) now disables only
+  `tfc_plans:transformer_oil` with a `neoforge:false` condition. Its malformed fluid ingredient duplicated
+  `electroenergetics:mixing/transformer_oil`: the mod JAR uses 250 mB `#c:plantoil` + 250 mB water →
+  125 mB transformer oil, heated; the tag includes IE plant oil. The user sees the standard mixing recipe
+  during client acceptance; production itself and this new draft have not been checked in game.
+  Checked: exact live ZIP, mod JAR recipe, expanded fluid tag, overlapping inputs, MCP dry-run and readback
+  (duplicate disabled; standard recipe remains). The writer's “recipe absent” warning reflects stale static
+  pack metadata; the live inventory confirms the old ZIP is pinned in snapshot `20261101-190800-fdd3`.
+  Source editing does not replace that ZIP. Host: `tfc datapacks unconfirm 9FCAF769A0A2ODuhbgxU`,
+  then `tfc datapacks pull 9FCAF769A0A2ODuhbgxU` into the selected test world, restart and check that
+  the parse error is gone and standard heated mixing produces oil; only then confirm the new version.
+
+- **Бензин из ароматических фракций Destroy** (2026-11-04, dev #223): карточка `7IHNTyYMc046lNeC0anS`
+  («Destroy — нефтехимия и полимеры», revision `2026-11-04T21:12:27.294657Z`) содержит рецепт
+  `tfc_plans:create/gasoline_from_destroy_aromatics`: отдельно 50 мБ толуольной смеси с толуолом ≥ 9 M и
+  50 мБ ксилольной смеси с этилбензолом ≥ 1.9 M → 100 мБ бензина CDG в Create-мешалке без нагрева.
+  JSON, чтение рецепта, отсутствие конфликтов и поддержка ингредиента `destroy:mixture_with_molecule` проверены;
+  полный производственный цикл в игре не проверялся. Предупреждение редактора об отсутствующих ID ожидаемо:
+  основной snapshot ещё без Destroy, а молекулы — не предметы. Хост: включить «В мир», выполнить
+  `tfc datapacks pull 7IHNTyYMc046lNeC0anS` в выбранный тестовый мир с Destroy + CDG, перезапустить,
+  проверить оба входа и выход 100 мБ, отказ неподходящих смесей и затем `confirm`.
 
 - **Destroy slice as one update** (2026-11-03, dev #203, acceptance #199): `u20261103-164054-6977` adds Destroy,
   Petrolpark, Destroy Bridge, Destroy Extras 0.3.0 and five datapacks (confirmed by approve); updates EE Extras 2.7.0, JEI 19.55.0.431,
@@ -96,6 +160,12 @@ its one-liner in STATE.md.
   survive; 2.0.2 — cable, EE connector terminal, highlight and label, wrench rotation; 2.1 — wires and spools, sag and
   rendering of spans > 128 blocks, clamp by click, spool tooltips, recipes; 2.2 — blocks, JEI, inverters with motors and
   several per grid (grid sync at microTicks > 1 fixed in 2.5.1). Details — [addons.md](addons.md).
+- **Better Fluids 1.3.0** (dev #253): install on the server and clients. In survival, check the fluid tap's model
+  and filling an IE jerrycan from a Create tank.
+
+- **Small Diesel 1.0.3** (dev #243): install on the server and clients. Check refueling both blocks by
+  right-clicking with a partly filled IE jerrycan, then check withdrawal from a full tank and the client tooltip.
+
 - **EE Extras 2.3.1 + Small Diesel 1.0.1** (2026-10-22, `ee-extras-2.3.1.jar`, `small-diesel-1.0.1.jar`; 2.3.1/1.0.1
   — new looks only): host installs both and `tfc publish` (EE Extras 2.3.1 includes 2.2–2.3). In game: new models of the
   generator, rectifiers, inverters, small engine and genset (terminals of both generators moved into terminal boxes —
@@ -120,6 +190,8 @@ its one-liner in STATE.md.
   installs (`tfc pull addons`, server and players) and `tfc publish`. In game: block looks and rotating half-shaft,
   goggles and tooltips, module insert/remove by hand, JEI/EMI recipes, the block on a flying Aeronautics ship with
   propellers. Details — [addons.md](addons.md).
+- **IE Extras 1.2.0** (dev #268): install on the server and clients; verify attached ear defenders render and muffle
+  sound while engineer's goggles still show Create information in the head armor slot.
 - **IE Extras 1.1.0** (2026-10-29, `ie-extras-1.1.0.jar`; 1.0.0 — analog heater, 1.1.0 — basin heating by IE external,
   EE and analog heaters, dev #113): in game — basin temperature line in goggles, heated/superheated basin recipes (steel,
   kaolinite) on the IE external heater and the EE heater. Host installs (`tfc pull addons`, server and
@@ -202,3 +274,41 @@ KubeJS folders. Test unconfirmed/changed drafts in a selected world. Preview `tf
 --dry-run`; after verifying the selected versions, confirm one/all and restart. Check both an existing and a new
 world, recipe overrides and KubeJS priority. Changed world copies remain for manual review. Local `undo` does not
 revert server confirmation; `tfc admin rollback` reverts the whole snapshot. Details: [datapacks-pack.md](../plans/datapacks-pack.md).
+
+## EE Extras 2.12.0 — питание CC: Tweaked (dev #247)
+
+Host: install on the server and clients with `tfc pull addons ee_extras@2.12.0`, then publish the pack snapshot.
+Verify the cable inlet on an existing computer and the charging station with both pocket tiers using the live
+pack profile. Existing desktops need an inlet and existing pocket computers start with an empty battery.
+
+## EE Extras 2.11.0 — пластики и цветной дисплей CC (dev #246)
+
+Host: install Destroy 0.4.6 + Petrolpark 1.5.11 and EE Extras 2.11.0 on the server and clients, pull the current M12
+datapack `tcegd3kspq62oHuM3YmF` into a test world and check the heated ABS/PET processes, the 450 K Vat PET reaction,
+RGB phosphor and the updated computer/case/display recipes in Survival. Only then confirm the datapack for the pack.
+The reduced dedicated-server stand passed 73/73 recipes, 280 CC checks and produced 7 PET; it was not a full pack boot.
+
+## EE Extras 2.10.1 — внешний вид электроники (dev #216)
+
+Host: install `ee_extras@2.10.1` on the server and clients; inspect the 28 item textures and five block models in the client. Dedicated-server behavior, resources and offline renders were checked. No recipe or gameplay changes.
+
+- Dev #221: install EE Extras 2.10.2 on the server and all clients; check steel PS and stranded copper M wire appearance, including existing tensioned lines.
+
+- Better Fluids 1.2.0 (dev #233.2–3, #233.5): host installs the jar on the server and clients, checks connected textures,
+  the shapes and slab orientations in the client, wrench interactions and stonecutting in the pack, then publishes a pack snapshot.
+
+## ComputerCraft components (dev #248, #249, #259)
+
+Update `u20261105-160606-f126` is pending. Test it on a copy of the current profile, including the antenna and both
+wireless modem recipes, the advanced pocket upgrade, the lead battery, the CC:C Bridge assemblies and ABS insulation
+for the cable and storage bay. Approve the update after the Survival check. The full dedicated stand booted with the
+update overlay and selected all nine probed recipe changes. The dev stand loaded 83 recipes and passed 324 checks after
+restart. The pack server requires a separate unconfirm to replace a pinned ZIP. This update adds the changed files
+under `kubejs/data` over the pinned M12, and the M12 site card carries the equivalent 85 entries.
+
+- Dev #228: install EE Extras 2.14.1 on the server and clients with the existing pump config. Check goggles and fluid
+  transfer on an existing electric pump, then publish the pack snapshot.
+
+- Host: install **Miner Tools 1.2.0** (dev #244) on the server and clients. Open an existing belt and check the group toggles and both list modes in the client.
+
+- Host: try pack update `u20261106-133656-3ca6` (dev #293) on a test profile. Check dust and all five briquette sizes in EMI, then approve.

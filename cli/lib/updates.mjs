@@ -1,12 +1,14 @@
 /**
  * Предложенные обновления сборки (server/pack-server/lib/updates.mjs).
- *   tfc admin propose [<папка>] [--jar <файл>…] [--datapack <id|имя>…] [--remove <путь>…] --note "…" — выложить:
+ *   tfc admin propose [<папка>] [--jar <файл>…] [--datapack <id|имя>…] [--replace-datapack <id|имя>…]
+ *                     [--remove <путь>…] --note "…" — выложить:
  *     файлы из папки (пути как в снимке: kubejs/…, config/…), jar в mods/, датапаки сайта на подтверждение и пути, которые
  *     убрать; старые версии предлагаемых jar убираются сами (--keep-old — оставить). Так обновляет сборку Claude или
  *     администратор не с ПК хоста.
- *   tfc admin updates [list] — что ждёт; subscribe/unsubscribe <id…> — проверять в профиле поверх сборки (staging.mjs);
+ *   tfc admin updates [list] [--rejected] [--approved] — что ждёт (или отклонённые, одобренные);
+ *     subscribe/unsubscribe <id…> — проверять в профиле поверх сборки (staging.mjs);
  *     pull [id…] — разово забрать файлами в папку игры (и сервера, если она в профиле), с копией для tfc undo;
- *     approve <id> — сделать из текущей сборки с этими изменениями новую текущую; reject <id>.
+ *     approve <id|all> — сделать из текущей сборки с этими изменениями новую текущую; reject <id>.
  */
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
@@ -43,13 +45,18 @@ export function printUpdate(u, { full = true, subscribed = false } = {}) {
     `${bold(u.id)} ${STATUS[u.status] ?? u.status}${subscribed ? cyan(' [подписан]') : ''} ${dim(`${date(Date.parse(u.createdAt))}, ${u.author}`)}${u.snapshot ? dim(` → сборка ${u.snapshot}`) : ''}`,
   );
   console.log(`  ${u.note}`);
+  for (const j of u.jarConflicts ?? [])
+    console.log(yellow(`  ! ${j.path}: в сборке уже ${j.current} — обновление устарело, одобрить нельзя`));
+  for (const p of u.conflicts ?? []) console.log(yellow(`  ! ${p}: в сборке поменяли после предложения`));
   if (u.snapshot && u.parent)
     console.log(dim(`  откат: tfc admin use ${u.parent} (или tfc admin rollback, если сборка последняя)`));
   if (!full) return;
   for (const f of u.files) console.log(`    ~ ${f.path} ${dim(mb(f.size))}`);
   for (const p of u.remove) console.log(`    − ${p}`);
   for (const d of u.datapacks ?? [])
-    console.log(`    ◆ датапак «${d.name}» ${dim(`→ ${d.path}, ревизия ${d.revision}, подтвердится при одобрении`)}`);
+    console.log(
+      `    ◆ датапак «${d.name}» ${dim(`→ ${d.path}, ревизия ${d.revision}, ${d.replaces ? `заменит закреплённую ${d.replaces.sha256.slice(0, 12)} при одобрении` : 'подтвердится при одобрении'}`)}`,
+    );
   if (u.reason) console.log(dim(`  причина: ${u.reason}`));
   if (u.status === 'pending')
     console.log(
@@ -59,15 +66,50 @@ export function printUpdate(u, { full = true, subscribed = false } = {}) {
     );
 }
 
-/** Датапаки сайта для обновления: ZIP как у tfc datapacks. → [{ id, revision, sha256, sourcePath?, name, zip? }] */
-async function datapackItems(api, names) {
-  if (names.includes('all')) throw new Error('--datapack — по одному: id или имя из tfc datapacks list');
+/** Почему обновление не одобрить: текст ошибки или null. С force остаются только другие версии модов */
+export function approveBlock(u, force) {
+  const lines = (u.jarConflicts ?? []).map((j) => `  ! ${j.path} — в сборке уже ${j.current}`);
+  if (lines.length)
+    return `Обновление ${u.id} устарело: две версии одного мода не запустятся.\n${lines.join('\n')}\nОтклоните его: tfc admin updates reject ${u.id}`;
+  if (force || !u.conflicts?.length) return null;
+  return `Эти файлы в сборке поменяли после предложения ${u.id}:\n${u.conflicts.map((p) => `  ! ${p}`).join('\n')}\nОтклонить: tfc admin updates reject ${u.id}; поверх них — approve ${u.id} --force`;
+}
+
+/** Почему обновления не одобрить пачкой: свои конфликты и правки одного файла или мода в разных обновлениях */
+export function batchProblems(list) {
+  const out = list.flatMap((u) => approveBlock(u) ?? []);
+  const paths = new Map();
+  const jars = new Map();
+  for (const u of list) {
+    for (const [p, sha] of [...u.files.map((f) => [f.path, f.sha256]), ...u.remove.map((x) => [x, null])]) {
+      const was = paths.get(p);
+      if (was && was.sha !== sha) out.push(`${p} меняют и ${was.id}, и ${u.id}`);
+      paths.set(p, { id: u.id, sha });
+    }
+    for (const f of u.files.filter((x) => isModJar(x.path))) {
+      const was = jars.get(jarKey(f.path));
+      if (was && was.path !== f.path)
+        out.push(`Один мод в двух версиях: ${was.path} (${was.id}) и ${f.path} (${u.id})`);
+      jars.set(jarKey(f.path), { id: u.id, path: f.path });
+    }
+  }
+  return out;
+}
+
+/**
+ * Датапаки сайта для обновления: ZIP как у tfc datapacks. → [{ id, revision, sha256, sourcePath?, name, zip?, replaces? }]
+ * names — новые для сборки, replacing — закреплённые, которые надо заменить версией с карточки.
+ */
+async function datapackItems(api, names, replacing) {
+  if ([...names, ...replacing].includes('all'))
+    throw new Error('--datapack и --replace-datapack — по одному: id или имя из tfc datapacks list');
   const c = await datapackCatalog(api, { refresh: true });
   const out = [];
-  for (const d of await resolveDatapacks(api, c, c.items, names)) {
+  // Пустой список для resolveDatapacks значит «все»
+  for (const d of names.length ? await resolveDatapacks(api, c, c.items, names) : []) {
     if (d.error) throw new Error(`${d.fileName}: ${d.error}`);
     if (c.deployed.some((p) => p.id === d.id))
-      throw new Error(`«${d.name}» уже в сборке. Для новой версии: tfc datapacks unconfirm ${d.id}`);
+      throw new Error(`«${d.name}» уже в сборке. Для новой версии: --replace-datapack ${d.id}`);
     const zip = d.snapshotSource ? null : datapackZip(d);
     out.push({
       id: d.id,
@@ -78,13 +120,33 @@ async function datapackItems(api, names) {
       ...(d.snapshotSource ? { sourcePath: d.sourcePath } : {}),
     });
   }
+  for (const d of replacing.length ? await resolveDatapacks(api, c, c.items, replacing) : []) {
+    const pinned = c.deployed.find((p) => p.id === d.id);
+    if (!pinned) throw new Error(`«${d.name}» ещё не закреплён в сборке. Добавить: --datapack ${d.id}`);
+    if (d.sourceMissing || d.snapshotSource || pinned.snapshotSource)
+      throw new Error(`«${d.name}» закреплён без карточки сайта — заменить нечем`);
+    if (out.some((x) => x.id === d.id)) throw new Error(`«${d.name}» указан дважды`);
+    if (d.contentHash === pinned.contentHash) throw new Error(`«${d.name}»: карточка совпадает с закреплённой версией`);
+    const zip = datapackZip(d);
+    out.push({
+      id: d.id,
+      revision: d.revision,
+      sha256: createHash('sha256').update(zip).digest('hex'),
+      name: d.name,
+      zip,
+      replaces: { sha256: pinned.sha256, contentHash: pinned.contentHash, revision: pinned.revision },
+    });
+  }
   return out;
 }
 
-export async function propose(api, { dir, remove = [], jars = [], datapacks = [], keepOld, note, yes, dryRun }) {
-  if (!dir && !remove.length && !jars.length && !datapacks.length)
+export async function propose(
+  api,
+  { dir, remove = [], jars = [], datapacks = [], replaceDatapacks = [], keepOld, note, yes, dryRun },
+) {
+  if (!dir && !remove.length && !jars.length && !datapacks.length && !replaceDatapacks.length)
     throw new Error(
-      'tfc admin propose [<папка>] [--jar <файл>…] [--datapack <id|имя>…] [--remove <путь>…] --note "что и зачем"',
+      'tfc admin propose [<папка>] [--jar <файл>…] [--datapack <id|имя>…] [--replace-datapack <id|имя>…] [--remove <путь>…] --note "что и зачем"',
     );
   if (!note?.trim()) throw new Error('--note "что меняется и зачем" — его увидит хост');
   if (dir && !fs.statSync(dir, { throwIfNoEntry: false })?.isDirectory()) throw new Error(`нет папки ${dir}`);
@@ -123,7 +185,8 @@ export async function propose(api, { dir, remove = [], jars = [], datapacks = []
         )
           old.set(c.path, f.path);
   const removing = [...remove, ...old.keys()];
-  const packs = datapacks.length ? await datapackItems(api, datapacks) : [];
+  const packs =
+    datapacks.length || replaceDatapacks.length ? await datapackItems(api, datapacks, replaceDatapacks) : [];
   if (!files.length && !removing.length && !packs.length)
     return console.log('В сборке уже всё так — предлагать нечего.');
 
@@ -132,7 +195,9 @@ export async function propose(api, { dir, remove = [], jars = [], datapacks = []
   for (const p of remove) console.log(`    − ${p}`);
   for (const [p, by] of old) console.log(`    − ${p} ${dim(`старая версия, вместо неё ${path.posix.basename(by)}`)}`);
   for (const d of packs)
-    console.log(`    ◆ датапак «${d.name}» ${dim(`→ kubejs/data/tfc-plans-${d.id}.zip, подтвердится при одобрении`)}`);
+    console.log(
+      `    ◆ датапак «${d.name}» ${dim(`→ kubejs/data/tfc-plans-${d.id}.zip, ${d.replaces ? `заменит закреплённую ${d.replaces.sha256.slice(0, 12)} при одобрении` : 'подтвердится при одобрении'}`)}`,
+    );
   const same = overlay.length - files.length;
   if (same) console.log(dim(`  ещё ${same} файлов уже такие же`));
   if (dryRun) return;

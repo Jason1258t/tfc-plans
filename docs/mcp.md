@@ -24,6 +24,32 @@ and parameter descriptions are in English (the agent reads them); tool output st
 - **After editing code in `scripts/mcp/`** restart the server: `/mcp` in terminal Claude Code or a new session in the
   app. Data (`public/`, jars, KubeJS) is re-read automatically when files change.
 
+## Calling from a shell
+
+`scripts/mcp-call.mjs` starts a server from `.mcp.json` (`tfc-pack`, `tfc-plans-dev`), makes one call and exits. For an
+agent without the servers connected, or one whose harness call timeout is shorter than the tool. Works from any folder
+and worktree; writes are signed as usual (`TFC_AGENT_NICK` or the detected agent). No need to write a JSON-RPC client.
+
+```bash
+node scripts/mcp-call.mjs                                     # servers
+node scripts/mcp-call.mjs tfc-pack                            # tools of a server
+node scripts/mcp-call.mjs tfc-plans-dev dev_get --schema      # parameters of a tool
+node scripts/mcp-call.mjs tfc-pack item_get '{"id":"tfc:powder/flux"}'
+node scripts/mcp-call.mjs tfc-pack pack_devserver @args.json --timeout 1200
+```
+
+- Arguments: a JSON string, `@file`, or `-` (stdin). A file is the way around shell quoting (PowerShell).
+- `--timeout <s>` — default 300, `0` — no limit. It stops the MCP server, and the server stops the stand it started. A stand
+  took 478 s in a real run, so pass more than the default for it, above the tool's own `timeout` (`pack_devserver` —
+  900 s to boot, plus the commands and shutdown; `pack_client` — sync, up to 900 s to the menu/world, shots, exit:
+  `--timeout 1500`).
+- `--out <dir>` — where images go (default a new temp folder); the path is printed. `--json` — the raw result.
+  `--verbose` — the server log on stderr.
+- Tool text goes to stdout, a tool error to stderr. Exit code: `0` success, `1` tool or server error, `2` bad call,
+  `124` timeout.
+- Each call is a new server process (`tfc-pack` code index and caches start cold), so don't loop it where a connected
+  server is available.
+
 ## Data sources
 
 The server builds nothing itself: it reads what the site scripts built. Stale site data → stale answers.
@@ -80,7 +106,8 @@ The server sends a short version of this to agents as its instructions.
   `addon-dev`; releasing an addon to the site → skill `addon-release` (`addon_check`).
 - Pack config changes → `config_propose`, not "edit the file".
 - Other pack file changes (KubeJS scripts, lang, resources, whole files) → check the overlay on the whole pack first —
-  `pack_devserver overlay=<dir>` (production dedicated server with full KubeJS, no game needed) — then
+  `pack_devserver overlay=<dir>` (production dedicated server with full KubeJS, no game needed; client-side resources,
+  GUI or client crashes — `pack_client overlay=<dir> world=flat`, full client on `test1a`) — then
   `npm run tfc -- admin propose <overlay dir> --note …` (agent key in the `tfc` app settings —
   `%APPDATA%\tfc\config.json` on Windows, `~/.config/tfc/config.json` on macOS/Linux, see `cli/lib/config.mjs`; base on
   the current snapshot, `tfc admin updates` to see status); the host subscribes a test profile
@@ -148,7 +175,8 @@ Recipe status: «работает», «изменён KubeJS», «удалён K
 ### KubeJS sources
 
 Marks in answers: `−` remove, `~` replaceInput/Output, `+` recipe, `#` tag, `@` own item — what the site parsed from the
-line. If files are newer than the parse, the tool warns: time for `npm run kubejs`.
+line. If files are newer than the parse, the tool warns: time for `npm run kubejs` (`npm run dev` replaces a local parse
+with the snapshot's unless `TFC_KEEP_MODS=1`).
 
 | Tool                                                         | Does                                                                            |
 | ------------------------------------------------------------ | ------------------------------------------------------------------------------- |
@@ -436,27 +464,31 @@ a region is named by the nearest city. Climate and rocks not compared with the g
 
 ### Reference guides
 
-| Tool                                       | Does                                                                 |
-| ------------------------------------------ | -------------------------------------------------------------------- |
-| `guides_list(section, query)`              | guides: id, title, section, verified flag, editors                   |
-| `guide_search(query*, section)`            | search guide text                                                    |
-| `guide_get(id*)`                           | guide in `npm run guides` format and its `revision`                  |
-| `guide_put(id*, markdown*, baseRevision*)` | **write to the shared DB**: signed `Claude`, version goes to history |
+| Tool                                                        | Does                                                                 |
+| ----------------------------------------------------------- | -------------------------------------------------------------------- |
+| `guides_list(section, query)`                               | guides: id, title, section, verified flag, editors                   |
+| `guide_search(query*, section)`                             | search guide text                                                    |
+| `guide_get(id*, offset, limit, file)`                       | guide in `npm run guides` format and its `revision`                  |
+| `guide_put(id*, markdown/file, baseRevision*, allowShrink)` | **write to the shared DB**: signed `Claude`, version goes to history |
 
 `guide_put` refuses if the article changed after `guide_get` (Firestore precondition on `updateTime`); for a new article
-`baseRevision` is `"new"`.
+`baseRevision` is `"new"`. A long guide comes in pages that are never clipped (header «ЧАСТЬ гайда»); to edit one, use
+`guide_get file=<abs path>` → edit the file → `guide_put file=<path>`. `guide_put` also refuses text with the clipped-output
+marker «… обрезано:» and text more than 30% (and 2000+ chars) shorter than the stored one unless `allowShrink=true`
+(dev task #278: a page saved from a clipped answer lost 30k chars).
 
 ### Pack addons
 
-| Tool                                                                                                  | Does                                                                                                                                                                                                                                                                                                                                    |
-| ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `addons_list(root)`                                                                                   | addon cards `tools/*/addon.json`: version, folder, side, blocks; flags source/jar/site version mismatch, missing page                                                                                                                                                                                                                   |
-| `addon_devserver(addon*, commands, env, timeout)`                                                     | run the addon test server (gradlew runServer + RCON), return replies and error lines; cross-platform, no python — replaces the manual `test-server.sh` run                                                                                                                                                                              |
-| `pack_devserver(commands, mods, overlay, exclude, include, keep, memory, timeout)`                    | whole pack on a production NeoForge dedicated server (`scripts/pack-stand.mjs`, `npm run stand`): snapshot mods minus client-only, config, full KubeJS; RCON commands; KubeJS script counts/errors, deduped `latest.log` errors, crash report. 3–6 min                                                                                  |
-| `addon_check(id*, root)`                                                                              | release check: card vs `gradle.properties`/`build.sh` and jar (modId, version, items, sha256), version record in `addonVersions` (changelog, status, jar uploaded and matching), block ids, recipes, `icons/`, site page `addon-<mod>` (section, `::addon-block` widgets, version mentioned, jar items not described), deployed version |
-| `addon_versions(id*, full, root)`                                                                     | versions of an addon (Firestore `addonVersions`): date, status, checked, jar on the pack server, changelog missing; `full` — with changelogs. One read per version                                                                                                                                                                      |
-| `addon_version_get(id*, version*)`                                                                    | one version: changelog, checkedNote, revision                                                                                                                                                                                                                                                                                           |
-| `addon_version_put(id*, version*, baseRevision*, changelog, status, checked, checkedNote, date, jar)` | create (`"new"`) or edit a version (signed Claude, revision kept); `jar` — local path, records file/sha256/size (the file itself goes up with `npm run tfc -- admin addon upload`)                                                                                                                                                      |
+| Tool                                                                                                               | Does                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `addons_list(root)`                                                                                                | addon cards `tools/*/addon.json`: version, folder, side, blocks; flags source/jar/site version mismatch, missing page                                                                                                                                                                                                                                                                                                                                     |
+| `addon_devserver(addon*, commands, env, timeout)`                                                                  | run the addon test server (gradlew runServer + RCON), return replies and error lines; a failed build returns at once with the cause; a crash = process exit or an explicit failure line, not any `Exception` in the log; mods follow the `cp` lines of `test-server.sh` under `env` (`IE=1`, `DESTROY=1`…); other conditional steps (datapacks, `MICROTICKS`) are reported, not run; cross-platform, no python — replaces the manual `test-server.sh` run |
+| `pack_devserver(commands, mods, overlay, exclude, include, keep, memory, timeout)`                                 | whole pack on a production NeoForge dedicated server (`scripts/pack-stand.mjs`, `npm run stand`): snapshot mods minus client-only, config, full KubeJS; RCON commands; KubeJS script counts/errors, deduped `latest.log` errors, crash report. 3–6 min                                                                                                                                                                                                    |
+| `pack_client(world, mods, exclude, overlay, shots, interval, settle, timeout, ready, memory, ram, noPack, images)` | full pack **client** on the remote Linux stand `test1a` over SSH (`scripts/client-stand-remote.mjs`, `npm run client-stand`): title screen or, with `world=flat` / a save folder, a singleplayer world; PNGs as images, KubeJS counts, deduped `latest.log` errors, crash report; logs in `~/.cache/tfc-plans/client-stand/results/<id>`. 4–8 min, one run at a time; the stand is prepared once (`npm run client-stand -- prepare`)                      |
+| `addon_check(id*, root)`                                                                                           | release check: card vs `gradle.properties`/`build.sh` and jar (modId, version, items, sha256), version record in `addonVersions` (changelog, status, jar uploaded and matching), block ids, recipes, `icons/`, site page `addon-<mod>` (section, `::addon-block` widgets, version mentioned, jar items not described), deployed version                                                                                                                   |
+| `addon_versions(id*, full, root)`                                                                                  | versions of an addon (Firestore `addonVersions`): date, status, checked, jar on the pack server, changelog missing; `full` — with changelogs. One read per version                                                                                                                                                                                                                                                                                        |
+| `addon_version_get(id*, version*)`                                                                                 | one version: changelog, checkedNote, revision                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `addon_version_put(id*, version*, baseRevision*, changelog, status, checked, checkedNote, date, jar)`              | create (`"new"`) or edit a version (signed Claude, revision kept); `jar` — local path, records file/sha256/size (the file itself goes up with `npm run tfc -- admin addon upload`)                                                                                                                                                                                                                                                                        |
 
 `root` — repo root to read cards from (a git worktree with the new release); default — main checkout. The page itself
 is a guide: `guide_get addon-<mod>` → `guide_put`. Reads: one Firestore document per addon plus `/addons/index.json`

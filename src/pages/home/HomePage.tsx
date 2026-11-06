@@ -1,4 +1,5 @@
 import {
+  ArrowDown,
   ArrowRight,
   Bell,
   BookOpen,
@@ -17,6 +18,7 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search } from '@/shared/ui';
 import { matchesNavigation, type NavigationSearchItem } from './model';
+import foundry from './foundry.svg';
 import styles from './HomePage.module.css';
 
 type Group = 'game' | 'work' | 'extra';
@@ -140,8 +142,70 @@ export function HomePage() {
   return (
     <main className={styles.page}>
       <section className={styles.hero} aria-labelledby="home-title">
-        <h1 id="home-title">TFC Studio</h1>
-        <p>Задачи группы, игровая вики и инструменты для TerraFirmaCraft RealWorld.</p>
+        <div className={styles.intro}>
+          <p className={styles.eyebrow}>Minecraft 1.21.1 · NeoForge</p>
+          <h1 id="home-title">TFC Studio</h1>
+          <p className={styles.tagline}>От первых слитков до своего завода</p>
+          <p className={styles.summary}>
+            Наша команда развивает сборку на основе TerraFirmaCraft RealWorld. Мы добавляем свои машины и рецепты, чтобы
+            связать добычу и обработку ресурсов с автоматизацией и электричеством.
+          </p>
+          <div className={styles.actions}>
+            <a
+              className={styles.primary}
+              href="#home-sections"
+              onClick={(event) => {
+                if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                event.preventDefault();
+                const target = document.getElementById('home-sections');
+                target?.focus({ preventScroll: true });
+                const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                target?.scrollIntoView({ behavior: reduceMotion ? 'instant' : 'smooth' });
+              }}
+            >
+              К разделам <ArrowDown size={18} aria-hidden />
+            </a>
+            <Link className={styles.secondary} to="/addons">
+              Аддоны команды <ArrowRight size={18} aria-hidden />
+            </Link>
+          </div>
+        </div>
+        <img className={styles.illustration} src={foundry} width={520} height={420} alt="" />
+      </section>
+
+      <section className={styles.story} aria-labelledby="home-story">
+        <p className={styles.storyLabel}>О сборке</p>
+        <h2 id="home-story">Как растёт производство</h2>
+        <ol className={styles.storyGrid}>
+          <li>
+            <span aria-hidden>01</span>
+            <h3>Основа RealWorld</h3>
+            <p>
+              Начинаете с выживания и поиска ресурсов. Осваиваете обработку руды и металлургию, чтобы перейти к машинам.
+            </p>
+          </li>
+          <li>
+            <span aria-hidden>02</span>
+            <h3>Аддоны команды</h3>
+            <p>Мы добавляем оборудование и меняем рецепты. Среди наших проектов — Small Diesel и EE Extras.</p>
+          </li>
+          <li>
+            <span aria-hidden>03</span>
+            <h3>Свой завод</h3>
+            <p>
+              Соединяете добычу, переработку и выпуск деталей. Когда производство растёт, планируете линии, транспорт и
+              питание машин.
+            </p>
+          </li>
+        </ol>
+        <Link className={styles.storyLink} to="/addons">
+          Посмотреть аддоны команды <ArrowRight size={16} aria-hidden />
+        </Link>
+      </section>
+
+      <section id="home-sections" className={styles.directory} aria-labelledby="home-directory" tabIndex={-1}>
+        <h2 id="home-directory">Разделы сайта</h2>
+        <p>Рецепты, карта мира и инструменты для совместной игры.</p>
         <Search className={styles.search}>
           <SearchIcon size={18} className="faint" aria-hidden />
           <input
@@ -158,37 +222,37 @@ export function HomePage() {
           />
         </Search>
         <p className="faint small">Поиск по разделам сайта. Id конкретного предмета ищите через Ctrl/Cmd+K.</p>
-      </section>
 
-      {visible.length === 0 ? (
-        <div className="empty" role="status">
-          Раздел не найден. Попробуйте другое слово или откройте справочник.
-        </div>
-      ) : (
-        GROUPS.map((group) => {
-          const items = visible.filter((item) => item.group === group.id);
-          if (!items.length) return null;
-          return (
-            <section key={group.id} className={styles.section} aria-labelledby={`home-${group.id}`}>
-              <h2 id={`home-${group.id}`}>{group.title}</h2>
-              <div className={styles.grid}>
-                {items.map((item) => (
-                  <Link key={item.to} to={item.to} className={styles.card}>
-                    <span className={styles.cardIcon} aria-hidden>
-                      <item.icon size={22} strokeWidth={1.6} />
-                    </span>
-                    <span className={styles.cardText}>
-                      <span className={styles.cardTitle}>{item.title}</span>
-                      <span className={styles.cardDescription}>{item.description}</span>
-                    </span>
-                    <ArrowRight className={styles.cardArrow} size={17} aria-hidden />
-                  </Link>
-                ))}
-              </div>
-            </section>
-          );
-        })
-      )}
+        {visible.length === 0 ? (
+          <div className="empty" role="status">
+            Раздел не найден. Попробуйте другое слово или откройте справочник.
+          </div>
+        ) : (
+          GROUPS.map((group) => {
+            const items = visible.filter((item) => item.group === group.id);
+            if (!items.length) return null;
+            return (
+              <section key={group.id} className={styles.section} aria-labelledby={`home-${group.id}`}>
+                <h3 id={`home-${group.id}`}>{group.title}</h3>
+                <div className={styles.grid}>
+                  {items.map((item) => (
+                    <Link key={item.to} to={item.to} className={styles.card}>
+                      <span className={styles.cardIcon} aria-hidden>
+                        <item.icon size={22} strokeWidth={1.6} />
+                      </span>
+                      <span className={styles.cardText}>
+                        <span className={styles.cardTitle}>{item.title}</span>
+                        <span className={styles.cardDescription}>{item.description}</span>
+                      </span>
+                      <ArrowRight className={styles.cardArrow} size={17} aria-hidden />
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            );
+          })
+        )}
+      </section>
     </main>
   );
 }

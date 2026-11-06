@@ -151,6 +151,9 @@ export function DevPage() {
       );
   }, [tasks, view, kind, area, query]);
   useSearchTrack('dev', query, tasks ? list.length : undefined);
+  // В «Открытых» отложенные задачи — отдельным тихим блоком под основным списком: статус уже назван в его заголовке
+  const later = view === 'open' ? list.filter((t) => t.status === 'backlog') : [];
+  const current = later.length ? list.filter((t) => t.status !== 'backlog') : list;
 
   if (!firebaseEnabled)
     return (
@@ -244,11 +247,25 @@ export function DevPage() {
           {!tasks && !error && <p className={styles.empty}>Загружаю…</p>}
           {tasks && !list.length && <p className={styles.empty}>Задач не найдено.</p>}
 
-          <ul className={styles.list}>
-            {list.map((t) => (
-              <DevRow key={t.id} task={t} onOpen={() => setOpen(t.id)} />
-            ))}
-          </ul>
+          {!!current.length && (
+            <ul className={styles.list}>
+              {current.map((t) => (
+                <DevRow key={t.id} task={t} onOpen={() => setOpen(t.id)} />
+              ))}
+            </ul>
+          )}
+          {!!later.length && (
+            <section className={styles.later} aria-labelledby="dev-later">
+              <h2 id="dev-later" className={styles.laterHead}>
+                Потом · {later.length}
+              </h2>
+              <ul className={cx(styles.list, styles.laterList)}>
+                {later.map((t) => (
+                  <DevRow key={t.id} task={t} quiet onOpen={() => setOpen(t.id)} />
+                ))}
+              </ul>
+            </section>
+          )}
         </>
       )}
       {open && (
@@ -291,16 +308,20 @@ export function DevPage() {
   );
 }
 
-function DevRow({ task: t, onOpen }: { task: DevTask; onOpen: () => void }) {
+function DevRow({ task: t, quiet, onOpen }: { task: DevTask; quiet?: boolean; onOpen: () => void }) {
   const done = t.checklist.filter((c) => c.done).length;
   return (
     <li className={styles.item}>
       <button
-        className={cx(styles.row, (t.status === 'done' || t.status === 'dropped') && styles.closed)}
+        className={cx(
+          styles.row,
+          quiet && styles.quiet,
+          (t.status === 'done' || t.status === 'dropped') && styles.closed,
+        )}
         onClick={onOpen}
       >
         <span className={styles.num}>#{t.id}</span>
-        <span className={cx(styles.status, STATUS_CLASS[t.status])}>{label(STATUSES, t.status)}</span>
+        {!quiet && <span className={cx(styles.status, STATUS_CLASS[t.status])}>{label(STATUSES, t.status)}</span>}
         <span className={styles.title}>
           <DevPriority value={t.priority} />
           {t.title}

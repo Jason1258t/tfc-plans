@@ -5,13 +5,13 @@ For all agents. Player commands: [tfc app](tfc-app.md#датапаки-мира-
 
 ## Sources and destinations
 
-| What                                     | Source of truth                                                              | Destination / action                                                                        |
-| ---------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| New editable recipes, tags or JSON fixes | Site card in Firestore `datapacks`, via MCP `datapack_put`                   | World testing through `tfc datapacks pull <id>`                                             |
-| A draft file within a card               | `entries[].path = data/<namespace>/recipe/…json` (1.21.1: singular `recipe`) | Relative path **inside** the ZIP, not an OS path                                            |
-| Test ZIP from a site card                | Generated from that card                                                     | `<selected world>/datapacks/tfc-plans-<id>.zip`                                             |
-| Legacy/local ZIP without a site card     | File on host PC; after `tfc publish`, world ZIP in snapshot                  | Original filename under `world/datapacks/` in snapshot; inspect with MCP inventory/pack_get |
-| Confirmed shared fix                     | Current server snapshot: ZIP bytes and `datapacks` metadata                  | `<instance>/kubejs/data/tfc-plans-<id>.zip`, managed by CLI                                 |
+| What                                     | Source of truth                                                              | Destination / action                                                                           |
+| ---------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| New editable recipes, tags or JSON fixes | Site card in Firestore `datapacks`, via MCP `datapack_put`                   | World (`world/datapacks/`) or pack (`kubejs/data/`) through `tfc datapacks pull <id>`          |
+| A draft file within a card               | `entries[].path = data/<namespace>/recipe/…json` (1.21.1: singular `recipe`) | Relative path **inside** the ZIP, not an OS path                                               |
+| ZIP from a site card                     | Generated from that card (`installTarget = 'world' \| 'pack'`)               | `<selected world>/datapacks/tfc-plans-<id>.zip` or `<instance>/kubejs/data/tfc-plans-<id>.zip` |
+| Legacy/local ZIP without a site card     | File on host PC; after `tfc publish`, world ZIP in snapshot                  | Original filename under `world/datapacks/` in snapshot; inspect with MCP inventory/pack_get    |
+| Confirmed shared fix                     | Current server snapshot: ZIP bytes and `datapacks` metadata                  | `<instance>/kubejs/data/tfc-plans-<id>.zip`, managed by CLI                                    |
 
 Do not add new editable fixes as loose `kubejs/data` files or hand-built ZIPs in `public/`, `.cache/` or the Git
 worktree. KubeJS is the **delivery destination**, not the normal authoring source. `public/` contains generated
@@ -56,7 +56,9 @@ currently distributes. These tools read only; they do not confirm, remove, uploa
 - Set `TFC_AGENT_NICK` to your own agent name. `datapack_put` signs the author/update and preserves existing authors.
 - New: `datapack_put name=… namespace=… description=… entries=[{path, content, kind}]`. `content` can be JSON text
   or an object; generated entry ids are managed by the tool. During drafting, use `install=false`; an explicit
-  CLI pull by id also fetches test cards. The `install` flag controls default world offers, not pack confirmation.
+  CLI pull by id also fetches test cards. The `install` flag + `installTarget` (`world` or `pack`) control whether
+  `tfc pull` installs the card into `world/datapacks/` or directly into `kubejs/data/` (snapshot confirmation via
+  `confirm` pins a hash separately in the snapshot).
 - Existing: read `datapack_get` immediately before editing. Pass its `revision` as `baseRevision`. Prefer `upsert`
   for changed files, `remove` for paths, `rename=[{from,to}]` for renames. `entries` replaces the entire file list.
   Preserve unrelated entries and document deliberate replacements. On revision conflict, reread and reconcile.
@@ -83,6 +85,10 @@ one requires a selected world (`tfc init --world <world>`). `all` follows defaul
 
 For a pinned card, writing a new draft **does not replace** the confirmed version. Explain this in the report.
 The host uses `unconfirm <id>` to return it to world testing, pulls the draft, checks in game, and confirms it again.
+To ship the new card version together with other pack files in one approval, an agent proposes
+`tfc admin propose --replace-datapack <id> [--remove <path>…] --note …`: the server checks the pinned version it replaces,
+card revision, new hash and data overlaps at propose and at approve, and the switch is one snapshot. Don't patch a pinned
+pack with loose `kubejs/data/` files.
 After the host checks the chosen versions: `tfc datapacks confirm <id> --dry-run`, then `confirm <id> --yes` and
 restart. An agent cannot verify in game or declare that the host has checked a version without their report.
 

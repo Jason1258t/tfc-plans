@@ -158,3 +158,25 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   `tfc-plans-dev` dispatcher rejects unknown arguments. Open tasks migrated on server start (snapshot
   `dev-backup/dev-before-checks-*.db`); closed ones keep the JSON, read-only, and migrate on reopen or a `dev_check`.
   `PATCH checklist` stays for stale clients, matching by `num` or text so marks survive.
+- **2026-11-05, recipe and tag gaps** (dev #235): `collectRefs` (`@tfc/core/recipeRefs`) now reads KubeJS argument strings
+  «4x mod:item» and «#tag», which brought back outputs of 222 script recipes (`create:milling`, `create:cutting`,
+  `tfc:quern`, `kubejs:shaped`…). `kubejs:shaped`/`kubejs:shapeless` are built as normal `pattern`/`key`/`result` JSON, so
+  they get a crafting grid on the site and grid comparison in `recipe_conflicts`; `stackJson` splits a count out of the id.
+  Nested jars follow `META-INF/jarjar/metadata.json` (Forgified Fabric API keeps its modules in `META-INF/jars`), adding
+  `fabric-convention-tags-v2`. `recipe_conflicts` no longer crashes on a grid cell with alternatives. Verified by a
+  scratch rebuild from the pack jars and the real MCP server over stdio.
+- Dev #240 (2026-11-05): `scripts/mcp-call.mjs` (`npm run mcp`) — one call of a `.mcp.json` server tool from a shell with
+  JSON arguments and `--timeout`, instead of temporary JSON-RPC clients (Codex in #218). Verified on both real servers
+  (lists, schema, calls, unknown argument/tool, `@file`, stdin) and on a fake server: crash, missing command, hang
+  (exit 124, process gone), 5 MB answer through a pipe, images, env priority.
+- Dev #255 (2026-11-05): test servers stop with the process that started them (`stopWithProcess` in `mc-server.mjs`), so a
+  broken MCP call no longer leaves a stand running. Not covered: SIGKILL of the MCP server itself.
+- Dev #257 (2026-11-05): `addon_devserver` watches the gradle process: a failed build returns at once with the failed task,
+  deduplicated javac errors and a `libs.sh` hint; a server crash = process exit or an explicit failure line, so `Exception`
+  in a mixin warning no longer stops a healthy server. Verified on `ee-extras-mod` through `mcp-call`: no libs (16 s),
+  boot + RCON (31 s), missing mod dependency (13 s), `timeout=10` (no processes left). Not verified: Windows.
+- Dev #266 (2026-11-05): `addon_devserver` picks mods from the `cp` lines of `test-server.sh` under `env` (simple `if` on a
+  variable, `else`, `$MODS`, `$OLD_JAR`); what it can't parse or run (`for` loops, `PROFILE`, datapack copies, `MICROTICKS`)
+  is listed in the answer. `ee-extras-mod` devtest builds without Destroy jars. Verified on it: plain, `IE=1 TFC=1`, `CC=1`,
+  `DESTROY=1 TFC=1` (`rectest petprepare` registered), `DESTROY=1` alone (missing deps shown), `OLD_JAR`; the parser dry-run
+  on 8 more addons. Not verified: Windows. Not run: `destroy-bridge-mod`, `destroy-extras-mod` still need `./test-server.sh`.

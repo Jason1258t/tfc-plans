@@ -10,20 +10,31 @@
  * возвращаем как было: игроку нужен наш профиль с отдельной папкой. Старые файлы профилей — копией рядом.
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { cacheDir } from './config.mjs';
-import { defaultMinecraftDir, isDir } from './detect.mjs';
+import { defaultMinecraftDir, detectVersions, isDir } from './detect.mjs';
 
 export { defaultMinecraftDir };
 
 const MAVEN = 'https://maven.neoforged.net/releases/net/neoforged/neoforge';
 /** Лаунчер из Microsoft Store / Xbox держит профили в своём файле рядом с обычным */
 const PROFILE_FILES = ['launcher_profiles.json', 'launcher_profiles_microsoft_store.json'];
-export const PROFILE_ID = 'tfc-realworld';
+const PROFILE_ID = 'tfc-realworld';
 export const DEFAULT_NAME = 'TFC-RealWorld';
+
+export function validVersionName(name) {
+  return (
+    typeof name === 'string' &&
+    name.length > 0 &&
+    !/[<>:"/\\|?*]/.test(name) &&
+    !/[. ]$/.test(name) &&
+    !/^(?:\d+(?:\.\d+)+$|neoforge-|(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$))/i.test(name) &&
+    [...name].every((char) => char.charCodeAt(0) >= 32)
+  );
+}
 
 /** Файлы профилей, что есть в папке лаунчера */
 export const profileFiles = (mcDir) => PROFILE_FILES.map((n) => path.join(mcDir, n)).filter((f) => fs.existsSync(f));
@@ -168,10 +179,50 @@ export async function buildFatInstaller(nf, mcDir, dir = path.join(cacheDir(), '
 const readJson = (f) => JSON.parse(fs.readFileSync(f, 'utf8'));
 const writeJson = (f, v) => fs.writeFileSync(f, `${JSON.stringify(v, null, 2)}\n`);
 
+const tlauncherDirs = () => [
+  path.join(process.env.APPDATA || os.homedir(), '.tlauncher'),
+  path.join(os.homedir(), '.tlauncher'),
+];
+const hasTlauncher = () => tlauncherDirs().some(isDir);
+
+/**
+ * Версия NeoForge вместе с родительской Minecraft, без inheritsFrom. Короткое описание TLauncher разворачивает при
+ * первом запуске и стирает блок modpack, а игра идёт на 2 модах (у хоста, dev #262); развёрнутое сразу он не трогает.
+ * Родителя нет — null.
+ */
+function unfoldVersion(mcDir, { inheritsFrom, ...own }) {
+  let parent;
+  try {
+    parent = readJson(path.join(mcDir, 'versions', inheritsFrom, `${inheritsFrom}.json`));
+  } catch {
+    return null;
+  }
+  const names = new Set(own.libraries.map((l) => l.name));
+  return {
+    ...parent,
+    ...own,
+    arguments: {
+      game: [...(parent.arguments?.game ?? []), ...(own.arguments?.game ?? [])],
+      jvm: [...(parent.arguments?.jvm ?? []), ...(own.arguments?.jvm ?? [])],
+    },
+    libraries: [...own.libraries, ...parent.libraries.filter((l) => !names.has(l.name))],
+  };
+}
+
+/** TLauncher завёл свой файл у версии, а блока сборки в нём нет: игра пойдёт не из папки версии */
+export function tlauncherModpackLost(instance) {
+  if (path.basename(path.dirname(path.resolve(instance))) !== 'versions') return false;
+  try {
+    return !readJson(path.join(instance, 'TLauncherAdditional.json')).modpack;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * TLauncher запускает из папки версии только сборки: их признак — блок modpack в TLauncherAdditional.json рядом с
  * версией; без него папка игры — корень .minecraft, и моды не видны. Список модов пустой: моды ставит tfc, TLauncher
- * лишние файлы не трогает (хост, dev #204). Числовые id — как у сборки хоста; другим лаунчерам файл не мешает.
+ * лишние файлы не трогает (хост, dev #204). У каждой локальной копии свои числовые ID.
  */
 function markTlauncherModpack(gameDir, name, mc, nf) {
   const file = path.join(gameDir, 'TLauncherAdditional.json');
@@ -181,6 +232,9 @@ function markTlauncherModpack(gameDir, name, mc, nf) {
   } catch {
     /* файла ещё нет или он битый: TLauncher дополнит свой */
   }
+  // Старые общие ID заменяем, а локальные сохраняем при обновлении и переименовании.
+  const id = (current, shared) =>
+    Number.isSafeInteger(current) && current < 0 && current !== shared ? current : -randomBytes(6).readUIntBE(0, 6) - 1;
   writeJson(file, {
     activateSkinCapeForUserVersion: false,
     skipHashsumValidation: false,
@@ -192,7 +246,6 @@ function markTlauncherModpack(gameDir, name, mc, nf) {
     modpack: {
       modpackMemory: false,
       memory: 0,
-      id: -57012801480201,
       favorite: false,
       userInstall: false,
       populateStatus: false,
@@ -201,18 +254,19 @@ function markTlauncherModpack(gameDir, name, mc, nf) {
       notExists: false,
       totalComments: 0,
       ...cur.modpack,
+      id: id(cur.modpack?.id, -57012801480201),
       name,
       version: {
         mods: [],
         resourcePacks: [],
         maps: [],
         shaderpacks: [],
-        id: -57012801606102,
         name: '1.0',
         available: false,
         remove: false,
         minecraftVersionTypes: [{ id: 5, name: 'neoForge' }],
         ...cur.modpack?.version,
+        id: id(cur.modpack?.version?.id, -57012801606102),
         gameVersionDTO: { id: 53, name: mc },
         minecraftVersionName: { id: 1985, name: nf },
       },
@@ -224,8 +278,18 @@ function markTlauncherModpack(gameDir, name, mc, nf) {
  * Поставить NeoForge nf в mcDir (если ещё нет) и профиль лаунчера на папку gameDir.
  * Возвращает { installed: поставили ли NeoForge сейчас, java, backups: копии файлов профилей, log }.
  */
-export async function installToLauncher({ mcDir, nf, name, title, memoryGb, api, onStep = () => {} }) {
-  const gameDir = path.join(mcDir, 'versions', name);
+export async function installToLauncher({
+  mcDir,
+  nf,
+  name,
+  gameDir = path.join(mcDir, 'versions', name),
+  profileId,
+  memoryGb,
+  api,
+  onStep = () => {},
+}) {
+  const versionDir = path.join(mcDir, 'versions', name);
+  const title = name === DEFAULT_NAME ? 'TFC RealWorld' : name;
   if (!isDir(mcDir))
     throw new Error(`нет папки Minecraft Launcher ${mcDir} — поставьте лаунчер и запустите его хотя бы раз`);
   const files = profileFiles(mcDir);
@@ -244,6 +308,16 @@ export async function installToLauncher({ mcDir, nf, name, title, memoryGb, api,
     backups.push(b);
   }
 
+  const matches = (profile) =>
+    profile?.lastVersionId === name && profile.gameDir && path.resolve(profile.gameDir) === gameDir;
+  const launchers = [...before.values()].map((file) => file.profiles ?? {});
+  const baseId = `${PROFILE_ID}-${name.toLowerCase()}`;
+  const candidates = [profileId, baseId, PROFILE_ID, ...new Set(launchers.flatMap(Object.keys))];
+  const compatible = (id) => launchers.every((profiles) => !Object.hasOwn(profiles, id) || matches(profiles[id]));
+  let id =
+    candidates.find((id) => id && compatible(id) && launchers.some((profiles) => matches(profiles[id]))) ?? baseId;
+  for (let i = 2; !compatible(id); i++) id = `${baseId}-${i}`;
+
   let installed = false;
   let java = null;
   let log = null;
@@ -254,7 +328,6 @@ export async function installToLauncher({ mcDir, nf, name, title, memoryGb, api,
         'нет Java 21 или новее. Проще всего: в Minecraft Launcher один раз запустите обычную версию 1.21.1 ' +
           '(лаунчер скачает Java сам), закройте игру и лаунчер и повторите. Или поставьте Java 21 (adoptium.net).',
       );
-    onStep(`Скачиваю установщик NeoForge ${nf}`);
     onStep(`Скачиваю установщик NeoForge ${nf}`);
     let got = 0;
     const jar = await fetchInstaller(nf, undefined, {
@@ -268,9 +341,11 @@ export async function installToLauncher({ mcDir, nf, name, title, memoryGb, api,
     const step = `Ставлю NeoForge ${nf}`;
     onStep(step);
     log = path.join(cacheDir(), 'neoforge', `install-${nf}.log`);
-    const r = await runInstaller(java.bin, jar, mcDir, (l) => onStep(`${step}: ${l}`));
+    const r = await runInstaller(java.bin, jar, mcDir, (l) => onStep(`${step}: ${l}`)).finally(() => {
+      if (madeMain) fs.rmSync(main, { force: true });
+      else fs.copyFileSync(backups[files.indexOf(main)], main);
+    });
     fs.writeFileSync(log, r.out);
-    if (madeMain) fs.rmSync(main, { force: true });
     if (r.code !== 0 || !isNeoforgeInstalled(mcDir, nf)) {
       const tail = r.out.trim().split('\n').slice(-4).join('\n  ');
       throw new Error(`установщик NeoForge не справился (лог — ${log}):\n  ${tail || r.error || ''}`);
@@ -282,8 +357,31 @@ export async function installToLauncher({ mcDir, nf, name, title, memoryGb, api,
   // официальный лаунчер, и TLauncher (он берёт список из versions/), а папка версии — она же папка игры
   fs.mkdirSync(path.join(gameDir, 'mods'), { recursive: true });
   const nfJson = readJson(path.join(mcDir, 'versions', versionId(nf), `${versionId(nf)}.json`));
-  writeJson(path.join(gameDir, `${name}.json`), { ...nfJson, id: name });
-  markTlauncherModpack(gameDir, name, nfJson.inheritsFrom ?? '1.21.1', nf);
+  fs.mkdirSync(versionDir, { recursive: true });
+  const versionFile = path.join(versionDir, `${name}.json`);
+  const versionBackups = [versionFile, path.join(versionDir, 'TLauncherAdditional.json')]
+    .filter((f) => fs.existsSync(f))
+    .map((f) => {
+      fs.copyFileSync(f, `${f}.tfc-${stamp}`);
+      return `${f}.tfc-${stamp}`;
+    });
+  let oldVersion = {};
+  try {
+    oldVersion = readJson(versionFile);
+  } catch {
+    /* версии ещё нет или файл битый */
+  }
+  // Версию, которую TLauncher уже развернул, не трогаем: короткое описание он разворачивает при запуске заново и
+  // стирает блок modpack (у хоста — дважды). Другой NeoForge без короткого описания не поставить
+  const unfolded = !oldVersion.inheritsFrom && detectVersions(versionDir).loader === versionId(nf);
+  if (!unfolded) {
+    const next = (hasTlauncher() && unfoldVersion(mcDir, nfJson)) || nfJson;
+    // Поля лаунчера и тип версии сохраняем: от NeoForge нужны только его запуск и библиотеки
+    const kept = { ...oldVersion };
+    if (!next.inheritsFrom) delete kept.inheritsFrom;
+    writeJson(versionFile, { ...kept, ...next, id: name, type: oldVersion.type ?? next.type });
+  }
+  if (gameDir === versionDir) markTlauncherModpack(versionDir, name, nfJson.inheritsFrom ?? '1.21.1', nf);
 
   // Профиль: установщик правит «NeoForge» — возвращаем как было, свой профиль добавляем во все файлы профилей
   const now = new Date().toISOString();
@@ -293,21 +391,31 @@ export async function installToLauncher({ mcDir, nf, name, title, memoryGb, api,
     cur.profiles ??= {};
     if (prev.profiles?.NeoForge) cur.profiles.NeoForge = prev.profiles.NeoForge;
     else delete cur.profiles.NeoForge;
-    const old = cur.profiles[PROFILE_ID] ?? {};
-    cur.profiles[PROFILE_ID] = {
+    const old = Object.hasOwn(prev.profiles ?? {}, id) ? prev.profiles[id] : {};
+    cur.profiles[id] = {
       ...old,
-      name: title,
+      name: old.name ?? title,
       type: 'custom',
       icon: old.icon ?? 'Furnace',
       lastVersionId: name,
       gameDir,
-      javaArgs: javaArgs(old.javaArgs, memoryGb),
+      javaArgs: javaArgs(old.javaArgs, memoryGb ?? (old.javaArgs ? undefined : defaultMemoryGb())),
       created: old.created ?? now,
       lastUsed: old.lastUsed ?? now,
     };
     writeJson(f, cur);
   }
-  return { installed, java, backups, log, gameDir, profiles: files.length };
+  return {
+    installed,
+    java,
+    backups,
+    versionBackups,
+    log,
+    gameDir,
+    profileId: id,
+    title: launchers.find((p) => matches(p[id]))?.[id].name ?? title,
+    profiles: files.length,
+  };
 }
 
 /** Установщик NeoForge без окна; onLine — последняя осмысленная строка его вывода (для крутилки) */
@@ -347,17 +455,30 @@ export function javaArgs(prev, memoryGb) {
     prev ||
     '-Xmx2G -XX:+UnlockExperimentalVMOptions -XX:+UseG1GC -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20 ' +
       '-XX:MaxGCPauseMillis=50 -XX:G1HeapRegionSize=32M';
+  if (memoryGb === undefined) return base;
   return /-Xmx\S+/.test(base) ? base.replace(/-Xmx\S+/, `-Xmx${memoryGb}G`) : `-Xmx${memoryGb}G ${base}`;
 }
 
-/** Запущен ли сейчас лаунчер: при выходе он перепишет launcher_profiles.json своей копией */
+/** Запущен ли сейчас лаунчер: он перепишет launcher_profiles.json и TLauncherAdditional.json своими копиями */
 export function launcherRunning() {
   try {
     if (process.platform === 'win32') {
       const r = spawnSync('tasklist', ['/FO', 'CSV', '/NH'], { encoding: 'utf8', windowsHide: true, timeout: 10_000 });
-      return /"Minecraft(Launcher)?\.exe"/i.test(r.stdout ?? '');
+      if (/"(?:Minecraft(?:Launcher)?|TLauncher[^"]*)\.exe"/i.test(r.stdout ?? '')) return true;
+      // TLauncher может работать как java.exe/javaw.exe: тогда его видно только по командной строке процесса
+      const java = spawnSync(
+        'powershell',
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          `@(Get-CimInstance Win32_Process -Filter "Name='java.exe' OR Name='javaw.exe'" | Where-Object { $_.CommandLine -match 'tlauncher' }).Count`,
+        ],
+        { encoding: 'utf8', windowsHide: true, timeout: 15_000 },
+      );
+      return Number(java.stdout) > 0;
     }
-    const r = spawnSync('pgrep', ['-if', 'minecraft.?launcher'], { encoding: 'utf8', timeout: 10_000 });
+    const r = spawnSync('pgrep', ['-if', 'minecraft.?launcher|tlauncher'], { encoding: 'utf8', timeout: 10_000 });
     return r.status === 0 && Boolean(r.stdout.trim());
   } catch {
     return false;
