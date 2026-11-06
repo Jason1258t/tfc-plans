@@ -1,0 +1,45 @@
+{
+  "type": "create:mixing",
+  "ingredients": [
+    {
+      "item": "kubejs:dust_briquette/ingot/chromium"
+    },
+    {
+      "item": "kubejs:dust_briquette/ingot/nickel"
+    },
+    {
+      "item": "kubejs:dust_briquette/ingot/nickel"
+    },
+    {
+      "item": "minecraft:charcoal"
+    },
+    {
+      "item": "kubejs:dust_briquette/ingot/iron"
+    },
+    {
+      "item": "kubejs:dust_briquette/ingot/iron"
+    },
+    {
+      "item": "kubejs:dust_briquette/ingot/iron"
+    },
+    {
+      "item": "kubejs:dust_briquette/ingot/iron"
+    },
+    {
+      "item": "kubejs:dust_briquette/ingot/iron"
+    },
+    {
+      "tag": "destroy:fluxes"
+    }
+  ],
+  "results": [
+    {
+      "amount": 500,
+      "id": "destroy:molten_stainless_steel"
+    },
+    {
+      "id": "destroy:slag"
+    }
+  ],
+  "heat_requirement": "heated"
+}

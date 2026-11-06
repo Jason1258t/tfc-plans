@@ -310,3 +310,5 @@ under `kubejs/data` over the pinned M12, and the M12 site card carries the equiv
   transfer on an existing electric pump, then publish the pack snapshot.
 
 - Host: install **Miner Tools 1.2.0** (dev #244) on the server and clients. Open an existing belt and check the group toggles and both list modes in the client.
+
+- Host: try pack update `u20261106-133656-3ca6` (dev #293) on a test profile. Check dust and all five briquette sizes in EMI, then approve.

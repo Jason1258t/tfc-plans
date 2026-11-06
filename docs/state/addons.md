@@ -647,3 +647,9 @@ persistence after restart.
 1.3.0 (dev #253): a fluid tap attaches to any face of a Create or Better Fluids tank and fills held containers
 through the NeoForge fluid capability in survival. The dev server tested a bucket and an IE jerrycan on all
 six faces of both tank types, fluid accounting and detachment when the tank is broken.
+
+### Destroy Extras 0.7.1 — текстуры чистой пыли (dev #293)
+
+18 пылей и 90 брикетов получили цветные спрайты 16 × 16. Модели пылей берут цвет из PNG.
+Обновление сборки `u20261106-133656-3ca6` включает JAR и скрипт KubeJS, который выбирает спрайт брикета
+по размеру и металлу. ID и рецепты сохранены. Gradle и проверка ресурсов прошли, отображение проверит хост.

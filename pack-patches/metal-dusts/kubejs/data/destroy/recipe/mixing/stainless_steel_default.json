@@ -1,0 +1,41 @@
+{
+  "type": "create:mixing",
+  "ingredients": [
+    {
+      "item": "kubejs:dust_briquette/ingot/chromium"
+    },
+    {
+      "item": "kubejs:dust_briquette/ingot/nickel"
+    },
+    {
+      "item": "kubejs:dust_briquette/ingot/nickel"
+    },
+    {
+      "item": "minecraft:charcoal"
+    },
+    {
+      "item": "kubejs:dust_briquette/ingot/iron"
+    },
+    {
+      "item": "kubejs:dust_briquette/ingot/iron"
+    },
+    {
+      "item": "kubejs:dust_briquette/ingot/iron"
+    },
+    {
+      "item": "kubejs:dust_briquette/ingot/iron"
+    },
+    {
+      "item": "kubejs:dust_briquette/ingot/iron"
+    }
+  ],
+  "results": [
+    {
+      "amount": 500,
+      "id": "destroy:molten_stainless_steel"
+    }
+  ],
+  "heat_requirement": "heated",
+  "duration": 1,
+  "__comment": "Mixing recipes do not allow you to specify an actual duration - only fast (0) or slow (any other number)"
+}

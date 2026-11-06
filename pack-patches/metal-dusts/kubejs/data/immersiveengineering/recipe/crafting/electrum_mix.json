@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "kubejs:dust_briquette/ingot/gold"
+    },
+    {
+      "item": "kubejs:dust_briquette/ingot/silver"
+    }
+  ],
+  "result": {
+    "id": "destroy_extras:electrum_dust",
+    "count": 28
+  }
+}

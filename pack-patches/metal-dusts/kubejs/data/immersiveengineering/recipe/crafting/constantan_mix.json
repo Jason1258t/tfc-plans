@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "kubejs:dust_briquette/ingot/copper"
+    },
+    {
+      "item": "kubejs:dust_briquette/ingot/nickel"
+    }
+  ],
+  "result": {
+    "id": "destroy_extras:constantan_dust",
+    "count": 28
+  }
+}
