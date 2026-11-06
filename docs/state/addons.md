@@ -544,6 +544,20 @@ Watut's `@Redirect` of the same call), latency rebroadcast every 100 ticks, Shar
 - Not checked: a real guest over the network, Windows (host). Host's original complaint «по 10 раз нажимать» — cause
   not confirmed; if a port binds but friends can't connect, `random` doesn't help (network side).
 
+## Perf Fix (`tools/perf-fix-mod`, 2026-11-06, dev #296)
+
+Server performance fixes found with spark (dev #267, doc:53), each a `@Pseudo` mixin that only applies when its mod is
+present. 1.0.0: JourneyMap Shared Maps 1.1.3 `RegionTileStore.writeTile` (main thread, `readAllBytes` of the whole
+region for an 8200-byte header, 4 opens; regions compacted only on `ServerStoppingEvent`) → one background writer,
+same format, one open, header cell write, same `LOCKS`, drain on `ServerStoppedEvent`; TFC 4.2.9
+`Octopoteuthis.remove` → `IGlow.tryRemoveLight` checked the entity's chunk but read `lightPos` (far / ZERO → sync chunk
+load) → skip when the light's chunk isn't loaded (`TFCLightBlock.randomTick` removes it 1/20). Dev server
+(`test-server.sh`, `/pftest`): 2000 tiles 1439 ms → 71 ms on the main thread, region files read back by the mod match
+memory (also after restart); far light chunk loaded without the addon, not with it. Switches
+`-Dperf_fix.jmsharedmaps.disabled`, `-Dperf_fix.glow.disabled`. **Not in game**; confirm with a new spark profile on the
+host. Next candidates from the profiles: pig pen (players), loaded chunk count 9–11k with render 12 (unknown ticket
+holder), Sable physics.
+
 ## Create: Stress Fix (`tools/stress-fix-mod`, 2026-10-22)
 
 After relog water wheels stopped and the network showed millions of SU load: Create accumulates an «unloaded part»
