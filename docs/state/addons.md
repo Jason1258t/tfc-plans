@@ -181,6 +181,12 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-06 (dev #289): **EE Extras 2.20.0** — installed boards display scaled Create: Power Grid component models
+(Apache-2.0), thinner visible traces and a tier-specific substrate. The editor offers direct component selection and
+highlights the pins of the preview. New placements of capacitors, diodes and meters require L2, transistors L3.
+The EE simulation and the existing topology format are preserved. Dev server: topology 15/15, L1–L3 placement and
+removal, relay indicator at 24.00 V. Dev client: 10 PCB checks passed, including L1 palette lock and installed board.
+
 2026-11-06 (dev #280): **EE Extras 2.19.0** — the editor takes one blank of the design tier from the inventory or table
 slot. Assembled boards render their thin cuttable outline and one-pixel contacts from the design. The thin spool
 connects individual contacts to another contact or EE device. The editor has a direct tool palette, and the table
