@@ -15,6 +15,9 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **Working boards** (dev #280): install EE Extras 2.19.0 on the server and clients. In the pack profile, assemble a board
+  using a stack from the inventory, place a trimmed board and connect a thin lead to a terminal.
+
 - **Surface wire** (2026-11-06, dev #205): EE Extras 2.16.0 — `tfc pull addons` on the server and players. Host: in
   game, lay the surface wire along walls and floors, branch it, cut it, check the junction box and the thin insulated
   wire, and judge laying comfort and looks (piece 16 m, 1 item per metre — `ee_extras-server.toml`). Remove after.

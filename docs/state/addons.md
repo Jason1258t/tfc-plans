@@ -181,6 +181,13 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-06 (dev #280): **EE Extras 2.19.0** — the editor takes one blank of the design tier from the inventory or table
+slot. Assembled boards render their thin cuttable outline and one-pixel contacts from the design. The thin spool
+connects individual contacts to another contact or EE device. The editor has a direct tool palette, and the table
+has an updated inventory model. Legacy boards keep their terminal IDs. The dedicated server checked L1–L3
+assembly, six positioned contacts, the cut outline, the thin lead, and item drops. The dev client checked design
+saving, assembly, and the installed outline and contacts.
+
 2026-11-06 (dev #286): **EE Extras 2.18.2** — renamed the surface wire in Russian. Routing and periodic support checks
 use the outline of fence posts and rails. On the dev server, a 6.13 m line over oak fences survived the periodic
 checks without drops. Removing three fence blocks dropped only the unsupported section. A separate heater circuit
