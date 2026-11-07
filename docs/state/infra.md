@@ -408,19 +408,24 @@ shows the result (badge in «Библиотека схем», block «Прове
   biggest (sites print in parallel). Worker silent > 20 min or past deadline + 30 min → every schematic of the batch
   gets «неясное» (`not_finished`) with the last stage/log line; a stale result stays visible as «прошлая проверка».
 - API: `GET /print-checks` (site login with the player mark or any key; CORS) — `{ env, running, queued, items: { id:
-{ state: queued|running|done, position, current, previous } } }`; admin key: `POST /print-checks/claim { worker,
+{ state: queued|running|done, position, current, previous } } }`; `worker` or admin key: `POST /print-checks/claim { worker,
 max }`, `/progress { batch, stage, note }`, `/result { batch, result }` or `{ batch, error, log }`,
   `/recheck { ids } | { all: true }`. Reads Firestore only through the 5-minute schematic list cache.
 - **Worker — `test1a`** (`scripts/print-worker.mjs`, cron wrapper `scripts/print-worker.sh`): claims a batch,
   `fetchPack` if the cached snapshot differs, downloads addon jars by sha256 to `~/.cache/tfc-plans/print-addons`,
   copies pack + NeoForge to `/dev/shm`, runs `printCheck` (survival, restart, addons as `mods`) in a child process,
   heartbeats every minute, posts the result. Child crash or kill → `error` + log tail → «неясное».
-- Install on `test1a` (once): `git clone https://github.com/Jason1258t/tfc-plans ~/tfc-stand/print-worker/repo`,
-  `npm ci --ignore-scripts` there, `~/tfc-stand/print-worker/env` (600) with `TFC_PACK_URL` and `TFC_PACK_TOKEN`
-  (admin key `print-worker`), crontab
-  `*/10 * * * * ~/tfc-stand/print-worker/repo/scripts/print-worker.sh >> ~/tfc-stand/print-worker/worker.log 2>&1`.
+- Installed on `test1a` 2026-11-07: clone `~/tfc-stand/print-worker/repo`, key in `~/tfc-stand/print-worker/env`
+  (600; `TFC_PACK_URL`, `TFC_PACK_TOKEN`) — key `print-worker`, id `e1c60c9b88ad`, role `worker` (reads the pack,
+  writes only claim/progress/result; no admin, no site login), crontab
+  `*/10 * * * * $HOME/tfc-stand/print-worker/repo/scripts/print-worker.sh >> $HOME/tfc-stand/print-worker/worker.log 2>&1`.
   The wrapper takes `flock`, `git pull --ff-only` (+ `npm ci` when the lock file changed), then runs the worker
-  until the queue is empty.
+  until the queue is empty. Revoke: `tfc admin revoke e1c60c9b88ad` (or on the VPS `node cli.mjs key revoke …`),
+  remove the crontab line. A new key: on the VPS `cd /opt/tfc-pack && sudo -u tfcpack env DATA_DIR=/var/lib/tfc-pack
+node cli.mjs key add print-worker --role worker`, write it into the env file.
+- First full run (test copy, 2026-11-07, snapshot `20261106-194903-3047` + 13 addons): boot ~2 min; 8 small schematics
+  ~1 min, 30k blocks ~5 min, the 190k-block cathedral 19 min of printing. Results archived on `test1a` in
+  `~/tfc-stand/print-worker/test-2026-11-07/`.
 
 ## Remote Minecraft client stand — scripted (dev #284)
 
