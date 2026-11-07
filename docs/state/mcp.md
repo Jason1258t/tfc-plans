@@ -180,3 +180,15 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   is listed in the answer. `ee-extras-mod` devtest builds without Destroy jars. Verified on it: plain, `IE=1 TFC=1`, `CC=1`,
   `DESTROY=1 TFC=1` (`rectest petprepare` registered), `DESTROY=1` alone (missing deps shown), `OLD_JAR`; the parser dry-run
   on 8 more addons. Not verified: Windows. Not run: `destroy-bridge-mod`, `destroy-extras-mod` still need `./test-server.sh`.
+- Dev #303 (2026-11-07): `schematic_print_check` — library schematics printed by the Create schematicannon on the
+  whole-pack stand (KubeJS harness `scripts/mcp/print-check.kubejs.js`, from the manual one of #196), problems sorted
+  by cause into the #305 status groups (ok / not_in_pack / broken / unclear) with codes, block, cells, example; JSON via
+  `json`/`save`. `printCheckPrepare` + `npm run stand -- --until …` + `printCheckReport` run it on another host. The
+  stand got a lock (`stand.lock`), `waitFor`/`--until`, and one retry after the mod-loading race «An uncaught parallel
+  processing error». Verified on test1a (snapshot `20261106-194903-3047`, survival + restart) with «постройка» and
+  oil_facory: «постройка» ok both ways; oil_facory — restart re-places and spends 380 createdeco catwalks without
+  `schematic-fix`, 0 with it (as found by hand in #196); 7 entities without an item, catwalks `bottom` differs from the
+  schematic either way. A stand-boot failure shows as `stand_error` with the summary. The MCP path itself (`printCheck`
+  with `runStand` on the Mac) was checked only up to input errors and the lock: the Mac stand was busy with another
+  session's run and has 8 GB. Not verified: `creative`, `reset`, `prefill`, `not_loaded` (#304), `lost_data` on a
+  schematic that has it.

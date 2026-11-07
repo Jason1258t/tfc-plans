@@ -387,13 +387,20 @@ export async function runStand({
   const java = home ? path.join(home, 'bin', isWin ? 'java.exe' : 'java') : 'java';
   const modsDir = path.join(cache, 'mods');
   if (!fs.existsSync(modsDir)) throw new Error(`нет ${modsDir} — сначала npm run pack:fetch`);
-  const server = await ensureServer(nf, java, onLog);
+  const unlock = lockStand();
+  let server;
+  try {
+    server = await ensureServer(nf, java, onLog);
+  } catch (e) {
+    unlock();
+    throw e;
+  }
   const run = path.join(STAND, 'run');
   // Клиентский мод, который видно только при запуске (главный класс — клиентский), исключаем и запускаем снова
   const found = {};
   let sel;
   let r;
-  const unlock = lockStand();
+  let racy = false;
   try {
     for (let attempt = 0; ; attempt++) {
       sel = selectMods({ modsDir, extra: mods, exclude, include, skip: found });
@@ -402,7 +409,14 @@ export async function runStand({
       r = await launch({ run, java, nf, timeout, rconPort, commands, waitFor, onLog });
       if (r.booted || attempt >= 4) break;
       const bad = clientOnlyFailures(run).filter((id) => !(id in found));
-      if (!bad.length) break;
+      if (!bad.length) {
+        // гонка параллельной загрузки модов (NPE «unbound value» в реестрах) — второй запуск обычно проходит
+        if (racy || !/An uncaught parallel processing error/.test(readText(path.join(run, 'logs', 'latest.log'))))
+          break;
+        racy = true;
+        onLog('ошибка параллельной загрузки модов — запускаю ещё раз');
+        continue;
+      }
       for (const id of bad) found[id] = 'клиентский главный класс (найден при запуске)';
       onLog(`клиентские моды: ${bad.join(', ')} — исключаю и запускаю снова`);
     }

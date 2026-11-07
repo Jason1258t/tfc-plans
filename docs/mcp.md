@@ -566,7 +566,8 @@ group, sites: [{ mode, status, group, required, invalid, placed, toPlace, spent,
 - Completion: `runStand`'s `waitFor` polls `logs/kubejs/server.log` every 5 s for «[CT] ВСЁ»/«ОШИБКА»; no «[CT] старт»
   within 60 s after `ct start` — the harness did not load, stop. Default `delay` 1 tick (Create's config 10).
 - One run at a time: `runStand` (also `pack_devserver`, `npm run stand`) takes `~/.cache/tfc-plans/stand/stand.lock`
-  and refuses while another live process holds it — `run/` and the ports are shared. A second stand needs its own
+  and refuses while another live process holds it — `run/` and the ports are shared. A mod-loading race («An uncaught
+  parallel processing error») gets one automatic retry. A second stand needs its own
   `TFC_STAND_DIR` and `port`. The Mac has 8 GB: one stand at a time there.
 - Elsewhere (test1a, the background check of #305): `printCheckPrepare(opts, overlayDir)` writes the overlay and
   returns `prep`; run `npm run stand -- --overlay <dir> --cmd "ct start" --until '\[CT\] (ВСЁ|ОШИБКА)' --until-timeout
