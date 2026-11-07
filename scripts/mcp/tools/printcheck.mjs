@@ -12,33 +12,12 @@ import { fileURLToPath } from 'node:url';
 import { runStand } from '../../pack-stand.mjs';
 import { named, num, str } from '../fmt.mjs';
 import { schematicFile } from './schematics.mjs';
+import { PRINT_CODES, PRINT_STATUS } from '@tfc/core/printCheck';
 
 const HARNESS = fileURLToPath(new URL('../print-check.kubejs.js', import.meta.url));
 const REPLACE_MODES = ['не заменять', 'твёрдое на твёрдое', 'твёрдое на любое', 'твёрдое на любое и пустоту'];
 
-/** Группы итога (худшая — итог схемы) */
-export const PRINT_STATUS = {
-  1: { status: 'ok', text: 'печатается полностью' },
-  2: { status: 'not_in_pack', text: 'нет в сборке' },
-  3: { status: 'broken', text: 'битое, чего редактор не видит' },
-  4: { status: 'unclear', text: 'неясное — нужно разобраться' },
-};
-
-/** Причины: группа и текст для игрока */
-export const PRINT_CODES = {
-  not_in_pack: [2, 'блока нет в сборке — замените его в редакторе схем'],
-  not_loaded: [3, 'схема не загружается в пушку — пересохраните схему (старые или битые данные блоков)'],
-  no_item: [3, 'у блока нет своего предмета — пушка его не ставит; замените блок'],
-  wrong_state: [3, 'блок встаёт с другими свойствами'],
-  lost_data: [3, 'теряются данные блок-сущности'],
-  restart_replaces: [3, 'повторный запуск ставит блок заново — пушка считает готовый блок неверным'],
-  missing: [4, 'блок не поставлен, причина неизвестна'],
-  other_block: [4, 'на месте другой блок'],
-  stuck: [4, 'пушка застряла'],
-  overspend: [4, 'потрачено больше, чем нужно по схеме'],
-  not_finished: [4, 'проверка не завершилась'],
-  stand_error: [4, 'ошибка стенда или харнесса'],
-};
+export { PRINT_CODES, PRINT_STATUS };
 
 let busy = false;
 

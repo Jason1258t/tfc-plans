@@ -38,6 +38,11 @@
  *                                     → запись в addonVersions (новая — черновик)          admin
  *   GET    /admin/changes           — правки конфигов от агента (Firestore configChanges) admin
  *   POST   /admin/changes/:id       — { status: applied|rejected, results, updateTime } admin
+ *   GET    /print-checks            — проверка печати схем (dev #305): очередь и итоги (CORS)  player/вход сайта
+ *   POST   /print-checks/claim      — исполнитель берёт пачку { worker, max }   admin
+ *   POST   /print-checks/progress   — { batch, stage, note }                     admin
+ *   POST   /print-checks/result     — { batch, result } или { batch, error, log } admin
+ *   POST   /print-checks/recheck    — { ids } или { all: true }                  admin
  *   /dev/…                           — задачи разработки (SQLite, lib/dev.mjs): ключ любой роли или вход сайта
  *     GET|POST /dev/tasks, GET|PATCH|DELETE /dev/tasks/:id, POST /dev/tasks/:id/notes,
  *     POST /dev/tasks/:id/checks | start | finish (без baseRev),
@@ -62,6 +67,7 @@ import { openSite } from './lib/site.mjs';
 import { openSiteLogins } from './lib/site-login.mjs';
 import { openStore } from './lib/store.mjs';
 import { openNeoforge } from './lib/neoforge.mjs';
+import { openPrintChecks } from './lib/print-checks.mjs';
 import { openUpdates } from './lib/updates.mjs';
 import { HttpError, SHA256_RE } from './lib/util.mjs';
 
@@ -115,6 +121,7 @@ const site = openSite(config.dataDir, {
 });
 const siteLogins = openSiteLogins(config.dataDir, { projectId: devSite.projectId, googleToken: site.googleToken });
 const updates = await openUpdates(config.dataDir, store, site);
+const printChecks = openPrintChecks(config.dataDir, { store, site });
 /** После смены текущего снимка: собрать (off — нет) и как публиковать (по умолчанию — только пробно) */
 const autoBuild = env.AUTO_BUILD !== 'off';
 const autoPublish = PUBLISH.includes(env.AUTO_PUBLISH) ? env.AUTO_PUBLISH : 'dry-run';
@@ -338,6 +345,23 @@ async function handle(req, res) {
     const r = await siteLogins.login(who, c.sub);
     console.log(`→ вход сайта ${c.sub.slice(0, 8)}… ключом «${who.name}» (${who.role})`);
     return json(res, 200, r);
+  }
+
+  // --- проверка печати схем: сайт читает, исполнитель на стенде берёт пачки и шлёт итоги
+  if (parts[0] === 'print-checks') {
+    devCors(req, res);
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      return res.end();
+    }
+    if (req.method === 'GET' && parts.length === 1) {
+      await authorizeDev(req);
+      return json(res, 200, await printChecks.status());
+    }
+    const action = { claim: 'claim', progress: 'progress', result: 'finish', recheck: 'recheck' }[parts[1]];
+    if (req.method !== 'POST' || parts.length !== 2 || !action) throw new HttpError(404, 'Нет такого адреса');
+    const who = await authorize(req, 'admin');
+    return json(res, 200, await printChecks[action](await readJsonBody(req), who));
   }
 
   // --- задачи разработки

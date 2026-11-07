@@ -395,6 +395,33 @@ Verified on `20261105-135644-3704` with NeoForge 21.1.251. The RAM-backed run bo
 answered RCON `list`, and stopped. Both listeners bound to loopback. The snapshot reported recipe and tag errors
 without blocking startup.
 
+## Background print check of library schematics (dev #305)
+
+Every library schematic is printed with the Create schematicannon on the whole-pack stand in the background; the site
+shows the result (badge in «Библиотека схем», block «Проверка печати пушкой» in the schematic panel).
+
+- **Queue and results — pack server** (`server/pack-server/lib/print-checks.mjs`, `<DATA_DIR>/print-checks.json`).
+  A schematic waits when it has no result for its key (source `fileId`+`sha256`, `replace`, `shape` — description
+  edits don't count) and the environment (current snapshot + latest `released` version of every non-manual addon,
+  as `tfc pull` installs). New/changed schematics first, then rechecks after a new snapshot/addon; small before big.
+  One batch at a time: ≤ 8 schematics and ≤ 40k blocks (bigger ones alone); deadline `900 + 0.12 × blocks` s of the
+  biggest (sites print in parallel). Worker silent > 20 min or past deadline + 30 min → every schematic of the batch
+  gets «неясное» (`not_finished`) with the last stage/log line; a stale result stays visible as «прошлая проверка».
+- API: `GET /print-checks` (site login with the player mark or any key; CORS) — `{ env, running, queued, items: { id:
+{ state: queued|running|done, position, current, previous } } }`; admin key: `POST /print-checks/claim { worker,
+max }`, `/progress { batch, stage, note }`, `/result { batch, result }` or `{ batch, error, log }`,
+  `/recheck { ids } | { all: true }`. Reads Firestore only through the 5-minute schematic list cache.
+- **Worker — `test1a`** (`scripts/print-worker.mjs`, cron wrapper `scripts/print-worker.sh`): claims a batch,
+  `fetchPack` if the cached snapshot differs, downloads addon jars by sha256 to `~/.cache/tfc-plans/print-addons`,
+  copies pack + NeoForge to `/dev/shm`, runs `printCheck` (survival, restart, addons as `mods`) in a child process,
+  heartbeats every minute, posts the result. Child crash or kill → `error` + log tail → «неясное».
+- Install on `test1a` (once): `git clone https://github.com/Jason1258t/tfc-plans ~/tfc-stand/print-worker/repo`,
+  `npm ci --ignore-scripts` there, `~/tfc-stand/print-worker/env` (600) with `TFC_PACK_URL` and `TFC_PACK_TOKEN`
+  (admin key `print-worker`), crontab
+  `*/10 * * * * ~/tfc-stand/print-worker/repo/scripts/print-worker.sh >> ~/tfc-stand/print-worker/worker.log 2>&1`.
+  The wrapper takes `flock`, `git pull --ff-only` (+ `npm ci` when the lock file changed), then runs the worker
+  until the queue is empty.
+
 ## Remote Minecraft client stand — scripted (dev #284)
 
 `npm run client-stand -- <prepare|run|clean>` on the Mac (`scripts/client-stand-remote.mjs`) drives

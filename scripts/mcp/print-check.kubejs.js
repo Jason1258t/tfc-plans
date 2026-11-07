@@ -70,11 +70,37 @@ function ctTarget(p) {
   return t;
 }
 
-// Ключи данных блок-сущности схемы, которых в мире нет или они другие
-function ctLostKeys(level, sbe, wbe) {
+// Состояние, которое игра сама переписывает после установки (не данные постройки): флаги и счётчики тиков, фаза
+// анимации, кто поставил, связи, которые блок пересчитывает по соседям, абсолютные координаты. По итогам прогонов
+// #305: NeedsSpeedUpdate у кинетических блоков Create, Owner (ставит пушка), кулдаун воронки, счётчики печи TFC,
+// стороны труб, контроллер ремня, угол и точка тяги станка-качалки. Сравниваются без них, на любой глубине.
+const CT_VOLATILE = ['NeedsSpeedUpdate', 'Owner', 'TransferCooldown', 'lastPlayerTick', 'lastMaxBurnTicks'];
+const CT_PIPE_SIDES = ['north', 'south', 'east', 'west', 'up', 'down'];
+const CT_VOLATILE_BY_BLOCK = {
+  'createdieselgenerators:pumpjack_crank': ['Angle', 'BackPosX', 'BackPosY', 'BackPosZ'],
+  'create:fluid_pipe': CT_PIPE_SIDES,
+  'create:encased_fluid_pipe': CT_PIPE_SIDES,
+  'copycats:copycat_fluid_pipe': CT_PIPE_SIDES,
+  'create:belt': ['Controller'],
+};
+
+function ctStrip(tag, skip) {
+  var c = tag.copy();
+  c.getAllKeys()
+    .toArray()
+    .forEach((k) => {
+      if (skip.indexOf(String(k)) >= 0) c.remove(k);
+      else if (c.get(k).getId() == 10) c.put(k, ctStrip(c.get(k), skip));
+    });
+  return c;
+}
+
+// Ключи данных блок-сущности схемы, которых в мире нет или они другие (без CT_VOLATILE)
+function ctLostKeys(level, sbe, wbe, block) {
   var ra = level.registryAccess();
-  var a = sbe.saveWithoutMetadata(ra);
-  var b = wbe ? wbe.saveWithoutMetadata(ra) : null;
+  var skip = CT_VOLATILE.concat(CT_VOLATILE_BY_BLOCK[block] || []);
+  var a = ctStrip(sbe.saveWithoutMetadata(ra), skip);
+  var b = wbe ? ctStrip(wbe.saveWithoutMetadata(ra), skip) : null;
   var lost = [];
   a.getAllKeys().forEach((k) => {
     if (!b || !b.contains(k) || !a.get(k).equals(b.get(k))) lost.push(String(k));
@@ -107,7 +133,7 @@ function ctCompare(level, site) {
       else if (w.getBlock() == t.state.getBlock()) add('state', ctBlockId(t.state), '', ex);
       else add('other', ctBlockId(t.state), ctBlockId(w), ex);
     } else if (t.be) {
-      var d = ctLostKeys(level, t.be, level.getBlockEntity(t.pos));
+      var d = ctLostKeys(level, t.be, level.getBlockEntity(t.pos), ctBlockId(t.state));
       if (d.lost.length)
         add(
           'data',
