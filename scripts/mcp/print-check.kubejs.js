@@ -71,11 +71,17 @@ function ctTarget(p) {
 }
 
 // Состояние, которое игра сама переписывает после установки (не данные постройки): флаги и счётчики тиков, фаза
-// анимации. По итогам прогонов #305: NeedsSpeedUpdate у всех кинетических блоков Create, кулдаун воронки, счётчики
-// печи TFC, угол и точка тяги станка-качалки. Сравниваются без них, на любой глубине (ExtraCogwheel и т. п.).
-const CT_VOLATILE = ['NeedsSpeedUpdate', 'TransferCooldown', 'lastPlayerTick', 'lastMaxBurnTicks'];
+// анимации, кто поставил, связи, которые блок пересчитывает по соседям, абсолютные координаты. По итогам прогонов
+// #305: NeedsSpeedUpdate у кинетических блоков Create, Owner (ставит пушка), кулдаун воронки, счётчики печи TFC,
+// стороны труб, контроллер ремня, угол и точка тяги станка-качалки. Сравниваются без них, на любой глубине.
+const CT_VOLATILE = ['NeedsSpeedUpdate', 'Owner', 'TransferCooldown', 'lastPlayerTick', 'lastMaxBurnTicks'];
+const CT_PIPE_SIDES = ['north', 'south', 'east', 'west', 'up', 'down'];
 const CT_VOLATILE_BY_BLOCK = {
   'createdieselgenerators:pumpjack_crank': ['Angle', 'BackPosX', 'BackPosY', 'BackPosZ'],
+  'create:fluid_pipe': CT_PIPE_SIDES,
+  'create:encased_fluid_pipe': CT_PIPE_SIDES,
+  'copycats:copycat_fluid_pipe': CT_PIPE_SIDES,
+  'create:belt': ['Controller'],
 };
 
 function ctStrip(tag, skip) {
