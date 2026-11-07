@@ -569,7 +569,10 @@ group, sites: [{ mode, status, group, required, invalid, placed, toPlace, spent,
   and refuses while another live process holds it — `run/` and the ports are shared. A mod-loading race («An uncaught
   parallel processing error») gets one automatic retry. A second stand needs its own
   `TFC_STAND_DIR` and `port`. The Mac has 8 GB: one stand at a time there.
-- Elsewhere (test1a, the background check of #305): `printCheckPrepare(opts, overlayDir)` writes the overlay and
+- Background check of every library schematic (dev #305) — `scripts/print-worker.mjs` on test1a calls `printCheck`;
+  queue, results and API — [state/infra.md](state/infra.md) «Background print check». Group texts and hints for the
+  site live in `@tfc/core/printCheck`.
+- Elsewhere by hand: `printCheckPrepare(opts, overlayDir)` writes the overlay and
   returns `prep`; run `npm run stand -- --overlay <dir> --cmd "ct start" --until '\[CT\] (ВСЁ|ОШИБКА)' --until-timeout
 2400` there (see [state/infra.md](state/infra.md) «Remote whole-pack stand»), copy back `logs/latest.log` and
   `logs/kubejs/server.log`, then `printCheckReport(prep, { booted, run, text })` gives `{ text, result }`.
