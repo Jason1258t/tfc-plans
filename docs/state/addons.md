@@ -12,6 +12,13 @@ game check — [pending.md](pending.md).
   и универсальной крышки. Проверены размеры, прозрачность и повторяемость полос провода; грани и иконки отрисованы
   проверочными моделями MCP. Интеграция с моделями и просмотр в клиенте относятся к приёмке #205 и #273.
 
+## Paused development
+
+- EE Extras PCB modules, #301 (2026-11-08): paused at the owner's request, not released or merged.
+  Worktree `.claude/worktrees/pcb-modules`, branches `feat/pcb-modules` in parent and addon repositories.
+  Prototype format 8; multi-cell editor and initial L1/L2 modules, including explicit-power sequential logic.
+  Full continuation state and remaining scope: [checkpoint](../plans/pcb-modules-checkpoint.md); plan doc:59.
+
 ## Versions (since 2026-10-23)
 
 Task «Написание чендж логов для наших аддонов, и их поддержка в генераторе патчноута» (group «Разработка»), plan doc
