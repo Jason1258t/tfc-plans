@@ -14,6 +14,7 @@
  * на сервере падают команды Create/FTB с BootstrapMethodError → LocalPlayer).
  *
  *   npm run stand -- --cmd "kubejs hand" --mod tools/x/build/libs/x.jar --overlay <папка> --keep --list
+ *   npm run stand -- --overlay <папка> --cmd "ct start" --until "\\[CT\\] ВСЁ" --until-timeout 1800
  *   --level-type tfc:overworld — настоящая генерация TFC вместо плоского мира (жилы, биомы)
  *   --port N — другой порт (и N+1 для RCON), вместе с TFC_STAND_DIR — параллельно другому стенду
  */
@@ -225,8 +226,11 @@ function prepare({ run, server, cache, sel, overlay, keep, memory, port, rconPor
   fs.writeFileSync(path.join(run, 'user_jvm_args.txt'), `-Xmx${memory}\n`);
 }
 
-/** Запуск: ждать «Done» (или падения), RCON-команды, stop. → { booted, exited, crashed, bootSec, rconText } */
-async function launch({ run, java, nf, timeout, rconPort, commands, onLog }) {
+/**
+ * Запуск: ждать «Done» (или падения), RCON-команды, waitFor, stop. → { booted, exited, crashed, bootSec, rconText, waited }
+ * waitFor — { check(run, sec) → true, когда можно останавливать; timeout } — опрос раз в 5 с после команд.
+ */
+async function launch({ run, java, nf, timeout, rconPort, commands, waitFor, onLog }) {
   const out = path.join(run, 'stand.log');
   const fd = fs.openSync(out, 'w');
   const argsFile = path.join('libraries', 'net', 'neoforged', 'neoforge', nf, isWin ? 'win_args.txt' : 'unix_args.txt');
@@ -277,6 +281,23 @@ async function launch({ run, java, nf, timeout, rconPort, commands, onLog }) {
       rconText = 'RCON: ' + e.message;
     }
   }
+  let waited = null;
+  if (booted && waitFor) {
+    const w0 = Date.now();
+    waited = 'timeout';
+    while (Date.now() - w0 < (waitFor.timeout ?? 1800) * 1000) {
+      if (exited) {
+        waited = 'exited';
+        break;
+      }
+      if (waitFor.check(run, Math.round((Date.now() - w0) / 1000))) {
+        waited = 'done';
+        break;
+      }
+      await sleep(5000);
+    }
+    onLog(`ожидание: ${waited} за ${Math.round((Date.now() - w0) / 1000)} с`);
+  }
   if (booted && !exited)
     try {
       await runRcon(rconPort, RCON_PASSWORD, ['stop']);
@@ -285,7 +306,35 @@ async function launch({ run, java, nf, timeout, rconPort, commands, onLog }) {
     }
   for (let i = 0; i < 30 && !exited; i++) await sleep(1000);
   if (!exited) killTree(child.pid);
-  return { booted, exited, crashed, bootSec, rconText };
+  return { booted, exited, crashed, bootSec, rconText, waited };
+}
+
+/**
+ * Один прогон за раз: run/ общий (prepare его чистит), порты тоже. Замок — stand.lock с pid процесса node;
+ * замок умершего процесса снимается. → функция снятия замка.
+ */
+function lockStand() {
+  const file = path.join(STAND, 'stand.lock');
+  fs.mkdirSync(STAND, { recursive: true });
+  for (let i = 0; i < 2; i++) {
+    try {
+      fs.writeFileSync(file, `${process.pid}\n`, { flag: 'wx' });
+      return () => fs.rmSync(file, { force: true });
+    } catch (e) {
+      if (e.code !== 'EEXIST') throw e;
+      const pid = Number(readText(file).trim());
+      let alive = false;
+      try {
+        alive = pid > 0 && pid !== process.pid && process.kill(pid, 0);
+      } catch {
+        alive = false;
+      }
+      if (alive)
+        throw new Error(`Стенд занят другим прогоном (процесс ${pid}, ${file}) — дождитесь его конца и повторите.`);
+      fs.rmSync(file, { force: true });
+    }
+  }
+  throw new Error(`Не удалось взять замок стенда ${file}`);
 }
 
 /** Последний краш-отчёт в run/ или null */
@@ -313,7 +362,7 @@ function clientOnlyFailures(run) {
 /**
  * Прогон стенда. → { ok, booted, text } — text по-русски, для человека и агента.
  * commands — RCON-команды после загрузки («sleep N» — пауза), mods — свои jar, overlay — папка поверх run/
- * (как оверлей tfc admin propose: kubejs/…, config/…), keep — оставить world/ прошлого прогона.
+ * (как оверлей tfc admin propose: kubejs/…, config/…), keep — оставить world/ прошлого прогона, waitFor — см. launch.
  */
 export async function runStand({
   commands = [],
@@ -329,6 +378,7 @@ export async function runStand({
   rconPort = 25616,
   port = 25617,
   cache = PACK_CACHE,
+  waitFor = null,
   onLog = () => {},
 } = {}) {
   const ver = packVersion(cache);
@@ -337,24 +387,43 @@ export async function runStand({
   const java = home ? path.join(home, 'bin', isWin ? 'java.exe' : 'java') : 'java';
   const modsDir = path.join(cache, 'mods');
   if (!fs.existsSync(modsDir)) throw new Error(`нет ${modsDir} — сначала npm run pack:fetch`);
-  const server = await ensureServer(nf, java, onLog);
+  const unlock = lockStand();
+  let server;
+  try {
+    server = await ensureServer(nf, java, onLog);
+  } catch (e) {
+    unlock();
+    throw e;
+  }
   const run = path.join(STAND, 'run');
   // Клиентский мод, который видно только при запуске (главный класс — клиентский), исключаем и запускаем снова
   const found = {};
   let sel;
   let r;
-  for (let attempt = 0; ; attempt++) {
-    sel = selectMods({ modsDir, extra: mods, exclude, include, skip: found });
-    prepare({ run, server, cache, sel, overlay, keep, memory, port, rconPort, levelType });
-    onLog(`запускаю сервер: модов ${sel.use.length}, исключено ${sel.skipped.length}`);
-    r = await launch({ run, java, nf, timeout, rconPort, commands, onLog });
-    if (r.booted || attempt >= 4) break;
-    const bad = clientOnlyFailures(run).filter((id) => !(id in found));
-    if (!bad.length) break;
-    for (const id of bad) found[id] = 'клиентский главный класс (найден при запуске)';
-    onLog(`клиентские моды: ${bad.join(', ')} — исключаю и запускаю снова`);
+  let racy = false;
+  try {
+    for (let attempt = 0; ; attempt++) {
+      sel = selectMods({ modsDir, extra: mods, exclude, include, skip: found });
+      prepare({ run, server, cache, sel, overlay, keep, memory, port, rconPort, levelType });
+      onLog(`запускаю сервер: модов ${sel.use.length}, исключено ${sel.skipped.length}`);
+      r = await launch({ run, java, nf, timeout, rconPort, commands, waitFor, onLog });
+      if (r.booted || attempt >= 4) break;
+      const bad = clientOnlyFailures(run).filter((id) => !(id in found));
+      if (!bad.length) {
+        // гонка параллельной загрузки модов (NPE «unbound value» в реестрах) — второй запуск обычно проходит
+        if (racy || !/An uncaught parallel processing error/.test(readText(path.join(run, 'logs', 'latest.log'))))
+          break;
+        racy = true;
+        onLog('ошибка параллельной загрузки модов — запускаю ещё раз');
+        continue;
+      }
+      for (const id of bad) found[id] = 'клиентский главный класс (найден при запуске)';
+      onLog(`клиентские моды: ${bad.join(', ')} — исключаю и запускаю снова`);
+    }
+  } finally {
+    unlock();
   }
-  const { booted, exited, crashed, bootSec, rconText } = r;
+  const { booted, exited, crashed, bootSec, rconText, waited } = r;
 
   // ------------------------------------------------------------ сводка
   const latest = readText(path.join(run, 'logs', 'latest.log')) || readText(out);
@@ -396,7 +465,7 @@ export async function runStand({
     ...(crash ? [`Краш: ${crash} (log_analyze path=${crash})`] : []),
     `Лог: ${path.join(run, 'logs', 'latest.log')} (log_analyze path=…)`,
   ].join('\n');
-  return { ok: booted && !crash, booted, text };
+  return { ok: booted && !crash, booted, waited, run, text };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
@@ -415,6 +484,18 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     timeout: Number(one('--timeout') ?? 900),
     memory: one('--memory') ?? '6G',
     neoforge: one('--neoforge') ?? null,
+    // --until <regex>: после команд ждать его в --until-file (logs/kubejs/server.log) до --until-timeout (1800) с
+    ...(one('--until')
+      ? {
+          waitFor: {
+            timeout: Number(one('--until-timeout') ?? 1800),
+            check: (run) =>
+              new RegExp(one('--until')).test(
+                readText(path.join(run, one('--until-file') ?? 'logs/kubejs/server.log')),
+              ),
+          },
+        }
+      : {}),
     onLog: (s) => console.error(s),
   };
   if (argv.includes('--list')) {
