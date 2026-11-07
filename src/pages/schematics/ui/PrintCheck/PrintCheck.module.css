@@ -1,0 +1,131 @@
+/* Проверка печати пушкой (dev #305): значок в списке библиотеки и блок в панели схемы. */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.g1 {
+  color: var(--success);
+  background: var(--success-soft);
+  border-color: transparent;
+}
+
+.g2 {
+  color: var(--imp-2);
+  background: color-mix(in srgb, var(--imp-2) 14%, transparent);
+  border-color: transparent;
+}
+
+.g3 {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-color: transparent;
+}
+
+.g4 {
+  color: var(--amethyst);
+  background: var(--amethyst-soft);
+  border-color: transparent;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.block h4 {
+  margin: 0;
+}
+
+.block p {
+  margin: 0;
+}
+
+.previous {
+  opacity: 0.55;
+}
+
+.group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+}
+
+.group > summary {
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.problems {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.problem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.problemHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.example {
+  margin: 2px 0 0;
+  max-height: 160px;
+  overflow: auto;
+  padding: 4px 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+}
+
+.spent {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 10px;
+  font-size: 13px;
+}
+
+.spent li {
+  display: contents;
+}
+
+.spentName {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

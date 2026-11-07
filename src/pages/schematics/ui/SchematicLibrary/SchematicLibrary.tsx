@@ -16,6 +16,7 @@ import styles from './SchematicLibrary.module.css';
 import type { SavedSchematic } from '@/entities/schematic';
 import { Markdown } from '@/components/Markdown';
 import { MarkdownField } from '@/components/MarkdownField';
+import { PrintBadge, PrintCheckBlock } from '../PrintCheck';
 
 interface Props {
   /** id записей, уже открытых в редакторе */
@@ -155,7 +156,9 @@ export function SchematicLibrary({ openIds, onOpen, onDownload }: Props) {
                 >
                   <FileBox size={18} className="faint" />
                   <span className="grow">
-                    <span className={styles.libName}>{entry.name}</span>
+                    <span className={styles.libName}>
+                      {entry.name} <PrintBadge id={entry.id} updatedAt={entry.updatedAt} />
+                    </span>
                     <span className="faint small">{summary(entry)}</span>
                   </span>
                 </button>
@@ -323,6 +326,8 @@ function SchematicPanel({ entry, busy, canRender, onPreview, onClose, onError }:
         </div>
 
         <p className={cx('faint', 'small', styles.panelMeta)}>{summary(entry)}</p>
+
+        <PrintCheckBlock id={entry.id} updatedAt={entry.updatedAt} />
 
         <div className={styles.panelDesc}>
           <div className="row">
