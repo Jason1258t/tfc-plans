@@ -39,9 +39,9 @@
  *   GET    /admin/changes           — правки конфигов от агента (Firestore configChanges) admin
  *   POST   /admin/changes/:id       — { status: applied|rejected, results, updateTime } admin
  *   GET    /print-checks            — проверка печати схем (dev #305): очередь и итоги (CORS)  player/вход сайта
- *   POST   /print-checks/claim      — исполнитель берёт пачку { worker, max }   admin
- *   POST   /print-checks/progress   — { batch, stage, note }                     admin
- *   POST   /print-checks/result     — { batch, result } или { batch, error, log } admin
+ *   POST   /print-checks/claim      — исполнитель берёт пачку { worker, max }   worker
+ *   POST   /print-checks/progress   — { batch, stage, note }                     worker
+ *   POST   /print-checks/result     — { batch, result } или { batch, error, log } worker
  *   POST   /print-checks/recheck    — { ids } или { all: true }                  admin
  *   /dev/…                           — задачи разработки (SQLite, lib/dev.mjs): ключ любой роли или вход сайта
  *     GET|POST /dev/tasks, GET|PATCH|DELETE /dev/tasks/:id, POST /dev/tasks/:id/notes,
@@ -136,8 +136,14 @@ async function authorize(req, role) {
   const who = await keys.check(req.headers.authorization);
   if (!who) throw new HttpError(401, 'Нужен ключ: Authorization: Bearer <ключ>');
   if (role === 'admin' && who.role !== 'admin') throw new HttpError(403, 'Нужен ключ администратора');
+  if (role === 'worker' && who.role !== 'admin' && who.role !== 'worker')
+    throw new HttpError(403, 'Нужен ключ исполнителя проверки печати или администратора');
+  // Ключ исполнителя вне очереди проверки — только чтение (и пачка мелких файлов снимка для pack:fetch)
+  if (who.role === 'worker' && role !== 'worker' && req.method !== 'GET' && !WORKER_POST.has(req.url?.split('?')[0]))
+    throw new HttpError(403, 'Ключ исполнителя проверки печати: только чтение сборки и очередь проверки');
   return who;
 }
+const WORKER_POST = new Set(['/blobs/pack']);
 
 /** Вход сайта: ID-токен Firebase (+ App Check) → его поля; token — сам JWT */
 async function siteClaims(req, token) {
@@ -360,7 +366,7 @@ async function handle(req, res) {
     }
     const action = { claim: 'claim', progress: 'progress', result: 'finish', recheck: 'recheck' }[parts[1]];
     if (req.method !== 'POST' || parts.length !== 2 || !action) throw new HttpError(404, 'Нет такого адреса');
-    const who = await authorize(req, 'admin');
+    const who = await authorize(req, action === 'recheck' ? 'admin' : 'worker');
     return json(res, 200, await printChecks[action](await readJsonBody(req), who));
   }
 

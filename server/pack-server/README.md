@@ -71,7 +71,11 @@ sudo -u tfcpack env DATA_DIR=/var/lib/tfc-pack node cli.mjs key revoke <id>
 Ключ показывается один раз. Потерял — выдайте новый и отзовите старый. Последний ключ администратора отозвать
 нельзя: сначала выдайте другой. Перезапускать службу не нужно.
 
-Ключ любой роли — это и вход на сайт (`POST /site/login`, отметка `player` на анонимном входе Firebase,
+Роль `worker` — исполнитель проверки печати схем на машине со стендом (dev #305; ключ `print-worker` на test1a,
+`~/tfc-stand/print-worker/env`): читает сборку и схемы (`GET`, `POST /blobs/pack`), пишет только `POST
+/print-checks/claim|progress|result`; прочие записи, вход на сайт и `/admin` ему закрыты.
+
+Ключ роли `player` или `admin` — это и вход на сайт (`POST /site/login`, отметка `player` на анонимном входе Firebase,
 `lib/site-login.mjs`). Отзыв через API (`tfc admin revoke`) снимает и отметки сайта; `cli.mjs key revoke` — нет.
 
 ## Что можно класть в снимок
@@ -178,9 +182,9 @@ sudo -u tfcpack env DATA_DIR=/var/lib/tfc-pack node cli.mjs key revoke <id>
 | `GET /site/schematics`            | player                | `{ items }` — записи библиотеки схем без превью                                                                                                                                                                                                                                      |
 | `GET /site/files/:id`             | player                | исходник схемы (байты из хранилища сайта); только файлы схем                                                                                                                                                                                                                         |
 | `GET /print-checks`               | player или вход сайта | проверка печати схем (dev #305): `{ env, running, queued, items }` — по каждой схеме состояние (`queued`/`running`/`done`), место в очереди, свежий и прошлый итог                                                                                                                   |
-| `POST /print-checks/claim`        | admin                 | `{ worker, max }` → `{ batch }` — исполнитель на стенде берёт пачку схем (одна за раз) или `{ batch: null, reason }`                                                                                                                                                                 |
-| `POST /print-checks/progress`     | admin                 | `{ batch, stage, note }` — отметка исполнителя; молчит дольше 20 мин — пачка закрывается итогом «неясное»                                                                                                                                                                            |
-| `POST /print-checks/result`       | admin                 | `{ batch, result }` (итог `schematic_print_check`) или `{ batch, error, log }` — проверка не дошла до конца                                                                                                                                                                          |
+| `POST /print-checks/claim`        | worker                | `{ worker, max }` → `{ batch }` — исполнитель на стенде берёт пачку схем (одна за раз) или `{ batch: null, reason }`                                                                                                                                                                 |
+| `POST /print-checks/progress`     | worker                | `{ batch, stage, note }` — отметка исполнителя; молчит дольше 20 мин — пачка закрывается итогом «неясное»                                                                                                                                                                            |
+| `POST /print-checks/result`       | worker                | `{ batch, result }` (итог `schematic_print_check`) или `{ batch, error, log }` — проверка не дошла до конца                                                                                                                                                                          |
 | `POST /print-checks/recheck`      | admin                 | `{ ids }` или `{ all: true }` — перепроверить                                                                                                                                                                                                                                        |
 | `POST /site/reports`              | player                | отчёт `tfc report`: тело — байты (до 25 МБ), заголовок `X-Report` — `encodeURIComponent(JSON)` `{ name, kind: crash\|log, type, label, note, files, taskId }` → `files/{id}` в хранилище сайта (автор — имя ключа); ответ `{ id, name, size, chunks }`                               |
 | `GET /admin/updates`              | admin                 | `{ updates }` — предложенные обновления сборки (новые сверху): `{ id, author, note, base, files, remove, status, snapshot?, conflicts?, jarConflicts? }` (конфликты — у ждущих)                                                                                                      |

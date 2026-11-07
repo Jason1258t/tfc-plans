@@ -8,7 +8,8 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { HttpError, readJson, writeJsonAtomic } from './util.mjs';
 
-export const ROLES = ['player', 'admin'];
+/** worker — исполнитель проверки печати схем (dev #305): читает сборку и схемы, пишет только в очередь проверки */
+export const ROLES = ['player', 'admin', 'worker'];
 const NAME_RE = /^[\p{L}\p{N}_ .-]{2,32}$/u;
 
 const hashKey = (key) => createHash('sha256').update(String(key)).digest('hex');
