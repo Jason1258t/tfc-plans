@@ -562,6 +562,20 @@ memory (also after restart); far light chunk loaded without the addon, not with 
 host. Next candidates from the profiles: pig pen (players), loaded chunk count 9–11k with render 12 (unknown ticket
 holder), Sable physics.
 
+## Create: Schematic Fix (`tools/schematic-fix-mod`, 1.0.0, 2026-11-07, dev #196)
+
+Schematicannon «ate» blocks. Causes (bytecode Create 6.0.10, Create: Fast Schematic Cannon 1.4.1): Create re-places a
+block whose world state differs from the schematic in any property (consumes the item, `setBlock` without drops) —
+createdeco catwalks recompute `bottom` by tick, so every restart re-placed them; Fast Schematic Cannon checks its
+`blocks_unbreak` list (all TFC/Firmalife ores, blaze burner) after items and gunpowder are taken. Mixin at HEAD of
+`SchematicannonBlockEntity.shouldPlace`: same block kind in the world → skip; world block in the CFC list (reflection on
+its `Config.blocks_unbreak`) → skip. Verified on the whole-pack stand with a KubeJS harness (`check/`, schematics from
+the site): without the addon a restart of oil_facory broke 380 catwalks and stalled, ore under «постройка» lost 310
+items; with it a restart costs 0 and consumption = schematic − ore cells. Also without the addon: 8 library schematics
+(creative crate) and 1900s_workshop (survival, exact item set, mid-print reset) print completely. Not changed: blocks
+without an item (piles, rope anchors) are never printed; other-kind blocks are still replaced without drops. **Not in
+game.**
+
 ## Create: Stress Fix (`tools/stress-fix-mod`, 2026-10-22)
 
 After relog water wheels stopped and the network showed millions of SU load: Create accumulates an «unloaded part»
