@@ -123,7 +123,7 @@ The server sends a short version of this to agents as its instructions.
 
 ## Tools
 
-73 in total. Asterisk — required parameter. Lists have `limit` and `offset`; the answer says «дальше: offset=…».
+74 in total. Asterisk — required parameter. Lists have `limit` and `offset`; the answer says «дальше: offset=…».
 
 Regex queries (`query` of `log_analyze`, `regex=true` in searches, `grep`, `members`) are case-insensitive; leading
 Java/PCRE flags (`(?i)…`, `(?s)…`) are accepted. Non-regex search understands «`a|b`» — any of.
@@ -534,6 +534,34 @@ changes content); block colours for renders — `colors.json` there. Parsing and
 | `schematic_render(id \| file, view, y, edited, shape, size)`                                                                      | PNG: `iso` / `top` / `layer`; block = cube coloured by its model (copycats — by material), no partial shapes; `file` — local .nbt before upload                                                                                                                                                                                                                                   |
 | `schematic_put(id, baseRevision, file, name, description, author, replace, replaceSet, shape, blocks, asSource, preview, dryRun)` | **write**: no `id` — upload `file` (duplicate check by content hash, then pack server `POST /site/schematics`, author default `TFC_AGENT_NICK`, iso preview); with `id` + `baseRevision` — fields via Firestore PATCH with `updateTime` precondition, new source (`file` or `blocks` cell edits) via the pack server with the revision. `dryRun` — check only                     |
 
+#### Print check on the stand (`schematic_print_check`, `tools/printcheck.mjs`, dev #303)
+
+`schematic_print_check(ids*, mode, restart, reset, resetAt, edited, mods, exclude, prefill, prefillHeight, replaceMode,
+delay, stall, timeout, memory)` prints library schematics with the Create schematicannon on the whole-pack stand
+(`pack_devserver`) and reports in Russian per schematic × mode: blocks placed, cells still different from the schematic
+grouped as «нет» (missing), «свойства» (same block, other properties), «другой» (other block), «данные» (block-entity
+NBT differs) with one example each, and in survival — items spent vs required («больше/меньше нужного»).
+`restart` (default on) runs the same schematic again over the finished build: placed and spent must be 0 (Create
+re-places blocks it compares wrongly — e.g. without the `schematic-fix` addon a restart of oil_facory re-places 380
+`createdeco` catwalks). `reset` presses «Стоп»→«Пуск» at `resetAt` (0.5) of the print.
+
+- Files: the schematic as the site downloads it (`edited=false` — the source) goes to the overlay's
+  `schematics/uploaded/Test/s<N>.nbt`; the KubeJS harness `scripts/mcp/print-check.kubejs.js` gets
+  `var CT_CFG = {…}` prepended and goes to `kubejs/server_scripts/zz_print_check.js`. Sites stand in a row along X
+  (z = 200), cannon 6 blocks off the anchor's corner; `mode=creative` — creative crate under the cannon, `survival` —
+  5 barrels around it refilled every second from an exact bank (required × 1.1, × 2.2 with restart, + 16; TFC stacks
+  are 16–32) plus gunpowder; `prefill=<block>` fills the bottom `prefillHeight` (4) layers of the box first (e.g. ore
+  the cannon must replace); `mods` — built addon jars (`tools/<addon>/build/libs/*.jar`).
+- Completion: the stand's new `waitFor` (`runStand`) polls `logs/kubejs/server.log` every 5 s for «[CT] ВСЁ»/«ОШИБКА»;
+  no «[CT] старт» within 60 s after `ct start` — the harness did not load, stop. A print with no new block for `stall`
+  (180) s is reported as stuck with the cannon state and missing item. Default `delay` 1 tick (Create's config 10).
+- Results are lines `[CT] R {json}` in that log (`ev` start/reset/report/error); the tool turns them into text. One
+  run at a time: `runStand` (also `pack_devserver`, `npm run stand`) takes `~/.cache/tfc-plans/stand/stand.lock` and
+  refuses while another live process holds it — `run/` and the ports are shared.
+  Slow: ~2 min boot + print (oil_facory, 33×26×60: minutes) — from a shell `node scripts/mcp-call.mjs tfc-pack schematic_print_check '{"ids":[…]}' --timeout 3600`.
+- Harness quirks (Rhino): `var` in loops, classes via `Java.loadClass`, stacks via `AllItems.X.asStack()` /
+  `Item.of`, ids via `BuiltInRegistries`.
+
 Preview is written only when the source changes or with `preview=true`: the site's own 3D preview is better, so a
 metadata edit keeps it. Block edits: `{ pos, to?, block }`, `block` — `ns:id[prop=v]`, `minecraft:air` (explicit air,
 clears space on paste) or `#remove`; replaced cells lose block-entity data; multi-palette schematics are refused.
@@ -608,7 +636,7 @@ scripts/mcp/
   tools/<section>.mjs  section tools: code (classes, mixins, decompile, deps), disasm (bytecode), logs, config (config_get,
                       config_propose, config_changes), pack, kubejs, books (+books-index), blocks (+blocks-data), blockstates, site
                       (tasks, groups, plan docs and datapacks with writes; site scripts), schematics (+schematic-render — library
-                      schematics: read, render, upload/edit), map (+map-climate,
+                      schematics: read, render, upload/edit), printcheck (schematic_print_check, harness ../print-check.kubejs.js), map (+map-climate,
                       map-png — PNG read/write), resources (model_render, texture_get, resources_check), addons
                       (addons_list, addon_check, addon_versions, addon_version_get/put), candidates (candidate_get),
                       reports (reports_list, report_get — players' logs/crashes from the site, analysed by logs.mjs)

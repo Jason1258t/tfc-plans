@@ -408,6 +408,16 @@ async function schematicsList(a) {
   });
 }
 
+/** Файл схемы для стенда (schematic_print_check): { entry, bytes, size }; edited — как «Скачать» на сайте */
+export async function schematicFile(id, { edited = true } = {}) {
+  const entry = await findEntry(id);
+  const src = await parse(await sourceBytes(entry));
+  if (!edited) return { entry, bytes: await sourceBytes(entry), size: src.size };
+  const { replace, shape } = savedEdits({ replace: entry.replace ?? [], shape: entry.shape });
+  const bytes = await applyEdits(src.parsed, replace, shape);
+  return { entry, bytes, size: (await parse(bytes)).size };
+}
+
 // ---------------------------------------------------------------- schematic_get
 
 function shapeText(sh) {
