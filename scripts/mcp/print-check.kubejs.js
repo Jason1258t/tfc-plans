@@ -18,6 +18,7 @@ const CT_Mirror = Java.loadClass('net.minecraft.world.level.block.Mirror');
 const CT_Direction = Java.loadClass('net.minecraft.core.Direction');
 const CT_Registries = Java.loadClass('net.minecraft.core.registries.BuiltInRegistries');
 const CT_RL = Java.loadClass('net.minecraft.resources.ResourceLocation');
+const CT_Integer = Java.loadClass('java.lang.Integer');
 const CT_Dirs = ['north', 'south', 'east', 'west', 'down'];
 
 var ct = null;
@@ -435,7 +436,8 @@ ServerEvents.commandRegistry((event) => {
       Commands.literal('start').executes((ctx) => {
         var server = ctx.source.server;
         try {
-          CT_AllConfigs.server().schematics.schematicannonDelay.set(CT_CFG.delay);
+          // Настройка типизирована дженериком: число из JS ушло бы как Double, и tickPrinter падает на (Integer) cast
+          CT_AllConfigs.server().schematics.schematicannonDelay.set(CT_Integer.valueOf(CT_CFG.delay | 0));
           ct = { tick: 0, sites: [] };
           for (var i = 0; i < CT_CFG.sites.length; i++) ct.sites.push(ctStart(server, CT_CFG.sites[i], i));
           ctLog('старт');
