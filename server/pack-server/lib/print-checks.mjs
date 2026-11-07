@@ -17,7 +17,22 @@ const MAX_BATCH_BLOCKS = 40_000;
 const BEAT_MS = 20 * 60_000;
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
-const sha = (v) => createHash('sha256').update(JSON.stringify(v)).digest('hex').slice(0, 16);
+/** JSON с ключами по алфавиту: Firestore отдаёт поля карт (shape) в разном порядке */
+const canon = (v) =>
+  Array.isArray(v)
+    ? v.map(canon)
+    : v && typeof v === 'object'
+      ? Object.fromEntries(
+          Object.keys(v)
+            .sort()
+            .map((k) => [k, canon(v[k])]),
+        )
+      : v;
+const sha = (v) =>
+  createHash('sha256')
+    .update(JSON.stringify(canon(v)))
+    .digest('hex')
+    .slice(0, 16);
 
 /** Что влияет на печать: сам файл, замены и форма; описание и превью — нет */
 export const schematicKey = (s) =>
@@ -103,7 +118,7 @@ export function openPrintChecks(dataDir, { store, site }) {
 
   function store1(s, schem, claim, e, extra = {}) {
     const old = state.results[s.id];
-    if (old && (old.key !== claim.key || old.envKey !== e.key)) state.previous[s.id] = old;
+    if (old) state.previous[s.id] = old;
     state.results[s.id] = {
       key: claim.revision === (schem.revision ?? claim.revision) ? claim.key : null,
       revision: schem.revision ?? claim.revision,

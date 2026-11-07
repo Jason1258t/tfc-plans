@@ -32,6 +32,9 @@ export interface PrintChecks {
   items: Record<string, PrintItem>;
 }
 
+/** Ошибка «нет входа с ключом» — не сбой, а подсказка */
+export const NO_KEY = 'no-key';
+
 let data: PrintChecks | null = null;
 let error: string | null = null;
 const listeners = new Set<() => void>();
@@ -46,6 +49,8 @@ async function load() {
     if (appCheck) h['X-Firebase-AppCheck'] = (await getToken(appCheck, false)).token;
     const res = await fetch(`${PACK_SERVER_URL}/print-checks`, { headers: h, signal: AbortSignal.timeout(20_000) });
     const out = await res.json().catch(() => ({}));
+    // Без ключа игрока сервер не отдаёт проверки (как и задачи разработки)
+    if (res.status === 401 || res.status === 403) throw new Error(NO_KEY);
     if (!res.ok) throw new Error(out.error ?? `${res.status}`);
     data = out as PrintChecks;
     error = null;
@@ -59,14 +64,12 @@ let users = 0;
 let timer: ReturnType<typeof setInterval> | null = null;
 let unsub = () => {};
 
-/** Состояние проверок; пока хоть один компонент подписан — опрос раз в минуту (только со входом игрока) */
+/** Состояние проверок; пока хоть один компонент подписан — опрос раз в минуту и при смене входа */
 export function usePrintChecks(): { data: PrintChecks | null; error: string | null } {
   useEffect(() => {
     users++;
     if (users === 1) {
-      unsub = subscribeAccess((s) => {
-        if (s === 'player') load();
-      });
+      unsub = subscribeAccess(() => load());
       timer = setInterval(load, 60_000);
     }
     return () => {

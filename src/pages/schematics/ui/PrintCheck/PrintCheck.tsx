@@ -1,7 +1,7 @@
 import { PRINT_HINTS, PRINT_STATUS, type PrintGroup, type PrintSchematic } from '@tfc/core/printCheck';
 import { blockEntry, ItemIcon, itemName, useItems } from '@/shared/pack-data';
 import { cx, timeAgo } from '@/shared/lib';
-import { printView, usePrintChecks, type PrintRecord } from '../../model/printChecks';
+import { NO_KEY, printView, usePrintChecks, type PrintRecord } from '../../model/printChecks';
 import styles from './PrintCheck.module.css';
 
 /** Короткие подписи значка */
@@ -51,7 +51,9 @@ export function PrintCheckBlock({ id, updatedAt }: { id: string; updatedAt: numb
       <h4>Проверка печати пушкой</h4>
       {!v ? (
         <p className="faint small">
-          {error ? `Сервер сборки не ответил: ${error}` : 'Статус виден после входа с ключом игрока.'}
+          {error && error !== NO_KEY
+            ? `Сервер сборки не ответил: ${error}`
+            : 'Статус виден после входа с ключом игрока.'}
         </p>
       ) : v.state === 'done' && v.item?.current ? (
         <CheckRecord rec={v.item.current} />
@@ -89,11 +91,18 @@ function CheckRecord({ rec }: { rec: PrintRecord }) {
           {rec.addons.length ? ` с аддонами (${rec.addons.length})` : ''}
         </span>
       </p>
-      {site?.placed != null && (
+      {site?.toPlace != null && (
         <p className="faint small">
-          Поставлено {site.placed} из {site.toPlace}
-          {site.sec != null ? ` за ${site.sec} с` : ''}
-          {site.restart ? `; повторный запуск поставил ${site.restart.placed}` : ''}.
+          {site.mismatch
+            ? `Не совпало со схемой ${site.mismatch} из ${site.toPlace} клеток`
+            : `Все ${site.toPlace} клеток совпали со схемой`}
+          {site.sec != null ? `, печать ${site.sec} с` : ''}
+          {site.restart
+            ? site.restart.placed
+              ? `; повторный запуск поставил ещё ${site.restart.placed}`
+              : '; повторный запуск ничего не тратит'
+            : ''}
+          .
         </p>
       )}
       <Problems schematic={s} />
@@ -138,7 +147,7 @@ function Problems({ schematic }: { schematic: PrintSchematic }) {
                     <BlockName id={p.from} />
                   </>
                 )}
-                {p.cells > 0 && <span className="faint small">— {p.cells}</span>}
+                {p.cells > 0 && <span className="faint small">клеток: {p.cells}</span>}
               </div>
               <span className="small">
                 {p.text} <span className={styles.code}>{p.code}</span>
