@@ -450,6 +450,11 @@ kind, upload without a task, download, delete (schematic-library sources cannot 
   replacing `copycat_door` → `copycat_board`); the table has already taken the blank and gives nothing. Such data is
   dropped (copycat without material). A single Copycats+ copycat with `id: create:copycat` would NPE in the same
   method — id rewritten to `copycats:copycat`. Checked on 1900s_workshop (4 boards cleaned) in Node, not in game.
+  Whole-pack stand (2026-11-07, dev #304, now `packages/core/src/schematicBlockFixes.ts`): the download with the door
+  data put back on the boards fails in `SchematicItem.loadSchematic` with the host's exact exception (41,1,3); the
+  current download loads and prints 5437 blocks, 0 mismatches. The 7 blocks match `MultiStateCopycatBlock` subclasses
+  in the bytecode. No library source (19 with copycats, scanned) has such data — only site replacements create it,
+  so direct uploads need no addon fix.
 - **Copycat materials in the file** (2026-10-29, dev #145): `applyEdits` applies the replacement map to copycat
   materials too (`replaceCopycatMaterials` in `schematicBlockFixes.ts`, same target as the 3D preview —
   `copycatMaterialTarget`): `Material`+`Item` (Create `CopycatBlockEntity`) and `material_data.<part>.material`+
