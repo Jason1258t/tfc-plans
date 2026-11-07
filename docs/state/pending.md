@@ -15,6 +15,9 @@ its one-liner in STATE.md.
 
 ## Host actions
 
+- **Schematicannon** (dev #196): install Create: Schematic Fix 1.0.0 on the server (host) with `tfc pull addons`. In game,
+  restart a finished print and check that nothing is broken or charged again.
+
 - **PCB wiring and mounting** (dev #292): install EE Extras 2.21.1 on the server and clients with `tfc pull addons`.
   The release was exercised on the isolated `test1a` client stand. The live pack installation is the host's step.
 
