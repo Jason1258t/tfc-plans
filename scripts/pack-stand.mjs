@@ -14,6 +14,7 @@
  * на сервере падают команды Create/FTB с BootstrapMethodError → LocalPlayer).
  *
  *   npm run stand -- --cmd "kubejs hand" --mod tools/x/build/libs/x.jar --overlay <папка> --keep --list
+ *   npm run stand -- --overlay <папка> --cmd "ct start" --until "\\[CT\\] ВСЁ" --until-timeout 1800
  *   --level-type tfc:overworld — настоящая генерация TFC вместо плоского мира (жилы, биомы)
  *   --port N — другой порт (и N+1 для RCON), вместе с TFC_STAND_DIR — параллельно другому стенду
  */
@@ -469,6 +470,18 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     timeout: Number(one('--timeout') ?? 900),
     memory: one('--memory') ?? '6G',
     neoforge: one('--neoforge') ?? null,
+    // --until <regex>: после команд ждать его в --until-file (logs/kubejs/server.log) до --until-timeout (1800) с
+    ...(one('--until')
+      ? {
+          waitFor: {
+            timeout: Number(one('--until-timeout') ?? 1800),
+            check: (run) =>
+              new RegExp(one('--until')).test(
+                readText(path.join(run, one('--until-file') ?? 'logs/kubejs/server.log')),
+              ),
+          },
+        }
+      : {}),
     onLog: (s) => console.error(s),
   };
   if (argv.includes('--list')) {

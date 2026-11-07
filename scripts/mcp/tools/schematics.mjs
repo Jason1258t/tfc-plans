@@ -408,14 +408,25 @@ async function schematicsList(a) {
   });
 }
 
-/** Файл схемы для стенда (schematic_print_check): { entry, bytes, size }; edited — как «Скачать» на сайте */
+/**
+ * Файл схемы для стенда (schematic_print_check): { entry, bytes, size, blocks: { id: клеток } без воздуха };
+ * edited — как «Скачать» на сайте
+ */
 export async function schematicFile(id, { edited = true } = {}) {
   const entry = await findEntry(id);
   const src = await parse(await sourceBytes(entry));
-  if (!edited) return { entry, bytes: await sourceBytes(entry), size: src.size };
-  const { replace, shape } = savedEdits({ replace: entry.replace ?? [], shape: entry.shape });
-  const bytes = await applyEdits(src.parsed, replace, shape);
-  return { entry, bytes, size: (await parse(bytes)).size };
+  let bytes = await sourceBytes(entry);
+  if (edited) {
+    const { replace, shape } = savedEdits({ replace: entry.replace ?? [], shape: entry.shape });
+    bytes = await applyEdits(src.parsed, replace, shape);
+  }
+  const m = edited ? await parse(bytes) : src;
+  const blocks = {};
+  for (const c of m.cells) {
+    const s = m.states[c.state];
+    if (s && !s.empty) blocks[s.name] = (blocks[s.name] ?? 0) + 1;
+  }
+  return { entry, bytes, size: m.size, blocks };
 }
 
 // ---------------------------------------------------------------- schematic_get

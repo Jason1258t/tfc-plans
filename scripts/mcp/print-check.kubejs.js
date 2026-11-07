@@ -1,4 +1,4 @@
-// KubeJS-харнесс schematic_print_check (scripts/mcp/tools/print-check.mjs): печать схем пушкой Create на стенде.
+// KubeJS-харнесс schematic_print_check (scripts/mcp/tools/printcheck.mjs): печать схем пушкой Create на стенде.
 // Инструмент дописывает сверху `var CT_CFG = {…}` и кладёт файл в kubejs/server_scripts оверлея; схемы —
 // в schematics/uploaded/Test/. Команда `ct start` ставит площадки; итог — строки «[CT] R {json}» в
 // logs/kubejs/server.log, конец — «[CT] ВСЁ» или «[CT] ОШИБКА». Rhino: в циклах только var, классы — Java.loadClass.
@@ -17,6 +17,7 @@ const CT_Rotation = Java.loadClass('net.minecraft.world.level.block.Rotation');
 const CT_Mirror = Java.loadClass('net.minecraft.world.level.block.Mirror');
 const CT_Direction = Java.loadClass('net.minecraft.core.Direction');
 const CT_Registries = Java.loadClass('net.minecraft.core.registries.BuiltInRegistries');
+const CT_RL = Java.loadClass('net.minecraft.resources.ResourceLocation');
 const CT_Dirs = ['north', 'south', 'east', 'west', 'down'];
 
 var ct = null;
@@ -48,55 +49,93 @@ function ctItemId(item) {
   return String(CT_Registries.ITEM.getKey(item));
 }
 
-// Что отличается от схемы: { total, groups: [{ key, n, ex }] }
-function ctCompare(level, site) {
+// Принтер со схемой площадки; null — схема не загрузилась (ошибка в latest.log: «Failed to load Schematic for Printing»)
+function ctPrinter(level, site) {
   var p = new CT_Printer();
   p.loadSchematic(ctBlueprint(site.anchor, site.file), level, true);
+  if (!p.isLoaded() || p.isErrored()) return null;
+  return p;
+}
+
+// Состояние и блок-сущность схемы в текущей клетке принтера (null — стадия сущностей)
+function ctTarget(p) {
+  var t = null;
+  p.handleCurrentTarget(
+    (pos, state, be) => {
+      t = { pos: pos, state: state, be: be };
+    },
+    () => {},
+  );
+  return t;
+}
+
+// Ключи данных блок-сущности схемы, которых в мире нет или они другие
+function ctLostKeys(level, sbe, wbe) {
+  var ra = level.registryAccess();
+  var a = sbe.saveWithoutMetadata(ra);
+  var b = wbe ? wbe.saveWithoutMetadata(ra) : null;
+  var lost = [];
+  a.getAllKeys().forEach((k) => {
+    if (!b || !b.contains(k) || !a.get(k).equals(b.get(k))) lost.push(String(k));
+  });
+  return { lost: lost, a: String(a), b: b ? String(b) : '' };
+}
+
+// Что отличается от схемы, группами по виду и блоку: { total, groups: [{ kind, block, from, n, ex }] }
+function ctCompare(level, site) {
+  var p = ctPrinter(level, site);
+  if (!p) return { total: 0, groups: [], error: 'not_loaded' };
   var groups = {};
   var total = 0;
   var guard = 0;
-  var add = function (key, ex) {
+  var add = function (kind, block, from, ex) {
+    var key = kind + ' ' + block + ' ' + from;
     total++;
-    if (!groups[key]) groups[key] = { key: key, n: 0, ex: ex };
+    if (!groups[key]) groups[key] = { kind: kind, block: block, from: from, n: 0, ex: ex };
     groups[key].n++;
   };
-  while (p.advanceCurrentPos() && guard++ < 2000000) {
-    p.shouldPlaceCurrent(level, (pos, state, be, toReplace) => {
-      if (state.isAir()) return false;
-      var at = ' @ ' + pos.toShortString();
-      if (toReplace == state) {
-        var wbe = level.getBlockEntity(pos);
-        var a = be ? String(be.saveWithoutMetadata(level.registryAccess())) : '';
-        var b = wbe ? String(wbe.saveWithoutMetadata(level.registryAccess())) : '';
-        if (a != b)
-          add('данные: ' + ctBlockId(state), 'схема ' + a.substring(0, 300) + ' | мир ' + b.substring(0, 300) + at);
-        return false;
-      }
-      var ex = String(state) + ' | мир: ' + String(toReplace) + at;
-      if (toReplace.isAir()) add('нет: ' + ctBlockId(state), ex);
-      else if (toReplace.getBlock() == state.getBlock()) add('свойства: ' + ctBlockId(state), ex);
-      else add('другой: ' + ctBlockId(state) + ' ← ' + ctBlockId(toReplace), ex);
-      return false;
-    });
+  while (p.advanceCurrentPos() && guard++ < 4000000) {
+    var t = ctTarget(p);
+    if (!t) break;
+    if (t.state.isAir()) continue;
+    var w = level.getBlockState(t.pos);
+    var at = ' @ ' + t.pos.toShortString();
+    if (w != t.state) {
+      var ex = String(t.state) + ' | мир: ' + String(w) + at;
+      if (w.isAir()) add('missing', ctBlockId(t.state), '', ex);
+      else if (w.getBlock() == t.state.getBlock()) add('state', ctBlockId(t.state), '', ex);
+      else add('other', ctBlockId(t.state), ctBlockId(w), ex);
+    } else if (t.be) {
+      var d = ctLostKeys(level, t.be, level.getBlockEntity(t.pos));
+      if (d.lost.length)
+        add(
+          'data',
+          ctBlockId(t.state),
+          '',
+          'ключи ' + d.lost.join(',') + ': схема ' + d.a.substring(0, 300) + ' | мир ' + d.b.substring(0, 300) + at,
+        );
+    }
   }
   var list = Object.keys(groups).map((k) => groups[k]);
   list.sort((x, y) => y.n - x.n);
-  return { total: total, groups: list.slice(0, 25), more: Math.max(0, list.length - 25) };
+  return { total: total, groups: list.slice(0, 40), more: Math.max(0, list.length - 40) };
 }
 
-// Сколько предметов нужно на всю схему (мир на месте пустой): { id: n }, INVALID — клеток без предмета
-function ctRequired(level, site) {
-  var p = new CT_Printer();
-  p.loadSchematic(ctBlueprint(site.anchor, site.file), level, true);
+// Сколько предметов нужно на всю схему (мир на месте пустой); клетки без своего предмета — по блокам
+function ctRequired(level, site, p) {
   var req = {};
+  var invalid = {};
   var stacks = {};
   var guard = 0;
   var rq;
-  while (p.advanceCurrentPos() && guard++ < 2000000) {
+  while (p.advanceCurrentPos() && guard++ < 4000000) {
+    var t = ctTarget(p);
+    if (t && t.state.isAir()) continue;
     if (!p.shouldPlaceCurrent(level)) continue;
     rq = p.getCurrentRequirement();
     if (rq.isInvalid()) {
-      req['INVALID'] = (req['INVALID'] || 0) + 1;
+      var b = t ? ctBlockId(t.state) : 'entity';
+      invalid[b] = (invalid[b] || 0) + 1;
       continue;
     }
     rq.getRequiredItems().forEach((sr) => {
@@ -106,6 +145,7 @@ function ctRequired(level, site) {
     });
   }
   site.req = req;
+  site.invalid = invalid;
   site.stacks = stacks;
 }
 
@@ -126,6 +166,9 @@ function ctCount(level, site) {
 
 // Бочки вокруг пушки пополняются из запаса по кругу (стаки TFC маленькие, всё сразу не влезает)
 function ctRefill(level, site) {
+  var cbe = level.getBlockEntity(site.cannon);
+  if (cbe && cbe.inventory.getStackInSlot(4).getCount() < 32)
+    cbe.inventory.setStackInSlot(4, Item.of('minecraft:gunpowder', 64));
   var ids = Object.keys(site.bank).filter((id) => site.bank[id] > 0);
   if (!ids.length) return;
   var k = site.rr || 0;
@@ -145,9 +188,16 @@ function ctRefill(level, site) {
     }
   });
   site.rr = k;
-  var cbe = level.getBlockEntity(site.cannon);
-  if (cbe && cbe.inventory.getStackInSlot(4).getCount() < 32)
-    cbe.inventory.setStackInSlot(4, Item.of('minecraft:gunpowder', 64));
+}
+
+// Блоки палитры, которых нет в реестре сборки: { id: клеток }
+function ctUnknown(blocks) {
+  var out = {};
+  Object.keys(blocks || {}).forEach((id) => {
+    var rl = CT_RL.tryParse(id);
+    if (!rl || !CT_Registries.BLOCK.containsKey(rl)) out[id] = blocks[id];
+  });
+  return out;
 }
 
 function ctStart(server, cfg, i) {
@@ -171,21 +221,26 @@ function ctStart(server, cfg, i) {
     cannon: new CT_BlockPos(x - 6, y, z - 6),
     phase: 'print',
     given: {},
+    bank: {},
     spentBefore: {},
     lastPlaced: -1,
-    lastChange: 0,
+    lastChange: ct.tick,
     t0: ct.tick,
   };
-  if (!site.creative) {
-    ctRequired(level, site);
-    site.bank = {};
+  var unknown = ctUnknown(cfg.blocks);
+  var p = ctPrinter(level, site);
+  if (!p) {
+    ctOut({ site: i, ev: 'start', anchor: String(site.anchor.toShortString()), unknown: unknown, notLoaded: true });
+    site.phase = 'done';
+    return site;
+  }
+  ctRequired(level, site, p);
+  if (!site.creative)
     Object.keys(site.req).forEach((id) => {
-      if (!site.stacks[id]) return;
       site.given[id] = 0;
       // запас с излишком: повторный запуск тоже тратит
       site.bank[id] = Math.ceil(site.req[id] * (site.restart ? 2.2 : 1.1)) + 16;
     });
-  }
   if (cfg.prefill) {
     var top = Math.min(cfg.size[1], cfg.prefill.height) - 1;
     for (var yy = 0; yy <= top; yy++)
@@ -220,7 +275,14 @@ function ctStart(server, cfg, i) {
   be.skipMissing = false;
   be.state = CT_State.RUNNING;
   be.setChanged();
-  ctOut({ site: i, ev: 'start', anchor: String(site.anchor.toShortString()), required: site.req || null });
+  ctOut({
+    site: i,
+    ev: 'start',
+    anchor: String(site.anchor.toShortString()),
+    unknown: unknown,
+    required: site.req,
+    invalid: site.invalid,
+  });
   return site;
 }
 
@@ -259,6 +321,7 @@ function ctRelaunch(be, site) {
   be.inventory.setStackInSlot(0, ctBlueprint(site.anchor, site.file));
   be.state = CT_State.RUNNING;
   site.lastPlaced = -1;
+  site.lastChange = ct.tick;
 }
 
 function ctSiteTick(level, s) {
@@ -293,6 +356,7 @@ function ctSiteTick(level, s) {
     be.state = CT_State.RUNNING;
     s.phase = 'print';
     s.lastPlaced = -1;
+    s.lastChange = ct.tick;
     return;
   }
   var done = be.state == CT_State.STOPPED && String(be.statusMsg) == 'finished';
