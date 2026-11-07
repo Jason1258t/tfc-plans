@@ -164,30 +164,65 @@ function ctCount(level, site) {
   return c;
 }
 
-// Бочки вокруг пушки пополняются из запаса по кругу (стаки TFC маленькие, всё сразу не влезает)
+// Бочки вокруг пушки пополняются из запаса (стаки TFC маленькие, всё сразу не влезает): пустая ячейка — предметом,
+// которого в бочках меньше всего; нужный пушке сейчас (missingItem) — вне очереди, вытесняя самый частый
 function ctRefill(level, site) {
   var cbe = level.getBlockEntity(site.cannon);
   if (cbe && cbe.inventory.getStackInSlot(4).getCount() < 32)
     cbe.inventory.setStackInSlot(4, Item.of('minecraft:gunpowder', 64));
-  var ids = Object.keys(site.bank).filter((id) => site.bank[id] > 0);
-  if (!ids.length) return;
-  var k = site.rr || 0;
+  var slots = [];
+  var have = {};
   CT_Dirs.forEach((d) => {
     var be = level.getBlockEntity(site.cannon.relative(CT_Direction.byName(d)));
     if (!be || !be.getContainerSize) return;
     for (var i = 0; i < be.getContainerSize(); i++) {
-      if (!ids.length) return;
-      if (!be.getItem(i).isEmpty()) continue;
-      var id = ids[k % ids.length];
-      var n = Math.min(site.bank[id], site.stacks[id].getMaxStackSize());
-      be.setItem(i, site.stacks[id].copyWithCount(n));
-      site.bank[id] -= n;
-      site.given[id] += n;
-      if (site.bank[id] <= 0) ids = ids.filter((x) => x != id);
-      else k++;
+      var st = be.getItem(i);
+      var id = st.isEmpty() ? null : ctItemId(st.getItem());
+      slots.push({ be: be, i: i, id: id, n: st.getCount() });
+      if (id) have[id] = (have[id] || 0) + st.getCount();
     }
   });
-  site.rr = k;
+  var put = function (slot, id) {
+    var n = Math.min(site.bank[id], site.stacks[id].getMaxStackSize());
+    slot.be.setItem(slot.i, site.stacks[id].copyWithCount(n));
+    site.bank[id] -= n;
+    site.given[id] += n;
+    have[id] = (have[id] || 0) + n;
+    slot.id = id;
+    slot.n = n;
+  };
+  var miss = cbe && cbe.missingItem && !cbe.missingItem.isEmpty() ? ctItemId(cbe.missingItem.getItem()) : null;
+  if (miss && site.bank[miss] > 0 && !have[miss]) {
+    var free = null;
+    var top = null;
+    for (var j = 0; j < slots.length; j++) {
+      var sl = slots[j];
+      if (!sl.id) {
+        free = sl;
+        break;
+      }
+      if (site.bank[sl.id] != null && (!top || have[sl.id] > have[top.id])) top = sl;
+    }
+    if (!free && top) {
+      // самый частый предмет — обратно в запас
+      site.bank[top.id] += top.n;
+      site.given[top.id] -= top.n;
+      have[top.id] -= top.n;
+      top.be.setItem(top.i, CT_ItemStack.EMPTY);
+      top.id = null;
+      free = top;
+    }
+    if (free) put(free, miss);
+  }
+  slots.forEach((sl) => {
+    if (sl.id) return;
+    var best = null;
+    Object.keys(site.bank).forEach((id) => {
+      if (site.bank[id] <= 0) return;
+      if (best == null || (have[id] || 0) < (have[best] || 0)) best = id;
+    });
+    if (best != null) put(sl, best);
+  });
 }
 
 // Блоки палитры, которых нет в реестре сборки: { id: клеток }
@@ -225,6 +260,8 @@ function ctStart(server, cfg, i) {
     spentBefore: {},
     lastPlaced: -1,
     lastChange: ct.tick,
+    maxPlaced: 0,
+    maxToPlace: 0,
     t0: ct.tick,
   };
   var unknown = ctUnknown(cfg.blocks);
@@ -292,8 +329,8 @@ function ctReport(level, site, be, label, extra) {
     site: site.i,
     ev: 'report',
     label: label,
-    placed: be.blocksPlaced,
-    toPlace: be.blocksToPlace,
+    placed: Math.max(site.maxPlaced, be.blocksPlaced),
+    toPlace: Math.max(site.maxToPlace, be.blocksToPlace),
     sec: Math.round((ct.tick - site.t0) / 20),
     mismatch: cmp.total,
     groups: cmp.groups,
@@ -313,6 +350,8 @@ function ctReport(level, site, be, label, extra) {
   }
   ctOut(out);
   site.t0 = ct.tick;
+  site.maxPlaced = 0;
+  site.maxToPlace = 0;
 }
 
 // Повторный запуск той же схемы поверх готовой постройки, как новая схема в слоте
@@ -350,6 +389,8 @@ function ctSiteTick(level, s) {
     be.state = CT_State.STOPPED;
     s.didReset = true;
     s.phase = 'stopped';
+    s.maxPlaced = 0;
+    s.maxToPlace = 0;
     return;
   }
   if (s.phase == 'stopped') {
@@ -411,8 +452,17 @@ ServerEvents.commandRegistry((event) => {
 ServerEvents.tick((event) => {
   if (!ct || ct.over) return;
   ct.tick++;
-  if (ct.tick % 20 != 0) return;
   var level = event.server.overworld();
+  // счётчики пушки обнуляются в конце печати — берём максимум за проход, каждый тик
+  for (var k = 0; k < ct.sites.length; k++) {
+    var st = ct.sites[k];
+    if (st.phase == 'done') continue;
+    var cb = level.getBlockEntity(st.cannon);
+    if (!cb) continue;
+    if (cb.blocksPlaced > st.maxPlaced) st.maxPlaced = cb.blocksPlaced;
+    if (cb.blocksToPlace > st.maxToPlace) st.maxToPlace = cb.blocksToPlace;
+  }
+  if (ct.tick % 20 != 0) return;
   try {
     for (var i = 0; i < ct.sites.length; i++) ctSiteTick(level, ct.sites[i]);
   } catch (e) {

@@ -537,28 +537,43 @@ changes content); block colours for renders — `colors.json` there. Parsing and
 #### Print check on the stand (`schematic_print_check`, `tools/printcheck.mjs`, dev #303)
 
 `schematic_print_check(ids*, mode, restart, reset, resetAt, edited, mods, exclude, prefill, prefillHeight, replaceMode,
-delay, stall, timeout, memory)` prints library schematics with the Create schematicannon on the whole-pack stand
-(`pack_devserver`) and reports in Russian per schematic × mode: blocks placed, cells still different from the schematic
-grouped as «нет» (missing), «свойства» (same block, other properties), «другой» (other block), «данные» (block-entity
-NBT differs) with one example each, and in survival — items spent vs required («больше/меньше нужного»).
-`restart` (default on) runs the same schematic again over the finished build: placed and spent must be 0 (Create
-re-places blocks it compares wrongly — e.g. without the `schematic-fix` addon a restart of oil_facory re-places 380
-`createdeco` catwalks). `reset` presses «Стоп»→«Пуск» at `resetAt` (0.5) of the print.
+delay, stall, timeout, memory, port, json, save)` prints library schematics with the Create schematicannon on the
+whole-pack stand (`pack_devserver`) and sorts every problem by cause. The worst group is the schematic's status (the
+statuses of dev #305):
+
+| Group | `status`      | Codes                                                                                                                                                                                                                                                                                             |
+| ----- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | `ok`          | — world matches, spend = requirements, restart places nothing                                                                                                                                                                                                                                     |
+| 2     | `not_in_pack` | `not_in_pack` — palette block missing from the pack registry (the editor shows it, #19)                                                                                                                                                                                                           |
+| 3     | `broken`      | `not_loaded` (printer could not load the file, #304), `no_item` (ItemRequirement invalid), `wrong_state` (same block, other properties), `lost_data` (block-entity keys of the schematic missing or different in the world), `restart_replaces` (a restart over the finished build places/spends) |
+| 4     | `unclear`     | `missing`, `other_block`, `stuck` (no new block for `stall` s), `overspend`, `not_finished`, `stand_error`                                                                                                                                                                                        |
+
+Each problem: `{ group, code, text (Russian), block, from?, cells, example }` — example is a cell
+(`schematic state | world state @ x,y,z`, NBT for `lost_data`) or a log excerpt (`not_loaded`, `stand_error`). Missing
+cells of a `no_item` block are counted only once, as `no_item`. `json=true` appends the machine-readable result,
+`save=<path>` writes it: `{ version, checkedAt, snapshot, params, stand, schematics: [{ id, name, revision, status,
+group, sites: [{ mode, status, group, required, invalid, placed, toPlace, spent, restart, problems }] }] }`.
 
 - Files: the schematic as the site downloads it (`edited=false` — the source) goes to the overlay's
   `schematics/uploaded/Test/s<N>.nbt`; the KubeJS harness `scripts/mcp/print-check.kubejs.js` gets
-  `var CT_CFG = {…}` prepended and goes to `kubejs/server_scripts/zz_print_check.js`. Sites stand in a row along X
-  (z = 200), cannon 6 blocks off the anchor's corner; `mode=creative` — creative crate under the cannon, `survival` —
-  5 barrels around it refilled every second from an exact bank (required × 1.1, × 2.2 with restart, + 16; TFC stacks
-  are 16–32) plus gunpowder; `prefill=<block>` fills the bottom `prefillHeight` (4) layers of the box first (e.g. ore
-  the cannon must replace); `mods` — built addon jars (`tools/<addon>/build/libs/*.jar`).
-- Completion: the stand's new `waitFor` (`runStand`) polls `logs/kubejs/server.log` every 5 s for «[CT] ВСЁ»/«ОШИБКА»;
-  no «[CT] старт» within 60 s after `ct start` — the harness did not load, stop. A print with no new block for `stall`
-  (180) s is reported as stuck with the cannon state and missing item. Default `delay` 1 tick (Create's config 10).
-- Results are lines `[CT] R {json}` in that log (`ev` start/reset/report/error); the tool turns them into text. One
-  run at a time: `runStand` (also `pack_devserver`, `npm run stand`) takes `~/.cache/tfc-plans/stand/stand.lock` and
-  refuses while another live process holds it — `run/` and the ports are shared.
-  Slow: ~2 min boot + print (oil_facory, 33×26×60: minutes) — from a shell `node scripts/mcp-call.mjs tfc-pack schematic_print_check '{"ids":[…]}' --timeout 3600`.
+  `var CT_CFG = {…}` (sites, palette counts) prepended and goes to `kubejs/server_scripts/zz_print_check.js`. Sites
+  stand in a row along X (z = 200), cannon 6 blocks off the anchor's corner; `mode=creative` — creative crate under
+  the cannon, `survival` — 5 barrels refilled every second from an exact bank (required × 1.1, × 2.2 with restart,
+  - 16; TFC stacks are 16–32) plus gunpowder; `prefill=<block>` fills the bottom `prefillHeight` (4) layers of the box
+    first (e.g. ore the cannon must replace); `mods` — built addon jars (`tools/<addon>/build/libs/*.jar`).
+- Comparison walks the printer's own cells (`SchematicPrinter.handleCurrentTarget`), so block-entity data is compared
+  for every block entity, not only Create's mergeable ones.
+- Completion: `runStand`'s `waitFor` polls `logs/kubejs/server.log` every 5 s for «[CT] ВСЁ»/«ОШИБКА»; no «[CT] старт»
+  within 60 s after `ct start` — the harness did not load, stop. Default `delay` 1 tick (Create's config 10).
+- One run at a time: `runStand` (also `pack_devserver`, `npm run stand`) takes `~/.cache/tfc-plans/stand/stand.lock`
+  and refuses while another live process holds it — `run/` and the ports are shared. A second stand needs its own
+  `TFC_STAND_DIR` and `port`. The Mac has 8 GB: one stand at a time there.
+- Elsewhere (test1a, the background check of #305): `printCheckPrepare(opts, overlayDir)` writes the overlay and
+  returns `prep`; run `npm run stand -- --overlay <dir> --cmd "ct start" --until '\[CT\] (ВСЁ|ОШИБКА)' --until-timeout
+2400` there (see [state/infra.md](state/infra.md) «Remote whole-pack stand»), copy back `logs/latest.log` and
+  `logs/kubejs/server.log`, then `printCheckReport(prep, { booted, run, text })` gives `{ text, result }`.
+- Slow: ~2 min boot + print (oil_facory, 33×26×60: minutes). From a shell:
+  `node scripts/mcp-call.mjs tfc-pack schematic_print_check '{"ids":[…]}' --timeout 3600`.
 - Harness quirks (Rhino): `var` in loops, classes via `Java.loadClass`, stacks via `AllItems.X.asStack()` /
   `Item.of`, ids via `BuiltInRegistries`.
 

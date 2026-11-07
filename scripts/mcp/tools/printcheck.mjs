@@ -135,7 +135,15 @@ function classify(site, evs, ctx) {
     problems.push(problem('not_loaded', { example: ctx.load }));
   } else {
     const invalid = { ...(start.invalid ?? {}) };
-    for (const [block, cells] of Object.entries(invalid)) problems.push(problem('no_item', { block, cells }));
+    for (const [block, cells] of Object.entries(invalid))
+      problems.push(
+        block === 'entity'
+          ? problem('no_item', {
+              text: 'сущности схемы (рамки, стойки, вагонетки) без своего предмета — пушка их не ставит',
+              cells,
+            })
+          : problem('no_item', { block, cells }),
+      );
     if (!print) problems.push(problem('not_finished', { example: ctx.done ? '' : `не дождался за ${ctx.timeout} с` }));
     if (print?.stall) {
       const s = print.stall;
