@@ -9,7 +9,7 @@
  *   node scripts/print-worker.mjs --once     — одна пачка
  *   --max N — схем в пачке (8); --memory 6G
  *
- * Ключ администратора — TFC_PACK_URL / TFC_PACK_TOKEN (окружение или .env.local). Снимок и сервер NeoForge
+ * Ключ роли worker (или администратора) — TFC_PACK_URL / TFC_PACK_TOKEN (окружение или .env.local). Снимок и сервер NeoForge
  * копируются на время прогона в /dev/shm (на HDD стенд грузится заметно дольше), если там хватает места.
  */
 import { spawn } from 'node:child_process';
@@ -44,7 +44,7 @@ const { packServer, fetchPack } = await import('./pack-fetch.mjs');
 const { PACK_CACHE } = await import('./pack-cache.mjs');
 const { STAND } = await import('./pack-stand.mjs');
 const srv = packServer();
-if (!srv) throw new Error('нет TFC_PACK_URL / TFC_PACK_TOKEN (ключ администратора)');
+if (!srv) throw new Error('нет TFC_PACK_URL / TFC_PACK_TOKEN (ключ роли worker)');
 
 async function api(p, body) {
   const res = await fetch(srv.url + p, {
