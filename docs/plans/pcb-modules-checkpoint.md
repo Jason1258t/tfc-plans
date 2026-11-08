@@ -3,6 +3,24 @@
 Resumed at the owner's request on 2026-11-08. Task #301 is doing under Codex and remains incomplete.
 Authoritative requirements: server plan doc:59, especially 2.1, 2.2 and 6.1. Do not replace the scope with this checkpoint.
 
+## Onboard transformer milestone
+
+L1 now has a 3×3 onboard transformer with a direct two-core 300 V RMS cable inlet on its body and only two
+secondary pads. Unique per board, including group paste. Uses native EE TransformerBehaviour; adjustable 1–48 V AC
+no-load output, passive secondary current/power limiting, input protection, DC rejection, persisted cooldown.
+Primary nodes 8192–8194 do not occupy user edge terminals. Empty-hand interaction reports measured input/output.
+Thin spool input dispatch and cable preview distinguish the body inlet from ordinary edge leads.
+
+- `/pcbonboard`: 48 inlet poses across six faces, rotations/reflections; loaded 12 V setting gives 11.717600 V on
+  1 kohm, input 0.141511 W, total losses 0.004209 W including primary sensing. Independent energy balance passes.
+  Short circuit 0.01 ohm: 0.497713 A, board intact. DC/zero/400 V protection, write/read and full server restart pass.
+- `/pcbmodules` now checks 224 variants. Mechanical recipe loads; inputs checked with active KubeJS, no conflict
+  among 104 mechanical recipes. Resource checker: 141 items, 58 code-selected models, no errors, seven known warnings.
+- Full client `20261108-110658-a5e1`, 250 mods, normal exit: actual clicks select inlet then connect/power the board;
+  DC gives zero output. Three screenshots inspected. No client run remains active.
+- Owner chose AC for the future L1 high-voltage transformer; use ~A/~B labels, no hidden rectification (doc:59 rev19).
+  Vibrator, high-voltage transformer and L2 regulated supply remain unimplemented.
+
 ## Current editor milestone
 
 - Prototype format **9**, no migration. Undo/redo (64 steps per open menu), base-X reflection F, translucent other
