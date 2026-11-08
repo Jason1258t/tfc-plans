@@ -230,6 +230,42 @@ export function platformLayers() {
   return out;
 }
 
+/**
+ * Текстуры, которые атлас собирает при загрузке игры из палитры (источник paletted_permutations:
+ * tfc:item/wood/boat + «_» + acacia → tfc:item/wood/boat_acacia) — файла нет, а в игре текстура есть.
+ * Атласы всех паков и модов складываются, поэтому файлы atlases/ читаются из каждого jar, а не из первого.
+ * Множество «ns:path».
+ */
+export function atlasSprites(layers) {
+  const out = new Set();
+  const add = (buf) => {
+    let j;
+    try {
+      j = JSON.parse(buf.toString('utf8').replace(/^﻿/, ''));
+    } catch {
+      return;
+    }
+    for (const s of j?.sources ?? []) {
+      if (String(s.type ?? '').replace(/^minecraft:/, '') !== 'paletted_permutations') continue;
+      const sep = s.separator ?? '_';
+      for (const t of s.textures ?? [])
+        for (const k of Object.keys(s.permutations ?? {})) {
+          const { ns, path: p } = resLoc(t);
+          out.add(`${ns}:${p}${sep}${k}`);
+        }
+    }
+  };
+  const isAtlas = (p) => /^assets\/[^/]+\/atlases\/[^/]+\.json$/.test(p);
+  for (const l of layers) {
+    if (l.kind === 'jars') {
+      jarFor('');
+      for (const [p, jars] of jarIndex.byPath)
+        if (isAtlas(p)) for (const j of jars) add(readEntry(j, p)?.data ?? Buffer.alloc(0));
+    } else for (const p of l.list('assets/')) if (isAtlas(p)) add(l.read(p) ?? Buffer.alloc(0));
+  }
+  return out;
+}
+
 /** Файл из первого слоя, где он есть: { data, layer, from } или null */
 export function findResource(layers, p) {
   for (const l of layers) {
