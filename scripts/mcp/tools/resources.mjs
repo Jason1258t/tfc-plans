@@ -15,6 +15,7 @@ import { jarToc, readEntry, resolveJar } from '../jars.mjs';
 import { loadTexture, renderId, textureImage } from '../render.mjs';
 import {
   addonDirs,
+  atlasSprites,
   addonRoot,
   blockstatePath,
   findResource,
@@ -287,9 +288,48 @@ const REGISTRATE = /^(block|item)$/;
 /**
  * Что мод регистрирует: [{ id | null, cls | null, kind: block|item|null, where }]. Шаблон javac:
  * ldc "id" … invokedynamic (лямбда / ссылка на конструктор) … invokevirtual register*(String, …).
- * id из переменной (цикл) — null: класс известен, имя нет.
+ * id из переменной (цикл) — null: класс известен, имя нет. Свой помощник мода с любым именем
+ * (PcbItems.item(String id, int) → ITEMS.register(id, …)) — метод с первым параметром String, внутри которого
+ * регистрация без id: его вызовы с ldc "id" — тоже регистрации (вложенные помощники — до 4 уровней). Помощник,
+ * который склеивает имя (prefix + id), даёт id «слабые»: берутся, только если блок или предмет виден по ресурсам.
+ * raw — все регистрации, вместе с теми, что внутри помощников (классы-кандидаты для регистраций в цикле).
  */
 function registrations(src, load) {
+  const wrappers = new Map(); // owner.name+desc → { kind, cls }
+  let out = [];
+  for (let pass = 0; pass < 4; pass++) {
+    out = scanRegistrations(src, load, wrappers);
+    let added = false;
+    for (const r of out) {
+      if (r.id || !r.method.desc.startsWith('(Ljava/lang/String;')) continue;
+      const key = `${r.method.owner}.${r.method.name}${r.method.desc}`;
+      if (wrappers.has(key)) continue;
+      const m = load(r.method.owner)?.methods.find((x) => x.name === r.method.name && x.desc === r.method.desc);
+      wrappers.set(key, {
+        kind: r.kind,
+        cls: r.cls,
+        weak: r.weak || Boolean(m?.code && buildsString(load(r.method.owner), m)),
+      });
+      added = true;
+    }
+    if (!added) break;
+  }
+  // Регистрация внутри помощника — не своя: её id приходят с вызовами помощника
+  const res = out.filter((r) => r.id || !wrappers.has(`${r.method.owner}.${r.method.name}${r.method.desc}`));
+  res.raw = out;
+  return res;
+}
+
+/** Метод склеивает строки (invokedynamic makeConcatWithConstants или StringBuilder) */
+function buildsString(cls, m) {
+  return instructions(m.code).some(
+    (i) =>
+      (i.op === 0xba && /^makeConcat/.test(cls.bootstrap[cls.cp[i.index].a]?.method?.name ?? '')) ||
+      (i.op === 0xbb && cls.className(i.index) === 'java/lang/StringBuilder'),
+  );
+}
+
+function scanRegistrations(src, load, wrappers) {
   const out = [];
   for (const n of src.names) {
     const cls = load(n);
@@ -319,6 +359,19 @@ function registrations(src, load) {
         } else if (i.op === 0xb6 || i.op === 0xb9 || i.op === 0xb8) {
           const r = cls.ref(i.index);
           if (!r.desc.startsWith('(Ljava/lang/String;')) return;
+          const method = { owner: n, name: m.name, desc: m.desc };
+          const where = `${n.split('/').pop()}.${m.name}`;
+          const wrap = wrappers.get(`${r.owner}.${r.name}${r.desc}`);
+          if (wrap) {
+            const id = k - lastStrAt <= 8 ? lastStr : null;
+            // Лямбда у вызова (register("id", () -> new FooBlock(…))) знает класс точнее помощника
+            const own = lastNew && kindOf(load, lastNew) ? lastNew : null;
+            const kind = (own && kindOf(load, own)) ?? wrap.kind;
+            out.push({ id, cls: own ?? wrap.cls, kind, where, method, weak: wrap.weak, via: r.name });
+            lastNew = null;
+            lastStr = null;
+            return;
+          }
           const viaRegistrate = /Registrate/.test(r.owner) && REGISTRATE.test(r.name);
           // Свой помощник мода (TFCBlocks.register("id", () -> new Foo…)) — если лямбда создаёт блок или предмет
           const standard = viaRegistrate || (REGISTER.test(r.name) && /DeferredRegister|Registr/.test(r.owner));
@@ -332,7 +385,7 @@ function registrations(src, load) {
           if (/Blocks$/.test(r.owner) && !kind) kind = 'block';
           if (/Items$/.test(r.owner) && !kind) kind = 'item';
           if (viaRegistrate && !kind) kind = r.name;
-          if (kind) out.push({ id, cls: c, kind, where: `${n.split('/').pop()}.${m.name}`, weak: Boolean(helper) });
+          if (kind) out.push({ id, cls: c, kind, where, method, weak: Boolean(helper) });
           lastNew = null;
           lastStr = null;
         }
@@ -453,6 +506,7 @@ function resourcesCheck(a) {
   const src = classSource(target);
   const load = classLoader(src);
   const regs = src.names.length ? registrations(src, load) : [];
+  regs.raw ??= regs;
   const code = src.names.length ? codeStrings(src, load) : { strings: [], partials: [] };
 
   const blocks = new Map(); // id → { cls, sources: Set }
@@ -481,7 +535,7 @@ function resourcesCheck(a) {
   const loose = (kind, map) => {
     const classes = [
       ...new Set(
-        regs
+        regs.raw
           .filter((r) => (!r.id || r.weak) && r.kind === kind)
           .map((r) => r.cls)
           .filter(Boolean),
@@ -508,7 +562,7 @@ function resourcesCheck(a) {
   };
   loose('block', blocks);
   loose('item', items);
-  if (regs.some((r) => !r.id && r.kind === 'item'))
+  if (regs.raw.some((r) => !r.id && r.kind === 'item'))
     for (const id of blocks.keys())
       if (!items.has(id) && findResource([own], modelPath(`${resLoc(id).ns}:item/${resLoc(id).path}`)))
         note(items, id, null, 'модель предмета блока');
@@ -549,12 +603,27 @@ function resourcesCheck(a) {
    * strict — модель используется (блокстейт, предмет, PartialModel): ошибки — ошибки. Файл, на который никто не
    * ссылается, — шаблон для потомков или остаток: незаданные переменные не проверяем, прочее — «к сведению».
    */
-  const checkModel = (mid, why, strict = true, particle = false) => {
+  // Текстуры из палитры атласа (файла нет) и модели-заготовки (parent других моделей мода): у заготовки
+  // переменные текстур задают потомки — «не задана» только у модели, на которую ссылаются напрямую
+  const sprites = atlasSprites(layers);
+  const parents = new Set();
+  for (const ns of spaces)
+    for (const p of own.list(`assets/${ns}/models/`)) {
+      const par = p.endsWith('.json') ? readJsonRes([own], p)?.json?.parent : null;
+      if (typeof par === 'string') parents.add(`${resLoc(par).ns}:${resLoc(par).path}`);
+    }
+  /** direct — модель названа прямо (блокстейт, PartialModel); иначе найдена по шаблону, названию, имени файла */
+  const checkModel = (mid, why, strict = true, particle = false, direct = true) => {
     const key = `${resLoc(mid).ns}:${resLoc(mid).path}`;
     if (checkedModels.has(key)) return checkedModels.get(key);
     const m = loadModel(layers, key);
     checkedModels.set(key, m);
-    const err = (t) => (strict ? errors : info).push(strict ? t : `${t} (на модель никто не ссылается напрямую)`);
+    // Ссылку на модель могли не найти (путь собран кодом) — у аддона поломка такой модели всё равно предупреждение.
+    // Модель, найденная по шаблону или строке кода, у аддона — ошибка, у чужого мода — предупреждение: догадка
+    const err = (t) =>
+      (strict ? (direct || target.only.addon ? errors : warns) : target.only.addon ? warns : info).push(
+        strict ? (direct ? t : `${t} (${why})`) : `${t} (ссылки на модель в коде и ресурсах не найдено)`,
+      );
     if (!m.chain.length) {
       if (absentNs(key)) warns.push(`модель ${modelPath(key)} — мода ${resLoc(key).ns} нет в сборке (${why})`);
       else errors.push(`нет модели ${modelPath(key)} (${why})`);
@@ -577,10 +646,11 @@ function resourcesCheck(a) {
     for (const r of refs) {
       const t = resolveTexture(m.textures, r);
       if (!t) {
-        if (strict) errors.push(`модель ${key}: текстура ${r} не задана — грань будет пурпурно-чёрной`);
+        if (strict && (direct || !parents.has(key)))
+          err(`модель ${key}: текстура ${r} не задана — грань будет пурпурно-чёрной`);
         continue;
       }
-      if (findResource(layers, texturePath(t))) continue;
+      if (findResource(layers, texturePath(t)) || sprites.has(`${resLoc(t).ns}:${resLoc(t).path}`)) continue;
       if (absentNs(t)) warns.push(`модель ${key}: текстура ${t} — мода ${resLoc(t).ns} нет в сборке (совместимость)`);
       else err(`модель ${key}: нет текстуры ${texturePath(t)}`);
     }
@@ -686,13 +756,29 @@ function resourcesCheck(a) {
       info.push(`${id}: модели предмета нет — если у блока есть предмет, в инвентаре он будет пурпурным`);
   }
 
+  // Модели предметов без найденной регистрации: есть название item.<ns>.<id> — предмет почти наверняка есть
+  // (регистрация собрана кодом, которого разбор не понял); нет — проверка мягкая, и это сказано явно
+  const unregistered = [];
+  for (const ns of spaces)
+    for (const p of own.list(`assets/${ns}/models/item/`)) {
+      if (!p.endsWith('.json')) continue;
+      const id = `${ns}:${p.slice(`assets/${ns}/models/item/`.length, -5)}`;
+      if (items.has(id) || blocks.has(id)) continue;
+      if (`item.${ns}.${resLoc(id).path.replaceAll('/', '.')}` in lang.en_us) note(items, id, null, 'перевод названия');
+      else unregistered.push(id);
+    }
+  if (unregistered.length)
+    (target.only.addon ? warns : info).push(
+      `${unregistered.length} моделей предметов без найденной регистрации и названия — проверены мягко (поломки — не ошибки): ${unregistered.slice(0, 8).join(', ')}${unregistered.length > 8 ? ' …' : ''}`,
+    );
+
   // Предметы: модель и название (у предмета блока название блока)
   // Предмет известен только по модели (блок с моделью предмета, регистрация не разобрана) — может и не быть
   // зарегистрирован (у TFC коралловых «настенных вееров» предметов нет): тогда модель не грузится, ошибки — к сведению
   for (const [id, e] of [...items].sort()) {
     const { ns, path: p } = resLoc(id);
-    const sure = Boolean(e.cls) || e.why.has('регистрация в коде');
-    checkModel(`${ns}:item/${p}`, `предмет ${id}`, sure);
+    const sure = Boolean(e.cls) || e.why.has('регистрация в коде') || e.why.has('перевод названия');
+    checkModel(`${ns}:item/${p}`, `предмет ${id}`, sure, false, e.why.has('регистрация в коде'));
     if (sure && !blocks.has(id)) needKey(`item.${ns}.${p.replaceAll('/', '.')}`, 'название предмета');
   }
 
@@ -709,6 +795,44 @@ function resourcesCheck(a) {
     }
     partialIds.add(`${resLoc(mid).ns}:${resLoc(mid).path}`);
     checkModel(mid, `PartialModel.of в ${pm.where}`);
+  }
+  // Модели, которые код грузит сам (ModelResourceLocation.standalone в ModelEvent.RegisterAdditional и т. п.):
+  // строка кода — путь существующей модели, или шаблон «block/pcb_part/» + имя из каталога — тогда все модели
+  // под этим префиксом считаются используемыми
+  let dynamicModels = 0;
+  const seenTemplates = new Set();
+  for (const s of code.strings) {
+    const raw = s.concat ? s.value.split('\u0001')[0] : s.value;
+    if (!raw.includes('/') || !/^([a-z0-9_.-]+:)?[a-z0-9_./-]+$/.test(raw)) continue;
+    const { ns: n0, path: p } = resLoc(raw, '');
+    // Шаблон уже папки вида «block/» или «item/» не говорит, какие модели грузятся
+    if (s.concat && !/^[a-z0-9_.-]+\/[a-z0-9_.-]+/.test(p)) continue;
+    const nss = n0 ? [n0].filter((x) => spaces.includes(x)) : spaces;
+    for (const ns of nss) {
+      if (!s.concat) {
+        const mid = `${ns}:${p}`;
+        if (!checkedModels.has(mid) && findResource([own], modelPath(mid))) {
+          dynamicModels++;
+          checkModel(mid, `строка в ${s.where}`, true, false, false);
+        }
+        continue;
+      }
+      if (seenTemplates.has(`${ns}:${p}`)) continue;
+      seenTemplates.add(`${ns}:${p}`);
+      const dir = `assets/${ns}/models/`;
+      const hits = own
+        .list(`${dir}${p.slice(0, p.lastIndexOf('/') + 1)}`)
+        .filter((f) => f.startsWith(`${dir}${p}`) && f.endsWith('.json'));
+      for (const f of hits) {
+        const mid = `${ns}:${f.slice(dir.length, -5)}`;
+        dynamicModels++;
+        checkModel(mid, `шаблон «${ns}:${p}…» в ${s.where}`, true, false, false);
+      }
+      if (hits.length)
+        info.push(
+          `${s.where}: путь модели собирается кодом «${ns}:${p}…» — ${hits.length} моделей проверены как используемые`,
+        );
+    }
   }
   for (const ns of spaces)
     for (const p of own.list(`assets/${ns}/models/`)) {
@@ -824,7 +948,7 @@ function resourcesCheck(a) {
   ];
   const out = [
     `Проверка ресурсов: ${target.label}; namespace ${spaces.join(', ') || '—'}`,
-    `проверено: блоков ${blocks.size} (состояний ${statesChecked}), предметов ${items.size}, моделей ${checkedModels.size}, ключей перевода ${keysChecked.size} (из кода ${codeKeys}), PartialModel ${code.partials.length}; классов ${src.names.length}, регистраций в коде ${regs.length}`,
+    `проверено: блоков ${blocks.size} (состояний ${statesChecked}), предметов ${items.size}, моделей ${checkedModels.size}, ключей перевода ${keysChecked.size} (из кода ${codeKeys}), PartialModel ${code.partials.length}, моделей из кода ${dynamicModels}; классов ${src.names.length}, регистраций в коде ${regs.length}`,
   ];
   const E = uniq(errors);
   const W = uniq(warns);
@@ -909,7 +1033,7 @@ export const TOOLS = [
   {
     name: 'resources_check',
     description:
-      "Check a mod's or addon's resources without a client: every block has a blockstate covering all property combinations (properties from createBlockStateDefinition bytecode incl. ancestors), property values valid, models and parents exist (incl. foreign namespaces and Minecraft), textures exist, element coordinates and angles valid, items have models, translation keys from code (everything passed to Component.translatable — incl. ternary branches — and strings with the mod's key prefixes) and block/item names exist in en_us and ru_ru (missing in ru_ru is an error for an addon), PartialModel.of points to a model, blocks have loot.",
+      "Check a mod's or addon's resources without a client: every block has a blockstate covering all property combinations (properties from createBlockStateDefinition bytecode incl. ancestors), property values valid, models and parents exist (incl. foreign namespaces and Minecraft), textures exist, element coordinates and angles valid, items have models (incl. items from a mod's own register helpers and item models with a name in en_us), models the code loads by path or prefix template (ModelResourceLocation.standalone) and atlas palette textures, translation keys from code (everything passed to Component.translatable — incl. ternary branches — and strings with the mod's key prefixes) and block/item names exist in en_us and ru_ru (missing in ru_ru is an error for an addon), PartialModel.of points to a model, blocks have loot.",
     inputSchema: {
       type: 'object',
       properties: {
