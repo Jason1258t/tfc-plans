@@ -30,9 +30,9 @@ import { PACK_CACHE } from './pack-cache.mjs';
 import { packServer } from './pack-fetch.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const HOST = process.env.TFC_CLIENT_HOST ?? 'master@100.109.147.20';
+export const HOST = process.env.TFC_CLIENT_HOST ?? 'master@100.109.147.20';
 const ALIAS = process.env.TFC_CLIENT_HOST_ALIAS ?? '192.168.0.101';
-const OPT = process.env.TFC_CLIENT_OPT ?? '~/.local/opt/tfc-stand';
+export const OPT = process.env.TFC_CLIENT_OPT ?? '~/.local/opt/tfc-stand';
 /** Код стенда на хосте: только эти файлы, без node_modules */
 const CODE = ['client-stand.mjs', 'mc-server.mjs', 'pack-cache.mjs', 'client-stand/Capture.java'];
 const REMOTE_CODE = '~/tfc-stand/client-stand-code';
@@ -40,11 +40,11 @@ const REMOTE_STAND = '.cache/tfc-plans/client-stand';
 const LOCAL = path.join(os.homedir(), '.cache', 'tfc-plans', 'client-stand');
 const DEFAULT_NF = '21.1.251';
 
-const SSH = ['-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-o', `HostKeyAlias=${ALIAS}`];
+export const SSH = ['-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-o', `HostKeyAlias=${ALIAS}`];
 const log = (s) => console.error(`[client-stand] ${s}`);
-const q = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
+export const q = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
 
-function ssh(script) {
+export function ssh(script) {
   const r = spawnSync('ssh', [...SSH, '-o', 'ConnectTimeout=15', HOST, 'bash -se'], {
     input: script,
     encoding: 'utf8',
@@ -53,7 +53,7 @@ function ssh(script) {
   return r.stdout;
 }
 
-function rsync(args) {
+export function rsync(args) {
   const r = spawnSync('rsync', ['-a', '-e', ['ssh', ...SSH].join(' '), ...args], {
     stdio: ['ignore', 'ignore', 'pipe'],
     encoding: 'utf8',

@@ -145,6 +145,10 @@ See [test stand access and commands](docs/state/infra.md#remote-whole-pack-stand
 snapshot and overlay transfer, and the smoke test. Full Minecraft client with the pack on a virtual display there:
 `npm run client-stand -- prepare` once, then `npm run client-stand -- run` (title screen PNG, logs, summary) —
 [client stand](docs/state/infra.md#remote-minecraft-client-stand--scripted-dev-284). AutoLab, Docker, and Ollama on that host are outside the stand.
+Both stands take jobs from a queue there: MCP `stand_submit` (`kind=server|client`) → `stand_wait id=…` — one call until
+the result, never poll the log or `sleep`-loop over SSH; in Claude Code run that wait in the background
+(`node scripts/mcp-call.mjs tfc-pack stand_wait '{"id":"…"}' --timeout 1800`) —
+[stand queue](docs/state/infra.md#stand-queue-on-test1a-dev-310).
 
 ## Browser checks
 

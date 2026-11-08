@@ -5,7 +5,7 @@
  * (schematic_print_check, scripts/mcp/tools/printcheck.mjs) и отдаёт итог (POST /print-checks/result). Стенд упал
  * или не уложился в срок — итог «неясное» с хвостом лога; сам исполнитель пропал — пачку закроет сервер.
  *
- *   node scripts/print-worker.mjs            — пачки, пока очередь не пуста (cron: scripts/print-worker.sh)
+ *   node scripts/print-worker.mjs            — пачки, пока очередь не пуста (вручную; на test1a его зовёт очередь стенда — stand-queue.mjs, --once)
  *   node scripts/print-worker.mjs --once     — одна пачка
  *   --max N — схем в пачке (8); --memory 6G
  *
@@ -43,6 +43,7 @@ if (argv[0] === '--child') {
 const { packServer, fetchPack } = await import('./pack-fetch.mjs');
 const { PACK_CACHE } = await import('./pack-cache.mjs');
 const { STAND } = await import('./pack-stand.mjs');
+const { packMeta, stageShm } = await import('./stand-shm.mjs');
 const srv = packServer();
 if (!srv) throw new Error('нет TFC_PACK_URL / TFC_PACK_TOKEN (ключ роли worker)');
 
@@ -78,30 +79,6 @@ async function addonJars(addons) {
   return out;
 }
 
-/** Снимок и сервер NeoForge → /dev/shm; → { pack, stand, clean } */
-function stage(loader) {
-  const free = (() => {
-    try {
-      const s = fs.statfsSync('/dev/shm');
-      return s.bavail * s.bsize;
-    } catch {
-      return 0;
-    }
-  })();
-  const need = 2 * 1024 ** 3;
-  if (free < need) return { pack: PACK_CACHE, stand: STAND, clean: () => {} };
-  const ram = fs.mkdtempSync('/dev/shm/tfc-print.');
-  fs.cpSync(PACK_CACHE, path.join(ram, 'pack'), { recursive: true });
-  fs.mkdirSync(path.join(ram, 'stand'));
-  const nf = path.join(STAND, loader);
-  if (loader && fs.existsSync(nf)) fs.cpSync(nf, path.join(ram, 'stand', loader), { recursive: true });
-  return {
-    pack: path.join(ram, 'pack'),
-    stand: path.join(ram, 'stand'),
-    clean: () => fs.rmSync(ram, { recursive: true, force: true }),
-  };
-}
-
 async function runBatch(b) {
   const beat = (st, note = '') => api('/print-checks/progress', { batch: b.id, stage: st, note }).catch(() => {});
   log(`пачка ${b.id}: ${b.items.map((s) => `${s.name} (${s.blocks})`).join(', ')}; срок ${b.timeoutSec} с`);
@@ -109,16 +86,9 @@ async function runBatch(b) {
   let staged = null;
   try {
     await beat('fetch', `снимок ${b.env.snapshot}`);
-    const meta = () => {
-      try {
-        return JSON.parse(fs.readFileSync(path.join(PACK_CACHE, '.tfc-fetch.json'), 'utf8'));
-      } catch {
-        return {};
-      }
-    };
-    if (meta().snapshot !== b.env.snapshot) await fetchPack();
+    if (packMeta().snapshot !== b.env.snapshot) await fetchPack();
     const mods = await addonJars(b.env.addons);
-    staged = stage(meta().loader);
+    staged = stageShm(STAND, { prefix: 'tfc-print.' });
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tfc-print-worker-'));
     const inFile = path.join(dir, 'in.json');
     const outFile = path.join(dir, 'out.json');
