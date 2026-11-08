@@ -26,6 +26,7 @@ import {
   shapeBox,
   sizeOf,
 } from '@tfc/core/schematicFile';
+import { PRINT_HINTS, PRINT_STATUS } from '@tfc/core/printCheck';
 import { inspectSchematic, SCHEMATIC_MAX } from '@tfc/pack-server/schematic-nbt';
 import { DOCS, fromValue } from '../../firestore-rest.mjs';
 import { packServer } from '../../pack-fetch.mjs';
@@ -108,6 +109,191 @@ async function schematics() {
   });
   for (const [id, f] of fresh) if (!out.some((s) => s.id === id)) out.push(f);
   return out.filter((s) => !s.deleted);
+}
+
+// ---------------------------------------------------------------- проверка печати пушкой (dev #305)
+
+/** Очередь и итоги фоновой проверки печати (GET /print-checks); сервер не ответил — null и причина */
+let checksCache = null;
+async function printChecks() {
+  if (!checksCache || checksCache.until < Date.now()) {
+    const value = pack('/print-checks').then(
+      (data) => ({ data, error: null }),
+      (e) => ({ data: null, error: e.message }),
+    );
+    checksCache = { until: Date.now() + TTL, value };
+  }
+  return checksCache.value;
+}
+
+/** Состояние схемы как на сайте (printView): правили после того, как сервер её видел, — уже ждёт проверки */
+function printView(checks, s) {
+  if (!checks) return null;
+  const item = checks.items[s.id];
+  if (!item) return { state: 'queued', item: null };
+  if (item.state === 'done' && item.updatedAt != null && (s.updatedAt ?? 0) > item.updatedAt)
+    return { state: 'queued', item: { ...item, previous: item.current, current: null } };
+  return { state: item.state, item };
+}
+
+const PRINT_SHORT = { 1: 'печатается', 2: 'нет в сборке', 3: 'битое', 4: 'неясное' };
+const PRINT_FILTER = {
+  ok: (v) => v?.item?.current?.schematic.group === 1,
+  not_in_pack: (v) => v?.item?.current?.schematic.group === 2,
+  broken: (v) => v?.item?.current?.schematic.group === 3,
+  unclear: (v) => v?.item?.current?.schematic.group === 4,
+  queued: (v) => v && v.state !== 'done',
+};
+const waitingText = (v) =>
+  v.state === 'running' ? 'проверяется на стенде' : v.item?.position ? `в очереди, ${v.item.position}-я` : 'в очереди';
+const checkedText = (rec) =>
+  `${dateOf(Date.parse(rec.checkedAt))}, сборка ${rec.snapshot ?? '?'}${rec.addons?.length ? ` + аддонов ${rec.addons.length}` : ''}`;
+
+/** Одна строка для списка */
+function printShort(v) {
+  if (!v) return null;
+  const cur = v.item?.current;
+  if (v.state === 'done' && cur) {
+    const s = cur.schematic;
+    const n = s.sites.flatMap((x) => x.problems ?? []).filter((p) => p.group > 1).length;
+    return `${s.group} ${PRINT_STATUS[s.group].text}${n ? ` (причин ${n})` : ''}; ${checkedText(cur)}`;
+  }
+  const prev = v.item?.previous?.schematic.group;
+  return `0 ${waitingText(v)}${prev ? `; прошлая проверка — ${prev} ${PRINT_SHORT[prev]}` : ''}`;
+}
+
+/** Итог проверки: совпадение, повтор, причины групп 2–4 по блокам, (full) расход */
+function recordLines(rec, entry, { full, indent = '' }) {
+  const s = rec.schematic;
+  const site = s.sites.find((x) => x.mode === 'survival') ?? s.sites[0];
+  const cut = full ? 3000 : 300;
+  const out = [
+    `группа ${s.group}: ${PRINT_STATUS[s.group].text}`,
+    `проверена ${checkedText(rec)}; ревизия схемы ${rec.revision ?? '?'}${
+      entry.revision && rec.revision && rec.revision !== entry.revision ? ` (текущая ${entry.revision})` : ''
+    }`,
+  ];
+  if (full && rec.addons?.length) out.push(`аддоны: ${rec.addons.join(', ')}`);
+  if (site?.toPlace != null)
+    out.push(
+      `${site.mismatch ? `не совпало со схемой ${site.mismatch} из ${site.toPlace} клеток` : `все ${site.toPlace} клеток совпали со схемой`}` +
+        `${site.sec != null ? `, печать ${site.sec} с` : ''}` +
+        `${site.restart ? (site.restart.placed ? `; повторный запуск поставил ещё ${site.restart.placed}` : '; повторный запуск ничего не тратит') : ''}`,
+    );
+  const problems = s.sites.flatMap((x) => x.problems ?? []).filter((p) => p.group > 1);
+  const hinted = new Set();
+  for (const g of [2, 3, 4]) {
+    const ps = problems.filter((p) => p.group === g);
+    if (!ps.length) continue;
+    const cells = ps.reduce((n, p) => n + (p.cells || 0), 0);
+    out.push(`${PRINT_STATUS[g].text}: причин ${ps.length}${cells ? `, клеток ${cells}` : ''}`);
+    const shown = full ? ps : ps.slice(0, 10);
+    for (const p of shown) {
+      out.push(
+        `  [${p.code}] ${p.block ? `${named(p.block)}${p.from ? ` (на месте ${named(p.from)})` : ''} — ` : ''}${p.text}${p.cells ? `; клеток ${p.cells}` : ''}`,
+      );
+      if (PRINT_HINTS[p.code] && !hinted.has(p.code)) out.push(`    что делать: ${PRINT_HINTS[p.code]}`);
+      hinted.add(p.code);
+      if (p.example) {
+        const ex = p.example.length > cut ? `…${p.example.slice(-cut)}` : p.example;
+        out.push(...ex.split('\n').map((l) => `    | ${l}`));
+      }
+    }
+    if (shown.length < ps.length) out.push(`  … ещё причин ${ps.length - shown.length} — section=print`);
+  }
+  if (site?.spent) {
+    const rows = Object.entries(site.spent)
+      .filter(([, n]) => n > 0)
+      .sort((a, b) => b[1] - a[1]);
+    const diff = rows.filter(([id, n]) => site.required?.[id] != null && site.required[id] !== n);
+    const total = rows.reduce((n, [, x]) => n + x, 0);
+    if (full) {
+      out.push(`расход на печать: ${total} шт., ${rows.length} видов`);
+      for (const [id, n] of rows)
+        out.push(
+          `  ${String(n).padStart(6)}  ${named(id)}${site.required?.[id] != null && site.required[id] !== n ? ` (по схеме ${site.required[id]})` : ''}`,
+        );
+    } else
+      out.push(
+        `расход на печать: ${total} шт., ${rows.length} видов${
+          diff.length
+            ? `; не как по схеме: ${diff
+                .slice(0, 8)
+                .map(([id, n]) => `${id} ${n} (по схеме ${site.required[id]})`)
+                .join(', ')}${diff.length > 8 ? ` и ещё ${diff.length - 8}` : ''}`
+            : ''
+        } — весь список: section=print`,
+      );
+  }
+  return out.map((l) => indent + l);
+}
+
+/** Блок «Проверка печати пушкой» для schematic_get */
+async function printSection(entry, { full }) {
+  const { data, error } = await printChecks();
+  if (!data) return [`Проверка печати пушкой: сервер сборки не ответил — ${error}`];
+  const v = printView(data, entry);
+  const out = ['Проверка печати пушкой (фоновая, стенд всей сборки):'];
+  if (v.state === 'done' && v.item?.current) out.push(...recordLines(v.item.current, entry, { full, indent: '  ' }));
+  else {
+    out.push(
+      `  0 ${waitingText(v)} — ${
+        v.state === 'running'
+          ? `этап «${data.running?.stage ?? '?'}», пачка из ${data.running?.ids.length ?? '?'}`
+          : 'схема новая, изменилась, вышла новая сборка/аддон или запрошена перепроверка'
+      }`,
+    );
+    if (v.item?.previous)
+      out.push('  прошлая проверка:', ...recordLines(v.item.previous, entry, { full, indent: '    ' }));
+  }
+  if (full)
+    out.push(
+      `  среда сейчас: сборка ${data.env.snapshot ?? '?'}, аддоны ${data.env.addons.join(', ') || 'нет'}; в очереди ${data.queued}${data.running ? `, идёт пачка (${data.running.ids.length})` : ''}`,
+    );
+  return out;
+}
+
+async function printRecheck(a) {
+  if (!a.all && !a.id) throw new Error('Укажите id схемы или all=true.');
+  const entries = a.all ? null : await Promise.all([a.id].flat().map((k) => findEntry(k)));
+  let r;
+  try {
+    r = await pack('/print-checks/recheck', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(a.all ? { all: true } : { ids: entries.map((e) => e.id) }),
+    });
+  } catch (e) {
+    if (e.status === 401 || e.status === 403)
+      throw new Error(`${e.message}\nПерепроверку ставит только ключ администратора (tfc login ключом хоста).`, {
+        cause: e,
+      });
+    throw e;
+  }
+  checksCache = null;
+  const { data } = await printChecks();
+  const list = entries ?? (await schematics());
+  const out = [
+    a.all
+      ? `Вся библиотека поставлена на перепроверку (в списке перепроверки ${r.recheck.length}).`
+      : `Поставлено на перепроверку: ${entries.map((e) => e.name).join(', ')}.`,
+  ];
+  if (data) {
+    for (const e of list) {
+      const v = printView(data, e);
+      if (!entries && v?.state === 'done') continue;
+      out.push(`  ${e.id} — ${e.name}: ${printShort(v)}`);
+      if (entries && v?.state === 'running')
+        out.push('    ⚠ она сейчас на стенде: итог этой пачки снимет просьбу — повторите перепроверку после него');
+    }
+    out.push(
+      `Всего в очереди ${data.queued}${data.running ? `, идёт пачка (${data.running.ids.length}), этап «${data.running.stage ?? '?'}»` : ''}.`,
+    );
+  }
+  out.push(
+    'Исполнитель на test1a берёт очередь раз в 10 минут, пачками до 8 схем; итог — schematic_get (блок «Проверка печати») или schematics_list print=…',
+  );
+  return out.join('\n');
 }
 
 /** Исходник .nbt по fileId: кеш на диске, иначе с сервера сборки; хеш сверяется, если он есть в записи */
@@ -396,16 +582,29 @@ async function schematicsList(a) {
     }
     list = out;
   }
+  const { data: checks, error } = await printChecks();
+  if (a.print) {
+    const f = PRINT_FILTER[a.print];
+    if (!f) throw new Error(`print: ${Object.keys(PRINT_FILTER).join(' | ')}`);
+    if (!checks) throw new Error(`Проверка печати: сервер сборки не ответил — ${error}`);
+    list = list.filter((s) => f(printView(checks, s)));
+  }
   list.sort((x, y) => (y.updatedAt ?? 0) - (x.updatedAt ?? 0));
-  return page(list, a, (s) => {
+  const head = checks
+    ? `Проверка печати пушкой: сборка ${checks.env.snapshot ?? '?'} + аддонов ${checks.env.addons.length}; в очереди ${checks.queued}${checks.running ? `, на стенде пачка из ${checks.running.ids.length} (этап «${checks.running.stage ?? '?'}»)` : ''}. Группы: 0 в проверке, 1 печатается, 2 нет в сборке, 3 битое, 4 неясное.`
+    : `Проверка печати: сервер сборки не ответил — ${error}`;
+  const body = page(list, a, (s) => {
     const hit = byBlocks.get(s.id);
+    const pr = printShort(printView(checks, s));
     return [
       `${s.id} — ${s.name} (${s.fileName}, ${sizeText(s.size)}, ${s.blocks ?? '?'} блоков, замен ${(s.replace ?? []).length}; ${who(s)}, ${dateOf(s.updatedAt)})`,
+      ...(pr ? [`    печать: ${pr}`] : []),
       ...(s.description ? [`    ${s.description.replace(/\s+/g, ' ').slice(0, 160)}`] : []),
       ...(hit ? [`    найдено по блокам: ${hit.slice(0, 6).map(namedRow).join(', ')}`] : []),
       `    ${link(s.id)}`,
     ];
   });
+  return `${head}\n${body}`;
 }
 
 /**
@@ -447,6 +646,8 @@ async function schematicGet(a) {
   reads = 0;
   const listed = await findEntry(a.id);
   const entry = a.fresh ? ((await firestoreEntry(listed.id)) ?? listed) : listed;
+  if (a.section === 'print')
+    return `${entry.id} — ${entry.name}\n${(await printSection(entry, { full: true })).join('\n')}${reads ? `\n— Firestore: ${reads} чтен.` : ''}`;
   const src = await parse(await sourceBytes(entry));
   const m = a.edited ? await editedModel(src, entry) : src;
   const view = a.edited ? 'файл с заменами и формой (как скачивает сайт)' : 'исходник';
@@ -555,6 +756,7 @@ async function schematicGet(a) {
     if (box2) out.push(`после замен и формы: ${sizeText(box2.size)}`);
   }
   if (entry.description) out.push('', 'Описание:', entry.description);
+  out.push('', ...(await printSection(entry, { full: false })));
   out.push(
     '',
     `Блоки ${a.edited ? 'файла с заменами' : 'исходника (→ замена из записи)'}:`,
@@ -562,7 +764,7 @@ async function schematicGet(a) {
   );
   out.push(
     '',
-    'Дальше: section=palette | blocks (block=, box=) | layer (y=, box=) | nbt; pos=x,y,z — блок и его данные; edited=true — как скачивается; save=<путь> — файл; schematic_render — картинка.',
+    'Дальше: section=palette | blocks (block=, box=) | layer (y=, box=) | nbt | print (проверка печати целиком); pos=x,y,z — блок и его данные; edited=true — как скачивается; save=<путь> — файл; schematic_render — картинка.',
   );
   const mm = await mentions(entry.name);
   if (mm) out.push(mm);
@@ -911,12 +1113,17 @@ export const TOOLS = [
   {
     name: 'schematics_list',
     description:
-      'Create schematics in the site library (via the pack server, 0 Firestore reads): name, file, size, blocks, replacements, description, site link. Search by words in id/name/file name/author/description/replacements; words not found there are searched in the blocks of each schematic (ids and Russian names; sources are downloaded once and cached).',
+      'Create schematics in the site library (via the pack server, 0 Firestore reads): name, file, size, blocks, replacements, description, site link, background print-check status (0 queued with position / 1 prints fully / 2 not in pack / 3 broken / 4 unclear, date, pack snapshot). Search by words in id/name/file name/author/description/replacements; words not found there are searched in the blocks of each schematic (ids and Russian names; sources are downloaded once and cached).',
     inputSchema: {
       type: 'object',
       properties: {
         query: str('words'),
         blocks: { type: 'boolean', description: 'also search block contents (default true)' },
+        print: {
+          type: 'string',
+          enum: Object.keys(PRINT_FILTER),
+          description: 'only schematics with this background print-check result (queued = waiting or running)',
+        },
         ...paging,
       },
     },
@@ -925,12 +1132,12 @@ export const TOOLS = [
   {
     name: 'schematic_get',
     description:
-      'One schematic from the library, read from its .nbt: summary (link, revision, size, shape, description, block counts with replacements); section=palette (states with properties and counts); section=blocks with block= words and box= (coordinates); y= — a layer as text with a legend; pos=x,y,z — block state and block-entity NBT (SNBT); section=nbt — root tags and entities. edited=true — the file after replacements and shape (as the site downloads it). save=<path> — write the file (edited by default; edited=false — the source). fresh=true — record from Firestore (current revision before schematic_put).',
+      'One schematic from the library, read from its .nbt: summary (link, revision, size, shape, description, block counts with replacements); section=palette (states with properties and counts); section=blocks with block= words and box= (coordinates); y= — a layer as text with a legend; pos=x,y,z — block state and block-entity NBT (SNBT); section=nbt — root tags and entities. The summary includes the background schematicannon print check (pack server, 0 Firestore reads): group, checked revision and snapshot, causes of groups 2–4 by block with example cells; section=print — full: long examples, exact material spend vs schematic, addons, previous result. edited=true — the file after replacements and shape (as the site downloads it). save=<path> — write the file (edited by default; edited=false — the source). fresh=true — record from Firestore (current revision before schematic_put).',
     inputSchema: {
       type: 'object',
       properties: {
         id: idProp,
-        section: { type: 'string', enum: ['summary', 'palette', 'blocks', 'layer', 'nbt'] },
+        section: { type: 'string', enum: ['summary', 'palette', 'blocks', 'layer', 'nbt', 'print'] },
         block: str('section=blocks: words of block id or Russian name'),
         y: num('layer Y (0 = bottom)'),
         pos: str('"x,y,z" — block at position'),
@@ -943,6 +1150,19 @@ export const TOOLS = [
       required: ['id'],
     },
     handler: schematicGet,
+  },
+  {
+    name: 'schematic_print_recheck',
+    description:
+      'Put library schematics back into the background print-check queue (pack server POST /print-checks/recheck, admin key; 0 Firestore reads): id (one or a list) or all=true. The worker on test1a drains the queue every 10 min; answers with the new queue positions. Use after a harness fix or a manual review; edits of the schematic, a new snapshot or addon requeue by themselves.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { anyOf: [idProp, { type: 'array', items: { type: 'string' } }] },
+        all: { type: 'boolean', description: 'recheck every schematic that has a result' },
+      },
+    },
+    handler: printRecheck,
   },
   {
     name: 'schematic_render',
