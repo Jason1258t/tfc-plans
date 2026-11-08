@@ -19,7 +19,8 @@ Thin spool input dispatch and cable preview distinguish the body inlet from ordi
 - Full client `20261108-110658-a5e1`, 250 mods, normal exit: actual clicks select inlet then connect/power the board;
   DC gives zero output. Three screenshots inspected. No client run remains active.
 - Owner chose AC for the future L1 high-voltage transformer; use ~A/~B labels, no hidden rectification (doc:59 rev19).
-  Vibrator, high-voltage transformer and L2 regulated supply remain unimplemented.
+  The vibrator was removed by the owner; LC/antenna feasibility is a separate optional research task #313.
+  High-voltage AC transformer and L2 regulated supply remain unimplemented.
 
 ## Current editor milestone
 
@@ -110,8 +111,8 @@ Register footprint stays 3×2 with eleven external pads; dense packages use the 
    poll the same process handle until terminal, and avoid concurrent full-pack runs on test1a. SSH authorization was restored.
 3. Finish editor requirements: undo/redo, mirror F, group selection/move/copy/paste, translucent other layers,
    named L3 buses/program view and probe mode. Do not call the current editor complete.
-4. Implement onboard power, vibrator/HV gate, sensors, remaining controls and interfaces/Create integration.
-   Onboard PSU has only two outputs; no half-board inlet/guard zone. HV only accepts AC/vibrator.
+4. Implement remaining onboard power, HV transformer, sensors, remaining controls and interfaces/Create integration.
+   Onboard PSU has only two outputs; no half-board inlet/guard zone. HV only accepts AC; no vibrator is planned.
 5. Finish L2 catalogue and then L3 CPU/memory/display and the agreed restricted Python-like language in doc:59 §6.1.
    Addressable L3 versions of strip/knob/button are separate modules with bus/power/ground, not hidden access to L1 parts.
 6. Run tier demos, finish recipes/guide/version, use addon-release and ship only when the full task is ready.
@@ -128,3 +129,16 @@ node scripts/mcp-call.mjs tfc-plans-dev dev_get '{"id":301}'
 
 Full-pack devtest jar must include optional PetTest classes (build libraries with `DESTROY=1 ./libs.sh` when needed).
 Do not publish the prototype jar under the existing release number.
+
+## Remaining session goal while the stand is occupied
+
+Plan doc:59 rev22 removes the vibrator and separates optional LC/antenna research into #313. Main goal #301.13:
+prepare the 3×3 four-pad step-up AC transformer, including power/current limits and interaction with L1 trace
+protection, native EE coupling, DC rejection, resources/recipe and buildable main/devtest jars. Use local compilation,
+static resource/model/recipe checks and calculations only. Do not use or alter test1a while occupied.
+
+Success for this session means a saved buildable candidate and a prepared measurement scenario, not electrical or
+client acceptance. #301.14 remains open for loaded/AC/DC/short/overload/rotation/reflection/restart and client checks
+once the stand is free. Optional spare-time work: #313 jar/API feasibility analysis only, no promised radio features.
+Do not pull L3 CPU/VM/display, all sensors or Create integration into this bounded session goal; keep the full scope
+in the parent plan. No release or completion of #301 before the required acceptance.

@@ -23,6 +23,8 @@ game check — [pending.md](pending.md).
   L1 onboard transformer now accepts a two-core 300 V AC cable directly on its body; adjustable 1–48 V AC output.
   Loaded/short/DC/protection/restart and 48 inlet poses pass; full client 110658-a5e1 confirms real cable clicks.
   Recipe, resource coverage and energy balance checked. Future L1 high-voltage output explicitly chosen as AC.
+  Vibrator removed by owner; optional LC/antenna feasibility is #313. Stand occupied: next goal #301.13 is a
+  buildable step-up AC candidate and prepared checks; electrical/client acceptance remains open as #301.14.
   Full continuation state and remaining scope: [checkpoint](../plans/pcb-modules-checkpoint.md); plan doc:59.
 
 ## Versions (since 2026-10-23)
