@@ -37,6 +37,17 @@ addon`, `formerIds` for ee_rectifier → ee_extras, rollback marked); `/updates`
   all versions (401 without a key), `tfc admin addon upload` — same jar «уже записана», mismatched 2.2.0 jar refused
   (409), `tfc pull addons ee_extras@2.3.1` from the live server installed the jar with the recorded hash.
 
+### Betas (since 2026-11-08, dev #308)
+
+A version with a «-» tail (`2.7.0-beta.3`) is a beta: compared numerically (`beta.10` > `beta.2`, all < `2.7.0`),
+never the latest released, skipped by patch notes unless it is the from/to version itself. `tfc addons install
+<mod>@beta` stores pin `beta` — newest released beta or a newer release on every pull; `@latest` unsubscribes.
+The pack server's `/site/addons` hides betas unless `beta=1` (new `tfc` sends it), so old `tfc` builds never
+take a released beta for the latest; the VPS needs the update for betas to reach anyone. `tfc publish` refuses a beta jar not already in the snapshot without `--allow-beta`; `addon_check` refuses a beta in
+the card; the site tab «Версии» marks betas and folds those older than the latest release. Procedure — skill
+`addon-release` «Beta». Checked: core comparisons by a node script, `pickAddonVersion` cases, site on the dev server;
+not checked against the live pack server with a real beta upload.
+
 ## Debug Tools (`tools/debug-tools-mod`)
 
 2026-11-04 (dev #214, #199): **1.0.0**, manual install, no blocks. TFC 4.2.9 has no vein locate command: only

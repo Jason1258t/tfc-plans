@@ -11,6 +11,8 @@ import type { Addon } from '@/lib/addons';
 import {
   STATUS_LABEL,
   STATUS_TITLE,
+  compareVersions,
+  isPrerelease,
   latestReleased,
   type AddonVersion,
   type AddonVersionRevision,
@@ -39,7 +41,8 @@ const dateRu = (d: string) =>
 /**
  * Версии аддона (Firestore addonVersions): у каждой свой ченджлог «что изменилось с прошлой», статус и «что
  * проверено». Правят все игроки, каждая правка — в истории. jar версий — на сервере сборки: ставит `tfc pull addons
- * <мод>@<версия>`, с сайта без ключа скачивается только последняя (кнопка в шапке аддона).
+ * <мод>@<версия>`, с сайта без ключа скачивается только последняя (кнопка в шапке аддона). Беты (2.7.0-beta.3)
+ * ставят подписанные на `<мод>@beta`; бета, которую уже обогнал выпуск, свёрнута.
  */
 export default function AddonVersions({ addon }: { addon: Addon }) {
   const [list, setList] = useState<AddonVersion[] | null>(null);
@@ -67,11 +70,18 @@ export default function AddonVersions({ addon }: { addon: Addon }) {
           <p className="faint small">
             Поставить другую версию (например, откатиться, если новая сломалась):{' '}
             <code>tfc pull addons {addon.id}@&lt;версия&gt;</code> — программа запомнит её и не обновит сама; вернуть
-            последнюю — <code>tfc pull addons {addon.id}@latest</code>. Ченджлог и «что проверено» правят все игроки.
+            последнюю — <code>tfc pull addons {addon.id}@latest</code>. Получать беты, пока идёт разработка, —{' '}
+            <code>tfc pull addons {addon.id}@beta</code>. Ченджлог и «что проверено» правят все игроки.
           </p>
           <ul className={styles.addonVersionsList}>
             {shown!.map((v) => (
-              <VersionRow key={v.id} addon={addon} v={v} latest={latest?.id === v.id} />
+              <VersionRow
+                key={v.id}
+                addon={addon}
+                v={v}
+                latest={latest?.id === v.id}
+                superseded={isPrerelease(v.version) && !!latest && compareVersions(latest.version, v.version) > 0}
+              />
             ))}
           </ul>
           {list.length > OPEN && (
@@ -93,8 +103,20 @@ function StatusBadge({ s }: { s: AddonVersionStatus }) {
   );
 }
 
-function VersionRow({ addon, v, latest }: { addon: Addon; v: AddonVersion; latest: boolean }) {
-  const [open, setOpen] = useState(true);
+function VersionRow({
+  addon,
+  v,
+  latest,
+  superseded,
+}: {
+  addon: Addon;
+  v: AddonVersion;
+  latest: boolean;
+  /** Бета, которую уже обогнал выпуск: свёрнута */
+  superseded: boolean;
+}) {
+  const [open, setOpen] = useState(!superseded);
+  const beta = isPrerelease(v.version);
   const [editing, setEditing] = useState<AddonVersionEdit | null>(null);
   const [history, setHistory] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -131,6 +153,14 @@ function VersionRow({ addon, v, latest }: { addon: Addon; v: AddonVersion; lates
         <b className={styles.addonVersionNum}>{v.version}</b>
         <span className="faint small">{dateRu(v.date)}</span>
         <StatusBadge s={v.status} />
+        {beta && (
+          <span
+            className={cx(guideStyles.guideBadge, styles.addonStatusBeta)}
+            title={`Бета: обычный tfc pull её не ставит — только подписанным (tfc pull addons ${addon.id}@beta)`}
+          >
+            бета
+          </span>
+        )}
         {latest && <span className={cx(guideStyles.guideBadge, styles.addonStatusLatest)}>последняя</span>}
         <CheckedBadge c={v.checked} />
         <span className="grow" />

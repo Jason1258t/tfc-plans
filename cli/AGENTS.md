@@ -11,3 +11,5 @@ Human docs — [cli/README.md](README.md), [docs/tfc-app.md](../docs/tfc-app.md)
 - Config and agent key — `lib/config.mjs` (`~/.config/tfc/config.json`, `%APPDATA%\tfc\config.json`); scripts take it
   as `@tfc/cli/config`.
 - Output and messages are Russian; the app runs on Windows, macOS and Linux — paths via `node:path`, no shell.
+- Version: before a `tfc:dist` for the site bump `cli/package.json` once per release — `npm run tfc:bump -- patch|minor|major`
+  (rule — docs/tfc-app.md «Версии tfc»); the build number grows by itself. `tfc:dist` refuses an unbumped release.

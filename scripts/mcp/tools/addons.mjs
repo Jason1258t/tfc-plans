@@ -13,7 +13,14 @@ import { addonCards } from '../../addons-index.mjs';
 import { items } from '../data.mjs';
 import { api, FirestoreError, guideDoc } from '../firestore.mjs';
 import { DOCS, fromValue, toValue } from '../../firestore-rest.mjs';
-import { STATUS_LABEL, addonVersionId, compareVersions, latestReleased, sortVersions } from '@tfc/core/addonVersions';
+import {
+  addonVersionId,
+  compareVersions,
+  isPrerelease,
+  latestReleased,
+  sortVersions,
+  STATUS_LABEL,
+} from '@tfc/core/addonVersions';
 import { dateOf, NICK, str } from '../fmt.mjs';
 import { zipEntries, zipRead } from '../jars.mjs';
 import { TOOLS_DIR } from '../resources.mjs';
@@ -223,6 +230,12 @@ async function addonCheck(a) {
     }
   }
 
+  // Карточка и страница сайта описывают выпущенную версию; бету только заливают и выпускают в addonVersions
+  if (isPrerelease(c.version ?? ''))
+    errors.push(
+      `в карточке бета ${c.version} — карточка (и «Скачать» на сайте) только для выпущенных версий; бету: tfc admin addon upload + addon_version_put status=released, ставят её подписанные (${c.id}@beta)`,
+    );
+
   // версия в addonVersions
   const rec = await versionDoc(c.id, c.version);
   if (!rec) errors.push(`нет записи версии ${c.version} — addon_version_put (baseRevision "new") с ченджлогом`);
@@ -300,7 +313,7 @@ async function versionDoc(addon, version) {
 
 const kb = (n) => `${Math.round(n / 1024)} КБ`;
 const versionLine = (v) =>
-  `${v.version} — ${v.date || 'без даты'}, ${STATUS_LABEL[v.status] ?? v.status}, проверено: ${v.checked}` +
+  `${v.version}${isPrerelease(v.version) ? ' (бета)' : ''} — ${v.date || 'без даты'}, ${STATUS_LABEL[v.status] ?? v.status}, проверено: ${v.checked}` +
   (v.jar ? `, jar ${v.jar.file} ${kb(v.jar.size)} (${v.jar.sha256.slice(0, 12)}…)` : ', jar не залит') +
   (v.changelog?.trim() ? '' : ', ⚠ без ченджлога');
 
@@ -469,7 +482,7 @@ export const TOOLS = [
   {
     name: 'addon_version_put',
     description:
-      'Create (baseRevision "new") or edit an addon version (**write to the shared database**, signed with the agent nick): changelog for players in Russian Markdown («что изменилось с прошлой версии»; prefix «Важно:» for what breaks or needs action), status draft|released|withdrawn, checked game|server|code|none, checkedNote, date YYYY-MM-DD, jar — local jar path (records file/sha256/size; upload the file itself with `npm run tfc -- admin addon upload <jar>`). Passed fields replace, others kept.',
+      'Create (baseRevision "new") or edit an addon version (**write to the shared database**, signed with the agent nick): changelog for players in Russian Markdown («что изменилось с прошлой версии»; prefix «Важно:» for what breaks or needs action), status draft|released|withdrawn (a beta is a version with a «-» tail, 2.7.0-beta.3: released = available to `<mod>@beta` subscribers only, never the latest; the release changelog summarises its betas), checked game|server|code|none, checkedNote, date YYYY-MM-DD, jar — local jar path (records file/sha256/size; upload the file itself with `npm run tfc -- admin addon upload <jar>`). Passed fields replace, others kept.',
     inputSchema: {
       type: 'object',
       properties: {

@@ -6,7 +6,11 @@ import styles from './TfcDownload.module.css';
 
 /** public/tfc/version.json — его пишет npm run tfc:dist */
 interface TfcVersion {
+  /** Метка коммита (дата-хеш) */
   version: string;
+  /** Читаемая версия и номер сборки; в старых version.json их нет */
+  release?: string;
+  build?: number;
   time: number;
   files: Record<string, { file: string; size: number; sha256: string }>;
   /** Пакет npm tfc-plans (tfc.tgz); в старых version.json его нет */
@@ -99,7 +103,7 @@ export function TfcDownload() {
           <h2>Программа tfc — сборка на вашем ПК</h2>
           <div className="faint small">
             Докачивает моды, конфиги, скрипты KubeJS и ресурспаки сборки и убирает устаревшие. Ваши моды и правки не
-            трогает. Версия {info.version}.
+            трогает. Версия {info.release ? `${info.release} (сборка ${info.build}, ${info.version})` : info.version}.
           </div>
         </div>
       </header>

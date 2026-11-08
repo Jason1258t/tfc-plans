@@ -67,6 +67,10 @@
   color: var(--diamond);
 }
 
+.addonStatusBeta {
+  color: var(--amethyst);
+}
+
 .addonVersionEdit {
   display: flex;
   flex-direction: column;

@@ -64,6 +64,22 @@ Work in a worktree (AGENTS.md). Game facts — from jars via MCP; nothing is che
 - `npx tsc -b` if site code changed; browser on the worktree preview (Claude: `wt-<short>`): `/addons` and `/addons/<mod>` render, icons load, widgets
   have no errors.
 
+## Beta (while a big step is in development)
+
+To let the host and testers try an unfinished step without giving it to everyone:
+
+- Version with a tail: `2.7.0-beta.1`, `-beta.2`, … (in `gradle.properties` and so in the jar). Betas compare
+  numerically (`beta.10` > `beta.2`) and are older than `2.7.0`; NeoForge orders them the same way.
+- Steps 1–2 only: build, `tfc admin addon upload`, `addon_version_put` with a short changelog (what to look at) and
+  `status: released` — for a beta it means «available to subscribers». Do **not** touch the card, the site page or
+  `/addons/` (step 3–4): they stay on the released version; `addon_check` refuses a beta in the card. Commit the addon
+  source in `tools/` as usual; a tfc-plans ship is needed only if the pointer or docs changed.
+- Testers: `tfc addons install <mod>@beta` — every later `tfc pull` brings the newest beta (or the release once it
+  is newer); `<mod>@latest` returns to releases. Plain `tfc pull` never installs a beta, and `tfc publish` refuses a
+  beta jar in the host's folder without `--allow-beta`.
+- Release `2.7.0`: the usual full procedure; its changelog sums up what the betas brought (patch notes skip betas).
+  The site folds betas older than the latest release.
+
 ## 6. Ship
 
 - Update `docs/state/addons.md` (version, what changed, how verified) and the `docs/addons.md` table row.

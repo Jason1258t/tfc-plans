@@ -13,7 +13,7 @@ import { unzipSync } from 'fflate';
 import { configDir } from './config.mjs';
 import { dim, mb, progress, yellow } from './ui.mjs';
 import { getJson, isNewer, latest, session, SITE } from './update.mjs';
-import { BUILD, CHANNEL, IS_BINARY, targetName } from './version.mjs';
+import { BUILD, CHANNEL, IS_BINARY, targetName, versionLabel } from './version.mjs';
 
 const self = () => process.execPath;
 
@@ -65,7 +65,7 @@ export async function upgrade({ force = false } = {}) {
     throw new Error(`нет прав на запись в ${dir} — переложите tfc в свою папку или обновите вручную`);
   }
 
-  console.log(`Скачиваю ${remote.version} (${mb(info.size)})`);
+  console.log(`Скачиваю ${versionLabel(remote)} (${mb(info.size)})`);
   const zip = await download(new URL(info.file, base).href, info.size);
   const sha = createHash('sha256').update(zip).digest('hex');
   if (info.sha256 && sha !== info.sha256)
@@ -77,16 +77,24 @@ export async function upgrade({ force = false } = {}) {
 
   const fresh = `${file}.new`;
   fs.writeFileSync(fresh, bin, { mode: fs.statSync(file).mode | 0o755 });
-  // Проверочный запуск: битый файл не заменит рабочий
+  // Проверочный запуск: битый файл не заменит рабочий, а не тот (назвал не версию из version.json) — тоже
+  let said;
   try {
-    execFileSync(fresh, ['--version'], {
+    said = execFileSync(fresh, ['--version'], {
       env: { ...process.env, TFC_NO_UPDATE_CHECK: '1' },
+      encoding: 'utf8',
       stdio: 'pipe',
       timeout: 30_000,
     });
   } catch (e) {
     fs.rmSync(fresh, { force: true });
     throw new Error(`новая версия не запустилась, оставляю прежнюю: ${e.message}`);
+  }
+  if (!said.includes(remote.version)) {
+    fs.rmSync(fresh, { force: true });
+    throw new Error(
+      `скачанный файл назвал себя «${said.trim().split('\n')[0]}», а ждали ${remote.version} — оставляю прежнюю`,
+    );
   }
   if (process.platform === 'win32') {
     fs.rmSync(`${file}.old`, { force: true });
@@ -100,7 +108,7 @@ export async function upgrade({ force = false } = {}) {
   } else fs.renameSync(fresh, file);
   // Подсказка «вышла новая версия» больше не нужна
   fs.rmSync(path.join(configDir(), 'update-check.json'), { force: true });
-  return { from: BUILD.version, to: remote.version, path: file };
+  return { from: versionLabel(BUILD), to: versionLabel(remote), path: file };
 }
 
 /** Пакет npm: npm install -g с сайта (тот же адрес, что в инструкции) */
@@ -108,7 +116,7 @@ function upgradeNpm(remote, base, force) {
   if (!remote.npm?.file) throw new Error('на сайте нет пакета npm');
   if (!force && !(remote.time > BUILD.time)) return null;
   const url = new URL(remote.npm.file, base).href;
-  console.log(`Ставлю ${remote.version}: npm install -g ${url}`);
+  console.log(`Ставлю ${versionLabel(remote)}: npm install -g ${url}`);
   // npm на Windows — npm.cmd, его запускает только оболочка
   const r = spawnSync('npm', ['install', '-g', url], { stdio: 'inherit', shell: process.platform === 'win32' });
   if (r.error) throw new Error(`npm не запустился: ${r.error.message}`);
@@ -118,7 +126,7 @@ function upgradeNpm(remote, base, force) {
         (process.platform === 'win32' ? '' : ' — если не хватило прав, запустите ту же команду через sudo'),
     );
   fs.rmSync(path.join(configDir(), 'update-check.json'), { force: true });
-  return { from: BUILD.version, to: remote.version, path: 'npm (глобальный пакет)' };
+  return { from: versionLabel(BUILD), to: versionLabel(remote), path: 'npm (глобальный пакет)' };
 }
 
 /**
@@ -134,7 +142,7 @@ export async function autoUpgrade(argv) {
   try {
     r = await upgrade();
   } catch (e) {
-    console.error(yellow(`Не удалось обновить tfc (${e.message}) — работаю прежней версией ${BUILD.version}.`));
+    console.error(yellow(`Не удалось обновить tfc (${e.message}) — работаю прежней версией ${versionLabel(BUILD)}.`));
     return null;
   }
   if (!r) return null;

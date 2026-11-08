@@ -5,6 +5,10 @@
  *
  *   npm run tfc:dist [-- --only macos-arm64,win-x64] [--out dist-tfc] [--no-public]
  *
+ * Версия: метка коммита (дата-хеш), номер сборки (число коммитов программы — растёт сам) и читаемая версия из
+ * cli/package.json. Если программа изменилась с выложенной на сайте, а читаемая версия не выросла, сборка для сайта
+ * отказывает: повысить — npm run tfc:bump -- patch|minor|major (правило — docs/tfc-app.md «Версии tfc»).
+ *
  * Результат — dist-tfc/: tfc-<ос>-<арх>[.exe] (сам файл), tfc-<ос>-<арх>.zip (его же сжатым — так он лежит на сайте),
  * tfc.tgz (пакет npm tfc-plans: тот же код одним .mjs, для тех, у кого есть Node.js), установщики install.ps1 и
  * install.sh (из cli/install/) и version.json; всё это копируется в public/tfc/ (вне git, уходит на хостинг при деплое).
@@ -20,6 +24,7 @@ import { parseArgs } from 'node:util';
 import { build } from 'esbuild';
 import { zipSync } from 'fflate';
 import { inject } from 'postject';
+import { compareVersions } from '@tfc/core/addonVersions';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const NODE_VERSION = process.versions.node;
@@ -45,7 +50,10 @@ const sha256 = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 const mb = (n) => `${(n / 1024 / 1024).toFixed(1)} МБ`;
 const git = (...a) => execFileSync('git', a, { cwd: ROOT, encoding: 'utf8' }).trim();
 
-/** Версия — последний коммит, менявший программу (и общие модули сайта в ней): пересборка без правок не заставит игроков обновляться */
+/**
+ * Версия — последний коммит, менявший программу (и общие модули сайта в ней): пересборка без правок не заставит
+ * игроков обновляться. build — сколько таких коммитов в истории, release — читаемая версия из cli/package.json.
+ */
 function buildVersion() {
   const srcs = [
     'cli',
@@ -64,7 +72,45 @@ function buildVersion() {
   const day = new Date(time).toISOString().slice(0, 10).replaceAll('-', '.');
   const dirty = git('status', '--porcelain', '--', ...srcs) !== '';
   if (dirty) console.warn('[tfc:dist] в cli/ есть незакоммиченные правки — версия помечена -dirty');
-  return { version: `${day}-${hash}${dirty ? '-dirty' : ''}`, time };
+  const build = Number(git('rev-list', '--count', 'HEAD', '--', ...srcs));
+  const { version: release } = JSON.parse(fs.readFileSync(path.join(ROOT, 'cli', 'package.json'), 'utf8'));
+  if (!/^\d+\.\d+\.\d+$/.test(release)) throw new Error(`версия в cli/package.json — «${release}», нужна вида 1.2.3`);
+  return { version: `${day}-${hash}${dirty ? '-dirty' : ''}`, time, release, build };
+}
+
+/** Выложенный version.json: с сайта (TFC_UPDATE_URL), без сети — прошлый локальный */
+async function publishedVersion(local) {
+  const url = process.env.TFC_UPDATE_URL || 'https://tfc-plans-fd2c.web.app/tfc/version.json';
+  try {
+    const res = await fetch(url, { headers: { 'Cache-Control': 'no-cache' }, signal: AbortSignal.timeout(10_000) });
+    if (res.ok) return { from: url, info: await res.json() };
+  } catch {}
+  try {
+    return { from: local, info: JSON.parse(fs.readFileSync(local, 'utf8')) };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Правило версии: новая сборка программы — номер сборки больше выложенного и читаемая версия выше. Та же метка
+ * коммита — пересборка, можно. Сборка не для сайта (--no-public) только предупреждает.
+ */
+function checkRelease(version, published) {
+  const prev = published?.info;
+  if (!prev?.version || prev.version === version.version) return [];
+  const problems = [];
+  if (prev.build != null && version.build <= prev.build)
+    problems.push(
+      `номер сборки ${version.build} не больше выложенного ${prev.build} — соберите из свежего main, а не из старой ветки`,
+    );
+  if (prev.release && compareVersions(version.release, prev.release) <= 0)
+    problems.push(
+      `программа изменилась с выложенной (${prev.version} → ${version.version}), а версия в cli/package.json осталась ` +
+        `${version.release} (выложена ${prev.release}) — повысьте: npm run tfc:bump -- patch|minor|major, закоммитьте ` +
+        'и соберите снова (правило — docs/tfc-app.md «Версии tfc»)',
+    );
+  return problems;
 }
 
 // ---------------------------------------------------------------- Node с nodejs.org
@@ -234,7 +280,12 @@ async function main() {
   fs.mkdirSync(work, { recursive: true });
 
   const version = buildVersion();
-  console.log(`[tfc:dist] tfc ${version.version}, Node ${NODE_VERSION}`);
+  console.log(`[tfc:dist] tfc ${version.release} (сборка ${version.build}, ${version.version}), Node ${NODE_VERSION}`);
+  const published = await publishedVersion(path.join(outDir, 'version.json'));
+  const problems = checkRelease(version, published);
+  if (problems.length && !args['no-public'])
+    throw new Error(`не по правилу версий (сравнил с ${published.from}):\n  ${problems.join('\n  ')}`);
+  for (const p of problems) console.warn(`[tfc:dist] ${p} (сборка не для сайта — продолжаю)`);
   const blob = seaBlob(work, await bundle(work, version));
 
   const files = {};

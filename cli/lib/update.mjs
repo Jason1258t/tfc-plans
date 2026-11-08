@@ -10,7 +10,7 @@ import https from 'node:https';
 import path from 'node:path';
 import { configDir } from './config.mjs';
 import { dim, yellow } from './ui.mjs';
-import { BUILD, CHANNEL, targetName } from './version.mjs';
+import { BUILD, CHANNEL, targetName, versionLabel } from './version.mjs';
 
 export const SITE = 'https://tfc-plans-fd2c.web.app';
 const DAY = 24 * 3600 * 1000;
@@ -79,6 +79,8 @@ export async function latest({ force = false, perSession = false } = {}) {
         checkedAt: Date.now(),
         session: session(),
         version: remote.version,
+        release: remote.release,
+        build: remote.build,
         time: remote.time,
         files: remote.files,
       };
@@ -104,7 +106,7 @@ export async function checkUpdate({ force = false } = {}) {
       ? `npm install -g ${SITE}/tfc/tfc.tgz`
       : `скачайте ${file ? `${SITE}/tfc/${file}` : `с ${SITE}/updates`} и замените им старый файл`;
   return [
-    yellow(`Вышла новая версия tfc: ${cache.version} (у вас ${BUILD.version}).`),
+    yellow(`Вышла новая версия tfc: ${versionLabel(cache)} (у вас ${versionLabel(BUILD)}).`),
     dim(`  Обновить: tfc --upgrade (или ${manual}).`),
   ].join('\n');
 }

@@ -7,6 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
+import { isPrerelease } from '@tfc/core/addonVersions';
 import { deploymentsOf, isPackDatapackPath } from '@tfc/pack-server/datapacks';
 import { Api } from './lib/api.mjs';
 import { configFile, currentProfile, DEFAULT_SERVER, loadConfig, saveConfig } from './lib/config.mjs';
@@ -74,7 +75,7 @@ import { applyStagingDrops, stagingClashes, stagingOverlay, stagingState, stagin
 import { approveBlock, batchProblems, markApproved, printUpdate, propose, pullUpdates } from './lib/updates.mjs';
 import { checkUpdate } from './lib/update.mjs';
 import { autoUpgrade, cleanupOld, upgrade } from './lib/upgrade.mjs';
-import { BUILD, CHANNEL, IS_BINARY } from './lib/version.mjs';
+import { BUILD, CHANNEL, IS_BINARY, versionLabel } from './lib/version.mjs';
 
 const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
 
@@ -119,6 +120,7 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
                               (--host-only — только аддоны для хоста)
   tfc addons <мод…>           все версии аддона строками <мод>@<версия> — какие можно поставить
   tfc addons install <мод>@<версия>…   поставить и закрепить версию (= tfc pull addons …); <мод>@latest — последнюю
+                              выпущенную; <мод>@beta — получать беты (2.7.0-beta.3) с каждым pull, пока не @latest
   tfc addons install --host-only   поставить все аддоны для хоста (последние версии)
   tfc addons remove <мод…>    убрать аддон, поставленный вручную (в списке — [вручную]: обычный pull такие не ставит
                               и не убирает, только обновляет поставленные)
@@ -132,6 +134,7 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
 Хосту (ключ администратора):
   tfc publish                 залить сборку из папки игры на сервер (--note "что поменял", --yes, --force)
                               --no-host-addons — без аддонов хоста (Host Tools и т. п.): они нужны только хосту
+                              --allow-beta — залить и бету аддона (без него publish откажет: беты — для проверки)
   tfc build [mods,kubejs,config,world]   собрать данные сайта локально в ./tfc-out — посмотреть до заливки
   tfc admin keys | invite <ник> [--admin] | revoke <id> | history | use <id> | rollback
   tfc admin neoforge [list | build [версия]]   установщик NeoForge с библиотеками на сервере сборки: игроки ставят
@@ -253,6 +256,7 @@ const opts = {
   'host-only': { type: 'boolean' },
   task: { type: 'string' },
   'no-host-addons': { type: 'boolean' },
+  'allow-beta': { type: 'boolean' },
   snapshot: { type: 'string' },
   follow: { type: 'boolean', short: 'f' },
   'no-follow': { type: 'boolean' },
@@ -981,7 +985,22 @@ async function cmdPublish(v) {
   }
   // Аддоны только для ручной установки в сборку не идут: у хоста стоят, игрокам не нужны. Уже в сборке — их оставляем
   const pulledAddons = Object.values(loadState(profile).pulled?.addons ?? {});
-  const manualList = (await a.get('/site/addons?v=2').catch(() => ({ addons: [] }))).addons.filter((x) => x.manual);
+  const siteAddons = (await a.get('/site/addons?v=2&beta=1').catch(() => ({ addons: [] }))).addons;
+  const manualList = siteAddons.filter((x) => x.manual);
+  // Бета аддона (2.7.0-beta.3) — для проверки у подписанных; в сборку для всех — только осознанно (--allow-beta)
+  const betas = [];
+  for (const [p, f] of local) {
+    if (f.kind !== 'mod' || current?.files.some((c) => c.path === p && c.sha256 === f.sha256)) continue;
+    for (const x of siteAddons) {
+      const ver = (x.versions ?? []).find((y) => y.file === path.basename(p) && isPrerelease(y.version));
+      if (ver) betas.push(`${x.id}@${ver.version}`);
+    }
+  }
+  if (betas.length && !v['allow-beta'])
+    throw new Error(
+      `в папке бета аддона: ${betas.join(', ')} — игрокам её ставить рано. Вернуть выпущенную: tfc pull addons ` +
+        `${betas.map((b) => `${b.split('@')[0]}@latest`).join(' ')}; залить всё же с бетой — tfc publish --allow-beta`,
+    );
   const manualJars = [];
   for (const [p, f] of local)
     if (
@@ -1703,11 +1722,13 @@ async function main(argv) {
   cleanupOld();
   if (values.upgrade || cmd === 'upgrade') {
     const r = await upgrade({ force: values.force });
-    if (!r) return console.log(green(`У вас последняя версия tfc: ${BUILD.version}.`));
+    if (!r) return console.log(green(`У вас последняя версия tfc: ${versionLabel(BUILD)}.`));
     return console.log(`${green('Обновил')} tfc: ${r.from} → ${bold(r.to)} (${r.path}).`);
   }
   if (values.version || cmd === 'version') {
-    console.log(BUILD ? `tfc ${BUILD.version}` : 'tfc из исходников (node cli/tfc.mjs) — версия не задана');
+    console.log(
+      BUILD ? `tfc ${versionLabel(BUILD, { full: true })}` : 'tfc из исходников (node cli/tfc.mjs) — версия не задана',
+    );
     const hint = await checkUpdate({ force: true });
     if (hint) console.log(hint);
     return;

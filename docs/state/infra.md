@@ -143,6 +143,14 @@ folder|zip>` — all at once with folder discovery, whitelist and `instance/sour
 
 ## `tfc` app (`cli/`, stage 3+)
 
+- **Versions** (2026-11-08, dev #307): `tfc --version` → `tfc 1.0.0 (сборка 70, 2026.11.05-95fc2b81)` — readable
+  version from `cli/package.json` (`npm run tfc:bump -- patch|minor|major`, rule in docs/tfc-app.md «Версии tfc»),
+  build number = `git rev-list --count` of the program sources, commit label. `version.json` gains `release`/`build`;
+  updates still compare commit time. `tfc:dist` refuses a site build whose program changed but release didn't grow,
+  or whose build number is not above the published one (`--no-public` only warns). `--upgrade` refuses a downloaded file
+  whose `--version` doesn't name the expected label. Checked: macOS arm64 build, both refusals against a fake
+  published `version.json`, `--upgrade --force` from a local server and the mismatch refusal; Windows/Linux not run.
+
 - `init`/`login`/profiles, `status`, `publish` (host; only missing files, protection from overwriting an edit from
   another device; without a game version in the folder — from past snapshots or by asking), `build`, `admin` (keys,
   history, rollback; `rebuild`/`publish`/`jobs` — server-side build and site publish, dry-run by default, with log and

@@ -1,5 +1,7 @@
 /**
  * Версии аддонов сборки: у каждой версии свой ченджлог «что изменилось с прошлой», статус и «что проверено».
+ * Бета — версия с хвостом после «-» (2.7.0-beta.3): обычный tfc pull её не ставит, её ставят подписанные на канал
+ * беты (`tfc addons install <мод>@beta`), в патчноут сборки она не попадает.
  * Хранятся в Firestore addonVersions/{мод}@{версия} (правят все игроки, история — в revisions), jar версии — на
  * сервере сборки (VPS) файлом по sha256: заливает `tfc admin addon upload`, раздаёт `tfc pull addons`.
  *
@@ -57,20 +59,41 @@ export const STATUS_LABEL: Record<AddonVersionStatus, string> = {
 
 export const STATUS_TITLE: Record<AddonVersionStatus, string> = {
   draft: 'Собрана и проверяется — tfc pull ставит её, только если назвать версию явно',
-  released: 'Выпущена — её ставит tfc pull',
+  released: 'Выпущена — её ставит tfc pull (бету — только подписанным на беты: <мод>@beta)',
   withdrawn: 'Отозвана (сломана) — tfc pull её не ставит и откатывает на прошлую выпущенную',
 };
 
 export const addonVersionId = (addon: string, version: string) => `${addon}@${version}`;
 
-/** Части версии: «2.3.10» → [2, 3, 10]; хвост после «-» или «+» (2.0.0-beta) — отдельно */
+/** Канал бет: `<мод>@beta` — закрепление «свежайшая бета или релиз, если он новее» */
+export const BETA_CHANNEL = 'beta';
+
+/** Части версии: «2.3.10» → [2, 3, 10]; хвост после «-» (2.0.0-beta.2) — отдельно, сборка после «+» не считается */
 function parts(v: string): { nums: number[]; tail: string } {
-  const m = /^v?([\d.]+)(.*)$/.exec(v.trim());
+  const m = /^v?([\d.]+)([^+]*)/.exec(v.trim());
   if (!m) return { nums: [], tail: v };
-  return { nums: m[1].split('.').filter(Boolean).map(Number), tail: m[2] };
+  return { nums: m[1].split('.').filter(Boolean).map(Number), tail: m[2].replace(/^[-.]/, '') };
 }
 
-/** Сравнение версий по числам: 2.3.10 > 2.3.9, 2.3 == 2.3.0; 2.0.0-beta < 2.0.0 */
+/** Хвосты как в semver: по частям через «.», числа — по числу и младше слов; короче — младше (beta < beta.1) */
+function compareTails(a: string, b: string): number {
+  const x = a.split('.');
+  const y = b.split('.');
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    if (x[i] === undefined) return -1;
+    if (y[i] === undefined) return 1;
+    const nx = /^\d+$/.test(x[i]);
+    const ny = /^\d+$/.test(y[i]);
+    if (nx && ny) {
+      const d = Number(x[i]) - Number(y[i]);
+      if (d) return d;
+    } else if (nx !== ny) return nx ? -1 : 1;
+    else if (x[i] !== y[i]) return x[i] < y[i] ? -1 : 1;
+  }
+  return 0;
+}
+
+/** Сравнение версий по числам: 2.3.10 > 2.3.9, 2.3 == 2.3.0; 2.0.0-beta.2 < 2.0.0-beta.10 < 2.0.0 */
 export function compareVersions(a: string, b: string): number {
   const x = parts(a);
   const y = parts(b);
@@ -81,28 +104,43 @@ export function compareVersions(a: string, b: string): number {
   if (x.tail === y.tail) return 0;
   if (!x.tail) return 1;
   if (!y.tail) return -1;
-  return x.tail < y.tail ? -1 : 1;
+  return compareTails(x.tail, y.tail);
 }
+
+/** Бета (пре-релиз): у версии есть хвост после «-» — 2.7.0-beta.3, 1.0.0-rc.1 */
+export const isPrerelease = (v: string) => parts(v).tail !== '';
 
 /** Новые сверху */
 export const sortVersions = <T extends { version: string }>(list: T[]): T[] =>
   [...list].sort((a, b) => compareVersions(b.version, a.version));
 
-/** Последняя выпущенная версия (не черновик и не отозванная) */
+/** Последняя выпущенная версия (не черновик, не отозванная и не бета) — её ставит обычный tfc pull */
 export function latestReleased<T extends { version: string; status: AddonVersionStatus }>(list: T[]): T | null {
+  return sortVersions(list.filter((v) => v.status === 'released' && !isPrerelease(v.version)))[0] ?? null;
+}
+
+/** Для канала бет: самая новая выпущенная — бета или релиз, если он новее */
+export function latestBeta<T extends { version: string; status: AddonVersionStatus }>(list: T[]): T | null {
   return sortVersions(list.filter((v) => v.status === 'released'))[0] ?? null;
 }
 
 /**
- * Версии между «было» и «стало» для патчноута, новые сверху: from < v ≤ to, кроме черновиков. Без from (аддон
- * добавлен) — только to. Откат (to < from) — отозванные и пропущенные версии to < v ≤ from: что игроки теряют.
+ * Версии между «было» и «стало» для патчноута, новые сверху: from < v ≤ to, кроме черновиков и бет (бета — только
+ * если это сама from или to). Без from (аддон добавлен) — только to. Откат (to < from) — отозванные и пропущенные
+ * версии to < v ≤ from: что игроки теряют.
  */
 export function versionsBetween<T extends { version: string; status: AddonVersionStatus }>(
   list: T[],
   from: string | null | undefined,
   to: string,
 ): { versions: T[]; rollback: boolean } {
-  const live = list.filter((v) => v.status !== 'draft');
+  const live = list.filter(
+    (v) =>
+      v.status !== 'draft' &&
+      (!isPrerelease(v.version) ||
+        compareVersions(v.version, to) === 0 ||
+        (from != null && compareVersions(v.version, from) === 0)),
+  );
   if (!from) return { versions: live.filter((v) => compareVersions(v.version, to) === 0), rollback: false };
   const rollback = compareVersions(to, from) < 0;
   const [lo, hi] = rollback ? [to, from] : [from, to];
