@@ -604,6 +604,16 @@ server runs); also nether exit beyond the map edge instead of the KubeJS script 
 limit was for a foreign map and it re-triggered itself). Verified on dev server NeoForge 21.1.251 + TFC + TFC RW
 (`test-server.sh`, `/rwtest`).
 
+- **1.1.0** (2026-11-08, dev #314): Cold Sweat 2.4.2 crash of the host's integrated server a few seconds after joining
+  (`ConcurrentModificationException` in `TempModifierRegistry.getHolder`, found by the client-stand stress run #267).
+  `ClientJoinSetup.onJoin` calls `TempModifierInit.buildModifierRegistries` (flush + re-register a static `HashBiMap`)
+  on the client thread while the server thread iterates it. Mixin `ColdSweatModifierInitMixin`: while a server runs,
+  a call from any other thread is cancelled (the server already built it on `ServerAboutToStartEvent`, same event and
+  listeners incl. KubeJS). Optional dep `cold_sweat [2.4.2,2.5)`; missing target = Mixin warning only. Not fixed in
+  Cold Sweat 2.4.3–2.4.5 changelogs. Dev server `/rwtest coldsweat`: 300 off-thread rebuilds vs server-thread reads —
+  0 errors; with `-Drw_host_fix.coldsweat.disabled=true` 2209 CMEs; `NO_COLDSWEAT=1` boots. `build.sh` now takes the
+  classpath from `ee-extras-mod` (+ `createMinecraftArtifacts`; `ee-rectifier-mod` was renamed).
+
 ## EE Heater Overheat (`tools/ee-overheat-mod`)
 
 Mixin on `ResistiveHeaterBlockEntity.calculateHeatLevel` — at heat ≥ 0.9 (~6.8 kW) returns SEETHING, so superheated
