@@ -4,6 +4,8 @@
  * — вызывать только напрямую, не в фоне. Работает на любой ОС (на Windows — через gradlew.bat) и не требует python.
  * pack_devserver — стенд всей сборки (scripts/pack-stand.mjs): production-сервер со снимком и полным KubeJS.
  * pack_client — клиентский стенд на test1a (scripts/client-stand-remote.mjs): полный клиент, меню или мир, PNG.
+ * stand_submit / stand_wait / stand_log / stand_jobs — очередь стенда на test1a (scripts/stand-queue-remote.mjs,
+ * dev #310): прогон ставится в очередь, агент ждёт итог одним вызовом вместо опроса журнала.
  */
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -12,7 +14,8 @@ import { isWin, javaHome, killTree, runRcon, sleep, stopWithProcess } from '../.
 import { PACK_CACHE } from '../../pack-cache.mjs';
 import { clientStand, worldKeyword } from '../../client-stand-remote.mjs';
 import { runStand } from '../../pack-stand.mjs';
-import { str, num } from '../fmt.mjs';
+import { cancelJob, jobLog, listJobs, listText, submit, viewText, waitJob } from '../../stand-queue-remote.mjs';
+import { NICK, str, num } from '../fmt.mjs';
 import { TOOLS_DIR } from '../resources.mjs';
 
 /** Папка аддона: путь или имя в tools/ (с -mod или без) */
@@ -345,7 +348,52 @@ function clientArgs(a) {
   return out;
 }
 
+/** Флаги pack-stand.mjs из параметров инструмента (прогон на test1a через очередь) */
+function serverArgs(a) {
+  const out = [];
+  for (const c of lines(a.commands)) out.push('--cmd', c);
+  for (const m of lines(a.mods)) out.push('--mod', path.resolve(m));
+  for (const x of lines(a.exclude)) out.push('--exclude', x);
+  for (const x of lines(a.include)) out.push('--include', x);
+  if (a.overlay) out.push('--overlay', path.resolve(String(a.overlay)));
+  if (a.keep) out.push('--keep');
+  if (a.timeout) out.push('--timeout', String(Math.max(60, Number(a.timeout) | 0)));
+  if (a.memory) out.push('--memory', String(a.memory));
+  if (a.levelType) out.push('--level-type', String(a.levelType));
+  if (a.untilLog) {
+    out.push('--until', String(a.untilLog));
+    if (a.untilFile) out.push('--until-file', String(a.untilFile));
+    if (a.untilTimeout) out.push('--until-timeout', String(Number(a.untilTimeout) | 0));
+  }
+  return out;
+}
+
+/** Итог ожидания: текст + последние PNG (снимки стенда, затем игровые — их показываем первыми) */
+function waitAnswer(r, images = 2) {
+  const max = Math.min(4, Math.max(0, Number(images ?? 2) | 0));
+  const all = [...r.pngs, ...r.gameShots];
+  const shown = max ? all.slice(-max) : [];
+  return { text: viewText(r), images: shown.map((f) => fs.readFileSync(f)) };
+}
+
+async function standSubmit(a) {
+  const kind = String(a.kind ?? '');
+  const argv = kind === 'client' ? clientArgs(a) : kind === 'server' ? serverArgs(a) : null;
+  if (!argv) throw new Error('kind: server | client');
+  const r = await submit(kind, argv, { note: a.note ? String(a.note) : '', by: NICK });
+  const wait = Number(a.wait ?? 0) | 0;
+  if (wait > 0) return waitAnswer(await waitJob(r.id, { timeout: wait, until: a.until ?? null }), a.images);
+  return [
+    `Задание ${r.id} поставлено: место в очереди ${r.position}.`,
+    `Ждать итог одним вызовом: stand_wait id=${r.id} (в фоне из shell: node scripts/mcp-call.mjs tfc-pack stand_wait '{"id":"${r.id}"}' --timeout 1800).`,
+  ].join('\n');
+}
+
 async function packClient(a) {
+  if (!a.direct) {
+    const r = await submit('client', clientArgs(a), { note: a.note ? String(a.note) : 'pack_client', by: NICK });
+    return waitAnswer(await waitJob(r.id, { timeout: Math.max(600, (Number(a.timeout ?? 900) | 0) + 900) }), a.images);
+  }
   const r = await clientStand('run', clientArgs(a), { noPack: Boolean(a.noPack) });
   const summary = r.local ? path.join(r.local, 'summary.txt') : null;
   const text =
@@ -428,7 +476,7 @@ export const TOOLS = [
   {
     name: 'pack_client',
     description:
-      'Run the full pack client (NeoForge, current snapshot, all mods incl. client-only) on the remote Linux stand test1a over SSH (scripts/client-stand-remote.mjs; Xvfb, software GL): wait for the title screen or, with world, join a singleplayer world; PNG screenshots (returned as images), clean exit, then a summary — KubeJS script counts, deduplicated latest.log errors, crash report; logs copied to ~/.cache/tfc-plans/client-stand/results/<id> on the Mac. For client-side checks: textures/models/GUI of an addon, client crashes, KubeJS client scripts. Syncs the local pack cache first (npm run pack:fetch; noPack skips). Slow (4–8 min) — call directly only; stand must be prepared once (npm run client-stand -- prepare). One run at a time.',
+      'Run the full pack client (NeoForge, current snapshot, all mods incl. client-only) on the remote Linux stand test1a (Xvfb, software GL): wait for the title screen or, with world, join a singleplayer world; PNG screenshots (returned as images), clean exit, then a summary — KubeJS script counts, deduplicated latest.log errors, crash report; logs copied to the Mac. For client-side checks: textures/models/GUI of an addon, client crashes, KubeJS client scripts. Goes through the stand queue (stand_submit kind=client + stand_wait in one call; waits its turn behind other agents). Slow (4–8 min + queue) — call directly only, or use stand_submit and wait in the background. direct=true — old path: own working-tree stand code over SSH, syncs the local pack cache (noPack skips); only for editing the stand itself.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -458,10 +506,120 @@ export const TOOLS = [
           description:
             'file name prefixes of in-game PNGs in game/screenshots (made by the overlay/KubeJS during the run) to copy into results/<id>/screenshots on the Mac; plain names only',
         },
-        noPack: { type: 'boolean', description: 'skip syncing the pack cache (already on the host)' },
+        noPack: { type: 'boolean', description: 'direct only: skip syncing the pack cache (already on the host)' },
+        direct: {
+          type: 'boolean',
+          description: 'bypass the queue: run working-tree stand code over SSH (stand development)',
+        },
+        note: str('what the run checks (shown in the queue)'),
         images: num('how many last PNGs to return as images (2, max 4)'),
       },
     },
     handler: packClient,
+  },
+  {
+    name: 'stand_submit',
+    description:
+      'Queue a whole-pack stand run on test1a (scripts/stand-queue-remote.mjs; one run at a time, agents before background print checks) and return the job id at once. kind=server — production NeoForge dedicated server (like pack_devserver, but on test1a, snapshot staged in RAM): RCON commands, KubeJS counts/errors, deduped latest.log errors, crash. kind=client — full client (like pack_client). The host pulls the current snapshot itself; own jars/overlay/world are uploaded. Then stand_wait id=… — one call until the result instead of polling logs. wait=N waits right here up to N s.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        kind: { type: 'string', enum: ['server', 'client'], description: 'server or client stand' },
+        note: str('what the run checks (shown in the queue)'),
+        wait: num('seconds to wait for the result in this call (0 — return the id at once)'),
+        until: str('with wait: also return early when a progress line matches this regex'),
+        images: num('client: how many last PNGs to return as images (2, max 4)'),
+        commands: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'server: RCON commands once up ("sleep N" — pause)',
+        },
+        mods: { type: 'array', items: { type: 'string' }, description: 'own jar paths (server: replace same modId)' },
+        overlay: str('local folder copied over the run/game dir (kubejs/…, config/…)'),
+        exclude: { type: 'array', items: { type: 'string' }, description: 'mods to drop: modId or file name part' },
+        include: { type: 'array', items: { type: 'string' }, description: 'server: keep even if client-only' },
+        keep: { type: 'boolean', description: 'server: keep world/ (only within one staged run — usually useless)' },
+        levelType: str('server: level type (minecraft:flat; tfc:overworld — real TFC generation)'),
+        untilLog: str('server: after commands wait for this regex in untilFile (logs/kubejs/server.log)'),
+        untilFile: str('server: file for untilLog, relative to the run dir'),
+        untilTimeout: num('server: max seconds for untilLog (1800)'),
+        world: str(
+          'join a singleplayer world: "new" — fresh creative world (cheats on) from the pack default preset (tfc:overworld; "new:<preset id>" — another), "flat" — vanilla flat, or a local save folder with level.dat; omit — title screen only',
+        ),
+        shots: num('screenshots (1)'),
+        interval: num('seconds between screenshots (10)'),
+        settle: num('seconds after ready before the first screenshot (20)'),
+        load: num('with world: max seconds after login to wait for the loading screen to go (300)'),
+        ready: str('regex on client.log that means ready'),
+        ram: { type: 'boolean', description: 'run from /dev/shm' },
+        gameShots: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'file name prefixes of in-game PNGs in game/screenshots to bring back',
+        },
+        memory: str('-Xmx (server 6G, client 8G)'),
+        timeout: num('max seconds to boot / reach menu or world (900)'),
+      },
+      required: ['kind'],
+    },
+    handler: standSubmit,
+  },
+  {
+    name: 'stand_wait',
+    description:
+      'Wait for a stand queue job on test1a (long-poll on the host) until it finishes, or until a progress line matches until, or timeout. Returns state, queue place, new progress lines (stand stages, not the raw game log) and, when finished, the summary + PNGs; logs are copied to ~/.cache/tfc-plans/stand-queue/<id> on the Mac. One call per wait — do not poll. From a shell in the background: node scripts/mcp-call.mjs tfc-pack stand_wait \'{"id":"…"}\' --timeout 1800.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: str('job id from stand_submit'),
+        timeout: num('max seconds to wait (600, max 3600)'),
+        since: num('progress seq already seen (from the previous answer)'),
+        until: str('return early when a progress line matches this regex'),
+        images: num('how many last PNGs to return as images (2, max 4)'),
+      },
+      required: ['id'],
+    },
+    handler: async (a) =>
+      waitAnswer(
+        await waitJob(String(a.id), { timeout: a.timeout ?? 600, since: Number(a.since ?? 0), until: a.until ?? null }),
+        a.images,
+      ),
+  },
+  {
+    name: 'stand_log',
+    description:
+      'Targeted read of a stand queue job output on test1a (stand + server/client process output): last lines or lines matching grep. For the game log of a finished job use log_analyze on the copied latest.log.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: str('job id'),
+        grep: str('regex filter (case-insensitive)'),
+        tail: num('last N lines (80, max 400)'),
+      },
+      required: ['id'],
+    },
+    handler: async (a) => {
+      const r = await jobLog(String(a.id), { grep: a.grep ?? null, tail: Number(a.tail ?? 80) });
+      return [
+        `Задание ${a.id}: строк${a.grep ? ` по «${a.grep}»` : ''} ${r.total}, последние ${r.lines.length}:`,
+        ...r.lines,
+      ].join('\n');
+    },
+  },
+  {
+    name: 'stand_jobs',
+    description:
+      'Stand queue on test1a: what runs now and the last 20 jobs (state, place, who, note). cancel=<id> — cancel a job.',
+    inputSchema: {
+      type: 'object',
+      properties: { cancel: str('job id to cancel (queued — dropped, running — stopped)') },
+    },
+    handler: async (a) => {
+      if (a.cancel) {
+        const r = await cancelJob(String(a.cancel));
+        return `Задание ${a.cancel}: ${r.state === 'cancelling' ? 'останавливается' : r.state === 'cancelled' ? 'отменено' : `уже ${r.state}`}`;
+      }
+      return listText(await listJobs());
+    },
   },
 ];

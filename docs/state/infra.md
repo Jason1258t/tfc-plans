@@ -419,21 +419,52 @@ shows the result (badge in «Библиотека схем», block «Прове
 { state: queued|running|done, position, current, previous } } }`; `worker` or admin key: `POST /print-checks/claim { worker,
 max }`, `/progress { batch, stage, note }`, `/result { batch, result }` or `{ batch, error, log }`,
   `/recheck { ids } | { all: true }`. Reads Firestore only through the 5-minute schematic list cache.
-- **Worker — `test1a`** (`scripts/print-worker.mjs`, cron wrapper `scripts/print-worker.sh`): claims a batch,
+- **Worker — `test1a`** (`scripts/print-worker.mjs --once`, run by the stand queue worker when it is idle — see
+  «Stand queue» below; the old `print-worker.sh` cron wrapper is gone): claims a batch,
   `fetchPack` if the cached snapshot differs, downloads addon jars by sha256 to `~/.cache/tfc-plans/print-addons`,
   copies pack + NeoForge to `/dev/shm`, runs `printCheck` (survival, restart, addons as `mods`) in a child process,
   heartbeats every minute, posts the result. Child crash or kill → `error` + log tail → «неясное».
 - Installed on `test1a` 2026-11-07: clone `~/tfc-stand/print-worker/repo`, key in `~/tfc-stand/print-worker/env`
   (600; `TFC_PACK_URL`, `TFC_PACK_TOKEN`) — key `print-worker`, id `e1c60c9b88ad`, role `worker` (reads the pack,
-  writes only claim/progress/result; no admin, no site login), crontab
-  `*/10 * * * * $HOME/tfc-stand/print-worker/repo/scripts/print-worker.sh >> $HOME/tfc-stand/print-worker/worker.log 2>&1`.
-  The wrapper takes `flock`, `git pull --ff-only` (+ `npm ci` when the lock file changed), then runs the worker
-  until the queue is empty. Revoke: `tfc admin revoke e1c60c9b88ad` (or on the VPS `node cli.mjs key revoke …`),
-  remove the crontab line. A new key: on the VPS `cd /opt/tfc-pack && sudo -u tfcpack env DATA_DIR=/var/lib/tfc-pack
+  writes only claim/progress/result; no admin, no site login); the stand queue cron line runs it. Revoke:
+  `tfc admin revoke e1c60c9b88ad` (or on the VPS `node cli.mjs key revoke …`). A new key: on the VPS `cd /opt/tfc-pack && sudo -u tfcpack env DATA_DIR=/var/lib/tfc-pack
 node cli.mjs key add print-worker --role worker`, write it into the env file.
 - First full run (test copy, 2026-11-07, snapshot `20261106-194903-3047` + 13 addons): boot ~2 min; 8 small schematics
   ~1 min, 30k blocks ~5 min, the 190k-block cathedral 19 min of printing. Results archived on `test1a` in
   `~/tfc-stand/print-worker/test-2026-11-07/`.
+
+## Stand queue on test1a (dev #310)
+
+Agents queue whole-pack stand runs instead of holding the stand from their session and polling its log. Measured
+before (226 Claude Code transcripts, 26 with the stand): log text itself was ~2 % of tool output, but 14–31 % of the
+turns of stand sessions went to the stand, 203 of 373 of them waiting/polling (`sleep`, `tail`, `ps`) — every turn
+re-reads the whole context. So the queue answers «done» in one call.
+
+- **Worker** — `scripts/stand-queue.mjs serve` on `test1a`, kept alive by cron every minute through `flock`
+  (`scripts/stand-queue.sh`; no systemd: linger is off for `master`). Runs from the print-worker clone
+  `~/tfc-stand/print-worker/repo` (main; `git pull` on start, exits by itself when `origin/main` moves while idle, cron
+  restarts it within a minute). One run at a time (client 8G + server 6G don't fit 14 GB together). Agent jobs first;
+  idle → one background print-check batch (`print-worker.mjs --once`) at most every 10 min. A long print batch (up to
+  ~20 min for the cathedral) is not interrupted — an agent job waits behind it, `stand_jobs` says so.
+- **Queue folder** `~/tfc-stand/queue` (`TFC_STAND_QUEUE`): `jobs/<id>/job.json` (queued → running → done | error |
+  cancelled), `events.jsonl` (progress: the stands' own stderr lines — `[client-stand] …`, pack-stand stages,
+  pack:fetch — not the game log), `output.log` (everything, `stand_log`), `summary.txt`, `logs/` (server runs: their
+  `/dev/shm` run dir is removed, so `latest.log`, `debug.log`, `kubejs/`, `crash-reports/` are copied here),
+  `cancel`; `inputs/<tag>/` — own jars/overlay/world uploaded by the Mac, removed after the run; `current.json`. Last
+  40 finished jobs are kept. A worker restart mid-run marks that job `error`.
+- **Before each job** the worker compares `.tfc-fetch.json` with `GET /pack/current` (print-worker key) and runs
+  `pack-fetch.mjs` when the snapshot moved: queue runs always use the current snapshot, not the Mac's cache. Server
+  runs: snapshot + NeoForge staged in `/dev/shm` (`scripts/stand-shm.mjs`, shared with print-worker). Client runs:
+  `client-stand.mjs run … --stdin-watch` (cancel closes stdin → clean exit). Stand code is main's: to test a change to
+  the stand code itself use the direct path (`pack_client direct=true`, `npm run client-stand`).
+- **Mac side** — `scripts/stand-queue-remote.mjs` (`npm run stand-queue -- submit|wait|list|log|cancel`), MCP
+  `stand_submit` / `stand_wait` / `stand_log` / `stand_jobs`; `pack_client` goes through the queue (submit + wait).
+  `stand_wait` is a long-poll on the host (`stand-queue.mjs wait`, checks the job file every second) over an async ssh,
+  so the MCP server keeps answering other calls. Results → `~/.cache/tfc-plans/stand-queue/<id>`. Env:
+  `TFC_QUEUE_REPO` (host code dir), `TFC_QUEUE_DIR` (queue dir relative to `~`) — for a test copy.
+- **Install** (once; replaces the old print-worker cron line):
+  `crontab -l | grep -v print-worker.sh | { cat; echo '* * * * * $HOME/tfc-stand/print-worker/repo/scripts/stand-queue.sh >> $HOME/tfc-stand/queue/serve.log 2>&1'; } | crontab -`.
+  Stop: remove the line, `pkill -f 'stand-queue[.]mjs serve'` (the bracket keeps `pkill` from matching its own ssh command).
 
 ## Remote Minecraft client stand — scripted (dev #284)
 
