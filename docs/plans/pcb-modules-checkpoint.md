@@ -20,7 +20,7 @@ Thin spool input dispatch and cable preview distinguish the body inlet from ordi
   DC gives zero output. Three screenshots inspected. No client run remains active.
 - Owner chose AC for the future L1 high-voltage transformer; use ~A/~B labels, no hidden rectification (doc:59 rev19).
   The vibrator was removed by the owner; LC/antenna feasibility is a separate optional research task #313.
-  High-voltage AC transformer and L2 regulated supply remain unimplemented.
+  High-voltage AC transformer is now a buildable, untested candidate (below); L2 regulated supply remains unimplemented.
 
 ## Current editor milestone
 
@@ -142,3 +142,35 @@ client acceptance. #301.14 remains open for loaded/AC/DC/short/overload/rotation
 once the stand is free. Optional spare-time work: #313 jar/API feasibility analysis only, no promised radio features.
 Do not pull L3 CPU/VM/display, all sensors or Create integration into this bounded session goal; keep the full scope
 in the parent plan. No release or completion of #301 before the required acceptance.
+
+## Step-up candidate prepared without the stand
+
+#301.13 now has a 3×3 four-pad fixed ×10 transformer, native EE coupling, cold-DC rejection, separate per-instance
+nodes/state, persisted 100-tick cooldown. Input up to 48 V RMS; open secondary up to 480 V AC. 20 kohm secondary
+ballast limits short current below 24 mA and primary below 0.24 A at maximum input; winding/ballast/bleed losses count
+once toward board heat. Useful matched-load power is approximately 2.88 W at maximum input, not a machine supply.
+
+Only the transformer's secondary insulation gets the 480 V exception. Ordinary connected parts and primary networks
+retain tier voltage/current/heat limits. A second connected-network graph checks secondary networks between edge
+terminals against 480 V, including series secondaries. No global L1 voltage-rating increase.
+
+`build devtestJar` succeeds. Resources: 142 items, 59 code-selected models, no errors (seven known warnings). Item
+render inspected; recipe inputs checked with active KubeJS and no conflicts among 104 mechanical recipes. An external
+30-case calculation validates nominal power balance and limits, but is not an EE measurement.
+
+Prepared `/pcbstepup geometry/ac/dc/short/open/ordinary/overload/overvoltage/report/expect/reload/cooldown/off/burnt`.
+README gives the ordered commands, cooldown/read-write and separate full-restart pass. Geometry covers 48 poses and
+ordinary/HV graph separation. External resistor and native 1 Mohm voltmeter are separate devices: at 24 V input,
+100 kohm load expects 196.703 V, voltmeter-only expects 235.292 V. Tolerance includes small wire losses. These commands
+have NOT been run. #301.14 remains open; no stand processes/profile/world were touched, no release/version bump.
+
+Optional #313 initial research completed: plan doc:60, checklist 1/2 done. Native reactive timestep is 0.05/N; N=8 means
+6.25 ms. Implicit Euler numerically damps LC oscillations well below Nyquist. Preliminary fit is a slow wired filter;
+antennas require a separate bounded game channel model. Minimal energy/decay/selectivity/persistence experiment is
+specified, not executed. No radio module or range/frequency promise has been added to #301.
+
+Saved addon milestone: `01abd8c` on `origin/feat/pcb-modules`. Frozen unreleased jars and SHA-256 manifest:
+`/var/folders/x6/3d5mczwn1hsgl2mnzkk_cs7h0000gn/T/pcb-301-stepup-final-lsygxh2u/candidate.json`.
+Main jar SHA-256: `7753c8a122e90dc768c61b7dacaa7f6ae025af3938cf35782c564f4842326af0`;
+devtest: `e19bb8568c5895164df6041643f847a344997d045fcb4b4ec69e754eba69002e`.
+Do not upload these as the existing 2.21.2 release; names retain the prototype version only.

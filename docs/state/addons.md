@@ -25,6 +25,8 @@ game check — [pending.md](pending.md).
   Recipe, resource coverage and energy balance checked. Future L1 high-voltage output explicitly chosen as AC.
   Vibrator removed by owner; optional LC/antenna feasibility is #313. Stand occupied: next goal #301.13 is a
   buildable step-up AC candidate and prepared checks; electrical/client acceptance remains open as #301.14.
+  Candidate now builds: ×10, four pads, isolated secondary up to 480 V, 20 kohm ballast; ordinary tier protection retained.
+  Resource/recipe/model checks pass; no new server/client run. #313 API findings and future LC experiment: doc:60.
   Full continuation state and remaining scope: [checkpoint](../plans/pcb-modules-checkpoint.md); plan doc:59.
 
 ## Versions (since 2026-10-23)
