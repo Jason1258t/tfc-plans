@@ -151,6 +151,22 @@ tools/<имя>-mod/
 Найдено по ходу (полезно и для справочника): диод EE ограничивает точку линеаризации 0,8 В — при токе больше ~9 мА
 он ведёт себя как 0,8 В + ~5,6 Ом; проверено и кодом, и в симуляции (2,78 А → 16,4 В).
 
+### PCB bridge prototype (#301.15, EE 1.1.2)
+
+The L2 bridge uses four native `DiodeProperties`, without a synthetic supply or internal storage. Bytecode confirms
+that `SimulationTicker.tick` normally runs one diode linearization per microtick. This lags AC commutation and can
+produce negative output spikes. `PcbBridgeConvergenceMixin` repeats `Network.formMatrix/getResults` only for networks
+containing a marked bridge diode; all diodes in that network converge together. Sources and capacitors are not ticked
+again, so this is a nonlinear solve within the same time sample, not extra simulation time. The bounded solve uses
+half-step damping, a 0.1 V maximum change, 64 iterations and 1e-6 V tolerance; unresolved/nonfinite results trip the board.
+
+Use sampled active power, not RMS-voltage × RMS-current, for diode heat and bridge input/output balance. The bridge
+also checks RMS current at both ports, and joins all four pads into the ordinary low-voltage protection graph.
+Native transformer regularization may remain with reactive loads and disappear after resistive graph optimization:
+the onboard transformer's heat therefore uses measured active input minus output, bounded below by winding/ballast
+losses; its explicit input-sensing resistor is counted once. See `tools/ee-extras-mod/README.md` and the PCB checkpoint
+for measurements and the unreleased acceptance status. Normal direct input of 300 V into a bridge is not allowed.
+
 ## Переменный ток EE (как устроен в `ee-extras` 2.5)
 
 Проверено по байткоду EE 1.1.2:

@@ -29,6 +29,14 @@ game check — [pending.md](pending.md).
   At 48 V input, 1-ohm short: 23.98 mA secondary, 11.51 W heat, board intact. Inclusive voltage boundary has 1e-6 V tolerance.
   Full client 142522-2510: all 17 assertions, six faces/eight powered poses, eight model screenshots, normal exit.
   Coupled EE optimization can omit regularization resistance; heat uses active input/output difference with physical lower bound.
+  #301.15 bridge candidate: L2 3×3, four native EE diodes, four pads, recipe/model/editor/assembly/persistence.
+  Full server 180305-67b1 passes external-capacitor smoothing, word5 on the loaded register and physical discharge/reset;
+  safe 5 V shorts, overload/overvoltage, geometry and sampled bridge power balance also pass in staged runs.
+  A bounded, damped local diode solve fixes native AC lag. Final whole-chain balance/restart pass in 180811-db7f;
+  physical DC wire reversal passes in 181252-a69f (-4.999855 V input, +3.486443 V output). Client geometry/electricity
+  pass. Final client 181843-1485 / queue 181841-f81a: 19 OK, zero FAIL, six powered faces/eight poses, nonempty
+  nine-module editor project plus bridge search, ten inspected frames, normal 293 s exit. #301.15 is accepted;
+  overall #301 and release remain open. TFC demo world exported; PCB at 20744,300,-11683.
   Full continuation state and remaining scope: [checkpoint](../plans/pcb-modules-checkpoint.md); plan doc:59.
 
 ## Versions (since 2026-10-23)

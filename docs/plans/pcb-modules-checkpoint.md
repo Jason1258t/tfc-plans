@@ -204,3 +204,76 @@ experiment was run. Release/version bump/merge/deploy remain outside this scoped
 Verified unreleased artifacts superseding the earlier untested snapshot: `/var/folders/x6/3d5mczwn1hsgl2mnzkk_cs7h0000gn/T/pcb-301-stepup-verified-1biubt00/verified.json`.
 Main SHA-256: `f8d7361949f4a631efb317e9ff073b06e47dce2a32d61dcfac0ff84386bb399d`;
 devtest: `a20953d1f29404cc9469410dd5fce6d21d1134a12469adc591d636afbf0208fd`.
+
+## L2 bridge session (#301.15), 2026-11-08
+
+New type 29: L2 3×3 bridge, pins ~A/~B/+/−, four native EE DiodeProperties with 1-ohm lead/sense resistors.
+Integrated catalogue, multi-cell geometry, assembly/salvage, item/model/lang, recipe and ordinary L2 protection.
+Part validation permits a real output short; all four pads remain in the ordinary voltage graph.
+
+Native EE 1.1.2 only performs one diode Newton step per sample. Raw native AC produced negative output spikes.
+The new network mixin converges only networks with a bridge marker, without reticking capacitors/sources. It uses
+half-step damping, 0.1 V maximum update, 64 iterations, 1e-6 V tolerance and fails closed on unresolved/nonfinite results.
+A helper record must live outside the mixin package (run 175345-df09 caught the initial IllegalClassLoadError).
+The onboard transformer's reactive-load heat now counts native regularization via actual active input/output power.
+
+Server 175820-a46b: 240 geometry variants, eight bridge poses, AC/DC and overload/overvoltage pass;
+capacitor convergence failure was correctly detected and superseded. Server 180305-67b1 passes all its commands:
+5 V AC + 1 kohm + 10 mF gives 5.277–5.289 V; demo after write holds word5 at 3.583–3.592 V, four outputs loaded by
+1 kohm; after source removal the capacitor keeps powering it, then below 3 V the register resets. Bridge power
+balance tolerance is 1e-5 W. A 0.01-ohm short from 5 V AC is safe: 0.280 A RMS, 1.394 W input, output 2.801 mV RMS.
+Higher source voltage/current triggers ordinary board protection; direct 300 V bridge input is forbidden.
+
+The demo is a real two-layer editor project: onboard transformer, bridge, separate 100 mF capacitor, write switch,
+register, four 1 kohm output resistors. Nine nets are routed through 174 cells, with manual separation cuts; no hidden
+fixture bridges are added to the compiled circuit. Commands /pcbbridge demo, write, demo-hold, off, demo-reset;
+/pcbbridge export writes a flushed world copy outside the ephemeral queue stage. /pcbbridge resume restores fixture
+coordinates for a dedicated-server restart. The client scenario marker is pcb-bridge-photos.
+
+Final acceptance jobs: server 20261108-180811-db7f (restored world + all electrical checks + one deliberate expect100
+negative control), client 20261108-180816-04a8 (full demo, six powered faces, eight bridge poses, editor, world export).
+Frozen input jars and SHA-256 manifest: /tmp/pcb-bridge-final-candidate/candidate.json. These are unreleased prototype
+artifacts, not the existing 2.21.2 release. Acceptance is still pending; do not mark #301.15 done from this paragraph.
+
+Final server 180811-db7f confirms the real saved-world restart (word5, capacitor charge, four loaded outputs),
+NBT reload, whole-chain sampled power balance within 1e-5 W, delayed power-loss reset, AC/raw/capacitor, short/hard
+short, overload and overvoltage. The deliberate expect100 negative control fails as intended. A new signed-input
+assertion also caught that setting a negative CreativeBatteryDevice voltage is overwritten by its block entity;
+that old "reverse" fixture did not actually reverse DC. The fixture now physically swaps its two source wires.
+Production jar is unchanged; follow-up polarity job 20261108-181252-a69f must prove negative input and positive output.
+
+Polarity server 181252-a69f passes all commands: physical wire swap gives -4.999855 V input and +3.486443 V output;
+normal wiring gives +4.999855 V input and the same positive output. Whole-chain balance and loaded word5 pass.
+Client 181127-fd06 has 17 OK / 0 FAIL, six faces, eight poses, ten screenshots, normal exit in 287 s. Manual image
+inspection still caught a weak test: the editor was open but its client block entity was not ready, so the grid was
+empty. Test-only fix delays opening until after client BE synchronization, checks all nine modules on both sides,
+and delays the search screenshot by a frame. Final client queue job: 20261108-181841-f81a. Do not accept the empty
+editor screenshots from the earlier client run. Close-up bridge model itself is visible and has correct textures.
+
+## L2 bridge final acceptance completed
+
+#301.15 is accepted. Final client 20261108-181843-1485 / queue 20261108-181841-f81a passes **19 OK, zero FAIL**:
+six powered mounting faces, eight bridge rotation/reflection poses, actual word5 and four loaded outputs, server
+and client editor both contain nine modules. Ten screenshots inspected, including nonempty editor and bridge search;
+normal SIGTERM exit in 293 s. The real cabled fixture is partly occluded by its thick inlet; the separate close-up
+bridge frame and editor view clearly show the model/pads without missing textures. No stand run is left by this session.
+
+Electrical acceptance: 180811-db7f (full saved-world restart/NBT/load/discharge/AC/raw/capacitor/short/hard short/
+overload/overvoltage/whole-chain energy balance) plus 181252-a69f (physically reversed DC source). Both bridge and
+transformer-to-bridge active-power balance pass with 1e-5 W tolerance. At -4.999855 V input, output is +3.486443 V;
+the normal polarity gives the same positive output. Deliberate expect100 fails; the signed-input assertion caught
+and led to fixing the old test source setting before final acceptance. No production source was synthesized.
+
+Deliverable folder: `/Users/ivan/.codex/visualizations/2026/11/08/01a1bc3d-4e07-78c3-aa28-9094b47a8cc5/pcb-bridge`.
+It contains prototype jars + manifest, final TFC world, ten screenshots, client-check log, sampled server measurements,
+README and verification.json. Final world PCB:20744,300,-11683; design table:20741,300,-11683. Source snapshot
+20261106-194903-3047, NeoForge21.1.251; the test jar is optional for loading the saved world.
+Main SHA-256: `7394327dce08b001b120306b5fe9c62a7a04e83f5999181423c2a8f34ee3f440`.
+Devtest SHA-256: `54b70a5ee2e44288ea8de51d2bc39b381b924c9ecf5a1efe074725269a6a4f34`.
+
+Build/devtestJar, lint (zero errors, existing warnings), formatting, resources (143 items/60 code-selected models,
+no errors/seven existing warnings), recipe input reachability/no mechanical-crafting conflict all pass. Prototype
+format stays9; no version bump, release, merge or deploy. Keep both feat/pcb-modules branches/worktree for the
+remaining #301 catalogue/editor/L2 power/sensors/Create/L3 scope; #301.5 and the parent task stay open.
+
+Saved addon acceptance commit: `dfaed18` on `feat/pcb-modules`; branch pushed for continuation, no release.
