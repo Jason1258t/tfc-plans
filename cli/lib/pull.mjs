@@ -4,7 +4,7 @@
  * (и на сервере — копии игроков в `schematics/uploaded/<ник>/`, uploadedCopies).
  * Берёт с сервера сборки (раздел /site), сайт закрыт App Check. Аддоны сборки → `mods/` — с сервера сборки
  * (/site/addons: версии из Firestore addonVersions, jar — блобы; `<мод>@<версия>` ставит и закрепляет версию в
- * state.addonPins, `@latest` снимает), без ключа — со статики сайта (/addons/index.json, только последние): старый
+ * state.addonPins, `@beta` подписывает на беты, `@latest` снимает), без ключа — со статики сайта (/addons/index.json, только последние): старый
  * jar того же мода и файлы, которые аддон заменяет (`replaces`), убираются с копией. Файлы собираются теми же модулями, что и
  * на сайте (packages/core/src/datapackFiles.ts, schematicFile.ts) — esbuild кладёт их в один файл программы.
  *
@@ -33,7 +33,14 @@ import {
 import { strToU8, zipSync } from 'fflate';
 import { datapackFiles, datapackInstallMode, zipName } from '@tfc/core/datapackFiles';
 import { schematicFromLibrary } from '@tfc/core/schematicFile';
-import { compareVersions, sortVersions } from '@tfc/core/addonVersions';
+import {
+  BETA_CHANNEL,
+  compareVersions,
+  isPrerelease,
+  latestBeta,
+  latestReleased,
+  sortVersions,
+} from '@tfc/core/addonVersions';
 import { modIdsOf } from './jarid.mjs';
 import { loadState, saveState } from './plan.mjs';
 import { localPath, stateDir } from './scan.mjs';
@@ -246,19 +253,29 @@ export const addonMatches = (a, n) =>
 /** jar в mods/ — какая-то версия этого аддона (по имени файла, и неизвестной версии тоже) */
 export const isAddonJar = (a, file) => addonMatches(a, file) || addonMatches(a, jarBase(file));
 
-/** Имя из командной строки → { name, version }: ee_extras@2.3.1, rw-host-fix@latest */
+/** Имя из командной строки → { name, version }: ee_extras@2.3.1, rw-host-fix@latest, ee_extras@beta */
 export function splitAddonName(n) {
   const i = String(n).lastIndexOf('@');
   return i > 0 ? { name: n.slice(0, i), version: n.slice(i + 1) || null } : { name: n, version: null };
 }
 
 /**
- * Версия аддона для этой папки: названная (`@2.3.1`; `@latest` — снять закрепление), закреплённая раньше
- * (state.addonPins) или последняя выпущенная. Черновики и отозванные — только названные явно. → { v, pin, note }
+ * Версия аддона для этой папки: названная (`@2.3.1`; `@latest` — снять закрепление), канал бет (`@beta`, в
+ * state.addonPins — 'beta': свежайшая выпущенная бета или релиз, если он новее), закреплённая раньше версия или
+ * последняя выпущенная не бета. Черновики и отозванные — только названные явно. → { v, pin, note }
  */
 export function pickAddonVersion(a, asked, pinned) {
   const vs = a.versions ?? [];
-  const latest = sortVersions(vs.filter((v) => v.status === 'released'))[0] ?? null;
+  const latest = latestReleased(vs);
+  if (asked === BETA_CHANNEL || (!asked && pinned === BETA_CHANNEL)) {
+    const v = latestBeta(vs);
+    const note = asked
+      ? `подписываю на беты: ${v ? `ставлю ${v.version}` : 'выпущенных версий нет'} (вернуться к выпущенным — ${a.id}@latest)`
+      : v && isPrerelease(v.version)
+        ? `бета ${v.version}${latest ? `, выпущенная — ${latest.version}` : ''}`
+        : null;
+    return { v, pin: BETA_CHANNEL, note };
+  }
   if (asked && asked !== 'latest') {
     const v = vs.find((x) => compareVersions(x.version, asked) === 0);
     if (!v)
@@ -270,10 +287,21 @@ export function pickAddonVersion(a, asked, pinned) {
         }`,
       );
     const warn =
-      v.status === 'withdrawn' ? ' — отозвана, ставлю по вашему слову' : v.status === 'draft' ? ' — черновик' : '';
+      v.status === 'withdrawn'
+        ? ' — отозвана, ставлю по вашему слову'
+        : v.status === 'draft'
+          ? ' — черновик'
+          : isPrerelease(v.version)
+            ? ' — бета'
+            : '';
     return { v, pin: v.version, note: `закрепляю ${v.version}${warn} (вернуть последнюю — ${a.id}@latest)` };
   }
-  if (asked === 'latest') return { v: latest, pin: null, note: pinned ? `снимаю закрепление ${pinned}` : null };
+  if (asked === 'latest')
+    return {
+      v: latest,
+      pin: null,
+      note: pinned === BETA_CHANNEL ? 'отписываю от бет' : pinned ? `снимаю закрепление ${pinned}` : null,
+    };
   if (pinned) {
     const v = vs.find((x) => compareVersions(x.version, pinned) === 0);
     if (v)
@@ -302,7 +330,7 @@ async function wantedAddons(api, names, profile, staging) {
   let serverDown = false;
   if (api) {
     try {
-      list = (await api.get('/site/addons?v=2')).addons;
+      list = (await api.get('/site/addons?v=2&beta=1')).addons;
     } catch (e) {
       // старый сервер сборки без /site/addons — как раньше, со статики сайта; 503 — у него нет карточек аддонов
       if (e.status !== 404 && e.status !== 503) throw e;

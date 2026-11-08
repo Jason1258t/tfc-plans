@@ -41,6 +41,8 @@ const SCHEMATIC_FIELDS = [
 const FILE_ID_RE = /^[A-Za-z0-9]{1,64}$/;
 const ADDON_ID_RE = /^[a-z][a-z0-9_]{1,63}$/;
 const VERSION_RE = /^[0-9][\w.+-]{0,39}$/;
+/** Бета аддона — хвост после номера (2.7.0-beta.3), как isPrerelease в packages/core/src/addonVersions.ts */
+const isPrerelease = (v) => /^v?[\d.]+[^\d.+]/.test(String(v ?? '').trim());
 const JAR_RE = /^[\w.+-]+\.jar$/;
 /** Отчёты tfc report: размер и кусок — как у сайта (packages/core/src/files.config.ts) */
 const REPORT_KINDS = ['crash', 'log'];
@@ -471,7 +473,7 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
    * manual: true в карточке — только ручная установка: отдаётся одним новым версиям программы (manual, ?v=2), они
    * ставят его, лишь когда его назвали. Старые поставили бы всем — их список такого аддона не видит.
    */
-  async function addons({ manual = false } = {}) {
+  async function addons({ manual = false, beta = false } = {}) {
     const cards = addonCards();
     // Пустой список программа поняла бы как «все аддоны убраны с сайта» и предложила бы их удалить
     if (!cards.length)
@@ -485,7 +487,7 @@ export function openSite(dataDir, { repoDir, ttlMs = 5 * 60_000, docsUrl }) {
       if (!ADDON_ID_RE.test(c.id ?? '')) continue;
       if (c.manual === true ? !manual : c.unlisted) continue;
       const list = versions
-        .filter((v) => v.addon === c.id && v.jar?.sha256)
+        .filter((v) => v.addon === c.id && v.jar?.sha256 && (beta || !isPrerelease(v.version)))
         .map((v) => ({
           version: v.version,
           date: v.date ?? '',

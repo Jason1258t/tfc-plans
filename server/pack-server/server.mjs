@@ -29,7 +29,8 @@
  *   GET    /site/kubejs?name=…      — скрипты KubeJS «Ставить на сервер» (+ названные) player
  *   GET    /site/schematics         — схемы библиотеки (без превью)              player
  *   GET    /site/files/:id          — исходник схемы (.nbt из хранилища сайта)   player
- *   GET    /site/addons?v=2         — аддоны: карточка + версии с jar (Firestore addonVersions); v=2 — и manual  player
+ *   GET    /site/addons?v=2         — аддоны: карточка + версии с jar (Firestore addonVersions); v=2 — и manual,  player
+ *                                     beta=1 — и беты (2.7.0-beta.3): старые программы приняли бы их за последние
  *   POST   /site/reports            — отчёт tfc report (лог, краш, zip пачки): тело — байты, X-Report — JSON
  *                                     { name, kind, type, label, note, files, taskId } → в хранилище сайта  player
  *   GET    /neoforge/:version       — толстый установщик NeoForge: { file, sha256, size }  player
@@ -662,7 +663,11 @@ async function handle(req, res) {
     if (url.pathname === '/site/schematics') return json(res, 200, await site.schematics());
     // v=2 — новые версии tfc: знают признак manual. Старым такие аддоны не отдаём, иначе поставили бы их всем
     if (url.pathname === '/site/addons')
-      return json(res, 200, await site.addons({ manual: url.searchParams.get('v') === '2' }));
+      return json(
+        res,
+        200,
+        await site.addons({ manual: url.searchParams.get('v') === '2', beta: url.searchParams.get('beta') === '1' }),
+      );
     if (parts[1] === 'files' && parts.length === 3) {
       const file = await site.filePath(parts[2]);
       const st = await fs.promises.stat(file);

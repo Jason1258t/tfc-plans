@@ -2,12 +2,19 @@
  * Версии аддонов на сервере сборки: `tfc admin addon upload <jar…>` — залить jar версии (блоб) и записать версию
  * на сайте (Firestore addonVersions, новая — черновик; ченджлог пишут на сайте или MCP addon_version_put);
  * `tfc addons list` — аддоны полными строками `мод@версия` (`--host-only` — только для хоста), `tfc addons <мод>` — его
- * версии, `tfc addons install <мод>@<версия>` — поставить (= `tfc pull addons`, в tfc.mjs), `tfc addons remove <мод>`
+ * версии, `tfc addons install <мод>@<версия>` — поставить (= `tfc pull addons`, в tfc.mjs; `<мод>@beta` — подписаться на беты), `tfc addons remove <мод>`
  * — убрать поставленный вручную.
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { compareVersions, sortVersions, STATUS_LABEL } from '@tfc/core/addonVersions';
+import {
+  BETA_CHANNEL,
+  compareVersions,
+  isPrerelease,
+  latestReleased,
+  sortVersions,
+  STATUS_LABEL,
+} from '@tfc/core/addonVersions';
 import { modInfoOf } from './jarid.mjs';
 import { loadState } from './plan.mjs';
 import { addonMatches, applyPull } from './pull.mjs';
@@ -46,7 +53,7 @@ const full = (a, v) => `${a.id}@${v}`;
 
 /** Список с сервера сборки + что стоит в этой папке и что закреплено */
 async function addonsHere(api, profile) {
-  const { addons } = await api.get('/site/addons?v=2');
+  const { addons } = await api.get('/site/addons?v=2&beta=1');
   const state = profile ? loadState(profile) : {};
   const pins = state.addonPins ?? {};
   const pulled = state.pulled?.addons ?? {};
@@ -58,7 +65,7 @@ async function addonsHere(api, profile) {
       vs,
       here,
       installed: here ? vs.find((v) => v.sha256 === here.sha256) : null,
-      latest: vs.find((v) => v.status === 'released'),
+      latest: latestReleased(vs),
       pin: pins[a.id],
     };
   });
@@ -67,7 +74,7 @@ async function addonsHere(api, profile) {
 /** Что стоит здесь: « — стоит 1.0.0 (закреплена 1.0.0)» */
 const hereNote = ({ here, installed, pin }) =>
   (installed ? ` — стоит ${installed.version}` : here ? ' — стоит неизвестная версия' : '') +
-  (pin ? yellow(` (закреплена ${pin})`) : '');
+  (pin === BETA_CHANNEL ? cyan(' (подписан на беты)') : pin ? yellow(` (закреплена ${pin})`) : '');
 
 /** tfc addons list: по строке на аддон — полная строка последней версии, название, что стоит здесь */
 export async function listAddons(api, profile, { hostOnly = false } = {}) {
@@ -115,11 +122,15 @@ export async function showAddons(api, profile, names) {
             ? yellow(STATUS_LABEL[v.status])
             : STATUS_LABEL[v.status];
       console.log(
-        `  ${mark} ${full(a, v.version).padEnd(width)} ${dim(v.date)} ${st}${latest === v ? dim(' · последняя') : ''}`,
+        `  ${mark} ${full(a, v.version).padEnd(width)} ${dim(v.date)} ${st}${isPrerelease(v.version) ? cyan(' · бета') : ''}${latest === v ? dim(' · последняя') : ''}`,
       );
     }
   }
-  console.log(dim('\nПоставить и закрепить: tfc addons install <мод>@<версия>; вернуть последнюю — <мод>@latest'));
+  console.log(
+    dim(
+      '\nПоставить и закрепить: tfc addons install <мод>@<версия>; получать беты — <мод>@beta; вернуть последнюю — <мод>@latest',
+    ),
+  );
 }
 
 /**
