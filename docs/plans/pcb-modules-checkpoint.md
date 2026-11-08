@@ -1,15 +1,52 @@
-# PCB modules — paused checkpoint, 2026-11-08
+# PCB modules — continuation checkpoint, 2026-11-08
 
-Paused at the owner's explicit request after completing the current L2 logic step. Task #301 remains incomplete.
+Resumed at the owner's request on 2026-11-08. Task #301 is doing under Codex and remains incomplete.
 Authoritative requirements: server plan doc:59, especially 2.1, 2.2 and 6.1. Do not replace the scope with this checkpoint.
+
+## Current editor milestone
+
+- Prototype format **9**, no migration. Undo/redo (64 steps per open menu), base-X reflection F, translucent other
+  layers H, region selection V+Shift+drag, atomic region move/copy/paste with all layers, shape, parameters and manual
+  cuts. Moves preserve IDs; copies create fresh IDs. One group operation is one undo step. Concurrent changes clear
+  history; an outdated group move is rejected. Automatic pin cuts are now rebuilt separately from manual cuts.
+- The owner's follow-up asks for contact outlines comparable to the actual pads. PCB pad bounds are transformed for
+  all six faces, with 0.002 block margin and 0.003 line width. A client-only EE tick mixin preserves EE colors and
+  restores the original line width for other devices. Hit selection remains independent of visual node size.
+- Server checks: 216 geometry/rotation/reflection variants, exact reflected pin coordinates, 240 slider placements,
+  24 pad bounds on six faces, history and region semantics. A physically loaded mirrored register writes word 5 and
+  all four outputs match. Build, lint, resource checks and diff-check pass; resource checker from current main covers
+  140 items / 57 code-selected models and reports no errors (7 known warnings).
+- Client `20261108-093616-e34c`: completed with normal exit, 21 screenshots; L2 bodies visible but close camera collided
+  with boards. `20261108-095444-348b`: 24 screenshots, readable large L2 bodies including mirrored register; UI tests
+  failed because the player was still far from the table. Fixed by returning to the table before opening it.
+- Client `20261108-100220-3d46`: all trace undo/redo and group-copy/undo assertions pass. Raw client.log and 24 screenshots
+  recovered to the local results folder. No automatic summary: stand.json contains the controller PID, not Java PID;
+  SIGTERM interrupted the controller while it was unnecessarily waiting for a static editor image to change. No
+  process from that run remains. Never stop a run by stand.json PID. For ready=DONE use load=0.
+- Client `20261108-101517-7569`: visible hover outline matches the pad, full editor scenario passes. The selected-outline
+  assertion was invalid because finishing a wire clears SELECTED_NODE. Fixed the test by explicitly selecting a pad.
+- Client `20261108-102319-9a02`: short contact scenario, all assertions pass (selected PCB line width and restoring
+  the original width on an ordinary device), normal exit, 243 seconds. The owner's outline request is verified.
+- The title and undo/redo row now sit below the pack's global toolbar. A new full client scenario checks the buttons
+  through native Java Robot mouse input rather than directly calling the screen handler; it is running.
+- Added Gradle `devtestJar` to package a complete test mod after compilation. Do not manually jar a classes directory
+  concurrently with another Gradle compilation (run `20261108-094734-6298` caught missing Power.class). General
+  automation candidate logged as dev #311.
+
+- Do not close checklist item 3 from a direct screen-method test alone: global overlays may intercept input.
+  The native mouse scenario above specifically covers dispatch through those overlays.
+
+Next: finish the active native-input client run and inspect its screenshots, then onboard power, sensors/interfaces and remaining catalogue, followed by L3. Do not release the prototype as 2.21.2.
+The older sections below describe the previous checkpoint and should be read with this milestone's updates.
 
 ## Checkout and saved state
 
 - Worktree: `.claude/worktrees/pcb-modules`; parent branch `feat/pcb-modules`.
+- Editor/contact checkpoint in addon repo: `3b052ac` (2026-11-08). No release or merge performed.
 - Addon repository: this worktree's `tools/`, also branch `feat/pcb-modules`.
 - Earlier addon checkpoints: `021ea8c` (palette / relay), `ba074b9` (latch / selector / mechanical winding),
   `5f20975` (powered comparator / clock). Latest L2 checkpoint: `a8791bc` (flip-flop / counter / register / decoder).
-- Prototype format **8**, no migration. Current jar name still `ee-extras-2.21.2.jar`; this is not a release.
+- Prototype format **9**, no migration. Current jar name still `ee-extras-2.21.2.jar`; this is not a release.
 - No merge, deployment or release was performed for #301. Keep the worktree for continuation.
 
 ## Implemented

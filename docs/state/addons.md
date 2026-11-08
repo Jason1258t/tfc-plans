@@ -12,11 +12,14 @@ game check — [pending.md](pending.md).
   и универсальной крышки. Проверены размеры, прозрачность и повторяемость полос провода; грани и иконки отрисованы
   проверочными моделями MCP. Интеграция с моделями и просмотр в клиенте относятся к приёмке #205 и #273.
 
-## Paused development
+## Development in progress
 
-- EE Extras PCB modules, #301 (2026-11-08): paused at the owner's request, not released or merged.
+- EE Extras PCB modules, #301 (2026-11-08): resumed by the owner, not released or merged.
   Worktree `.claude/worktrees/pcb-modules`, branches `feat/pcb-modules` in parent and addon repositories.
-  Prototype format 8; multi-cell editor and initial L1/L2 modules, including explicit-power sequential logic.
+  Prototype format 9; multi-cell editor and initial L1/L2 modules, including explicit-power sequential logic.
+  Editor now has bounded undo/redo, base-X reflection, translucent layer context, atomic multi-layer region copy/move.
+  Server checks: 216 geometry variants, 240 slider placements, region identity/parameters/manual cuts and undo.
+  Owner follow-up: PCB contact outlines now use actual pad bounds and a thin line; hit selection remains unchanged.
   Full continuation state and remaining scope: [checkpoint](../plans/pcb-modules-checkpoint.md); plan doc:59.
 
 ## Versions (since 2026-10-23)
