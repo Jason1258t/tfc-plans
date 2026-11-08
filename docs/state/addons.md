@@ -18,15 +18,17 @@ game check — [pending.md](pending.md).
   Worktree `.claude/worktrees/pcb-modules`, branches `feat/pcb-modules` in parent and addon repositories.
   Prototype format 9; multi-cell editor and initial L1/L2 modules, including explicit-power sequential logic.
   Editor now has bounded undo/redo, base-X reflection, translucent layer context, atomic multi-layer region copy/move.
-  Server checks: 224 geometry variants, 240 slider placements, region identity/parameters/manual cuts and undo.
+  Server checks: 232 geometry variants, 240 slider placements, region identity/parameters/manual cuts and undo.
   Owner follow-up: PCB contact outlines now use actual pad bounds and a thin line; hit selection remains unchanged.
   L1 onboard transformer now accepts a two-core 300 V AC cable directly on its body; adjustable 1–48 V AC output.
   Loaded/short/DC/protection/restart and 48 inlet poses pass; full client 110658-a5e1 confirms real cable clicks.
   Recipe, resource coverage and energy balance checked. Future L1 high-voltage output explicitly chosen as AC.
-  Vibrator removed by owner; optional LC/antenna feasibility is #313. Stand occupied: next goal #301.13 is a
-  buildable step-up AC candidate and prepared checks; electrical/client acceptance remains open as #301.14.
-  Candidate now builds: ×10, four pads, isolated secondary up to 480 V, 20 kohm ballast; ordinary tier protection retained.
-  Resource/recipe/model checks pass; no new server/client run. #313 API findings and future LC experiment: doc:60.
+  Vibrator removed by owner; optional LC/antenna feasibility is #313 (doc:60, initial research complete).
+  #301.13/.14 now pass: ×10 step-up, four pads, isolated secondary up to 480 V, 20 kohm ballast; ordinary protection retained.
+  Full server: loaded/short/DC/overload/overvoltage/cooldown/restart and sampled active-power balance pass.
+  At 48 V input, 1-ohm short: 23.98 mA secondary, 11.51 W heat, board intact. Inclusive voltage boundary has 1e-6 V tolerance.
+  Full client 142522-2510: all 17 assertions, six faces/eight powered poses, eight model screenshots, normal exit.
+  Coupled EE optimization can omit regularization resistance; heat uses active input/output difference with physical lower bound.
   Full continuation state and remaining scope: [checkpoint](../plans/pcb-modules-checkpoint.md); plan doc:59.
 
 ## Versions (since 2026-10-23)

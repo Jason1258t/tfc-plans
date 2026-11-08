@@ -174,3 +174,33 @@ Saved addon milestone: `01abd8c` on `origin/feat/pcb-modules`. Frozen unreleased
 Main jar SHA-256: `7753c8a122e90dc768c61b7dacaa7f6ae025af3938cf35782c564f4842326af0`;
 devtest: `e19bb8568c5895164df6041643f847a344997d045fcb4b4ec69e754eba69002e`.
 Do not upload these as the existing 2.21.2 release; names retain the prototype version only.
+
+## Stand verification completed after the owner's release
+
+The owner released test1a. #301.14 now passes on the full dedicated server (232 mods) and full client (250 mods).
+Server evidence: `/tmp/pcb301-remote-server-verified.log`; remote `~/tfc-stand/pcb301-result-verified.json`;
+local detailed copy `/tmp/pcb301-verified-server/`. All positive commands pass, with one deliberate `expect 100`
+negative control. Actual restart into the saved world restores 196.695295 V at nominal 24 V input / 100 kohm load
+plus the native 1 Mohm meter. At 48 V input: 393.390589 V loaded. 1-ohm short at 48 V: 23.981659 mA secondary,
+239.865035 mA primary, 0.025039 V output, 11.510557 W heat, board intact. Meter-only output: 235.289954 V.
+DC/zero, NBT, cooldown and recovery, ordinary low-voltage part on HV, primary overload and 60 V all behave as specified.
+
+Runtime fixes: use ResistorBlockEntity.setResistance in the fixture (direct device assignment is overwritten);
+allow 1e-6 V numerical tolerance on the inclusive 48 V input boundary. Native Network.seriesOptimize may remove
+coupled branches including their regularization resistance: getHeatLoss on the original properties then overcounts.
+Heat now uses sampled active input minus sampled active output, bounded below by actual winding/ballast losses;
+input sensing bleed counts once. Independent physical-loss bounds and 1e-5 W balance checks pass including meter-only.
+
+Client `20261108-141312-5bdb`: normal exit, all six powered faces/eight poses/DC passed, but exposed the meter-only
+heat error; wires obscured the model. Superseded by **20261108-142522-2510**: normal exit, 264 seconds, all 17 EECLIENT
+assertions pass. Eight screenshots under the local client-stand results folder; inspected UP, NORTH and mirrored pose.
+For clear model frames a separate unpowered copy stands beside the powered measurement fixture. No missing textures.
+All eight powered rotation/reflection variants and six mounting faces were tested on the real fixture, not that copy.
+
+The scoped session goal is achieved after final commits; full #301 still needs remaining catalogue/editor/L2 power,
+sensors, Create interfaces and L3 VM/memory/display. #313 initial jar research and experiment plan are doc:60; no LC
+experiment was run. Release/version bump/merge/deploy remain outside this scoped session.
+
+Verified unreleased artifacts superseding the earlier untested snapshot: `/var/folders/x6/3d5mczwn1hsgl2mnzkk_cs7h0000gn/T/pcb-301-stepup-verified-1biubt00/verified.json`.
+Main SHA-256: `f8d7361949f4a631efb317e9ff073b06e47dce2a32d61dcfac0ff84386bb399d`;
+devtest: `a20953d1f29404cc9469410dd5fce6d21d1134a12469adc591d636afbf0208fd`.
