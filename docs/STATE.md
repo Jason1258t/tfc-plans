@@ -62,7 +62,7 @@ When finishing work: update the topic file, and this index only if a line below 
 - Host: **`rw-host-fix`** + delete `eratosthenes_portal_clamp.js`; delete corrupted chunks Z ≈ −22 000…−18 400.
 - Host: **World Border** nether limit (`worldborder.json5`) → disable or widen; remove `tp-trace`.
 - Host: apply crop growth config change `MjQFPQkIf9SHOdEjopy4` (`tfc admin changes pull`).
-- Host: apply Carry On change `P3E9AOli90hZrXpIgFBR` — IE crates/barrels, TFC barrels, FD cabinets, Firmalife wine/jar shelves can be carried (`tfc admin changes pull`).
+- Host: apply Carry On change `LeWgtBNgBhm1xnsQiMx6` — ArborFirmaCraft food shelves, hangers, kegs, wine/jar shelves and other cellar storages stop being carryable (`tfc admin changes pull`).
 - Host: `arc-furnace-matadora` resource pack in `server.properties`; `ee-overheat` into `mods/`.
 - Host: install **TFC Pyrofuel 1.0.1** (server and players), then `tfc publish`; check pyrogel/briquette production and client textures.
 - In game: two-core cable shell model, datapacks `electroenergetics_missing` and `pellet_arc_furnace`, map scale,
