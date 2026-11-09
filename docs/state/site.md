@@ -643,7 +643,8 @@ Tab «Геология» (`/reference?tab=geology`, `pages/reference/tabs/Geolog
 TFC field guide (`the_world/geology`), 21 rock cards with ru/en name search (also by ore name → rocks hosting it) and a
 category filter. Static facts from TFC 4.2.9 jar in `model/geology.ts`: categories/acidity (`Rock` enum), tool
 durability (`TFCTiers`), flux (`#tfc:fluxstone`), igneous-only rock anvils, layer relations from the only world preset
-(`overworld.json` `rock_layer_settings`; tuff is in no layer → «не появляется»). Ores per rock — live from
+(`overworld.json` `rock_layer_settings`). Tuff is in no layer but is placed by surface builders (stratovolcano strata,
+tuff rings of shield volcanoes, badlands; TFC Real World keeps those biomes) — its card lists those places (dev #321). Ores per rock — live from
 `reference.json` veins (`kind: 'ore'`); «жилы →» opens «Руды» with `?rock=` preselected. Re-check the constants on a
 TFC update.
 

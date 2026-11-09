@@ -1,7 +1,9 @@
 /* Геология для вкладки справочника. Источник — TerraFirmaCraft-NeoForge-1.21.1-4.2.9.jar:
    категории — enum Rock / RockCategory, прочность инструментов — TFCTiers, слои — пресет мира
    data/tfc/worldgen/world_preset/overworld.json (rock_layer_settings; другого пресета в сборке нет),
-   флюс — тег #tfc:fluxstone. Жилы руд по породам — из reference.json (собирается из jar). */
+   флюс — тег #tfc:fluxstone. Жилы руд по породам — из reference.json (собирается из jar).
+   Туфа в слоях пресета нет — его ставят построители поверхности (VolcanoVariants, TuffRingsSurfaceBuilder,
+   BadlandsSurfaceBuilder); TFC Real World эти биомы сохраняет. */
 
 import type { Vein } from '@/lib/reference';
 
@@ -38,7 +40,7 @@ interface RockDef {
   acidity?: Acidity;
 }
 
-/** enum Rock (порядок — как в моде). Туф в мире не появляется: в слоях пресета его нет */
+/** enum Rock (порядок — как в моде) */
 export const ROCKS: Record<string, RockDef> = {
   granite: { category: 'igneous_intrusive', acidity: 'felsic' },
   diorite: { category: 'igneous_intrusive', acidity: 'intermediate' },
@@ -117,6 +119,15 @@ const SURFACE: { id: string; label: string; layers: string[] }[] = [
   },
 ];
 
+/** Породы вне слоёв пресета: где их ставят построители поверхности */
+const SURFACE_FEATURES: Record<string, string[]> = {
+  tuff: [
+    'слои в склонах стратовулканов (вулканические горы, острова и дуги)',
+    'туфовые кольца у щитовых вулканов (горячие точки)',
+    'полосы в бэдлендах',
+  ],
+};
+
 const layerRocks = (layer: string): string[] => (layer === 'bottom' ? BOTTOM : Object.keys(LAYERS[layer] ?? {}));
 
 export interface RockInfo {
@@ -133,8 +144,8 @@ export interface RockInfo {
   surface: string[];
   /** Глубинный слой (bottom) — бывает под всем остальным */
   bottom: boolean;
-  /** Генерируется ли вообще (туф — нет) */
-  generates: boolean;
+  /** Не входит в слои пресета: только на поверхности вулканов и бэдлендов */
+  featureOnly: boolean;
   below: string[];
   above: string[];
   veins: Vein[];
@@ -153,19 +164,18 @@ export function buildRocks(veins: Vein[]): RockInfo[] {
       add(below, rock, under);
       for (const u of under) add(above, u, [rock]);
     }
-  const generated = new Set([...BOTTOM, ...Object.values(LAYERS).flatMap((l) => Object.keys(l))]);
-
   return Object.entries(ROCKS).map(([key, def]) => {
     const block = `tfc:rock/raw/${key}`;
+    const features = SURFACE_FEATURES[key];
     return {
       key,
       block,
       ...def,
       flux: FLUX.has(key),
       anvil: def.category.startsWith('igneous'),
-      surface: SURFACE.filter((s) => s.layers.some((l) => key in (LAYERS[l] ?? {}))).map((s) => s.label),
+      surface: features ?? SURFACE.filter((s) => s.layers.some((l) => key in (LAYERS[l] ?? {}))).map((s) => s.label),
       bottom: BOTTOM.includes(key),
-      generates: generated.has(key),
+      featureOnly: !!features,
       below: sortUniq((below.get(key) ?? []).filter((r) => r !== key)),
       above: sortUniq((above.get(key) ?? []).filter((r) => r !== key)),
       veins: veins.filter((v) => v.kind === 'ore' && v.rocks.includes(block)),
