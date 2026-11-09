@@ -46,6 +46,21 @@ game check — [pending.md](pending.md).
   direct trace short at10V is66.644mA/0V, board intact; bridge cap/reverse-DC regressions pass.
   Client195652-e955:19OK/0FAIL, six faces/eight poses, ten-module editor, ten inspected frames, normal exit.
   Unreleased artifacts and TFC world in this session's pcb-regulator deliverable; board20741,300,-11681.
+  #301.17 sensors (2026-11-09):2×2 temperature/light modules, analog out/power/ground,
+  passive powered10kohm divider+100ohm output (0.5–4.5V at5V,0.5mA idle),3–6V DC.
+  Temperature−40…160°C uses TFC heat behind the mounting face, otherwise instant climate;
+  light0…15 reads the front neighbor with skyDarken. APIs/models/recipes/resources/build verified.
+  Server110749-ab69:30 independent physical measurements, load1G/1k/short0.01ohm, actual0/2/5/7V,
+  both power cycles/NBT/dark return/air/highAC RMS protection pass. Initial premature startup probe
+  was rechecked by a clean process113413-a904 after settling: both boards/thresholds/lamps restore;
+  100samples each span5.003453…5.003477V and5.003461…5.003480V (0.024/0.019mV ripple).
+  MainSHAa6969917…; client110752-c403:20OK/0FAIL,252mods,four inspected frames,normal exit.
+  Native UI114241-2220 proves both sensor selection/placement; CtrlY intercepted by EMI (#318).
+  Final native UI115736-656b:11OK/0FAIL, real K/mouse palette/selection/placement/Undo/Repeat-button,
+  three inspected frames,normal245s exit. #301.17 accepted. No release/merge/deploy; parent301 stays open.
+  TFC world1794227134676: boards21148,300,-11703 and21164,300,-11703; demo table21161,300,-11703.
+  Deliverable /Users/ivan/.codex/visualizations/2026/11/09/01a1bfb2-da1d-7033-8878-2c53604e13a3/pcb-sensors.
+  Other findings#315 (chip input edges) and#317 (old regulator PKM) are outside this session.
   Full continuation state and remaining scope: [checkpoint](../plans/pcb-modules-checkpoint.md); plan doc:59.
 
 ## Versions (since 2026-10-23)

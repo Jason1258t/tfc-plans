@@ -167,6 +167,24 @@ the onboard transformer's heat therefore uses measured active input minus output
 losses; its explicit input-sensing resistor is counted once. See `tools/ee-extras-mod/README.md` and the PCB checkpoint
 for measurements and the unreleased acceptance status. Normal direct input of 300 V into a bridge is not allowed.
 
+### PCB sensor data and parallel branches (#301.17)
+
+Verified by MCP against TFC4.2.9: `Climate.getInstantTemperature(Level,BlockPos)` delegates to the current
+world climate model with the server calendar. TFC's own `ThermometerBlockEntity.updatePower` distinguishes
+attached block heat from air climate; it scales air −40…40°C separately. `BlockCapabilities.HEAT` supplies
+`IHeatConsumer.getTemperature()` for a compatible target block. The PCB prototype uses block heat behind the
+mounting face when available, otherwise instant climate; its own fixed range is −40…160°C.
+
+Minecraft/NeoForge21.1.251 `LevelReader.getMaxLocalRawBrightness(pos)` passes `getSkyDarken()` into
+`getRawBrightness`: use this server value for combined sky/block light0…15, not a client lightmap or an assumed lux
+value. The PCB's existing `LIT` state emits7; its front neighbor may therefore see its own indicator at6. A50%
+light threshold corresponds to7.5, allowing the same-board indicator to switch off after external light is removed.
+
+EE1.1.2 `CircuitBuilder.connect` replaces an existing edge between the same nodes. Even an OPEN input resistor
+can overwrite an external potentiometer leg. Powered comparator/clock inputs now use private intermediate nodes;
+the resistor-only sensor divider also has private nodes on each rail leg. Do not stamp an input directly in parallel
+with arbitrary user wiring. Remaining chip-input audit is tracked separately in #315.
+
 ## Переменный ток EE (как устроен в `ee-extras` 2.5)
 
 Проверено по байткоду EE 1.1.2:

@@ -328,3 +328,146 @@ Deliverable:/Users/ivan/.codex/visualizations/2026/11/08/01a1bc9d-f268-7971-829d
 Commands:/pcbregulator; client marker:pcb-regulator-photos.
 
 Saved addon acceptance commit: `be4e080` on `feat/pcb-modules`; no release or merge.
+
+## L2 sensor session (#301.17), 2026-11-09 — in progress
+
+Scope from owner: temperature/light L2 only, actual powered models/recipes/editor,
+regulator-fed sensor→comparator→indicator demos, changed readings/threshold/load,
+power loss/recovery, NBT, full restart and full client inspection. No release/L3/LC.
+Stand availability was checked before tests. Existing Codex worktree/branches reused.
+
+Candidate adds types31/32, 2×2 three pads output/power/ground; 3–6V DC, passive10kohm
+divider +100ohm output,0.5–4.5V unloaded at5V,0.5mA idle; impedance1–2.6kohm.
+Invalid supply disconnects upper leg and pulls output down via10.1kohm; one-tick gate.
+Temperature−40…160°C reads TFC heat capability behind mounting face, otherwise TFC
+instant climate; light0…15 uses max local raw brightness at front neighbor with skyDarken.
+Jar API checked TFC4.2.9 / Minecraft+NeoForge21.1.251. Item renders inspected, resource
+check no errors/seven existing warnings; build/devtest and lint pass, recipes no conflicts.
+
+First server101511-7771 (233mods, snapshot20261108-192710-4c28) was not acceptance:
+isolated fixtures lacked pin traces; reused crucible could not cool from explicit heat setter;
+dark box leaked light from below; comparator OPEN input overwrote pot lower leg because
+EE builder replaces parallel edges. Fixed fixtures and powered-logic input private nodes.
+Chip-input version of the same issue is separately logged #315, outside this session.
+Actual demo supply~5.004V and sensor sampled passive power balance10µW already passed.
+
+Second server102027-3ebb queued behind Claude #267 client (do not interrupt that job).
+Wait process session15717 was for first server and has completed; second wait not started.
+Second server candidates were uploaded before subsequent devtest expect-reading addition;
+production is unchanged since. Final client class PcbSensorPhotos exists, marker pcb-sensor-photos,
+but not yet submitted. It builds two TFC boards at player Y300 and checks thresholds/editor;
+needs final server fixes and image inspection. Main/devtest jar still unreleased2.21.2.
+No commit/release/merge/deploy. #301.17 and goal remain open.
+
+### Current frozen sensor candidate, 09.11.2026
+
+Second server102027-3ebb completed, not accepted wholesale. Actual demos pass:
+20→150°C gives1.701351→4.302735V; light0→14 gives0.500398→4.236024V;
+5V rail~5.003…5.004V, passive balance10µW; real temperature-demo power loss at150s
+leaves rail2.72169V and sensor output27µV, lamp off, restoration returns4.30258V/lamp on.
+But isolated fixture had no physical edge terminals and never got supply; old off2/7V checks
+were false positives because they did not assert actual supply. Threshold command95 meant
+raw slider95 (5% output), so those unlit checks failed. Fixed: expose real edge terminals,
+assert actual supplied voltage, invert voltage-percentage command to slider position.
+A stale global load estimate no longer contaminates reports after switching back to demo boards.
+
+Main sensor now returns RMS voltage to ordinary L2 protection (signed AC average can be zero),
+rejects nonfinite source data, and exposes compact body PKM status via Module.input().
+Existing regulator PKM flag defect is logged separately #317; no change to that module.
+PcbBridgeTest assertion failures now use the logger so they survive into stand log artifacts.
+
+CURRENT jobs (all earlier queued sensor clients/last candidate server jobs were cancelled before running):
+
+- server **20261109-110749-ab69**, wait session23435, stdout /tmp/pcb-sensor-server-final-summary.txt;
+- client **20261109-110752-c403**, wait session7314, stdout /tmp/pcb-sensor-client-final-summary.txt.
+  Both queue behind Claude #267 client104713-4a22 (started10:51:47UTC, GC/6GB measurement).
+  Do not interrupt other jobs or bypass queue. Current candidate frozen in /tmp/pcb-sensor-final-candidate:
+  mainSHA a6969917b09877761d2a7047568c9347495549718a072e0b99eaf43dfdd52921;
+  devtestSHA ddf54a2f93a015ea4baaff16d8bb54c4a98fc53d383bd560e67f7202dfaf5453.
+  Do not change candidate files while queued.
+
+Server final overlay /tmp/pcb-sensor-restart/world was rsynced from real completed save
+/home/master/tfc-stand/pcb301-bridge-save-1794221505205. Restore two demos32,-60,32 and64,-60,32;
+measure stable5V and both power cycles, thresholds, bright→dark return; isolated tests at96,-60,32
+have real edge terminals and check loads1G/1k/0.01ohm, actual0/2/5/7V, NBT, air and highAC protection.
+Last expect-output100 is the ONLY expected negative control; every other unexpected RCON error rejects acceptance.
+Server submit args (306 entries) stored in /tmp/pcb-sensor-server-job.json, remapped paths by last submit script.
+
+Client uses final same frozen jars, new realTFC world, marker /tmp/pcb-sensor-client-overlay/pcb-sensor-photos.
+It tests both demos, high/low thresholds,8-module server/client editor; opens light chamber for model screenshot.
+Once complete: inspect EECLIENT OK/FAIL and all PNGs; copy exported TFC world (login coordinate gives temperature
+board at Y300, light board east16), prepare deliverable jar/world/photos/measurements/SHA, verify current resources/lint
+and formatting, update task17/checkpoint/state/README/plan59, commit+push BOTH feature branches. Do NOT merge/release/deploy.
+Task #301 stays open; dev_note(report=true) for scoped completion, not dev_finish (that would close the parent).
+Current branches still uncommitted. Earlier loop session9149 timed out then58111 collected server2; those are done.
+
+### Electrical/restart accepted, final native editor check pending (09.11.2026)
+
+Final physical server110749-ab69: every scenario passes except the FIRST immediate resume probe,
+which sampled the one-tick sensor startup (supply valid but previous open-divider output still50µV).
+A separate NEW-server restart113413-a904 waits3s, restores BOTH saved boards correctly, toggles both thresholds,
+and samples100ticks each:5.003452958…5.003476543V and5.003461072…5.003480463V, ripple0.024/0.019mV.
+Each server intentionally ends with expect-output100 failure. All actual load/short/source0/2/5/7V,
+NBT/both real power cycles/dark return/air/highAC protection checks pass with maina6969917.
+Independent /tmp/verify-pcb-sensors.py checks30 real measurements against EXTERNAL scale/Thevenin/load/input-power
+math and10µW balance; /tmp/pcb-sensor-measurements.json accepted=true includes explicit startup-probe recheck provenance.
+
+Full client110752-c403 / run112709-0a47:20OK/0FAIL,252mods, normal285s exit. Four PNGs inspected:
+both sensor bodies and actual lit demos visible (thick inlet partly covers power modules); editor contains8modules.
+Palette screenshot was taken closed (query applied to a hidden field), so not accepted as palette evidence.
+TFC world exported /home/master/tfc-stand/pcb301-bridge-save-1794223901402 and already rsynced to deliverable/world.
+Temperature board21148,300,-11703; light21164,300,-11703; demo table21161,300,-11703.
+
+Added DEVTEST-ONLY PcbSensorEditorPhotos + marker pcb-sensor-editor-photos, content coordinates21148 300 -11703.
+It loads that actual TFC save, GUIscale2, creates empty L2 design at table21158,300,-11703, uses Java Robot K/mouse
+for palette selection and placement of BOTH sensors; CtrlZ removes light sensor; repeat should use header BUTTON.
+First native UI job114241-2220:10OK/1FAIL. Palette and both placements/Undo pass. CtrlY is intercepted by EMI
+(the final frame is its recipe screen), so no redo reaches editor. Separate unrelated issue #318 logged, no production
+fix in this bounded session. Final helper now clicks Repeat at screen.width-169,y18 instead of CtrlY.
+
+CURRENT LAST JOB **20261109-115736-656b**, client, queued behind Claude #267 ModernFix/6GB GC run115651-45b3
+(start11:56:53UTC, world181s + settle1300s). Wait session79626 writes /tmp/pcb-sensor-editor-final-summary.txt.
+Main jar is STILL frozen /tmp/pcb-sensor-final-candidate/ee-extras-2.21.2.jar, SHAa6969917… unchanged.
+Latest optional devtest jar is DIFFERENT: /tmp/pcb-sensor-editor-candidate/ee-extras-2.21.2-devtest.jar
+(source ClientTest dispatcher + new native editor scenario; existing physics helpers unchanged).
+Do NOT overwrite the old frozen physics devtestddf54a2f…; provenance must list both verification jars.
+
+Deliverable prepared at
+/Users/ivan/.codex/visualizations/2026/11/09/01a1bfb2-da1d-7033-8878-2c53604e13a3/pcb-sensors:
+
+- jars currently main+OLD physics devtest+candidate.json; replace user-facing optional devtest with FINAL native one after pass;
+- verification has30 measurements, two server reports, demo-client report/checks, independent script, lint/resources;
+- screenshots has original4frames; models has2inspected item renders;
+- world is ORIGINAL demo-client TFC save; replace with LAST successful native-client exported save after result;
+- README Russian is drafted, still says Repeat button pending; update it. No manifest.json/ZIP yet.
+
+Remaining: await115736-656b; require11OK/0FAIL and inspect palette/two-sensor/restored PNGs. Capture extra-world path
+from client.log, rsync --delete world, copy final UI logs/frames and optional test jar, hashes/manifest/ZIP.
+Update README/state/checkpoint/doc59, dev_check301 done[17], scoped dev_note(report=true) (NOT dev_finish parent).
+Log repeatable automation additions in existing #311. Commit+push addon feat/pcb-modules, then parent docs+tools pointer
+feat/pcb-modules. Keep worktree, do NOT merge/deploy/release or close overall301. Verify both git trees clean,
+mark goal complete ONLY after actual required work is done and deliver result. Known CtrlY conflict#318 remains with
+Repeat-button workaround once verified; other findings#315/#317 intentionally not implemented.
+
+## Sensor acceptance completed (#301.17), 09.11.2026
+
+All scoped requirements are accepted; no required work remains for the two sensors.
+Physical110749-ab69 + clean full restart113413-a904 pass30 independent matrix measurements,
+real source0/2/5/7V,1G/1k/0.01ohm loads/short, both power cycles, changing readings/thresholds,
+air/NBT/RMS protection and stable5V. Startup race of first immediate probe was explicitly rechecked after settling.
+Demo client110752-c403:20OK/0FAIL, both bodies/lamps/eight-module editor, four inspected frames.
+FINAL native editor115736-656b:11OK/0FAIL, actual window K/mouse selection and placement of BOTH sensors,
+CtrlZ and Repeat BUTTON, three inspected screenshots, normal245s exit. The prior CtrlY failure was EMI interception,
+separately logged #318; do not claim CtrlY works. Both main/editor runs use productionSHAa6969917… unchanged.
+Physics helper classes are byte-identical in the extended optional editor-test jar; provenance JSON is in deliverable.
+
+Final TFC export1794227134676, boards21148,300,-11703 (temperature) and21164,300,-11703 (light);
+eight-module demo table21161,300,-11703; native two-sensor placement table21158,300,-11703.
+Deliverable path above contains world, main jar, stand-only devtest, seven inspected game frames,
+two item renders, independent30-measurement proof, original server/client reports, manifest and Russian README.
+Only the main jar belongs in a normal game profile: devtest has automatic client scenarios and is stand-only.
+#301.17 is accepted; parent301/remaining catalogue/L3/LC/release remain outside this session.
+Keep both feature branches/worktree for continuation, no merge/deploy/release. Final scoped report must preserve
+known separate issues#315/#317/#318. Last native job is done; do not restart earlier/cancelled jobs.
+
+Saved sensor addon acceptance commit: `3ae5caf` on `origin/feat/pcb-modules`. No release or merge.
