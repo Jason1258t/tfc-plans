@@ -277,3 +277,54 @@ format stays9; no version bump, release, merge or deploy. Keep both feat/pcb-mod
 remaining #301 catalogue/editor/L2 power/sensors/Create/L3 scope; #301.5 and the parent task stay open.
 
 Saved addon acceptance commit: `dfaed18` on `feat/pcb-modules`; branch pushed for continuation, no release.
+
+## L2 regulator session (#301.16), 2026-11-08
+
+Scope: regulator + actual transformer → bridge → external capacitor → regulator → L2 register demo;
+load/ripple/dropout/power cycling/short/overload/persistence/full restart/client. No other modules, L3, LC or release.
+Keep pcb-modules worktree and both feat/pcb-modules branches; the parent task remains incomplete.
+
+New type30:3×3 shunt regulator, four pads Vin+/Vin−/Vout+/Vout−, common ground through0.01ohm;
+150ohm ballast, passive5V shunt with0.2ohm dynamic resistance and0.01ohm series sense.
+Working input8–12V DC, useful output15mA(75mW). No synthetic supply or hidden capacitor.
+Thermal model2J/K,0.02W/K to20°C; disconnect90°C, recover60°C; persisted temperature/trip state.
+Editor/model/item/recipe/assembly/status integrated; prototype format9/version unchanged.
+
+EE1.1.2 CircuitBuilder.connect(int,int,ElectricalProperties) uses adjacency.put: later parallel stamps replace earlier
+ones. The initial direct shunt was replaced by the register idle resistor; earlier demo attempts were rejected.
+All regulator branches now have private nodes12000+3*partIndex; actual shunt current is measured across its sense
+resistor. The Newton solve also handles the shunt, without reticking the capacitor. Wider shunt bounds/256iteration
+limit apply only to networks with a shunt; bridge-only networks retain64iterations.
+
+Electrical acceptance:194548-0a2c + final195604-16b8. At333⅓ohm load,8/10/12V input gives
+5.001046/5.003840/5.006633V. Dropout4V→2.758326V;100ohm overload→3.999176V.
+0.01ohm short:66.639343mA,0.666mV output; direct trace short:66.643784mA,0V output,0.666253516W heat;
+both confirmed at real9.997V input, board intact. The original trace-short fixture picked the first compiled TRACE
+instead of the regulator; fixed in final devtest and retested. Main production SHA unchanged.
+
+Real24V heating trips, cooling below60°C recovers. Trip/temperature NBT round-trip passes.
+The ten-module demo has actual routed nets, external100mF capacitor,9V~ onboard transformer, word5 and four1kohm
+output loads; no hidden fixture bridges. It passes independent register/load power and full chain balance including
+capacitor port power (10µW tolerance).100ticks:5.002286089–5.002528173V,0.242mV range.
+After source removal it still holds5V/word5 at2seconds; later it discharges and resets. Restoration with write held
+produces no false write; a new write edge stores5. Deliberate expect100 fails as intended.
+
+Actual new-server restart from exported world1794167598336 passes: charge and word5 retained, four loaded outputs
+correct, supply5.002410586–5.002430812V; another100ticks remain5.002415046–5.002590442V.
+Bridge cap and physical reverse-DC regressions pass. Final server world export1794167956788.
+248 geometry variants, menu/history/region regressions, build/devtestJar, lint0errors, resources144items/61code
+models no errors(7existing warnings), recipe reachability/no conflict, item model inspection pass.
+
+Frozen final candidate:/tmp/pcb-regulator-final-candidate (released=false).
+Main SHA256:224d4bb4b59a64e81b7ef957b07fa7df3d9d13ea135d8e94f3bfdec525abf3aa.
+Devtest SHA256:4c4664efbb4fab5e52fc45632f3de0accac7354e9ed3cbcc0c6d37b807a057d7.
+Final client195652-e955 / run195919-138b passes19OK/0FAIL, six powered faces/eight poses, actual word5 and
+four loaded outputs, server/client editor both have ten modules. All ten screenshots inspected: model and project
+visible without missing textures; thick inlet partly obscures some views. Search-specific UI is not proven by the
+search screenshot, so no separate search acceptance is claimed. Normal exit,298s,252profile mods with Voxy excluded.
+The client exported a real TFC demo world1794168242773; board20741,300,-11681; table20738,300,-11681.
+No stand run remains. #301.16 is accepted; overall #301 and #301.5 remain open. No release/merge/deploy.
+Deliverable:/Users/ivan/.codex/visualizations/2026/11/08/01a1bc9d-f268-7971-829d-b48d7bed0a8d/pcb-regulator.
+Commands:/pcbregulator; client marker:pcb-regulator-photos.
+
+Saved addon acceptance commit: `be4e080` on `feat/pcb-modules`; no release or merge.

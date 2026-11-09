@@ -37,6 +37,15 @@ game check — [pending.md](pending.md).
   pass. Final client 181843-1485 / queue 181841-f81a: 19 OK, zero FAIL, six powered faces/eight poses, nonempty
   nine-module editor project plus bridge search, ten inspected frames, normal 293 s exit. #301.15 is accepted;
   overall #301 and release remain open. TFC demo world exported; PCB at 20744,300,-11683.
+  #301.16 regulator accepted: L2 3×3, 8–12V DC →5V up to15mA; 150ohm ballast/passive shunt,
+  actual branch currents and heat, persisted90°C trip/60°C recovery. Private nodes prevent native adjacency.put
+  from replacing parallel branches. 15mA checks at8/10/12V give5.001046/5.003840/5.006633V.
+  Real ten-module transformer→bridge→external100mF→regulator→register demo holds word5;100ticks span0.242mV.
+  Load/dropout/overload/both shorts/power cycle/discharge/thermal trip and recovery/NBT/full new-server restart pass;
+  independent full-chain balance including capacitor and register loads passes10µW. Final server195604-16b8:
+  direct trace short at10V is66.644mA/0V, board intact; bridge cap/reverse-DC regressions pass.
+  Client195652-e955:19OK/0FAIL, six faces/eight poses, ten-module editor, ten inspected frames, normal exit.
+  Unreleased artifacts and TFC world in this session's pcb-regulator deliverable; board20741,300,-11681.
   Full continuation state and remaining scope: [checkpoint](../plans/pcb-modules-checkpoint.md); plan doc:59.
 
 ## Versions (since 2026-10-23)
