@@ -701,6 +701,16 @@ persistence after restart.
 through the NeoForge fluid capability in survival. The dev server tested a bucket and an IE jerrycan on all
 six faces of both tank types, fluid accounting and detachment when the tank is broken.
 
+1.4.0 (dev #322): lids and bottoms of one-block-wide runs (e.g. a 2×1×2 wall) were invisible — Create's RECTANGLE
+CT sheets for `fluid_tank_top`/`fluid_tank_inner` leave the "neighbours on one axis only" tiles empty (Create tanks are
+always square, ours are free-form). `art/gen_assets.py` now fills them from halves of the frame tiles. Windowed
+sections use `WindowTankModel` (inside Create's `FluidTankModel`): lid/bottom from Create's JSON, walls rebuilt in
+code — a pillar only where the straight wall ends, glass (`fluid_tank_window_wide`, 9-sliced) across seams with
+windowed neighbours of the same height. `./test-client.sh` (ModDevGradle `runClient` + devtest `ClientTest`) builds
+tank shapes in a flat world and saves `run/screenshots/bf-*.png`; `EXTRA="sodium-neoforge"` adds pack jars. Checked
+there with and without Sodium plus the dev-server suite; the full-pack client stand did not finish loading the world
+(llvmpipe), so not seen in the full pack.
+
 ### Destroy Extras 0.7.1 — текстуры чистой пыли (dev #293)
 
 18 пылей и 90 брикетов получили цветные спрайты 16 × 16. Модели пылей берут цвет из PNG.
