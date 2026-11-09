@@ -227,8 +227,17 @@ its one-liner in STATE.md.
   Firmalife Hardcore's `CellarTracker`), keg (2×2), Functional Storage (drawers already drop with contents; Carry On
   removes the BE first, so `Drawer.onRemove` can't unlink the controller). Dev server (Carry On 2.2.6.13, TFC 4.2.9,
   IE 12.4.2, Firmalife 3.0.14, FD 1.3.2, fake player through `PickupHandler`/`PlacementHandler`): all opened blocks
-  keep items / 4000 mB / sealed, rack drops once; refused blocks refused. Waits for `tfc admin changes pull`; not checked
-  in game.
+  keep items / 4000 mB / sealed, rack drops once; refused blocks refused. Applied by the host 2026-10-23; the host later
+  also added `tfc:wood/shelf/*` and `firmalife:wood/{food_shelf,wine_shelf,jarbnet,hanger}/*` by hand.
+- **Carry On: ArborFirmaCraft storages** (2026-11-09, dev #316): proposed change `LeWgtBNgBhm1xnsQiMx6`. AFC registers
+  its own copies of Firmalife/TFC wood blocks for its woods (`afc:wood/food_shelf/cypress` etc., from
+  `firmalife_compat_*` in the AFC jar), so `firmalife:*` / `tfc:wood/shelf/*` masks missed them — the host carried a
+  cypress food shelf with food. Added `afc:wood/{food_shelf,wine_shelf,jarbnet,hanger,big_barrel,barrel_press,
+stomping_barrel,shelf}/*` and `afc:wood/keg*` (keg + keg_sub). Masks checked against all AFC 2.1.3 block ids with Carry
+  On's rule (`ListHandler.addWithWildcards`: every `*`-separated part is a substring): exactly those 10 groups ×14 woods
+  (big_barrel ×10); AFC barrels/chests/crates stay carryable like TFC ones (AFC woods use TFC block factories, so the
+  `tfc:wood/barrel/oak[rack]` exception — matched by the shared `Property` object — covers them). Waits for
+  `tfc admin changes pull`.
 - **Server resource pack `arc-furnace-matadora`** (https://tfc-plans-fd2c.web.app/packs/arc-furnace-matadora.zip,
   source in `instance/resourcepacks/`, not in git — `public/packs/` is gitignored): IE arc furnace sound overridden via
   `sounds.json` (`replace: true`) with a track from own namespace `tfc_sounds`. Server needs `resource-pack` and
