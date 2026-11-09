@@ -332,3 +332,21 @@ EE снимает узлы и кабели при любой смене сост
    ставит и вернёт прошлую выпущенную), у себя — `tfc pull addons <мод>@<версия>`.
 9. Блоки аддона появятся в библиотеке предметов и рецептах сайта сами: данные собирает сервер сборки из снимка
    после `tfc publish`.
+
+### PCB optocoupler isolation (#301.19, EE 1.1.2)
+
+`CircuitBuilder.connect` adds conductive edges only between the supplied nodes. `dfsAndGround` first discovers
+conductive networks and chooses a separate numerical reference for each; its second pass includes invisible
+`CoupledProperties` adjacency. An optical signal can therefore be implemented by sampling a real input branch
+and selecting resistances entirely inside the independently powered output network. Do not add a cross-side
+resistor, voltage source, shared node or coupled property. PCB protection groups must likewise keep both sides
+separate. The optocoupler reserves internal nodes 16000–16319; comparators already use 14000–14127.
+
+`PcbCircuitDevice.collectedBuilder` is cleared by `postTick`; an after-tick graph audit must use
+`FinishElectricSimulationEvent.results.circuitBuilder`. `InfrastructureSavedData.connect` requires registered
+external nodes (`getNodeDataOrThrow`), so an external bias source cannot be wired to an arbitrary internal PCB
+node. Perform common-mode injection on a board with all relevant pins exposed as actual terminals.
+
+PCB block partial models are normalized around X/Z=8 with an approximately one-model-pixel footprint, then
+scaled by module width/height. Full 16-pixel item geometry used as a partial will cover the board and editor.
+Keep the full-size inventory item separate from the normalized installed model and inspect both in the client.

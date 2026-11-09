@@ -232,6 +232,29 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-09 (dev #301.19, unreleased): **L2 optocoupler**, 3×3 cells / five pins, real
+EE diode and 1 kΩ input, 2 mA on / 1 mA off hysteresis, 10 mA nominal limit. Independent
+3–6 V output with a passive 100 Ω / 10 kΩ divider and 100 Ω driver, 5 mA nominal load.
+No conductive edge/shared node/coupled property crosses the barrier. Model, recipe,
+assembly, editor and status are ready; internal nodes 16000–16319 avoid comparator collisions.
+
+49 independent electrical measurements pass: thresholds/hysteresis, real input power,
+1 GΩ / 1 kΩ / 0.01 Ω loads and trace short, reversed input, overcurrent-off, both power
+cycles, NBT and a clean new-process restart of the saved TFC demonstration. Final server
+`174316-ca76`: five actual graph traversals found no ground-to-ground path; 24 V common-mode
+injection on a five-terminal board yielded numerical leakage ≤3.56e-12 A, output unchanged.
+Demo supply, 100 samples: 5.0034638617–5.0034824331 V. Deliberate `expect-output 100` fails.
+Final full client `173732-6343`: 18 OK / 0 FAIL, 252 mods, normal 272 s exit; all seven
+frames inspected (board, indicator, independent sources, editor, palette, native mounting,
+Undo/Repeat). Earlier oversized geometry and the graph harness were fixed and retested.
+
+Final main JAR SHA256: `9690ce0d17416baf99cdb26395d0539f95f755ef0c6a92007950e65b3564de23`.
+Demo: 21190, 300, −11477; table: 21187, 300, −11477; input ground separate from the
+transformer → bridge → external 100 mF → 5 V regulator output side. TFC client world
+export `1794246318005`. Build/devtestJar, resources, recipe, lint and format pass.
+Both feature branches/worktree retained; no release, merge/deploy or version bump.
+Other modules/Create adapters/L3/LC remain outside scope. Automation candidate: dev #319.
+
 2026-11-06 (dev #295): **EE Extras 2.21.2** — stronger on/off contrast for PCB LEDs, plus separate craftable
 pushbutton and switch caps. Existing caps retain their mounted positions and drop the corresponding new item.
 The local NeoForge control circuit confirmed installation and operation of both caps.

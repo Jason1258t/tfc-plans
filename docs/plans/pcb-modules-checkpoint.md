@@ -542,3 +542,55 @@ Task301.18 complete; overall301 remains incomplete. Keep both feature branches/w
 no release/merge/deploy. Separate known issues315/317/318 remain outside this session.
 
 Saved rotation addon acceptance commit: `226bb90` on `origin/feat/pcb-modules`.
+
+### Optocoupler L2 accepted (#301.19), 09.11.2026
+
+Scope completed without release: L2 optocoupler, 3×3 cells, five pins; real EE diode
+and 1 kΩ input, 2 mA on / 1 mA off hysteresis, 10 mA nominal limit. Independent output
+supply 3–6 V DC, passive 100 Ω / 10 kΩ divider and 100 Ω output driver, 5 mA nominal load.
+No conductive edge, shared node or coupled property crosses the barrier. Model, recipe,
+assembly, editor and status are ready. Internal nodes 16000–16319 do not overlap comparator
+nodes. Hysteresis and diode state persist; supply is measured again after loading.
+
+Final frozen candidate: `/tmp/pcb-opto-visual-final-candidate`.
+Main JAR SHA256: `9690ce0d17416baf99cdb26395d0539f95f755ef0c6a92007950e65b3564de23`.
+All production classes match the accepted 16000-range candidate; final visual changes
+are only the installed and inventory model JSON files. The broad electrical run used
+14000-range internal nodes without a collision in its particular layouts; the final
+range was retested in a clean process and client. See artifact provenance.
+
+Verification: 49 independent measurements (input current, VI, Thevenin load, hysteresis,
+supply gating and energy balance; max error 2.45e-15 W). Input −5…12 V, output source
+0/2/3/5/6/7 V, 1 GΩ / 1 kΩ / 0.01 Ω loads, trace short, separate input/output power
+cycles and NBT pass. Exact 3 V pin cutoff means a nominal 3 V source with wire loss can
+fall below it; the demonstration uses regulated 5 V. At 5 V: input 4.237 mA, output
+4.95046 V unloaded / 4.12853 V at 1 kΩ, short current about 25.1 mA.
+
+Final server `20261109-174316-ca76` loaded the saved real TFC demonstration WITHOUT
+rebuilding it. Five traversals of the actual EE graph found no path between grounds;
+24 V common-mode injection on a five-terminal board yielded numerical leakage below
+3.56e-12 A with unchanged output. Hysteresis at 1.683 mA survives NBT reload. Demo supply
+100 samples: 5.0034638616830875–5.0034824331122785 V. Only deliberately wrong
+`expect-output 100` fails. Raw commands/results and the independent verifier are in the artifact.
+
+Final full client `20261109-173732-6343`: 18 OK / 0 FAIL, 252 mods, normal 272 s exit.
+All seven frames inspected: normalized model, lit/unlit indicator, independent sources,
+nine-module editor, palette, native placement, Ctrl+Z and Repeat. It loaded the saved
+board without recreating it. Earlier oversized geometry was fixed and retested.
+The graph harness now uses `SimulationResults.circuitBuilder`: the device clears its
+`collectedBuilder` after ticking. An external wire needs a registered terminal, so the
+24 V injection uses a board with five exposed pins rather than an internal demo node.
+
+Delivered real TFC world: client export `1794246318005`, local `/tmp/pcb-opto-client-final-save`.
+Board: 21190, 300, −11477. Table: 21187, 300, −11477. Input source: 21185, 300, −11477.
+Output source: 21198, 300, −11477, feeding transformer → bridge → external 100 mF →
+5 V regulator. Input ground remains separate. The table contains a single placed optocoupler
+after the history test; the installed board retains the complete nine-module project.
+Deliverable: `/Users/ivan/.codex/visualizations/2026/11/09/01a1c147-3c9a-7ef0-8b38-b0c11ac46a91/pcb-opto.zip`.
+Main JAR is for ordinary profiles; devtest is stand-only. Build/devtestJar, resources,
+recipe conflicts, lint and formatting pass. Stand was free after the final jobs.
+
+Task 301.19 is complete; overall 301 remains open. Keep both `feat/pcb-modules` branches
+and the worktree for the next scoped session. No version bump, release, merge or deploy.
+Other modules, Create adapters, L3 and LC were excluded. Stand fail-fast/report automation
+candidate recorded as dev #319. Final commit IDs are recorded in the task report.
