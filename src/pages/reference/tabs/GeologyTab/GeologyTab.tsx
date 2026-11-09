@@ -147,47 +147,44 @@ export function GeologyTab({ veins, items }: { veins: Vein[]; items: ItemIndex |
                   инструменты: {CATEGORY[r.category].durability}
                 </Tag>
               </div>
-              {!r.generates ? (
-                <p className="faint small">В мире сборки не появляется: в слоях пресета её нет.</p>
-              ) : (
-                <dl className={styles.facts}>
-                  <dt>Где сверху</dt>
-                  <dd>
-                    {r.surface.length ? r.surface.join(', ') : 'на поверхность не выходит'}
-                    {r.bottom && ' · бывает глубинным слоем под всеми'}
-                  </dd>
-                  {r.above.length > 0 && (
-                    <>
-                      <dt>Над ней</dt>
-                      <dd>{rockLinks(r.above)}</dd>
-                    </>
+              <dl className={styles.facts}>
+                <dt>{r.featureOnly ? 'Где встречается' : 'Где сверху'}</dt>
+                <dd>
+                  {r.surface.length ? r.surface.join(', ') : 'на поверхность не выходит'}
+                  {r.bottom && ' · бывает глубинным слоем под всеми'}
+                  {r.featureOnly && ' · в слоях пород под землёй её нет'}
+                </dd>
+                {r.above.length > 0 && (
+                  <>
+                    <dt>Над ней</dt>
+                    <dd>{rockLinks(r.above)}</dd>
+                  </>
+                )}
+                {r.below.length > 0 && (
+                  <>
+                    <dt>Под ней</dt>
+                    <dd>{rockLinks(r.below)}</dd>
+                  </>
+                )}
+                <dt>Руды</dt>
+                <dd>
+                  {r.ores.length ? (
+                    <span className={styles.ores}>
+                      {r.ores.map((o) => (
+                        <span key={o} className={styles.ore} title={o}>
+                          <ItemIcon id={o} size={18} />
+                          {itemName(items?.byId.get(o), o)}
+                        </span>
+                      ))}
+                      <Link to={`/reference?rock=${encodeURIComponent(r.block)}`} className="small">
+                        жилы →
+                      </Link>
+                    </span>
+                  ) : (
+                    <span className="faint">жил нет</span>
                   )}
-                  {r.below.length > 0 && (
-                    <>
-                      <dt>Под ней</dt>
-                      <dd>{rockLinks(r.below)}</dd>
-                    </>
-                  )}
-                  <dt>Руды</dt>
-                  <dd>
-                    {r.ores.length ? (
-                      <span className={styles.ores}>
-                        {r.ores.map((o) => (
-                          <span key={o} className={styles.ore} title={o}>
-                            <ItemIcon id={o} size={18} />
-                            {itemName(items?.byId.get(o), o)}
-                          </span>
-                        ))}
-                        <Link to={`/reference?rock=${encodeURIComponent(r.block)}`} className="small">
-                          жилы →
-                        </Link>
-                      </span>
-                    ) : (
-                      <span className="faint">жил нет</span>
-                    )}
-                  </dd>
-                </dl>
-              )}
+                </dd>
+              </dl>
             </Card>
           ))}
         </div>
