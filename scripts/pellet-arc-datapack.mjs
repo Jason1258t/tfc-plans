@@ -1,13 +1,16 @@
 // Датапак: пеллеты и брикеты tfcorewashing → слитки в дуговой печи IE.
 //
 // В сборке дуговая печь плавит только пыльки руд (20 шт. → 1 слиток), а пеллеты (4 пыльки) и брикеты
-// (4 пеллеты) в неё не лезут. Скрипт берёт из каталога рецептов модов (public/recipes.json — его собирает
-// `npm run mods`) все рецепты печи «N пылек → слитки» без добавок, находит пеллету и брикет из той же пыльки
-// и пишет рецепты с тем же выходом на пыльку. Если на один слиток уходит не целое число пеллет/брикетов,
-// обе стороны умножаются до целых (20 пылек = 5 пеллет → 1 слиток; 5 брикетов = 80 пылек → 4 слитка).
+// (4 пеллеты) в неё не лезут. Скрипт берёт из каталога рецептов (public/ — его собирает `npm run mods`, плюс
+// KubeJS и датапаки сайта, как у MCP) все рецепты печи «N пылек → слитки» без добавок, находит пеллету и брикет
+// из той же пыльки и пишет рецепты с тем же выходом на пыльку. Если на один слиток уходит не целое число
+// пеллет/брикетов, обе стороны умножаются до целых (20 пылек = 5 пеллет → 1 слиток; 5 брикетов = 80 пылек → 4 слитка).
 // Энергия и время — пропорционально числу слитков, как если бы печь плавила те же пыльки.
 //
-// Рецепты печи, которые KubeJS сборки удаляет (public/kubejs.json), пропускаются.
+// Если у пыльки нет рецепта печи (хромит), он пишется в датапак сам: из нагрева TFC (мБ на пыльку) и литья в форму
+// слитка (100 мБ) — N = 100 / мБ пылек → 1 слиток, энергия и время как у руд TFC-IE-Crossover.
+//
+// Отключённые рецепты (удаления KubeJS, заглушки датапаков сайта — например, боксит в M13) пропускаются.
 //
 //   node scripts/pellet-arc-datapack.mjs [выход.zip] [--upload]   (по умолчанию out/pellet_arc_furnace.zip)
 //
@@ -19,13 +22,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { strToU8, zipSync } from 'fflate';
 import { ROOT } from './firestore-rest.mjs';
-import { PUBLIC } from './mcp/data.mjs';
+import { flattenTag, isActive, tags } from './mcp/data.mjs';
 import { uploadDatapack } from './mcp/datapack-write.mjs';
 import { NICK } from './mcp/fmt.mjs';
+import { siteRecipes } from './mcp/site-datapacks.mjs';
 import { PACK_FORMAT } from '@tfc/core/datapackFiles';
 import { recipeHash } from '@tfc/core/hash';
-import { matchFilter } from '@tfc/core/recipeFilter';
-import { recipeRefs } from '@tfc/core/recipeRefs';
 
 const NS = 'tfc_plans_pellets';
 const NAME = 'Пеллеты и брикеты в дуговой печи';
@@ -35,36 +37,21 @@ const args = process.argv.slice(2);
 const upload = args.includes('--upload');
 const out = path.resolve(args.find((a) => !a.startsWith('--')) ?? path.join(ROOT, 'out/pellet_arc_furnace.zip'));
 
-// Данные сборки — public/ основной копии (в git worktree его нет), как у MCP
-const readJson = (p) => JSON.parse(fs.readFileSync(path.join(PUBLIC, p), 'utf8'));
-const recipes = readJson('recipes.json');
-const kubejsPath = path.join(PUBLIC, 'kubejs.json');
-const removes = fs.existsSync(kubejsPath)
-  ? JSON.parse(fs.readFileSync(kubejsPath, 'utf8')).rules.filter((r) => r.kind === 'remove')
-  : [];
-if (!removes.length) console.warn('! нет public/kubejs.json — удаления KubeJS не проверяются (npm run kubejs)');
+// Каталог рецептов сборки со слоем датапаков сайта; свой датапак не учитывается — он пишется заново
+const site = await siteRecipes();
+if (site.note) console.warn(`! ${site.note}`);
+const recipes = site.cat.list.filter((r) => !r.i.startsWith(`${NS}:`));
+const active = recipes.filter(isActive);
 
 const gcd = (a, b) => (b ? gcd(b, a % b) : a);
-const removedByKubejs = (id, type, json) => {
-  const { inputs, outputs } = recipeRefs(json);
-  return removes.some((rule) => matchFilter(rule.filter, { id, type, inputs, outputs }) === true);
-};
-
-// Теги предметов из каталога модов (правки тегов KubeJS не учитываются)
-const itemTags = new Map();
-for (const t of readJson('tags.json').tags)
-  if (t.k === 'item') itemTags.set(t.i, [...new Set(t.s.flatMap((s) => s.v))]);
-const expand = (ing, seen = new Set()) => {
-  if (ing.item) return [ing.item];
-  if (!ing.tag || seen.has(ing.tag)) return [];
-  seen.add(ing.tag);
-  return (itemTags.get(ing.tag) ?? []).flatMap((v) => (v.startsWith('#') ? expand({ tag: v.slice(1) }, seen) : [v]));
-};
+// Теги предметов с учётом правок KubeJS
+const expand = (ing) =>
+  ing.item ? [ing.item] : ing.tag ? flattenTag(tags(), 'item', [`#${ing.tag}`]).filter((v) => !v.startsWith('#')) : [];
 
 // Сжатие tfcorewashing: «N × вход → 1 × выход» из бесформенных рецептов мода (вход — предмет или тег)
 /** id результата → { from: подходящие предметы, count } */
 const compress = new Map();
-for (const r of recipes) {
+for (const r of active) {
   if (!r.i.startsWith('tfcorewashing:crafting/pellet/') && !r.i.startsWith('tfcorewashing:crafting/briquet/')) continue;
   const ings = r.j.ingredients ?? [];
   const key = JSON.stringify(ings[0]);
@@ -101,19 +88,74 @@ const files = {
 const table = [];
 /** Записи датапака в формате сайта (types.ts, DatapackEntry) */
 const entries = [];
-/** пеллета/брикет → рецепт печи, по которому сделан */
-const made = new Map();
-for (const r of recipes) {
+function addFile(file, json, source, note) {
+  files[file] = JSON.stringify(json, null, 2);
+  entries.push({
+    id: Math.random().toString(36).slice(2, 10),
+    kind: 'add',
+    path: file,
+    content: files[file],
+    recipeType: json.type,
+    sourceRecipe: source.i,
+    sourceHash: recipeHash(source.j),
+    note,
+  });
+}
+
+// Рецепты печи «N пылек → слитки» без добавок: { r — исходник, powder, n, res, energy, time }
+const bases = [];
+for (const r of active) {
   if (r.t !== 'immersiveengineering:arc_furnace') continue;
   const j = r.j;
   const powder = j.input?.basePredicate?.item ?? j.input?.item;
   const n = j.input?.count ?? (j.input?.item ? 1 : 0);
   if (!powder || j.additives?.length || j.results?.length !== 1 || j.secondaries?.length) continue;
-  if (removedByKubejs(r.i, r.t, j)) {
-    console.warn(`! ${r.i} удаляет KubeJS — пропущен`);
+  bases.push({ r, powder, n, res: j.results[0], energy: j.energy, time: j.time });
+}
+
+// Пыльки без рецепта печи: по нагреву TFC и литью в форму слитка
+const ORE_ENERGY = 25600; // как у руд TFC-IE-Crossover (касситерит и др.): 20 пылек → 1 слиток
+const ORE_TIME = 100;
+const covered = new Set(bases.map((b) => b.powder));
+for (const powder of new Set([...packed.values()].flatMap(({ base }) => [...base]))) {
+  if (covered.has(powder)) continue;
+  const heat = active.find(
+    (r) => r.t === 'tfc:heating' && r.j.result_fluid?.amount && expand(r.j.ingredient ?? {}).includes(powder),
+  );
+  const fluid = heat?.j.result_fluid;
+  const cast =
+    fluid &&
+    active.find(
+      (r) =>
+        r.t === 'tfc:casting' &&
+        r.j.mold?.item === 'tfc:ceramic/ingot_mold' &&
+        (r.j.fluid?.fluid ?? r.j.fluid?.id) === fluid.id,
+    );
+  const ingotMb = cast?.j.fluid?.amount;
+  if (!cast || !ingotMb || ingotMb % fluid.amount) {
+    console.warn(`! ${powder}: нет нагрева TFC с литьём в слиток (или не делится нацело) — пропущен`);
     continue;
   }
-  const res = j.results[0];
+  const n = ingotMb / fluid.amount;
+  const res = { id: cast.j.result.id };
+  const file = `data/${NS}/recipe/arc_furnace/${powder.split(':')[1]}.json`;
+  const json = {
+    type: 'immersiveengineering:arc_furnace',
+    additives: [],
+    energy: ORE_ENERGY,
+    input: { basePredicate: { item: powder }, count: n },
+    results: [res],
+    time: ORE_TIME,
+  };
+  addFile(file, json, heat, `${n} пылек по ${fluid.amount} мБ → 1 слиток (${ingotMb} мБ); по ${heat.i} и ${cast.i}`);
+  table.push(`${n} × ${powder} → 1 × ${res.id}   (по нагреву ${fluid.amount} мБ)`);
+  // Исходник пеллет и брикетов — тот же нагрев: рецепт из этого датапака сайт не отследит
+  bases.push({ r: heat, powder, n, res, energy: ORE_ENERGY, time: ORE_TIME });
+}
+
+/** пеллета/брикет → рецепт печи, по которому сделан */
+const made = new Map();
+for (const { r, powder, n, res, energy, time } of bases) {
   const outCount = res.count ?? 1;
   for (const [item, { base, powders }] of packed) {
     if (!base.has(powder)) continue;
@@ -127,30 +169,20 @@ for (const r of recipes) {
     const g = gcd(num, n);
     const k = n / g;
     const m = num / g;
-    const name = item.split(':')[1];
-    const file = `data/${NS}/recipe/arc_furnace/${name}.json`;
-    files[file] = JSON.stringify(
+    const file = `data/${NS}/recipe/arc_furnace/${item.split(':')[1]}.json`;
+    addFile(
+      file,
       {
         type: 'immersiveengineering:arc_furnace',
         additives: [],
-        energy: Math.round((j.energy * m) / outCount),
+        energy: Math.round((energy * m) / outCount),
         input: { basePredicate: { item }, count: k },
         results: [{ ...res, count: m }],
-        time: Math.round((j.time * m) / outCount),
+        time: Math.round((time * m) / outCount),
       },
-      null,
-      2,
+      r,
+      `${k} шт. = ${k * powders} пылек; исходник — ${n} пылек → ${outCount}`,
     );
-    entries.push({
-      id: Math.random().toString(36).slice(2, 10),
-      kind: 'add',
-      path: file,
-      content: files[file],
-      recipeType: r.t,
-      sourceRecipe: r.i,
-      sourceHash: recipeHash(r.j),
-      note: `${k} шт. = ${k * powders} пылек; исходник — ${n} пылек → ${outCount}`,
-    });
     table.push(`${k} × ${item} → ${m} × ${res.id ?? JSON.stringify(res)}   (как ${n} × ${powder} → ${outCount})`);
   }
 }
