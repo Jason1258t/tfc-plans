@@ -722,3 +722,18 @@ six faces of both tank types, fluid accounting and detachment when the tank is b
 18 пылей и 90 брикетов получили цветные спрайты 16 × 16. Модели пылей берут цвет из PNG.
 Обновление сборки `u20261106-133656-3ca6` включает JAR и скрипт KubeJS, который выбирает спрайт брикета
 по размеру и металлу. ID и рецепты сохранены. Gradle и проверка ресурсов прошли, отображение проверит хост.
+
+- Dev #301.18, 2026-11-09: unreleased Create L2 rotation sensor prototype in preserved
+  `feat/pcb-modules`. 2×2, analog/power/ground, 3–6 V DC; signed −256…+256 RPM maps
+  to 0.5…4.5 V at 5 V unloaded, stop at 2.5 V. Reads effective signed speed from the
+  mechanism behind the mounting face; absent mechanism disables the output. Passive
+  10 kohm divider/100 ohm output, 0.5 mA idle, real load/input-power behavior. Create
+  6.0.10 API and pack speed limit verified via MCP; models/recipe/editor/resources ready.
+  Server161223-3986 and clean restart161934-ab33 pass; 24 independent measurements,
+  signed speeds/stop/thresholds/1G/1k/short/power0/2/5/7V/missing mechanism/NBT/real
+  demo power loss/recovery. Restart rail100samples:5.003223623…5.003365739V. First client
+  demonstrated working board/shaft and editor but its empty-array Undo assertion was
+  faulty; corrected final client162500-e1ff is pending. No release/main/deployment change.
+  Final client162500-e1ff accepted:17OK/0FAIL, no scenario task exceptions, normal274s
+  exit; seven inspected frames cover close body/shaft/lamp/editor/native placement/Undo/
+  Repeat. Board21190,300,−11477, placement table21187,300,−11477; final realTFC export 1794241816327. All scoped #301.18 requirements accepted; overall301 remains open.

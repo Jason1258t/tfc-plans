@@ -471,3 +471,74 @@ Keep both feature branches/worktree for continuation, no merge/deploy/release. F
 known separate issues#315/#317/#318. Last native job is done; do not restart earlier/cancelled jobs.
 
 Saved sensor addon acceptance commit: `3ae5caf` on `origin/feat/pcb-modules`. No release or merge.
+
+## Rotation sensor candidate (#301.18), 2026-11-09
+
+Owner scope: Create L2 rotation sensor and regulator-fed comparator/light demo only;
+no release, Create display/lamp adapters, L3, LC or other modules. Reuse preserved
+pcb-modules worktree, clean at session start. Task remains doing under Codex.
+
+Create6.0.10 jar via MCP: KineticBlockEntity.getSpeed returns signed effective speed,
+zero when overStressed or world frozen; getTheoreticalSpeed is deliberately unused.
+Pack kinetics.maxRotationSpeed=256. New type33 appended (existing type ids unchanged),
+2×2, analog/power/ground, 3–6V DC. Signed fixed range−256…+256rpm maps to0.1…0.9
+of supply; stop=0.5. Reads KineticBlockEntity behind mounting face without adding SU.
+Missing/unloaded mechanism invalidates reading and disables upper divider. Direction
+is Create's axis sign, not camera-relative clockwise. Same passive10kohm+100ohm sensor
+network as temperature/light, actual supply/current/load behavior and RMS protection.
+Recipe uses obtainable Create speedometer; conflict check104 mechanical recipes clean.
+Model renders inspected; build/devtestJar/lint pass; resource checker no errors.
+
+First server job161223-3986: source/shaft, demo rail5V, signed scale, thresholds,
+stop/reversal, load1G/1k/0.01ohm, actual0/2/5/7V, missing mechanism,NBT and power cycle.
+Client161406-683e: final resource candidate, fullTFC world, demo/reverse/stop,
+visible shaft+motor, actual native editor selection/placement/undo/repeat.
+Both submitted through main checkout's current stand tools (preserved worktree's
+MCP version predates queue API). Main/devtest candidate in/tmp/pcb-rotation-final-candidate.
+Server first candidate differs only item model/devtest client additions, no physics change.
+No acceptance claimed yet. Wait processes write/tmp/pcb-rotation-{server,client}-summary.txt.
+
+### Electrical and full restart accepted; final editor retest pending
+
+Server161223-3986 passes all intended scenarios, only deliberate expect-output100 fails.
+20 independent measurements parsed from complete filtered output; new process161934-ab33
+restores motor/shaft/board and signed speed128 with lamp on, stop and−128 lamp off,
+threshold20 turns lamp on for−128, threshold50/+128 restores final demo.100samples
+5.003223623…5.003365739V, balance10µW. Combined24measurements independently pass scale,
+Thevenin load, actual input power/output/loss; script/tmp/verify-pcb-rotation.py.
+
+Client161406-683e: full252mod TFC profile, normal exit282s. Seven screenshots inspected:
+working positive/reverse lamp, actual shaft+motor, eight-module editor, palette/placement.
+Do NOT claim whole scenario passes: CtrlZ DID empty the topology but devtest indexed the
+absent ElectricalParts array, throwing ArrayIndexOutOfBounds. Test-only assertion fixed
+(empty array means no component); same flaw fixed in prior sensor editor scenario and its
+expected search list now includes type33. Final job162500-e1ff uses the saved realTFC world,
+builds a fresh demo32blocks east, closer top camera, checks native Undo and Repeat again.
+Wait session51554 writes/tmp/pcb-rotation-client-final-summary.txt. Production class files
+are byte-identical across all3candidates; provenance/tmp/pcb-rotation-provenance.json.
+Final frozen candidate:/tmp/pcb-rotation-accepted-candidate. No more source edits needed.
+
+Deliverable draft: /Users/ivan/.codex/visualizations/2026/11/09/01a1c111-cd5a-7933-834c-e57362663107/pcb-rotation.
+Finish: require allclient assertions including−1empty check and no devtest task exceptions,
+inspect final screenshots, copy LAST exported realTFC world and final jars, full measurement
+proof/reports/provenance, RussianREADME+manifest+ZIP/hash verification. Update this checkpoint,
+README/state/doc59/task18, report scoped milestone without closing301, commit+push BOTH
+feat/pcb-modules branches, retain worktree and do NOT release/merge/deploy.
+
+### Rotation acceptance completed (#301.18), 09.11.2026
+
+Final client162500-e1ff:17OK/0FAIL, no devtest task exceptions, normal274s exit,
+252mod realTFC profile. All seven screenshots inspected: close working board/indicator,
+reverse/unlit, real shaft/motor, full8module editor, palette, native placement, Undo and
+Repeat button. Previous empty-array test failure is corrected and explicitly superseded.
+All scoped requirements accepted:24independent electrical measurements, clean full server
+restart, signed speed/stop/reversal/thresholds/loaded output/real power cycles/NBT/client.
+
+Final export1794241816327: board21190,300,−11477; shaft299/motor298; placement table
+21187,300,−11477. First demonstration remains21161,300,−11478. Deliverable directory above
+has main+stand-onlytestjars, realTFCworld, seven frames, independent math/provenance/logs,
+RussianREADME and manifest. Finaljar candidate/tmp/pcb-rotation-accepted-candidate.
+Task301.18 complete; overall301 remains incomplete. Keep both feature branches/worktree,
+no release/merge/deploy. Separate known issues315/317/318 remain outside this session.
+
+Saved rotation addon acceptance commit: `226bb90` on `origin/feat/pcb-modules`.
