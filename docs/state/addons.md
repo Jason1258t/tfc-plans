@@ -714,16 +714,26 @@ there with and without Sodium plus the dev-server suite; the full-pack client st
 1.5.0 (dev #332): sheet cladding — `white_cladding`, `aluminum_cladding` and their `_framed` variants, plain full
 blocks (copycat-fillable). One ingot on the stonecutter → one block, like Create's industrial iron
 (`#c:ingots/iron` / `#c:ingots/aluminum`); plain ↔ framed on the stonecutter. Textures and JSON from
-`art/gen_cladding.py`. Devtest `betterfluidstest tankers` builds the three library tankers (horizontal cylinder of
-cladding, BF tank inside, Copycats+ slopes `copycat_slope` on the disc steps — facing = high side, verified from
-`CCShapes.SLOPE`), saves `run/tanker_<d>x<len>.nbt`, re-places them from the file and fills them. Library schematics:
-`lYdHCHToOvSC89HZLhXg` (5×12, 1260 buckets), `u5XNxBUEqxKo0YZZ82p0` (7×16, 4116), `Zx8oz8aRkFOGNw7ONt0L` (9×22, 12 600). Vertical tank-farm tanks (devtest `betterfluidstest tankfarm`, class
-`StorageTank`: cylinder on an industrial-iron base, flat roof with iron-bar rail, ladder, roof neck and bottom pipe,
-Copycats+ `copycat_vertical_slope` — facing picked by testing the shape against the inner corner):
-`3cF4FPgOunTKkETbrgl0` (Ø9 h10, 6300 buckets), `qXlDmyeEkI7XVsIpXS7y` (Ø13 h14, 19 796), `kyF6tTF2IXcjT6otMtHE`
-(Ø17 h18, 44 604).
-Checked on the dev server with IE and Copycats+ (`WITH_IE=1 WITH_COPYCATS=1 ./test-server.sh … 'betterfluidstest
-cladding' 'betterfluidstest tankers'`) plus the old suite; textures not seen in a client.
+`art/gen_cladding.py`.
+
+1.5.1 (dev #332): `IronTankEntity.updateShell` compares against `level.getBlockState`, not the block entity's cached
+state. The Create schematicannon (`BlockHelper.placeSchematicBlock`, flag 18) runs our neighbour update inside
+`onPlace`, then `LevelChunk.setBlockState` writes the outer (schematic) state into the BE cache, so later updates saw
+"already top=false" and skipped — lower sections kept `top=true` (stand print check: group 3 `wrong_state`). Devtest
+`print` + `printcheck` repeats the cannon path (writeSafe data, bottom-up) on the small tanker: all 305 cells match.
+
+Library schematics (devtest `tankers` / `tankfarm`, classes `Tanker`, `StorageTank`, `Round`): circles at half-block
+resolution — a quadrant is in if >50 % of its area is inside; 3–4 quadrants → full block, 2 → `copycats:copycat_slab`
+(axis by shape), 1 → `create:copycat_step` (horizontal) / `copycats:copycat_vertical_step` (vertical); the state is
+picked by testing the block shape, no 45° slopes (the host rejected them). Horizontal tankers `lYdHCHToOvSC89HZLhXg`
+(5×12, 1260 buckets), `u5XNxBUEqxKo0YZZ82p0` (7×16, 4116), `Zx8oz8aRkFOGNw7ONt0L` (9×22, 10 360). Vertical tank-farm
+tanks, wide and low: `3cF4FPgOunTKkETbrgl0` (Ø11 h7, 5978), `qXlDmyeEkI7XVsIpXS7y` (Ø15 h9, 17 262),
+`kyF6tTF2IXcjT6otMtHE` (Ø21 h12, 47 880). Each is saved to `run/*.nbt`, re-placed from the file and filled; copycat
+shape and material verified after re-placement; `drops` checks nothing popped off. `BF_SHOWCASE=1 EXTRA=copycats
+./test-client.sh` places the saved files in a client and shoots `bf-show-*.png` (placing the same file twice over
+itself pops copycat slabs — don't). Run: `WITH_IE=1 WITH_COPYCATS=1 ./test-server.sh 'forceload add 0 32 90 220'
+'betterfluidstest tankers' 'betterfluidstest print' 'betterfluidstest tankfarm' 'sleep 3' 'betterfluidstest
+printcheck' 'betterfluidstest drops'`.
 
 ### Destroy Extras 0.7.1 — текстуры чистой пыли (dev #293)
 

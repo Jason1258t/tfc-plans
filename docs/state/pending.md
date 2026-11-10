@@ -1,6 +1,6 @@
 # State: waiting for the host or an in-game check
 
-- Host (dev #332): install Better Fluids 1.5.0 on the server and clients (`tfc pull addons`), `tfc publish`; craft
+- Host (dev #332): install Better Fluids 1.5.1 on the server and clients (`tfc pull addons`), `tfc publish`; craft
   the cladding on a stonecutter and print one library tanker with the schematicannon.
 
 - Host (dev #283): install EE Extras 2.18.1 on the server and clients. Check that a newly placed cable and one
