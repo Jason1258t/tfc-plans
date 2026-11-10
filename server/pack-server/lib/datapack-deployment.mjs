@@ -35,6 +35,11 @@ export async function confirmDatapackItems(store, site, current, items, { files,
     throw new HttpError(409, 'В снимке нет поддерживаемого KubeJS для 1.21.1');
   const list = (await site.datapacks([], { all: true, fresh: true })).items;
   const replacedPaths = new Set(items.filter((d) => d?.replaces).map((d) => packDatapackPath(d.id)));
+  // Копия в мире под id подтверждаемого пакета — его прежняя версия (её оставил unconfirm), а не чужой пакет:
+  // она не пересекается с новой и уходит из снимка вместе с подтверждением.
+  const ownWorldPaths = new Set(
+    items.filter((d) => /^[A-Za-z0-9]{1,64}$/.test(d?.id ?? '')).map((d) => worldDatapackPath(d.id)),
+  );
   const resources = new Map();
   const remember = (pack, label) => {
     for (const [file, bytes] of Object.entries(pack.files)) {
@@ -52,7 +57,8 @@ export async function confirmDatapackItems(store, site, current, items, { files,
     (f) =>
       (f.kind === 'world-datapack' || deploymentsOf(current).some((d) => d.path === f.path)) &&
       f.path.endsWith('.zip') &&
-      !replacedPaths.has(f.path),
+      !replacedPaths.has(f.path) &&
+      !ownWorldPaths.has(f.path),
   )) {
     let pack;
     try {
@@ -105,6 +111,8 @@ export async function confirmDatapackItems(store, site, current, items, { files,
     if (existing && existing.sha256 !== item.sha256 && existing.sha256 !== item.replaces?.sha256)
       throw new HttpError(409, `Уже есть другой ${target}`);
     const worldPaths = new Set([worldDatapackPath(pack.id), ...(pinned?.worldPaths ?? [])]);
+    if (!snapshotSource && files.get(worldDatapackPath(pack.id))?.kind === 'world-datapack')
+      files.delete(worldDatapackPath(pack.id));
     // В снимке встречаются ZIP с ручными названиями: убираем только совпавшее содержимое.
     for (const f of [...files.values()].filter((f) => f.kind === 'world-datapack' && f.path.endsWith('.zip'))) {
       try {

@@ -258,19 +258,22 @@ export async function confirmDatapacks(api, profile, names, { yes = false, dryRu
         (f) =>
           (f.path.startsWith('world/') || f.path === packDatapackPath(d.id)) && f.info?.contentHash === d.contentHash,
       );
-      const canonical =
-        local.find((f) => f.path === worldDatapackPath(d.id)) ?? local.find((f) => f.path === packDatapackPath(d.id));
-      if (canonical && canonical.info?.contentHash !== d.contentHash)
-        throw new Error(
-          `«${d.name}»: локальная копия отличается от сайта — сначала сравните и проверьте нужную версию`,
-        );
-      const source = canonical ?? candidates[0];
+      // После unconfirm в мире лежит прежняя версия из снимка: она не мешает, если есть копия новой редакции
+      const source =
+        candidates.find((f) => f.path === worldDatapackPath(d.id)) ??
+        candidates.find((f) => f.path === packDatapackPath(d.id)) ??
+        candidates[0];
       if (!source) {
         if (all) {
           console.log(`Пропускаю «${d.name}»: совпадающей проверенной копии в мире нет.`);
           continue;
         }
-        throw new Error(`«${d.name}»: в мире нет ZIP с содержимым карточки сайта; установите и проверьте его в игре`);
+        const old = local.some((f) => f.path === worldDatapackPath(d.id) || f.path === packDatapackPath(d.id));
+        throw new Error(
+          old
+            ? `«${d.name}»: локальная копия — другая редакция, не как на сайте. Поставьте текущую: tfc datapacks pull ${d.id}, проверьте в игре и повторите`
+            : `«${d.name}»: в мире нет ZIP с содержимым карточки сайта; установите и проверьте его в игре`,
+        );
       }
       const target = local.find((f) => f.path === packDatapackPath(d.id));
       if (target && target.info?.sha256 !== source.info.sha256)
