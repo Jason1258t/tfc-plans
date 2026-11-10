@@ -717,7 +717,11 @@ blocks (copycat-fillable). One ingot on the stonecutter → one block, like Crea
 `art/gen_cladding.py`. Devtest `betterfluidstest tankers` builds the three library tankers (horizontal cylinder of
 cladding, BF tank inside, Copycats+ slopes `copycat_slope` on the disc steps — facing = high side, verified from
 `CCShapes.SLOPE`), saves `run/tanker_<d>x<len>.nbt`, re-places them from the file and fills them. Library schematics:
-`lYdHCHToOvSC89HZLhXg` (5×12, 1260 buckets), `u5XNxBUEqxKo0YZZ82p0` (7×16, 4116), `Zx8oz8aRkFOGNw7ONt0L` (9×22, 12 600).
+`lYdHCHToOvSC89HZLhXg` (5×12, 1260 buckets), `u5XNxBUEqxKo0YZZ82p0` (7×16, 4116), `Zx8oz8aRkFOGNw7ONt0L` (9×22, 12 600). Vertical tank-farm tanks (devtest `betterfluidstest tankfarm`, class
+`StorageTank`: cylinder on an industrial-iron base, flat roof with iron-bar rail, ladder, roof neck and bottom pipe,
+Copycats+ `copycat_vertical_slope` — facing picked by testing the shape against the inner corner):
+`3cF4FPgOunTKkETbrgl0` (Ø9 h10, 6300 buckets), `qXlDmyeEkI7XVsIpXS7y` (Ø13 h14, 19 796), `kyF6tTF2IXcjT6otMtHE`
+(Ø17 h18, 44 604).
 Checked on the dev server with IE and Copycats+ (`WITH_IE=1 WITH_COPYCATS=1 ./test-server.sh … 'betterfluidstest
 cladding' 'betterfluidstest tankers'`) plus the old suite; textures not seen in a client.
 
