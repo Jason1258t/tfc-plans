@@ -740,3 +740,8 @@ printcheck' 'betterfluidstest drops'`.
 18 пылей и 90 брикетов получили цветные спрайты 16 × 16. Модели пылей берут цвет из PNG.
 Обновление сборки `u20261106-133656-3ca6` включает JAR и скрипт KubeJS, который выбирает спрайт брикета
 по размеру и металлу. ID и рецепты сохранены. Gradle и проверка ресурсов прошли, отображение проверит хост.
+
+1.5.2 (dev #335): all addon items were missing from creative mode — the mod never listened to
+`BuildCreativeModeTabContentsEvent`. They are now appended to Create's base tab. The dev server checked the tab
+contents (`betterfluidstest tab`) and a creative instant print of the small tanker through Create's
+`SchematicPlacePacket` from a non-op creative player (`creativeprint` + `printcheck`): 90 of 90 tank sections, matches.
