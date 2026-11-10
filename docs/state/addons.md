@@ -711,6 +711,16 @@ tank shapes in a flat world and saves `run/screenshots/bf-*.png`; `EXTRA="sodium
 there with and without Sodium plus the dev-server suite; the full-pack client stand did not finish loading the world
 (llvmpipe), so not seen in the full pack.
 
+1.5.0 (dev #332): sheet cladding — `white_cladding`, `aluminum_cladding` and their `_framed` variants, plain full
+blocks (copycat-fillable). One ingot on the stonecutter → one block, like Create's industrial iron
+(`#c:ingots/iron` / `#c:ingots/aluminum`); plain ↔ framed on the stonecutter. Textures and JSON from
+`art/gen_cladding.py`. Devtest `betterfluidstest tankers` builds the three library tankers (horizontal cylinder of
+cladding, BF tank inside, Copycats+ slopes `copycat_slope` on the disc steps — facing = high side, verified from
+`CCShapes.SLOPE`), saves `run/tanker_<d>x<len>.nbt`, re-places them from the file and fills them. Library schematics:
+`lYdHCHToOvSC89HZLhXg` (5×12, 1260 buckets), `u5XNxBUEqxKo0YZZ82p0` (7×16, 4116), `Zx8oz8aRkFOGNw7ONt0L` (9×22, 12 600).
+Checked on the dev server with IE and Copycats+ (`WITH_IE=1 WITH_COPYCATS=1 ./test-server.sh … 'betterfluidstest
+cladding' 'betterfluidstest tankers'`) plus the old suite; textures not seen in a client.
+
 ### Destroy Extras 0.7.1 — текстуры чистой пыли (dev #293)
 
 18 пылей и 90 брикетов получили цветные спрайты 16 × 16. Модели пылей берут цвет из PNG.
