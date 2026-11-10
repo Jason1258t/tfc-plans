@@ -3,6 +3,44 @@
 Resumed at the owner's request on 2026-11-08. Task #301 is doing under Codex and remains incomplete.
 Authoritative requirements: server plan doc:59, especially 2.1, 2.2 and 6.1. Do not replace the scope with this checkpoint.
 
+## L2 eight-line connector — verified, 2026-11-10
+
+Item #301.20 is verified. Overall #301 remains open; no release/version bump/merge/deploy.
+Only the connector milestone is completed: no Create adapters, L3, LC or other modules added.
+
+- 2×9 cells,8signals+explicit green common,9real EE leads and0.01ohm contacts. Nominal0–5V DC,
+  limit6V relative to common,10mA signal/80mA common, RMS board protection. No logical copying,
+  source or implicit ground. Model, recipe, catalogue, rotations/reflections and native editor history.
+
+- Demo TX21230,300,−11477 / RX21233,300,−11477:8switches→9leads→8comparator/LED channels.
+  Independent transformer→bridge→100mF→regulated5V supply per board,3blocks north.
+- Final server `20261110-083455-ba20`:269commands/392seconds,33positive words,
+  32unique18-contact/cache checks,32nine-wire independent-RMS/zero-heat checks,5×81pair audits,
+  each1kohm/all8×4700ohm loads, short/open/common, both power cuts/restores,NBT,100samples,
+  real EE thermal destruction positive control. Only intentional expect100 fails.
+  TX5.0047321917…5.0047507173V; RX5.0013664815…5.0013850234V.
+  Loaded8signals5.002459V,1.064mA each/8.515mA common. Off RX rail2.1e-15V with5V inputs/5nA,
+  LEDs off. Open common at85 gives±2.502V via other input paths: not isolation.
+- Final client `20261110-083505-8b73`:9native spool connections,81/81,255/85,17-module project,
+  native mouse placement/Undo/Redo,8screenshots inspected. Completed normally by stand SIGTERM.
+  Native EE basic renderer used on CPU stand; general Flywheel problem is separate #329.
+- Cold server `20261110-083958-ff8a`: new process from client-exported world1794264010270,
+  no demo/rebuild.17positive words,15unique/cache checks,16wire-RMS/temperature checks,
+  3×81audits; all loads, full unplug/replug,NBT,100samples pass, no failed assertions.
+  Final world export1794300707108 downloaded:~34MB, valid level.dat, no symlinks.
+- Fixed root cause: connector builder.node redundantly recreated external EE nodes. addInternalNode
+  unconditionally adds a duplicate; stale wire cache then read5V instead of actual16microvolt and
+  burned second lead. Removed duplicate creation; native resistor stamp creates only missing nodes.
+  EE getNodeID now resolves canonical map ordinal; formulas/thermal destruction unchanged.
+  Earlier failed runs are diagnostic evidence, not accepted tests.
+- Main SHA256 `b06f5e3d102dfaa597c29ec52f32c63d934917ea364f9987ef8633c8468c5569`;
+  devtest `216b038021438765a5133dc731cdb0155b3d0401d24c25599be2dda439579169`.
+  Gradle build/devtestJar, lint0errors, changed docs format and git diff checks pass.
+- Working kit/report/screenshots/evidence:
+  `/Users/ivan/.codex/visualizations/2026/11/09/01a1c187-7451-7990-8f01-21e1cd7b1246/pcb-connector/kit`.
+  Access: trusted LAN `TFC_CLIENT_HOST=master@192.168.0.101`; owner confirmed Tailscale auth too.
+  Tool truncated large JSON worked around by raw rsync (#328); routing automation candidate #327.
+
 ## Onboard transformer milestone
 
 L1 now has a 3×3 onboard transformer with a direct two-core 300 V RMS cable inlet on its body and only two

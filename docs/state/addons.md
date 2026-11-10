@@ -760,3 +760,15 @@ six faces of both tank types, fluid accounting and detachment when the tank is b
   Final client162500-e1ff accepted:17OK/0FAIL, no scenario task exceptions, normal274s
   exit; seven inspected frames cover close body/shaft/lamp/editor/native placement/Undo/
   Repeat. Board21190,300,−11477, placement table21187,300,−11477; final realTFC export 1794241816327. All scoped #301.18 requirements accepted; overall301 remains open.
+
+- Dev #301.20,2026-11-10: **verified**, unreleased L2 connector in `feat/pcb-modules`:
+  2×9,8signals+explicit common,9real EE leads/0.01ohm contacts,6V/10mA signal/80mA common.
+  Two real boards with independent regulated5V supplies; no signal copying or implicit ground.
+  Final server083455-ba20:33positive words,8individual/all loads, short/open/common/both power cycles,
+  backfeed,NBT,100sample rails, unique18nodes and independent wire-RMS/thermal checks pass.
+  Client083505-8b73:9native spool connections, actual editor mouse/Undo/Redo,8inspected shots.
+  Cold server083958-ff8a: saved client world without rebuilding,17word checks/loads/unplug/NBT pass.
+  Fixed duplicate external nodes and stale EE node hint; real thermal protection remains active.
+  Final world1794300707108 and kit/report in artifact folder linked from
+  [checkpoint](../plans/pcb-modules-checkpoint.md). #327 routing tool candidate, #328 stand JSON,
+  #329 CPU Flywheel rendering separate. Only item20 complete; overall301 open. No release/merge/deploy.
