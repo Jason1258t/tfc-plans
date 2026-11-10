@@ -1,86 +1,13 @@
 import { lazy, Suspense } from 'react';
-import { usePower, useSettings, type PowerData } from '@/lib/power';
-import { SectionShell, contentStyles as content } from '@/shared/ui';
-import { GUIDES_SUBS, type GuidesSub } from '@/features/guides';
+import type { CatalogPlace } from '@/features/guides/GuidesCatalog';
 
-const PowerGuidesSection = lazy(() => import('@/features/guides/PowerGuidesSection'));
-const SiteGuidesSection = lazy(() => import('@/features/guides/SiteGuidesSection'));
-const MultiblockGuidesSection = lazy(() => import('@/features/guides/MultiblockGuidesSection'));
-const ChemistryGuidesSection = lazy(() => import('@/features/guides/ChemistryGuidesSection'));
+const GuidesCatalog = lazy(() => import('@/features/guides/GuidesCatalog'));
 
-/** Справочник → «Все гайды»: общий каталог; аддонные статьи остаются на странице аддонов. */
-export function GuidesTab({
-  sub,
-  onSub,
-  guide,
-  onGuide,
-}: {
-  sub: GuidesSub;
-  onSub: (s: GuidesSub) => void;
-  guide: string | null;
-  onGuide: (id: string | null) => void;
-}) {
-  return (
-    <SectionShell
-      navLabel="Разделы гайдов"
-      nav={
-        <>
-          {GUIDES_SUBS.map((s) => (
-            <button key={s.id} aria-pressed={sub === s.id} onClick={() => onSub(s.id)}>
-              <span>{s.label}</span>
-            </button>
-          ))}
-        </>
-      }
-    >
-      <div className={content.stack}>
-        {sub === 'multiblocks' ? (
-          <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>
-            <MultiblockGuidesSection guide={guide} onGuide={onGuide} />
-          </Suspense>
-        ) : sub === 'chemistry' ? (
-          <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>
-            <ChemistryGuidesSection guide={guide} onGuide={onGuide} />
-          </Suspense>
-        ) : sub === 'site' ? (
-          <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>
-            <SiteGuidesSection guide={guide} onGuide={onGuide} />
-          </Suspense>
-        ) : (
-          <PowerGuidesTab guide={guide} onGuide={onGuide} />
-        )}
-      </div>
-    </SectionShell>
-  );
-}
-
-export function PowerGuidesTab({ guide, onGuide }: { guide: string | null; onGuide: (id: string | null) => void }) {
-  const data = usePower();
-  return data === undefined ? (
-    <div className="empty">Загружаю…</div>
-  ) : data === null ? (
-    <div className="empty">Данные по электричеству не собраны — выполните npm run mods</div>
-  ) : (
-    <PowerGuides data={data} guide={guide} onGuide={onGuide} />
-  );
-}
-
-/** Формулам гайдов нужны настройки обоих модов — как во вкладке «Электричество» */
-function PowerGuides({
-  data,
-  guide,
-  onGuide,
-}: {
-  data: PowerData;
-  guide: string | null;
-  onGuide: (id: string | null) => void;
-}) {
-  const ee = useSettings(data.ee?.file, data.ee?.keys);
-  const ie = useSettings(data.ie?.file, data.ie?.keys);
-  const att = useSettings(data.att?.file, data.att?.keys);
+/** Справочник → «Гайды»: общий каталог; аддонные статьи остаются на странице аддонов. */
+export function GuidesTab(props: CatalogPlace & { onPlace: (p: CatalogPlace) => void }) {
   return (
     <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>
-      <PowerGuidesSection data={data} ee={ee.get} ie={ie.get} att={att.get} guide={guide} onGuide={onGuide} />
+      <GuidesCatalog {...props} />
     </Suspense>
   );
 }

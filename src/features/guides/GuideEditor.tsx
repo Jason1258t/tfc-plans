@@ -52,7 +52,8 @@ outputs:
 
 /** Правка гайда: поля, текст со вставками и живой предпросмотр */
 export function GuideEditor({
-  section,
+  section: initialSection,
+  sections,
   id,
   kit,
   guide,
@@ -64,6 +65,8 @@ export function GuideEditor({
   onGuide,
 }: {
   section: string;
+  /** Разделы на выбор (каталог справочника); без них раздел не меняется */
+  sections?: { id: string; label: string }[];
   /** Id новой статьи (статья аддона — addon-<мод>); без него id выдаст Firestore */
   id?: string;
   kit: GuideKit;
@@ -74,7 +77,8 @@ export function GuideEditor({
   /** Версия из истории, которую возвращают */
   restore: Pick<Guide, 'title' | 'summary' | 'body'> | null;
   nextOrder: number;
-  groups: string[];
+  /** Группы, уже заведённые в разделе, — подсказки поля «Группа» */
+  groups: (section: string) => string[];
   onClose: (savedId: string | null) => void;
   onGuide: (id: string) => void;
 }) {
@@ -83,6 +87,7 @@ export function GuideEditor({
   const [summary, setSummary] = useState(restore?.summary ?? base?.summary ?? '');
   const [body, setBody] = useState(restore?.body ?? base?.body ?? NEW_BODY);
   const [icon, setIcon] = useState<string | null>(base?.icon ?? null);
+  const [section, setSection] = useState(initialSection);
   const [group, setGroup] = useState(base?.group ?? '');
   const [order, setOrder] = useState(base?.order ?? nextOrder);
   const [checked, setChecked] = useState<GuideChecked>(base?.checked ?? 'none');
@@ -98,6 +103,7 @@ export function GuideEditor({
 
   const changed =
     !base ||
+    section !== base.section ||
     title !== base.title ||
     summary !== base.summary ||
     body !== base.body ||
@@ -214,11 +220,25 @@ export function GuideEditor({
             )}
           </span>
         </div>
+        {sections && (
+          <label className={styles.guideField}>
+            <span className="faint small">Раздел</span>
+            <Select value={section} onChange={(e) => setSection(e.target.value)}>
+              {(sections.some((s) => s.id === section) ? sections : [...sections, { id: section, label: section }]).map(
+                (s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.label}
+                  </option>
+                ),
+              )}
+            </Select>
+          </label>
+        )}
         <label className={styles.guideField}>
           <span className="faint small">Группа в списке</span>
           <Input list="guide-groups" value={group} maxLength={80} onChange={(e) => setGroup(e.target.value)} />
           <datalist id="guide-groups">
-            {groups.map((g) => (
+            {groups(section).map((g) => (
               <option key={g} value={g} />
             ))}
           </datalist>

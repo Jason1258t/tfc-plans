@@ -1,5 +1,6 @@
 import { ArrowDown } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { CONFIG_ORIGIN_LABEL } from '@/entities/pack-config';
 import {
   alternator,
@@ -46,15 +47,7 @@ const EE_BLOCK = {
   transformer: 'electroenergetics:transformer',
 };
 
-export function PowerTab({
-  sub,
-  onSub,
-  guides,
-}: {
-  sub: PowerSub | 'guides';
-  onSub: (s: PowerSub | 'guides') => void;
-  guides?: ReactNode;
-}) {
+export function PowerTab({ sub, onSub }: { sub: PowerSub; onSub: (s: PowerSub) => void }) {
   const data = usePower();
   return (
     <SectionShell
@@ -66,16 +59,14 @@ export function PowerTab({
               <span>{s.label}</span>
             </button>
           ))}
-          <button aria-pressed={sub === 'guides'} onClick={() => onSub('guides')}>
-            <span>Гайды</span>
-          </button>
+          <Link className={cx(styles.guidesLink, 'small')} to="/reference?tab=guides&sub=power">
+            Гайды по электричеству →
+          </Link>
         </>
       }
     >
       <div className={styles.power}>
-        {sub === 'guides' ? (
-          guides
-        ) : data === undefined ? (
+        {data === undefined ? (
           <div className="empty">Загружаю…</div>
         ) : data === null ? (
           <div className="empty">Данные по электричеству не собраны — выполните npm run mods</div>

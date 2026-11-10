@@ -178,7 +178,7 @@ export default function AddonArticle({ addon }: { addon: Addon }) {
         started={editing === 'new' ? null : editing}
         restore={restore}
         nextOrder={0}
-        groups={[]}
+        groups={() => []}
         onClose={() => setEditing(null)}
         onGuide={() => {}}
       />

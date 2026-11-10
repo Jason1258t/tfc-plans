@@ -44,6 +44,8 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* Щелчок по группе в меню прокручивает к ней — под липкой шапкой */
+  scroll-margin-top: calc(var(--header-h) + 12px);
 }
 
 .guideGroupTitle {
@@ -728,4 +730,62 @@
   flex-shrink: 0;
   border-radius: var(--radius-sm);
   background: var(--surface-2);
+}
+
+/* ---------------------------------------------------------------- каталог справочника: меню разделов */
+
+.catalogSearch {
+  flex: none;
+  margin-bottom: 4px;
+}
+
+/* На телефоне вместо дерева — одна выпадашка раздела */
+.catalogSelect {
+  display: none;
+}
+
+.catalogTree {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.catalogGroups {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0 0 4px 10px;
+  padding-left: 6px;
+  border-left: 1px solid var(--border);
+}
+
+.catalogGroups button {
+  padding: 4px 8px;
+  color: var(--text-2);
+}
+
+.catalogLink {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 10px;
+}
+
+@media (max-width: 760px) {
+  .catalogSearch,
+  .catalogSelect {
+    flex: 1 1 100%;
+  }
+
+  .catalogSearch {
+    margin-bottom: 0;
+  }
+
+  .catalogSelect {
+    display: block;
+  }
+
+  .catalogTree {
+    display: none;
+  }
 }

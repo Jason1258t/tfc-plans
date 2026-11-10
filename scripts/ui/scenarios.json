@@ -191,6 +191,16 @@
       "theme": "dark"
     },
     {
+      "name": "reference.guides-list",
+      "path": "/reference?tab=guides&sub=multiblocks",
+      "waitFor": "main"
+    },
+    {
+      "name": "reference.guides-article",
+      "path": "/reference?tab=guides&sub=multiblocks&g=create-display",
+      "waitFor": "main"
+    },
+    {
       "name": "schematics",
       "path": "/schematics"
     },
