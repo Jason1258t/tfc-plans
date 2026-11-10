@@ -704,7 +704,15 @@ fertiliser blocks, calendar with month labels. `.class` parsing — `scripts/mod
 
 ## Guides
 
-- «Все гайды» (`?tab=guides`) is the common catalogue with topic filters and «TFC Studio» articles. Power and multiblock articles also open inside `/reference?tab=power&sub=guides` and `/reference?tab=multiblocks&sub=guides`; old guide URLs redirect to the canonical topic. Addon authoring remains at `/addons?sub=guides` rather than duplicating a second list.
+- «Гайды» (`?tab=guides[&sub=<section>][&g=<id>]`, dev #333, 2026-11-10) is the only catalogue of reference
+  articles. Sections and groups come from the guides themselves (`section`, `group`); labels, intros and order —
+  `guideSection` in `src/features/guides/guideMeta.ts` (an unknown `section` shows under its id, last). Current
+  sections: `power`, `logistics`, `mining`, `multiblocks`, `chemistry`, `site`; to add one, set `section` on a guide
+  (`guide_put` or the editor's «Раздел» select) and add a label there. Left nav — sections with counts, groups of the
+  open section, search over all guides; phone — a section select. One kit for all sections: power formulas/widgets
+  - `::multiblock`. The «Гайды» subtabs of «Электричество»/«Мультиблоки» are gone: `legacyReferenceTarget` sends
+    `tab=power|multiblocks&sub=guides` to the catalogue; `?g=` finds the article whatever `sub` says. The catalogue
+    reads every non-addon guide (≈50 docs per visit). Addon authoring stays at `/addons?sub=guides`.
 - Section `addon` (2026-10-22) — addon pages `/addons/<mod>` (guide id `addon-<mod>`), not listed under «Гайды»;
   see [addons.md](addons.md).
 - Since 2026-10-15 articles live in Firestore `guides`, editable on the site by anyone, with revision history;

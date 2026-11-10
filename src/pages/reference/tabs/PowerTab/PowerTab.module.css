@@ -46,3 +46,8 @@
   align-items: center;
   gap: 6px;
 }
+
+/* Ссылка на гайды раздела — внизу меню */
+.guidesLink {
+  padding: 7px 10px;
+}

@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { SectionShell, Select, Card, CardHead, Table, TableWrap, tableStyles } from '@/shared/ui';
 import { useMemo, useState } from 'react';
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { BotanyTab } from '../tabs/BotanyTab';
 import { DishesTab } from '../tabs/DishesTab';
 import { MealsTab } from '../tabs/MealsTab';
@@ -25,8 +25,7 @@ import { LiquidFuelTab } from '../tabs/LiquidFuelTab';
 import { GeologyTab } from '../tabs/GeologyTab';
 import { MapPage } from '@/pages/map';
 import { MultiblocksTab, type MultiblockSub } from '@/features/reference-tabs';
-import { GuidesTab, PowerGuidesTab } from '../tabs/GuidesTab';
-import { GUIDES_SUBS, type GuidesSub } from '@/features/guides';
+import { GuidesTab } from '../tabs/GuidesTab';
 import { PowerTab } from '../tabs/PowerTab';
 import { POWER_SUBS } from '@/lib/power';
 import type { BotanySub } from '@/lib/botany';
@@ -73,23 +72,23 @@ const TABS: { id: Tab; label: string; description: string; icon: LucideIcon }[] 
   {
     id: 'power',
     label: 'Электричество',
-    description: 'Системы энергии, сети, нагрузки и профильные гайды.',
+    description: 'Системы энергии, сети, нагрузки и потребители.',
     icon: Zap,
   },
   {
     id: 'multiblocks',
     label: 'Мультиблоки',
-    description: 'Постройка, материалы, работа машин и гайды.',
+    description: 'Постройка, материалы и работа машин.',
     icon: Boxes,
   },
   {
     id: 'guides',
-    label: 'Все гайды',
-    description: 'Статьи по механизмам, мультиблокам и TFC Studio.',
+    label: 'Гайды',
+    description: 'Статьи по энергии, логистике, добыче, мультиблокам, химии и TFC Studio.',
     icon: BookOpen,
   },
 ];
-const MB_SUBS: MultiblockSub[] = ['build', 'materials', 'work', 'guides'];
+const MB_SUBS: MultiblockSub[] = ['build', 'materials', 'work'];
 const WORLD_SUBS: { id: WorldSub; label: string }[] = [
   { id: 'ores', label: 'Руды' },
   { id: 'geology', label: 'Геология' },
@@ -130,7 +129,6 @@ export function ReferencePage() {
 
 function Reference() {
   const [params, setParams] = useSearchParams();
-  const navigate = useNavigate();
   const section = TABS.find((t) => t.id === params.get('tab'));
   const tab = section?.id ?? 'world';
   const home = !section;
@@ -185,19 +183,11 @@ function Reference() {
         </SectionShell>
       ) : tab === 'guides' ? (
         <GuidesTab
-          sub={GUIDES_SUBS.find((s) => s.id === params.get('sub'))?.id ?? 'power'}
-          onSub={(k: GuidesSub) => {
-            if (k === 'addons') navigate('/addons?sub=guides');
-            else setParams(k === 'power' ? { tab: 'guides' } : { tab: 'guides', sub: k }, { replace: true });
-          }}
+          section={params.get('sub')}
           guide={params.get('g')}
-          onGuide={(g) => {
-            const next: Record<string, string> = { tab: 'guides' };
-            const sub = params.get('sub');
-            if (sub && sub !== 'power' && GUIDES_SUBS.some((s) => s.id === sub)) next.sub = sub;
-            if (g) next.g = g;
-            setParams(next);
-          }}
+          onPlace={({ section: sub, guide: g }) =>
+            setParams({ tab: 'guides', ...(sub ? { sub } : {}), ...(g ? { g } : {}) })
+          }
         />
       ) : tab === 'multiblocks' ? (
         <MultiblocksTab
@@ -218,26 +208,11 @@ function Reference() {
             const mb = params.get('mb');
             setParams({ tab: 'multiblocks', ...(mb ? { mb } : {}), sub }, { replace: true });
           }}
-          guide={params.get('g')}
-          onGuide={(g) => {
-            const mb = params.get('mb');
-            setParams({ tab: 'multiblocks', ...(mb ? { mb } : {}), sub: 'guides', ...(g ? { g } : {}) });
-          }}
         />
       ) : tab === 'power' ? (
         <PowerTab
-          sub={
-            params.get('sub') === 'guides'
-              ? 'guides'
-              : (POWER_SUBS.find((s) => s.id === params.get('sub'))?.id ?? 'link')
-          }
+          sub={POWER_SUBS.find((s) => s.id === params.get('sub'))?.id ?? 'link'}
           onSub={(sub) => setParams(sub === 'link' ? { tab: 'power' } : { tab: 'power', sub }, { replace: true })}
-          guides={
-            <PowerGuidesTab
-              guide={params.get('g')}
-              onGuide={(g) => setParams({ tab: 'power', sub: 'guides', ...(g ? { g } : {}) })}
-            />
-          }
         />
       ) : tab === 'items' ? (
         <ItemsSection

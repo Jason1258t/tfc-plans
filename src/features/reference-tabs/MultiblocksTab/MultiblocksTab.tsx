@@ -30,9 +30,8 @@ import styles from './MultiblocksTab.module.css';
 const HAMMER = 'immersiveengineering:hammer';
 
 const MultiblockFormed = lazy(() => import('../MultiblockFormed'));
-const MultiblockGuidesSection = lazy(() => import('@/features/guides/MultiblockGuidesSection'));
 
-export type MultiblockSub = 'build' | 'materials' | 'work' | 'guides';
+export type MultiblockSub = 'build' | 'materials' | 'work';
 type MbPurpose = 'production' | 'mining' | 'energy' | 'storage' | 'other';
 
 const PURPOSE_LABEL: Record<MbPurpose, string> = {
@@ -62,15 +61,11 @@ export function MultiblocksTab({
   onSlug,
   sub,
   onSub,
-  guide,
-  onGuide,
 }: {
   slug: string | null;
   onSlug: (s: string | null) => void;
   sub: MultiblockSub;
   onSub: (s: MultiblockSub) => void;
-  guide: string | null;
-  onGuide: (id: string | null) => void;
 }) {
   const data = useMultiblocks();
   const items = useItems();
@@ -149,19 +144,14 @@ export function MultiblocksTab({
               Ничего не найдено
             </p>
           )}
+          <Link className={cx(styles.guidesLink, 'small')} to="/reference?tab=guides&sub=multiblocks">
+            Гайды по мультиблокам →
+          </Link>
         </>
       }
     >
       <div>
-        <MultiblockCard
-          key={current.id}
-          m={current}
-          data={data}
-          sub={sub}
-          onSub={onSub}
-          guide={guide}
-          onGuide={onGuide}
-        />
+        <MultiblockCard key={current.id} m={current} data={data} sub={sub} onSub={onSub} />
       </div>
     </SectionShell>
   );
@@ -172,15 +162,11 @@ function MultiblockCard({
   data,
   sub,
   onSub,
-  guide,
-  onGuide,
 }: {
   m: Multiblock;
   data: MultiblockData;
   sub: MultiblockSub;
   onSub: (s: MultiblockSub) => void;
-  guide: string | null;
-  onGuide: (id: string | null) => void;
 }) {
   const [full, setFull] = useState(false);
   return (
@@ -193,7 +179,6 @@ function MultiblockCard({
           { value: 'build', label: 'Обзор и постройка' },
           { value: 'materials', label: 'Материалы' },
           { value: 'work', label: 'Работа' },
-          { value: 'guides', label: 'Гайды' },
         ]}
       />
       {sub === 'build' && <MultiblockOverview m={m} full={full} onFull={setFull} />}
@@ -205,11 +190,6 @@ function MultiblockCard({
             <ManualEntry key={`${e.ns}:${e.entry}`} e={e} m={m} />
           ))}
         </>
-      )}
-      {sub === 'guides' && (
-        <Suspense fallback={<div className="empty">Загружаю гайды…</div>}>
-          <MultiblockGuidesSection guide={guide} onGuide={onGuide} />
-        </Suspense>
       )}
     </div>
   );

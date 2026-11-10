@@ -47,9 +47,6 @@ export function GuidesSection({
 }) {
   const [guides, setGuides] = useState<Guide[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [editing, setEditing] = useState<Guide | 'new' | null>(null);
-  const [history, setHistory] = useState<Guide | null>(null);
-  const [restore, setRestore] = useState<Pick<Guide, 'title' | 'summary' | 'body'> | null>(null);
 
   useEffect(
     () =>
@@ -60,8 +57,61 @@ export function GuidesSection({
     [section],
   );
 
+  return (
+    <GuideScreens
+      all={guides}
+      list={guides}
+      error={error}
+      section={section}
+      kit={kit}
+      guide={guide}
+      onGuide={onGuide}
+      intro={intro}
+      checks={() => checks}
+    />
+  );
+}
+
+/**
+ * Экраны гайдов: список по группам, статья, правка. all — где искать статью по ?g= (ссылки guide: ведут и в другие
+ * разделы), list — что показать списком.
+ */
+export function GuideScreens({
+  all: guides,
+  list,
+  error,
+  section,
+  sections,
+  kit,
+  guide,
+  onGuide,
+  title = 'Гайды',
+  intro,
+  checks,
+  groupOf = (g) => g.group || 'Разное',
+}: {
+  all: Guide[] | null;
+  list: Guide[] | null;
+  error: string | null;
+  /** Раздел нового гайда */
+  section: string;
+  /** Разделы на выбор в редакторе; без них раздел гайда не меняется */
+  sections?: { id: string; label: string }[];
+  kit: GuideKit;
+  guide: string | null;
+  onGuide: (id: string | null) => void;
+  title?: string;
+  intro?: string;
+  checks: (g: Guide) => boolean;
+  /** Заголовок группы в списке (поиск группирует по разделам) */
+  groupOf?: (g: Guide) => string;
+}) {
+  const [editing, setEditing] = useState<Guide | 'new' | null>(null);
+  const [history, setHistory] = useState<Guide | null>(null);
+  const [restore, setRestore] = useState<Pick<Guide, 'title' | 'summary' | 'body'> | null>(null);
+
   if (!guidesEnabled) return <div className="empty">Гайды хранятся в Firestore — без Firebase их негде взять</div>;
-  if (guides === null) return <div className="empty">Загружаю гайды…</div>;
+  if (guides === null || list === null) return <div className="empty">Загружаю гайды…</div>;
 
   const startEdit = (g: Guide | 'new') => {
     if (!readNick()) {
@@ -76,13 +126,21 @@ export function GuidesSection({
     const g = editing === 'new' ? null : (guides.find((x) => x.id === editing.id) ?? editing);
     return (
       <GuideEditor
-        section={section}
+        section={g?.section ?? section}
+        sections={sections}
         kit={kit}
         guide={g}
         started={editing === 'new' ? null : editing}
         restore={restore}
-        nextOrder={Math.max(0, ...guides.map((x) => x.order)) + 10}
-        groups={[...new Set(guides.map((x) => x.group).filter(Boolean))]}
+        nextOrder={Math.max(0, ...list.map((x) => x.order)) + 10}
+        groups={(s) => [
+          ...new Set(
+            guides
+              .filter((x) => x.section === s)
+              .map((x) => x.group)
+              .filter(Boolean),
+          ),
+        ]}
         onClose={(id) => {
           setEditing(null);
           if (id) onGuide(id);
@@ -114,7 +172,7 @@ export function GuidesSection({
               <div className="grow">
                 <h2 className={content.heading}>{current.title}</h2>
                 <div className={cx('faint small', styles.guideMeta)}>
-                  {checks && <CheckedBadge c={current.checked} />}
+                  {checks(current) && <CheckedBadge c={current.checked} />}
                   {current.hidden && (
                     <span className={styles.guideBadge} data-kind="hidden">
                       снят с публикации
@@ -157,12 +215,12 @@ export function GuidesSection({
       </>
     );
 
-  const visible = guides.filter((g) => !g.hidden);
-  const hidden = guides.filter((g) => g.hidden);
+  const visible = list.filter((g) => !g.hidden);
+  const hidden = list.filter((g) => g.hidden);
   const byOrder = (a: Guide, b: Guide) => a.order - b.order || a.title.localeCompare(b.title, 'ru');
   const groups = new Map<string, Guide[]>();
   for (const g of [...visible].sort(byOrder)) {
-    const k = g.group || 'Разное';
+    const k = groupOf(g);
     groups.set(k, [...(groups.get(k) ?? []), g]);
   }
 
@@ -170,7 +228,7 @@ export function GuidesSection({
     <section className={styles.guideList}>
       <header className={styles.guideListHead} aria-label="Список гайдов">
         <div>
-          <h2 className={content.heading}>Гайды</h2>
+          <h2 className={content.heading}>{title}</h2>
           {intro && <p className="faint small">{intro}</p>}
         </div>
         <Button className="small" aria-label="Новый гайд" onClick={() => startEdit('new')}>
@@ -178,13 +236,15 @@ export function GuidesSection({
         </Button>
       </header>
       {error && <div className={cx(styles.guideErrors, 'small')}>Не удалось загрузить: {error}</div>}
-      {visible.length === 0 && <div className="empty">Гайдов пока нет — напишите первый</div>}
+      {visible.length === 0 && (
+        <div className="empty">{list.length ? 'Ничего не найдено' : 'Гайдов пока нет — напишите первый'}</div>
+      )}
       {[...groups].map(([name, list]) => (
-        <div key={name} className={styles.guideGroup}>
+        <div key={name} className={styles.guideGroup} data-group={name}>
           {groups.size > 1 && <h3 className={styles.guideGroupTitle}>{name}</h3>}
           <div className={styles.guideCards}>
             {list.map((g) => (
-              <GuideCard key={g.id} g={g} kit={kit} checks={checks} onOpen={() => onGuide(g.id)} />
+              <GuideCard key={g.id} g={g} kit={kit} checks={checks(g)} onOpen={() => onGuide(g.id)} />
             ))}
           </div>
         </div>
@@ -196,12 +256,12 @@ export function GuidesSection({
           </summary>
           <div className={styles.guideCards}>
             {hidden.sort(byOrder).map((g) => (
-              <GuideCard key={g.id} g={g} kit={kit} checks={checks} onOpen={() => onGuide(g.id)} />
+              <GuideCard key={g.id} g={g} kit={kit} checks={checks(g)} onOpen={() => onGuide(g.id)} />
             ))}
           </div>
         </details>
       )}
-      <GuideEditorHint checks={checks} />
+      <GuideEditorHint checks={list.some(checks)} />
     </section>
   );
 }

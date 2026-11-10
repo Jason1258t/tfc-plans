@@ -18,9 +18,11 @@ export function legacyReferenceTarget(search: string): string | null {
     params.set('sub', 'guides');
     return `/addons?${params}`;
   }
-  if (tab === 'guides' && params.has('g') && sub !== 'site' && sub !== 'chemistry') {
-    params.set('tab', sub === 'multiblocks' ? 'multiblocks' : 'power');
-    params.set('sub', 'guides');
+  // Гайды прежде жили и подвкладками «Электричества» и «Мультиблоков» — теперь все в каталоге «Гайды»
+  if ((tab === 'power' || tab === 'multiblocks') && sub === 'guides') {
+    params.delete('mb');
+    params.set('sub', tab);
+    params.set('tab', 'guides');
     return `/reference?${params}`;
   }
   if (tab === 'botany') {
