@@ -469,6 +469,26 @@ re-reads the whole context. So the queue answers «done» in one call.
   `crontab -l | grep -v print-worker.sh | { cat; echo '* * * * * $HOME/tfc-stand/print-worker/repo/scripts/stand-queue.sh >> $HOME/tfc-stand/queue/serve.log 2>&1'; } | crontab -`.
   Stop: remove the line, `pkill -f 'stand-queue[.]mjs serve'` (the bracket keeps `pkill` from matching its own ssh command).
 
+## Stand scenario with acceptance (dev #319)
+
+Server stand (`pack-stand.mjs`, `stand_submit kind=server`, `pack_devserver`) can judge its own RCON commands instead of
+a throwaway script over the summary (`scripts/stand-scenario.mjs`). Opt-in: on only with `failFast` (`--fail-fast`),
+`failOn` (`--fail-on <regex>`) or scenario lines in `commands`; without them runs, summary and exit code are unchanged.
+
+- A reply is a failure on `ASSERTFAIL`, a command exception («An unexpected error occurred…»), unknown/incomplete
+  command, wrong argument, or a `failOn` regex.
+- `!cmd` — negative check: sent as `cmd`, its reply must be a failure; a failure there is a pass, no failure is a fail.
+- `expect A=4.95±0.002 A+B-C=0±1e-7 D=5±1% E<=1e-11 F>0` — evaluated on the Mac/host side, not sent: numbers from the
+  reply of the last sent command (`Name:1.5d` SNBT and `Name=1.5`, last occurrence wins; `%` — of the expected value);
+  the left side is fields joined by `+`/`-` (energy balance in one check). Missing field — fail.
+- `failFast` — after the first failure no more commands go out and `untilLog` is skipped («ожидание until пропущено»).
+- Result: a line near the top of the summary «Сценарий: ПРОЙДЕН|ПРОВАЛ — команд отправлено N из M, остановлен на шаге
+  K …» (survives a cut summary), failures and every check at the end, and `scenario.json` in the run dir
+  (`{ ok, failFast, total, sent, stopped, failures, negatives, checks: [{ n, command, expr, op, measured, expected,
+tolerance, error, ok }] }`); the queue copies it next to the logs, `stand_wait` names its Mac path. A failed scenario
+  makes the stand exit non-zero; `stand_wait` then says «итог: не пройдено» — «готово» alone means only that the run
+  ended.
+
 ## Remote Minecraft client stand — scripted (dev #284)
 
 `npm run client-stand -- <prepare|run|clean>` on the Mac (`scripts/client-stand-remote.mjs`) drives
