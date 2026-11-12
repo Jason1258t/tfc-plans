@@ -297,8 +297,8 @@ the host's real folder.
 
 - Card flag `manual: true`: visible on the site and in `tfc addons`, installed only by name, plain pull keeps and updates
   an installed one, `tfc addons remove`, not uploaded by `tfc publish` unless already in the snapshot. Old clients: server
-  gates it behind `/site/addons?v=2`, `index.json` omits it (old no-key clients read it). `destroy_extras`, `destroy_bridge`
-  use it (`unlisted` removed from the bridge). Live `index.json` listed `destroy_extras` until the first publish after this.
+  gates it behind `/site/addons?v=2`, `index.json` omits it (old no-key clients read it). `destroy_extras` and `destroy_bridge`
+  used it until 2026-11-13 (dev #341): since Destroy Extras 0.8.1 both are regular addons installed by plain `tfc pull`.
 - Staging: `tfc admin updates subscribe|unsubscribe|subscribed`, client-only state in `.tfc/state.json` (`staging`,
   `stagingPaths`, `stagingDrop`), logic in `cli/lib/staging.mjs`. `tfc pull` plans against a virtual snapshot
   (current + updates), so regular files keep updating and unsubscribing is just the next plain plan. Update wins over the
