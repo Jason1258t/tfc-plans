@@ -720,6 +720,9 @@ blocks (copycat-fillable). One ingot on the stonecutter → one block, like Crea
 (`#c:ingots/iron` / `#c:ingots/aluminum`); plain ↔ framed on the stonecutter. Textures and JSON from
 `art/gen_cladding.py`.
 
+1.5.3 (dev #338): cheaper — an ingot on the stonecutter gives 4 cladding blocks (generator writes `count: 4`), the
+iron tank recipe (8 `#c:plates/iron` + pane) gives 2. Dev server: 1.5.3 loads with no recipe errors.
+
 1.5.1 (dev #332): `IronTankEntity.updateShell` compares against `level.getBlockState`, not the block entity's cached
 state. The Create schematicannon (`BlockHelper.placeSchematicBlock`, flag 18) runs our neighbour update inside
 `onPlace`, then `LevelChunk.setBlockState` writes the outer (schematic) state into the BE cache, so later updates saw
