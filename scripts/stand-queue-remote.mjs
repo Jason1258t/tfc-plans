@@ -187,12 +187,12 @@ export function viewText(r) {
       out.push(`итог: не пройдено (код ${j.code}: сервер не поднялся, краш или провал сценария — см. сводку)`);
     if (j.startedAt && j.endedAt)
       out.push(`прогон ${Math.round((Date.parse(j.endedAt) - Date.parse(j.startedAt)) / 1000)} с`);
-    if (view.summary?.trim()) out.push('', view.summary.trim());
     if (view.summaryCut)
       out.push(
         '',
-        `Сводка длинная, выше — начало и конец; целиком: ${r.local ? path.join(r.local, 'summary.txt') : view.summaryFile}`,
+        `Сводка длинная, ниже — начало и конец; целиком: ${r.local ? path.join(r.local, 'summary.txt') : view.summaryFile}`,
       );
+    if (view.summary?.trim()) out.push('', view.summary.trim());
     if (r.local) {
       const all = [...r.pngs, ...r.gameShots];
       out.push(
