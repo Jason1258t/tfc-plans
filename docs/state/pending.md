@@ -65,13 +65,11 @@ its one-liner in STATE.md.
   then `tfc datapacks pull 9FCAF769A0A2ODuhbgxU` into the selected test world, restart and check that
   the parse error is gone and standard heated mixing produces oil; only then confirm the new version.
 
-- **Дешевле окна и бак Create** (2026-11-13, dev #338): new card `PMNmv3Hq9XkQ18diUScL` («Окна Create: дешевле», flag
+- **Дешевле окна Create** (2026-11-13, dev #338): new card `PMNmv3Hq9XkQ18diUScL` («Окна Create: дешевле», flag
   «ставить», world) — Create industrial iron window and Create Deco metal windows (iron, copper, brass, zinc, andesite,
-  industrial iron): 1 ingot (block) + 4 glass → 4 windows instead of 3 + glass → 2. Card `2csvwoHPHBhlpqiZTQ4c`
-  («Бак Create: крафт без бочки») now gives 4 tanks from 8 copper sheets + pane instead of 2; its pinned ZIP still
-  gives 2. Checked: `recipe_conflicts` clean, dry-run. Host: `tfc datapacks unconfirm 2csvwoHPHBhlpqiZTQ4c`, then
-  `tfc datapacks pull 2csvwoHPHBhlpqiZTQ4c` and `tfc datapacks pull PMNmv3Hq9XkQ18diUScL` into the test world,
-  check the crafts, then confirm both.
+  industrial iron): 1 ingot (block) + 4 glass → 4 windows instead of 3 + glass → 2. Checked: `recipe_conflicts` clean,
+  dry-run. Host: `tfc datapacks pull PMNmv3Hq9XkQ18diUScL` into the test world, check the crafts, then confirm. The
+  Create tank stays at 2 per craft (host's call; card `2csvwoHPHBhlpqiZTQ4c` back to its pinned content).
 
 - **Бензин из ароматических фракций Destroy** (2026-11-04, dev #223): карточка `7IHNTyYMc046lNeC0anS`
   («Destroy — нефтехимия и полимеры», revision `2026-11-04T21:12:27.294657Z`) содержит рецепт
