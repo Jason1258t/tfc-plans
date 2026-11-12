@@ -83,9 +83,9 @@ function allJobs() {
 }
 const queued = () => allJobs().filter((j) => j.state === 'queued');
 
-/** Сводка в ответе wait — не больше стольких символов (начало + конец) */
-const SUMMARY_MAX = 24_000;
-const SUMMARY_HEAD = 6_000;
+/** Сводка в ответе wait — не больше стольких символов (начало + конец): с шапкой влезает в ответ MCP (fmt.mjs MAX) */
+const SUMMARY_MAX = 14_000;
+const SUMMARY_HEAD = 4_000;
 
 /** Место в очереди: 1 — следующее; 0 — уже идёт или кончилось */
 function positionOf(id) {

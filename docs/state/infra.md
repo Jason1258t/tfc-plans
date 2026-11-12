@@ -462,7 +462,7 @@ re-reads the whole context. So the queue answers «done» in one call.
   `stand_wait` is a long-poll on the host (`stand-queue.mjs wait`, checks the job file every second) over an async ssh,
   so the MCP server keeps answering other calls. Results → `~/.cache/tfc-plans/stand-queue/<id>`. The host CLI exits
   only after stdout drains (`process.exit` right after a write into the ssh pipe cut answers at 64 KB, dev #328); a
-  summary over 24 000 chars comes back as head + tail with `summaryCut`, the full `summary.txt` is rsynced next to the
+  summary over 14 000 chars (fits the MCP 20 000 cap with the header) comes back as head + tail with `summaryCut`, the full `summary.txt` is rsynced next to the
   results. Env:
   `TFC_QUEUE_REPO` (host code dir), `TFC_QUEUE_DIR` (queue dir relative to `~`) — for a test copy.
 - **Install** (once; replaces the old print-worker cron line):
