@@ -61,7 +61,11 @@ function hostAsync(args, { timeoutSec = 120 } = {}) {
       try {
         resolve(JSON.parse(out.trim().split('\n').at(-1)));
       } catch {
-        reject(new Error(`stand-queue ${args[0]}: непонятный ответ хоста: ${out.slice(0, 300)}`));
+        reject(
+          new Error(
+            `stand-queue ${args[0]}: непонятный ответ хоста (${out.length} байт): ${out.slice(0, 200)} … ${out.slice(-200)}`,
+          ),
+        );
       }
     });
   });
@@ -111,10 +115,13 @@ export async function submit(
 /** Результаты задания (журналы, PNG) → ~/.cache/tfc-plans/stand-queue/<id> */
 function pull(view) {
   const { job } = view;
-  if (!job.result) return { local: null, pngs: [], gameShots: [] };
+  // Урезанную в ответе сводку — целиком в ту же папку
+  const summary = view.summaryCut && view.summaryFile ? path.join(LOCAL, job.id, 'summary.txt') : null;
+  if (!job.result && !summary) return { local: null, pngs: [], gameShots: [] };
   const local = path.join(LOCAL, job.id);
   fs.mkdirSync(local, { recursive: true });
-  rsync([`${HOST}:${job.result}/`, `${local}/`]);
+  if (job.result) rsync([`${HOST}:${job.result}/`, `${local}/`]);
+  if (summary) rsync([`${HOST}:${view.summaryFile}`, summary]);
   const png = (dir) =>
     fs.existsSync(dir)
       ? fs
@@ -178,6 +185,11 @@ export function viewText(r) {
     if (j.startedAt && j.endedAt)
       out.push(`прогон ${Math.round((Date.parse(j.endedAt) - Date.parse(j.startedAt)) / 1000)} с`);
     if (view.summary?.trim()) out.push('', view.summary.trim());
+    if (view.summaryCut)
+      out.push(
+        '',
+        `Сводка длинная, выше — начало и конец; целиком: ${r.local ? path.join(r.local, 'summary.txt') : view.summaryFile}`,
+      );
     if (r.local) {
       const all = [...r.pngs, ...r.gameShots];
       out.push(

@@ -83,6 +83,10 @@ function allJobs() {
 }
 const queued = () => allJobs().filter((j) => j.state === 'queued');
 
+/** Сводка в ответе wait — не больше стольких символов (начало + конец) */
+const SUMMARY_MAX = 24_000;
+const SUMMARY_HEAD = 6_000;
+
 /** Место в очереди: 1 — следующее; 0 — уже идёт или кончилось */
 function positionOf(id) {
   const i = queued().findIndex((j) => j.id === id);
@@ -135,7 +139,12 @@ function view(id, since) {
   const job = readJob(id);
   if (!job) throw new Error(`нет задания ${id}`);
   const evs = events(id, since);
-  const summary = FINAL.has(job.state) ? readText(path.join(jobDir(id), 'summary.txt')) : null;
+  const full = FINAL.has(job.state) ? readText(path.join(jobDir(id), 'summary.txt')) : null;
+  // Длинную сводку (сотни команд) — началом и концом; целиком её забирает Mac (summaryFile)
+  const cut = full && full.length > SUMMARY_MAX;
+  const summary = cut
+    ? `${full.slice(0, SUMMARY_HEAD)}\n… пропущено ${full.length - SUMMARY_MAX} симв. …\n${full.slice(-(SUMMARY_MAX - SUMMARY_HEAD))}`
+    : full;
   return {
     job,
     position: positionOf(id),
@@ -144,6 +153,8 @@ function view(id, since) {
     skipped: Math.max(0, evs.length - 25),
     seq: job.seq ?? 0,
     summary,
+    summaryCut: Boolean(cut),
+    summaryFile: full ? path.join(jobDir(id), 'summary.txt') : null,
   };
 }
 
@@ -480,7 +491,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     process.exit(2);
   }
   run().then(
-    () => process.exit(0),
+    // process.exit сразу после write в канал (ssh) рвёт ответ на 64 КБ: выходим, когда stdout сброшен
+    () => process.stdout.write('', () => process.exit(0)),
     (e) => {
       console.error(e.message);
       process.exit(1);
