@@ -460,7 +460,10 @@ re-reads the whole context. So the queue answers «done» in one call.
 - **Mac side** — `scripts/stand-queue-remote.mjs` (`npm run stand-queue -- submit|wait|list|log|cancel`), MCP
   `stand_submit` / `stand_wait` / `stand_log` / `stand_jobs`; `pack_client` goes through the queue (submit + wait).
   `stand_wait` is a long-poll on the host (`stand-queue.mjs wait`, checks the job file every second) over an async ssh,
-  so the MCP server keeps answering other calls. Results → `~/.cache/tfc-plans/stand-queue/<id>`. Env:
+  so the MCP server keeps answering other calls. Results → `~/.cache/tfc-plans/stand-queue/<id>`. The host CLI exits
+  only after stdout drains (`process.exit` right after a write into the ssh pipe cut answers at 64 KB, dev #328); a
+  summary over 24 000 chars comes back as head + tail with `summaryCut`, the full `summary.txt` is rsynced next to the
+  results. Env:
   `TFC_QUEUE_REPO` (host code dir), `TFC_QUEUE_DIR` (queue dir relative to `~`) — for a test copy.
 - **Install** (once; replaces the old print-worker cron line):
   `crontab -l | grep -v print-worker.sh | { cat; echo '* * * * * $HOME/tfc-stand/print-worker/repo/scripts/stand-queue.sh >> $HOME/tfc-stand/queue/serve.log 2>&1'; } | crontab -`.
