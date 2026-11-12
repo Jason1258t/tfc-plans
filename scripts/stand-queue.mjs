@@ -326,7 +326,7 @@ async function runServer(id, job) {
     // Журналы из /dev/shm — в папку задания, пока их не убрали
     const run = path.join(staged.stand, 'run');
     const keep = path.join(jobDir(id), 'logs');
-    for (const rel of ['logs/latest.log', 'logs/debug.log', 'logs/kubejs', 'crash-reports'])
+    for (const rel of ['logs/latest.log', 'logs/debug.log', 'logs/kubejs', 'crash-reports', 'scenario.json'])
       if (fs.existsSync(path.join(run, rel)))
         fs.cpSync(path.join(run, rel), path.join(keep, path.basename(rel)), { recursive: true });
     summary = summary.replaceAll(run, '<прогон>');

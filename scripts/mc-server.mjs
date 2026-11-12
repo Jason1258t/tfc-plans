@@ -36,8 +36,12 @@ function rconPacket(id, type, body) {
 /** Сколько ждать ответа: первая команда в новом мире TFC идёт, пока сервер догоняет генерацию спавна */
 const RCON_IDLE_MS = 180000;
 
-/** RCON-клиент: авторизация, команды по очереди («sleep N» — пауза), ответы текстом */
-export function runRcon(port, password, commands) {
+/**
+ * RCON-клиент: авторизация, команды по очереди («sleep N» — пауза), ответы текстом.
+ * before(c) — что сделать с командой: строка — отправить её, { local } — не слать, записать текст, { stop } — закончить;
+ * after(c, ответ) — после ответа (сценарий стенда, stand-scenario.mjs).
+ */
+export function runRcon(port, password, commands, { before = null, after = null } = {}) {
   return new Promise((resolve, reject) => {
     const sock = net.connect({ host: '127.0.0.1', port });
     const replies = [];
@@ -51,7 +55,21 @@ export function runRcon(port, password, commands) {
         resolve(replies.join('\n'));
         return;
       }
-      const c = commands[idx++];
+      let c = commands[idx++];
+      if (before && !/^sleep\s/.test(c)) {
+        const d = before(c);
+        if (d?.stop) {
+          idx = commands.length;
+          next();
+          return;
+        }
+        if (d?.local !== undefined) {
+          replies.push('> ' + c + '\n' + d.local);
+          next();
+          return;
+        }
+        if (typeof d === 'string') c = d;
+      }
       if (/^sleep\s/.test(c)) {
         sock.setTimeout(0); // пауза не считается зависшим сервером
         sleep(Number(c.split(/\s+/)[1]) * 1000).then(() => {
@@ -77,6 +95,7 @@ export function runRcon(port, password, commands) {
           next();
         } else {
           replies.push('> ' + waiting + '\n' + body);
+          after?.(waiting, body);
           waiting = null;
           next();
         }

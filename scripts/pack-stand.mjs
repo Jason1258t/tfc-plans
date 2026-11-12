@@ -17,6 +17,8 @@
  *   npm run stand -- --overlay <папка> --cmd "ct start" --until "\\[CT\\] ВСЁ" --until-timeout 1800
  *   --level-type tfc:overworld — настоящая генерация TFC вместо плоского мира (жилы, биомы)
  *   --port N — другой порт (и N+1 для RCON), вместе с TFC_STAND_DIR — параллельно другому стенду
+ *   --fail-fast, --fail-on <regex> — сценарий с приёмкой (команды «!…», «expect …»; stand-scenario.mjs): остановка
+ *   после первого провала, итог scenario.json в run/; без них и без таких строк прогон как раньше
  */
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -28,6 +30,7 @@ import { parse as parseToml } from 'smol-toml';
 import { fetchInstaller, neoforgeVersion } from '@tfc/cli/vanilla';
 import { errorLines as groupErrors, isWin, javaHome, killTree, runRcon, sleep, stopWithProcess } from './mc-server.mjs';
 import { PACK_CACHE, PACK_MODS } from './pack-cache.mjs';
+import { createScenario, reportText, scenarioWanted } from './stand-scenario.mjs';
 
 export const STAND = path.resolve(process.env.TFC_STAND_DIR ?? path.join(os.homedir(), '.cache', 'tfc-plans', 'stand'));
 /** Версия NeoForge, если снимок её не знает (как у хоста) */
@@ -227,10 +230,12 @@ function prepare({ run, server, cache, sel, overlay, keep, memory, port, rconPor
 }
 
 /**
- * Запуск: ждать «Done» (или падения), RCON-команды, waitFor, stop. → { booted, exited, crashed, bootSec, rconText, waited }
+ * Запуск: ждать «Done» (или падения), RCON-команды, waitFor, stop.
+ * → { booted, exited, crashed, bootSec, rconText, waited, scenario }
  * waitFor — { check(run, sec) → true, когда можно останавливать; timeout } — опрос раз в 5 с после команд.
+ * scenario — { failFast, failOn } или null: приёмка команд (stand-scenario.mjs), провал с failFast пропускает waitFor.
  */
-async function launch({ run, java, nf, timeout, rconPort, commands, waitFor, onLog }) {
+async function launch({ run, java, nf, timeout, rconPort, commands, waitFor, scenario, onLog }) {
   const out = path.join(run, 'stand.log');
   const fd = fs.openSync(out, 'w');
   const argsFile = path.join('libraries', 'net', 'neoforged', 'neoforge', nf, isWin ? 'win_args.txt' : 'unix_args.txt');
@@ -273,16 +278,26 @@ async function launch({ run, java, nf, timeout, rconPort, commands, waitFor, onL
   const bootSec = Math.round((Date.now() - t0) / 1000);
 
   let rconText = '';
+  let report = null;
   if (booted && commands.length) {
     onLog('сервер поднялся, шлю команды');
+    const sc = scenario ? createScenario(commands.map(String), scenario) : null;
+    let error = null;
     try {
-      rconText = await runRcon(rconPort, RCON_PASSWORD, commands.map(String));
+      rconText = await runRcon(rconPort, RCON_PASSWORD, commands.map(String), sc ?? {});
     } catch (e) {
-      rconText = 'RCON: ' + e.message;
+      error = 'RCON: ' + e.message;
+      rconText = [rconText, error].filter(Boolean).join('\n');
+    }
+    if (sc) {
+      sc.finish(error);
+      report = sc.report();
+      if (report.stopped) onLog(`сценарий остановлен на шаге ${report.stopped.n}: ${report.stopped.reason}`);
     }
   }
   let waited = null;
-  if (booted && waitFor) {
+  if (booted && waitFor && report?.stopped) waited = 'skipped';
+  else if (booted && waitFor) {
     const w0 = Date.now();
     waited = 'timeout';
     while (Date.now() - w0 < (waitFor.timeout ?? 1800) * 1000) {
@@ -306,7 +321,7 @@ async function launch({ run, java, nf, timeout, rconPort, commands, waitFor, onL
     }
   for (let i = 0; i < 30 && !exited; i++) await sleep(1000);
   if (!exited) killTree(child.pid);
-  return { booted, exited, crashed, bootSec, rconText, waited };
+  return { booted, exited, crashed, bootSec, rconText, waited, scenario: report };
 }
 
 /**
@@ -362,7 +377,9 @@ function clientOnlyFailures(run) {
 /**
  * Прогон стенда. → { ok, booted, text } — text по-русски, для человека и агента.
  * commands — RCON-команды после загрузки («sleep N» — пауза), mods — свои jar, overlay — папка поверх run/
- * (как оверлей tfc admin propose: kubejs/…, config/…), keep — оставить world/ прошлого прогона, waitFor — см. launch.
+ * (как оверлей tfc admin propose: kubejs/…, config/…), keep — оставить world/ прошлого прогона, waitFor — см. launch,
+ * failFast / failOn — сценарий с приёмкой (stand-scenario.mjs; включается и строками «!…» / «expect …»): итог в
+ * run/scenario.json и в сводке, провал сценария — ok=false.
  */
 export async function runStand({
   commands = [],
@@ -379,8 +396,11 @@ export async function runStand({
   port = 25617,
   cache = PACK_CACHE,
   waitFor = null,
+  failFast = false,
+  failOn = [],
   onLog = () => {},
 } = {}) {
+  const scenario = scenarioWanted(commands, { failFast, failOn }) ? { failFast, failOn } : null;
   const ver = packVersion(cache);
   const nf = neoforge || neoforgeVersion(ver.loader) || DEFAULT_NF;
   const home = javaHome();
@@ -406,7 +426,7 @@ export async function runStand({
       sel = selectMods({ modsDir, extra: mods, exclude, include, skip: found });
       prepare({ run, server, cache, sel, overlay, keep, memory, port, rconPort, levelType });
       onLog(`запускаю сервер: модов ${sel.use.length}, исключено ${sel.skipped.length}`);
-      r = await launch({ run, java, nf, timeout, rconPort, commands, waitFor, onLog });
+      r = await launch({ run, java, nf, timeout, rconPort, commands, waitFor, scenario, onLog });
       if (r.booted || attempt >= 4) break;
       const bad = clientOnlyFailures(run).filter((id) => !(id in found));
       if (!bad.length) {
@@ -423,7 +443,11 @@ export async function runStand({
   } finally {
     unlock();
   }
-  const { booted, exited, crashed, bootSec, rconText, waited } = r;
+  const { booted, exited, crashed, bootSec, rconText, waited, scenario: report } = r;
+  const reportFile = path.join(run, 'scenario.json');
+  fs.rmSync(reportFile, { force: true });
+  if (report) fs.writeFileSync(reportFile, JSON.stringify(report, null, 2) + '\n');
+  const rep = report ? reportText(report, reportFile) : null;
 
   // ------------------------------------------------------------ сводка
   const latest = readText(path.join(run, 'logs', 'latest.log')) || readText(out);
@@ -441,6 +465,8 @@ export async function runStand({
       : crashed || exited
         ? `сервер упал при запуске (${bootSec} с)`
         : `сервер не поднялся за ${timeout} с`,
+    ...(rep ? [rep.head] : []),
+    ...(waited === 'skipped' ? ['ожидание until пропущено: сценарий остановлен'] : []),
     `моды: ${sel.use.length} на стенде${sel.replaced.length ? `, заменены своими: ${sel.replaced.join(', ')}` : ''}`,
     ...(Object.keys(found).length
       ? [
@@ -464,8 +490,9 @@ export async function runStand({
     ...(logErr.noise ? [`  (+ ${logErr.noise} строк шума выделенного сервера: клиентские классы, AT)`] : []),
     ...(crash ? [`Краш: ${crash} (log_analyze path=${crash})`] : []),
     `Лог: ${path.join(run, 'logs', 'latest.log')} (log_analyze path=…)`,
+    ...(rep ? rep.tail : []),
   ].join('\n');
-  return { ok: booted && !crash, booted, waited, run, text };
+  return { ok: booted && !crash && (!report || report.ok), booted, waited, run, scenario: report, text };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
@@ -484,6 +511,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     timeout: Number(one('--timeout') ?? 900),
     memory: one('--memory') ?? '6G',
     neoforge: one('--neoforge') ?? null,
+    failFast: argv.includes('--fail-fast'),
+    failOn: many('--fail-on'),
     // --until <regex>: после команд ждать его в --until-file (logs/kubejs/server.log) до --until-timeout (1800) с
     ...(one('--until')
       ? {

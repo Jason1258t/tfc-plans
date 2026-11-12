@@ -182,6 +182,9 @@ export function viewText(r) {
     out.push(`Ждать дальше: stand_wait id=${j.id} since=${view.seq}; журнал: stand_log id=${j.id}`);
   if (view.reason === 'final') {
     if (j.error) out.push(`причина: ${j.error}`);
+    // «готово» — только что прогон кончился; приёмку даёт код выхода стенда
+    if (j.state === 'done' && j.ok === false)
+      out.push(`итог: не пройдено (код ${j.code}: сервер не поднялся, краш или провал сценария — см. сводку)`);
     if (j.startedAt && j.endedAt)
       out.push(`прогон ${Math.round((Date.parse(j.endedAt) - Date.parse(j.startedAt)) / 1000)} с`);
     if (view.summary?.trim()) out.push('', view.summary.trim());
@@ -198,6 +201,8 @@ export function viewText(r) {
       );
       const latest = path.join(r.local, 'latest.log');
       if (fs.existsSync(latest)) out.push(`Журнал: log_analyze path=${latest}`);
+      const scenario = path.join(r.local, 'scenario.json');
+      if (fs.existsSync(scenario)) out.push(`Итог сценария: ${scenario}`);
     }
     out.push(`Весь вывод прогона: stand_log id=${j.id}`);
   }

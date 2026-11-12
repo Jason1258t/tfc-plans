@@ -328,6 +328,8 @@ async function packDevServer(a) {
     keep: Boolean(a.keep),
     timeout: Math.max(60, Number(a.timeout ?? 900) | 0),
     memory: a.memory ? String(a.memory) : undefined,
+    failFast: Boolean(a.failFast),
+    failOn: lines(a.failOn),
   });
   return r.text;
 }
@@ -360,6 +362,8 @@ function serverArgs(a) {
   if (a.timeout) out.push('--timeout', String(Math.max(60, Number(a.timeout) | 0)));
   if (a.memory) out.push('--memory', String(a.memory));
   if (a.levelType) out.push('--level-type', String(a.levelType));
+  if (a.failFast) out.push('--fail-fast');
+  for (const r of lines(a.failOn)) out.push('--fail-on', r);
   if (a.untilLog) {
     out.push('--until', String(a.untilLog));
     if (a.untilFile) out.push('--until-file', String(a.untilFile));
@@ -467,6 +471,12 @@ export const TOOLS = [
         },
         include: { type: 'array', items: { type: 'string' }, description: 'keep these even if listed as client-only' },
         keep: { type: 'boolean', description: 'keep world/ from the previous run' },
+        failFast: {
+          type: 'boolean',
+          description:
+            'stop sending commands after the first failure (ASSERTFAIL, command exception/syntax error, failOn, failed expect or negative check); untilLog is skipped. Commands also take "!cmd" — negative check, must fail — and "expect A=4.95±0.002 A+B-C=0±1e-7 B=5±1% C<=1e-11" — numbers (Name:1.5d / Name=1.5) from the last sent command reply. Any of these turns on the scenario: summary line «Сценарий: ПРОЙДЕН|ПРОВАЛ», scenario.json (measured/expected/tolerance), failure — non-zero result; without them runs are unchanged',
+        },
+        failOn: { type: 'array', items: { type: 'string' }, description: 'extra reply regexes that count as failure' },
         memory: str('-Xmx (6G)'),
         timeout: num('max seconds to boot (900)'),
       },
@@ -540,6 +550,12 @@ export const TOOLS = [
         include: { type: 'array', items: { type: 'string' }, description: 'server: keep even if client-only' },
         keep: { type: 'boolean', description: 'server: keep world/ (only within one staged run — usually useless)' },
         levelType: str('server: level type (minecraft:flat; tfc:overworld — real TFC generation)'),
+        failFast: {
+          type: 'boolean',
+          description:
+            'server: stop sending commands after the first failure (ASSERTFAIL, command exception/syntax error, failOn, failed expect or negative check); untilLog is skipped. Commands also take "!cmd" — negative check, must fail — and "expect A=4.95±0.002 A+B-C=0±1e-7 B=5±1% C<=1e-11" — numbers (Name:1.5d / Name=1.5) from the last sent command reply. Any of these turns on the scenario: summary line «Сценарий: ПРОЙДЕН|ПРОВАЛ», scenario.json (measured/expected/tolerance), failure — non-zero result; without them runs are unchanged',
+        },
+        failOn: { type: 'array', items: { type: 'string' }, description: 'extra reply regexes that count as failure' },
         untilLog: str('server: after commands wait for this regex in untilFile (logs/kubejs/server.log)'),
         untilFile: str('server: file for untilLog, relative to the run dir'),
         untilTimeout: num('server: max seconds for untilLog (1800)'),
