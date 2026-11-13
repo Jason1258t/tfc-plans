@@ -19,6 +19,7 @@
  *   node scripts/client-stand.mjs run [--mod <jar>]… [--exclude <часть имени jar>]… [--overlay <папка>]
  *        [--timeout 900] [--settle 20] [--load 300] [--shots 1] [--interval 10] [--memory 8G] [--ready <regex>] [--ram] [--keep]
  *        [--parallel] [--game-shots <префикс имени PNG>]… [--size 1280x720] [--world new[:<пресет>]|flat|<папка мира>]
+ *        [--scene <имя>]
  *   node scripts/client-stand.mjs clean [--results 10]
  *
  * Почему не runClient (ModDevGradle): в dev-запуске KubeJS TFC бросает AssertionError (!isProduction()), как у
@@ -60,6 +61,13 @@ const OFFLINE_UUID = (() => {
 /** Мир не открылся: экран ошибки или вопроса вместо мира (FancyMenu пишет каждый новый класс экрана) */
 const WORLD_FAIL =
   /ScreenCustomizationLayer registered: (\S*(?:RecoverWorldData|Disconnected|DatapackLoadFailure|Alert|BackupConfirm|Confirm)Screen)/;
+/** Сцена devtest (tools/stand-scene): её строки в журнале и конец — SCENE END PASS|FAIL */
+// Формат строки STDOUT в client.log (консоль) и latest.log разный: ищем по самому слову
+const SCENE_LINE = /\s(SCENE (?:OK|FAIL|NOTE|SHOT|END|START)\b.*)$/gm;
+const SCENE_END = /\sSCENE END (PASS|FAIL \d+)/;
+/** Сцена не начала работу за столько секунд после меню — её jar не тот или она упала при запуске */
+const SCENE_START_SEC = 120;
+const SCENE_NAME = /^[\w.-]+$/;
 /** Имя мира стенда в saves/ */
 const WORLD = 'stand';
 /** Шум: llvmpipe без /dev/dri, Xvfb без звуковой карты, моды с объявленным, но пустым AT */
@@ -532,6 +540,9 @@ function launchCommand({ nf, game, natives, memory, size: [w, h], world }) {
     ...expand(parent.arguments.jvm),
     ...expand(child.arguments?.jvm),
     `-Xmx${memory}`,
+    // Консоль (client.log) в UTF-8: иначе кириллица строк мода и сцены в прогрессе стенда — «???»
+    '-Dstdout.encoding=UTF-8',
+    '-Dstderr.encoding=UTF-8',
     child.mainClass,
     ...expand(parent.arguments.game),
     ...expand(child.arguments?.game),
@@ -754,6 +765,9 @@ function collect(game, run, out) {
  * mods — свои jar в моды, exclude — убрать jar снимка по части имени, overlay — папка поверх профиля игры,
  * world — войти в одиночный мир: 'new' (пресет сборки, 'new:<id>' — другой), 'flat' или папка мира; ready тогда по
  * умолчанию — вход игрока.
+ * scene — сцена devtest-jar (tools/stand-scene, dev #342): стенд кладёт её имя в файл game/scene, сцена сама создаёт
+ * мир TFC и ведёт шаги; прогон кончается строкой SCENE END (или выходом игры), а не settle, кадры scene-* забираются
+ * сами, строки SCENE — в сводке. Мир (world) сцене не нужен.
  */
 export async function runClient({
   mods = [],
@@ -773,6 +787,7 @@ export async function runClient({
   gameShots = [],
   signal = null,
   size = [1280, 720],
+  scene = null,
   cache = PACK_CACHE,
 } = {}) {
   if (process.platform !== 'linux')
@@ -782,10 +797,10 @@ export async function runClient({
   if (!fs.existsSync(XVFB) || !fs.existsSync(path.join(LAUNCHER, 'versions', `neoforge-${nf}`)))
     throw new Error(`стенд не готов для NeoForge ${nf}: сначала prepare`);
   const bad = badShotPrefixes(gameShots);
-  if (bad)
-    throw new Error(
-      `--game-shots: префикс — часть имени файла (буквы, цифры, . _ -), не путь и не маска: ${bad.join(', ')}`,
-    );
+  if (bad) throw new Error(bad);
+  if (scene && !SCENE_NAME.test(scene)) throw new Error(`--scene: имя сцены — буквы, цифры, . _ - (${scene})`);
+  if (scene && world) throw new Error('--scene: сцена сама создаёт мир, --world не нужен');
+  if (scene) gameShots = [...new Set([...gameShots, `scene-${scene}`])];
   const busy = liveRuns().filter((r) => r.live);
   if (busy.length && !parallel)
     throw new Error(
@@ -812,9 +827,11 @@ export async function runClient({
   let shownSec = null;
   let stopped = '';
   let shotsOut = { files: [], skipped: 0 };
+  let sceneEnd = null;
   try {
     profile = buildProfile({ game, cache, mods, exclude, overlay, copyMods: ram });
     if (world) worldNote = setupWorld(game, world, versionJson(`neoforge-${nf}`).inheritsFrom);
+    if (scene) fs.writeFileSync(path.join(game, 'scene'), `${scene}\n`);
     display = await startDisplay(run, size);
     const env = {
       ...process.env,
@@ -860,7 +877,35 @@ export async function runClient({
       }
       await sleep(2000);
     }
-    if (readySec !== null) {
+    if (readySec !== null && scene) {
+      // Сцена сама входит в мир и закрывает игру после SCENE END: ждём конец, а не settle
+      log(`главное меню через ${readySec} с, сцена ${scene} идёт (до ${timeout} с от запуска)`);
+      let lastStep = '';
+      let noStart = false;
+      while (!exited() && !aborted() && Date.now() < deadline) {
+        const text = readText(path.join(run, 'client.log'));
+        sceneEnd = SCENE_END.exec(text)?.[1] ?? null;
+        if (sceneEnd) break;
+        if (!/\sSCENE START /.test(text) && secs() - readySec > SCENE_START_SEC) {
+          noStart = true;
+          break;
+        }
+        const step = [...text.matchAll(/\sSCENE STEP (.*)$/gm)].at(-1)?.[1] ?? '';
+        if (step !== lastStep) log(`сцена: ${(lastStep = step)} (${secs()} с)`);
+        await sleep(2000);
+      }
+      if (sceneEnd)
+        state = `сцена ${scene}: ${sceneEnd.startsWith('PASS') ? 'ПРОЙДЕНА' : `ПРОВАЛ (${sceneEnd.slice(5)})`}`;
+      else if (aborted()) state = 'прерван (оборвался вызов)';
+      else if (noStart)
+        state = `сцена ${scene} не запустилась за ${SCENE_START_SEC} с после меню (нет SCENE START: нет её devtest-jar или ошибка при запуске — см. latest.log)`;
+      else if (exited()) state = `сцена ${scene}: игра вышла без SCENE END (код ${exitCode})`;
+      else {
+        state = `сцена ${scene}: нет SCENE END за ${timeout} с`;
+        const file = path.join(run, 'timeout.png');
+        if (!capture(env, file)) pngs.push(file);
+      }
+    } else if (readySec !== null) {
       state = world ? 'в мире' : 'главное меню';
       if (world) {
         // Игрок вошёл раньше, чем мир на экране: на программном OpenGL «Загрузка территории…» висит минутами, и этот
@@ -918,7 +963,11 @@ export async function runClient({
   const kjs = [...latest.matchAll(/Loaded \d+\/\d+ KubeJS (startup|client) scripts[^\n]*/g)].map((m) => m[0]);
   const logErr = errorLines(latest, /\/(ERROR|FATAL)\]/, 25, NOISE);
   const crashes = fs.existsSync(path.join(out, 'crash-reports')) ? fs.readdirSync(path.join(out, 'crash-reports')) : [];
-  const ok = readySec !== null && pngs.length > 0 && !crashes.length;
+  const sceneLines = scene ? [...latest.matchAll(SCENE_LINE)].map((m) => m[1]) : [];
+  const sceneOk = sceneLines.filter((l) => l.startsWith('SCENE OK')).length;
+  const ok = scene
+    ? Boolean(sceneEnd?.startsWith('PASS')) && !crashes.length
+    : readySec !== null && pngs.length > 0 && !crashes.length;
   const text = [
     `Клиентский стенд: снимок ${ver.snapshot ?? '?'}, NeoForge ${nf}, прогон ${id}`,
     `итог: ${state}${readySec !== null ? ` за ${readySec} с` : ''}${shownSec !== null ? `, мир на экране через ${shownSec} с` : ''}; ${stopped || 'не запускалась'}; всего ${secs()} с`,
@@ -926,6 +975,16 @@ export async function runClient({
       ? `моды: ${profile.used} в профиле${profile.excluded ? `, убрано --exclude: ${profile.excluded}` : ''}${mods.length ? `, свои: ${mods.map((m) => path.basename(m)).join(', ')}` : ''}`
       : 'профиль не собран',
     ...(worldNote ? [`мир: ${worldNote}`] : []),
+    ...(scene
+      ? [
+          `Сцена ${scene}: проверок OK ${sceneOk}, FAIL ${sceneLines.filter((l) => l.startsWith('SCENE FAIL')).length}`,
+          // OK — числом, остальное (FAIL, NOTE, кадры, конец) построчно
+          ...sceneLines
+            .filter((l) => !l.startsWith('SCENE OK'))
+            .slice(-60)
+            .map((l) => '  ' + l),
+        ]
+      : []),
     ...(kjs.length ? ['KubeJS:', ...kjs.slice(-2).map((l) => '  ' + l)] : []),
     logErr.lines.length ? 'Ошибки latest.log (без повторов):' : 'Ошибок в latest.log нет.',
     ...logErr.lines.map((l) => '  ' + l),
@@ -1029,6 +1088,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
             parallel: argv.includes('--parallel'),
             gameShots: many('--game-shots'),
             size: (one('--size') ?? '1280x720').split('x').map(Number),
+            scene: one('--scene') ?? null,
             signal: abort.signal,
           }).then((r) => {
             process.exitCode = r.ok ? 0 : 1;

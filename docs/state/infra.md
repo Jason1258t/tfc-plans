@@ -555,7 +555,47 @@ check: ModDevGradle `runClient` from sources with the `devtest` source set (not 
 (addon `libs/`, optionally TFC + Patchouli), assertions in code (`BTCLIENT OK/FAIL`, six of them), about a minute. The
 pack client stand answers a different question — does the released jar work in the full pack (250 jars, KubeJS,
 production launch). To run an addon's in-game assertions inside the full pack, build its devtest classes into a jar
-and pass it with `pack_client mods=[…] world=flat`; none of the addons builds such a jar yet.
+and pass it with `stand_submit kind=client scene=<name> mods=[…]` (below).
+
+**Scene scaffold for addon client checks (dev #342).** `tools/stand-scene/src/tfc/stand/scene/Scene.java` is shared
+source, compiled into an addon's `devtest` source set (`java.srcDir '../stand-scene/src'` in its `build.gradle`; now
+`ee-extras-mod`, `destroy-extras-mod`). A check is written as steps: `server(name, c -> …)` (runs on the integrated
+server, `c.at(x, y, z)` is relative to the platform), `client`, `ticks`, `until(name, timeout, cond)`,
+`synced(name, from, to)` (waits until the client sees the server's block states in a box), `camera(x, y, z, distance,
+yaw, pitch)` (target relative to the platform; player hangs there, waits for client chunks and Sodium/vanilla terrain compile), `gui(false)`,
+`shot(name)`, then `start()`. The prologue does what every scene needed by hand: on the title screen it creates a
+creative world **`tfc:overworld` with fixed seed `Scene.SEED`** (vanilla flat if TFC is absent — a dev run without it),
+waits for no loading screen and the player's chunk, waits until the integrated server's smoothed tick time stays under
+50 ms for 40 ticks, then on the server: noon, no daylight/weather/mob cycle, a smooth-stone floor at the spawn surface
+`±12` with `10` layers of air above (`area(r, h)`; flags without neighbour updates, so TFC collapses stay quiet),
+player flying at its south edge; and waits until the client sees the platform. Every tick it checks that the server
+player still exists. Log lines `SCENE START|STEP|OK|FAIL|NOTE|SHOT`, the end `SCENE END PASS|FAIL <n> <name>`, then
+the game closes itself. Frames go to `screenshots/scene-<name>-<shot>.png`.
+
+- **Why not `minecraft:flat`** (root cause of #340/#339/#329 «client sees no server blocks»): TFC Eratosthenes reads
+  its map projection on a player tick every 23 ticks; outside `tfc:overworld` there is none and it throws. The pack's
+  `neoforge-server.toml` has `removeErroringEntities = true`, so NeoForge does not crash — it **discards the server
+  player** (crash report «Ticking entity», `StandTest`, ~20 s after login). The connection lives on (commands, `tp`,
+  menus work), but a removed player is no longer tracked by `ChunkMap`: no block changes, no new chunks. The scene's
+  player check catches that at once.
+- **Enable**: the scene is picked by name — file `scene` in the game dir, or `-Dstand.scene=<name>`;
+  `Scene.requested("<name>")`. The stand writes the file: `client-stand.mjs run --scene <name>` (MCP
+  `stand_submit kind=client scene=<name>` / `pack_client scene=<name>`). With `--scene` the run needs no `--world`
+  (refused), waits for the title screen, then for `SCENE END` (or game exit, or `--timeout` from launch) instead of
+  `--settle`/shots, takes `scene-<name>*` in-game shots by itself, and the summary gets «Сцена <name>: проверок OK n,
+  FAIL m» plus every non-OK `SCENE` line; `ok` = `SCENE END PASS` and no crash report.
+- **One devtest jar per run**: each carries its own copy of `tfc.stand.scene` (two would split the package).
+- Build the jar: `./libs.sh` once, then `./gradlew devtestJar` in the addon (JDK 21–23; Gradle 8 fails on JDK 26 with
+  «Unsupported class file major version 70» — set `JAVA_HOME`). Example:
+
+  ```
+  stand_submit kind=client scene=flywheel-wires timeout=1500 note="…" \
+    mods=["tools/ee-extras-mod/build/libs/ee-extras-<ver>-devtest.jar"]
+  stand_wait id=<id>
+  ```
+
+  Scenes so far: `flywheel-wires` (ee-extras `FlywheelWireTest`, dev #329), `destroy-extras` (destroy-extras
+  `ClientTest`; also its `test-client.sh` dev run, which runs it when no scene is requested).
 
 ## Remote Minecraft client stand (dev #279, manual)
 

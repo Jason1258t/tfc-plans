@@ -114,6 +114,9 @@ tools/<имя>-mod/
   Там же `/rectest gen <об/мин>`, `genload`, `genshortwire`, `genreport` — генератор EE от творческого мотора (проверка
   формул справочника). Свои команды: `./test-server.sh 'rectest gen 64' 'sleep 4' 'rectest genreport'` — без аргументов
   скрипт гоняет проверку выпрямителей.
+- **Клиентская сцена на стенде всей сборки** (`tools/stand-scene`, dev #342): шаги «поставь блоки — дождись их у
+  клиента — камера — кадр» на общей заготовке, мир TFC с постоянным сидом и площадкой у точки появления; запуск —
+  `stand_submit kind=client scene=<имя> mods=[<devtest jar>]`. Подробно — docs/state/infra.md «Scene scaffold».
 - **Проверка кодом мода и Minecraft** (`art/CheckNodes.java`, `./check-nodes.sh`): запускается на пути классов сборки
   (`art/classpath.gradle`). Пример: клеммы модели против точек крепления проводов во всех 12 положениях блока —
   настоящим `NodeConfigurator` EE и `BlockModelRotation` Minecraft. Чтобы убедиться, что проверка что-то ловит,
