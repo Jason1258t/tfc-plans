@@ -5,6 +5,7 @@ import {
   Boxes,
   Globe2,
   Package,
+  ScrollText,
   Search,
   Wheat,
   Zap,
@@ -27,6 +28,7 @@ import { MapPage } from '@/pages/map';
 import { MultiblocksTab, type MultiblockSub } from '@/features/reference-tabs';
 import { GuidesTab } from '../tabs/GuidesTab';
 import { PowerTab } from '../tabs/PowerTab';
+import { QuestsTab } from '../tabs/QuestsTab';
 import { POWER_SUBS } from '@/lib/power';
 import type { BotanySub } from '@/lib/botany';
 import {
@@ -51,7 +53,7 @@ import shell from '../ReferenceShell.module.css';
 import styles from './ReferencePage.module.css';
 import nutrition from '../NutritionTable.module.css';
 
-type Tab = 'world' | 'items' | 'food' | 'power' | 'multiblocks' | 'guides';
+type Tab = 'world' | 'items' | 'food' | 'power' | 'multiblocks' | 'quests' | 'guides';
 type WorldSub = 'ores' | 'geology' | 'map';
 type ItemsSub = 'items' | 'recipes' | 'tags' | 'metals' | 'fuel' | 'liquid';
 type FoodSub = 'food' | 'meals' | 'dishes' | BotanySub;
@@ -80,6 +82,12 @@ const TABS: { id: Tab; label: string; description: string; icon: LucideIcon }[] 
     label: 'Мультиблоки',
     description: 'Постройка, материалы и работа машин.',
     icon: Boxes,
+  },
+  {
+    id: 'quests',
+    label: 'Квесты',
+    description: 'Книга квестов сборки: главы, ветки и задачи.',
+    icon: ScrollText,
   },
   {
     id: 'guides',
@@ -188,6 +196,21 @@ function Reference() {
           onPlace={({ section: sub, guide: g }) =>
             setParams({ tab: 'guides', ...(sub ? { sub } : {}), ...(g ? { g } : {}) })
           }
+        />
+      ) : tab === 'quests' ? (
+        <QuestsTab
+          chapter={params.get('ch')}
+          quest={params.get('quest')}
+          query={params.get('find') ?? ''}
+          onPlace={(p) => {
+            const ch = p.chapter === undefined ? params.get('ch') : p.chapter;
+            const quest = p.quest === undefined ? params.get('quest') : p.quest;
+            const find = p.query === undefined ? (params.get('find') ?? '') : p.query;
+            setParams(
+              { tab: 'quests', ...(ch ? { ch } : {}), ...(quest ? { quest } : {}), ...(find ? { find } : {}) },
+              { replace: p.query !== undefined },
+            );
+          }}
         />
       ) : tab === 'multiblocks' ? (
         <MultiblocksTab

@@ -192,3 +192,9 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   with `runStand` on the Mac) was checked only up to input errors and the lock: the Mac stand was busy with another
   session's run and has 8 GB. Not verified: `creative`, `reset`, `prefill`, `not_loaded` (#304), `lost_data` on a
   schematic that has it.
+- **2026-11-13, quest book** (dev #343, `tools/quests.mjs`): `quests_list`, `quest_chapter`, `quest_chapter_put` over
+  `config/ftbquests/quests` of the snapshot with an optional overlay. Verified: all 45 pack SNBT files parse and write
+  back (41 byte-exact, 4 differ only by hand-made indentation in lang files, same data); all 36 chapters go
+  `format=spec` → `quest_chapter_put` byte-identical with no lang change; a new chapter with refs, tags, `or()` filter,
+  advancement and cross-chapter dependency written and read back; formats of item task (`count` long) and item reward
+  (`count` int) checked against FTB Quests 2101.1.30 bytecode; lang storage — one file per locale (`TranslationManager`).

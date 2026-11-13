@@ -28,7 +28,10 @@ export const MODS_OUTPUTS = [
 /** Что собирает npm run kubejs (scripts/kubejs.mjs) */
 export const KUBEJS_OUTPUTS = ['kubejs.json', 'kubejs-items.json', 'kubejs-data.json', 'icons-kubejs'];
 
-export const DATA_ROOTS = [...MODS_OUTPUTS, ...KUBEJS_OUTPUTS];
+/** Что собирает часть quests в npm run pack (scripts/quests.mjs) */
+export const QUESTS_OUTPUTS = ['quests.json'];
+
+export const DATA_ROOTS = [...MODS_OUTPUTS, ...KUBEJS_OUTPUTS, ...QUESTS_OUTPUTS];
 
 /** Путь хостинга («/icons/a.png») лежит в корнях данных */
 export function isDataPath(p) {

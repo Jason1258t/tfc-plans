@@ -5,7 +5,7 @@
  *
  *   npm run pack -- <папка версии | zip>   — инстанс игры (папка с mods/) или папка сервера
  *   … --world <папка мира>                 — мир (иначе: level-name из server.properties, world/ или единственный в saves/)
- *   … --only mods,kubejs,config,world      — только эти части (можно несколько раз)
+ *   … --only mods,kubejs,config,quests,world — только эти части (можно несколько раз)
  *   … --out <папка>                        — данные сайта сюда, а не в public/
  *   … --instance <папка>                   — слои KubeJS и sources.json сюда, а не в instance/
  *   … --dry-run                            — ничего не писать в Firestore (config, мир) и в sources.json;
@@ -13,6 +13,7 @@
  *
  * Части: mods → данные сайта из jar; kubejs → копия в <instance>/kubejs/pack и разбор (после mods — он читает
  * их данные); config — config/, defaultconfigs/, serverconfig/ (и <мир>/serverconfig/) → Firestore config;
+ * quests — config/ftbquests/quests (книга квестов FTB Quests) → quests.json;
  * world — <мир>/data/tfc_calendar.dat → Firestore config.
  *
  * <instance>/sources.json — что импортировано, откуда, когда, sha1 каждого файла: по нему видно, что устарело.
@@ -31,9 +32,10 @@ import { buildMods, DEFAULT_CACHE, DEFAULT_OUT } from './mods.mjs';
 import { buildKubejs, importKubejsLayer } from './kubejs.mjs';
 import { configDocs, logConfigDocs } from './serverconfig.mjs';
 import { WANTED as WORLD_FILES, worldDocs } from './world.mjs';
+import { buildQuests, QUESTS_DIR } from './quests.mjs';
 
 const log = (...a) => console.log('[pack]', ...a);
-const PARTS = ['mods', 'kubejs', 'config', 'world'];
+const PARTS = ['mods', 'kubejs', 'config', 'quests', 'world'];
 const CONFIG_DIRS = ['config', 'defaultconfigs', 'serverconfig'];
 
 /** Запреты внутри config/ — клиентское, чужие карты и голосовой чат, резервные копии */
@@ -268,6 +270,12 @@ async function packDir(
       parts.config = { at, from: from(root), files };
     } else log('конфигов модов (*.toml) не найдено');
   }
+
+  const questsDir = path.join(root, QUESTS_DIR);
+  if (want('quests') && isDir(questsDir)) {
+    buildQuests({ root, outDir });
+    parts.quests = { at, from: from(questsDir), files: fileList(root, questsDir, (f) => f.endsWith('.snbt')) };
+  } else if (want('quests') && only.length) log(`${QUESTS_DIR} нет — книгу квестов не собираю`);
 
   if (want('world') && world.dir) {
     const docs = await worldDocs(world.dir);
