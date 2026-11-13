@@ -150,6 +150,11 @@ its one-liner in STATE.md.
   NeoForge server. Full KubeJS scripts loaded, but the full server stopped on unrelated dedicated-side class loading;
   test-environment follow-up: dev #133. Full-pack runtime and in-game machines: not checked.
 
+- **Песчаник TFC из песка** (2026-11-13, dev #349): обновление `u20261113-140903-42aa` — уплотнение Create, 4 песка
+  цвета + 250 мБ известковой воды → сырой песчаник того же цвета (7 цветов). Стенд: скрипт грузится без ошибок.
+  Хосту: проверить рецепт в JEI/EMI и пресс, затем approve. Подробности —
+  [pack-patches/sandstone-press](../../pack-patches/sandstone-press/README.md).
+
 - **Бетонные смеси с известью** (2026-10-28, dev #124): обновление `u20261028-155634-36f7`, исходник и проверки —
   [pack-patches/concrete-lime](../../pack-patches/concrete-lime/README.md). Общая основа: 3 песка + 3 гравия + 2 извести
   → 8 смеси; цветные варианты с красителем, IE и RnR используют ту же смесь. Переход датапака «Бетон» TFC → IE
