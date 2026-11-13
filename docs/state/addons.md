@@ -729,6 +729,21 @@ state. The Create schematicannon (`BlockHelper.placeSchematicBlock`, flag 18) ru
 "already top=false" and skipped — lower sections kept `top=true` (stand print check: group 3 `wrong_state`). Devtest
 `print` + `printcheck` repeats the cannon path (writeSafe data, bottom-up) on the small tanker: all 305 cells match.
 
+1.5.4 (dev #346): even fluid level within a layer. `TankNetwork.fill/drain` used to fill sections one at a time
+(by Y, then position), so a layer showed a full section next to empty ones. Now both compute the network total and
+`TankNetwork.spread` lays it out bottom-up (lighter-than-air fluids top-down): full layers, then the partial layer split
+in proportion to section capacity (quarter next to full gets the same fraction), remainder mB to the first sections;
+only changed sections are written, and each written section's inventory capacity is reset to `sectionCapacity`
+first (guard for a host tank that stopped filling at 474 of ~600 buckets — cause not found yet, dev #346). Networks with two different fluids keep the old per-section drain. Legacy 1.0.0
+migration uses `spread` too. Existing uneven tanks level out on their next fill or drain. Textures renamed
+`fluid_tank*` → `iron_tank*` (model folder `block/fluid_tank/` unchanged; `art/gen_assets.py` writes the new names):
+JourneyMap 6.0.3 caches texture colours by sprite path **without namespace** (`ColorManager.iconColorCache`,
+`ColoredSprite.getIconName`), so our `block/fluid_tank*` shared colours with Create's copper tank — whichever was
+computed first won. JourneyMap rebuilds its default palette when the mod list changes (`defaultPaletteIsCurrent`) and
+remaps nearby chunks; far map tiles keep the old colour until they are redrawn. Devtest `levels`
+(3×2×3 tank fill/drain + full/quarter pair) fails on 1.5.3 and passes on 1.5.4; client scene `better-fluids`
+(`TankScene`, stand-scene scaffold) checks client-side levels and that iron/copper tank sprite paths don't overlap.
+
 Library schematics (devtest `tankers` / `tankfarm`, classes `Tanker`, `StorageTank`, `Round`): circles at half-block
 resolution — a quadrant is in if >50 % of its area is inside; 3–4 quadrants → full block, 2 → `copycats:copycat_slab`
 (axis by shape), 1 → `create:copycat_step` (horizontal) / `copycats:copycat_vertical_step` (vertical); the state is
