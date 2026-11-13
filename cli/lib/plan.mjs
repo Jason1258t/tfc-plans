@@ -7,6 +7,8 @@
  * - конфиг или скрипт, который игрок поменял после прошлой синхронизации, не перезаписываем молча:
  *   рядом кладём `*.tfc-new` (или перезаписываем с --force, копия остаётся);
  * - клиентские конфиги (`*-client.toml` и т. п.) только добавляются: у каждого игрока свои;
+ * - книга квестов FTB Quests (`config/ftbquests/quests/`) — файлы сборки: мод сам пересохраняет их (lang/*.snbt),
+ *   и `*.tfc-new` оставил бы новые главы без текстов — обновляем всегда, старое уходит в копию;
  * - конфиг, который игрок (или сама игра) поменял, а в сборке он с прошлого pull не менялся, — оставляем молча;
  *   поменяла только игра (дата в шапке, пустые строки — cli/lib/noise.mjs) — обновляем без .tfc-new;
  * - состояние модов (кеши, история JEI — isStatePath) не ставим и не убираем;
@@ -46,6 +48,8 @@ const DEFAULT_SITE = {
 };
 
 const EDITABLE = new Set(['config', 'defaultconfig', 'serverconfig', 'kubejs', 'world-datapack']);
+/** Книга квестов: главы и тексты (lang/<язык>.snbt) связаны по id, половина из сборки ломает книгу */
+const QUEST_BOOK = /^config\/ftbquests\/quests\//;
 
 /**
  * Что тянуть: { snap: виды снимка, site: виды сайта }. Выбран мир — его датапаки тянем и на клиенте
@@ -162,6 +166,7 @@ export function makePlan(
     else if (isClientConfig(f.path)) plan.keepClient.push({ ...f, local: l });
     else if ((isPackDatapackPath(f.path) || f.kind === 'world-datapack') && !state.files[f.path] && !force)
       plan.conflict.push({ ...f, local: l });
+    else if (QUEST_BOOK.test(f.path)) plan.update.push({ ...f, local: l });
     else if (EDITABLE.has(f.kind) && state.files[f.path] && state.files[f.path] !== l.sha256 && !force) {
       // В сборке файл с прошлого pull тот же — менять нечего, правку (игрока или игры) оставляем
       if (state.files[f.path] === f.sha256) plan.keptLocal.push({ ...f, local: l });
