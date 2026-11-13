@@ -610,7 +610,7 @@ next — photos, MCP, wooden styles.
 
 ## Reference
 
-- Card topics: «Мир и ресурсы», «Предметы и рецепты», «Еда и сельское хозяйство», «Электричество», «Мультиблоки», «Все гайды». Topic contents use the sidebar/mobile section list described in «Wiki navigation» above.
+- Card topics: «Мир и ресурсы», «Предметы и рецепты», «Еда и сельское хозяйство», «Электричество», «Мультиблоки», «Квесты», «Все гайды». Topic contents use the sidebar/mobile section list described in «Wiki navigation» above.
 - Metals and food respect the pack datapack (`kubejs/data`): a record with the same id replaces mod data (aluminium
   1550 °C instead of 1740), metals table shows a «kubejs/data» badge.
 - Ore smelting and chains are recomputed by `npm run kubejs` from recipes that remain in game (mods + `kubejs/data` −
@@ -636,6 +636,16 @@ next — photos, MCP, wooden styles.
 - Food section closed (`docs/plans/food.md`): products, composite meals with calculators, cooked meals by method.
   Leftovers listed in the plan («Сознательно не сделано»). CSS вкладки `MealsTab` переведён на локальные классы
   `MealsTab.module.css`; остаточных зависимостей от `ReferenceShared.css` и `:global` в ней нет (2026-10-26).
+
+### Quests (2026-11-13, dev #343)
+
+- `/reference?tab=quests` («Квесты»): the pack's FTB Quests book from `public/quests.json` (published by the pack server,
+  part `quests` of `npm run pack`). Sidebar — chapter groups and chapters (a select on phones); chapter map — quest nodes
+  at their book x/y with dependency lines and item icons (quest icon, first task item, or first member of a tag);
+  quest card — subtitle, description, tasks (item/tag chips link to the item catalogue and tags), rewards, «Откроется
+  после» and «Открывает» (also across chapters). Search across the whole book (`find=`). URL: `ch=<filename>`,
+  `quest=<id>`. Formatting codes are stripped; custom PNG icons and `{image:…}` are not shown.
+- Checked in the worktree preview (desktop and 375 px: no page overflow, map scrolls in its box, console clean).
 
 ### Geology (2026-10-29, dev #149)
 

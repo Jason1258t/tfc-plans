@@ -1,0 +1,294 @@
+/* Вкладка «Квесты»: меню глав, карта главы, карточка квеста, поиск. */
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.search {
+  flex: none;
+  width: 100%;
+}
+
+/* ---------------------------------------------------------------- меню глав */
+
+.navGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.navGroup + .navGroup {
+  margin-top: 8px;
+}
+
+.navGroupTitle {
+  padding: 4px 10px 2px;
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.navChapter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.navSelect {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .navGroup {
+    display: none;
+  }
+
+  .navSelect {
+    display: block;
+    width: 100%;
+  }
+}
+
+/* ---------------------------------------------------------------- шапка и карта */
+
+.chapterHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chapterHead h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.chapterHead p {
+  margin: 2px 0 0;
+}
+
+.mapBox {
+  overflow: auto;
+  max-height: 64vh;
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.map {
+  position: relative;
+  margin: 0 auto;
+}
+
+.lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.lines line {
+  stroke: var(--border-strong);
+  stroke-width: 2;
+}
+
+.lines line.lineActive {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.node {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 2px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.node:hover {
+  border-color: var(--accent);
+}
+
+.node:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.square {
+  border-radius: var(--radius-sm);
+}
+
+/* Ромб: поворачивается рамка, иконка — обратно */
+.diamond {
+  border-radius: 4px;
+  transform: rotate(45deg);
+}
+
+.diamond > * {
+  transform: rotate(-45deg);
+}
+
+.optional {
+  border-style: dashed;
+}
+
+.invisible {
+  opacity: 0.55;
+}
+
+.related {
+  border-color: var(--accent);
+}
+
+.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.nodeDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-3);
+}
+
+/* ---------------------------------------------------------------- карточка квеста */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.card h4 {
+  margin: 0 0 6px;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.subtitle {
+  margin: 2px 0 0;
+  color: var(--text-2);
+  font-style: italic;
+}
+
+.desc p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.taskTitle {
+  font-weight: 600;
+}
+
+.refs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.ref {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 4px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.ref:hover {
+  background: var(--surface-3);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.questLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 5px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.questLink:hover {
+  background: var(--accent-soft);
+}
+
+/* ---------------------------------------------------------------- поиск */
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.result:hover {
+  background: var(--surface-2);
+}
+
+.resultTitle {
+  font-weight: 600;
+}
+
+.resultSub {
+  display: block;
+}

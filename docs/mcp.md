@@ -59,6 +59,7 @@ The server builds nothing itself: it reads what the site scripts built. Stale si
 | Items, recipes, tags, reference, mod manifest                               | `public/*.json`                                                                                                 | `npm run mods`                                  |
 | KubeJS rules and recipes, `kubejs/data`                                     | `public/kubejs.json`, `kubejs-data.json`                                                                        | `npm run kubejs`                                |
 | KubeJS sources                                                              | `instance/kubejs/<layer>/`                                                                                      | `npm run pack:fetch -- --kubejs`                |
+| Quest book (FTB Quests)                                                     | `~/.cache/tfc-plans/pack/config/ftbquests/quests/`                                                              | `npm run pack:fetch`                            |
 | Mod code, books, translations, loot tables                                  | `~/.cache/tfc-plans/pack/mods/*.jar` (and nested jar-in-jar)                                                    | `npm run pack:fetch`                            |
 | Candidate mods (not in the pack)                                            | `<root>/.cache/mcp/candidates/*.jar`                                                                            | `candidate_get` (path / Modrinth / link)        |
 | Minecraft + NeoForge code and sources (Mojang names)                        | `tools/<addon>/build/moddev/artifacts/neoforge-*.jar`, `-sources.jar`                                           | addon build (`./gradlew build`, docs/addons.md) |
@@ -288,6 +289,25 @@ built in memory in ~75 ms on first request.
 | `book_entry(id*, book, lang)`               | entry as readable text: no markup, recipes with pack status, climate and settings substituted |
 
 Not indexed: IE entries built by code (deposits, shaders) and Ponder scenes.
+
+### Quest book (FTB Quests)
+
+The in-game quest book: `config/ftbquests/quests/` of the pack snapshot (next to the jars), read live; `overlay=` reads a
+folder of edits over it. Texts live apart from chapters, one file per language (`lang/ru_ru.snbt`, fallback `en_us`);
+SNBT parsing and writing — `@tfc/core/snbt` (byte-exact round trip of every pack file), model — `@tfc/core/ftbQuests`,
+edits — `@tfc/core/ftbQuestsEdit`. The site shows the same book from `public/quests.json` (part `quests` of `npm run pack`).
+
+| Tool                                                 | Does                                                                                                                                                                                                                                                                                                                  |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `quests_list(query, overlay)`                        | groups and chapters (title, quest count, filename, id); with `query` — quests by title/description/task items (item names too)                                                                                                                                                                                        |
+| `quest_chapter(chapter*, quest, format, overlay)`    | `text` — quests with id, x/y, dependencies (titles, other chapters), tasks, rewards; `spec` — JSON for `quest_chapter_put`, raw texts with `&` codes, paged by size; `snbt` — the chapter file and its ru_ru lines                                                                                                    |
+| `quest_chapter_put(spec*, chapter, overlay, dryRun)` | creates or edits a chapter **into an overlay folder** (default `.cache/mcp/quests-overlay`): chapter file + whole `lang/ru_ru.snbt` (and `en_us` with `en` texts). Merge by default, `replace`, `remove`; untouched fields, components and line order stay; checks items/tags, dependencies, overlaps; prints new ids |
+
+Workflow: `quest_chapter format=spec` (or a new spec) → `quest_chapter_put` → `quest_chapter overlay=…` to read it back →
+`stand_submit kind=server overlay=…` (FTB Quests loads the book at start; errors are in `latest.log`) → the host gets the
+folder via `npm run tfc -- admin propose <overlay> --note …`. Lang files in the overlay are whole files: propose them
+from a fresh overlay, not over an older pack version. Quest positions and look are not visible without the game — the host
+can move nodes in the in-game editor.
 
 ### Blocks, entities, loot
 

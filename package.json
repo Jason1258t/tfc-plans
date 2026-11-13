@@ -33,6 +33,7 @@
     "serverconfig": "node scripts/serverconfig.mjs",
     "config": "node scripts/serverconfig.mjs",
     "kubejs": "node scripts/kubejs.mjs",
+    "quests": "node scripts/quests.mjs",
     "world": "node scripts/world.mjs",
     "guides": "node scripts/guides.mjs",
     "datapack:pellets": "node scripts/pellet-arc-datapack.mjs",
