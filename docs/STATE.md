@@ -54,6 +54,7 @@ When finishing work: update the topic file, and this index only if a line below 
   pull both fixes, restart, check cement and both ion thrusters in game before approving/confirming.
 - Host: pack update `u20261022-150945-83a0` (Chinese KubeJS messages → ru/en): `tfc admin updates pull`, check in game,
   `tfc admin updates approve`.
+- Host: chemistry quest chapter `u20261113-102707-af34` (dev #345): check the book in a test profile, approve.
 - Host: approve M12 replacement `u20261105-175613-fa0b`, which removes its 32 overlay files (dev #261).
 - Host: test **EE Extras 2.14.0** with the proposed pack update (dev #248, #249, #259) before approval. Also check the cable inlet on an existing CC computer and both
   pocket computer tiers at the charger (dev #247) before publishing the snapshot.
