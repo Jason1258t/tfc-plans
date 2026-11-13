@@ -4,7 +4,7 @@
  */
 import { bold, date, dim, green, mb, red, yellow } from './ui.mjs';
 
-export const PARTS = ['mods', 'kubejs', 'config', 'world'];
+export const PARTS = ['mods', 'kubejs', 'config', 'quests', 'world'];
 export const PUBLISH = ['none', 'dry-run', 'live'];
 
 const STATE = {
