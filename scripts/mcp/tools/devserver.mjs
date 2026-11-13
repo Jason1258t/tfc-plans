@@ -347,6 +347,7 @@ function clientArgs(a) {
   if (a.ready) out.push('--ready', String(a.ready));
   if (a.ram) out.push('--ram');
   for (const p of lines(a.gameShots)) out.push('--game-shots', p);
+  if (a.scene) out.push('--scene', String(a.scene));
   return out;
 }
 
@@ -516,6 +517,9 @@ export const TOOLS = [
           description:
             'file name prefixes of in-game PNGs in game/screenshots (made by the overlay/KubeJS during the run) to copy into results/<id>/screenshots on the Mac; plain names only',
         },
+        scene: str(
+          'devtest scene (tools/stand-scene, needs its devtest jar in mods): the scene creates a TFC world itself, the run ends on its SCENE END line instead of settle, scene-* in-game shots come back, SCENE lines go to the summary; no world needed',
+        ),
         noPack: { type: 'boolean', description: 'direct only: skip syncing the pack cache (already on the host)' },
         direct: {
           type: 'boolean',
@@ -573,6 +577,9 @@ export const TOOLS = [
           items: { type: 'string' },
           description: 'file name prefixes of in-game PNGs in game/screenshots to bring back',
         },
+        scene: str(
+          'client: devtest scene name (tools/stand-scene; pass its devtest jar in mods) — the scene makes its own TFC world, the run ends on SCENE END, scene-* shots come back, SCENE OK/FAIL lines in the summary',
+        ),
         memory: str('-Xmx (server 6G, client 8G)'),
         timeout: num('max seconds to boot / reach menu or world (900)'),
       },
