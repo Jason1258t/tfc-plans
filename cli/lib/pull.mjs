@@ -33,6 +33,7 @@ import {
 import { strToU8, zipSync } from 'fflate';
 import { datapackFiles, datapackInstallMode, zipName } from '@tfc/core/datapackFiles';
 import { schematicFromLibrary } from '@tfc/core/schematicFile';
+import { inspectSchematic } from '@tfc/pack-server/schematic-nbt';
 import {
   BETA_CHANNEL,
   compareVersions,
@@ -522,8 +523,10 @@ export async function planPull(api, profile, kind, names = [], { force = false, 
       disk && state.files?.[it.path] === disk && (!it.path.startsWith('world/') || state.world === profile.world);
     if (!disk) plan.add.push(item);
     else if (disk === item.sha256) plan.same.push(item);
-    // jar аддона руками не правят: другой файл под тем же именем — просто заменяем (с копией)
-    else if (ours || fromSync || force || kind === 'addons') plan.update.push(item);
+    else if (kind === 'schematics' && sameSchematic(file, bytes)) plan.same.push({ ...item, sha256: disk });
+    // jar аддона руками не правят: другой файл под тем же именем — просто заменяем (с копией). Схему под именем
+    // из библиотеки — тоже: почти всегда это её старая версия, а своё вернёт tfc undo
+    else if (ours || fromSync || force || kind === 'addons' || kind === 'schematics') plan.update.push(item);
     else plan.conflict.push(item);
   }
   // Убрать: без имён — всё своё, чего больше нет среди отмеченных; переименованное — старый путь
@@ -549,10 +552,9 @@ export async function planPull(api, profile, kind, names = [], { force = false, 
     else plan.keptModified.push(item);
   }
   if (kind === 'schematics') {
-    const copies = await uploadedCopies(profile, w.items, state, force);
+    const copies = await uploadedCopies(profile, w.items);
     plan.update.push(...copies.update);
     plan.same.push(...copies.same);
-    plan.keptModified.push(...copies.kept);
   }
   if (kind === 'datapacks') {
     for (const it of [...plan.add, ...plan.update, ...plan.same]) {
@@ -606,18 +608,19 @@ export async function planPull(api, profile, kind, names = [], { force = false, 
  * Копии схем игроков на сервере. Стол схем Create загружает файл игрока в `schematics/uploaded/<ник>/<файл>`
  * на сервере (у хоста — в его папке игры: мир открыт из его клиента), и пушка строит по этой копии, а не по файлу
  * у игрока. Игрок после `tfc pull` видит новую голограмму, а пушка строит старую. Поэтому pull на сервере
- * обновляет известные копии с тем же именем; неизвестные одноимённые файлы сохраняет без --force.
+ * обновляет копии с тем же именем: почти всегда это старая версия схемы с сайта (с той, что стоит сейчас,
+ * её не сравнить — старых версий сайт не хранит).
  * Хеши копий — в schematicCopies, отдельно от pulled: при удалении схемы с сайта файлы игроков не убираем.
  * Старое — в копию pull, `tfc undo` вернёт.
  */
-async function uploadedCopies(profile, items, state, force) {
+async function uploadedCopies(profile, items) {
   const dir = path.join(profile.instance, 'schematics', 'uploaded');
-  if (!fs.existsSync(dir)) return { update: [], same: [], kept: [] };
+  if (!fs.existsSync(dir)) return { update: [], same: [] };
   const players = fs
     .readdirSync(dir, { withFileTypes: true })
     .filter((d) => d.isDirectory())
     .map((d) => d.name);
-  const out = { update: [], same: [], kept: [] };
+  const out = { update: [], same: [] };
   for (const it of items) {
     const name = path.posix.basename(it.path);
     for (const nick of players) {
@@ -637,16 +640,21 @@ async function uploadedCopies(profile, items, state, force) {
         sha256,
         copy: true,
       };
-      const previous = state.schematicCopies?.[rel];
-      const known = previous?.id === it.id && previous.sha256 === disk;
-      const ours = state.pulled?.schematics?.[it.id]?.sha256 === disk;
-      const source = sha(await it.sourceBytes());
       if (disk === sha256) out.same.push(item);
-      else if (force || known || ours || disk === source) out.update.push(item);
-      else out.kept.push(item);
+      else if (sameSchematic(file, bytes)) out.same.push({ ...item, sha256: disk });
+      else out.update.push(item);
     }
   }
   return out;
+}
+
+/** Та же схема в другом сжатии (gzip другой версии программы или игры) — по содержимому NBT */
+function sameSchematic(file, bytes) {
+  try {
+    return inspectSchematic(fs.readFileSync(file)).contentHash === inspectSchematic(bytes).contentHash;
+  } catch {
+    return false;
+  }
 }
 
 export const pullChanges = (p) =>
