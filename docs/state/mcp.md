@@ -198,3 +198,7 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   `format=spec` → `quest_chapter_put` byte-identical with no lang change; a new chapter with refs, tags, `or()` filter,
   advancement and cross-chapter dependency written and read back; formats of item task (`count` long) and item reward
   (`count` int) checked against FTB Quests 2101.1.30 bytecode; lang storage — one file per locale (`TranslationManager`).
+- **2026-11-13, quest ids** (dev #351): `newQuestId` made 64-bit ids with a first digit 8–F, which FTB Quests can't parse
+  (`BaseQuestFile.readID` → `Long.parseLong`) — it re-randomises them on load, so the «Химия» chapter (#345) showed
+  «Безымянный» (stand probe: server chapter id `0A45…` vs file `CE64…`). Now ids start with 0–7, and `quest_chapter_put`
+  repairs unreadable ids of the chapter it edits (41 in «Химия», lang keys renamed in place, rest of ru_ru byte-identical).

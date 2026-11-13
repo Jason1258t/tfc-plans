@@ -79,12 +79,19 @@ export interface QuestFiles {
   lang: Record<string, SnbtValue>;
 }
 
-/** Новый id объекта квестов: 16 шестнадцатеричных цифр, как у FTB Quests */
+/**
+ * Прочтёт ли FTB Quests id: мод берёт Long.parseLong(hex), и 16 цифр с первой 8–F переполняют long — тогда он молча
+ * выдаёт объекту случайный id при каждой загрузке, а тексты lang и зависимости по старому id теряются. 0 и 1 заняты.
+ */
+export const isQuestIdReadable = (s: string) =>
+  /^[0-9A-F]{1,16}$/i.test(s) && (s.length < 16 || s[0] <= '7') && !/^0*[01]$/.test(s);
+
+/** Новый id объекта квестов: 16 шестнадцатеричных цифр, как у FTB Quests (первая 0–7, см. isQuestIdReadable) */
 export function newQuestId(taken: Set<string> = new Set()): string {
   for (;;) {
-    let s = '';
-    for (let i = 0; i < 16; i++) s += '0123456789ABCDEF'[Math.floor(Math.random() * 16)];
-    if (s !== '0000000000000000' && !taken.has(s)) {
+    let s = '01234567'[Math.floor(Math.random() * 8)];
+    for (let i = 1; i < 16; i++) s += '0123456789ABCDEF'[Math.floor(Math.random() * 16)];
+    if (isQuestIdReadable(s) && !taken.has(s)) {
       taken.add(s);
       return s;
     }
