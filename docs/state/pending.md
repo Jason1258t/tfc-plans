@@ -1,5 +1,9 @@
 # State: waiting for the host or an in-game check
 
+- Host (dev #345): quest chapter «Химия» (27 quests, group Create & IE, after IE «Стальной слиток») — update
+  `u20261113-102707-af34`. Subscribe a test profile, open the quest book, check layout and texts, then approve. Server
+  stand: the book loads without FTB Quests errors; in-game look not checked.
+
 - Host (dev #332): install Better Fluids 1.5.1 on the server and clients (`tfc pull addons`), `tfc publish`; craft
   the cladding on a stonecutter and print one library tanker with the schematicannon.
 
