@@ -309,6 +309,13 @@ folder via `npm run tfc -- admin propose <overlay> --note …`. Lang files in th
 from a fresh overlay, not over an older pack version. Quest positions and look are not visible without the game — the host
 can move nodes in the in-game editor.
 
+**Ids.** FTB Quests reads an id with `Long.parseLong(hex)`: 16 digits starting with 8–F overflow, and the mod silently
+gives the object a random id on every load — its lang texts and dependencies are lost (chapter shows «Безымянный»).
+New ids therefore start with 0–7 (`newQuestId`, `isQuestIdReadable` in `@tfc/core/ftbQuests`). Any `quest_chapter_put`
+on an existing chapter replaces unreadable ids in it (chapter, quests, tasks, rewards, quest links) and renames their
+lang keys; dependencies from other chapters on the old ids are only warned about. To repair a chapter, put an empty spec
+`{}` into a fresh overlay.
+
 ### Blocks, entities, loot
 
 The item library is items only. Blocks without items, entities, fluids, effects are found via translations.

@@ -3,7 +3,7 @@
  * Чистая функция: файлы читает и пишет вызывающий (MCP quest_chapter_put). Поля, которых спецификация не касается
  * (фоны Quest Enhance, флаги скрытия, свои иконки), у существующих квестов и задач сохраняются.
  */
-import { langKey, newQuestId, stackRefs } from './ftbQuests.ts';
+import { isQuestIdReadable, langKey, newQuestId, stackRefs } from './ftbQuests.ts';
 import { snbtDouble, snbtInline, snbtLong, snbtNum, type SnbtCompound, type SnbtValue } from './snbt.ts';
 
 /** Текст на языке: строка — русский; { ru, en } — оба */
@@ -127,6 +127,81 @@ export function itemStack(refs: string[]): SnbtCompound {
   });
 }
 
+/**
+ * Заменить в главе id, которые FTB Quests не прочтёт (isQuestIdReadable): глава, квесты, задачи, награды, ссылки на
+ * квесты. Зависимости внутри главы и ключи текстов переписываются; возвращает старый id → новый.
+ */
+function repairIds(
+  chapter: SnbtCompound,
+  lang: Record<string, SnbtCompound>,
+  taken: Set<string>,
+  touched: Set<string>,
+): Map<string, string> {
+  const fixed = new Map<string, string>();
+  const fix = (v: unknown) => {
+    const id = String(v);
+    if (isQuestIdReadable(id)) return id;
+    if (!fixed.has(id)) fixed.set(id, newQuestId(taken));
+    return fixed.get(id)!;
+  };
+  chapter.id = fix(chapter.id);
+  const quests = (Array.isArray(chapter.quests) ? chapter.quests : []).map(obj).filter((q): q is SnbtCompound => !!q);
+  const each = (list: unknown) => (Array.isArray(list) ? list.map(obj).filter((x): x is SnbtCompound => !!x) : []);
+  // Сначала все id (зависимость может ссылаться на квест ниже по файлу), потом ссылки
+  for (const q of quests) {
+    fix(q.id);
+    for (const t of each(q.tasks)) fix(t.id);
+    for (const r of each(q.rewards)) fix(r.id);
+  }
+  for (const l of each(chapter.quest_links)) fix(l.id);
+  if (!fixed.size) return fixed;
+  const to = (v: unknown) => (typeof v === 'string' ? (fixed.get(v) ?? v) : v);
+  const relist = (list: unknown) => each(list).map((x) => sorted({ ...x, id: to(String(x.id)) as string }));
+  chapter.quests = quests.map((q) => {
+    const n: SnbtCompound = {
+      ...q,
+      id: to(String(q.id)) as string,
+      tasks: relist(q.tasks),
+      rewards: relist(q.rewards),
+    };
+    if (Array.isArray(q.dependencies)) n.dependencies = q.dependencies.map(to) as SnbtValue[];
+    return sorted(n);
+  });
+  if (Array.isArray(chapter.quest_links))
+    chapter.quest_links = each(chapter.quest_links).map((l) =>
+      sorted({ ...l, id: to(String(l.id)) as string, linked_quest: to(l.linked_quest) as SnbtValue }),
+    );
+  // Ключи текстов kind.<id>.field — на месте, порядок строк файла сохраняется
+  for (const loc of Object.keys(lang)) {
+    const out: SnbtCompound = {};
+    for (const [k, v] of Object.entries(lang[loc])) {
+      const [kind, id, ...rest] = k.split('.');
+      const renamed = fixed.has(id) && rest.length;
+      if (renamed) touched.add(loc);
+      out[renamed ? [kind, fixed.get(id), ...rest].join('.') : k] = v;
+    }
+    lang[loc] = out;
+  }
+  return fixed;
+}
+
+/** Спецификация с id, заменёнными repairIds */
+function remapSpec(spec: ChapterSpec, fixed: Map<string, string>): ChapterSpec {
+  if (!fixed.size) return spec;
+  const to = (id: string | undefined) => (id === undefined ? id : (fixed.get(id) ?? id));
+  return {
+    ...spec,
+    remove: spec.remove?.map((id) => to(id)!),
+    quests: spec.quests?.map((q) => ({
+      ...q,
+      id: to(q.id),
+      deps: q.deps?.map((d) => to(d)!),
+      tasks: q.tasks?.map((t) => ({ ...t, id: to(t.id) })),
+      rewards: q.rewards?.map((r) => ({ ...r, id: to(r.id) })),
+    })),
+  };
+}
+
 export function applyChapterSpec(
   base: SnbtCompound | null,
   langIn: Record<string, SnbtCompound>,
@@ -179,6 +254,17 @@ export function applyChapterSpec(
         quest_links: [],
         quests: [],
       };
+  // id, которые игра не прочтёт (сделанные старым newQuestId), — заменить; spec мог ссылаться на старые
+  const fixed = isNew ? new Map<string, string>() : repairIds(chapter, lang, ctx.takenIds, touched);
+  if (fixed.size) {
+    const oldId = String(base?.id);
+    const head = fixed.get(oldId);
+    warnings.push(
+      `заменено id: ${fixed.size}${head ? ` (глава ${oldId} → ${head})` : ''} — FTB Quests не читает id с первой цифрой 8–F: ` +
+        'выдаёт случайный при каждой загрузке, тексты и зависимости по старому id теряются. Зависимости из других глав на старые id — поправить вручную',
+    );
+  }
+  spec = remapSpec(spec, fixed);
   const chapterId = String(chapter.id);
   if (isNew && !spec.filename) throw new Error('новой главе нужен filename (латиница: chemistry)');
   if (spec.filename !== undefined) {
