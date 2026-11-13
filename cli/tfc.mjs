@@ -700,10 +700,16 @@ function printHeader(profile, current) {
     );
 }
 
+// Файлы, которые pull не трогает (ваши правки, лишние моды), — только числом; список — с --dry-run
+const KEPT = dim('·');
+let keptHidden = false;
+
 function printPlan(plan, { verbose = false } = {}) {
   const line = (mark, title, list, extra = '') => {
     if (!list.length) return;
+    const kept = mark === KEPT;
     console.log(`  ${mark} ${title}: ${list.length}${extra}`);
+    if (kept && !verbose) return void (keptHidden = true);
     const limit = verbose ? Infinity : 8;
     for (const f of list.slice(0, limit)) console.log(dim(`      ${f.path}`));
     if (list.length > limit) console.log(dim(`      … ещё ${list.length - limit}`));
@@ -712,11 +718,11 @@ function printPlan(plan, { verbose = false } = {}) {
   line(yellow('~'), 'обновить', plan.update, dim(` (${mb(bytesOf(plan.update))}, старые — в копию)`));
   line(red('−'), 'убрать (больше нет в сборке)', plan.remove);
   line(yellow('!'), 'вы меняли — рядом положу .tfc-new (перезаписать: --force)', plan.conflict);
-  line(dim('·'), 'клиентские конфиги отличаются — оставляю ваши', plan.keepClient);
-  line(dim('·'), 'ваши правки конфигов — в сборке эти файлы не менялись, оставляю', plan.keptLocal);
-  line(dim('·'), 'убраны из сборки, но вы их меняли — оставляю', plan.keptModified);
+  line(KEPT, 'клиентские конфиги отличаются — оставляю ваши', plan.keepClient);
+  line(KEPT, 'ваши правки конфигов — в сборке эти файлы не менялись, оставляю', plan.keptLocal);
+  line(KEPT, 'убраны из сборки, но вы их меняли — оставляю', plan.keptModified);
   const extraMods = plan.extra.filter((f) => f.kind === 'mod');
-  line(dim('·'), 'ваши моды не из сборки — не трогаю', extraMods);
+  line(KEPT, 'ваши моды не из сборки — не трогаю', extraMods);
   if (plan.noWorld.length) console.log(dim(`  · файлов мира ${plan.noWorld.length} — мир не выбран (tfc init)`));
 }
 
@@ -727,12 +733,14 @@ const PULL_TITLE = {
   addons: 'Аддоны сборки',
 };
 
-function printSite(p, names) {
+function printSite(p, names, { verbose = false } = {}) {
   const total = p.add.length + p.update.length + p.same.length + p.conflict.length;
   console.log(`${bold(PULL_TITLE[p.kind])}: ${names.length ? `названо ${names.length}` : `с сайта ${total}`}`);
   const line = (mark, title, list) => {
     if (!list.length) return;
+    const kept = mark === KEPT;
     console.log(`  ${mark} ${title}: ${list.length}`);
+    if (kept && !verbose) return void (keptHidden = true);
     for (const x of list) {
       console.log(dim(`      ${x.name ?? x.id} → ${x.path.replace(/^world\//, '<мир>/')}`));
       if (x.note) console.log(dim(`        ставить: ${x.note}`));
@@ -756,7 +764,7 @@ function printSite(p, names) {
   if (p.update.some((x) => x.copy))
     console.log(dim('      пушка, которая уже строит схему, держит старую: вынуть схему из пушки и вставить снова'));
   line(yellow('!'), 'там ваш файл — рядом положу .tfc-new (перезаписать: --force)', p.conflict);
-  line(dim('·'), 'ставил я, но вы меняли — оставляю', p.keptModified);
+  line(KEPT, 'ставил я, но вы меняли — оставляю', p.keptModified);
   line(yellow('!'), 'нужен выбранный мир: tfc init --world <мир>', p.noWorld ?? []);
   if (p.unknown.length) {
     console.log(red(`  нет на сайте: ${p.unknown.join(', ')}`));
@@ -833,7 +841,8 @@ function printAll(r, { verbose = false } = {}) {
     if (!changes(r.plan)) console.log(dim('  всё на месте'));
     printPlan(r.plan, { verbose });
   }
-  for (const p of r.sitePlans) printSite(p, r.names);
+  for (const p of r.sitePlans) printSite(p, r.names, { verbose });
+  if (keptHidden) console.log(dim('Какие файлы оставляю как есть — tfc pull --dry-run'));
   return (r.plan ? changes(r.plan) : 0) + r.sitePlans.reduce((s, p) => s + pullChanges(p), 0);
 }
 
