@@ -135,7 +135,7 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
   tfc publish                 залить сборку из папки игры на сервер (--note "что поменял", --yes, --force)
                               --no-host-addons — без аддонов хоста (Host Tools и т. п.): они нужны только хосту
                               --allow-beta — залить и бету аддона (без него publish откажет: беты — для проверки)
-  tfc build [mods,kubejs,config,world]   собрать данные сайта локально в ./tfc-out — посмотреть до заливки
+  tfc build [mods,kubejs,config,quests,world]   собрать данные сайта локально в ./tfc-out — посмотреть до заливки
   tfc admin keys | invite <ник> [--admin] | revoke <id> | history | use <id> | rollback
   tfc admin neoforge [list | build [версия]]   установщик NeoForge с библиотеками на сервере сборки: игроки ставят
                               NeoForge без maven.neoforged.net; собирать после смены версии NeoForge
@@ -149,7 +149,7 @@ const HELP = `${bold('tfc')} — сборка TFC RealWorld на вашем ПК
                               версии уберёт сам; --keep-old — оставить), --datapack <id|имя> (подтвердится при одобрении),
                               --replace-datapack <id|имя> (заменит закреплённый при одобрении), --remove <путь>,
                               --note, --dry-run
-  tfc admin rebuild [mods,kubejs,config,world]   пересобрать данные сайта на сервере (--pull — свежий код,
+  tfc admin rebuild [mods,kubejs,config,quests,world]   пересобрать данные сайта на сервере (--pull — свежий код,
                               --publish none|dry-run|live — что потом; по умолчанию dry-run — только показать)
   tfc admin publish           показать, что изменится на сайте; --live — выложить (текущую сборку, с вопросом);
                               --allow-removals — разрешить убрать с сайта больше 300 файлов

@@ -18,7 +18,7 @@ import path from 'node:path';
 import { HttpError, readJson, writeJsonAtomic } from './util.mjs';
 
 const JOB_ID_RE = /^j\d{8}-\d{6}-[0-9a-f]{4}$/;
-export const PARTS = ['mods', 'kubejs', 'config', 'world'];
+export const PARTS = ['mods', 'kubejs', 'config', 'quests', 'world'];
 export const PUBLISH = ['none', 'dry-run', 'live'];
 
 export function openJobs(dataDir, { repoDir, managedRepo, repoUrl, repoBranch, heapMb, timeoutMs }) {
