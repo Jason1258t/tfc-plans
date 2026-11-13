@@ -577,6 +577,17 @@ memory (also after restart); far light chunk loaded without the addon, not with 
 host. Next candidates from the profiles: pig pen (players), loaded chunk count 9–11k with render 12 (unknown ticket
 holder), Sable physics.
 
+## Incinerator (`tools/incinerator-mod`, 1.0.0, 2026-11-13, dev #350)
+
+New addon: block `incinerator:incinerator` destroys items touching its top (collision 15/16 → `entityInside`) and
+everything inserted through `Capabilities.ItemHandler.BLOCK` (slot 0 always empty, any insert accepted and burnt;
+slots 1–4 — residue, extract only). Residue: 15 % per burnt item, one random item of tag `incinerator:residue`
+(`tfc:powder/wood_ash|charcoal|coke`, `required: false`; the pack has no coal powder). `powered=true` disables
+residue, burning continues. No compile dependency on Create; recipe gated on `create` + `create_connected`.
+Checked on the dev server (`./test-server.sh`): hopper → Create chute → incinerator, andesite funnels in and out,
+items dropped on top, hopper below, 1000 items → 15.1 % / 13.4 %, powered → 0, `KEEP=1` restart, `NO_MODS=1` load.
+Not opened in a client.
+
 ## Create: Schematic Fix (`tools/schematic-fix-mod`, 1.0.0, 2026-11-07, dev #196)
 
 Schematicannon «ate» blocks. Causes (bytecode Create 6.0.10, Create: Fast Schematic Cannon 1.4.1): Create re-places a
