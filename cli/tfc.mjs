@@ -747,6 +747,11 @@ function printSite(p, names, { verbose = false } = {}) {
     }
   };
   for (const n of p.notes ?? []) console.log(dim(`  · ${n}`));
+  if (p.inPack?.length) {
+    console.log(dim(`  · подтверждённые — уже в сборке, ставятся с ней: ${p.inPack.length}`));
+    if (verbose) for (const n of p.inPack) console.log(dim(`      ${n}`));
+    else keptHidden = true;
+  }
   line(green('+'), 'поставить', p.add);
   line(yellow('~'), 'обновить (старое — в копию)', p.update);
   line(
@@ -842,7 +847,7 @@ function printAll(r, { verbose = false } = {}) {
     printPlan(r.plan, { verbose });
   }
   for (const p of r.sitePlans) printSite(p, r.names, { verbose });
-  if (keptHidden) console.log(dim('Какие файлы оставляю как есть — tfc pull --dry-run'));
+  if (keptHidden) console.log(dim('Полные списки — tfc pull --dry-run'));
   return (r.plan ? changes(r.plan) : 0) + r.sitePlans.reduce((s, p) => s + pullChanges(p), 0);
 }
 

@@ -164,7 +164,8 @@ async function wanted(api, kind, names, profile, staging) {
             bytes: async () => api.bytes(`/blobs/${d.sha256}`),
           })),
       ],
-      notes: (r.omitted ?? []).map((d) => `«${d.name}» уже включён в сборку — используется подтверждённая версия`),
+      // Подтверждённые: уже в снимке сборки, с сайта их не ставим — в выводе одной строкой
+      inPack: (r.omitted ?? []).map((d) => d.name),
     };
   }
   if (kind === 'kubejs') {
@@ -599,6 +600,7 @@ export async function planPull(api, profile, kind, names = [], { force = false, 
     unknown: w.unknown ?? [],
     all: w.all ?? [],
     notes: w.notes ?? [],
+    inPack: w.inPack ?? [],
     pins: w.pins,
     snapshot: w.snapshot,
   };
