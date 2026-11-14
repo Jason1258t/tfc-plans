@@ -531,7 +531,8 @@ export async function addonStandResult(jobId, { timeout = 1800 } = {}) {
     `Комплект на Mac: ${fz.dir}.`,
   ].join(' ');
   const images = verdict.shots.slice(-2).map((s) => s.file);
-  return { ok: verdict.ok, text, images, verdict, note, evidence: ev, task: c.task ?? null };
+  const attachName = `addon-stand-${c.addon}-${c.scene}-${jobId}.zip`.replace(/[^\w.-]+/g, '_');
+  return { ok: verdict.ok, text, images, verdict, note, evidence: ev, attachName, task: c.task ?? null };
 }
 
 /** Запись итога в журнал dev-задачи (сервер сборки, как dev_note) */
@@ -539,6 +540,34 @@ export async function noteToTask(task, text) {
   const { api } = await import('./mcp-dev/devtasks.mjs');
   const r = await api('POST', `tasks/${task}/notes`, { text, kind: 'note' });
   return `note:${r.notes.at(-1).id} в #${task}`;
+}
+
+/**
+ * Итог приёмки в dev-задачу: запись в журнал и вложение — zip с evidence/ и verdict.json (dev_file_put). Вложение
+ * не удалось — запись всё равно остаётся, ошибка — в ответе.
+ */
+export async function verdictToTask(task, v) {
+  const out = [`журнал: ${await noteToTask(task, v.note)}`];
+  try {
+    const { devFilePut } = await import('./mcp-dev/files.mjs');
+    const dir = path.dirname(v.evidence);
+    const r = await devFilePut({
+      task,
+      path: [v.evidence, path.join(dir, 'verdict.json')],
+      zip: true,
+      name: v.attachName,
+    });
+    out.push(
+      r
+        .split('\n')
+        .slice(1)
+        .join('\n')
+        .replace(/^[+=] (уже было )?/, 'вложение: '),
+    );
+  } catch (e) {
+    out.push(`вложение: не приложено — ${e.message}`);
+  }
+  return out.join('\n');
 }
 
 // ---------------------------------------------------------------- CLI
@@ -573,14 +602,14 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
       if (opt('--wait')) {
         const v = await addonStandResult(r.job, { timeout: Number(opt('--wait')) });
         console.log(v.text);
-        if (v.note && opt('--task')) console.log('журнал: ' + (await noteToTask(Number(opt('--task')), v.note)));
+        if (v.note && opt('--task')) console.log(await verdictToTask(Number(opt('--task')), v));
         process.exit(v.ok ? 0 : v.ok === null ? 2 : 1);
       }
     } else if (cmd === 'result') {
       const v = await addonStandResult(target, { timeout: Number(opt('--timeout') ?? 1800) });
       console.log(v.text);
       const task = opt('--task') ?? v.task;
-      if (v.note && task) console.log('журнал: ' + (await noteToTask(Number(task), v.note)));
+      if (v.note && task) console.log(await verdictToTask(Number(task), v));
       process.exit(v.ok ? 0 : v.ok === null ? 2 : 1);
     } else {
       console.error('npm run addon-stand -- run <аддон> --scene <имя> … | result <id> | scenes <аддон>');

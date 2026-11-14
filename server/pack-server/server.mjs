@@ -50,7 +50,8 @@
  *     GET|POST /dev/docs, GET|PATCH|DELETE /dev/docs/:id, GET /dev/meta, POST /dev/import (admin),
  *     журнал и документы (lib/dev-log.mjs): GET /dev/tasks/:id/notes, GET /dev/find, GET /dev/docs/:id/read,
  *     POST /dev/docs/:id/edit, POST /dev/docs/:id/append,
- *     GET /dev/open?ref=, POST|DELETE /dev/links
+ *     GET /dev/open?ref=, POST|DELETE /dev/links,
+ *     вложения (lib/dev-files.mjs): GET|POST /dev/tasks/:id/files, GET|DELETE /dev/files/:id, GET /dev/files/:id/content
  */
 import fs from 'node:fs';
 import http from 'node:http';
@@ -86,7 +87,13 @@ const config = {
 const store = await openStore(config.dataDir, config);
 const neoforge = openNeoforge(config.dataDir, store);
 const keys = openKeys(config.dataDir);
-const dev = openDev(config.dataDir);
+const dev = openDev(config.dataDir, {
+  files: {
+    maxFile: Number(env.DEV_FILE_MAX_BYTES ?? 50 * 1024 ** 2),
+    maxTotal: Number(env.DEV_FILES_MAX_BYTES ?? 5 * 1024 ** 3),
+    minFree: config.minFreeBytes,
+  },
+});
 /** Страница «Разработка» сайта: откуда пускать (CORS) и чей вход принимать */
 const devSite = {
   origins: (env.DEV_ORIGINS ?? 'https://tfc-plans-fd2c.web.app,https://tfc-plans-fd2c.firebaseapp.com')
@@ -179,7 +186,10 @@ function devCors(req, res) {
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Firebase-AppCheck');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Authorization, Content-Type, X-Firebase-AppCheck, X-File-Name, X-File-Sha256, X-File-By',
+  );
   res.setHeader('Access-Control-Max-Age', '86400');
 }
 
@@ -317,6 +327,70 @@ async function sendPack(res, list) {
   );
 }
 
+/** Заголовок, закодированный encodeURIComponent (имя файла по-русски) */
+function uriHeader(req, name) {
+  const v = req.headers[name];
+  if (v === undefined) return undefined;
+  try {
+    return decodeURIComponent(String(v));
+  } catch {
+    throw new HttpError(400, `${name} — строка в encodeURIComponent`);
+  }
+}
+
+/**
+ * Вложения задач разработки (lib/dev-files.mjs). Загрузка: тело — сам файл, X-File-Name и X-File-By —
+ * encodeURIComponent, X-File-Sha256 — хеш содержимого; ключ администратора может задать X-File-Id и X-File-Created
+ * (перенос из Firestore с прежними id). Отдача — всегда как скачивание: чужой HTML/SVG не исполнится.
+ */
+async function devFileRoute(req, res, [kind, id, sub, more], who) {
+  if (kind === 'tasks' && id && sub === 'files' && !more) {
+    const t = dev.getTask(id);
+    if (req.method === 'GET') return (json(res, 200, { files: dev.files.list(t.id) }), true);
+    if (req.method !== 'POST') return false;
+    const by = uriHeader(req, 'x-file-by')?.trim();
+    const admin = who.role === 'admin';
+    const r = await dev.files.put(t.id, req, {
+      name: uriHeader(req, 'x-file-name'),
+      type: req.headers['content-type'],
+      sha256: req.headers['x-file-sha256'],
+      length: req.headers['content-length'] === undefined ? NaN : Number(req.headers['content-length']),
+      by: by && by.length >= 2 && by.length <= 24 ? by : who.name,
+      ...(admin && req.headers['x-file-id'] && { id: String(req.headers['x-file-id']) }),
+      ...(admin && req.headers['x-file-created'] && { createdAt: Number(req.headers['x-file-created']) }),
+    });
+    if (!r.existed) console.log(`+ dev #${t.id} вложение ${r.file.id} «${r.file.name}» ${r.file.size} Б — ${who.name}`);
+    return (json(res, r.existed ? 200 : 201, r), true);
+  }
+  if (kind !== 'files' || !id || more) return false;
+  if (!sub && req.method === 'GET') return (json(res, 200, { file: dev.files.get(id) }), true);
+  if (!sub && req.method === 'DELETE') {
+    const by = uriHeader(req, 'x-file-by')?.trim();
+    const f = dev.files.remove(id, by && by.length >= 2 && by.length <= 24 ? by : who.name);
+    console.log(`− dev #${f.task} вложение ${f.id} «${f.name}» — ${who.name}`);
+    return (json(res, 200, { ok: true, file: f }), true);
+  }
+  if (sub === 'content' && (req.method === 'GET' || req.method === 'HEAD')) {
+    const f = dev.files.get(id);
+    const inline = /^image\/(png|jpeg|webp|gif|avif|bmp)$/.test(f.type);
+    res.writeHead(200, {
+      'Content-Type': inline ? f.type : 'application/octet-stream',
+      'Content-Length': f.size,
+      'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(f.name)}`,
+      'Content-Security-Policy': 'sandbox',
+      'X-Content-Type-Options': 'nosniff',
+      'Cache-Control': 'private, max-age=31536000, immutable',
+      ETag: `"${f.sha256}"`,
+    });
+    if (req.method === 'HEAD') return (res.end(), true);
+    fs.createReadStream(dev.files.path(id))
+      .on('error', () => res.destroy())
+      .pipe(res);
+    return true;
+  }
+  return false;
+}
+
 async function handle(req, res) {
   const url = new URL(req.url ?? '/', 'http://x');
   const parts = url.pathname.split('/').filter(Boolean);
@@ -379,6 +453,7 @@ async function handle(req, res) {
       return res.end();
     }
     const who = await authorizeDev(req);
+    if (await devFileRoute(req, res, parts.slice(1).map(decodeURIComponent), who)) return;
     const body = req.method === 'POST' || req.method === 'PATCH' ? await readJsonBody(req) : null;
     const [status, out] = dev.route(req.method, parts.slice(1).map(decodeURIComponent), url.searchParams, body, who);
     if (req.method !== 'GET' && status < 300 && out?.task)

@@ -124,7 +124,11 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
 - **2026-11-02, dev links** (dev #194): refs in dev texts are indexed by temp triggers + a queue flushed on read, and all
   sources are re-indexed at startup; `dev_open`, `dev_link`, `dev_unlink`, `item` in `dev_note` / `dev_doc_put`, links in
   `dev_get`, clickable refs and a links block on `/dev` (`?ref=` in the page address).
-- **2026-10-29, dev attachments** (dev #155): `dev_get` queries Firestore files bound to `dev:<id>`;
+- **2026-11-14, dev attachments on the pack server** (dev #357): `dev_get` lists attachments from the task response,
+  `dev_file_get` caches in `~/.cache/tfc-plans/dev-files/<id>` (SHA256, zip unpacked, up to 6 images), new
+  `dev_file_put` (file, folder → deterministic zip, `each`, `zip`); `addon_stand task=` attaches the evidence zip.
+  Firestore is no longer read for dev attachments. Details — `docs/mcp-dev.md`, `docs/state/infra.md`.
+- **2026-10-29, dev attachments** (dev #155, superseded by #357): `dev_get` queries Firestore files bound to `dev:<id>`;
   `dev_file_get` returns verified local files and inline images. The dev MCP transport now supports image content.
   Verified over stdio against task #150 (WebP screenshot), an attachment-free task, ownership refusal, and
   repeated downloads from cache. No game/config changes.

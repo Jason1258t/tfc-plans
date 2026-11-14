@@ -1,10 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { downloadFile, removeFile, useFiles, type FileMeta } from '@/entities/file';
 import { useTasks } from '@/entities/task';
 import { ErrorBox } from '@/shared/ui';
 import { ReportList } from './ReportList';
 
-export function DevReports({ kind, focusId }: { kind: 'crash' | 'log'; focusId: string | null }) {
+export function DevReports({
+  kind,
+  focusId,
+  onKind,
+}: {
+  kind: 'crash' | 'log';
+  focusId: string | null;
+  /** Ссылка ?report=<id> на лог: переключить вкладку */
+  onKind: (kind: 'crash' | 'log') => void;
+}) {
   const { items: files, loading, error: filesError } = useFiles();
   const { items: tasks } = useTasks();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -22,6 +31,9 @@ export function DevReports({ kind, focusId }: { kind: 'crash' | 'log'; focusId: 
   };
   // Ссылка на конкретный отчёт сама выбирает его тип после загрузки метаданных.
   const selected = files.find((f) => f.id === focusId)?.report?.kind ?? kind;
+  useEffect(() => {
+    if (selected !== kind) onKind(selected);
+  }, [selected, kind, onKind]);
   return (
     <>
       {(error || filesError) && <ErrorBox>{error || filesError}</ErrorBox>}

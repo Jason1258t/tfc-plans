@@ -627,8 +627,8 @@ One call for what agents of #301 did by hand around every client scene: `scripts
 - **`tools/<mod>/stand.json`** (optional): `{ "scenes": { "<name>": { "note", "timeout", "env", "classes",
 "shots", "expectFail", "failOn" } } }`. Without it the scene still runs with defaults.
 - Not covered (ideas from #301 notes, separate work): chained server-save → restart → client runs with the saved world
-  as a queue artifact; full RCON results as an artifact; board-specific measurement profiles. Uploading evidence as a
-  dev-task attachment needs a write path to Firestore `files` (only reading exists, `dev_file_get`).
+  as a queue artifact; full RCON results as an artifact; board-specific measurement profiles. Evidence upload as a
+  dev-task attachment — done in dev #357: `addon_stand … task=<id>` attaches `evidence/` + `verdict.json` as one zip.
 
 ## Remote Minecraft client stand (dev #279, manual)
 
@@ -690,6 +690,16 @@ MCP tools against a local server, the page with a real site sign-in (list, filte
 create, mobile). Plan and stages — `docs/plans/dev-tracker.md`. Migrated the same day with the host's yes: 81 tasks
 and 15 plans imported (checked on the server), 89 Firestore docs and the group «Разработка» deleted; 7 tasks with
 attachments stay in Firestore group «Фиксы» (their copies on the server note where the files are).
+
+**Dev attachments on the pack server** (2026-11-14, dev #357): table `files` in `dev.db` + `<DATA_DIR>/dev-files/<sha256>`
+(`lib/dev-files.mjs`), routes `/dev/tasks/:id/files`, `/dev/files/:id[/content]`, same auth as `/dev`; SHA256 checked
+while streaming, 50 MB/file, 5 GB total, extension allowlist, download-only serving, upload/delete log notes, cascade on
+task delete. Site `/dev` uploads and shows them through the pack server (no Firestore), MCP `dev_file_get` /
+`dev_file_put`. Firestore attachments migrated with `scripts/dev-files-migrate.mjs` (Firestore copies kept, unread).
+Checked on a local pack server: upload/duplicate/bad hash/bad type/size/no key/download/delete/admin id/task cascade,
+MCP put (file, folder zip, repeat) and get (unzip, images, ownership refusal), `verdictToTask`, the migration twice
+(10/10 verified, repeat idempotent), and `/dev` in the browser (image + file upload, gallery, download, delete, new task
+with a draft file). Not covered: player crash/log reports on `/dev` («Краш-репорты»/«Логи») stay in Firestore.
 
 ## Multi-agent setup (2026-10-23)
 

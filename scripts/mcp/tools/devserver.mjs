@@ -15,7 +15,7 @@ import path from 'node:path';
 import { isWin, javaHome, killTree, runRcon, sleep, stopWithProcess } from '../../mc-server.mjs';
 import { PACK_CACHE } from '../../pack-cache.mjs';
 import { clientStand, worldKeyword } from '../../client-stand-remote.mjs';
-import { addonStandResult, addonStandRun, noteToTask } from '../../addon-stand.mjs';
+import { addonStandResult, addonStandRun, verdictToTask } from '../../addon-stand.mjs';
 import { runStand } from '../../pack-stand.mjs';
 import { cancelJob, jobLog, listJobs, listText, submit, viewText, waitJob } from '../../stand-queue-remote.mjs';
 import { NICK, str, num } from '../fmt.mjs';
@@ -433,7 +433,7 @@ async function addonStand(a) {
     const v = await addonStandResult(id, { timeout });
     const out = [...head, v.text];
     if (v.ok === null) out.push(`Ждать дальше: addon_stand job=${id}${task ? ` task=${task}` : ''}`);
-    else if (v.note && (task ?? v.task)) out.push(`Журнал: ${await noteToTask(task ?? v.task, v.note)}`);
+    else if (v.note && (task ?? v.task)) out.push(await verdictToTask(task ?? v.task, v));
     return { text: out.join('\n'), images: v.images.map((f) => fs.readFileSync(f)) };
   };
   if (a.job) return finish(String(a.job), Number(a.timeout ?? 1800) | 0);
@@ -632,7 +632,7 @@ export const TOOLS = [
   {
     name: 'addon_stand',
     description:
-      'Acceptance of an addon devtest scene on the full-pack client stand (scripts/addon-stand.mjs). Run: libs.sh if needed, one Gradle call `jar devtestJar` (JDK 21), jar check (every compiled main/devtest class in its jar, no split packages, modIds differ, main modId = addon.json id, Scene.class and stand.json classes in devtest), freeze both jars with SHA256 in ~/.cache/tfc-plans/addon-stand/<id>, queue a client job with both jars, the snapshot copy of the addon excluded and scene=<name>; returns the job id. job=<id>: wait for it and judge strictly — SCENE END PASS, no crash, the frozen jars were the ones loaded, no unexpected fail line (SCENE FAIL, *CLIENT … FAIL, ASSERTFAIL, stand.json failOn), every stand.json expectFail happened, every SCENE SHOT came back as a non-uniform PNG, stand.json shots present; writes verdict.json + evidence/ next to the frozen jars; task=<dev id> also logs the verdict there. Scenes come from devtest sources (new Scene("…")) and optional tools/<mod>/stand.json. Use instead of stand_submit kind=client scene=… for addon checks.',
+      'Acceptance of an addon devtest scene on the full-pack client stand (scripts/addon-stand.mjs). Run: libs.sh if needed, one Gradle call `jar devtestJar` (JDK 21), jar check (every compiled main/devtest class in its jar, no split packages, modIds differ, main modId = addon.json id, Scene.class and stand.json classes in devtest), freeze both jars with SHA256 in ~/.cache/tfc-plans/addon-stand/<id>, queue a client job with both jars, the snapshot copy of the addon excluded and scene=<name>; returns the job id. job=<id>: wait for it and judge strictly — SCENE END PASS, no crash, the frozen jars were the ones loaded, no unexpected fail line (SCENE FAIL, *CLIENT … FAIL, ASSERTFAIL, stand.json failOn), every stand.json expectFail happened, every SCENE SHOT came back as a non-uniform PNG, stand.json shots present; writes verdict.json + evidence/ next to the frozen jars; task=<dev id> also logs the verdict there and attaches evidence/ + verdict.json as one zip (dev_file_put). Scenes come from devtest sources (new Scene("…")) and optional tools/<mod>/stand.json. Use instead of stand_submit kind=client scene=… for addon checks.',
     inputSchema: {
       type: 'object',
       properties: {

@@ -26,10 +26,33 @@ subscription to the whole `tasks` collection burn the 50k reads/day free tier (i
 - `docs`: plan docs (title, markdown, optional task, `rev`, `legacy`).
 - Writes with `baseRev` refuse with 409 when the record changed. A status change writes a `status` note itself.
 - Daily backup `VACUUM INTO <DATA_DIR>/dev-backup/dev-YYYYMMDD.db`, last 14 kept.
+- `files` (dev #357, 2026-11-14): attachments — `id` (20 chars, Firestore-style; migrated ones keep their old id),
+  task (cascade on task delete), name, MIME type, size, `sha256`, author, time. Content in `<DATA_DIR>/dev-files/<sha256>`
+  (deduplicated; a file is removed when no attachment references it). Server module — `lib/dev-files.mjs`.
+
+## Attachments (dev #357)
+
+Before: Firestore `files` with `taskId = "dev:<id>"` — reads from the scarce quota, and agents had no write path (the
+stand evidence of #311 could not be attached). Now everything is on the pack server:
+
+- API (same auth as `/dev`): `GET|POST /dev/tasks/:id/files`, `GET|DELETE /dev/files/:id`, `GET /dev/files/:id/content`.
+  Upload body — the file itself; `X-File-Name` and `X-File-By` URI-encoded, `X-File-Sha256` required and checked while
+  streaming (mismatch → 409). Admin key may pass `X-File-Id` / `X-File-Created` (migration). Same content + name on the
+  same task → `existed`, not a copy. Upload and delete write a log note.
+- Limits: 50 MB per file (`DEV_FILE_MAX_BYTES`), 5 GB total (`DEV_FILES_MAX_BYTES`), `MIN_FREE_BYTES` on the disk;
+  extension allowlist (images, text/logs/configs/code, archives, nbt/schematics/jar, pdf, audio/video), `.log.N` too.
+  Content is always served as a download with `CSP: sandbox` and `nosniff`.
+- `GET /dev/tasks/:id` returns `files` too — the site and `dev_get` need no extra request.
+- Site: `src/pages/dev/model/files.ts` → `FileSource` of `features/task-files` (the shared gallery and attachment list
+  take a source; without one they use the Firestore store as before for players' tasks).
+- MCP: `dev_file_get`, `dev_file_put` (`scripts/mcp-dev/files.mjs`); `addon_stand task=` attaches `evidence/` +
+  `verdict.json` as one zip.
+- Migration: `scripts/dev-files-migrate.mjs` (dry run, `--apply`, then verified by size and SHA256). Firestore copies
+  are left in place but nothing reads them.
 
 ## MCP
 
-`tfc-plans-dev` gets `dev_list`, `dev_get`, `dev_create`, `dev_update`, `dev_note`, `dev_doc_get`, `dev_doc_put` —
+`tfc-plans-dev` gets `dev_list`, `dev_get`, `dev_create`, `dev_update`, `dev_note`, `dev_doc_get`, `dev_doc_put`, `dev_file_get`, `dev_file_put` —
 HTTPS to the pack server with the `tfc` key (`TFC_PACK_URL`/`TFC_PACK_TOKEN` or `tfc login`), signed with
 `TFC_AGENT_NICK`. Zero Firestore reads. The `tfc-pack` task tools stay for players' tasks.
 

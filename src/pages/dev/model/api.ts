@@ -93,12 +93,26 @@ export interface DevLink {
   createdAt: number;
 }
 
+/** Вложение задачи: метаданные в SQLite сервера сборки, содержимое — на его диске (model/files.ts) */
+export interface DevFile {
+  id: string;
+  task: number;
+  name: string;
+  type: string;
+  size: number;
+  sha256: string;
+  author: string;
+  createdAt: number;
+}
+
 export interface DevTaskFull {
   task: DevTask;
   notes: DevNote[];
   noteCount: number;
   docs: DevDoc[];
   links: DevLink[];
+  /** нет у старого сервера */
+  files?: DevFile[];
 }
 
 export const STATUSES: { value: DevStatus; label: string }[] = [
@@ -130,9 +144,9 @@ export const PRIORITY_LABEL = ['Низкая', 'Обычная', 'Высокая
 export const label = <T extends string>(list: { value: T; label: string }[], v: T | null) =>
   list.find((x) => x.value === v)?.label ?? '—';
 
-const BASE = PACK_SERVER_URL;
+export const BASE = PACK_SERVER_URL;
 
-async function headers(): Promise<Record<string, string>> {
+export async function headers(): Promise<Record<string, string>> {
   await authReady;
   const h: Record<string, string> = { 'Content-Type': 'application/json' };
   const idToken = await auth?.currentUser?.getIdToken();
