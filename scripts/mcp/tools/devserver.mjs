@@ -7,7 +7,8 @@
  * stand_submit / stand_wait / stand_log / stand_jobs — очередь стенда на test1a (scripts/stand-queue-remote.mjs,
  * dev #310): прогон ставится в очередь, агент ждёт итог одним вызовом вместо опроса журнала.
  * addon_stand — приёмка аддона на клиентском стенде (scripts/addon-stand.mjs, dev #311): сборка обоих jar, проверка,
- * заморозка, сцена в очереди, строгий итог и комплект доказательств.
+ * заморозка, сцена в очереди, строгий итог и комплект доказательств; chain — цепочка шагов из stand.json (dev #356):
+ * сервер с сохранением мира → рестарт на нём → клиент, один SHA на всех шагах, общий итог.
  */
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -388,7 +389,9 @@ async function standSubmit(a) {
   const kind = String(a.kind ?? '');
   const argv = kind === 'client' ? clientArgs(a) : kind === 'server' ? serverArgs(a) : null;
   if (!argv) throw new Error('kind: server | client');
-  const r = await submit(kind, argv, { note: a.note ? String(a.note) : '', by: NICK });
+  if (a.saveWorld) argv.push('--save-world');
+  if (a.worldJob) argv.push('--world-job', String(a.worldJob));
+  const r = await submit(kind, argv, { note: a.note ? String(a.note) : '', by: NICK, after: a.after ?? null });
   const wait = Number(a.wait ?? 0) | 0;
   if (wait > 0) return waitAnswer(await waitJob(r.id, { timeout: wait, until: a.until ?? null }), a.images);
   return [
@@ -445,6 +448,7 @@ async function addonStand(a) {
   const r = await addonStandRun({
     addon: a.addon,
     scene: a.scene,
+    chain: a.chain ? String(a.chain) : null,
     build: a.build !== false,
     libs: Boolean(a.libs),
     env,
@@ -582,6 +586,12 @@ export const TOOLS = [
       properties: {
         kind: { type: 'string', enum: ['server', 'client'], description: 'server or client stand' },
         note: str('what the run checks (shown in the queue)'),
+        after: str('run only after this job id finished and passed (else it is cancelled) — a hand-made chain'),
+        saveWorld: {
+          type: 'boolean',
+          description: 'keep the world after the run as a job artifact (world/ in the results)',
+        },
+        worldJob: str('start on the world saved by this job (its saveWorld); usually together with after'),
         wait: num('seconds to wait for the result in this call (0 — return the id at once)'),
         until: str('with wait: also return early when a progress line matches this regex'),
         images: num('client: how many last PNGs to return as images (2, max 4)'),
@@ -632,12 +642,15 @@ export const TOOLS = [
   {
     name: 'addon_stand',
     description:
-      'Acceptance of an addon devtest scene on the full-pack client stand (scripts/addon-stand.mjs). Run: libs.sh if needed, one Gradle call `jar devtestJar` (JDK 21), jar check (every compiled main/devtest class in its jar, no split packages, modIds differ, main modId = addon.json id, Scene.class and stand.json classes in devtest), freeze both jars with SHA256 in ~/.cache/tfc-plans/addon-stand/<id>, queue a client job with both jars, the snapshot copy of the addon excluded and scene=<name>; returns the job id. job=<id>: wait for it and judge strictly — SCENE END PASS, no crash, the frozen jars were the ones loaded, no unexpected fail line (SCENE FAIL, *CLIENT … FAIL, ASSERTFAIL, stand.json failOn), every stand.json expectFail happened, every SCENE SHOT came back as a non-uniform PNG, stand.json shots present; writes verdict.json + evidence/ next to the frozen jars; task=<dev id> also logs the verdict there and attaches evidence/ + verdict.json as one zip (dev_file_put). Scenes come from devtest sources (new Scene("…")) and optional tools/<mod>/stand.json. Use instead of stand_submit kind=client scene=… for addon checks.',
+      'Acceptance of an addon devtest scene on the full-pack client stand (scripts/addon-stand.mjs). Run: libs.sh if needed, one Gradle call `jar devtestJar` (JDK 21), jar check (every compiled main/devtest class in its jar, no split packages, modIds differ, main modId = addon.json id, Scene.class and stand.json classes in devtest), freeze both jars with SHA256 in ~/.cache/tfc-plans/addon-stand/<id>, queue a client job with both jars, the snapshot copy of the addon excluded and scene=<name>; returns the job id. job=<id>: wait for it and judge strictly — SCENE END PASS, no crash, the frozen jars were the ones loaded, no unexpected fail line (SCENE FAIL, *CLIENT … FAIL, ASSERTFAIL, stand.json failOn), every stand.json expectFail happened, every SCENE SHOT came back as a non-uniform PNG, stand.json shots present; writes verdict.json + evidence/ next to the frozen jars; task=<dev id> also logs the verdict there and attaches evidence/ + verdict.json as one zip (dev_file_put). Scenes come from devtest sources (new Scene("…")) and optional tools/<mod>/stand.json. chain=<name> (stand.json "chains"): same build/check/freeze, then queue every step as its own job, each running only after the previous one passed — server steps (RCON cmd with scenario syntax, save=true keeps the world as a job artifact), a server step with world=<step> boots a NEW server process on that saved world (restart check), a client step with world=<step> logs into it and takes shots (or runs its own scene); judges every step (stand-computed SHA256 of both jars must equal the frozen ones on each step, boot, no crash, scenario, expect regexes over the full RCON transcript rcon.txt, world saved/loaded, shots not flat) into one verdict.json and evidence/<step>/ (summary, logs, rcon.txt, scenario.json, PNGs, world/). job=<any step id> waits for the last step. Use instead of stand_submit kind=client scene=… for addon checks.',
     inputSchema: {
       type: 'object',
       properties: {
         addon: str('addon folder: path (a worktree path works) or name in tools/'),
         scene: str('scene name (default: the only scene of the addon)'),
+        chain: str(
+          'chain name from tools/<mod>/stand.json "chains" instead of a scene: server save → restart → client',
+        ),
         job: str('job id from a previous addon_stand run: wait and judge'),
         task: num('dev task number: log the verdict there'),
         build: { type: 'boolean', description: 'false — take jars from build/libs as they are (true)' },
@@ -645,7 +658,9 @@ export const TOOLS = [
         env: str('KEY=VALUE per line for libs.sh/Gradle (DESTROY=1); stand.json scene env is merged in'),
         overlay: str('local folder copied over the game dir'),
         exclude: { type: 'array', items: { type: 'string' }, description: 'more snapshot jars to drop' },
-        timeout: num('run: max seconds from launch to SCENE END (1500); job: seconds to wait (1800)'),
+        timeout: num(
+          'run: max seconds from launch to SCENE END (1500; chain steps use their own); job: seconds to wait (1800)',
+        ),
         wait: num('run: also wait and judge right here up to N seconds (0 — return the job id)'),
         note: str('what the run checks (shown in the queue)'),
       },

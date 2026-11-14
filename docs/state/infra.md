@@ -449,9 +449,12 @@ re-reads the whole context. So the queue answers «done» in one call.
 - **Queue folder** `~/tfc-stand/queue` (`TFC_STAND_QUEUE`): `jobs/<id>/job.json` (queued → running → done | error |
   cancelled), `events.jsonl` (progress: the stands' own stderr lines — `[client-stand] …`, pack-stand stages,
   pack:fetch — not the game log), `output.log` (everything, `stand_log`), `summary.txt`, `logs/` (server runs: their
-  `/dev/shm` run dir is removed, so `latest.log`, `debug.log`, `kubejs/`, `crash-reports/` are copied here),
+  `/dev/shm` run dir is removed, so `latest.log`, `debug.log`, `kubejs/`, `crash-reports/`, `rcon.txt`/`rcon.json` and,
+  with `--save-world`, `world/` are copied here),
   `cancel`; `inputs/<tag>/` — own jars/overlay/world uploaded by the Mac, removed after the run; `current.json`. Last
-  40 finished jobs are kept. A worker restart mid-run marks that job `error`.
+  40 finished jobs are kept. A worker restart mid-run marks that job `error`. Chains (dev #356): a job with `after`
+  waits for that job and runs only if it passed, else it is cancelled; `--world-job <id>` → `--world <saved world>`
+  (`npm run stand-queue -- submit … --after <id> --world-job <id>`; «Chains» under «Addon scene acceptance»).
 - **Before each job** the worker compares `.tfc-fetch.json` with `GET /pack/current` (print-worker key) and runs
   `pack-fetch.mjs` when the snapshot moved: queue runs always use the current snapshot, not the Mac's cache. Server
   runs: snapshot + NeoForge staged in `/dev/shm` (`scripts/stand-shm.mjs`, shared with print-worker). Client runs:
@@ -464,7 +467,11 @@ re-reads the whole context. So the queue answers «done» in one call.
   only after stdout drains (`process.exit` right after a write into the ssh pipe cut answers at 64 KB, dev #328); a
   summary over 14 000 chars (fits the MCP 20 000 cap with the header) comes back as head + tail with `summaryCut`, the full `summary.txt` is rsynced next to the
   results. Env:
-  `TFC_QUEUE_REPO` (host code dir), `TFC_QUEUE_DIR` (queue dir relative to `~`) — for a test copy.
+  `TFC_QUEUE_REPO` (host code dir), `TFC_QUEUE_DIR` (queue dir relative to `~`) — for a test copy. A test copy of
+  the worker (dev #356: branch `scripts/` rsynced to `~/tfc-stand/chain-test`, `node_modules` symlinked to the
+  print-worker clone, `serve --no-print --no-pull` with `TFC_STAND_QUEUE` and the print-worker `env`) runs beside the
+  live one: move the copy's `pack-stand.mjs` default ports off 25616/25617, or the live print check takes them
+  («bind failed: Address already in use»).
 - **Install** (once; replaces the old print-worker cron line):
   `crontab -l | grep -v print-worker.sh | { cat; echo '* * * * * $HOME/tfc-stand/print-worker/repo/scripts/stand-queue.sh >> $HOME/tfc-stand/queue/serve.log 2>&1'; } | crontab -`.
   Stop: remove the line, `pkill -f 'stand-queue[.]mjs serve'` (the bracket keeps `pkill` from matching its own ssh command).
@@ -605,7 +612,8 @@ One call for what agents of #301 did by hand around every client scene: `scripts
 - **run** `addon=<path|name> scene=<name>`: `libs.sh` when `libs/` is empty, `libs=true` or `env` is given (`DESTROY=1`
   — merged with the scene's `env` from `stand.json`); then **one** Gradle call `./gradlew jar devtestJar` with
   `javaHome()` (JDK 21) — Gradle compiles everything before packing (a hand-zipped classes folder next to a running
-  Gradle once gave a devtest jar without `Power.class`). Addons without a `devtestJar` task are refused with the
+  Gradle once gave a devtest jar without `Power.class`). An up-to-date build keeps the old jars (fine); a jar older
+  than its own `build/classes/java/<set>` is refused. Addons without a `devtestJar` task are refused with the
   example to copy (`ee-extras-mod/build.gradle`).
 - **Jar check** before the stand is touched: every `.class` in `build/classes/java/main|devtest` is in its jar and the
   jar has nothing else; no package in both jars (split package); both have a manifest and `neoforge.mods.toml`; the main
@@ -626,9 +634,63 @@ One call for what agents of #301 did by hand around every client scene: `scripts
   note with verdict, SHA256 and the folder.
 - **`tools/<mod>/stand.json`** (optional): `{ "scenes": { "<name>": { "note", "timeout", "env", "classes",
 "shots", "expectFail", "failOn" } } }`. Without it the scene still runs with defaults.
-- Not covered (ideas from #301 notes, separate work): chained server-save → restart → client runs with the saved world
-  as a queue artifact; full RCON results as an artifact; board-specific measurement profiles. Evidence upload as a
-  dev-task attachment — done in dev #357: `addon_stand … task=<id>` attaches `evidence/` + `verdict.json` as one zip.
+- Not covered (separate work): a client **scene** inside a saved world (scenes create their own world and start from
+  the title screen, which quick play skips — needs `tools/stand-scene` and the addons' start hook); board-specific
+  measurement profiles. Evidence upload as a dev-task attachment — done in dev #357: `addon_stand … task=<id>`
+  attaches `evidence/` + `verdict.json` as one zip (chains too; their `evidence/<step>/world` folders make it a few
+  MB, the limit is 50 MB).
+
+### Chains: server save → restart → client (dev #356)
+
+What #301 agents did by hand (export the world from an ephemeral job, rsync it back as an overlay, restart, check the
+SHA by eye) is a declared chain: `addon_stand addon=<path> chain=<name>` (`npm run addon-stand -- run <addon> --chain
+<name>`), then `addon_stand job=<any step id> task=<dev id>`.
+
+- **Declared** in `tools/<mod>/stand.json` → `"chains": { "<name>": { "note", "env", "classes", "steps": [...] } }`.
+  Step: `name`, `kind` (`server`|`client`), `world` (name of an earlier step whose saved world it starts on), `save`
+  (keep this step's world as a job artifact), `timeout`. Server: `cmd` (RCON, scenario syntax `!…`/`expect …`),
+  `failFast`, `failOn`, `levelType` (first step only), `expect` (regexes that must match the full RCON transcript).
+  Client: `shots` (frames after entering the world, default 2) or `scene` (own world; `scene` + `world` is refused).
+  Which jars: server steps and scene steps get main + devtest; a plain client entry gets **only the main jar**, like a
+  player (main + world) — the old auto `ClientTest` of ee-extras devtest otherwise takes over any world, prints
+  `EECLIENT FAIL` and quits after one frame; `devtest: true` puts it back. `expectFail`/`failOn` work on every step.
+  Example — `tools/ee-extras-mod/stand.json` `rectifier-restart`: build + measure + save → a new server process on that
+  world checks the blocks (`execute if block …` with `failOn: Test failed`) and the measurement → the client logs in.
+- **Same bytes everywhere**: one build, one freeze (`~/.cache/tfc-plans/addon-stand/<chain>-<time>/`), every step gets
+  the same frozen jars. Each stand computes SHA256 of its own jars itself (`свои: x.jar sha256 …` in the server
+  summary, `свои sha256: …` in the client one); the judge requires them to equal the frozen ones on **every** step
+  (the devtest jar where the step loads it, and its absence where it doesn't).
+- **Queue**: every step is its own job, submitted at once with `after=<previous job>` and `chain=<addon>/<name>`. The
+  worker (`stand-queue.mjs`) runs a job only after its `after` job finished with `done` and code 0; otherwise it
+  cancels it with the reason, so the rest of a failed chain does not burn stand time. `--world-job <id>` in a job's
+  args is replaced on the host by `--world <that job's saved world>` — the world never travels through the Mac between
+  steps.
+- **World artifact**: server `--save-world` (`pack-stand.mjs`) sends `save-all flush`, stops the server normally (waits
+  up to 120 s; a killed server is a failed save), the worker copies `run/world` (without `session.lock`) to
+  `jobs/<id>/logs/world` and records `job.world`. Server `--world <dir>` starts on a copy of it. Client `--save-world`
+  (`client-stand.mjs`) copies the last played world from `saves/` to `results/<id>/world`. Both come to the Mac with
+  the job results (`~/.cache/tfc-plans/stand-queue/<id>/world`).
+- **Judge per step**: cancelled → failed with the reason; server — exit 0, «сервер загрузился», no crash, scenario
+  passed (if any), `rcon.txt` came back, each `expect` matched, `мир: копия …` when `world` is set, `мир сохранён` +
+  `world/level.dat` when `save` (a failed server's `run/world` is only its input world, the worker doesn't keep it);
+  client entry — `итог: в мире`, all `shots` frames, each not flat and with no tone over 90 % of pixels (a black
+  screen with the FancyMenu bar has a luminance spread of 16 but 94 % one tone; real frames — 7–25 %); every step —
+  no unexpected fail line (`SCENE FAIL`, `…CLIENT … FAIL`, `ASSERTFAIL`, `failOn`) in `latest.log`, every
+  `expectFail` seen; client scene — the scene judge above. One
+  `verdict.json` (`steps[]` with checks, jobs, SHA) and `evidence/<step>/` (summary, `latest.log`, `client.log`,
+  `rcon.txt`, `rcon.json`, `scenario.json`, PNGs, `screenshots/`, `world/`).
+
+### Full RCON transcript (dev #356)
+
+- `pack-stand.mjs` writes every command with its whole reply to `run/rcon.txt` (`> command` + reply) and
+  `run/rcon.json` (`[{ command, reply, ms, packets }]`); the queue copies both into `logs/`, `stand_wait` names them.
+  In the summary a reply over 1500 chars is cut with `… ещё N симв. (rcon.txt)`.
+- `runRcon` (`mc-server.mjs`) used to take the first 4 KB packet as the whole reply and pin the rest on the next
+  command. Now, after the first packet of a reply it sends an end marker (unknown packet type → the server answers
+  «Unknown request c8»); everything before the marker's answer is the reply. The marker must not be sent right behind
+  the command: vanilla `RconClient.run` reads the socket once per packet and drops the connection when two packets
+  arrive in one read. The server cuts replies at 4096 bytes, so a Cyrillic character on a cut becomes U+FFFD — server
+  side, can't be repaired.
 
 ## Remote Minecraft client stand (dev #279, manual)
 

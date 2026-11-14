@@ -7,6 +7,8 @@
  *
  *   npm run stand-queue -- submit server [--cmd …]… [--mod <jar>]… [--overlay <папка>] [--until <re>] … [--note …]
  *   npm run stand-queue -- submit client [--world new] [--mod <jar>]… [--overlay <папка>] … [--note …]
+ *   … submit server|client --after <id> [--world-job <id>] … — следующий шаг цепочки: идёт, только если <id> прошёл;
+ *     --world-job — мир, сохранённый тем заданием (--save-world)
  *   npm run stand-queue -- wait <id> [--timeout 600] [--until <re>]  |  list  |  log <id> [--grep re] [--tail N]
  *   npm run stand-queue -- cancel <id>
  *
@@ -99,15 +101,19 @@ function pushInputs(kind, argv) {
   return { args: out, inputs: home ? tag : null };
 }
 
-/** Поставить прогон: kind server|client, argv — флаги стенда с локальными путями. → { id, position, current } */
+/**
+ * Поставить прогон: kind server|client, argv — флаги стенда с локальными путями. → { id, position, current }
+ * after — id задания, после которого идти (только если оно прошло), chain — метка цепочки; --world-job <id> в argv
+ * хост заменит миром того задания (dev #356).
+ */
 export async function submit(
   kind,
   argv,
-  { note = '', by = process.env.TFC_AGENT_NICK || os.userInfo().username } = {},
+  { note = '', by = process.env.TFC_AGENT_NICK || os.userInfo().username, after = null, chain = null } = {},
 ) {
   if (!KIND_RU[kind]) throw new Error('вид прогона: server | client');
   const { args, inputs } = pushInputs(kind, argv);
-  const spec = JSON.stringify({ kind, args, by, note, inputs });
+  const spec = JSON.stringify({ kind, args, by, note, inputs, after, chain });
   const out = ssh(`${hostCmd(['add'])} <<'TFC_JOB_EOF'\n${spec}\nTFC_JOB_EOF\n`);
   return JSON.parse(out.trim().split('\n').at(-1));
 }
@@ -122,6 +128,9 @@ function pull(view) {
   fs.mkdirSync(local, { recursive: true });
   if (job.result) rsync([`${HOST}:${job.result}/`, `${local}/`]);
   if (summary) rsync([`${HOST}:${view.summaryFile}`, summary]);
+  // Сводка серверного прогона лежит у задания, не в logs/: кладём рядом с журналами (приёмка читает её отсюда)
+  else if (view.summary && !fs.existsSync(path.join(local, 'summary.txt')))
+    fs.writeFileSync(path.join(local, 'summary.txt'), view.summary);
   const png = (dir) =>
     fs.existsSync(dir)
       ? fs
@@ -170,6 +179,7 @@ export function viewText(r) {
   const j = view.job;
   const head = `Задание ${j.id} (${KIND_RU[j.kind]} стенд, ${j.by}${j.note ? `: ${j.note}` : ''}) — ${STATE_RU[j.state] ?? j.state}`;
   const out = [head];
+  if (j.chain || j.after) out.push(`цепочка ${j.chain ?? '—'}${j.after ? `, после задания ${j.after}` : ''}`);
   if (j.state === 'queued') out.push(`место в очереди: ${view.position}; ${currentText(view.current)}`);
   if (j.state === 'running') out.push(`идёт ${ago(j.startedAt)}; этап: ${j.stage ?? '—'}`);
   if (view.events.length && view.reason !== 'final') {
@@ -203,6 +213,10 @@ export function viewText(r) {
       if (fs.existsSync(latest)) out.push(`Журнал: log_analyze path=${latest}`);
       const scenario = path.join(r.local, 'scenario.json');
       if (fs.existsSync(scenario)) out.push(`Итог сценария: ${scenario}`);
+      const rcon = path.join(r.local, 'rcon.txt');
+      if (fs.existsSync(rcon)) out.push(`Полный протокол RCON: ${rcon}`);
+      const world = path.join(r.local, 'world');
+      if (fs.existsSync(path.join(world, 'level.dat'))) out.push(`Мир после прогона: ${world}`);
     }
     out.push(`Весь вывод прогона: stand_log id=${j.id}`);
   }
@@ -216,6 +230,7 @@ export function listText(r) {
   for (const j of jobs)
     rows.push(
       `${j.id}  ${STATE_RU[j.state] ?? j.state}${j.position ? ` #${j.position}` : ''}  ${KIND_RU[j.kind]}  ${j.by}` +
+        `${j.after ? ` (после ${j.after})` : ''}` +
         `${j.note ? ` — ${j.note}` : ''}${j.state === 'running' && j.stage ? `  [${j.stage}]` : ''}`,
     );
   return rows.join('\n');
@@ -228,7 +243,10 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   const run = async () => {
     if (cmd === 'submit') {
       const [kind, ...rest] = argv;
-      const r = await submit(kind, without(rest, ['--note']), { note: one('--note') ?? '' });
+      const r = await submit(kind, without(rest, ['--note', '--after']), {
+        note: one('--note') ?? '',
+        after: one('--after') ?? null,
+      });
       return `Задание ${r.id} в очереди, место ${r.position}; ${currentText(r.current)}\nЖдать: npm run stand-queue -- wait ${r.id}`;
     }
     if (cmd === 'wait')

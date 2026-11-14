@@ -36,12 +36,21 @@ function rconPacket(id, type, body) {
 /** Сколько ждать ответа: первая команда в новом мире TFC идёт, пока сервер догоняет генерацию спавна */
 const RCON_IDLE_MS = 180000;
 
+/** id пакетов: команда и метка конца её ответа (сервер отвечает на неизвестный тип пакета «Unknown request») */
+const RCON_CMD_ID = 2;
+const RCON_END_ID = 7;
+const RCON_END_TYPE = 200;
+
 /**
  * RCON-клиент: авторизация, команды по очереди («sleep N» — пауза), ответы текстом.
+ * Длинный ответ сервер шлёт несколькими пакетами по 4 КБ: получив первый, шлём пакет-метку, и ответом считается всё до
+ * ответа на метку — хвост не приписывается следующей команде. Метку нельзя слать вплотную за командой: RconClient читает
+ * сокет одним read и, получив два пакета разом, закрывает соединение.
  * before(c) — что сделать с командой: строка — отправить её, { local } — не слать, записать текст, { stop } — закончить;
- * after(c, ответ) — после ответа (сценарий стенда, stand-scenario.mjs).
+ * after(c, ответ) — после ответа (сценарий стенда, stand-scenario.mjs); log — массив, куда класть { command, reply,
+ * ms, packets } по каждой отправленной команде (полный протокол стенда).
  */
-export function runRcon(port, password, commands, { before = null, after = null } = {}) {
+export function runRcon(port, password, commands, { before = null, after = null, log = null } = {}) {
   return new Promise((resolve, reject) => {
     const sock = net.connect({ host: '127.0.0.1', port });
     const replies = [];
@@ -49,10 +58,26 @@ export function runRcon(port, password, commands, { before = null, after = null 
     let authed = false;
     let idx = 0;
     let waiting = null;
+    let parts = [];
+    let sentAt = 0;
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      resolve(replies.join('\n'));
+    };
+    const reply = () => {
+      const body = parts.join('');
+      replies.push('> ' + waiting + '\n' + body);
+      log?.push({ command: waiting, reply: body, ms: Date.now() - sentAt, packets: parts.length });
+      after?.(waiting, body);
+      waiting = null;
+      parts = [];
+    };
     const next = () => {
       if (idx >= commands.length) {
         sock.end();
-        resolve(replies.join('\n'));
+        done();
         return;
       }
       let c = commands[idx++];
@@ -79,7 +104,9 @@ export function runRcon(port, password, commands, { before = null, after = null 
         return;
       }
       waiting = c;
-      sock.write(rconPacket(2, 2, c));
+      parts = [];
+      sentAt = Date.now();
+      sock.write(rconPacket(RCON_CMD_ID, 2, c));
     };
     sock.on('connect', () => sock.write(rconPacket(1, 3, password)));
     sock.on('data', (d) => {
@@ -89,24 +116,35 @@ export function runRcon(port, password, commands, { before = null, after = null 
         if (buf.length < 4 + len) break;
         const pkt = buf.slice(0, 4 + len);
         buf = buf.slice(4 + len);
+        const id = pkt.readInt32LE(4);
         const body = pkt.slice(12, 4 + len - 2).toString('utf8');
         if (!authed) {
           authed = true;
           next();
-        } else {
-          replies.push('> ' + waiting + '\n' + body);
-          after?.(waiting, body);
-          waiting = null;
+        } else if (id === RCON_END_ID) {
+          if (waiting !== null) reply();
           next();
+        } else if (waiting !== null) {
+          // Сервер однопоточен: на метку он ответит, только дописав все куски этого ответа
+          if (!parts.length) sock.write(rconPacket(RCON_END_ID, RCON_END_TYPE, ''));
+          parts.push(body);
         }
       }
     });
-    sock.on('error', (e) => reject(e));
+    sock.on('error', (e) => (authed ? (waiting !== null && parts.length && reply(), done()) : reject(e)));
+    // Сервер закрыл соединение (stop): что успело прийти — ответ последней команды; ничего — команда без ответа
+    sock.on('close', () => {
+      if (!authed) return reject(new Error('RCON: соединение закрыто до авторизации'));
+      if (waiting !== null && parts.length) reply();
+      done();
+    });
     sock.setTimeout(RCON_IDLE_MS);
     sock.on('timeout', () => {
       sock.destroy();
-      if (authed) resolve(replies.join('\n'));
-      else reject(new Error('RCON: сервер не ответил на авторизацию'));
+      if (authed) {
+        if (waiting !== null && parts.length) reply();
+        done();
+      } else reject(new Error('RCON: сервер не ответил на авторизацию'));
     });
   });
 }
