@@ -10,13 +10,20 @@
  *     jobs/<id>/events.jsonl — ход прогона: строки стенда о себе (не сырой журнал игры), по номерам seq
  *     jobs/<id>/output.log  — весь вывод прогона (stand_log)
  *     jobs/<id>/summary.txt — сводка стенда
- *     jobs/<id>/logs/       — журналы серверного прогона (его папка в /dev/shm удаляется)
+ *     jobs/<id>/logs/       — журналы серверного прогона (его папка в /dev/shm удаляется), rcon.txt / rcon.json —
+ *                             полный протокол RCON, world/ — мир после прогона с --save-world
  *     jobs/<id>/cancel      — просьба отменить (кладёт cancel)
  *     inputs/<метка>/       — свои jar, оверлей, мир задания (заливает Mac, удаляются после прогона)
  *     current.json          — что идёт сейчас: задание или проверка печати
  *
  *   node scripts/stand-queue.mjs serve                 — исполнитель (cron: scripts/stand-queue.sh)
- *   node scripts/stand-queue.mjs add < job.json        — { kind: server|client, args, by, note, inputs } → { id, position }
+ *   node scripts/stand-queue.mjs add < job.json        — { kind: server|client, args, by, note, inputs, after, chain }
+ *                                                         → { id, position }
+ *
+ * Цепочка (dev #356): задание с after=<id> ждёт, пока то кончится, и идёт только если оно прошло (done и код 0);
+ * иначе снимается с пометкой. Флаг --world-job <id> в args заменяется на --world <мир, сохранённый тем заданием>
+ * (серверное с --save-world — logs/world, клиентское — results/<id>/world): так шаг «рестарт» и клиент получают мир
+ * прошлого шага без поездки через Mac.
  *   node scripts/stand-queue.mjs wait <id> [--since N] [--timeout 600] [--until <regex>]
  *   node scripts/stand-queue.mjs list | log <id> [--grep re] [--tail 80] | cancel <id>
  *
@@ -120,6 +127,8 @@ function add(spec) {
   const id = `${t.slice(0, 8)}-${t.slice(8)}-${randomBytes(2).toString('hex')}`;
   fs.mkdirSync(path.join(JOBS, id));
   const inputs = spec.inputs ? path.resolve(QUEUE, 'inputs', path.basename(String(spec.inputs))) : null;
+  const after = spec.after ? String(spec.after) : null;
+  if (after && !readJob(after)) throw new Error(`after: нет задания ${after}`);
   updateJob(id, {
     id,
     kind: spec.kind,
@@ -127,6 +136,8 @@ function add(spec) {
     by: String(spec.by ?? '?').slice(0, 60),
     note: String(spec.note ?? '').slice(0, 300),
     inputs,
+    after,
+    chain: spec.chain ? String(spec.chain).slice(0, 120) : null,
     state: 'queued',
     createdAt: now(),
     seq: 0,
@@ -304,6 +315,52 @@ function runChild(id, args, { env = {}, stdinWatch = false, hardSec = 0, onStdou
   });
 }
 
+/** Шаг прошёл: кончился штатно с кодом 0 */
+const passed = (j) => j?.state === 'done' && j.ok !== false;
+
+/**
+ * Следующее задание к запуску: первое в очереди, чей предыдущий шаг (after) кончился. Шаг после провала снимается.
+ */
+function nextJob() {
+  for (const j of queued()) {
+    if (!j.after) return j;
+    const prev = readJob(j.after);
+    if (prev && !FINAL.has(prev.state)) continue;
+    if (passed(prev)) return j;
+    seqCache.set(j.id, j.seq ?? 0);
+    const why = prev
+      ? `предыдущий шаг ${prev.id} не прошёл (${prev.state}${prev.ok === false ? `, код ${prev.code}` : ''}${prev.error ? `: ${prev.error}` : ''})`
+      : `предыдущего шага ${j.after} нет`;
+    event(j.id, `снято: ${why}`);
+    finishJob(j.id, { state: 'cancelled', error: why });
+  }
+  return null;
+}
+
+/** --world-job <id> → --world <мир того задания> */
+function resolveArgs(args) {
+  const out = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] !== '--world-job') {
+      out.push(args[i]);
+      continue;
+    }
+    const id = args[++i];
+    const prev = readJob(id);
+    if (!prev?.world || !fs.existsSync(path.join(prev.world, 'level.dat')))
+      throw new Error(`--world-job ${id}: у задания нет сохранённого мира (нужен --save-world)`);
+    out.push('--world', prev.world);
+  }
+  return out;
+}
+
+/** Мир прогона → dest без session.lock */
+function copyWorld(from, dest) {
+  fs.cpSync(from, dest, { recursive: true });
+  fs.rmSync(path.join(dest, 'session.lock'), { force: true });
+  return dest;
+}
+
 /** Сколько секунд прогон может идти: его --timeout + запас на загрузку, снимки и выход */
 function hardLimit(args) {
   const i = args.lastIndexOf('--timeout');
@@ -318,7 +375,7 @@ async function runServer(id, job) {
   let summary = '';
   try {
     if (staged.stand !== SERVER_STAND) event(id, 'снимок и NeoForge скопированы в /dev/shm');
-    const code = await runChild(id, [path.join(HERE, 'pack-stand.mjs'), ...job.args], {
+    const code = await runChild(id, [path.join(HERE, 'pack-stand.mjs'), ...resolveArgs(job.args)], {
       env: { TFC_PACK_CACHE: staged.pack, TFC_STAND_DIR: staged.stand },
       hardSec: hardLimit(job.args),
       onStdout: (l) => (summary += `${l}\n`),
@@ -326,11 +383,19 @@ async function runServer(id, job) {
     // Журналы из /dev/shm — в папку задания, пока их не убрали
     const run = path.join(staged.stand, 'run');
     const keep = path.join(jobDir(id), 'logs');
-    for (const rel of ['logs/latest.log', 'logs/debug.log', 'logs/kubejs', 'crash-reports', 'scenario.json'])
+    const rels = ['logs/latest.log', 'logs/debug.log', 'logs/kubejs', 'crash-reports', 'scenario.json'];
+    for (const rel of [...rels, 'rcon.txt', 'rcon.json'])
       if (fs.existsSync(path.join(run, rel)))
         fs.cpSync(path.join(run, rel), path.join(keep, path.basename(rel)), { recursive: true });
-    summary = summary.replaceAll(run, '<прогон>');
-    return { code, summary, result: fs.existsSync(keep) ? keep : null };
+    // Мир — артефакт задания: из него следующий шаг цепочки (--world-job), его же забирает Mac
+    let world = null;
+    // Только мир, который стенд сам признал сохранённым: у упавшего сервера в run/world — входной мир
+    if (job.args.includes('--save-world') && /^мир сохранён: /m.test(summary)) {
+      world = copyWorld(path.join(run, 'world'), path.join(keep, 'world'));
+      event(id, 'мир прогона сохранён в задании');
+    }
+    summary = summary.replaceAll(path.join(run, 'world'), path.join(keep, 'world')).replaceAll(run, '<прогон>');
+    return { code, summary, result: fs.existsSync(keep) ? keep : null, world };
   } finally {
     staged.clean();
   }
@@ -339,16 +404,21 @@ async function runServer(id, job) {
 async function runClientJob(id, job) {
   let summary = '';
   let result = null;
-  const code = await runChild(id, [path.join(HERE, 'client-stand.mjs'), 'run', ...job.args, '--stdin-watch'], {
-    stdinWatch: true,
-    hardSec: hardLimit(job.args),
-    onStdout: (l) => {
-      const m = /^RESULT (.+)$/.exec(l);
-      if (m) result = m[1].trim();
-      else summary += `${l}\n`;
+  const code = await runChild(
+    id,
+    [path.join(HERE, 'client-stand.mjs'), 'run', ...resolveArgs(job.args), '--stdin-watch'],
+    {
+      stdinWatch: true,
+      hardSec: hardLimit(job.args),
+      onStdout: (l) => {
+        const m = /^RESULT (.+)$/.exec(l);
+        if (m) result = m[1].trim();
+        else summary += `${l}\n`;
+      },
     },
-  });
-  return { code, summary, result };
+  );
+  const world = result && fs.existsSync(path.join(result, 'world', 'level.dat')) ? path.join(result, 'world') : null;
+  return { code, summary, result, world };
 }
 
 async function runJob(job) {
@@ -371,6 +441,7 @@ async function runJob(job) {
       code: r.code,
       ok: r.code === 0,
       result: r.result,
+      world: r.world ?? null,
       ...(state === 'error' ? { error: `прогон не дал сводки (код ${r.code})` } : {}),
     });
     log(`задание ${id}: ${state} (код ${r.code})`);
@@ -437,7 +508,7 @@ async function serve({ noPrint = false, noPull = false }) {
   let lastPrint = 0;
   let lastPull = Date.now();
   for (;;) {
-    const next = queued()[0];
+    const next = nextJob();
     if (next) {
       await runJob(next);
       prune();

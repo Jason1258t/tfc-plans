@@ -19,7 +19,9 @@
  *   node scripts/client-stand.mjs run [--mod <jar>]… [--exclude <часть имени jar>]… [--overlay <папка>]
  *        [--timeout 900] [--settle 20] [--load 300] [--shots 1] [--interval 10] [--memory 8G] [--ready <regex>] [--ram] [--keep]
  *        [--parallel] [--game-shots <префикс имени PNG>]… [--size 1280x720] [--world new[:<пресет>]|flat|<папка мира>]
- *        [--scene <имя>]
+ *        [--scene <имя>] [--save-world]
+ *   --save-world — после выхода игры мир из saves/ остаётся в results/<id>/world (артефакт очереди: следующий шаг
+ *   цепочки заходит в него, dev #356)
  *   node scripts/client-stand.mjs clean [--results 10]
  *
  * Почему не runClient (ModDevGradle): в dev-запуске KubeJS TFC бросает AssertionError (!isProduction()), как у
@@ -745,6 +747,25 @@ function collectGameShots(game, out, prefixes) {
   return res;
 }
 
+const sha256File = (f) => createHash('sha256').update(fs.readFileSync(f)).digest('hex');
+
+/** Мир, в котором играли (последний изменённый в saves/), → out/world без session.lock; нет — null */
+function keepWorld(game, out) {
+  const saves = path.join(game, 'saves');
+  const dirs = fs.existsSync(saves)
+    ? fs
+        .readdirSync(saves)
+        .map((n) => path.join(saves, n))
+        .filter((d) => fs.existsSync(path.join(d, 'level.dat')))
+        .sort((a, b) => fs.statSync(path.join(b, 'level.dat')).mtimeMs - fs.statSync(path.join(a, 'level.dat')).mtimeMs)
+    : [];
+  if (!dirs.length) return null;
+  const to = path.join(out, 'world');
+  fs.cpSync(dirs[0], to, { recursive: true });
+  fs.rmSync(path.join(to, 'session.lock'), { force: true });
+  return `${to} (из saves/${path.basename(dirs[0])})`;
+}
+
 function collect(game, run, out) {
   fs.mkdirSync(out, { recursive: true });
   const take = (from, to = path.basename(from)) => {
@@ -788,6 +809,7 @@ export async function runClient({
   signal = null,
   size = [1280, 720],
   scene = null,
+  saveWorld = false,
   cache = PACK_CACHE,
 } = {}) {
   if (process.platform !== 'linux')
@@ -828,6 +850,7 @@ export async function runClient({
   let stopped = '';
   let shotsOut = { files: [], skipped: 0 };
   let sceneEnd = null;
+  let savedWorld = null;
   try {
     profile = buildProfile({ game, cache, mods, exclude, overlay, copyMods: ram });
     if (world) worldNote = setupWorld(game, world, versionJson(`neoforge-${nf}`).inheritsFrom);
@@ -953,6 +976,7 @@ export async function runClient({
   } finally {
     if (display) await stopDisplay(display);
     collect(game, run, out);
+    if (saveWorld) savedWorld = keepWorld(game, out);
     shotsOut = collectGameShots(game, out, gameShots);
     for (const f of pngs) fs.copyFileSync(f, path.join(out, path.basename(f)));
     if (!keep) fs.rmSync(run, { recursive: true, force: true, maxRetries: 3 });
@@ -965,16 +989,22 @@ export async function runClient({
   const crashes = fs.existsSync(path.join(out, 'crash-reports')) ? fs.readdirSync(path.join(out, 'crash-reports')) : [];
   const sceneLines = scene ? [...latest.matchAll(SCENE_LINE)].map((m) => m[1]) : [];
   const sceneOk = sceneLines.filter((l) => l.startsWith('SCENE OK')).length;
-  const ok = scene
-    ? Boolean(sceneEnd?.startsWith('PASS')) && !crashes.length
-    : readySec !== null && pngs.length > 0 && !crashes.length;
+  const ok =
+    (scene
+      ? Boolean(sceneEnd?.startsWith('PASS')) && !crashes.length
+      : readySec !== null && pngs.length > 0 && !crashes.length) &&
+    (!saveWorld || Boolean(savedWorld));
   const text = [
     `Клиентский стенд: снимок ${ver.snapshot ?? '?'}, NeoForge ${nf}, прогон ${id}`,
     `итог: ${state}${readySec !== null ? ` за ${readySec} с` : ''}${shownSec !== null ? `, мир на экране через ${shownSec} с` : ''}; ${stopped || 'не запускалась'}; всего ${secs()} с`,
     profile
       ? `моды: ${profile.used} в профиле${profile.excluded ? `, убрано --exclude: ${profile.excluded}` : ''}${mods.length ? `, свои: ${mods.map((m) => path.basename(m)).join(', ')}` : ''}`
       : 'профиль не собран',
+    ...(mods.length ? [`свои sha256: ${mods.map((m) => `${path.basename(m)} ${sha256File(m)}`).join(', ')}`] : []),
     ...(worldNote ? [`мир: ${worldNote}`] : []),
+    ...(saveWorld
+      ? [savedWorld ? `мир сохранён: ${savedWorld}` : 'мир НЕ сохранён: в saves/ нет мира с level.dat']
+      : []),
     ...(scene
       ? [
           `Сцена ${scene}: проверок OK ${sceneOk}, FAIL ${sceneLines.filter((l) => l.startsWith('SCENE FAIL')).length}`,
@@ -1089,6 +1119,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
             gameShots: many('--game-shots'),
             size: (one('--size') ?? '1280x720').split('x').map(Number),
             scene: one('--scene') ?? null,
+            saveWorld: argv.includes('--save-world'),
             signal: abort.signal,
           }).then((r) => {
             process.exitCode = r.ok ? 0 : 1;

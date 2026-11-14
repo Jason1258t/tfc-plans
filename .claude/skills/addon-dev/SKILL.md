@@ -96,6 +96,12 @@ your worktree> scene=<name>` → `addon_stand job=<id> task=<dev id>`. It builds
   freezes them with SHA256 and accepts only a clean `SCENE END PASS` with real frames; never zip devtest classes by
   hand. Negative controls and must-have frames go into `tools/<mod>/stand.json` (`expectFail`, `shots`). Look at the
   frames yourself too: a PASS proves the checks, not that the picture shows the right thing.
+- Saved data across a restart, or the client in a world the server built: declare a chain in
+  `tools/<mod>/stand.json` (`chains` — server step with `save: true` → server step with `world: <that step>` →
+  client step with `world`; example `ee-extras-mod` `rectifier-restart`, docs/state/infra.md «Chains»), run
+  `addon_stand addon=<path> chain=<name>` → `addon_stand job=<id> task=<dev id>`. Same frozen jars on every step (the
+  stand's own SHA256 is checked each time), full RCON replies in `evidence/<step>/rcon.txt`, worlds in
+  `evidence/<step>/world`. Don't export worlds by a devtest command or rsync them by hand.
 - Mixins: confirm they apply (`-Dmixin.debug.export=true`, log line); client-only mixins can't be checked on the
   server — say so.
 - `log_analyze path=run/logs/latest.log` for errors.

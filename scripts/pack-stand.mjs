@@ -19,8 +19,14 @@
  *   --port N — другой порт (и N+1 для RCON), вместе с TFC_STAND_DIR — параллельно другому стенду
  *   --fail-fast, --fail-on <regex> — сценарий с приёмкой (команды «!…», «expect …»; stand-scenario.mjs): остановка
  *   после первого провала, итог scenario.json в run/; без них и без таких строк прогон как раньше
+ *   --world <папка мира> — запустить на копии этого мира (сохранённого прошлым прогоном: проверка после рестарта)
+ *   --save-world — после команд save-all flush и штатный stop: мир остаётся в run/world (очередь забирает его
+ *   артефактом задания, dev #356)
+ * Полный протокол RCON (каждая команда и весь её ответ, без обрезки) — run/rcon.txt и run/rcon.json; в сводке длинные
+ * ответы укорочены.
  */
 import { spawn, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -190,11 +196,45 @@ function link(target, dest) {
 }
 
 const RCON_PASSWORD = 'check';
+/** Случайный сбой параллельной загрузки модов: повторный запуск обычно проходит */
+const RACY_LOAD =
+  /An uncaught parallel processing error|error while dispatching the net\.neoforged\.neoforge\.registries\.RegisterEvent event\s+java\.lang\.ExceptionInInitializerError/;
 const readText = (f) => (fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '');
+const sha256 = (f) => createHash('sha256').update(fs.readFileSync(f)).digest('hex');
 
-/** Папка запуска: ссылки на сервер и моды, копии config/kubejs/world снимка, оверлей, server.properties */
-function prepare({ run, server, cache, sel, overlay, keep, memory, port, rconPort, levelType }) {
-  clean(run, keep ? ['world'] : []);
+/** Размер папки в МБ (одна цифра после запятой) */
+function dirMb(dir) {
+  let n = 0;
+  for (const e of fs.readdirSync(dir, { withFileTypes: true, recursive: true }))
+    if (e.isFile()) n += fs.statSync(path.join(e.parentPath ?? e.path, e.name)).size;
+  return (n / 1024 / 1024).toFixed(1);
+}
+
+/** Ответ RCON длиннее этого в сводке укорачивается: целиком он в rcon.txt */
+const RCON_REPLY_MAX = 1500;
+
+/** Протокол RCON для сводки: ответы длиннее RCON_REPLY_MAX — началом и пометкой */
+function shortRcon(text) {
+  return text.split(/\n(?=> )/).flatMap((block) => {
+    const [head, ...rest] = block.split('\n');
+    const body = rest.join('\n');
+    if (body.length <= RCON_REPLY_MAX) return block.split('\n');
+    return [
+      head,
+      ...body.slice(0, RCON_REPLY_MAX).split('\n'),
+      `… ещё ${body.length - RCON_REPLY_MAX} симв. (rcon.txt)`,
+    ];
+  });
+}
+
+/** Папка запуска: ссылки на сервер и моды, копии config/kubejs/world снимка (или world), оверлей, server.properties */
+function prepare({ run, server, cache, sel, overlay, keep, world, memory, port, rconPort, levelType }) {
+  clean(run, keep && !world ? ['world'] : []);
+  if (world) {
+    if (!fs.existsSync(path.join(world, 'level.dat'))) throw new Error(`--world: в ${world} нет level.dat`);
+    fs.cpSync(path.resolve(world), path.join(run, 'world'), { recursive: true });
+    fs.rmSync(path.join(run, 'world', 'session.lock'), { force: true });
+  }
   link(path.join(server, 'libraries'), path.join(run, 'libraries'));
   fs.mkdirSync(path.join(run, 'mods'));
   for (const m of sel.use) link(m.file, path.join(run, 'mods', path.basename(m.file)));
@@ -235,7 +275,7 @@ function prepare({ run, server, cache, sel, overlay, keep, memory, port, rconPor
  * waitFor — { check(run, sec) → true, когда можно останавливать; timeout } — опрос раз в 5 с после команд.
  * scenario — { failFast, failOn } или null: приёмка команд (stand-scenario.mjs), провал с failFast пропускает waitFor.
  */
-async function launch({ run, java, nf, timeout, rconPort, commands, waitFor, scenario, onLog }) {
+async function launch({ run, java, nf, timeout, rconPort, commands, waitFor, scenario, saveWorld, onLog }) {
   const out = path.join(run, 'stand.log');
   const fd = fs.openSync(out, 'w');
   const argsFile = path.join('libraries', 'net', 'neoforged', 'neoforge', nf, isWin ? 'win_args.txt' : 'unix_args.txt');
@@ -278,13 +318,14 @@ async function launch({ run, java, nf, timeout, rconPort, commands, waitFor, sce
   const bootSec = Math.round((Date.now() - t0) / 1000);
 
   let rconText = '';
+  const rconLog = [];
   let report = null;
   if (booted && commands.length) {
     onLog('сервер поднялся, шлю команды');
     const sc = scenario ? createScenario(commands.map(String), scenario) : null;
     let error = null;
     try {
-      rconText = await runRcon(rconPort, RCON_PASSWORD, commands.map(String), sc ?? {});
+      rconText = await runRcon(rconPort, RCON_PASSWORD, commands.map(String), { ...sc, log: rconLog });
     } catch (e) {
       error = 'RCON: ' + e.message;
       rconText = [rconText, error].filter(Boolean).join('\n');
@@ -313,15 +354,29 @@ async function launch({ run, java, nf, timeout, rconPort, commands, waitFor, sce
     }
     onLog(`ожидание: ${waited} за ${Math.round((Date.now() - w0) / 1000)} с`);
   }
+  let saved = null;
+  if (booted && !exited && saveWorld)
+    try {
+      const log = [];
+      await runRcon(rconPort, RCON_PASSWORD, ['save-all flush'], { log });
+      saved = log[0]?.reply?.replace(/\s+/g, ' ').trim() || 'нет ответа';
+      onLog(`мир сохранён: ${saved}`);
+    } catch (e) {
+      saved = `save-all flush: ${e.message}`;
+    }
+  const stopAt = Date.now();
   if (booted && !exited)
     try {
       await runRcon(rconPort, RCON_PASSWORD, ['stop']);
     } catch {
       /* уже не отвечает */
     }
-  for (let i = 0; i < 30 && !exited; i++) await sleep(1000);
-  if (!exited) killTree(child.pid);
-  return { booted, exited, crashed, bootSec, rconText, waited, scenario: report };
+  // Штатный stop сохраняет мир сам; с --save-world ждём его дольше, а убитый сервер — мир неполный
+  for (let i = 0; i < (saveWorld ? 120 : 30) && !exited; i++) await sleep(1000);
+  const killed = !exited;
+  if (killed) killTree(child.pid);
+  const stopSec = Math.round((Date.now() - stopAt) / 1000);
+  return { booted, exited, crashed, bootSec, rconText, rconLog, waited, scenario: report, saved, killed, stopSec };
 }
 
 /**
@@ -389,6 +444,8 @@ export async function runStand({
   overlay = null,
   levelType = 'minecraft:flat',
   keep = false,
+  world = null,
+  saveWorld = false,
   timeout = 900,
   memory = '6G',
   neoforge = null,
@@ -424,15 +481,15 @@ export async function runStand({
   try {
     for (let attempt = 0; ; attempt++) {
       sel = selectMods({ modsDir, extra: mods, exclude, include, skip: found });
-      prepare({ run, server, cache, sel, overlay, keep, memory, port, rconPort, levelType });
+      prepare({ run, server, cache, sel, overlay, keep, world, memory, port, rconPort, levelType });
       onLog(`запускаю сервер: модов ${sel.use.length}, исключено ${sel.skipped.length}`);
-      r = await launch({ run, java, nf, timeout, rconPort, commands, waitFor, scenario, onLog });
+      r = await launch({ run, java, nf, timeout, rconPort, commands, waitFor, scenario, saveWorld, onLog });
       if (r.booted || attempt >= 4) break;
       const bad = clientOnlyFailures(run).filter((id) => !(id in found));
       if (!bad.length) {
-        // гонка параллельной загрузки модов (NPE «unbound value» в реестрах) — второй запуск обычно проходит
-        if (racy || !/An uncaught parallel processing error/.test(readText(path.join(run, 'logs', 'latest.log'))))
-          break;
+        // гонка параллельной загрузки модов (NPE «unbound value» в реестрах; Create 6.0.10 — PackageStyles пуст при
+        // RegisterEvent, ExceptionInInitializerError) — второй запуск обычно проходит
+        if (racy || !RACY_LOAD.test(readText(path.join(run, 'logs', 'latest.log')))) break;
         racy = true;
         onLog('ошибка параллельной загрузки модов — запускаю ещё раз');
         continue;
@@ -443,14 +500,27 @@ export async function runStand({
   } finally {
     unlock();
   }
-  const { booted, exited, crashed, bootSec, rconText, waited, scenario: report } = r;
+  const { booted, exited, crashed, bootSec, rconText, rconLog, waited, scenario: report } = r;
   const reportFile = path.join(run, 'scenario.json');
   fs.rmSync(reportFile, { force: true });
   if (report) fs.writeFileSync(reportFile, JSON.stringify(report, null, 2) + '\n');
   const rep = report ? reportText(report, reportFile) : null;
+  // Полный протокол RCON: в сводке длинные ответы укорочены
+  const rconFile = path.join(run, 'rcon.txt');
+  if (rconText) {
+    fs.writeFileSync(rconFile, rconText + '\n');
+    fs.writeFileSync(path.join(run, 'rcon.json'), JSON.stringify(rconLog, null, 1) + '\n');
+  }
+  const own = mods.map((f) => `${path.basename(f)} sha256 ${sha256(f)}`);
+  const worldDir = path.join(run, 'world');
+  const worldNote = saveWorld
+    ? fs.existsSync(path.join(worldDir, 'level.dat')) && booted && !r.killed
+      ? `мир сохранён: ${worldDir} (${dirMb(worldDir)} МБ; save-all flush: ${r.saved ?? '—'}; stop за ${r.stopSec} с)`
+      : `мир НЕ сохранён: ${!booted ? 'сервер не поднялся' : r.killed ? 'сервер не вышел штатно и убит' : 'нет level.dat'}`
+    : null;
 
   // ------------------------------------------------------------ сводка
-  const latest = readText(path.join(run, 'logs', 'latest.log')) || readText(out);
+  const latest = readText(path.join(run, 'logs', 'latest.log')) || readText(path.join(run, 'stand.log'));
   const kjs = [...latest.matchAll(/Loaded \d+\/\d+ KubeJS (startup|server) scripts[^\n]*/g)].map((m) => m[0]);
   const kjsLast = ['startup', 'server'].map((t) => kjs.filter((l) => l.includes(` ${t} `)).at(-1)).filter(Boolean);
   const kjsErr = ['startup', 'server']
@@ -467,7 +537,9 @@ export async function runStand({
         : `сервер не поднялся за ${timeout} с`,
     ...(rep ? [rep.head] : []),
     ...(waited === 'skipped' ? ['ожидание until пропущено: сценарий остановлен'] : []),
+    ...(world ? [`мир: копия ${path.resolve(world)}`] : []),
     `моды: ${sel.use.length} на стенде${sel.replaced.length ? `, заменены своими: ${sel.replaced.join(', ')}` : ''}`,
+    ...(own.length ? [`свои: ${own.join(', ')}`] : []),
     ...(Object.keys(found).length
       ? [
           `клиентские, найдены при запуске (добавьте в scripts/pack-stand-client.json): ${Object.keys(found).join(', ')}`,
@@ -482,8 +554,9 @@ export async function runStand({
       ...e.lines.map((l) => '    ' + l),
       ...(e.more ? [`    … ещё ${e.more}`] : []),
     ]),
-    `RCON ${rconPort}:`,
-    ...(rconText ? rconText.split('\n').map((l) => '  ' + l) : ['  (команд не было)']),
+    `RCON ${rconPort}${rconText ? ` (полностью: ${rconFile})` : ''}:`,
+    ...(rconText ? shortRcon(rconText).map((l) => '  ' + l) : ['  (команд не было)']),
+    ...(worldNote ? [worldNote] : []),
     logErr.lines.length ? 'Ошибки latest.log (без повторов):' : 'Ошибок в latest.log нет.',
     ...logErr.lines.map((l) => '  ' + l),
     ...(logErr.more ? [`  … ещё ${logErr.more}`] : []),
@@ -492,7 +565,8 @@ export async function runStand({
     `Лог: ${path.join(run, 'logs', 'latest.log')} (log_analyze path=…)`,
     ...(rep ? rep.tail : []),
   ].join('\n');
-  return { ok: booted && !crash && (!report || report.ok), booted, waited, run, scenario: report, text };
+  const savedOk = !saveWorld || (worldNote ?? '').startsWith('мир сохранён');
+  return { ok: booted && !crash && (!report || report.ok) && savedOk, booted, waited, run, scenario: report, text };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
@@ -508,6 +582,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     levelType: one('--level-type') ?? 'minecraft:flat',
     ...(one('--port') ? { port: Number(one('--port')), rconPort: Number(one('--port')) + 1 } : {}),
     keep: argv.includes('--keep'),
+    world: one('--world') ?? null,
+    saveWorld: argv.includes('--save-world'),
     timeout: Number(one('--timeout') ?? 900),
     memory: one('--memory') ?? '6G',
     neoforge: one('--neoforge') ?? null,
