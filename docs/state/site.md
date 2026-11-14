@@ -187,6 +187,9 @@ exhaustively checked.
 - 2026-10-26: бейдж типа версии на странице «Свежесть» переведён на `Tag`, глобальное переопределение снято; `freshness` desktop/mobile — 0,000%. Осталось 2 прямых употребления `.tag`.
 - 2026-10-26: метка типа рецепта в каталоге переведена на `Tag`, responsive-правило стало локальным; desktop/mobile — 0,000%. Остался один `.tag` в списке блоков схем.
 - 2026-10-26: бейдж мода в списке замен схем переведён на `Tag`; открытая схема с заменами — desktop/mobile 0,000%. Разметка `.tag` нулевая, глобальное правило удалено; статус `в работе` переведён на локальный селектор, `:global(.tag)` не осталось. Одноимённые `.tag` в MealsTab остаются локальными CSS Modules.
+- 2026-11-14 (#360): `/dev` → «Краш-репорты»/«Логи» read players' reports from the pack server
+  (`pages/dev/model/reports.ts`: list on mount and on focus, download with size check, delete) — `/dev` no longer
+  subscribes to Firestore `files` at all. «Документы» still hides legacy report docs (`report.kind`) until they are purged.
 - 2026-11-14 (#357): `/dev` attachments live on the pack server — `features/task-files` gallery and list take a
   `FileSource` (default: the Firestore store for players' tasks), `pages/dev/model/files.ts` uploads (XHR progress,
   SHA256), reads with size/hash check, downloads and deletes; files come with the task, limit 50 MB. The task list on

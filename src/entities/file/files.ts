@@ -24,8 +24,8 @@ type Meta = {
 };
 
 /**
- * Служебный файл от `tfc report` (cli/lib/reports.mjs → сервер сборки): лог или краш-репорт игрока. На сайте —
- * «Документы» → «Краш-репорты»/«Логи», агенту — MCP report_get по id.
+ * Старый формат отчёта `tfc report` в Firestore (до dev #360; теперь отчёты — на сервере сборки, pages/dev/model/reports.ts).
+ * Поле осталось, чтобы «Документы» не показывали ещё не удалённые старые копии.
  */
 export interface FileReport {
   kind: 'crash' | 'log';

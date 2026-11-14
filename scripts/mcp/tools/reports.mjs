@@ -1,8 +1,8 @@
 /**
- * Инструменты MCP: отчёты игроков с сайта — логи и краш-репорты, загруженные `tfc report` (cli/lib/reports.mjs) в
- * хранилище файлов сайта (files/{id} с полем report, части — files/{id}/chunks). reports_list — список, report_get —
- * скачать в кеш (~/.cache/tfc-plans/reports/<id>, файл с данным id не меняется), распаковать zip/gz и сразу
- * разобрать главный файл тем же log_analyze. Чтения Firestore: список — по одному на отчёт, файл — 1 + части.
+ * Инструменты MCP: отчёты игроков — логи и краш-репорты, загруженные `tfc report` (cli/lib/reports.mjs) на сервер
+ * сборки (dev #360, lib/reports.mjs; раньше — Firestore files). reports_list — список, report_get — скачать в кеш
+ * (~/.cache/tfc-plans/reports/<id>, файл с данным id не меняется), распаковать zip/gz и сразу разобрать главный файл
+ * тем же log_analyze. Чтений Firestore нет: всё — GET /reports сервера сборки ключом tfc.
  */
 import fs from 'node:fs';
 import os from 'node:os';
@@ -10,8 +10,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { createHash } from 'node:crypto';
 import { unzipSync } from 'fflate';
-import { DOCS, fromValue } from '../../firestore-rest.mjs';
-import { FirestoreError, api } from '../firestore.mjs';
+import { packServer } from '../../pack-fetch.mjs';
 import { dateOf, page, paging, str, words } from '../fmt.mjs';
 import { logAnalyze } from './logs.mjs';
 
@@ -20,28 +19,35 @@ const CACHE = path.resolve(process.env.TFC_REPORTS_CACHE ?? path.join(os.homedir
 const KIND = { crash: 'краш', log: 'лог' };
 const TTL = 60_000;
 
-let reads = 0;
-const fields = (d) => Object.fromEntries(Object.entries(d.fields ?? {}).map(([k, v]) => [k, fromValue(v)]));
 const kb = (n) =>
   n < 1024 ? `${n} Б` : n < 1048576 ? `${(n / 1024).toFixed(1)} КБ` : `${(n / 1048576).toFixed(1)} МБ`;
 
-/** Отчёты (files с report.source = tfc), свежие сверху; кеш на минуту */
+/** Запрос к /reports сервера сборки; 404 → null */
+async function pack(p) {
+  const srv = packServer();
+  if (!srv) throw new Error('Нужен ключ сервера сборки: tfc login или TFC_PACK_URL/TFC_PACK_TOKEN');
+  let res;
+  try {
+    res = await fetch(`${srv.url}/reports${p}`, {
+      headers: { Authorization: `Bearer ${srv.token}` },
+      signal: AbortSignal.timeout(120_000),
+    });
+  } catch {
+    throw new Error('Сервер сборки недоступен или не ответил');
+  }
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    const out = await res.json().catch(() => ({}));
+    throw new Error(`Сервер сборки: ${out.error ?? `${res.status} ${res.statusText}`}`);
+  }
+  return res;
+}
+
+/** Отчёты, свежие сверху; кеш на минуту */
 let listCache = null;
 async function reportDocs() {
   if (listCache && listCache.until > Date.now()) return listCache.value;
-  const structuredQuery = {
-    from: [{ collectionId: 'files' }],
-    where: {
-      fieldFilter: { field: { fieldPath: 'report.source' }, op: 'EQUAL', value: { stringValue: 'tfc' } },
-    },
-  };
-  const r = await api(`${DOCS}:runQuery`, { method: 'POST', body: JSON.stringify({ structuredQuery }) });
-  const value = r
-    .filter((x) => x.document)
-    .map((x) => ({ id: x.document.name.split('/').pop(), ...fields(x.document) }))
-    .filter((d) => d.complete)
-    .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
-  reads += Math.max(1, value.length);
+  const value = (await (await pack('')).json()).reports;
   listCache = { until: Date.now() + TTL, value };
   return value;
 }
@@ -73,45 +79,23 @@ function reportId(key) {
   return m?.[1] ?? null;
 }
 
-/** Метаданные + части → кеш; распаковка zip/gz рядом. { dir, meta, files: [{ rel, full, size }] } */
+/** Метаданные + файл с сервера сборки → кеш; распаковка zip/gz рядом. { dir, meta, files: [{ rel, full, size }] } */
 export async function fetchReport(id) {
   const dir = path.join(CACHE, id);
   const metaFile = path.join(dir, 'meta.json');
   let meta;
   if (fs.existsSync(metaFile)) meta = JSON.parse(fs.readFileSync(metaFile, 'utf8'));
   else {
-    let d;
-    try {
-      d = await api(`${DOCS}/files/${id}`);
-      reads += 1;
-    } catch (e) {
-      if (e instanceof FirestoreError && e.status === 404) {
-        reads += 1;
-        throw new Error(`Нет файла ${id} на сайте (удалён?).`);
-      }
-      throw e;
-    }
-    meta = { id, ...fields(d) };
-    if (!meta.complete) throw new Error(`Файл ${id} ещё загружается — повторите позже.`);
-    const parts = [];
-    let pageToken = '';
-    do {
-      const r = await api(`${DOCS}/files/${id}/chunks?pageSize=300${pageToken ? `&pageToken=${pageToken}` : ''}`);
-      for (const c of r.documents ?? []) {
-        const f = fields(c);
-        parts.push({ i: Number(f.i ?? c.name.split('/').pop()), data: f.data });
-      }
-      reads += Math.max(1, r.documents?.length ?? 0);
-      pageToken = r.nextPageToken ?? '';
-    } while (pageToken);
-    parts.sort((x, y) => x.i - y.i);
-    if (parts.length !== meta.chunks || parts.some((p, i) => p.i !== i || !Buffer.isBuffer(p.data)))
-      throw new Error(`Файл ${id} в Firestore неполный (${parts.length} из ${meta.chunks} частей).`);
-    const bytes = Buffer.concat(parts.map((p) => p.data));
+    const r = await pack(`/${id}`);
+    if (!r) throw new Error(`Нет отчёта ${id} на сервере сборки (удалён?).`);
+    meta = (await r.json()).report;
+    const c = await pack(`/${id}/content`);
+    if (!c) throw new Error(`Нет отчёта ${id} на сервере сборки (удалён?).`);
+    const bytes = Buffer.from(await c.arrayBuffer());
     if (bytes.length !== meta.size)
-      throw new Error(`Файл ${id}: размер не сошёлся (${bytes.length} вместо ${meta.size}).`);
-    if (meta.sha256 && createHash('sha256').update(bytes).digest('hex') !== meta.sha256)
-      throw new Error(`Файл ${id}: хеш не сошёлся.`);
+      throw new Error(`Отчёт ${id}: размер не сошёлся (${bytes.length} вместо ${meta.size}).`);
+    if (createHash('sha256').update(bytes).digest('hex') !== meta.sha256)
+      throw new Error(`Отчёт ${id}: хеш не сошёлся.`);
     const out = path.join(dir, 'files');
     fs.mkdirSync(out, { recursive: true });
     const safe = (rel) => {
@@ -200,12 +184,6 @@ async function reportGet(a) {
   return `${head.join('\n')}\n\n${logAnalyze({ path: file.full, level: a.level, query: a.query, limit: a.limit, offset: a.offset })}`;
 }
 
-const counted = (fn) => async (a) => {
-  reads = 0;
-  const text = await fn(a);
-  return `${text}\n— Firestore: ${reads ? `${reads} чтен.` : 'из кеша, 0 чтений'}`;
-};
-
 export const TOOLS = [
   {
     name: 'reports_list',
@@ -220,7 +198,7 @@ export const TOOLS = [
         ...paging,
       },
     },
-    handler: counted(reportsList),
+    handler: reportsList,
   },
   {
     name: 'report_get',
@@ -238,6 +216,6 @@ export const TOOLS = [
       },
       required: ['id'],
     },
-    handler: counted(reportGet),
+    handler: reportGet,
   },
 ];

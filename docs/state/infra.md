@@ -753,6 +753,18 @@ create, mobile). Plan and stages — `docs/plans/dev-tracker.md`. Migrated the s
 and 15 plans imported (checked on the server), 89 Firestore docs and the group «Разработка» deleted; 7 tasks with
 attachments stay in Firestore group «Фиксы» (their copies on the server note where the files are).
 
+**Players' reports on the pack server** (2026-11-14, dev #360): `tfc report` uploads (`POST /site/reports`, unchanged
+for the CLI) go to `<DATA_DIR>/reports.db` + `<DATA_DIR>/reports/<sha256>` (`lib/reports.mjs`) instead of Firestore
+`files`; reads — `GET /reports[?kind=]`, `GET|DELETE /reports/:id`, `GET /reports/:id/content`, same auth and CORS as
+`/dev`; 25 MB/report, 5 GB total (`REPORTS_MAX_BYTES`). An admin key may pass `id`/`createdAt`/`author`/`sha256` in
+`X-Report` — ids survive (`tfc-report:<id>`, `/dev?report=<id>`). Site report tabs and MCP `reports_list`/`report_get`
+read the pack server (0 Firestore reads). Migration — `scripts/reports-migrate.mjs` (dry run, `--apply` with
+verification of size/hash/author/time/kind/task, `--purge` deletes the Firestore copies after a clean verification).
+Checked on a local pack server: player upload, admin upload with id (bad hash refused, repeat = existed), list by kind,
+content headers, delete keeping a shared blob; migration of the 3 real Firestore reports twice (3/3 verified, then
+"existed"); MCP list/get/analysis of a migrated zip; site `/dev` against the local server — list, `?report=` focus and
+tab switch, download (size matches), delete.
+
 **Dev attachments on the pack server** (2026-11-14, dev #357): table `files` in `dev.db` + `<DATA_DIR>/dev-files/<sha256>`
 (`lib/dev-files.mjs`), routes `/dev/tasks/:id/files`, `/dev/files/:id[/content]`, same auth as `/dev`; SHA256 checked
 while streaming, 50 MB/file, 5 GB total, extension allowlist, download-only serving, upload/delete log notes, cascade on

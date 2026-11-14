@@ -2,25 +2,26 @@ import { Check, Copy, Download, Search as SearchIcon, Trash2 } from 'lucide-reac
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileBadge } from '../../../../components/FileBadge';
-import { formatSize, type FileMeta } from '@/entities/file';
+import { formatSize } from '@/entities/file';
 import type { Task } from '@/entities/task';
+import type { Report } from '../../model/reports';
 import { cx, timeAgo } from '@/shared/lib';
 import { Button, Search } from '@/shared/ui';
 import styles from './ReportList.module.css';
 
 interface Props {
   kind: 'crash' | 'log';
-  files: FileMeta[];
+  files: Report[];
   taskById: Map<string, Task>;
   /** ?report=<id> — подсветить и прокрутить */
   focusId: string | null;
   busyId: string | null;
-  onDownload: (f: FileMeta) => void;
-  onRemove: (f: FileMeta) => void;
+  onDownload: (f: Report) => void;
+  onRemove: (f: Report) => void;
 }
 
 /** Строка для агента: по ней MCP report_get находит отчёт (её же печатает tfc report) */
-const agentLine = (f: FileMeta) => `Отчёт «${f.name}» — tfc-report:${f.id} — ${location.origin}/dev?report=${f.id}`;
+const agentLine = (f: Report) => `Отчёт «${f.name}» — tfc-report:${f.id} — ${location.origin}/dev?report=${f.id}`;
 
 /** Служебный подраздел «Разработки»: логи или краш-репорты, загруженные из игры командой tfc report */
 export function ReportList({ kind, files, taskById, focusId, busyId, onDownload, onRemove }: Props) {
@@ -32,7 +33,7 @@ export function ReportList({ kind, files, taskById, focusId, busyId, onDownload,
     focusRef.current?.scrollIntoView({ block: 'center' });
   }, [focusId, files.length]);
 
-  const copy = async (f: FileMeta) => {
+  const copy = async (f: Report) => {
     const text = agentLine(f);
     try {
       await navigator.clipboard.writeText(text);
@@ -45,7 +46,7 @@ export function ReportList({ kind, files, taskById, focusId, busyId, onDownload,
 
   const words = q.toLowerCase().split(/\s+/).filter(Boolean);
   const shown = files.filter((f) => {
-    const r = f.report!;
+    const r = f.report;
     const hay = `${f.name}\n${f.author}\n${r.label}\n${r.note}\n${r.files.map((x) => x.name).join('\n')}`.toLowerCase();
     return words.every((w) => hay.includes(w));
   });
@@ -77,7 +78,7 @@ export function ReportList({ kind, files, taskById, focusId, busyId, onDownload,
       ) : (
         <ul className={styles.filesList}>
           {shown.map((f) => {
-            const r = f.report!;
+            const r = f.report;
             const task = f.taskId ? taskById.get(f.taskId) : undefined;
             const inner = r.files.length > 1 ? r.files.map((x) => x.name.split('/').pop()).join(', ') : '';
             return (
