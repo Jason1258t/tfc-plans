@@ -7,7 +7,7 @@
 import { NICK } from '../mcp/env.mjs';
 import { packServer } from '../pack-fetch.mjs';
 import { logTools, noteLine } from './devlog.mjs';
-import { taskFiles, devFileGet } from './files.mjs';
+import { devFileGet, devFilePut, filesBlock } from './files.mjs';
 import { checkTools } from './devchecks.mjs';
 import { linkTools, linksBlock } from './devlinks.mjs';
 
@@ -123,14 +123,7 @@ async function devGet(a) {
     api('GET', `tasks/${a.id}?notes=${a.notes ?? 5}`),
     api('GET', `tasks/${a.id}/notes?kind=report&limit=200`),
   ]);
-  const task = full(r, log.notes);
-  try {
-    const files = await taskFiles(a.id);
-    if (!files.length) return task;
-    return `${task}\n\nВложения (${files.length}):\n${files.map((f) => `- ${f.id} «${f.name}» (${f.type}, ${f.size} Б) — dev_file_get task=${a.id} id=${f.id}`).join('\n')}`;
-  } catch (e) {
-    return `${task}\n\nВложения: не удалось проверить (${e.message}). Отсутствие вложений не подтверждено.`;
-  }
+  return [full(r, log.notes), ...filesBlock(a.id, r.files)].join('\n');
 }
 
 async function devCreate(a) {
@@ -187,13 +180,29 @@ export const DEV_TOOLS = [
   {
     name: 'dev_file_get',
     description:
-      'Read an attachment of a dev task: image content for PNG/JPEG/WebP/GIF, local paths for all files. Verifies task ownership and SHA256; cached locally. Does not analyse logs automatically.',
+      'Read an attachment of a dev task (pack server): image content for PNG/JPEG/WebP/GIF (also up to 6 from a zip), local paths for all files; zip is unpacked next to it. Verifies task ownership and SHA256; cached in ~/.cache/tfc-plans/dev-files. Does not analyse logs automatically.',
     inputSchema: {
       type: 'object',
       properties: { task: int('dev task number'), id: str('attachment id from dev_get') },
       required: ['task', 'id'],
     },
     handler: devFileGet,
+  },
+  {
+    name: 'dev_file_put',
+    description: `Write: attach files to a dev task (pack server, signed ${NICK}) — stand evidence, screenshots, logs, reports. path — a file, a folder or a list; a folder goes as one zip (name or <folder>.zip), each=true — every file separately (max 50), zip=true — several paths in one zip. Up to 50 MB per file; types: images, text/logs/json/md, zip/gz/7z, nbt/schem, jar, pdf, video. The same file with the same name is not stored twice. Shows on the site task and in dev_get.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        task: int('dev task number'),
+        path: { type: ['string', 'array'], items: { type: 'string' }, description: 'file or folder path, or a list' },
+        name: str('attachment name (single file or the zip)'),
+        each: { type: 'boolean', description: 'folder: one attachment per file instead of a zip' },
+        zip: { type: 'boolean', description: 'pack all paths into one zip' },
+      },
+      required: ['task', 'path'],
+    },
+    handler: devFilePut,
   },
   {
     name: 'dev_list',
@@ -217,7 +226,7 @@ export const DEV_TOOLS = [
   {
     name: 'dev_get',
     description:
-      'Whole dev task: description, checklist, plan docs, all reports, last 5 work-log entries (note:<id>; older — dev_log), rev for dev_update, attachments from Firestore (cached 1 min; dev_file_get opens them).',
+      'Whole dev task: description, checklist, plan docs, all reports, last 5 work-log entries (note:<id>; older — dev_log), rev for dev_update, attachments (pack server; dev_file_get opens them, dev_file_put adds).',
     inputSchema: {
       type: 'object',
       properties: { id: int('task number'), notes: int('how many last log entries (default 5)') },

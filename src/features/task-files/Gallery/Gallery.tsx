@@ -1,35 +1,44 @@
 import { ChevronLeft, ChevronRight, Download, ImagePlus, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useFiles } from '@/entities/file';
-import { downloadFile, fileUrl, filesEnabled, formatSize, removeFile, type FileMeta } from '@/entities/file';
+import { formatSize } from '@/entities/file';
 import { dismissUpload, isImage, useUploads } from '@/lib/uploads';
 import { cx, timeAgo } from '@/shared/lib';
 import styles from './Gallery.module.css';
+import { useStoreSource, type FileSource, type TaskFile } from '../source';
 
 interface Props {
   taskId?: string;
   pending?: File[];
   onRemovePending?: (file: File) => void;
   onAdd: (files: File[]) => void;
+  /** Своё хранилище; без него — общее хранилище файлов сайта */
+  source?: FileSource;
 }
 
 /** Картинка сетки: загруженная (в базе) или из черновика новой задачи */
 type Shot =
-  | { key: string; kind: 'file'; file: FileMeta; name: string }
+  | { key: string; kind: 'file'; file: TaskFile; name: string }
   | { key: string; kind: 'pending'; file: File; name: string; url: string };
 
 /** Картинки задачи: превью-сетка под описанием + просмотр на весь экран */
-export function Gallery({ taskId, pending, onRemovePending, onAdd }: Props) {
-  const { items: files } = useFiles();
+export function Gallery(props: Props) {
+  return props.source ? <GalleryView {...props} source={props.source} /> : <StoreGallery {...props} />;
+}
+
+function StoreGallery(props: Props) {
+  return <GalleryView {...props} source={useStoreSource(props.taskId)} />;
+}
+
+function GalleryView({ taskId, pending, onRemovePending, onAdd, source }: Props & { source: FileSource }) {
+  const files = source.files;
   const uploads = useUploads(taskId).filter((u) => u.image);
   const inputRef = useRef<HTMLInputElement>(null);
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
 
   const saved = useMemo(
-    () =>
-      taskId ? files.filter((f) => f.taskId === taskId && isImage(f)).sort((a, b) => a.createdAt - b.createdAt) : [],
+    () => (taskId ? files.filter(isImage).sort((a, b) => a.createdAt - b.createdAt) : []),
     [files, taskId],
   );
   const pendingImages = useMemo(() => (pending ?? []).filter(isImage), [pending]);
@@ -51,7 +60,7 @@ export function Gallery({ taskId, pending, onRemovePending, onAdd }: Props) {
     [saved, pendingImages, pendingUrls],
   );
 
-  if (!filesEnabled) return null;
+  if (!source.enabled) return null;
   const hasAny = shots.length + uploads.length > 0;
 
   /** Убрать картинку из сетки — с подтверждением; из просмотра переходим к соседней */
@@ -61,7 +70,7 @@ export function Gallery({ taskId, pending, onRemovePending, onAdd }: Props) {
     const next = shots[i + 1] ?? shots[i - 1];
     if (shot.key === openKey) setOpenKey(next && next.key !== shot.key ? next.key : null);
     try {
-      if (shot.kind === 'file') await removeFile(shot.file);
+      if (shot.kind === 'file') await source.remove(shot.file);
       else onRemovePending?.(shot.file);
     } catch (e) {
       alert('Не удалось удалить «' + shot.name + '»: ' + (e instanceof Error ? e.message : e));
@@ -89,7 +98,13 @@ export function Gallery({ taskId, pending, onRemovePending, onAdd }: Props) {
       {hasAny && (
         <div className={styles.galleryGrid}>
           {shots.map((shot) => (
-            <Thumb key={shot.key} shot={shot} onOpen={() => setOpenKey(shot.key)} onRemove={() => remove(shot)} />
+            <Thumb
+              key={shot.key}
+              shot={shot}
+              source={source}
+              onOpen={() => setOpenKey(shot.key)}
+              onRemove={() => remove(shot)}
+            />
           ))}
           {uploads.map((u) => (
             <div
@@ -128,6 +143,7 @@ export function Gallery({ taskId, pending, onRemovePending, onAdd }: Props) {
       {open >= 0 && (
         <Lightbox
           shots={shots}
+          source={source}
           index={open}
           onIndex={(i) => setOpenKey(shots[i]?.key ?? null)}
           onRemove={(shot) => remove(shot)}
@@ -139,26 +155,36 @@ export function Gallery({ taskId, pending, onRemovePending, onAdd }: Props) {
 }
 
 /** object URL сохранённой картинки; у картинки черновика свой URL, поэтому для неё f нет и url = null */
-function useImageUrl(f?: FileMeta) {
+function useImageUrl(source: FileSource, f?: TaskFile) {
   // Состояние помнит, для какого файла получен URL: при переходе к соседней картинке старый не показываем
   const [got, setGot] = useState<{ id: string; url?: string; failed?: boolean } | null>(null);
   useEffect(() => {
     if (!f) return;
     let alive = true;
-    fileUrl(f).then(
+    source.url(f).then(
       (u) => alive && setGot({ id: f.id, url: u }),
       () => alive && setGot({ id: f.id, failed: true }),
     );
     return () => {
       alive = false;
     };
-  }, [f]);
+  }, [f, source]);
   const own = f && got?.id === f.id ? got : null;
   return { url: own?.url ?? null, failed: Boolean(own?.failed) };
 }
 
-function Thumb({ shot, onOpen, onRemove }: { shot: Shot; onOpen: () => void; onRemove: () => void }) {
-  const { url: savedUrl, failed } = useImageUrl(shot.kind === 'file' ? shot.file : undefined);
+function Thumb({
+  shot,
+  source,
+  onOpen,
+  onRemove,
+}: {
+  shot: Shot;
+  source: FileSource;
+  onOpen: () => void;
+  onRemove: () => void;
+}) {
+  const { url: savedUrl, failed } = useImageUrl(source, shot.kind === 'file' ? shot.file : undefined);
   const url = shot.kind === 'pending' ? shot.url : savedUrl;
   return (
     <div className={styles.gThumb} title={shot.name}>
@@ -180,19 +206,21 @@ function Thumb({ shot, onOpen, onRemove }: { shot: Shot; onOpen: () => void; onR
 
 function Lightbox({
   shots,
+  source,
   index,
   onIndex,
   onRemove,
   onClose,
 }: {
   shots: Shot[];
+  source: FileSource;
   index: number;
   onIndex: (i: number) => void;
   onRemove: (shot: Shot) => void;
   onClose: () => void;
 }) {
   const shot = shots[index];
-  const { url: savedUrl } = useImageUrl(shot?.kind === 'file' ? shot.file : undefined);
+  const { url: savedUrl } = useImageUrl(source, shot?.kind === 'file' ? shot.file : undefined);
   const url = shot?.kind === 'pending' ? shot.url : savedUrl;
   const go = (d: number) => onIndex((index + d + shots.length) % shots.length);
 
@@ -233,7 +261,12 @@ function Lightbox({
           </span>
         </span>
         {shot.kind === 'file' ? (
-          <button className={styles.lbBtn} onClick={() => downloadFile(shot.file)} aria-label="Скачать" title="Скачать">
+          <button
+            className={styles.lbBtn}
+            onClick={() => source.download(shot.file)}
+            aria-label="Скачать"
+            title="Скачать"
+          >
             <Download size={18} />
           </button>
         ) : (

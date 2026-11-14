@@ -12,6 +12,7 @@ import { openLinks } from './dev-links.mjs';
 import { devLogRoutes } from './dev-log.mjs';
 import { HttpError } from './util.mjs';
 import { CHECKS_SCHEMA, openChecks, rejectUnknown } from './dev-checks.mjs';
+import { openDevFiles } from './dev-files.mjs';
 
 // node:sqlite в Node 22 печатает ExperimentalWarning на каждый запуск — глушим только его
 const emit = process.emitWarning;
@@ -146,6 +147,7 @@ const taskOut = (r, list) =>
     updatedAt: r.updated_at,
     doneAt: r.done_at,
     rev: r.rev,
+    ...(r.legacy && { legacy: r.legacy }),
     ...(r.notes !== undefined && { notes: r.notes, docs: r.docs, lastNoteAt: r.last_note }),
   };
 const noteOut = (r) => ({
@@ -170,7 +172,13 @@ const docOut = (r, full) =>
 
 // ---------------------------------------------------------------- база
 
-export function openDev(dataDir, { backupDays = 14 } = {}) {
+export function openDev(
+  dataDir,
+  {
+    backupDays = 14,
+    files: fileLimits = { maxFile: 50 * 1024 ** 2, maxTotal: 5 * 1024 ** 3, minFree: 1024 ** 3 },
+  } = {},
+) {
   fs.mkdirSync(dataDir, { recursive: true });
   const db = new DatabaseSync(path.join(dataDir, 'dev.db'));
   db.exec(SCHEMA);
@@ -213,6 +221,16 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
   };
 
   const checks = openChecks(db, tx);
+  const files = openDevFiles(db, dataDir, {
+    ...fileLimits,
+    note: (taskId, by, text) => {
+      const now = Date.now();
+      tx(() => {
+        q.addNote.run(taskId, by, 'note', text, now);
+        db.prepare('update tasks set updated_at = ? where id = ?').run(now, taskId);
+      });
+    },
+  });
   const taskView = (r) => taskOut(r, checks.view(r));
 
   const getTask = (id) => {
@@ -372,6 +390,7 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
       noteCount: q.noteCount.get(t.id).c,
       docs: q.taskDocs.all(t.id).map((d) => docOut(d)),
       links: links.forTask(t.id),
+      files: files.list(t.id),
     };
   }
 
@@ -555,6 +574,7 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
         const cur = getTask(id);
         checkRev(cur, Number(params.get('baseRev')), `Задача #${cur.id}`);
         db.prepare('delete from tasks where id = ?').run(cur.id);
+        files.sweep();
         console.log(`− dev #${cur.id} «${cur.title}» — ${by}`);
         return [200, { ok: true }];
       }
@@ -611,5 +631,5 @@ export function openDev(dataDir, { backupDays = 14 } = {}) {
     throw new HttpError(404, 'Нет такого адреса');
   }
 
-  return { route, close: () => db.close() };
+  return { route, files, getTask, close: () => db.close() };
 }

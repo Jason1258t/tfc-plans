@@ -40,6 +40,13 @@ is verified; a journal note alone marks nothing. Items are created with `dev_cre
 Search — `dev_find`; log pages — `dev_log`; small plan edits — `dev_doc_edit` and `dev_doc_append` instead of `dev_doc_put`
 with the whole text; a long plan — `dev_doc_get heading=…`.
 
+### Attachments
+
+Evidence that is a file — stand screenshots, logs, `verdict.json`, renders, reports — goes onto the task with
+`dev_file_put task=<id> path=<file|folder>` (a folder → one zip; `each=true` — file by file; up to 50 MB per file),
+not into the repo or a log note. `addon_stand … task=<id>` attaches its evidence itself. Read one — `dev_file_get`
+(ids are in `dev_get`). Attachments live on the pack server, the site shows them in the task card.
+
 ### Links
 
 Tie work together with refs `#175`, `#175.3`, `doc:12#Раздел`, `note:881` — the server finds them in texts itself (a ref
