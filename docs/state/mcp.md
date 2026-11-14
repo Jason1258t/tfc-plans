@@ -124,6 +124,9 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
 - **2026-11-02, dev links** (dev #194): refs in dev texts are indexed by temp triggers + a queue flushed on read, and all
   sources are re-indexed at startup; `dev_open`, `dev_link`, `dev_unlink`, `item` in `dev_note` / `dev_doc_put`, links in
   `dev_get`, clickable refs and a links block on `/dev` (`?ref=` in the page address).
+- **2026-11-14, players' reports on the pack server** (dev #360): `reports_list` and `report_get` read `GET /reports`
+  of the pack server (key from `tfc login` / `TFC_PACK_URL`+`TFC_PACK_TOKEN`) instead of Firestore; size and SHA256
+  checked, the local cache `~/.cache/tfc-plans/reports/<id>` is unchanged. No Firestore reads.
 - **2026-11-14, dev attachments on the pack server** (dev #357): `dev_get` lists attachments from the task response,
   `dev_file_get` caches in `~/.cache/tfc-plans/dev-files/<id>` (SHA256, zip unpacked, up to 6 images), new
   `dev_file_put` (file, folder → deterministic zip, `each`, `zip`); `addon_stand task=` attaches the evidence zip.

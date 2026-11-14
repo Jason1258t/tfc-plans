@@ -32,7 +32,10 @@
  *   GET    /site/addons?v=2         — аддоны: карточка + версии с jar (Firestore addonVersions); v=2 — и manual,  player
  *                                     beta=1 — и беты (2.7.0-beta.3): старые программы приняли бы их за последние
  *   POST   /site/reports            — отчёт tfc report (лог, краш, zip пачки): тело — байты, X-Report — JSON
- *                                     { name, kind, type, label, note, files, taskId } → в хранилище сайта  player
+ *                                     { name, kind, type, label, note, files, taskId } → lib/reports.mjs  player
+ *                                     (admin — ещё id, createdAt, author, sha256: перенос из Firestore)
+ *   GET    /reports?kind=           — отчёты, свежие сверху (CORS)       ключ любой роли или вход сайта
+ *   GET|DELETE /reports/:id, GET /reports/:id/content — отчёт, удалить, содержимое (как скачивание)
  *   GET    /neoforge/:version       — толстый установщик NeoForge: { file, sha256, size }  player
  *   POST   /admin/neoforge          — { version, file, sha256 }: установщик (блоб уже залит)  admin
  *   POST   /admin/addons            — { addon, version, file, sha256, size }: jar версии (блоб уже залит)
@@ -70,6 +73,7 @@ import { openSiteLogins } from './lib/site-login.mjs';
 import { openStore } from './lib/store.mjs';
 import { openNeoforge } from './lib/neoforge.mjs';
 import { openPrintChecks } from './lib/print-checks.mjs';
+import { openReports } from './lib/reports.mjs';
 import { openUpdates } from './lib/updates.mjs';
 import { HttpError, SHA256_RE } from './lib/util.mjs';
 
@@ -93,6 +97,10 @@ const dev = openDev(config.dataDir, {
     maxTotal: Number(env.DEV_FILES_MAX_BYTES ?? 5 * 1024 ** 3),
     minFree: config.minFreeBytes,
   },
+});
+const reports = openReports(config.dataDir, {
+  maxTotal: Number(env.REPORTS_MAX_BYTES ?? 5 * 1024 ** 3),
+  minFree: config.minFreeBytes,
 });
 /** Страница «Разработка» сайта: откуда пускать (CORS) и чей вход принимать */
 const devSite = {
@@ -689,7 +697,7 @@ async function handle(req, res) {
     return json(res, 201, await site.publishSchematic(await readRawBody(req, 10 * 1024 ** 2), meta, who));
   }
 
-  // --- отчёты tfc report → хранилище файлов сайта
+  // --- отчёты tfc report → lib/reports.mjs (dev #360; раньше — Firestore files)
   if (route === 'POST /site/reports' && parts.length === 2) {
     const who = await authorize(req, 'player');
     let meta;
@@ -698,9 +706,60 @@ async function handle(req, res) {
     } catch {
       throw new HttpError(400, 'X-Report — JSON с описанием отчёта (encodeURIComponent)');
     }
-    const r = await site.uploadReport(await readRawBody(req, 26 * 1024 ** 2), meta, who.name);
-    console.log(`+ отчёт ${r.id} ${r.type} ${r.name} ${r.size} Б — ${who.name}`);
-    return json(res, 201, r);
+    const { report: r, existed } = await reports.put(await readRawBody(req, 26 * 1024 ** 2), meta, who.name, {
+      admin: who.role === 'admin',
+    });
+    if (!existed) console.log(`+ отчёт ${r.id} ${r.report.type} ${r.name} ${r.size} Б — ${who.name}`);
+    // chunks — старые tfc печатали число частей Firestore
+    return json(res, existed ? 200 : 201, {
+      id: r.id,
+      name: r.name,
+      size: r.size,
+      chunks: 1,
+      kind: r.report.kind,
+      type: r.report.type,
+      author: r.author,
+      existed,
+    });
+  }
+
+  // --- отчёты: список и файлы для сайта («Разработка» → «Краш-репорты»/«Логи») и MCP report_get
+  if (parts[0] === 'reports') {
+    devCors(req, res);
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      return res.end();
+    }
+    const who = await authorizeDev(req);
+    const [, id, sub, more] = parts.map(decodeURIComponent);
+    if (!id && req.method === 'GET') {
+      const kind = url.searchParams.get('kind');
+      return json(res, 200, { reports: reports.list(kind === 'crash' || kind === 'log' ? kind : null) });
+    }
+    if (id && !sub && req.method === 'GET') return json(res, 200, { report: reports.get(id) });
+    if (id && !sub && req.method === 'DELETE') {
+      const r = reports.remove(id);
+      console.log(`− отчёт ${r.id} «${r.name}» — ${who.name}`);
+      return json(res, 200, { ok: true, report: r });
+    }
+    if (id && sub === 'content' && !more && (req.method === 'GET' || req.method === 'HEAD')) {
+      const r = reports.get(id);
+      res.writeHead(200, {
+        'Content-Type': 'application/octet-stream',
+        'Content-Length': r.size,
+        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(r.name)}`,
+        'Content-Security-Policy': 'sandbox',
+        'X-Content-Type-Options': 'nosniff',
+        'Cache-Control': 'private, max-age=31536000, immutable',
+        ETag: `"${r.sha256}"`,
+      });
+      if (req.method === 'HEAD') return res.end();
+      return fs
+        .createReadStream(reports.path(id))
+        .on('error', () => res.destroy())
+        .pipe(res);
+    }
+    throw new HttpError(404, 'Нет такого адреса');
   }
 
   // --- контент сайта для tfc pull (Firestore — сервисным ключом, с кешем)
