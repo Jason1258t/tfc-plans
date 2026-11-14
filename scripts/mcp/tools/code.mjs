@@ -988,7 +988,7 @@ function decompiler() {
   return found.at(-1)?.f ?? null;
 }
 
-function javaBin() {
+export function javaBin() {
   const base = path.join(os.homedir(), '.gradle', 'local-tools', 'jdk21');
   for (const p of [
     path.join(base, 'Contents', 'Home', 'bin', 'java'), // macOS
