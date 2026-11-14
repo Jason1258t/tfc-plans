@@ -102,6 +102,8 @@ The server sends a short version of this to agents as its instructions.
 - Mod code: `decompile method=` to read; `bytecode` instead of `javap` in a shell — method outline, any jar or classes
   folder on disk (addon `libs/`, `build/classes`, `.mixin.out`), `diff` of two mod versions.
 - Crash / "what broke" → start with `log_analyze`.
+- How an Electroenergetics circuit behaves (LC, filters, sources, diodes, energy growth) → `ee_circuit`, not a
+  hand-written Java program or the stand.
 - A mod not in the pack (integration analysis) → `candidate_get`, then jar tools with `jar=candidate:<file>`.
 - Editing addon resources → `resources_check` + `model_render`. Developing an addon (new addon, block, mixin) → skill
   `addon-dev`; releasing an addon to the site → skill `addon-release` (`addon_check`). An addon's devtest scene in the
@@ -128,7 +130,7 @@ The server sends a short version of this to agents as its instructions.
 
 ## Tools
 
-85 in total. Asterisk — required parameter. Lists have `limit` and `offset`; the answer says «дальше: offset=…».
+86 in total. Asterisk — required parameter. Lists have `limit` and `offset`; the answer says «дальше: offset=…».
 
 Regex queries (`query` of `log_analyze`, `regex=true` in searches, `grep`, `members`) are case-insensitive; leading
 Java/PCRE flags (`(?i)…`, `(?s)…`) are accepted. Non-regex search understands «`a|b`» — any of.
@@ -504,6 +506,31 @@ Projection — the same `packages/core/src/projection.ts` as the site. Climate r
 The world seed picks the exact rock, so `map_rocks` gives options, not an answer. The mod data has no country borders:
 a region is named by the nearest city. Climate and rocks not compared with the game.
 
+### Electric circuits: Create: Electroenergetics (`tools/ee.mjs`, dev #355)
+
+| Tool                                                                      | Does                                                                                                                                                                                        |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ee_circuit(circuit*, n, seconds, measure_from, probes, ground, samples)` | run an EE circuit outside the game on the mod's own classes: per-probe end/min/max/amplitude/mean/RMS/frequency over the measure window, L+C energy (growth without sources, decay), series |
+
+How it is faithful: elements are the mod's `ElectricalProperties`, `InductorProperties`, `CapacitorProperties`,
+`DiodeProperties`; solvers — its `SparseMatrix` + `CholeskySolver` (`LUSolver` when an ideal source `E` is present). Matrix
+assembly repeats `Network.formMatrix`, the micro-step order — `SimulationTicker.tick` (`tick()` of every micro-ticker →
+matrix → solve → `afterTick()`), a fresh voltage array per tick; an ungrounded network gets 1000 S on one node like
+`CircuitBuilder.dfsAndGround` (in game the block picks the node). Not repeated: topology optimisation (series resistors,
+star→delta — rounding only), transformers (`CoupledProperties`) and other device classes (alternators, accumulators).
+
+Circuit syntax — one element per line or «;»: `[name:] TYPE a b value [key=val]`. `R` ohm; `L` henry (`i0`, `r` — series
+resistance via an internal node; the EE inductor block is `L … r=0.1`, as `InductorDevice.preTick`); `C` farad (`v0`,
+`r=0.1` for the block); `D anode cathode`; `V` EMF a−b, Thevenin (`r`, default 1 Ω); `E` ideal voltage source; `I` amps
+from a through the source into b. Sources: `sin=<Hz> phase=<deg> offset=…`, `hold=tick` keeps the value for the whole
+tick as blocks set it in `preTick` (default `micro` — per micro-step). SI suffixes `p n u m k M meg`. Node `gnd` is
+grounded unless `ground=` names others. `n` defaults to 8 — the pack's `simulation.microTicks`.
+
+Classpath: the EE jar from the snapshot cache + the newest stand's NeoForge libraries
+(`~/.cache/tfc-plans/stand/neoforge-*/libraries`: fastutil, and for the diode — the Minecraft server jar with everything
+`net.minecraft.util.Mth` pulls in). Without the stand — fastutil from the Gradle cache, no diode. A 3200-step LC run takes
+~20 ms plus ~0.7 s JVM start and compilation.
+
 ### Reference guides
 
 | Tool                                                        | Does                                                                 |
@@ -720,7 +747,8 @@ scripts/mcp/
                       schematics: read, render, upload/edit), printcheck (schematic_print_check, harness ../print-check.kubejs.js), map (+map-climate,
                       map-png — PNG read/write), resources (model_render, texture_get, resources_check), addons
                       (addons_list, addon_check, addon_versions, addon_version_get/put), candidates (candidate_get),
-                      reports (reports_list, report_get — players' logs/crashes from the site, analysed by logs.mjs)
+                      reports (reports_list, report_get — players' logs/crashes from the site, analysed by logs.mjs),
+                      ee (ee_circuit; the solver itself — ../ee/EeCircuit.java, run as `java <file>.java`)
 ```
 
 Data merging repeats the site (`src/shared/pack-data` — `items.ts`, `recipes.ts`, `tags.ts`; `src/lib/reference.ts`,
