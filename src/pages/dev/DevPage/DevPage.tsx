@@ -2,7 +2,6 @@ import { parseRef } from '@tfc/pack-server/dev-refs';
 import { GitBranch, MessageSquare, Plus, Search as SearchIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useFiles } from '@/entities/file';
 import { firebaseEnabled, useSearchTrack } from '@/shared/api';
 import { cx, timeAgo } from '@/shared/lib';
 import { Button, ErrorBox, Search, Segmented, Select, Tag } from '@/shared/ui';
@@ -47,15 +46,13 @@ export function DevPage() {
   const [area, setArea] = useState('');
   const [query, setQuery] = useState('');
 
-  const { items: reportFiles } = useFiles();
-  const reportKind = reportFiles.find((f) => f.id === params.get('report'))?.report?.kind;
+  // Список файлов Firestore (отчёты игроков) подписывается только во вкладках отчётов, не у задач
   const section =
-    reportKind ??
-    (params.get('section') === 'log'
+    params.get('section') === 'log'
       ? 'log'
       : params.get('section') === 'crash' || params.has('report')
         ? 'crash'
-        : 'tasks');
+        : 'tasks';
   const open = params.get('task');
   const setOpen = (id: number | 'new' | null) =>
     setParams(
@@ -185,7 +182,19 @@ export function DevPage() {
         ]}
       />
       {section !== 'tasks' ? (
-        <DevReports kind={section} focusId={params.get('report')} />
+        <DevReports
+          kind={section}
+          focusId={params.get('report')}
+          onKind={(k) =>
+            setParams(
+              (p) => {
+                p.set('section', k);
+                return p;
+              },
+              { replace: true },
+            )
+          }
+        />
       ) : (
         <>
           <p className={styles.hint} role="status">

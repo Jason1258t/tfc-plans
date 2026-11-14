@@ -1,9 +1,8 @@
 import { FileText, Plus, Trash2 } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toggleTaskLine } from '@/components/Markdown';
 import { MarkdownField } from '@/components/MarkdownField';
 import { Attachments, Gallery, useFileIntake } from '@/features/task-files';
-import { filesEnabled, removeFile, useFiles } from '@/entities/file';
 import { startUpload, useUploads } from '@/lib/uploads';
 import { useNick } from '@/entities/user';
 import { cx, timeAgo } from '@/shared/lib';
@@ -27,6 +26,7 @@ import { DevProgress } from '../DevProgress';
 import { CopyRef } from '../CopyRef';
 import { DevLinks, brokenRefs } from '../DevLinks';
 import { DevMarkdown } from '../DevMarkdown';
+import { DEV_FILE_MAX, devFileSource, uploadDevFile } from '../../model/files';
 import styles from './DevTaskDialog.module.css';
 
 interface Props {
@@ -100,14 +100,24 @@ export function DevTaskDialog({ id, focus, onOpenRef, onClose, onSaved, onDelete
   const [newItem, setNewItem] = useState('');
   const [showCompleted, setShowCompleted] = useState(false);
   const [pending, setPending] = useState<File[]>([]);
-  // Числовые id dev-задач отделены от id задач игроков в общем хранилище файлов.
+  // Ключ загрузок в процессе (lib/uploads); сами вложения — на сервере сборки, model/files.ts
   const fileTaskId = id === null ? undefined : `dev:${id}`;
-  const files = useFiles();
   const uploads = useUploads(fileTaskId);
+  /** Перечитать только вложения: правки полей в черновике не трогаем */
+  const refreshFiles = useCallback(async (tid: number) => {
+    const f = await devApi.get(tid);
+    setFull((cur) => (cur && cur.task.id === tid ? { ...cur, files: f.files } : cur));
+  }, []);
+  const uploader = (tid: number) => (file: File, onProgress: (f: number) => void) =>
+    uploadDevFile(tid, file, nick, onProgress).then(() => refreshFiles(tid));
+  const fileSource = useMemo(
+    () => devFileSource(full?.files ?? [], nick, () => id !== null && void refreshFiles(id)),
+    [full?.files, nick, id, refreshFiles],
+  );
   const intake = useFileIntake(
-    fileTaskId
-      ? { taskId: fileTaskId, author: nick }
-      : { addPending: (list) => setPending((cur) => [...cur, ...list]) },
+    id !== null
+      ? { taskId: `dev:${id}`, author: nick, upload: uploader(id), maxSize: DEV_FILE_MAX }
+      : { addPending: (list) => setPending((cur) => [...cur, ...list]), maxSize: DEV_FILE_MAX },
   );
   const removePending = (file: File) => setPending((cur) => cur.filter((f) => f !== file));
 
@@ -177,7 +187,7 @@ export function DevTaskDialog({ id, focus, onOpenRef, onClose, onSaved, onDelete
         setFull(f);
         setDraft(pick(f.task));
         setEditBody(false);
-        pending.forEach((file) => startUpload(file, `dev:${f.task.id}`, nick));
+        pending.forEach((file) => startUpload(file, `dev:${f.task.id}`, nick, uploader(f.task.id)));
         setPending([]);
         onSaved(f.task, true);
         return;
@@ -203,9 +213,8 @@ export function DevTaskDialog({ id, focus, onOpenRef, onClose, onSaved, onDelete
   const remove = () =>
     run(async () => {
       if (!full || !confirm(`Удалить задачу #${full.task.id} вместе с журналом? Это не отменить.`)) return;
-      if (files.loading || files.error || uploads.length)
-        throw new Error('Дождитесь загрузки списка файлов и завершения отправки вложений перед удалением.');
-      for (const file of files.items.filter((f) => f.taskId === fileTaskId)) await removeFile(file);
+      if (uploads.length) throw new Error('Дождитесь завершения отправки вложений перед удалением.');
+      // Вложения сервер удаляет вместе с задачей
       await devApi.remove(full.task.id, full.task.rev);
       onDeleted(full.task.id);
     });
@@ -477,21 +486,26 @@ export function DevTaskDialog({ id, focus, onOpenRef, onClose, onSaved, onDelete
           <section>
             <h3>Вложения и скриншоты</h3>
             <div className={styles.files}>
-              <Gallery taskId={fileTaskId} pending={pending} onRemovePending={removePending} onAdd={intake.add} />
+              <Gallery
+                taskId={fileTaskId}
+                source={fileSource}
+                pending={pending}
+                onRemovePending={removePending}
+                onAdd={intake.add}
+              />
               <Attachments
                 taskId={fileTaskId}
+                source={fileSource}
                 pending={pending}
                 onRemovePending={removePending}
                 onAdd={intake.add}
                 error={intake.error}
               />
-              {files.error && <ErrorBox>{files.error}</ErrorBox>}
-              {filesEnabled && (
-                <p className={styles.muted}>
-                  Скриншот можно вставить через Ctrl+V.{' '}
-                  {id === null ? 'Файлы загрузятся после создания задачи.' : 'Вложения сохраняются сразу.'}
-                </p>
-              )}
+              <p className={styles.muted}>
+                Скриншот можно вставить через Ctrl+V.{' '}
+                {id === null ? 'Файлы загрузятся после создания задачи.' : 'Вложения сохраняются сразу.'} Агенты
+                прикладывают файлы через MCP dev_file_put.
+              </p>
             </div>
           </section>
 

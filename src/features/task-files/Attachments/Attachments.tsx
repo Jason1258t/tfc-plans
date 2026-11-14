@@ -1,12 +1,12 @@
 import { Download, Paperclip, Trash2, X } from 'lucide-react';
 import { Button, ErrorBox, Progress } from '@/shared/ui';
 import { useRef, useState } from 'react';
-import { useFiles } from '@/entities/file';
-import { downloadFile, filesEnabled, formatSize, MAX_FILE_SIZE, removeFile, type FileMeta } from '@/entities/file';
+import { formatSize } from '@/entities/file';
 import { dismissUpload, isImage, useUploads } from '@/lib/uploads';
 import { cx, timeAgo } from '@/shared/lib';
 import styles from './Attachments.module.css';
 import { FileBadge } from '@/components/FileBadge';
+import { useStoreSource, type FileSource, type TaskFile } from '../source';
 
 interface Props {
   /** Существующая задача; без него — черновик новой задачи */
@@ -17,20 +17,27 @@ interface Props {
   /** Добавить файлы (картинки уйдут в галерею, остальное — сюда) */
   onAdd: (files: File[]) => void;
   error?: string | null;
+  /** Своё хранилище; без него — общее хранилище файлов сайта */
+  source?: FileSource;
 }
 
 /** Список вложений, кроме картинок — те показываются галереей */
-export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: Props) {
-  const { items: files } = useFiles();
+export function Attachments(props: Props) {
+  return props.source ? <AttachmentsView {...props} source={props.source} /> : <StoreAttachments {...props} />;
+}
+
+function StoreAttachments(props: Props) {
+  return <AttachmentsView {...props} source={useStoreSource(props.taskId)} />;
+}
+
+function AttachmentsView({ taskId, pending, onRemovePending, onAdd, error, source }: Props & { source: FileSource }) {
   const uploads = useUploads(taskId).filter((u) => !u.image);
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [ownError, setOwnError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const attached = taskId
-    ? files.filter((f) => f.taskId === taskId && !isImage(f)).sort((a, b) => a.createdAt - b.createdAt)
-    : [];
+  const attached = taskId ? source.files.filter((f) => !isImage(f)).sort((a, b) => a.createdAt - b.createdAt) : [];
   const pendingFiles = (pending ?? []).filter((f) => !isImage(f));
 
   const run = async (id: string, fn: () => Promise<void>) => {
@@ -45,9 +52,9 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
     }
   };
 
-  const remove = (f: FileMeta) => confirm(`Удалить файл «${f.name}»?`) && run(f.id, () => removeFile(f));
+  const remove = (f: TaskFile) => confirm(`Удалить файл «${f.name}»?`) && run(f.id, () => source.remove(f));
 
-  if (!filesEnabled) return <div className="faint small">Вложения доступны, когда подключён Firebase.</div>;
+  if (!source.enabled) return <div className="faint small">Вложения доступны, когда подключён Firebase.</div>;
 
   const empty = !attached.length && !uploads.length && !pendingFiles.length;
   const shownError = error ?? ownError;
@@ -76,7 +83,7 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
                 compact
                 name={f.name}
                 type={f.type}
-                onOpen={() => run(f.id, () => downloadFile(f))}
+                onOpen={() => run(f.id, () => source.download(f))}
                 disabled={busyId === f.id}
               />
               <span className={cx('faint', 'small', styles.attachMeta)}>
@@ -86,7 +93,7 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
                 variant="ghost"
                 size="sm"
                 icon
-                onClick={() => run(f.id, () => downloadFile(f))}
+                onClick={() => run(f.id, () => source.download(f))}
                 disabled={busyId === f.id}
                 aria-label={`Скачать ${f.name}`}
                 title="Скачать"
@@ -149,7 +156,7 @@ export function Attachments({ taskId, pending, onRemovePending, onAdd, error }: 
       <button type="button" className={styles.attachDrop} onClick={() => inputRef.current?.click()}>
         <Paperclip size={15} />
         {dragging ? 'Отпустите, чтобы прикрепить' : 'Прикрепить файл или перетащить сюда'}
-        <span className="faint small">до {formatSize(MAX_FILE_SIZE)}</span>
+        <span className="faint small">до {formatSize(source.maxSize)}</span>
       </button>
       <input
         ref={inputRef}

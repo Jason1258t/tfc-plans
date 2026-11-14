@@ -33,13 +33,16 @@ export async function prepareFile(file: File): Promise<File> {
 }
 
 /** Проверка размера; возвращает подходящие файлы и текст ошибки про остальные */
-export function validateFiles(files: File[]): { ok: File[]; error: string | null } {
-  const tooBig = files.filter((f) => f.size > MAX_FILE_SIZE);
+export function validateFiles(files: File[], maxSize = MAX_FILE_SIZE): { ok: File[]; error: string | null } {
+  const tooBig = files.filter((f) => f.size > maxSize);
   return {
-    ok: files.filter((f) => f.size <= MAX_FILE_SIZE),
-    error: tooBig.length ? `Больше ${formatSize(MAX_FILE_SIZE)}: ${tooBig.map((f) => f.name).join(', ')}` : null,
+    ok: files.filter((f) => f.size <= maxSize),
+    error: tooBig.length ? `Больше ${formatSize(maxSize)}: ${tooBig.map((f) => f.name).join(', ')}` : null,
   };
 }
+
+/** Куда грузить: по умолчанию — общее хранилище файлов сайта; у задач разработки — сервер сборки */
+export type Uploader = (file: File, onProgress: (fraction: number) => void) => Promise<unknown>;
 
 // ---------------------------------------------------------------- загрузки в процессе
 
@@ -63,7 +66,7 @@ const patch = (key: string, p: Partial<UploadItem>) => {
 };
 
 /** Загружает уже подготовленный файл; прогресс виден всем компонентам через useUploads */
-export function startUpload(file: File, taskId: string, author: string) {
+export function startUpload(file: File, taskId: string, author: string, upload?: Uploader) {
   const key = `${Date.now()}-${Math.random()}`;
   const image = isImage(file);
   items = [
@@ -71,7 +74,8 @@ export function startUpload(file: File, taskId: string, author: string) {
     { key, taskId, name: file.name, image, preview: image ? URL.createObjectURL(file) : undefined, progress: 0 },
   ];
   emit();
-  uploadFile(file, { taskId, author }, (progress) => patch(key, { progress })).then(
+  const onProgress = (progress: number) => patch(key, { progress });
+  (upload ? upload(file, onProgress) : uploadFile(file, { taskId, author }, onProgress)).then(
     () => dismissUpload(key),
     (e) => patch(key, { error: e instanceof Error ? e.message : String(e) }),
   );
