@@ -585,7 +585,7 @@ the game closes itself. Frames go to `screenshots/scene-<name>-<shot>.png`.
   `--settle`/shots, takes `scene-<name>*` in-game shots by itself, and the summary gets «Сцена <name>: проверок OK n,
   FAIL m» plus every non-OK `SCENE` line; `ok` = `SCENE END PASS` and no crash report.
 - **One devtest jar per run**: each carries its own copy of `tfc.stand.scene` (two would split the package).
-- Build the jar: `./libs.sh` once, then `./gradlew devtestJar` in the addon (JDK 21–23; Gradle 8 fails on JDK 26 with
+- Usual path — `addon_stand` (below, «Addon scene acceptance»): builds, checks, freezes and judges. By hand: build the jar: `./libs.sh` once, then `./gradlew devtestJar` in the addon (JDK 21–23; Gradle 8 fails on JDK 26 with
   «Unsupported class file major version 70» — set `JAVA_HOME`). Example:
 
   ```
@@ -596,6 +596,39 @@ the game closes itself. Frames go to `screenshots/scene-<name>-<shot>.png`.
 
   Scenes so far: `flywheel-wires` (ee-extras `FlywheelWireTest`, dev #329), `destroy-extras` (destroy-extras
   `ClientTest`; also its `test-client.sh` dev run, which runs it when no scene is requested).
+
+## Addon scene acceptance (dev #311)
+
+One call for what agents of #301 did by hand around every client scene: `scripts/addon-stand.mjs`
+(`npm run addon-stand -- run|result|scenes`, MCP `tfc-pack` `addon_stand`).
+
+- **run** `addon=<path|name> scene=<name>`: `libs.sh` when `libs/` is empty, `libs=true` or `env` is given (`DESTROY=1`
+  — merged with the scene's `env` from `stand.json`); then **one** Gradle call `./gradlew jar devtestJar` with
+  `javaHome()` (JDK 21) — Gradle compiles everything before packing (a hand-zipped classes folder next to a running
+  Gradle once gave a devtest jar without `Power.class`). Addons without a `devtestJar` task are refused with the
+  example to copy (`ee-extras-mod/build.gradle`).
+- **Jar check** before the stand is touched: every `.class` in `build/classes/java/main|devtest` is in its jar and the
+  jar has nothing else; no package in both jars (split package); both have a manifest and `neoforge.mods.toml`; the main
+  modId equals `addon.json` `id`, the devtest one differs; `tfc/stand/scene/Scene.class` only in devtest; classes listed
+  in `stand.json` are there; the scene is found in devtest sources (`new Scene("…")`, `Scene.requested("…")`) or
+  declared. Failure → nothing is queued.
+- **Freeze**: both jars copied to `~/.cache/tfc-plans/addon-stand/<scene>-<time>/` with the first 8 SHA256 chars in
+  the name (so the stand summary line «свои: …» proves which bytes ran) + `candidate.json` (paths, SHA256, addon git
+  commit and dirty count, `released=false`, `runtimeChecked`, job id, task).
+- **Job**: client queue job with both frozen jars, `--exclude` of the snapshot copy (prefix from the card's `jar`),
+  `--scene`, `timeout` (1500 s or the scene's). Returns the job id; `wait=N` judges in the same call.
+- **result** `job=<id>`: waits (long-poll) and judges: job ended without error, `SCENE END PASS <scene>`, no crash
+  report, both frozen file names in «свои:», no unexpected fail line (`SCENE FAIL`, `<X>CLIENT … FAIL` — old
+  `EECLIENT FAIL` style, `ASSERTFAIL`, scene `failOn`), every scene `expectFail` regex matched (negative controls must
+  fail), at least one `SCENE SHOT` and each came back as a PNG whose luminance spread is not flat (an empty/black frame
+  fails; byte-identical frames are noted), scene `shots` present. Writes `verdict.json` and `evidence/` (summary,
+  `latest.log`, `client.log`, frames) next to the frozen jars; `task=<dev id>` (or the one given to run) adds a work-log
+  note with verdict, SHA256 and the folder.
+- **`tools/<mod>/stand.json`** (optional): `{ "scenes": { "<name>": { "note", "timeout", "env", "classes",
+"shots", "expectFail", "failOn" } } }`. Without it the scene still runs with defaults.
+- Not covered (ideas from #301 notes, separate work): chained server-save → restart → client runs with the saved world
+  as a queue artifact; full RCON results as an artifact; board-specific measurement profiles. Uploading evidence as a
+  dev-task attachment needs a write path to Firestore `files` (only reading exists, `dev_file_get`).
 
 ## Remote Minecraft client stand (dev #279, manual)
 

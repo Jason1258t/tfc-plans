@@ -44,6 +44,7 @@
     "stand": "node scripts/pack-stand.mjs",
     "client-stand": "node scripts/client-stand-remote.mjs",
     "stand-queue": "node scripts/stand-queue-remote.mjs",
+    "addon-stand": "node scripts/addon-stand.mjs",
     "pack:publish": "node scripts/publish-data.mjs",
     "mcp": "node scripts/mcp-call.mjs",
     "tfc": "node cli/tfc.mjs",

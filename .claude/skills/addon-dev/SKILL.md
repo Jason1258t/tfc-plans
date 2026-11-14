@@ -90,6 +90,12 @@ and command, jar names in `release.sh`.
   source/load) and print measured numbers — energy/heat/stress/rpm per tick, against what the formula says. Test the
   edge cases: no dependency (`NO_<MOD>=1`), restart with `KEEP=1`, old world migration (`OLD_JAR=…`), every orientation.
   Make the check fail once on purpose to prove it catches something.
+- Client side in the full pack (models, GUI, JEI/EMI, renders): a devtest scene on `tools/stand-scene`
+  (docs/state/infra.md «Scene scaffold»; addon needs a `devtestJar` task), then `addon_stand addon=<path to the mod in
+your worktree> scene=<name>` → `addon_stand job=<id> task=<dev id>`. It builds both jars with Gradle, checks them,
+  freezes them with SHA256 and accepts only a clean `SCENE END PASS` with real frames; never zip devtest classes by
+  hand. Negative controls and must-have frames go into `tools/<mod>/stand.json` (`expectFail`, `shots`). Look at the
+  frames yourself too: a PASS proves the checks, not that the picture shows the right thing.
 - Mixins: confirm they apply (`-Dmixin.debug.export=true`, log line); client-only mixins can't be checked on the
   server — say so.
 - `log_analyze path=run/logs/latest.log` for errors.
