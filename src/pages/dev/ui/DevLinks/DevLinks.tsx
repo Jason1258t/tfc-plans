@@ -70,8 +70,8 @@ export function DevLinks({
   };
 
   return (
-    <section>
-      <h3>Связи</h3>
+    <details>
+      <summary>Связи · {links.length}</summary>
       {error && <ErrorBox>{error}</ErrorBox>}
       {links.length ? (
         <ul className={styles.list}>
@@ -113,6 +113,6 @@ export function DevLinks({
           <Link2 size={14} /> Связать
         </Button>
       </form>
-    </section>
+    </details>
   );
 }
