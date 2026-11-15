@@ -3,6 +3,7 @@ import {
   ArrowRight,
   BookOpen,
   Boxes,
+  FlaskConical,
   Globe2,
   Package,
   ScrollText,
@@ -94,6 +95,15 @@ const TABS: { id: Tab; label: string; description: string; icon: LucideIcon }[] 
     label: 'Гайды',
     description: 'Статьи по энергии, логистике, добыче, мультиблокам, химии и TFC Studio.',
     icon: BookOpen,
+  },
+];
+const REFERENCE_CARDS = [
+  ...TABS.map((section) => ({ ...section, href: `/reference?tab=${section.id}` })),
+  {
+    label: 'Химия',
+    description: 'Чан Destroy, электролиз, кислоты и полимеры.',
+    icon: FlaskConical,
+    href: '/reference?tab=guides&sub=chemistry',
   },
 ];
 const MB_SUBS: MultiblockSub[] = ['build', 'materials', 'work'];
@@ -281,8 +291,8 @@ function Reference() {
 function ReferenceHome() {
   return (
     <nav className={styles.sectionGrid} aria-label="Разделы справочника">
-      {TABS.map((section) => (
-        <Link key={section.id} to={`/reference?tab=${section.id}`} className={styles.sectionCard}>
+      {REFERENCE_CARDS.map((section) => (
+        <Link key={section.href} to={section.href} className={styles.sectionCard}>
           <span className={styles.sectionIcon} aria-hidden>
             <section.icon size={22} strokeWidth={1.6} />
           </span>

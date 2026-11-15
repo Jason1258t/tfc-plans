@@ -721,6 +721,8 @@ fertiliser blocks, calendar with month labels. `.class` parsing — `scripts/mod
 
 ## Guides
 
+- 2026-11-15 (dev #366): the reference home has a «Химия» tile linking directly to the chemistry section of «Гайды».
+
 - 2026-11-15 (dev #365): Firestore guide `chem-vat` covers unpowered reactions, the controller screen, Create pump
   plumbing, liquid and gas outlets, item transfer, temperature, pressure and vent controls. The controls were checked
   in the pack's Destroy 0.4.6-eligibbs jar.
