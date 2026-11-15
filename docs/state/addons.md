@@ -232,6 +232,14 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-15 (dev #315, PCB prototype): each logic input retains its 1 GΩ load through two resistors
+and a private node. Electro Energetics 1.1.2 stores one branch per node pair, so the old direct input
+branch could replace the lower half of a potentiometer. The original build reads 4.999908 V with the
+register stamped after the potentiometer. The fixed build reads 2.499835–2.499940 V across both orders
+and four chip types (D flip-flop, counter, register, decoder), with two chips on each shared input
+and the same readings after a fresh server process. Loaded outputs at 1 kΩ and the register power
+cycle were also checked. Fix commit `fb01f99` in the `feat/pcb-modules` prototype branch.
+
 2026-11-09 (dev #301.19, unreleased): **L2 optocoupler**, 3×3 cells / five pins, real
 EE diode and 1 kΩ input, 2 mA on / 1 mA off hysteresis, 10 mA nominal limit. Independent
 3–6 V output with a passive 100 Ω / 10 kΩ divider and 100 Ω driver, 5 mA nominal load.
