@@ -187,6 +187,9 @@ exhaustively checked.
 - 2026-10-26: бейдж типа версии на странице «Свежесть» переведён на `Tag`, глобальное переопределение снято; `freshness` desktop/mobile — 0,000%. Осталось 2 прямых употребления `.tag`.
 - 2026-10-26: метка типа рецепта в каталоге переведена на `Tag`, responsive-правило стало локальным; desktop/mobile — 0,000%. Остался один `.tag` в списке блоков схем.
 - 2026-10-26: бейдж мода в списке замен схем переведён на `Tag`; открытая схема с заменами — desktop/mobile 0,000%. Разметка `.tag` нулевая, глобальное правило удалено; статус `в работе` переведён на локальный селектор, `:global(.tag)` не осталось. Одноимённые `.tag` в MealsTab остаются локальными CSS Modules.
+- 2026-11-15 (#376): development task cards can upload a ZIP as a report and link to
+  `/dev/tasks/:task/reports/:file`. The `.report.zip` suffix identifies the attachment. The site reads original paths,
+  an image gallery and read-only text/code from the archive in the browser. Binary files can be downloaded individually.
 - 2026-11-14 (#360): `/dev` → «Краш-репорты»/«Логи» read players' reports from the pack server
   (`pages/dev/model/reports.ts`: list on mount and on focus, download with size check, delete) — `/dev` no longer
   subscribes to Firestore `files` at all. «Документы» still hides legacy report docs (`report.kind`) until they are purged.

@@ -52,7 +52,7 @@ export async function uploadDevFile(task: number, file: File, by: string, onProg
 const blobs = new Map<string, Promise<Blob>>();
 const urls = new Map<string, Promise<string>>();
 
-function read(f: TaskFile & { sha256?: string }): Promise<Blob> {
+export function readDevFile(f: TaskFile & { sha256?: string }): Promise<Blob> {
   let p = blobs.get(f.id);
   if (!p) {
     p = (async () => {
@@ -75,15 +75,15 @@ function read(f: TaskFile & { sha256?: string }): Promise<Blob> {
 function url(f: TaskFile): Promise<string> {
   let p = urls.get(f.id);
   if (!p) {
-    p = read(f).then((b) => URL.createObjectURL(b));
+    p = readDevFile(f).then((b) => URL.createObjectURL(b));
     p.catch(() => urls.delete(f.id));
     urls.set(f.id, p);
   }
   return p;
 }
 
-async function download(f: TaskFile) {
-  const u = URL.createObjectURL(await read(f));
+export async function downloadDevFile(f: TaskFile) {
+  const u = URL.createObjectURL(await readDevFile(f));
   const a = document.createElement('a');
   a.href = u;
   a.download = f.name;
@@ -114,7 +114,7 @@ export function devFileSource(files: DevFile[], by: string, onChanged: () => voi
     files,
     maxSize: DEV_FILE_MAX,
     url,
-    download,
+    download: downloadDevFile,
     remove: (f) => remove(f, by).then(onChanged),
   };
 }

@@ -1,5 +1,6 @@
-import { FileText, Plus, Trash2 } from 'lucide-react';
+import { Archive, FileText, Plus, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { toggleTaskLine } from '@/components/Markdown';
 import { MarkdownField } from '@/components/MarkdownField';
 import { Attachments, Gallery, useFileIntake } from '@/features/task-files';
@@ -27,6 +28,7 @@ import { CopyRef } from '../CopyRef';
 import { DevLinks, brokenRefs } from '../DevLinks';
 import { DevMarkdown } from '../DevMarkdown';
 import { DEV_FILE_MAX, devFileSource, uploadDevFile } from '../../model/files';
+import { isDevReport, reportTitle } from '../../model/reportArchive';
 import styles from './DevTaskDialog.module.css';
 
 interface Props {
@@ -103,6 +105,7 @@ export function DevTaskDialog({ id, focus, onOpenRef, onClose, onSaved, onDelete
   // Ключ загрузок в процессе (lib/uploads); сами вложения — на сервере сборки, model/files.ts
   const fileTaskId = id === null ? undefined : `dev:${id}`;
   const uploads = useUploads(fileTaskId);
+  const reportInput = useRef<HTMLInputElement>(null);
   /** Перечитать только вложения: правки полей в черновике не трогаем */
   const refreshFiles = useCallback(async (tid: number) => {
     const f = await devApi.get(tid);
@@ -500,6 +503,37 @@ export function DevTaskDialog({ id, focus, onOpenRef, onClose, onSaved, onDelete
                 onRemovePending={removePending}
                 onAdd={intake.add}
                 error={intake.error}
+                renderFileLink={(file) =>
+                  id !== null && isDevReport(file.name) ? (
+                    <Link to={`/dev/tasks/${id}/reports/${encodeURIComponent(file.id)}`}>
+                      Отчёт · {reportTitle(file.name)}
+                    </Link>
+                  ) : null
+                }
+              />
+              <Button size="sm" variant="ghost" onClick={() => reportInput.current?.click()}>
+                <Archive size={15} />
+                Прикрепить ZIP-отчёт
+              </Button>
+              <input
+                ref={reportInput}
+                type="file"
+                accept=".zip"
+                hidden
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = '';
+                  if (!file) return;
+                  if (!/\.zip$/i.test(file.name)) {
+                    setError('Выберите ZIP-архив.');
+                    return;
+                  }
+                  setError(null);
+                  const name = isDevReport(file.name)
+                    ? file.name
+                    : `${file.name.slice(0, -4).slice(0, 189)}.report.zip`;
+                  void intake.add([new File([file], name, { type: 'application/zip' })]);
+                }}
               />
               <p className={styles.muted}>
                 Скриншот можно вставить через Ctrl+V.{' '}
