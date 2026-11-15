@@ -1,9 +1,9 @@
 # State: waiting for the host or an in-game check
 
-- Host (dev #345): quest chapter «Химия» (27 quests, group Create & IE, after IE «Стальной слиток») — update
-  `u20261113-152048-bea5`. It fixes the approved first version, whose ids FTB Quests could not parse (chapter showed «Безымянный», dev #351).
-  Subscribe a test profile, check the chapter title and layout, then approve. Server stand: chapter id is stable and the
-  Russian title resolves; in-game look not checked.
+- Host (dev #375): install **Destroy Extras 0.9.1** on the game server and clients. It includes the electric Vat
+  heating from 0.9.0 (dev #367) and the formed electrolyzer model fix. Test the «Мембранный электролизёр» quest
+  description using pack update `u20261115-163731-67bb`, then approve it and publish the snapshot. The previous
+  chemistry chapter update `u20261113-152048-bea5` (dev #345) is already in the current snapshot.
 
 - Host (dev #332): install Better Fluids 1.5.1 on the server and clients (`tfc pull addons`), `tfc publish`; craft
   the cladding on a stonecutter and print one library tanker with the schematicannon.
@@ -13,8 +13,6 @@
 
 - Host (dev #272): install EE Extras 2.17.0 on the server and clients, check one working board and a charred-board
   salvage in the pack profile, then publish the pack snapshot.
-
-- Host (dev #367): install Destroy Extras 0.9.0 on the game server and for players to enable electrical Vat heating.
 
 - Host (dev #211): accept Destroy Extras 0.6.0 on a test-world copy. Rotate both machines, rebuild the electrolyzer shell, verify fluid flow through the rotated ports and the goggles tooltip.
 
