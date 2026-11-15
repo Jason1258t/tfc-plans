@@ -28,6 +28,9 @@ animated embers under the grate and the dim top under redstone power.
 
 ## Host actions
 
+- Install **EE Extras 2.22.0** (dev #368) on the server and all clients. In a test world, check the connector and both
+  switch ports in the electrical panel before publishing the pack snapshot.
+
 - **Ore textures for TFC rocks** (2026-11-15, dev #363): update `u20261115-132405-1cd8` includes platinum ore and
   sperrylite processing from #362 and supersedes `u20261114-224107-c9bf`. Platinum uses gabbro, fluorite uses five
   rocks, and titanium uses four. Stand `20261115-122238-bcc6`: generation in all ten ore/rock combinations,

@@ -202,6 +202,10 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-15 (dev #368): **EE Extras 2.22.0** adds two half-panel attachments. The existing EE duplex termination
+accepts one cable and exposes two individual terminals. The double-pole switch has two duplex ports and switches both
+conductors. The dedicated server checks a same-panel cable, a 300 V load, the open circuit and reload.
+
 2026-11-06 (dev #295): **EE Extras 2.21.2** — stronger on/off contrast for PCB LEDs, plus separate craftable
 pushbutton and switch caps. Existing caps retain their mounted positions and drop the corresponding new item.
 The local NeoForge control circuit confirmed installation and operation of both caps.
