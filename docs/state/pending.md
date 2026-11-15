@@ -14,6 +14,8 @@
 - Host (dev #272): install EE Extras 2.17.0 on the server and clients, check one working board and a charred-board
   salvage in the pack profile, then publish the pack snapshot.
 
+- Host (dev #367): install Destroy Extras 0.9.0 on the game server and for players to enable electrical Vat heating.
+
 - Host (dev #211): accept Destroy Extras 0.6.0 on a test-world copy. Rotate both machines, rebuild the electrolyzer shell, verify fluid flow through the rotated ports and the goggles tooltip.
 
 Part of [STATE.md](../STATE.md). The agent can't check anything in game. When an item is resolved, remove it here and
