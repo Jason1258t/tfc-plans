@@ -28,6 +28,10 @@ animated embers under the grate and the dim top under redstone power.
 
 ## Host actions
 
+- **Destroy mechanical sieve timing** (dev #371): pull draft `qyho2TttVauqoLgY98FM` into a test world. Check that
+  sand and red sand take about 10 seconds per dropped stack at 64 RPM, then confirm for the pack. Nine recipes now
+  use a duration of 12,800, matching the existing ash recipes. The sieve still times each dropped stack as one batch.
+
 - Install **EE Extras 2.22.0** (dev #368) on the server and all clients. In a test world, check the connector and both
   switch ports in the electrical panel before publishing the pack snapshot.
 
