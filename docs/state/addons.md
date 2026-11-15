@@ -581,7 +581,11 @@ memory (also after restart); far light chunk loaded without the addon, not with 
 host. Next candidates from the profiles: pig pen (players), loaded chunk count 9–11k with render 12 (unknown ticket
 holder), Sable physics.
 
-## Incinerator (`tools/incinerator-mod`, 1.0.0, 2026-11-13, dev #350)
+## Incinerator (`tools/incinerator-mod`, 1.0.1, 2026-11-15, dev #352, #350)
+
+1.0.1 adds original 16×16 textures: riveted iron panels with andesite braces, an andesite base, and an andesite
+grate over animated embers. Powered mode uses the same grate with dim embers. Checked both models from the top
+and side and regenerated the site icon. Checked the packaged animation metadata and four frames.
 
 New addon: block `incinerator:incinerator` destroys items touching its top (collision 15/16 → `entityInside`) and
 everything inserted through `Capabilities.ItemHandler.BLOCK` (slot 0 always empty, any insert accepted and burnt;
