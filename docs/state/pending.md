@@ -28,6 +28,9 @@ animated embers under the grate and the dim top under redstone power.
 
 ## Host actions
 
+- **Salt water in Create** (dev #369): pull draft `imW47qzpOu6ZErBxLQUI` into a test world. Check that the unheated
+  mixer consumes one salt and 125 mB of fresh water and yields 125 mB of salt water, then confirm for the pack.
+
 - **Ore textures for TFC rocks** (2026-11-15, dev #363): update `u20261115-132405-1cd8` includes platinum ore and
   sperrylite processing from #362 and supersedes `u20261114-224107-c9bf`. Platinum uses gabbro, fluorite uses five
   rocks, and titanium uses four. Stand `20261115-122238-bcc6`: generation in all ten ore/rock combinations,
