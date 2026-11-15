@@ -26,12 +26,12 @@ animated embers under the grate and the dim top under redstone power.
 
 ## Host actions
 
-- **Platinum ore** (2026-11-15, dev #362): update `u20261114-224107-c9bf` (overlay `pack-patches/platinum-ore`) adds
-  `kubejs:ore/platinum` — rare small veins in gabbro (y −80…−10, rarity 160, size 8) — and the sperrylite chunk, crushed
-  by IE/Create into platinum dust with palladium and rhodium by-products. It replaces the pack's
-  `kubejs/data/tfc/tags/worldgen/placed_feature/in_biome/veins.json` (titanium kept); later `kubejs/data` veins go in
-  the same file. Stand: scripts load clean, block/tags/loot OK, vein places ore in gabbro. Host: subscribe, check the
-  block, chunk and crushing recipes in JEI/EMI, approve. Veins appear only in new chunks. Temporary textures — dev #363.
+- **Ore textures for TFC rocks** (2026-11-15, dev #363): update `u20261115-132405-1cd8` includes platinum ore and
+  sperrylite processing from #362 and supersedes `u20261114-224107-c9bf`. Platinum uses gabbro, fluorite uses five
+  rocks, and titanium uses four. Stand `20261115-122238-bcc6`: generation in all ten ore/rock combinations,
+  prospecting tag and drops with both normal and Silk Touch mining. Host: subscribe to the new update, check the
+  textures and sperrylite crushing recipes in JEI/EMI, then approve. New fluorite and titanium variants appear in
+  new chunks. The new platinum texture also applies to existing platinum blocks.
 - **Schematicannon** (dev #196): install Create: Schematic Fix 1.0.0 on the server (host) with `tfc pull addons`. In game,
   restart a finished print and check that nothing is broken or charged again.
 

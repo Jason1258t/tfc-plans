@@ -1,0 +1,69 @@
+{
+  "type": "tfc:cluster_vein",
+  "config": {
+    "rarity": 50,
+    "density": 0.2,
+    "min_y": -60,
+    "max_y": 60,
+    "size": 14,
+    "random_name": "tfc_plans_fluorite",
+    "indicator": {
+      "rarity": 20,
+      "depth": 35,
+      "underground_rarity": 1,
+      "underground_count": 0,
+      "blocks": [
+        {
+          "block": "destroy:fluorite_ore"
+        }
+      ]
+    },
+    "blocks": [
+      {
+        "replace": ["tfc:rock/raw/granite"],
+        "with": [
+          {
+            "weight": 100,
+            "block": "kubejs:ore/fluorite/granite"
+          }
+        ]
+      },
+      {
+        "replace": ["tfc:rock/raw/rhyolite"],
+        "with": [
+          {
+            "weight": 100,
+            "block": "kubejs:ore/fluorite/rhyolite"
+          }
+        ]
+      },
+      {
+        "replace": ["tfc:rock/raw/limestone"],
+        "with": [
+          {
+            "weight": 100,
+            "block": "kubejs:ore/fluorite/limestone"
+          }
+        ]
+      },
+      {
+        "replace": ["tfc:rock/raw/dolomite"],
+        "with": [
+          {
+            "weight": 100,
+            "block": "kubejs:ore/fluorite/dolomite"
+          }
+        ]
+      },
+      {
+        "replace": ["tfc:rock/raw/marble"],
+        "with": [
+          {
+            "weight": 100,
+            "block": "kubejs:ore/fluorite/marble"
+          }
+        ]
+      }
+    ]
+  }
+}
