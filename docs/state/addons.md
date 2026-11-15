@@ -202,6 +202,10 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-15 (dev #372): **EE Extras 2.22.1** fits duplex terminations into quarter slots. Two terminations on the right
+leave the left half for the standard switch. Server clicks verified both duplex cables and three ordinary wire links,
+with one conductor bypassing the switch. Previously installed half-slot terminations retain their slot and node IDs.
+
 2026-11-15 (dev #368): **EE Extras 2.22.0** adds two half-panel attachments. The existing EE duplex termination
 accepts one cable and exposes two individual terminals. The double-pole switch has two duplex ports and switches both
 conductors. The dedicated server checks a same-panel cable, a 300 V load, the open circuit and reload.

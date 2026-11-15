@@ -32,8 +32,8 @@ animated embers under the grate and the dim top under redstone power.
   sand and red sand take about 10 seconds per dropped stack at 64 RPM, then confirm for the pack. Nine recipes now
   use a duration of 12,800, matching the existing ash recipes. The sieve still times each dropped stack as one batch.
 
-- Install **EE Extras 2.22.0** (dev #368) on the server and all clients. In a test world, check the connector and both
-  switch ports in the electrical panel before publishing the pack snapshot.
+- Install **EE Extras 2.22.1** (dev #368, #372) on the server and all clients. In a test world, check the two quarter-slot
+  connectors beside a standard switch and both ports of the double-pole switch before publishing the pack snapshot.
 
 - **Salt water in Create** (dev #369): pull draft `imW47qzpOu6ZErBxLQUI` into a test world. Check that the unheated
   mixer consumes one salt and 125 mB of fresh water and yields 125 mB of salt water, then confirm for the pack.
