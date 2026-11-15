@@ -1,8 +1,8 @@
 # State: waiting for the host or an in-game check
 
-- Host (dev #375): install **Destroy Extras 0.9.1** on the game server and clients. It includes the electric Vat
-  heating from 0.9.0 (dev #367) and the formed electrolyzer model fix. Test the «Мембранный электролизёр» quest
-  description using pack update `u20261115-163731-67bb`, then approve it and publish the snapshot. The previous
+- Host (dev #379, #375): install **Destroy Extras 0.9.2** on the game server and clients. It fixes the electrolyzer
+  stalling at 328 V and includes the model fix and electric Vat heating from previous releases. Test the
+  «Мембранный электролизёр» quest description using pack update `u20261115-163731-67bb`, then approve it and publish the snapshot. The previous
   chemistry chapter update `u20261113-152048-bea5` (dev #345) is already in the current snapshot.
 
 - Host (dev #332): install Better Fluids 1.5.1 on the server and clients (`tfc pull addons`), `tfc publish`; craft
