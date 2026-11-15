@@ -21,7 +21,7 @@ its one-liner in STATE.md.
 
 - Host: install **EE Extras 2.18.2** on the server and clients (dev #286) and check the original fence and heater setup.
 
-Incinerator 1.0.1 (dev #352): host installs the update on the server and player clients. In the client, check the
+Incinerator 1.0.2 (dev #364, #352): host installs the update on the server and player clients. In the client, check the
 animated embers under the grate and the dim top under redstone power.
 
 ## Host actions

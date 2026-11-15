@@ -581,7 +581,9 @@ memory (also after restart); far light chunk loaded without the addon, not with 
 host. Next candidates from the profiles: pig pen (players), loaded chunk count 9–11k with render 12 (unknown ticket
 holder), Sable physics.
 
-## Incinerator (`tools/incinerator-mod`, 1.0.1, 2026-11-15, dev #352, #350)
+## Incinerator (`tools/incinerator-mod`, 1.0.2, 2026-11-15, dev #364, #352, #350)
+
+1.0.2 simplifies the sides to a flat iron panel with andesite trim and a small firebox window. Both states rendered.
 
 1.0.1 adds original 16×16 textures: riveted iron panels with andesite braces, an andesite base, and an andesite
 grate over animated embers. Powered mode uses the same grate with dim embers. Checked both models from the top
