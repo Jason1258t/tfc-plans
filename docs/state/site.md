@@ -721,6 +721,10 @@ fertiliser blocks, calendar with month labels. `.class` parsing — `scripts/mod
 
 ## Guides
 
+- 2026-11-15 (dev #365): Firestore guide `chem-vat` covers unpowered reactions, the controller screen, Create pump
+  plumbing, liquid and gas outlets, item transfer, temperature, pressure and vent controls. The controls were checked
+  in the pack's Destroy 0.4.6-eligibbs jar.
+
 - «Гайды» (`?tab=guides[&sub=<section>][&g=<id>]`, dev #333, 2026-11-10) is the only catalogue of reference
   articles. Sections and groups come from the guides themselves (`section`, `group`); labels, intros and order —
   `guideSection` in `src/features/guides/guideMeta.ts` (an unknown `section` shows under its id, last). Current
