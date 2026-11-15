@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { Header } from '@/widgets/header';
 import { Onboarding } from '@/widgets/onboarding';
@@ -22,6 +22,10 @@ import { DevPage } from '@/pages/dev';
 import { TasksPage } from '@/pages/tasks';
 import { HomePage } from '@/pages/home';
 import { legacyTasksTarget, mapReferenceTarget, recipesReferenceTarget, tagsReferenceTarget } from '@/shared/lib';
+
+const DevReportPage = lazy(() =>
+  import('@/pages/dev/DevReportPage').then(({ DevReportPage }) => ({ default: DevReportPage })),
+);
 
 /** Без параметров корень — главная; прежние ссылки на задачи и планы сохраняют весь query. */
 function RootPage() {
@@ -112,6 +116,16 @@ export default function App() {
             element={
               <KeyRequired section="Разработка">
                 <DevPage />
+              </KeyRequired>
+            }
+          />
+          <Route
+            path="/dev/tasks/:task/reports/:file"
+            element={
+              <KeyRequired section="Разработка">
+                <Suspense fallback={<p role="status">Загрузка отчёта…</p>}>
+                  <DevReportPage />
+                </Suspense>
               </KeyRequired>
             }
           />
