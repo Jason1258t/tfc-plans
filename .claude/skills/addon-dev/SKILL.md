@@ -96,6 +96,12 @@ your worktree> scene=<name>` → `addon_stand job=<id> task=<dev id>`. It builds
   freezes them with SHA256 and accepts only a clean `SCENE END PASS` with real frames; never zip devtest classes by
   hand. Negative controls and must-have frames go into `tools/<mod>/stand.json` (`expectFail`, `shots`). Look at the
   frames yourself too: a PASS proves the checks, not that the picture shows the right thing.
+- **Visual report for new assets (required):** capture every added block in a full-pack client scene. Show orientations,
+  active states, or connections when they change what players see. For added items, include a labeled gallery of every
+  item using client inventory screenshots or renders of the final item models. Inspect the frames and attach the report
+  to the dev task via `addon_stand job=<id> task=<id>` or `dev_file_put`. If the client stand cannot produce block
+  screenshots, attach labeled `model_render` output as interim evidence and record the missing client verification in
+  the task. Resource checks and server logs cannot substitute for the visual report.
 - Saved data across a restart, or the client in a world the server built: declare a chain in
   `tools/<mod>/stand.json` (`chains` — server step with `save: true` → server step with `world: <that step>` →
   client step with `world`; example `ee-extras-mod` `rectifier-restart`, docs/state/infra.md «Chains»), run
