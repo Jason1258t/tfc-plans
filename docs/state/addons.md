@@ -220,7 +220,14 @@ A development-server player mounted the kit without replacing the pulley. Reload
 The same worktree contains the first electric machine, an unreleased press with a metal body and two EE contacts.
 Create 6.0.10 supplies its pressing operations and configured stress. A dedicated server with EE 1.1.2 verified
 32 RPM at a 330 V source, stopping at 270 V, cut-off on redstone or disconnected power, and an iron sheet made by the
-press before and after reloading the saved world. The mixer, deployer and fluid dispenser are still pending.
+press before and after reloading the saved world. Full-pack client scene electric-press (20261116-163300-9ec3)
+confirmed stock EE spool connections to both contacts and 32 RPM without a kinetic network.
+
+The unreleased worktree also has an electric mixer for the stock Create basin, an electric deployer with Create's
+item-handler capability, and a redstone pulse fluid dispenser with a Create fluid filter and adjustable dose.
+The standalone development server made dough and placed a block with the deployer. The dispenser blocked water
+on a lava filter, then delivered 310 and 200 mB on separate edges. A held signal and a dose above the available
+amount left the destination unchanged. Full-pack client scene electric-machines is queued as 20261116-164703-1f0c.
 
 2026-11-15 (dev #372): **EE Extras 2.22.1** fits duplex terminations into quarter slots. Two terminations on the right
 leave the left half for the standard switch. Server clicks verified both duplex cables and three ordinary wire links,
