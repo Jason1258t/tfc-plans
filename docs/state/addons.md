@@ -58,6 +58,8 @@ Checked on the full pack stand with `--level-type tfc:overworld`, not in the cli
 
 ## Destroy Bridge + Destroy Extras (`tools/destroy-bridge-mod`, `tools/destroy-extras-mod`)
 
+2026-11-16 (dev #381): **Destroy Extras 0.11.0** gives the processor, tank controller and filling station custom art. The etching bath has copper trim, and the membrane is a thin plate. Universal gas pipes and axial hand valves carry pure H₂, Cl₂, N₂ and O₂ and keep the concentration. Cylinders can be placed, connected from above, switched between fill and discharge, and mined with their gas component intact. Adjacent pipes of different legacy colours stay separate until replaced.
+
 2026-11-16 (dev #380): **Destroy Extras 0.10.0** adds nine IE gas tank variants (500/4,000/16,000 L, 2/4/6 bar), separate hydrogen/chlorine lines, a 300 V / 2 A filling station and three portable cylinders (820/3,283/9,851 mB of standard mixture). The development server verified full cylinders for both gases, exact source remainder at the pressure limit, direct line output and discharge after restarting on the saved world.
 
 2026-11-16 (dev #379): **Destroy Extras 0.9.2** uses the 270–330 V operating range for the electrolyzer. The 37.5 Ω load draws 8 A at 300 V and about 8.7 A at 328 V. The previous shared 7.9–8.1 A gate stalled the reaction in much of the documented voltage range. The machine status, tooltips, Ponder and guides now show the operating voltage. Full-pack server job `20261115-210141-62b6` verified two brine batches at 327.723 V / 8.739 A and a stable paused progress at 260 V and 345 V.

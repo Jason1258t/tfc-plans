@@ -24,9 +24,9 @@ its one-liner in STATE.md.
 Incinerator 1.0.2 (dev #364, #352): host installs the update on the server and player clients. In the client, check the
 animated embers under the grate and the dim top under redstone power.
 
-## Destroy Extras gas logistics (dev #380)
+## Destroy Extras gas logistics (dev #380, #381)
 
-Host: install Destroy Extras 0.10.0 on the server and on clients, then publish the pack snapshot. Check the dock controls and gas delivery into production consumers in the host world.
+Host: install Destroy Extras 0.11.0 on the server and on clients, then publish the pack snapshot. Check the dock controls and gas delivery into production consumers in the host world.
 
 ## Host actions
 
