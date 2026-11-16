@@ -1,5 +1,8 @@
 # State: waiting for the host or an in-game check
 
+- Host: install **EE Extras 2.23.1** on the server and clients with `tfc pull addons ee_extras@2.23.1`
+  and publish the pack snapshot (dev #373).
+
 - Host (dev #379, #375): install **Destroy Extras 0.9.2** on the game server and clients. It fixes the electrolyzer
   stalling at 328 V and includes the model fix and electric Vat heating from previous releases. Test the
   «Мембранный электролизёр» quest description using pack update `u20261115-163731-67bb`, then approve it and publish the snapshot. The previous

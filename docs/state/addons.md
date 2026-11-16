@@ -210,6 +210,37 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-16 (dev #373): **EE Extras 2.23.1** adds the side-mounted drive kit for a horizontal Create belt's middle
+pulley and the Simulated auger trough, plus the electric press, mixer, deployer and pulse fluid dispenser. The drive
+preserves the host block entity, uses two EE terminals and provides 256 SU at 300 V and 32 rpm. The wrench reverses
+the drive. Sneak-wrench removes it and disconnects the wires. Redstone stops it. The dedicated server showed 32 rpm
+with the loaded belt at 330 V and a stall at 270 V, switching from an external motor and recovery after restart.
+On the dedicated server with Simulated 1.3.2, the trough moved all 16 emeralds from a chest to the far section.
+A restart preserved the mount, items and rotation. Cutting the power stopped the auger. Full-pack client acceptance
+`20261116-203251-c372` covered four connections made with EE spools, 16 TFC copper ingots reaching the far auger
+section, redstone, reversal, removal and reinstallation in the same tick.
+
+Dev #373 has an unreleased belt motor prototype in the `ee-electric-create` worktree. The existing middle pulley
+reports network stress and capacity to a position-bound EE device. A dedicated server with Create 6.0.10 and EE
+1.1.2 drove a standard belt from a wired test battery. The 256 SU press on the far end stopped the line at 270 V
+(207.3 SU available) and ran at 330 V (309.7 SU available). At 300 V the cable drop put the line just below 256 SU.
+A development-server player mounted the kit without replacing the pulley. Reloading the saved world preserved
+309.7 SU at 330 V and the overload stop at 270 V. Manual wiring, removal, and a second source remain open.
+
+The same worktree contains the first electric machine, an unreleased press with a metal body and two EE contacts.
+Create 6.0.10 supplies its pressing operations and configured stress. A dedicated server with EE 1.1.2 verified
+32 RPM at a 330 V source, stopping at 270 V, cut-off on redstone or disconnected power, and an iron sheet made by the
+press before and after reloading the saved world. Full-pack client scene electric-press (20261116-163300-9ec3)
+confirmed stock EE spool connections to both contacts and 32 RPM without a kinetic network.
+
+The unreleased worktree also has an electric mixer for the stock Create basin, an electric deployer with Create's
+item-handler capability, and a redstone pulse fluid dispenser with a Create fluid filter and adjustable dose.
+The standalone development server made dough and placed a block with the deployer. The dispenser blocked water
+on a lava filter, then delivered 310 and 200 mB on separate edges. A held signal and a dose above the available
+amount left the destination unchanged. After restart, a fresh pulse added the saved 200 mB dose. Full-pack client
+scene electric-machines (20261116-164703-1f0c) confirmed spool connections and 32 RPM for the mixer and deployer
+and the dispenser's fluid filter registration.
+
 2026-11-15 (dev #372): **EE Extras 2.22.1** fits duplex terminations into quarter slots. Two terminations on the right
 leave the left half for the standard switch. Server clicks verified both duplex cables and three ordinary wire links,
 with one conductor bypassing the switch. Previously installed half-slot terminations retain their slot and node IDs.
