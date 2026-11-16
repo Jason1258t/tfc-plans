@@ -54,7 +54,7 @@ When finishing work: update the topic file, and this index only if a line below 
   pull both fixes, restart, check cement and both ion thrusters in game before approving/confirming.
 - Host: pack update `u20261022-150945-83a0` (Chinese KubeJS messages → ru/en): `tfc admin updates pull`, check in game,
   `tfc admin updates approve`.
-- Host: install **Destroy Extras 0.11.0** (dev #381, #380, #379) and check the electrolyzer quest description in pack update
+- Host: install **Destroy Extras 0.11.1** (dev #381, #380, #379) and check the electrolyzer quest description in pack update
   `u20261115-163731-67bb` (dev #375) before approval.
 - Host: approve M12 replacement `u20261105-175613-fa0b`, which removes its 32 overlay files (dev #261).
 - Host: test **EE Extras 2.14.0** with the proposed pack update (dev #248, #249, #259) before approval. Also check the cable inlet on an existing CC computer and both
