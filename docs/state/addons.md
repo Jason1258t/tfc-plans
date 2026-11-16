@@ -781,8 +781,30 @@ six faces of both tank types, fluid accounting and detachment when the tank is b
   [checkpoint](../plans/pcb-modules-checkpoint.md). #327 routing tool candidate, #328 stand JSON,
   #329 CPU Flywheel rendering separate. Only item20 complete; overall301 open. No release/merge/deploy.
 
-- 2026-11-10: #301 implementation paused by the owner; cleanup/preparation only. No module code
+- Earlier preparation session2026-11-10: #301 implementation was paused by the owner; cleanup/preparation only. No module code
   changed or stand jobs submitted. Current checklist14/20 retained. Superseded session notes moved to
   [history](../plans/pcb-modules-history.md); use the compact [checkpoint](../plans/pcb-modules-checkpoint.md)
   and [prepared future goal](../plans/pcb-modules-next-session.md). Preliminary all-item audit is doc:62;
   #315 remains unverified/unfixed. No release/merge/deploy.
+
+- #301 new goal resumed2026-11-10: original20marks audited against code, late rawlogs,
+  worlds and hashes; missing catalogue/partial acceptance tracked21–30 (original14marks retained).
+  Prototype catalogue40types (19L1/21L2): new rotary knob/buzzer/sevensegment/quadNAND
+  and project naming are local candidates, not released or fully accepted.
+  #315 reproduced4.999929V vs2.5V and patched with private split input branches;
+  four-chip/order/NBT/output regressions passed. Server100331-8eb1 and cold152608-da1b
+  cover new modules/real loads/polarity/geometry/name serialization; nativeclient152618-3e9f
+  has25positive assertions,0FAIL, realnamepaste/serverpacket and client sound event.
+  Complete physicalNAND/restart/visible-routing demo and integratedCreate acceptance remain open.
+  Work continues only in preservedfeat/pcb-modules; no release/version/main/deploy.
+  [Current checkpoint](../plans/pcb-modules-checkpoint.md), [all-item audit](../plans/pcb-modules-audit.md).
+
+- 2026-11-16: #301 work resumed in the existing PCB prototype branch. #315 / #301.28 acceptance
+  is complete (45 checks across server, restart and client on 2026-11-15). Four additional
+  catalogue modules and project naming are committed to the addon branch, with a dedicated
+  cold restart scenario and visible NAND demonstration routing. The current run IDs and
+  Create 6.0.10 display/lighting API notes are in the [checkpoint](../plans/pcb-modules-checkpoint.md).
+
+  #301.22–25 accepted after server and cold restart plus a full client editor test. The server
+  accepts and persists the project name, but the last screenshot did not show the updated name.
+  #301.29 remains open. Checklist total 20/30.

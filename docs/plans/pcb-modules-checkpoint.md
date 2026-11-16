@@ -1,32 +1,35 @@
 # PCB modules — current continuation checkpoint
 
-Updated 2026-11-10. **Implementation is paused at the owner’s request.** This session only
-cleaned documentation and prepared the next session. No module code changed and no new stand jobs were submitted.
+Updated 2026-11-16.
+Audit of all20original items completed against code, late logs and artifact hashes.
+Checklist expanded to 30 items: concrete catalogue/acceptance work21–29, explicitly deferred editor stage2 is30.
+Four catalogue additions and project naming are implemented; acceptance is in progress.
+See [all-item audit](pcb-modules-audit.md); do not treat compilation as runtime acceptance.
 
 ## Authoritative state
 
-- Task #301:14/20 checked; overall incomplete. The checklist was not changed during this preliminary audit.
+- Task #301: 16/30 checked at the beginning of the 2026-11-16 session. #315 and #301.28 accepted.
 - Main requirements and owner decisions: doc:59. Preliminary requirement-by-requirement audit and future goal: doc:62.
 - Worktree: `.claude/worktrees/pcb-modules`; both repositories use `feat/pcb-modules`.
-- Last implementation commits: addon `4c45ab1`, parent `c8177151`. Later documentation commits do not change the tested binary.
-- Prototype format9,36catalogue module types. No migration of old designs. Jar name2.21.2 is a prototype name, not a release.
+- Input isolation accepted at addon `b195a4c` / parent `2f0d43ff`. The four modules and name input are in addon `7aa79dc`, the NAND demo routing fix in `a61882a`, and the client fixture fix in `87811a3`.
+- Prototype format9,40catalogue module types (19L1/21L2; four new candidates not yet accepted). No migration of old designs. Jar name2.21.2 is a prototype name, not a release.
 - No release, version bump, merge or deployment. Preserve this worktree for the next session.
 
 ## Verified implementation
 
-| Area                        | Current evidence                                                                                                                                                             |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Multicell geometry/editor   | Rotations/reflections,64-step history, groups/copy/paste, other layers, parameters, footprint/pad outlines; server checks and actual native client input, six mounting faces |
-| L1 controls/light           | Buttons, switches, slider/rheostat, SET/RESET flag, mechanical timer, panel2×2 and five-section strip2×5; physical operation and persistence recorded in the history         |
-| Onboard transformer         | 3×3, native EE coupling, two secondary pads and direct300V AC inlet; loaded output, short/DC/overvoltage, restart and client accepted                                        |
-| Step-up transformer #13/#14 | 3×3,four pads,AC only; final client20261108-142522-2510 and real saved-world restart, independent power balance accepted                                                     |
-| L2 logic #6                 | Powered comparator/clock/D-flip-flop/counter/register/decoder, real loaded outputs and state/restart tests exist; **integration risk #315 remains open**, see below          |
-| Bridge #15                  | 3×3,four pads,actual EE diode bridge; server/restart/client accepted, addon dfaed18                                                                                          |
-| 5V regulator #16            | 3×3,four pads,8–12V DC input,15mA useful output; load/ripple/dropout/thermal protection/restart/client accepted, addon be4e080                                               |
-| Temperature/light #17       | Two2×2 analog modules;30independent measurements, full restart, native editor client115736-656b accepted; addon3ae5caf                                                       |
-| Rotation #18                | 2×2,Create API speed−256…+256rpm;24measurements, restart and client162500-e1ff accepted; addon226bb90                                                                        |
-| Optocoupler #19             | 3×3,five pads,separate input/output circuits;49measurements, graph isolation/common-mode test, restart174316-ca76 and client173732-6343 accepted                             |
-| Connector #20               | 2×9,eight signals+common; final physical/current/cache/thermal/restart/client checks accepted, detailed evidence below                                                       |
+| Area                        | Current evidence                                                                                                                                                                                          |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Multicell geometry/editor   | Rotations/reflections,64-step history, groups/copy/paste, other layers, parameters, footprint/pad outlines; server checks and actual native client input, six mounting faces                              |
+| L1 controls/light           | Buttons, switches, slider/rheostat, SET/RESET flag, mechanical timer, panel2×2 and five-section strip2×5; physical operation and persistence recorded in the history                                      |
+| Onboard transformer         | 3×3, native EE coupling, two secondary pads and direct300V AC inlet; loaded output, short/DC/overvoltage, restart and client accepted                                                                     |
+| Step-up transformer #13/#14 | 3×3,four pads,AC only; final client20261108-142522-2510 and real saved-world restart, independent power balance accepted                                                                                  |
+| L2 logic #6                 | Powered comparator/clock/D-flip-flop/counter/register/decoder, real loaded outputs and state/restart tests exist; #315 and #301.28 accepted: 45 checks, server → cold restart → client, tracker note:1447 |
+| Bridge #15                  | 3×3,four pads,actual EE diode bridge; server/restart/client accepted, addon dfaed18                                                                                                                       |
+| 5V regulator #16            | 3×3,four pads,8–12V DC input,15mA useful output; load/ripple/dropout/thermal protection/restart/client accepted, addon be4e080                                                                            |
+| Temperature/light #17       | Two2×2 analog modules;30independent measurements, full restart, native editor client115736-656b accepted; addon3ae5caf                                                                                    |
+| Rotation #18                | 2×2,Create API speed−256…+256rpm;24measurements, restart and client162500-e1ff accepted; addon226bb90                                                                                                     |
+| Optocoupler #19             | 3×3,five pads,separate input/output circuits;49measurements, graph isolation/common-mode test, restart174316-ca76 and client173732-6343 accepted                                                          |
+| Connector #20               | 2×9,eight signals+common; final physical/current/cache/thermal/restart/client checks accepted, detailed evidence below                                                                                    |
 
 No old “candidate”, “not yet viewed” or “currently queued” paragraph supersedes these accepted results.
 Detailed intermediate records, old hashes and stopped job handles are preserved in
@@ -40,17 +43,14 @@ The preliminary audit is doc:62; do not treat this summary as a replacement for 
    expose false/partial closure and untracked requirements as concrete child items with stable numbering.
 2. #301.5 is the first open composite item: onboard power, slider/rheostat, sensors and connector exist;
    agreed L2 communication, particularly Create information output, remains incomplete.
-3. #315 is still unverified/unfixed: logic chips stamp input→ground directly, and EE adjacency.put can
-   replace another branch on the same nodes. Reproduce with actual external circuits before relying on #301.6
-   as complete integration evidence. No fix or regression was performed in the cleanup session.
-4. Missing catalogue entries include buzzer, rotary knob, seven-segment display, logic assembly and Create
-   adapter; reconcile mandatory versus undecided entries with owner decisions and track them explicitly.
+3. #315 reproduced with originalJAR: register after external10kpot gives4.999929V instead2.5V; reverse order2.499931V. Private split1Gohm input branches fix it. Final standalone regression completed on 2026-11-15, see #315 note:1447.
+4. Buzzer/rotary knob/seven-segment/quadNAND are candidates in code (36–39); only Create adapter is absent. Owner confirmed quadNAND as mandatory. Catalogue/table/README distinguish checked results from candidates; edge terminal is toolG, LED panel separate from lamp, capacitor nonpolarA/B. Project name is implemented, acceptance pending (29); probe/library explicitly later30.
 5. #301.8/#301.11 have separate L1/L2 and L3 acceptance; record completed subparts without closing the parents.
    CPU/RAM/language/display/L3 interfaces and release remain open. Probe/library are explicitly editor stage2;
    bus/program UI depends on L3 and must not be silently counted as implemented.
 
 The future goal is prepared in [next-session brief](pcb-modules-next-session.md) and doc:62.
-**Do not start it merely because this checkpoint is read.** The owner requested a different session for implementation.
+The owner explicitly started that different implementation session on2026-11-10.
 No stand is reserved. Recheck access/queue when that session actually starts; use the queue, not old PID/lock files.
 Known independent follow-ups include #315,#317,#318,#327,#328,#329; check their live status before taking one.
 
@@ -101,3 +101,78 @@ Only the connector milestone is completed: no Create adapters, L3, LC or other m
   `/Users/ivan/.codex/visualizations/2026/11/09/01a1c187-7451-7990-8f01-21e1cd7b1246/pcb-connector/kit`.
   Access: trusted LAN `TFC_CLIENT_HOST=master@192.168.0.101`; owner confirmed Tailscale auth too.
   Tool truncated large JSON worked around by raw rsync (#328); routing automation candidate #327.
+
+## Current goal acceptance work, 2026-11-10
+
+- Full historical audit: original20marks reviewed; late raw logs, jarSHA15–20 and
+  complete manifests sensors107/rotation113/opto112/connector133 verified without gaps.
+- New server100331-8eb1:320geometryvariants; rotary loaded endpoints/25%/50%, power/NBT;
+  buzzer0/2/3/5/6/7V and realpower; all7individualsegments/digits/NBT; independentquadNAND
+  inputs/loadedoutputs/power/NBT pass. Initial sevensegment pin isolation bug fixed and rerun.
+- Client151224-251c:22positive native assertions,0FAIL; allfourmodules searched/selected/placed
+  by nativeK/mouse, Undo/Repeat; 9images available but inspection/restart/final naming pending.
+  Earlier100352-f96c failed because player remained too far from table; fixed by teleport before opening.
+- Runtime evidence root:
+  `/Users/ivan/.codex/visualizations/2026/11/10/01a1c4d6-2109-7403-8e80-6e4cf676c1b7/pcb-audit`.
+- Coldserver151648-23a6 submitted from exported flatworld1794305230608, no initial rebuild;
+  checks saved7segment/NAND, angular hit240poses, naming/serialization, new knobloadtests.
+  Observe through stand_wait; do not rerun solely on observer timeout.
+- Final client scene now also includes physicalquadNAND, actualsoundevent and nativeprojectname packet.
+  New submission handle to be recorded after stand_submit returns.
+- No prototype commit/push in this goal yet. Both repositories have local candidate changes.
+  Finish acceptance, synchronize docs/tracker, lint/format, then preserve/push bothfeat/pcb-modules;
+  current goal explicitly excludes release/version/merge/deploy and overall301 closure.
+
+## Resumed acceptance — 2026-11-16
+
+The four catalogue modules already present in the worktree are the buzzer (22), rotary knob
+(23), seven-segment indicator (24) and quad NAND (25). The name field now sends the value shown
+when editing began, so a concurrent rename is rejected by the server's existing comparison.
+The server restart scenario builds and saves the four reference boards, then opens that same
+world in a new process and checks the saved name of an assembled and installed board.
+
+- Client rerun `20261116-164846-3baf`: catalogue, mouse placement, undo/redo, real name packet,
+  buzzer sound event and models. Initial run `20261116-162841-c157` saw both addon versions,
+  so later runs exclude the pack JAR by filename. Run `20261116-163916-ee5f` received the
+  buzzer event but the player fell and the menu did not stay open. The rerun uses ground level
+  and teleports the player onto solid ground before opening the editor. It logged 26 OK, no FAIL:
+  native placement, undo/redo, sound event and a real rename packet. The final screenshot still
+  showed an empty client-side field and grid, and the world shots did not show the boards.
+  Item #301.29 stays open until the client reflects the server name. First reproduce using a
+  prebuilt world with the editor present before joining, then inspect client entity and topology
+  synchronization if needed. #301.27 also stays open.
+- Server save `20261116-163848-2ead` → cold restart `20261116-163903-f804`.
+  Initial save `20261116-163012-7bd4` stopped at the NAND demo: its four load placements blocked the
+  prescribed router. The new layout routes all 14 nets and four visible loads in a known order.
+  Both final server stages passed. Cold restart restored all four circuits and the editor/installed
+  board name. Items #301.22–25 are checked (20/30 total).
+- Gradle build, resource validation and all four recipe conflict checks passed.
+- The prototype is based on 2.21.2. The pack now includes EE Extras 2.22.1. Before release, the
+  PCB branch needs integration with the newer addon main and validation of the merged build.
+
+### Create interface (26) — API findings
+
+Create 6.0.10's split-flap board accepts flap text and requires kinetic speed. The ordinary
+`acceptText` method on `DisplayBoardTarget` is empty. `DisplayLinkBlockEntity` transfers from
+the adjacent source to its own bound target, checks both positions are loaded, and suppresses
+periodic refresh while redstone-powered. Keep the screen link away from the PCB's lamp signal.
+On loss of PCB power, send a blank flap line explicitly while the board and link are loaded.
+Removing the source or targeting an unloaded block stops transfer and therefore cannot clear
+a receiver immediately.
+
+The rose quartz lamp consumes normal redstone but its render model follows `POWERING`,
+the short pulse, rather than sustained `POWERED`. A constant level is unsuitable for a
+persistent indicator with this lamp. Lamp state and screen value will need distinct outputs.
+
+Create Deco 2.1.3's cage lamp has a sustained input at its mounting side and supports an
+inversion setting. Linear Bearing 1.2.6's andesite lamp tracks the strongest neighboring
+redstone signal. Both are candidates for a persistent indicator in the pack. Create's nixie
+tube receives Display Link text through its own target and can display a short state/value.
+
+The candidate 3×2 design has distinct analogue and binary inputs, shared ground and a
+3–6 V DC supply input. Use separate EE branches for the two signal inputs to preserve
+external divider resistances (#315). The binary signal drives the board's oriented
+redstone output. The analogue signal uses a dedicated Create display source, selected
+independently by each attached Display Link. The old first-meter display source stays
+available for existing boards. Demonstrate at least two simultaneous links, a lamp on a
+separate redstone route, loaded and unloaded recipients, power loss and a cold restart.
