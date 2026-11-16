@@ -2,6 +2,16 @@
 
 Part of [STATE.md](../STATE.md). Everything here is deployed. UI labels are quoted in Russian as they appear in the code.
 
+## Electrolyzer and gas logistics (2026-11-16, dev #382)
+
+- The live chemistry guides `chem-electrolysis`, `chem-gas-logistics` and `chem-etchant` and the Destroy Extras addon
+  page link the 0.11.1 route: machine and brine, separate hydrogen, chlorine and catholyte lines, valves, three tank
+  sizes and materials, stationary filling and cylinder transport. The guide links were exercised in the browser.
+- FTB Quests overlay `u20261116-122746-dfd6` refreshes four descriptions and adds five quests to «Химия». All 27
+  existing quests were compared against snapshot `20261115-150306-36f6`: their IDs, tasks, rewards and dependencies
+  are identical. A local dedicated stand loaded 788 quests on startup and reload with the released 0.11.1 jar.
+  The host still has to check the client book and manual Survival route on a test profile before approval.
+
 ## Player key login (2026-11-06, dev #281)
 
 - The nick dialog has an optional «Ключ игрока» field (the `tfc_…` pack-server key, same as `tfc login`). The pack
