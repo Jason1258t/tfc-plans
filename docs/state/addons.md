@@ -227,7 +227,9 @@ The unreleased worktree also has an electric mixer for the stock Create basin, a
 item-handler capability, and a redstone pulse fluid dispenser with a Create fluid filter and adjustable dose.
 The standalone development server made dough and placed a block with the deployer. The dispenser blocked water
 on a lava filter, then delivered 310 and 200 mB on separate edges. A held signal and a dose above the available
-amount left the destination unchanged. Full-pack client scene electric-machines is queued as 20261116-164703-1f0c.
+amount left the destination unchanged. After restart, a fresh pulse added the saved 200 mB dose. Full-pack client
+scene electric-machines (20261116-164703-1f0c) confirmed spool connections and 32 RPM for the mixer and deployer
+and the dispenser's fluid filter registration.
 
 2026-11-15 (dev #372): **EE Extras 2.22.1** fits duplex terminations into quarter slots. Two terminations on the right
 leave the left half for the standard switch. Server clicks verified both duplex cables and three ordinary wire links,
