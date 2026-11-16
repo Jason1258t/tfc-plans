@@ -25,9 +25,11 @@ a rendered block icon and its face textures are different assets. Preserve an ex
 
 ## Generate the artwork
 
-Use the harness's available image-generation tool for new artwork. In Codex, use the installed `imagegen` skill
-and built-in image tool when available; follow its current tool instructions rather than hardcoding API parameters.
-Other agents use their available equivalent. Do not require a separate API key for a built-in tool.
+Use the harness's available generation tool for new artwork. **Codex** uses its installed `imagegen` skill and
+built-in image tool for original textures. **Kimi** uses the relevant image-generation skill for flat textures or
+its 3D-modeling skill when the asset needs a model or baked texture. Other agents use the equivalent available skill.
+Use pack assets as visual references and inspect the texture on the final game asset. Reused textures and deterministic
+asset preparation such as UV assembly, palette reduction and format conversion can use the existing tooling.
 
 Supply the inspected references as images when supported, with each image's role explained. Merely naming a mod
 is not a visual reference. A useful prompt structure (adapt to the actual item):
