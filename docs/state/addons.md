@@ -210,6 +210,18 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+Dev #373 has an unreleased belt motor prototype in the `ee-electric-create` worktree. The existing middle pulley
+reports network stress and capacity to a position-bound EE device. A dedicated server with Create 6.0.10 and EE
+1.1.2 drove a standard belt from a wired test battery. The 256 SU press on the far end stopped the line at 270 V
+(207.3 SU available) and ran at 330 V (309.7 SU available). At 300 V the cable drop put the line just below 256 SU.
+A development-server player mounted the kit without replacing the pulley. Reloading the saved world preserved
+309.7 SU at 330 V and the overload stop at 270 V. Manual wiring, removal, and a second source remain open.
+
+The same worktree contains the first electric machine, an unreleased press with a metal body and two EE contacts.
+Create 6.0.10 supplies its pressing operations and configured stress. A dedicated server with EE 1.1.2 verified
+32 RPM at a 330 V source, stopping at 270 V, cut-off on redstone or disconnected power, and an iron sheet made by the
+press before and after reloading the saved world. The mixer, deployer and fluid dispenser are still pending.
+
 2026-11-15 (dev #372): **EE Extras 2.22.1** fits duplex terminations into quarter slots. Two terminations on the right
 leave the left half for the standard switch. Server clicks verified both duplex cables and three ordinary wire links,
 with one conductor bypassing the switch. Previously installed half-slot terminations retain their slot and node IDs.
