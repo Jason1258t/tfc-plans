@@ -210,6 +210,16 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-16 (dev #373): **EE Extras 2.23.1** adds the side-mounted drive kit for a horizontal Create belt's middle
+pulley and the Simulated auger trough, plus the electric press, mixer, deployer and pulse fluid dispenser. The drive
+preserves the host block entity, uses two EE terminals and provides 256 SU at 300 V and 32 rpm. The wrench reverses
+the drive. Sneak-wrench removes it and disconnects the wires. Redstone stops it. The dedicated server showed 32 rpm
+with the loaded belt at 330 V and a stall at 270 V, switching from an external motor and recovery after restart.
+On the dedicated server with Simulated 1.3.2, the trough moved all 16 emeralds from a chest to the far section.
+A restart preserved the mount, items and rotation. Cutting the power stopped the auger. Full-pack client acceptance
+`20261116-203251-c372` covered four connections made with EE spools, 16 TFC copper ingots reaching the far auger
+section, redstone, reversal, removal and reinstallation in the same tick.
+
 Dev #373 has an unreleased belt motor prototype in the `ee-electric-create` worktree. The existing middle pulley
 reports network stress and capacity to a position-bound EE device. A dedicated server with Create 6.0.10 and EE
 1.1.2 drove a standard belt from a wired test battery. The 256 SU press on the far end stopped the line at 270 V
