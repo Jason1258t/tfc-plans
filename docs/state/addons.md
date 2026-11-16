@@ -494,6 +494,12 @@ area` of the stand — keeps working on the plot. Terminals 24/24. Not checked i
   `art/sources/` and `art/modules.md`; generator preserves finished item PNGs. Released as 1.0.1 (2026-10-29);
   build, resource/model checks, 24/24 terminals and default dev-server scenario passed. Client appearance not checked in game. Onboard-computer modules approved by the user; Pyrofuel sources described below.
 
+- **Fuel system prototype (dev #282):** the common compact pump started the transport, Aeronautics and CDG engines on
+  CDG diesel at 32/32/96 rpm on NeoForge 21.1.251. The CDG registry rejected water and its sided fluid interface rejected
+  side feed. The tank port supplied fuel from Create and Better Fluids 1.5.4. The passive mount left fuel in the tank.
+  Redstone on the pump and removal of the fuel feed stopped the transport engine. Hose routes, acceptance on a moving
+  Sable sub-level, and release recipes are pending.
+
 ## IE Extras (`tools/ie-extras-mod`, 2026-10-23)
 
 Blocks and features for Immersive Engineering (task «Аддон для блоков и функций IE», group «Разработка»; the user's first
