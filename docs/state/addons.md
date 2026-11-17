@@ -226,6 +226,11 @@ A restart preserved the mount, items and rotation. Cutting the power stopped the
 `20261116-203251-c372` covered four connections made with EE spools, 16 TFC copper ingots reaching the far auger
 section, redstone, reversal, removal and reinstallation in the same tick.
 
+Dev #384 reproduced the missing Create belt sections on the full-pack client stand before and after drive
+installation (job `20261116-204714-cf48`). Only the start section was visible. The client had all three belt
+block entities with a shared controller and length 3, and received 32 rpm on each section after the drive
+was connected. The acceptance scene now captures both phases from the same camera and logs the three sections.
+
 Dev #373 has an unreleased belt motor prototype in the `ee-electric-create` worktree. The existing middle pulley
 reports network stress and capacity to a position-bound EE device. A dedicated server with Create 6.0.10 and EE
 1.1.2 drove a standard belt from a wired test battery. The 256 SU press on the far end stopped the line at 270 V
