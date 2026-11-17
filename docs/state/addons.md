@@ -497,8 +497,12 @@ area` of the stand — keeps working on the plot. Terminals 24/24. Not checked i
 - **Fuel system prototype (dev #282):** the common compact pump started the transport, Aeronautics and CDG engines on
   CDG diesel at 32/32/96 rpm on NeoForge 21.1.251. The CDG registry rejected water and its sided fluid interface rejected
   side feed. The tank port supplied fuel from Create and Better Fluids 1.5.4. The passive mount left fuel in the tank.
-  Redstone on the pump and removal of the fuel feed stopped the transport engine. Hose routes, acceptance on a moving
-  Sable sub-level, and release recipes are pending.
+  Redstone on the pump and removal of the fuel feed stopped the transport engine. Flexible metal hoses support up to
+  8 m per span and 24 m per route. A two-span route supplied the transport engine after a server restart. The client
+  visual report shows the installed hose and its inventory sprite. A falling Sable platform drove fans at 32/32/96 rpm
+  with the three engine types. The same machine resumed after save/restart and after chunk unload/load. Removing the
+  mounts stopped supply and returned the installed hose while retaining the fuel in the tanks. The four shaped recipes
+  passed recipe conflict checks. Final full-pack server acceptance and release remain open.
 
 ## IE Extras (`tools/ie-extras-mod`, 2026-10-23)
 
