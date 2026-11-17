@@ -210,6 +210,15 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-17 (dev #359): the archived rectifier runs already showed 300 V / 20 Hz before saving the world. The old
+voltmeter check accepted 483.60 V because it matched only the first digit. EE 1.1.2 stores the battery's UI voltage in
+the block entity and reloads simulated voltage, frequency and phase from `simulated_devices.dat`. The devtest now
+sets voltage through the same Create setting as the UI after the battery's scheduled placement tick. The
+`battery-persistence` chain compares the saved block settings and simulated values for four batteries and two
+converters across two consecutive server restarts. Full-pack runs `20261117-095115-8451` → `20261117-095118-cdb9` →
+`20261117-095119-a8db` with EE Extras 2.24.1 retained 10 V / 1 Hz and the individual phases, 230 V on the bidirectional
+converter and 17 Hz on the frequency converter.
+
 2026-11-17 (dev #370): **EE Extras 2.24.1** — удалена нижняя грань толкателя кнопки платы с незаданной
 текстурой `#missing`. Грань целиком перекрыта основанием. Проверка ресурсов прошла, рендеры до и после
 совпали побайтно. Сравнение выполнено на модели кнопки.
