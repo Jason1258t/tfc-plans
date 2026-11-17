@@ -1,5 +1,8 @@
 # State: waiting for the host or an in-game check
 
+- Host: install **IE Extras 1.2.1** on the server and clients with `tfc pull addons ie_extras@1.2.1` and publish the pack
+  snapshot (dev #387). Existing Beamhouses do not need to be rebuilt.
+
 - Host: install **EE Extras 2.24.1** on the server and clients with `tfc pull addons ee_extras@2.24.1`
   and publish the pack snapshot (dev #370, #373).
 

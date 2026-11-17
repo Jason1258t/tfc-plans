@@ -586,6 +586,12 @@ Blocks and features for Immersive Engineering (task «Аддон для блок
 candidate — a heater regulated by an analog lever). Depends on TFC 4.2.9 + IE 12.4.2 (both required), NeoForge 21.1.234+
 (TFC's own minimum; built on 21.1.251 from the Gradle cache).
 
+- **1.2.1** (dev #387): Advanced TFC Tech 3.3's formed Beamhouse now marks the existing side item input with a
+  hatch and no longer shows the blind branch off the fluid line. The rear fluid inlet stays on the same face.
+  Ordinary and mirrored OBJ files are overridden; no stored state or structure template changes. Dedicated server:
+  item insertion and recipe input filter, liquid fill, and no fluid access from the item face in all eight orientations.
+  Full-pack client stand: SCENE END PASS, eight orientation checks and two inspected frames (task attachments).
+  The unrelated item output fault is tracked in dev #389.
 - **1.2.0** (dev #268): IE's crafting recipe attaches its ear defenders to Create engineer's goggles and returns them
   unchanged on removal. The combined item goes in the head armor slot. Dev server: `ietest earmuffs` checks both directions
   and rejects extra ingredients or a second attachment. Client sound and rendering still need a game check.
