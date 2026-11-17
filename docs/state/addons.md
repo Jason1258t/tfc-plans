@@ -230,6 +230,10 @@ Dev #384 reproduced the missing Create belt sections on the full-pack client sta
 installation (job `20261116-204714-cf48`). Only the start section was visible. The client had all three belt
 block entities with a shared controller and length 3, and received 32 rpm on each section after the drive
 was connected. The acceptance scene now captures both phases from the same camera and logs the three sections.
+With the same snapshot and jars, the control job `20261116-204759-29fd` rendered all three sections before and
+after installation when the stand overlay set `backend = "flywheel:off"` in `config/flywheel-client.toml`.
+This isolates the symptom to the Flywheel rendering path in the stand profile. The specific interaction within
+that path and reproduction on player hardware were not established. Both sets of frames are attached to #384.
 
 Dev #373 has an unreleased belt motor prototype in the `ee-electric-create` worktree. The existing middle pulley
 reports network stress and capacity to a position-bound EE device. A dedicated server with Create 6.0.10 and EE
