@@ -1,6 +1,6 @@
 import { Download, Paperclip, Trash2, X } from 'lucide-react';
 import { Button, ErrorBox, Progress } from '@/shared/ui';
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { formatSize } from '@/entities/file';
 import { dismissUpload, isImage, useUploads } from '@/lib/uploads';
 import { cx, timeAgo } from '@/shared/lib';
@@ -17,6 +17,7 @@ interface Props {
   /** Добавить файлы (картинки уйдут в галерею, остальное — сюда) */
   onAdd: (files: File[]) => void;
   error?: string | null;
+  renderFileLink?: (file: TaskFile) => ReactNode;
   /** Своё хранилище; без него — общее хранилище файлов сайта */
   source?: FileSource;
 }
@@ -30,7 +31,15 @@ function StoreAttachments(props: Props) {
   return <AttachmentsView {...props} source={useStoreSource(props.taskId)} />;
 }
 
-function AttachmentsView({ taskId, pending, onRemovePending, onAdd, error, source }: Props & { source: FileSource }) {
+function AttachmentsView({
+  taskId,
+  pending,
+  onRemovePending,
+  onAdd,
+  error,
+  renderFileLink,
+  source,
+}: Props & { source: FileSource }) {
   const uploads = useUploads(taskId).filter((u) => !u.image);
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -78,14 +87,16 @@ function AttachmentsView({ taskId, pending, onRemovePending, onAdd, error, sourc
         <ul className={styles.attachList}>
           {attached.map((f) => (
             <li key={f.id} className={styles.attachRow}>
-              <FileBadge
-                className={styles.fileBadge}
-                compact
-                name={f.name}
-                type={f.type}
-                onOpen={() => run(f.id, () => source.download(f))}
-                disabled={busyId === f.id}
-              />
+              {renderFileLink?.(f) ?? (
+                <FileBadge
+                  className={styles.fileBadge}
+                  compact
+                  name={f.name}
+                  type={f.type}
+                  onOpen={() => run(f.id, () => source.download(f))}
+                  disabled={busyId === f.id}
+                />
+              )}
               <span className={cx('faint', 'small', styles.attachMeta)}>
                 {formatSize(f.size)} · {f.author} · {timeAgo(f.createdAt)}
               </span>

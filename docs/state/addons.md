@@ -58,6 +58,14 @@ Checked on the full pack stand with `--level-type tfc:overworld`, not in the cli
 
 ## Destroy Bridge + Destroy Extras (`tools/destroy-bridge-mod`, `tools/destroy-extras-mod`)
 
+2026-11-16 (dev #381): **Destroy Extras 0.11.1** gives the processor, tank controller and filling station custom art. The etching bath has copper trim, and the membrane is a thin plate. Universal gas pipes and axial hand valves carry pure H₂, Cl₂, N₂ and O₂ and keep the concentration. Cylinders can be placed, connected from above, switched between fill and discharge, and mined with their gas component intact. Adjacent pipes of different legacy colours stay separate until replaced. The hotfix validates HCl inside Extras, compatible with the released Destroy Bridge 0.2.0.
+
+2026-11-16 (dev #380): **Destroy Extras 0.10.0** adds nine IE gas tank variants (500/4,000/16,000 L, 2/4/6 bar), separate hydrogen/chlorine lines, a 300 V / 2 A filling station and three portable cylinders (820/3,283/9,851 mB of standard mixture). The development server verified full cylinders for both gases, exact source remainder at the pressure limit, direct line output and discharge after restarting on the saved world.
+
+2026-11-16 (dev #379): **Destroy Extras 0.9.2** uses the 270–330 V operating range for the electrolyzer. The 37.5 Ω load draws 8 A at 300 V and about 8.7 A at 328 V. The previous shared 7.9–8.1 A gate stalled the reaction in much of the documented voltage range. The machine status, tooltips, Ponder and guides now show the operating voltage. Full-pack server job `20261115-210141-62b6` verified two brine batches at 327.723 V / 8.739 A and a stable paused progress at 260 V and 345 V.
+
+2026-11-15 (dev #375): **Destroy Extras 0.9.1** completes the formed electrolyzer model. Steel risers connect the collectors to the tanks, the four pipe ports have connected necks and recessed openings, and the power terminals have opaque top faces at the wire attachment points. The blue rim marks intake, cyan marks cathode gas, yellow marks anode gas, and violet marks liquid output. The atlas tiles formerly used for arrows on the pump and housing now carry plain materials. Both site guides and the «Мембранный электролизёр» quest use the same legend. The final jar passed the full-pack client scene (job `20261115-162904-e950`), and the formed model was inspected from all five viewpoints. See the task attachments for the frames.
+
 2026-11-15 (dev #367): **Destroy Extras 0.9.0** adds electrical Vat heating. External IE heaters use redstone and 20 FE/t via the IE heat capability, EE heater output follows its actual heat, and IE Extras analog heaters transfer heat through the working face according to the temperature difference. Dedicated server: eight power checks passed, including cutoff and heater removal. The tested Jar matches the released build.
 
 2026-11-14 (dev #353): **Destroy Extras 0.8.4** — readable formed-electrolyzer model: every face of the OBJ gets a reversed twin (thin parts no longer vanish from behind), coloured frames + flow arrows on the working ports, «+»/«−» on the terminals, the big octagonal gas-manifold end caps replaced by flat lids; port/terminal coordinates unchanged. Geometry and atlas come from `art/fix_electrolyzer_model.py` (needs Pillow + numpy; reads `art/membrane_electrolyzer-original.*`). Pitfall: the OBJ must keep `usemtl` before the faces — without it `neoforge:obj` bakes zero quads and IE `basic_split` crashes chunk meshing (`OBJModel` checkState on an empty group); the 0.8.3 build did exactly that (withdrawn, never released), caught by the client stand. Client stand scene `destroy-extras`: formed-front / formed-back shots.
@@ -201,6 +209,60 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
   13/13 at 299.827 V / 7.995 A. No manual Survival playthrough or live pack-wide datapack confirmation was performed.
 
 ## EE Extras (`tools/ee-extras-mod`)
+
+2026-11-17 (dev #373): **EE Extras 2.24.0** adds a wall-mounted disconnect between two standard EE wire terminals.
+A redstone signal opens the circuit and prevents closing it until the signal is removed. The circuit then needs a manual
+reset. Full-pack scene `20261116-205012-0358` verified manual placement, spool connections, press operation at 32 rpm,
+emergency stop, reset, and loss of power after removing the support. The two switch positions are documented in the
+task attachment. The switch reuses the single-pole contact and models from Electro Energetics 1.1.2.
+
+2026-11-16 (dev #373): **EE Extras 2.23.1** adds the side-mounted drive kit for a horizontal Create belt's middle
+pulley and the Simulated auger trough, plus the electric press, mixer, deployer and pulse fluid dispenser. The drive
+preserves the host block entity, uses two EE terminals and provides 256 SU at 300 V and 32 rpm. The wrench reverses
+the drive. Sneak-wrench removes it and disconnects the wires. Redstone stops it. The dedicated server showed 32 rpm
+with the loaded belt at 330 V and a stall at 270 V, switching from an external motor and recovery after restart.
+On the dedicated server with Simulated 1.3.2, the trough moved all 16 emeralds from a chest to the far section.
+A restart preserved the mount, items and rotation. Cutting the power stopped the auger. Full-pack client acceptance
+`20261116-203251-c372` covered four connections made with EE spools, 16 TFC copper ingots reaching the far auger
+section, redstone, reversal, removal and reinstallation in the same tick.
+
+Dev #384 reproduced the missing Create belt sections on the full-pack client stand before and after drive
+installation (job `20261116-204714-cf48`). Only the start section was visible. The client had all three belt
+block entities with a shared controller and length 3, and received 32 rpm on each section after the drive
+was connected. The acceptance scene now captures both phases from the same camera and logs the three sections.
+With the same snapshot and jars, the control job `20261116-204759-29fd` rendered all three sections before and
+after installation when the stand overlay set `backend = "flywheel:off"` in `config/flywheel-client.toml`.
+This isolates the symptom to the Flywheel rendering path in the stand profile. The specific interaction within
+that path and reproduction on player hardware were not established. Both sets of frames are attached to #384.
+
+Dev #373 has an unreleased belt motor prototype in the `ee-electric-create` worktree. The existing middle pulley
+reports network stress and capacity to a position-bound EE device. A dedicated server with Create 6.0.10 and EE
+1.1.2 drove a standard belt from a wired test battery. The 256 SU press on the far end stopped the line at 270 V
+(207.3 SU available) and ran at 330 V (309.7 SU available). At 300 V the cable drop put the line just below 256 SU.
+A development-server player mounted the kit without replacing the pulley. Reloading the saved world preserved
+309.7 SU at 330 V and the overload stop at 270 V. Manual wiring, removal, and a second source remain open.
+
+The same worktree contains the first electric machine, an unreleased press with a metal body and two EE contacts.
+Create 6.0.10 supplies its pressing operations and configured stress. A dedicated server with EE 1.1.2 verified
+32 RPM at a 330 V source, stopping at 270 V, cut-off on redstone or disconnected power, and an iron sheet made by the
+press before and after reloading the saved world. Full-pack client scene electric-press (20261116-163300-9ec3)
+confirmed stock EE spool connections to both contacts and 32 RPM without a kinetic network.
+
+The unreleased worktree also has an electric mixer for the stock Create basin, an electric deployer with Create's
+item-handler capability, and a redstone pulse fluid dispenser with a Create fluid filter and adjustable dose.
+The standalone development server made dough and placed a block with the deployer. The dispenser blocked water
+on a lava filter, then delivered 310 and 200 mB on separate edges. A held signal and a dose above the available
+amount left the destination unchanged. After restart, a fresh pulse added the saved 200 mB dose. Full-pack client
+scene electric-machines (20261116-164703-1f0c) confirmed spool connections and 32 RPM for the mixer and deployer
+and the dispenser's fluid filter registration.
+
+2026-11-15 (dev #372): **EE Extras 2.22.1** fits duplex terminations into quarter slots. Two terminations on the right
+leave the left half for the standard switch. Server clicks verified both duplex cables and three ordinary wire links,
+with one conductor bypassing the switch. Previously installed half-slot terminations retain their slot and node IDs.
+
+2026-11-15 (dev #368): **EE Extras 2.22.0** adds two half-panel attachments. The existing EE duplex termination
+accepts one cable and exposes two individual terminals. The double-pole switch has two duplex ports and switches both
+conductors. The dedicated server checks a same-panel cable, a 300 V load, the open circuit and reload.
 
 2026-11-06 (dev #295): **EE Extras 2.21.2** — stronger on/off contrast for PCB LEDs, plus separate craftable
 pushbutton and switch caps. Existing caps retain their mounted positions and drop the corresponding new item.

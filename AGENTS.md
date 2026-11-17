@@ -72,6 +72,12 @@ comments, commit messages, guides, MCP tool output. Keep Russian UI labels verba
 - Firestore rules change with the code: deploy `firestore:rules` first, then hosting.
 - Report to the user (not a frontend dev): what changed for players, what was checked and how, what wasn't. No internal
   function names unless needed for an action.
+- **Addon visual report is required.** Attach screenshots of every added block in a client scene to its dev task. For
+  added items, attach an inventory or item-render gallery that shows each item. If the client stand cannot produce
+  screenshots, attach labeled model renders as interim evidence and record the missing client check.
+- **Original addon textures:** Codex uses its `imagegen` skill and image generation tool. Kimi uses its relevant
+  image-generation or 3D-modeling skill, using the 3D workflow when the asset calls for a model or a texture bake.
+  Follow `addon-dev` for pack references and runtime asset checks.
 - Game facts (mod mechanics, KubeJS filters, map projection) — **verify in jars** (MCP first), not from memory. Say what
   was checked in code and what wasn't. The agent can't run the game, so don't append a routine «в игре не проверялось»
   note unless the in-game status is actually load-bearing for the answer.

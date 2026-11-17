@@ -1,9 +1,12 @@
 # State: waiting for the host or an in-game check
 
-- Host (dev #345): quest chapter «Химия» (27 quests, group Create & IE, after IE «Стальной слиток») — update
-  `u20261113-152048-bea5`. It fixes the approved first version, whose ids FTB Quests could not parse (chapter showed «Безымянный», dev #351).
-  Subscribe a test profile, check the chapter title and layout, then approve. Server stand: chapter id is stable and the
-  Russian title resolves; in-game look not checked.
+- Host: install **EE Extras 2.24.0** on the server and clients with `tfc pull addons ee_extras@2.24.0`
+  and publish the pack snapshot (dev #373).
+
+- Host (dev #379, #375): install **Destroy Extras 0.9.2** on the game server and clients. It fixes the electrolyzer
+  stalling at 328 V and includes the model fix and electric Vat heating from previous releases. Test the
+  «Мембранный электролизёр» quest description using pack update `u20261115-163731-67bb`, then approve it and publish the snapshot. The previous
+  chemistry chapter update `u20261113-152048-bea5` (dev #345) is already in the current snapshot.
 
 - Host (dev #332): install Better Fluids 1.5.1 on the server and clients (`tfc pull addons`), `tfc publish`; craft
   the cladding on a stonecutter and print one library tanker with the schematicannon.
@@ -13,8 +16,6 @@
 
 - Host (dev #272): install EE Extras 2.17.0 on the server and clients, check one working board and a charred-board
   salvage in the pack profile, then publish the pack snapshot.
-
-- Host (dev #367): install Destroy Extras 0.9.0 on the game server and for players to enable electrical Vat heating.
 
 - Host (dev #211): accept Destroy Extras 0.6.0 on a test-world copy. Rotate both machines, rebuild the electrolyzer shell, verify fluid flow through the rotated ports and the goggles tooltip.
 
@@ -26,7 +27,21 @@ its one-liner in STATE.md.
 Incinerator 1.0.2 (dev #364, #352): host installs the update on the server and player clients. In the client, check the
 animated embers under the grate and the dim top under redstone power.
 
+## Destroy Extras gas logistics (dev #380, #381)
+
+Host: install Destroy Extras 0.11.1 on the server and on clients, then publish the pack snapshot. Check the dock controls and gas delivery into production consumers in the host world.
+
 ## Host actions
+
+- **Destroy mechanical sieve timing** (dev #371): pull draft `qyho2TttVauqoLgY98FM` into a test world. Check that
+  sand and red sand take about 10 seconds per dropped stack at 64 RPM, then confirm for the pack. Nine recipes now
+  use a duration of 12,800, matching the existing ash recipes. The sieve still times each dropped stack as one batch.
+
+- Install **EE Extras 2.22.1** (dev #368, #372) on the server and all clients. In a test world, check the two quarter-slot
+  connectors beside a standard switch and both ports of the double-pole switch before publishing the pack snapshot.
+
+- **Salt water in Create** (dev #369): pull draft `imW47qzpOu6ZErBxLQUI` into a test world. Check that the unheated
+  mixer consumes one salt and 125 mB of fresh water and yields 125 mB of salt water, then confirm for the pack.
 
 - **Ore textures for TFC rocks** (2026-11-15, dev #363): update `u20261115-132405-1cd8` includes platinum ore and
   sperrylite processing from #362 and supersedes `u20261114-224107-c9bf`. Platinum uses gabbro, fluorite uses five

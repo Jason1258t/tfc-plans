@@ -20,7 +20,7 @@ export interface AddonBlock {
   /** Картинка «вид сверху» из icons/ аддона */
   image?: string;
   /** Рецепт верстака: три строки по три символа и ключ (предмет или #тег; иконка тега — item) */
-  recipe?: { pattern: string[]; key: Record<string, AddonRecipeKey> };
+  recipe?: { pattern: string[]; key: Record<string, AddonRecipeKey>; count?: number };
 }
 
 /** tools/<мод>/addon.json */

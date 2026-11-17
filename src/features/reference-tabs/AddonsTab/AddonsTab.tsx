@@ -170,7 +170,12 @@ function cardRecipe(a: Addon, b: AddonBlock): Recipe | null {
     i: b.id,
     t: 'minecraft:crafting_shaped',
     s: `tools/${a.source.split('/').pop()}/addon.json`,
-    j: { type: 'minecraft:crafting_shaped', pattern: b.recipe.pattern, key, result: { id: b.id, count: 1 } },
+    j: {
+      type: 'minecraft:crafting_shaped',
+      pattern: b.recipe.pattern,
+      key,
+      result: { id: b.id, count: b.recipe.count ?? 1 },
+    },
   });
 }
 
