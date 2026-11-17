@@ -234,10 +234,10 @@ Host: install Destroy Extras 0.11.1 on the server and on clients, then publish t
   Extras 0.4.0 with `tfc addons install destroy_extras` on server and players, then runs `tfc publish`. Test complete
   manual Survival L2/L3 lines with reusable designs and the required EE power. Draft datapack `Nh1ATmqCY92Hao48hOAQ`
   remains `install=false`: test it in a selected world before live confirmation; no pack-wide confirm was performed.
-- **Create Aeronautics Extra 1.0.1** (2026-10-29, `create-aeronautics-extra-1.0.1.jar`, new module textures): host
-  installs (`tfc pull addons`, server and players) and `tfc publish`. In game: block looks and rotating half-shaft,
-  goggles and tooltips, module insert/remove by hand, JEI/EMI recipes, the block on a flying Aeronautics ship with
-  propellers. Details — [addons.md](addons.md).
+- **Create Aeronautics Extra 1.1.0** (dev #282): subscribe a test profile to `u20261117-094608-5cd4` and check the
+  three-engine fuel system, manual filling and the recipes before approving. The update includes the addon for the
+  server and clients and replaces the KubeJS manual filling script. Also check the previously released onboard
+  computer in flight, its tooltips and inserting and removing modules. Details — [addons.md](addons.md).
 - **IE Extras 1.2.0** (dev #268): install on the server and clients; verify attached ear defenders render and muffle
   sound while engineer's goggles still show Create information in the head armor slot.
 - **IE Extras 1.1.0** (2026-10-29, `ie-extras-1.1.0.jar`; 1.0.0 — analog heater, 1.1.0 — basin heating by IE external,
