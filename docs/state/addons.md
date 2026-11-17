@@ -210,6 +210,10 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-17 (dev #370): **EE Extras 2.24.1** — удалена нижняя грань толкателя кнопки платы с незаданной
+текстурой `#missing`. Грань целиком перекрыта основанием. Проверка ресурсов прошла, рендеры до и после
+совпали побайтно. Сравнение выполнено на модели кнопки.
+
 2026-11-17 (dev #373): **EE Extras 2.24.0** adds a wall-mounted disconnect between two standard EE wire terminals.
 A redstone signal opens the circuit and prevents closing it until the signal is removed. The circuit then needs a manual
 reset. Full-pack scene `20261116-205012-0358` verified manual placement, spool connections, press operation at 32 rpm,

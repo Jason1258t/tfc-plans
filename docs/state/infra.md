@@ -441,7 +441,7 @@ turns of stand sessions went to the stand, 203 of 373 of them waiting/polling (`
 re-reads the whole context. So the queue answers «done» in one call.
 
 - **Worker** — `scripts/stand-queue.mjs serve` on `test1a`, kept alive by cron every minute through `flock`
-  (`scripts/stand-queue.sh`; no systemd: linger is off for `master`). Runs from the print-worker clone
+  (`scripts/stand-queue.sh`). Runs from the print-worker clone
   `~/tfc-stand/print-worker/repo` (main; `git pull` on start, exits by itself when `origin/main` moves while idle, cron
   restarts it within a minute). One run at a time (client 8G + server 6G don't fit 14 GB together). Agent jobs first;
   idle → one background print-check batch (`print-worker.mjs --once`) at most every 10 min. A long print batch (up to
@@ -472,6 +472,11 @@ re-reads the whole context. So the queue answers «done» in one call.
   print-worker clone, `serve --no-print --no-pull` with `TFC_STAND_QUEUE` and the print-worker `env`) runs beside the
   live one: move the copy's `pack-stand.mjs` default ports off 25616/25617, or the live print check takes them
   («bind failed: Address already in use»).
+- **RAM after SSH logout (dev #374)** — test1a has lingering enabled for `master`. Run
+  `loginctl enable-linger master` when provisioning the stand and verify `loginctl show-user master -p Linger`
+  returns `Linger=yes`. With the default `RemoveIPC=yes`, stopping the user after the last login session closes
+  recursively removes its files under `/dev/shm`, including the server run and its logs. Lingering keeps the user
+  manager running across logouts. Cron still starts the worker, and the worker removes its own staged files after runs.
 - **Install** (once; replaces the old print-worker cron line):
   `crontab -l | grep -v print-worker.sh | { cat; echo '* * * * * $HOME/tfc-stand/print-worker/repo/scripts/stand-queue.sh >> $HOME/tfc-stand/queue/serve.log 2>&1'; } | crontab -`.
   Stop: remove the line, `pkill -f 'stand-queue[.]mjs serve'` (the bracket keeps `pkill` from matching its own ssh command).
