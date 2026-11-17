@@ -1,6 +1,6 @@
 # State: waiting for the host or an in-game check
 
-- Host: install **EE Extras 2.23.1** on the server and clients with `tfc pull addons ee_extras@2.23.1`
+- Host: install **EE Extras 2.24.0** on the server and clients with `tfc pull addons ee_extras@2.24.0`
   and publish the pack snapshot (dev #373).
 
 - Host (dev #379, #375): install **Destroy Extras 0.9.2** on the game server and clients. It fixes the electrolyzer

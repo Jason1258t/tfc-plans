@@ -210,6 +210,12 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-17 (dev #373): **EE Extras 2.24.0** adds a wall-mounted disconnect between two standard EE wire terminals.
+A redstone signal opens the circuit and prevents closing it until the signal is removed. The circuit then needs a manual
+reset. Full-pack scene `20261116-205012-0358` verified manual placement, spool connections, press operation at 32 rpm,
+emergency stop, reset, and loss of power after removing the support. The two switch positions are documented in the
+task attachment. The switch reuses the single-pole contact and models from Electro Energetics 1.1.2.
+
 2026-11-16 (dev #373): **EE Extras 2.23.1** adds the side-mounted drive kit for a horizontal Create belt's middle
 pulley and the Simulated auger trough, plus the electric press, mixer, deployer and pulse fluid dispenser. The drive
 preserves the host block entity, uses two EE terminals and provides 256 SU at 300 V and 32 rpm. The wrench reverses
