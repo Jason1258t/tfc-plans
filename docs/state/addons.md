@@ -210,6 +210,12 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-17 (dev #386): **EE Extras 2.25.0** adds dead-end spans using the existing tension clamp. A clamp on each end
+holds that hanging glass string up to 60° from vertical, with reduced reach on short spans. A jumper to a fixed
+terminal can feed the span. The anchor is an EE wire attachment and the original conductor length remains in use
+for resistance and recovery. The dedicated server exercises straight and diagonal spans, short spans, clamp
+removal, saved worlds and a 300 V feed. Screenshots of free and anchored spans are attached to the tracker task.
+
 2026-11-17 (dev #359): the archived rectifier runs already showed 300 V / 20 Hz before saving the world. The old
 voltmeter check accepted 483.60 V because it matched only the first digit. EE 1.1.2 stores the battery's UI voltage in
 the block entity and reloads simulated voltage, frequency and phase from `simulated_devices.dat`. The devtest now
