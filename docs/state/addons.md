@@ -14,6 +14,14 @@ game check — [pending.md](pending.md).
 
 ## Development in progress
 
+- EE Extras PCB project name, #301.29 (2026-11-17). The open editor receives authoritative
+  topology updates through its menu, sent immediately after edits. Final client
+  `20261117-163340-8692` passed 9 native input/server/display/undo/redo checks.
+  The four screenshots show the saved circuit and title. The cold-restart chain is
+  `20261117-163722-bd9c` → retry `20261117-165523-6f9d` passed, including the
+  installed board name. #301.29 is checked (21/30). Addon commit `9d798a7` is pushed.
+  Scope and evidence are in [the checkpoint](../plans/pcb-modules-checkpoint.md).
+
 - EE Extras PCB modules, #301 (2026-11-08): resumed by the owner, not released or merged.
   Worktree `.claude/worktrees/pcb-modules`, branches `feat/pcb-modules` in parent and addon repositories.
   Prototype format 9; multi-cell editor and initial L1/L2 modules, including explicit-power sequential logic.

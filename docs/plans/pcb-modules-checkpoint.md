@@ -176,3 +176,50 @@ redstone output. The analogue signal uses a dedicated Create display source, sel
 independently by each attached Display Link. The old first-meter display source stays
 available for existing boards. Demonstrate at least two simultaneous links, a lamp on a
 separate redstone route, loaded and unloaded recipients, power loss and a cold restart.
+
+## Project name acceptance — 2026-11-17
+
+The saved-world client run `20261117-134016-b687` showed the saved design and initial title,
+but still displayed the old title after edit and redo. The open editor now receives the
+authoritative topology from its server menu whenever it changes. The grid, selection parameters,
+parts list and project name all use this snapshot. Block-entity updates remain available for
+clients observing the world.
+
+The server chain `pcb-name-restart` checks the rename, rejects a foreign menu ID and an out-of-date
+previous name, verifies undo and redo, saves the drawing, assembles and places the board, and checks
+the editor and installed board after a new server process starts. Save `20261117-134812-9b3e` and
+restart `20261117-134815-25a0` passed on the same main JAR (`f3ded6f6…`).
+
+Client run `20261117-134727-d043` verified the native name input and all three server transitions.
+The original name, undo and redo appeared in the editor. The first post-Enter screenshot still
+showed the previous value. Rerun `20261117-144252-7119` allows five seconds for each editor transition
+and checks each server-side value independently.
+
+### Create display transport (26)
+
+In Create 6.0.10, a Display Link with an active source refreshes every 100 ticks by default.
+The source can select a shorter interval via `getPassiveRefreshTicks`; each configured link
+polls its own target, so the adapter can use passive updates without keeping a receiver list.
+The base transfer calls both the flap-specific and plain-text APIs. A blank display should
+send a line with an empty component and no label. The split-flap target keeps a single-line
+source's previous text when the input contains no line. Expect the target's next eligible
+refresh when it loads, reaches operating speed or the link resumes after a redstone pause.
+
+Client `20261117-155622-9b3d` confirmed the stale value was in the menu snapshot itself.
+Calling `broadcastChanges` from `finishEdit` sends the committed change immediately.
+Final client `20261117-163340-8692` passed 9 assertions with no failures and exited normally.
+Four screenshots were inspected, including the new name, undo and redo. Native AWT keyboard input
+uses a single Robot; two earlier repeats aborted in native code with a double-free error.
+The final cold-restart chain uses the exact client JARs, main SHA256
+`b7c13571c606b9c3e5b926632166ccd001392768661c14fde66bdf1ab653cf86`.
+Its jobs are `20261117-163722-bd9c` → `20261117-163724-c633`.
+
+The final save job `20261117-163722-bd9c` passed. Its scheduled restart
+`20261117-163724-c633` failed in the queue worker before server startup, with no RCON
+transcript. Repeat `20261117-165523-6f9d` uses that save through `worldJob` and the same
+frozen main and devtest JARs. Attachment `r4DBxEYEQiC2l7DnlWyW` records the failed chain.
+
+Cold restart `20261117-165523-6f9d` passed from the final save, using the matching frozen
+main/devtest hashes. RCON confirmed the editor and installed board name. #301.29 is checked,
+21/30 complete. Addon commit `9d798a7` is pushed to `origin/feat/pcb-modules`.
+The next active catalogue gap is the powered Create L2 adapter (#301.26).
