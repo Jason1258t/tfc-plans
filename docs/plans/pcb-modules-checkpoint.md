@@ -223,3 +223,22 @@ Cold restart `20261117-165523-6f9d` passed from the final save, using the matchi
 main/devtest hashes. RCON confirmed the editor and installed board name. #301.29 is checked,
 21/30 complete. Addon commit `9d798a7` is pushed to `origin/feat/pcb-modules`.
 The next active catalogue gap is the powered Create L2 adapter (#301.26).
+
+## Isolated local work — 2026-11-18
+
+The owner confirmed that another chat owns the original `pcb-modules` worktree. Do not edit it from this chat.
+The local continuation is in `pcb-create-local` / `feat/pcb-create-local` in both repos, based on parent
+`c6167c6c` and addon `9d798a7`, with a snapshot of the uncommitted Create candidate. Reconcile this branch
+with the owning chat before transferring changes. The stand is rebooting; no new runtime jobs were submitted
+after the owner's instruction to work only on code and textures.
+
+Local additions: per-Display-Link adapter selection; adapter numbers in installed component feedback; editor
+help explains scan order (top to bottom, left to right) and the shared OR lamp output. The second demo knob at
+25% produces 3.75 V, not 1.25 V: its supply-to-wiper resistance is 2.5 kohm and wiper-to-ground is 7.5 kohm.
+The client assertion was corrected accordingly; runtime acceptance remains pending. The shared Scene scaffold
+from main is included for the `pcb-create` scene.
+
+The new generated top-face panel is 32×32, 16 colours, opaque, with analogue/digital channel marks. Original,
+preparation notes, enlarged texture and inspected item render live in `tools/ee-extras-mod/art/pcb-create/`.
+Only the top lid face uses it; other faces retain EE/Create textures. Local build/devtestJar, lint and resource
+validation pass (existing warnings remain). No release, merge or deploy; #301.26 is still open.

@@ -816,3 +816,12 @@ six faces of both tank types, fluid accounting and detachment when the tank is b
   #301.22–25 accepted after server and cold restart plus a full client editor test. The server
   accepts and persists the project name, but the last screenshot did not show the updated name.
   #301.29 remains open. Checklist total 20/30.
+
+## PCB Create adapter: isolated local candidate, 2026-11-18
+
+Dev #301.26: `feat/pcb-create-local` preserves a separate snapshot of the candidate from `pcb-modules` so the
+owning chat can continue without concurrent edits. Local changes add per-link adapter selection, explicit
+adapter numbering/help, the corrected second-knob expectation (3.75 V at 25%) and an original 32×32 top-panel
+texture. Build/devtestJar, lint, resource validation and local item rendering pass; client scene still needs
+rerunning, plus full supply/load/persistence/unload acceptance. Stand rebooting; no release or deployment.
+See `docs/plans/pcb-modules-checkpoint.md`, isolated local work section.
