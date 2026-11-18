@@ -223,3 +223,82 @@ Cold restart `20261117-165523-6f9d` passed from the final save, using the matchi
 main/devtest hashes. RCON confirmed the editor and installed board name. #301.29 is checked,
 21/30 complete. Addon commit `9d798a7` is pushed to `origin/feat/pcb-modules`.
 The next active catalogue gap is the powered Create L2 adapter (#301.26).
+
+## Create L2 adapter candidate — 2026-11-18
+
+#301.26 has an uncommitted implementation in the existing addon worktree. Catalogue index 40,
+CREATE_INTERFACE, 3×2, pins A/L/power/ground. Supply load 10 kohm, each input 1 Gohm through
+private EE nodes. All supply samples must be 3–6 V DC, digital hysteresis is 40/60 percent,
+power loss clears the board output. Two Display Link sources provide voltage and state,
+refresh every 20 ticks and send an empty line with no label when unpowered. The existing
+meter source is retained. Display sources currently select the first adapter on a board.
+
+New files are PcbCreateInterface, PcbCreateSource and devtest PcbCreateTest, plus the recipe
+and models. Reused housing, metal and contact textures and Create andesite casing. The item
+model is enlarged from the mounted geometry, its render was inspected. Build/devtestJar,
+resource validation and recipe conflict checks pass. Runtime acceptance remains pending.
+
+PcbCreateTest commands build/check/displays/blank/supply/digital create a routed board with
+a 10 kohm rotary knob, separate power and logic batteries, two real Display Links and Nixie
+receivers. Initial smoke must pass before extending to split-flap display, lamps, independent
+power/analogue checks, loads/AC, multiple receivers, persistence/chunk unload and full client.
+Do not mark #301.26 complete from compilation or a source-provided text assertion.
+
+SSH auth was renewed by the owner. Tailscale initially timed out; ping discovered the host's
+current LAN address 192.168.0.102. SSH with HostKeyAlias=192.168.0.101 succeeded there.
+Use TFC_CLIENT_HOST=master@192.168.0.102 for the current queue calls.
+
+Initial server job submitted successfully as `20261118-113641-70b7` over LAN.
+The host then stopped responding to SSH and briefly appeared offline in Tailscale.
+The owner has been notified. Keep waiting for this job; do not duplicate it.
+Attachment `mbFrrQ5jENVD3bEbzAKA` contains the later candidate JARs, hashes, inspected item
+render and local checks. The later build adds the editor tooltip, so compare hashes before
+accepting a runtime result. Task #301.26 stays unchecked.
+
+### Combined acceptance in progress — 2026-11-18
+
+The owner stopped the overlapping session. Its adapter selector, third receiver, cage lamp
+and Scene scaffold were retained. The scaffold is byte-for-byte the current addon origin/main
+blob `52804f6b1ba83ef410e2dd27d11ce0d004812ad4`. The adapter source now selects its ordinal
+independently in every Display Link; invalid ordinals return no adapter.
+
+Initial smoke `20261118-113641-70b7` passed real power/input measurements, both physical Nixies,
+power loss and restoration. Full receiver check `123339-18ca` exposed a wrong test expectation:
+a knob at 25 percent produces 3.75 V, not 1.25 V. The next run passed independent receivers,
+the real driven flap display, cage lamp and hysteresis, then stopped because the creative
+battery's UI clamped a requested negative voltage to zero. The fixture now swaps real wires
+for reverse polarity.
+
+Final frozen chain `pcb-create-restart-20261118-124402` uses main
+`f74a20df7b0d34bbdf090f265fdd8d03d6511c143dfccf640c5c3e8acb18cb9c`
+and devtest `d8a1f4ac178689ca8a38a5e69af275b8809adea13029db3dda502655021a6eb9`.
+Build `20261118-124406-71e9` passed, including the actual reverse connection, AC, unloaded
+chunk assertion and recovery. Restart `124409-f744` and client `124414-8043` follow.
+The client scene also checks native editor placement, undo and redo. Keep waiting via
+addon_stand job=20261118-124414-8043, then inspect every returned scene frame.
+
+Create's pack config has logistics.displayLinkRange=64. The adapter polls at 20 ticks.
+Each link retains its own source/channel/adapter/target selection. Loaded receiver, operating
+speed of the flap display and an unpaused link remain prerequisites for an update.
+
+### Acceptance completed — 2026-11-18
+
+The full chain `124406-71e9` → `124409-f744` → `124414-8043` passed. After visual
+inspection, a separate client `20261118-130531-bc85` passed with clearer camera angles.
+All 11 frames were inspected: uncovered board modules, voltage/state Nixies, driven flap display
+showing 2.50, cage lamp, catalogue and native editor placement/undo/redo. Its devtest JAR is
+`ebb0c7762511bda09b31343aa5b1c0aa2344272ae9ff1e4d1c1869a9eed800e7`; main remains
+`f74a20df7b0d34bbdf090f265fdd8d03d6511c143dfccf640c5c3e8acb18cb9c`.
+
+#301.26 and #301.5 are checked, total 23/30. The L2 part of #301.11 is accepted.
+#301.27 remains the next aggregate L1/L2 acceptance step, before L3. Overall #301 remains doing.
+
+Attachment `RdncbBEVdshaJHYaj9jP`, pcb-create-accepted.zip (15.3 MB), contains frozen JARs,
+hashes, server-chain world/evidence and final visual evidence. Local kit:
+`/Users/ivan/.codex/visualizations/2026/11/17/01a1e9ba-74ab-7c52-aee7-8da2e9a310a1/pcb-create-accepted`.
+
+Additional receiver-only unload job `20261118-130942-2a85` was submitted on the accepted saved
+world. Its result has not been fetched because test1a went offline again. It is not counted as
+accepted evidence. The accepted full-board chunk unload has actual CHUNK_UNLOADED/CHUNK_LOADED
+server log messages. Note the nearby receiver may be retained by neighboring forced chunks
+in the additional fixture. Inspect that result before using it or repeating the experiment.

@@ -14,6 +14,16 @@ game check — [pending.md](pending.md).
 
 ## Development in progress
 
+- EE Extras PCB Create L2 adapter, #301.26 (2026-11-18). 3×2, powered passive input stage,
+  separate analogue and logic inputs, per-Display-Link adapter/channel selection. Real Nixies,
+  driven Create display board and Create Deco lamp passed power loss/recovery, hysteresis,
+  reverse polarity, AC, chunk unload and a new server process. Full frozen chain
+  `20261118-124406-71e9` → `124409-f744` → `124414-8043` passed.
+  Final visual client `130531-bc85` passed; all 11 frames inspected, including native editor
+  placement/undo/redo. Attachment `RdncbBEVdshaJHYaj9jP` has the world, JARs and evidence.
+  #301.26 and #301.5 accepted (23/30). Next is aggregate L1/L2 acceptance #301.27.
+  Additional receiver-only unload job `130942-2a85` awaits retrieval after test1a reconnects.
+
 - EE Extras PCB project name, #301.29 (2026-11-17). The open editor receives authoritative
   topology updates through its menu, sent immediately after edits. Final client
   `20261117-163340-8692` passed 9 native input/server/display/undo/redo checks.
