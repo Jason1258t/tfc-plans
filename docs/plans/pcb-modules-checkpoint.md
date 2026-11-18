@@ -242,3 +242,15 @@ The new generated top-face panel is 32×32, 16 colours, opaque, with analogue/di
 preparation notes, enlarged texture and inspected item render live in `tools/ee-extras-mod/art/pcb-create/`.
 Only the top lid face uses it; other faces retain EE/Create textures. Local build/devtestJar, lint and resource
 validation pass (existing warnings remain). No release, merge or deploy; #301.26 is still open.
+
+### Prepared acceptance chain (not run), 2026-11-18
+
+Local `pcb-create-restart` now includes a visible fifth module (analogue input load),
+independent divider expectations at 1 kohm / 0.01 ohm / 1 Gohm, exact text assertions,
+digital hysteresis, invalid supply 0/2/7/-5 V, actual chunk unload verification,
+and a new process reading the same saved world. Restart then changes the real signal
+and power again to distinguish live transport from stale saved text. The primary
+receiver is now Create's mechanical display with a real cogwheel and 128 rpm motor;
+its actual speed requirement and section text are asserted. Two Nixie targets
+remain. All new devtest code compiles; the chain has NOT run. The stand remains
+unused at the owner's request. AC and runtime/client evidence remain required.
