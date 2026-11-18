@@ -825,3 +825,11 @@ adapter numbering/help, the corrected second-knob expectation (3.75 V at 25%) an
 texture. Build/devtestJar, lint, resource validation and local item rendering pass; client scene still needs
 rerunning, plus full supply/load/persistence/unload acceptance. Stand rebooting; no release or deployment.
 See `docs/plans/pcb-modules-checkpoint.md`, isolated local work section.
+
+### Acceptance status reconciled, 2026-11-18
+
+#301.26 was subsequently accepted by the owning session in `feat/pcb-modules` (addon d26c21d,
+parent84b958ed, doc59 rev50). This chat independently inspected the saved server-chain evidence,
+JAR hashes and all11final client frames in attachment RdncbBEVdshaJHYaj9jP. The isolated panel
+texture and extended load/short/balance fixture remain unaccepted extras in `feat/pcb-create-local`;
+the accepted build does not contain them. Overall301 remains doing; no release or deployment.

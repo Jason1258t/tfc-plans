@@ -264,3 +264,31 @@ the visible load and all signal-input resistances, with a 10 microwatt residual
 limit. Sense resistors are included in the external divider/load expectation.
 These additions are compile-checked only; the owner still limits this chat
 to local code/art work. The stand and the original worktree remain untouched.
+
+## Authoritative acceptance reconciled — 2026-11-18
+
+The owning session completed #301.26 and #301.5 in `feat/pcb-modules`: addon `d26c21d`, parent
+`84b958ed`, both pushed. Plan doc:59 rev50 and task rev15 show acceptance; overall #301 stays doing.
+The earlier local statements that #301.26 is open describe the state before this reconciliation.
+
+This chat independently read the complete build/restart RCON transcripts, both verdicts and raw
+CHUNK_UNLOADED/CHUNK_LOADED log lines, recomputed the three JAR SHA256 values and inspected all
+11 final client frames. Evidence: task attachment `RdncbBEVdshaJHYaj9jP`, local kit
+`/Users/ivan/.codex/visualizations/2026/11/17/01a1e9ba-74ab-7c52-aee7-8da2e9a310a1/pcb-create-accepted`.
+
+| Session requirement                                  | Inspected evidence                                                                                                                                                                                               |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Actual power and inputs, nominal electrical loads    | Build RCON: 4.999892791 V supply, 2.499940146 V analogue input, 4.9999999996 V logic input, 0.002499924042 W adapter consumption; devtest independently checks the 10 kohm supply and both 1 Gohm input branches |
+| Independent module selection and multiple recipients | Two real adapters at 2.50/3.75, three Nixies and driven Create display; invalid ordinals return no adapter; client frames voltage/second-adapter/flap-display                                                    |
+| Physical lamp and display                            | Real Create Deco lamp and mechanically driven Create display; state/lamp-on/lamp-off/flap-display frames plus server state assertions                                                                            |
+| Power loss and recovery                              | RCON checks 0/2/7 V, physically reversed wires and AC; blanking and restoration, hysteresis transitions in both directions                                                                                       |
+| Saved world, new process, chunk unload               | Chain 124406-71e9 → 124409-f744; actual server log unload/load messages, restored inputs/displays/lamp                                                                                                           |
+| Client and evidence attachment                       | Final 130531-bc85 verdict PASS; 11 frames inspected; kit attached to #301                                                                                                                                        |
+| Saved verified work and plan                         | origin/feat/pcb-modules d26c21d/84b958ed; doc59 rev50; checklist26 checked, overall301 doing                                                                                                                     |
+
+The session's acceptance goal is satisfied by the owning session's verified build, not by the newer
+local candidate. The original worktree was not edited during reconciliation. The 32×32 panel,
+extra feedback text and extended short/load/power-balance scenario in `feat/pcb-create-local`
+remain separate unaccepted additions. Do not substitute its JAR for the accepted frozen JAR or
+claim that its extended load matrix passed. The extra receiver-only unload job is not counted;
+full-board chunk unload is the inspected acceptance evidence. No release, main merge or deploy.
