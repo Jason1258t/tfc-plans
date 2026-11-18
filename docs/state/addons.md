@@ -586,6 +586,8 @@ area` of the stand — keeps working on the plot. Terminals 24/24. Not checked i
   passed recipe conflict checks. The full snapshot also passed manual CDG diesel filling, empty bucket return,
   redstone stop and restart with the replacement KubeJS script. Host update: `u20261117-094608-5cd4`.
 
+- **1.1.2 (dev #390):** открытая модель рядного трёхцилиндрового транспортного дизеля вместо латунного куба: оребрённые цилиндры, головки, форсунки и трубки, коллекторы, фильтр, масляный поддон, маховик и лапы. Четыре текстуры ImageGen 32×32; исходник и запрос в `art/`. Gradle, клеммы 24/24, ресурсы и рендеры шести направлений прошли. Клиентский стенд `20261118-124908-e5d4` прошёл; кадры просмотрены, горизонтальные двигатели стоят головками вверх и лапами вниз, все шесть ориентаций видны. Визуальные материалы в #390.
+
 ## IE Extras (`tools/ie-extras-mod`, 2026-10-23)
 
 Blocks and features for Immersive Engineering (task «Аддон для блоков и функций IE», group «Разработка»; the user's first

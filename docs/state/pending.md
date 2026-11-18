@@ -237,6 +237,7 @@ Host: install Destroy Extras 0.11.1 on the server and on clients, then publish t
   Extras 0.4.0 with `tfc addons install destroy_extras` on server and players, then runs `tfc publish`. Test complete
   manual Survival L2/L3 lines with reusable designs and the required EE power. Draft datapack `Nh1ATmqCY92Hao48hOAQ`
   remains `install=false`: test it in a selected world before live confirmation; no pack-wide confirm was performed.
+- **Create Aeronautics Extra 1.1.2** (dev #390): install the new diesel model and textures on the server and all clients with `tfc pull addons create_aeronautics_extra@1.1.2`, then publish the snapshot. The older fuel-system proposal below still needs host acceptance.
 - **Create Aeronautics Extra 1.1.0** (dev #282): subscribe a test profile to `u20261117-094608-5cd4` and check the
   three-engine fuel system, manual filling and the recipes before approving. The update includes the addon for the
   server and clients and replaces the KubeJS manual filling script. Also check the previously released onboard
