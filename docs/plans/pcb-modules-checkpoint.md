@@ -2,6 +2,13 @@
 
 ## Aggregate acceptance continuation — 2026-11-18
 
+Latest authoritative correction: cold flag repeat182851-45cc failed before boot (`fetch failed`).
+The preceding181835-c221 had a fixture exclusion error and is not accepted. Client182756-7370
+is submitted but unobserved after SSH loss. Later timer/register retry attempts returned no IDs;
+reconcile the remote queue before duplicating them. There are now10prepared lifecycle chains,
+including a step-up cold-server proof replacement. See the last section of the matrix for
+current states; older pending paragraphs below record earlier observation points. Tool follow-up#393.
+
 Latest: flag save/unload step181319-e675 passed; scheduled restart181322-abc7 failed
 before boot (`fetch failed`). Repeat181835-c221, timer181910-0686→181913-7818 and
 register181909-b7f6→181912-b5f4 have unknown results after SSH was lost. Reobserve them;

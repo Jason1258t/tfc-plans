@@ -135,3 +135,44 @@ main remains f74a20df. Neither client candidate has been accepted.
 
 Tailscale reported test1a offline after last seen 18:20 UTC; both known SSH routes timed
 out. This blocks result observation and additional runs, not proof that queued jobs stopped.
+
+## Reconciled queue state — 2026-11-18, 18:29 UTC
+
+Connectivity returned again. The timer/register first steps above are now confirmed
+terminal errors, both `fetch failed` before Minecraft startup; their dependent restarts
+are cancelled. They can be retried without duplicating live work.
+
+Flag repeat181835-c221 booted the copied world, but did not load either addon: its broad
+manual exclusion `ee-extras-` removed the frozen main/devtest as well as the snapshot JAR.
+The resulting unknown command is a fixture error, not an accepted restart or a PCB defect.
+Corrected repeat182851-45cc uses the original save181319-e675, the original frozen JARs
+and only excludes the exact snapshot filename `ee-extras-2.22.1.jar`. Its result is pending.
+
+The initial client attempt182118 had no job and was absent from the authoritative queue.
+The corrected, committed client scene was successfully submitted as182756-7370 with
+mainf74a20df/devtesta37da5cc; observe this handle rather than resubmitting.
+
+Prototype branches are preserved: addond0c8c33, parent3afd8d81 before this status note.
+The main JAR remains unchanged. #301.27 is still open.
+
+## Latest authoritative continuation state
+
+- Corrected flag restart182851-45cc is terminal error: `fetch failed` before boot.
+  Cold restart of the flag is still unaccepted. Source save181319-e675 remains intact.
+- Original timer/register chains are terminal infrastructure failures as above. Later
+  resubmission attempts lost SSH or hit the CLI180-second timeout before returning IDs.
+  Reconcile the remote queue by their notes and frozen hashes before any new submission.
+- Client182756-7370 was successfully submitted; its observer ended on broken SSH.
+  Its remote terminal state is unknown, so reobserve that same ID first.
+- Prepared chains now total10: the prior nine plus `pcb-l1-stepup-lifecycle` (not submitted).
+  The latter uses the real external loaded voltmeter/balance, a running-world chunk cycle,
+  cold restart and a power cycle; its purpose is to restore the missing cold-server raw proof.
+- [Historical raw evidence index](pcb-l1-l2-evidence-index.md) preserves numeric results
+  and distinguishes old failures from later corrected cases. It does not claim current
+  runtime/chunk acceptance. Thirteen raw source files were copied with an exact path/hash index.
+- Tooling follow-up#393 records the manual immutable-step retry procedure and the broad
+  exclusion mistake, so a future retry command can preserve the correct JARs/world safely.
+
+Next dependent work requires the stand: reconcile the uncertain submissions, inspect the
+client result and retry only confirmed terminal infrastructure failures. Do not add acceptance
+marks or release the prototype while those results and the remaining family checks are absent.
