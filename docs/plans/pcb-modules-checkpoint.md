@@ -2,13 +2,22 @@
 
 ## Aggregate acceptance continuation — 2026-11-18
 
+Latest: flag save/unload step181319-e675 passed; scheduled restart181322-abc7 failed
+before boot (`fetch failed`). Repeat181835-c221, timer181910-0686→181913-7818 and
+register181909-b7f6→181912-b5f4 have unknown results after SSH was lost. Reobserve them;
+never restart because observation timed out. Receiver-only130942-2a85 is now read and
+proves receiver unloaded/source loaded/blank/restore. Interim attachmenttu7JONG5aPxbhQSB5mTY.
+Nine lifecycle chains and a six-board client scene are prepared. The new scene has no
+accepted run; its initial attempt has no local job ID and must be reconciled against the
+remote queue before resubmission. Detailed states and hashes are in the evidence matrix.
+
 Current tracker is 23/30: #301.5/.26/.29 are accepted; #301.27 remains open.
 The older introductory inventory below is historical and must not reopen those accepted items.
 See [aggregate evidence matrix](pcb-l1-l2-acceptance.md) for current coverage and remaining checks.
-Seven devtest-only chunk/restart chains are prepared for the flag, timer and five logic types;
-build/devtestJar passed, but none of those chains has run. Main JAR still exactly matches
-accepted SHA f74a20df…; no production logic changed. Queue access failed over both known routes.
-Preserve the existing receiver-only job 130942-2a85 until its authoritative result is available.
+Nine devtest-only chunk/restart chains and the client scene are prepared; build/devtestJar passed.
+Use the latest per-job states above: compilation alone proves no runtime acceptance.
+Main JAR still exactly matches accepted SHA f74a20df…; no production logic changed.
+Queue access is intermittent and currently failed over both known routes.
 
 Updated 2026-11-16.
 Audit of all20original items completed against code, late logs and artifact hashes.

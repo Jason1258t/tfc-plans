@@ -85,3 +85,53 @@ Prepared devtest SHA256: `1bd05cbf91dfbe0ba257bddaab597d29a00e5b746921c54d8487a7
 **None of these seven new chains has executed.** This preparation supplies no new runtime,
 protection, visual or acceptance result. Clock/comparator and other remaining family
 coverage must still be completed; successful compilation does not close #301.27.
+
+## First runtime results and current handles — 2026-11-18
+
+The stand briefly became reachable. The previously unobserved receiver-only job
+`20261118-130942-2a85` is terminal `done`: raw latest.log lines 14229/14230 confirm
+RECEIVER_UNLOADED and SOURCE_LOADED. Subsequent lamp/power-loss/blank/restore assertions
+passed. This supplements accepted #26 without reopening it.
+
+The flag chain now has actual evidence:
+
+- `20261118-181319-e675` passed: actual Loaded=0 then Loaded=1, unchanged Latched/Circuit,
+  zero output while unpowered, 23.9987 V under load after power restoration, SET/RESET and
+  three successful negative controls (opposite loaded state, missing reference, changed flag).
+- Scheduled cold restart `20261118-181322-abc7` is terminal `error`, reason `fetch failed`,
+  before Minecraft started. It is not an electrical or state regression result.
+- Repeat `20261118-181835-c221` uses that same saved world and frozen f74a20df/1bd05cbf
+  JARs. Its result is unknown: the observer lost SSH, which is not a terminal job result.
+- Timer `181910-0686` → `181913-7818` and register `181909-b7f6` → `181912-b5f4` were
+  submitted with the same frozen JARs. Observation timed out after connectivity vanished;
+  reobserve those exact handles, do not infer failure or create duplicates.
+
+Interim attachment `tu7JONG5aPxbhQSB5mTY`, `pcb-l1-latch-partial.zip` (2.2 MB), contains
+the automatic chain evidence/world, frozen JARs, full checksums, explicit failed-restart
+status and the additional receiver-only logs. It is not the final aggregate acceptance kit.
+
+Two additional chains, `pcb-l2-comparator-lifecycle` and `pcb-l2-clock-lifecycle`, are
+prepared but not submitted. They check real loaded output/power or 100 sampled ticks,
+plus actual chunk lifecycle and saved circuit/phase across a cold process.
+
+Read-only visual audit found useful old frames in client run `20261108-103726-b348`
+(23 OK/0 FAIL) and `20261110-152618-3e9f` (25 OK/0 FAIL). Exact loaded JAR hashes for
+those two runs remain unproven. The former shows the flag, lights and L2 packages; the
+latter shows the knob/buzzer/seven-segment and four modules together in the editor,
+but its installed NAND frame shows sky. Mechanical timer and three-position switch
+are missing from that older catalogue gallery. The 16 November world frames show grass.
+Do not claim these runs visually cover every installed module.
+
+New scene `pcb-acceptance` builds six real powered boards for those visual gaps, including
+all three selector positions. It uses the shared Scene camera and tests measured outputs
+before photos. A static placement audit checked 31 distinct board/source/probe positions;
+the timer uses a separate row so its winding battery cannot overwrite a NAND input.
+The scene compiles, but has no runtime or viewed-frame result yet.
+An initial submission attempt froze candidate `pcb-acceptance-20261118-182118`, then
+lost SSH; its local candidate has no job ID. Before resubmitting, inspect the remote queue
+for that exact attempt/note/hash once reachable. The subsequently corrected layout was
+rebuilt as devtest SHA `a37da5ccc0a1443e39ed90bf0ec83fa6cf2e52cff4185f05f202c6028e04b846`;
+main remains f74a20df. Neither client candidate has been accepted.
+
+Tailscale reported test1a offline after last seen 18:20 UTC; both known SSH routes timed
+out. This blocks result observation and additional runs, not proof that queued jobs stopped.
