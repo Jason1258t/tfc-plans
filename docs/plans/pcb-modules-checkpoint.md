@@ -254,3 +254,13 @@ receiver is now Create's mechanical display with a real cogwheel and 128 rpm mot
 its actual speed requirement and section text are asserted. Two Nixie targets
 remain. All new devtest code compiles; the chain has NOT run. The stand remains
 unused at the owner's request. AC and runtime/client evidence remain required.
+
+### AC and power-balance scenario prepared, 2026-11-18
+
+The isolated candidate now includes a real EE AC source (5 V RMS, 50 Hz),
+checks both adapter supplies disabled and receiver blanking, then returns to DC.
+An independent DC power balance sums both supply resistors, both potentiometers,
+the visible load and all signal-input resistances, with a 10 microwatt residual
+limit. Sense resistors are included in the external divider/load expectation.
+These additions are compile-checked only; the owner still limits this chat
+to local code/art work. The stand and the original worktree remain untouched.
