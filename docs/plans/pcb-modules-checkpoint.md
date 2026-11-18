@@ -1,5 +1,15 @@
 # PCB modules — current continuation checkpoint
 
+## Aggregate acceptance continuation — 2026-11-18
+
+Current tracker is 23/30: #301.5/.26/.29 are accepted; #301.27 remains open.
+The older introductory inventory below is historical and must not reopen those accepted items.
+See [aggregate evidence matrix](pcb-l1-l2-acceptance.md) for current coverage and remaining checks.
+Seven devtest-only chunk/restart chains are prepared for the flag, timer and five logic types;
+build/devtestJar passed, but none of those chains has run. Main JAR still exactly matches
+accepted SHA f74a20df…; no production logic changed. Queue access failed over both known routes.
+Preserve the existing receiver-only job 130942-2a85 until its authoritative result is available.
+
 Updated 2026-11-16.
 Audit of all20original items completed against code, late logs and artifact hashes.
 Checklist expanded to 30 items: concrete catalogue/acceptance work21–29, explicitly deferred editor stage2 is30.

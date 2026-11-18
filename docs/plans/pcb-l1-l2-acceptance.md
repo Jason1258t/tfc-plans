@@ -48,3 +48,40 @@ not applicable only with its electrical or state contract explained. Attach the 
 indexed kit (JARs/SHA, worlds, instructions, measurements, logs and images), synchronize
 doc:59/checkpoint, preserve/push verified prototype changes, then mark #301.27.
 No acceptance mark is changed by this preliminary audit.
+
+## Local preparation — 2026-11-18
+
+The sensor, rotation, optocoupler and connector manifests were independently rehashed:
+107, 113, 112 and 133 entries respectively, with no missing files or hash mismatches.
+Results are in `historical-integrity.json` beside the earlier integrity report.
+Bridge/regulator kits have no corresponding file manifest in their roots; zero manifest
+entries is **not** a successful integrity check for them.
+
+The searched historical kits do not establish chunk unload/load for these families.
+In particular, `pcbconnector unload` removes a load resistor, not a chunk. Ordinary
+server shutdown messages about unloading chunks are not a running-world lifecycle test.
+
+Seven new chains are prepared in the addon's `stand.json`:
+
+- `pcb-l1-latch-lifecycle`: unpowered latched state, actual chunk unload/load, restoration
+  under load, RESET/SET, saved reference and cold server restart.
+- `pcb-l1-timer-lifecycle`: expiry during chunk absence, no new winding edge from a held
+  input, manual cancellation, saved absolute deadline and cold server restart.
+- `pcb-l2-{flip,counter,register,decoder,gates}-lifecycle`: all individually loaded outputs,
+  saved words/input levels/circuit, actual chunk unload/load, cold restart and subsequent
+  real input changes. A held register write must preserve 5 across both lifecycle events,
+  then a new edge writes 15; the counter must not invent an extra edge on loading.
+
+New devtest-only `pcblifecycle` commands verify the loaded state without requesting a chunk,
+and compare an explicitly named device NBT field to a reference stored in Minecraft command
+storage (which survives a new process). Missing reference/field/device and a burnt board
+fail. The scenario also checks numeric `Loaded`, `Saved` and `Equal` replies, so an echoed
+command is insufficient. L1 chains include negative checks for the wrong loaded state and
+a missing reference; the flag also checks that resetting makes the old state comparison fail.
+
+`./gradlew build devtestJar --offline` passed. The main JAR is byte-for-byte the accepted
+Create build: SHA256 `f74a20df7b0d34bbdf090f265fdd8d03d6511c143dfccf640c5c3e8acb18cb9c`.
+Prepared devtest SHA256: `1bd05cbf91dfbe0ba257bddaab597d29a00e5b746921c54d8487a700101adc76`.
+**None of these seven new chains has executed.** This preparation supplies no new runtime,
+protection, visual or acceptance result. Clock/comparator and other remaining family
+coverage must still be completed; successful compilation does not close #301.27.
