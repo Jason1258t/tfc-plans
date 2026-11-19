@@ -210,6 +210,16 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-19 (dev #396): **EE Extras 2.26.0** tensions an anchored span by selecting its two hanging glass strings.
+The first selection remains highlighted. The server requires a supported conductor between their lower contacts,
+valid suspensions and enough clamps, then installs both ends atomically. A spool can target the string itself
+to select the lower electrical contact for a jumper. Dedicated-server checks cover cancellation, disconnected
+strings, unsupported wire, insufficient clamps, both feed directions through spool methods and 298 V at the heater from a 300 V source.
+Full-pack client scene `20261119-152316-6a8d` selected both strings, fitted both clamps and wired the input, output,
+return and heater using normal right-clicks. The loaded circuit measured 297.9 V. Its three frames and logs are
+attached to dev #396. Earlier scene failures came from approaching the meter through the heater; the final scene
+separates those blocks and asserts the exact selected terminal before every click.
+
 2026-11-17 (dev #386): **EE Extras 2.25.0** adds dead-end spans using the existing tension clamp. A clamp on each end
 holds that hanging glass string up to 60° from vertical, with reduced reach on short spans. A jumper to a fixed
 terminal can feed the span. The anchor is an EE wire attachment and the original conductor length remains in use

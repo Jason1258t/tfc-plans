@@ -3,8 +3,8 @@
 - Host: install **IE Extras 1.2.1** on the server and clients with `tfc pull addons ie_extras@1.2.1` and publish the pack
   snapshot (dev #387). Existing Beamhouses do not need to be rebuilt.
 
-- Host: install **EE Extras 2.25.0** on the server and clients with `tfc pull addons ee_extras@2.25.0`,
-  then publish the snapshot (dev #386, #370, #373).
+- Host: install **EE Extras 2.26.0** on the server and clients with `tfc pull addons ee_extras@2.26.0`,
+  then publish the snapshot (dev #396, #386, #370, #373).
 
 - Host (dev #379, #375): install **Destroy Extras 0.9.2** on the game server and clients. It fixes the electrolyzer
   stalling at 328 V and includes the model fix and electric Vat heating from previous releases. Test the
