@@ -1,5 +1,73 @@
 # Aggregate L1/L2 acceptance — #301.27
 
+## Current status — 2026-11-19
+
+Twenty of the twenty-two lifecycle cases now have inspected positive evidence on the
+unchanged production JAR f74a20df. In addition to the ten cases below, bridge, light,
+rotation, optocoupler, connector, onboard supply, section strip, potentiometer, rheostat
+and the four-module catalogue have passed actual unload/load and a new server process.
+The six first family chains were audited against all twelve raw scenario/transcript/world
+sets: 54 numeric checks, nine actual Loaded=0 and nine Loaded=1 responses, 24 Equal=1
+responses; both frozen JARs were independently rehashed. Later repeat cases are indexed
+in `observed-revived-families.json` in the artifact directory.
+
+Final client 20261119-111732-096b passed with mainf74a20df/devtest17fce742 and all nine
+frames were actually viewed: full boards are centred, effects do not obscure them, and
+the overview shows the complete powered stage. This supersedes the cropped client frames.
+
+Remaining: regulator full chain152212-0963 → 152220-6960 and temperature full chain
+152332-2ec2 → 152337-1e82. Earlier network failures were confirmed terminal before retry.
+The regulator's original source world had been pruned remotely by the queue; its local
+copy remains, and the new full chain avoids an unavailable worldJob.
+
+Temperature diagnostics111707-2311 (intact),111706-6103 (PCB removed),111706-0d57
+(crucible replaced by stone) all passed on unchanged mainf74a20df. Each reports no_ticket,
+Loaded=0 and BlockTicking=0 after40seconds; intact remained unloaded at120 and180seconds.
+The previous retention is therefore not attributed to a production defect. No production
+patch or relaxed assertion was introduced; full lifecycle confirmation remains required.
+
+#301.27 remains open pending the last cases, coverage audit and attached indexed kit.
+The following sections preserve earlier evidence and chronological execution history;
+old connectivity and pending-job statements do not describe the current stand.
+
+## First ten lifecycle cases — inspected evidence
+
+The ten prepared lifecycle cases now have inspected positive evidence on unchanged
+production SHA f74a20df7b0d34bbdf090f265fdd8d03d6511c143dfccf640c5c3e8acb18cb9c:
+
+| Case             | Save/unload job → accepted cold restart | Inspected cold result                                                                                                      |
+| ---------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| L1 flag          | 181319-e675 → 194527-5902               | Unpowered Latched retained; restore23.9987V under load, RESET works                                                        |
+| Mechanical timer | 184550-69bc → 194533-c842               | Absolute deadline/winding input retained;23.999V, cancellation does not retrigger while winding stays high; new edge works |
+| D flip-flop      | 192514-ebfe → 194542-48d4               | Word1 retained, two actual outputs; new edge writes0                                                                       |
+| Counter          | 192523-1728 → 192528-8713               | Word1 retained without a fabricated edge, next real edge gives2                                                            |
+| Register         | 192506-816c → 192510-0674               | Held write retains5; next real write gives15, four loaded outputs                                                          |
+| Decoder          | 192531-8b4c → 192535-6e59               | Word4 retained, input3 produces8                                                                                           |
+| Quad NAND        | 192539-bb34 → 192543-f29f               | Word14 retained, input255 produces0, four loaded outputs                                                                   |
+| Comparator       | 192548-de64 → 192551-5d0b               | 4.54527V/0.0252252W, low0V/0.0025W, power-off0, restoration works                                                          |
+| Clock            | 192555-96f4 → 192558-3614               | Saved phase retained;100samples46/54 with5transitions, stop and restart then58/42 with5transitions                         |
+| Step-up          | 192603-0885 → 192606-cf23               | External loaded196.6952947V, power-off0, restoration196.696022V; balance/current assertions pass                           |
+
+All job IDs above have prefix20261118-. Seven complete native chain verdicts are true.
+The flag/timer/flip use their original successful save plus a separately submitted cold
+retry after the scheduled step's confirmed infrastructure failure. Original failed verdicts
+remain as history; they are not relabelled as successful. Each accepted retry has inspected
+raw RCON, scenario0failures, the original source world and both actual SHA values in its summary.
+
+Actual Loaded=0/Loaded=1 response lines (not echoed commands), complete numeric scenario
+checks and raw transcript hashes are indexed in artifact files `observed-chain-checks.json`
+and `observed-cold-repeats.json`.
+
+Client 182756-7370 passed with 9 frames; all were viewed and show the six powered boards.
+Cleaner client 20261119-102157-3f4c also passed with devtest 44b72da5 and all 9 frames
+were viewed: knob, buzzer, lit seven-segment, loaded NAND, mechanical timer and all three
+selector positions are visible without effect particles. The enlarged view cuts off some
+board-edge contacts, so the final framing is being centred; this is a fixture-only change.
+
+#301.27 is still open. Remaining family coverage is being checked against the actual
+legacy demos (supply/bridge/regulator/sensors/opto/connector/lights), before creating the
+final indexed kit. The older status sections below are chronological history, not current blockers.
+
 Audit started 2026-11-18. This document records evidence coverage, not a new runtime pass.
 Accepted baseline: addon `d26c21d`, parent `84b958ed`, both `feat/pcb-modules`.
 Overall #301 and #301.8 remain open. No release or merge is part of this milestone.
@@ -176,3 +244,27 @@ The main JAR remains unchanged. #301.27 is still open.
 Next dependent work requires the stand: reconcile the uncertain submissions, inspect the
 client result and retry only confirmed terminal infrastructure failures. Do not add acceptance
 marks or release the prototype while those results and the remaining family checks are absent.
+
+## Remaining-family execution — 2026-11-19
+
+Twelve additional family chains (24 server steps) were submitted; the durable job index is
+`family-submissions/index.json` in the acceptance artifact directory. Bridge, light sensor,
+rotation sensor, optocoupler and connector now have positive native lifecycle verdicts.
+The regulator save/unload step passed (word5, output5.0027185–5.0027371V over101samples);
+its scheduled cold process failed before boot with `fetch failed`. Frozen-JAR retry
+20261119-110233-2321 uses the same source world103357-8fb8.
+
+The temperature case103404-f662 failed the actual unload assertion: after removing all
+forced chunks and40seconds the target was still loaded. Its electrical checks were valid
+(19°C, supply5.00399V, output1.68134V, indicator off). Its dependent cold step was correctly
+cancelled. No acceptance condition was relaxed. Linked fix#395 tracks attribution: three
+diagnostic jobs compare the intact setup (including180-second observation), removal of
+the PCB, and replacement of the TFC crucible. Their IDs are110237-7a6b,110240-c2c2 and
+110243-ac2e. Devtest-only ticket/ticking-state inspection uses actual DistanceManager APIs
+verified through MCP on NeoForge21.1.251. Production remains byte-identical f74a20df; no
+claim about which component causes retention is made yet.
+
+Centred final client104118-5bc5 is queued with devtestbb4624c8. The previously viewed
+clean client102157-3f4c passes and has all six models, but some board edges are clipped.
+Twenty-six actually viewed historical images are preserved with source paths/hashes in
+`legacy-visuals/index.json`; they are explicitly not labelled with the current production SHA.

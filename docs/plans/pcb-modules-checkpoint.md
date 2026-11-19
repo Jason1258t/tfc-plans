@@ -1,4 +1,28 @@
+# Current continuation — 2026-11-19
+
+#301.27 remains open. Twenty of22 lifecycle cases now have inspected positive raw
+save/unload/reload/cold evidence on unchanged production SHA f74a20df. New accepted
+families: bridge, light, rotation, opto, connector, onboard, lights, pot, rheostat, catalogue.
+Final centred client111732-096b passes; all nine frames were viewed. Regulator full chain
+152212-0963→152220-6960 and temperature152332-2ec2→152337-1e82 are being observed.
+Three temperature diagnostic variants all unloaded with no_ticket/Loaded=0/BlockTicking=0;
+no production defect is attributed and no runtime code was changed. Original failures remain
+history. See pcb-l1-l2-acceptance.md for current evidence and artifact provenance.
+Final aggregate kit and power/protection/visual coverage audit remain required before27.
+No release/version bump/merge/deploy; parent301 and items8/11 remain open.
+
+---
+
 # PCB modules — current continuation checkpoint
+
+## Current verification — 2026-11-19
+
+Ten lifecycle cases have inspected positive save/unload/cold-restart evidence on production
+SHA f74a20df (seven native chains plus three preserved-world cold retries). See the newest
+section of pcb-l1-l2-acceptance.md for IDs, measured results and the still-open family gaps.
+Client182756-7370 passed and all9frames were viewed; cleaner client20261119-102157-3f4c
+is submitted. Overall tracker remains23/30 and #301.27 stays open. No release/merge/deploy.
+Earlier unresolved-job paragraphs below have been superseded by this evidence.
 
 ## Aggregate acceptance continuation — 2026-11-18
 
