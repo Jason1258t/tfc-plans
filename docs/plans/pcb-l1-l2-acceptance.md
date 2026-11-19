@@ -1,5 +1,25 @@
 # Aggregate L1/L2 acceptance — #301.27
 
+## Latest evidence — 2026-11-19, continuation
+
+All22 initially prepared lifecycle cases now have inspected positive raw evidence.
+Regulator152212-0963→152220-6960 and temperature152332-2ec2→152337-1e82 passed.
+The latter reports actual Loaded=0/1, Circuit/Positions Equal=1 and cold19°C,
+supply5.0044216V→output1.6814817V with indicator off. No production patch was needed.
+The isolated earlier retention remains unattributed; it was not reproduced by the three
+diagnostics or by the full lifecycle repeat. All22 working-world sets are preserved under
+`kit-staging/lifecycle` in the acceptance artifact root (still not the final attached kit).
+
+The goal's aggregate completion gate is still unproven. A further raw-coverage audit found
+missing explicit invalid-power/short/overload evidence for early logic and missing numeric
+lifecycle evidence for lamp/LED/panel. Supplemental fixtures are committed, not accepted:
+addon18fe11e/833fe85/1eb7cbe. The first D protection job152850-abf6 had a terminal
+`fetch failed` before Minecraft; its repeat and the other fault/lamp jobs must be observed.
+Do not count their prepared assertions as runtime evidence. Production remains f74a20df.
+
+Nine final viewed client frames plus logs/SHA are attached to301 as
+`BhaAWA9vK8Ssm9EiwjGA` (`current-client.zip`,2.3MB). No mark27 was changed.
+
 ## Current status — 2026-11-19
 
 Twenty of the twenty-two lifecycle cases now have inspected positive evidence on the
