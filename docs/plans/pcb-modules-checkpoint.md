@@ -1,15 +1,29 @@
 # Latest continuation — 2026-11-19
 
-All22 initially prepared lifecycle cases are positive, including regulator152212→152220
-and temperature152332→152337. Raw Loaded0/1, state comparisons and cold19°C/5.00442V→
-1.68148V were inspected; both temperature worlds are preserved. Production unchangedf74a20df.
-#301.27 is still open: supplemental early logic/contact fault checks and lamp/LED/panel
-numeric lifecycle are newly prepared and running, after a coverage audit exposed gaps.
-The first D protection job152850-abf6 failed before Minecraft (`fetch failed`), not a PCB
-assertion failure. Addon prepared-fixture commits18fe11e/833fe85/1eb7cbe; acceptance cannot
-be inferred from them. Final9 viewed client frames attached asBhaAWA9vK8Ssm9EiwjGA.
-Working-world staging contains22 cases; indexed final kit, supplemental evidence and
-final doc59/state update remain required. No release/merge/deploy or parent closure.
+#301.27 remains open. All22 initial lifecycle cases plus lamp/LED/panel are accepted:
+23 working-world cases. Final centred client111732-096b passes, all9 frames viewed;
+attachmentBhaAWA9vK8Ssm9EiwjGA. Production remains byte-identicalf74a20df.
+
+Three immutable world/JAR/log ZIPs are attached asn9IgoTFpodL56DdzcrWv,
+UYusy4sOCzG0SrlOMJoc,j20WmFWFIo5QckTCEFsy. All3323 archived file hashes were
+verified; all3 server attachments were downloaded again and matched their archiveSHA.
+Full metadata is in artifact deliverables/lifecycle-archives.json and
+server-readback-verification.json. These are working worlds; destructive fixtures are separate.
+
+Accepted supplementary overvoltage cases: pot153618-775f, rheostat153632-a64b,
+latch-wind153642-628c, timer-wind153652-9d61. Their actual raw transitions Burnt0→1
+at60V were inspected. The first latch/timer short runs stopped before the fault because
+of fixture command/delay mistakes; corrected repeats154558-f152/154612-4d18 are queued.
+Other pending jobs: seven logic protection cases; L1 strip154247-ea21→154250-bacf→
+154253-755c; pot/rheostat internal short154625-9806/154636-552d. Do not resubmit
+unknown/live jobs. Initial D protection152850-abf6 failed with fetch failed before boot;
+its existing repeat is153721-48a8. Observer handles and durable submissions are indexed
+under the acceptance artifact root; logic observer functions cell144 is serial/live.
+
+Prepared supplementary fixture commits throughbb1da8b (main JAR unchanged). Build/lint
+pass; source-format checks cover changed JSON/docs. Final indexed instructions, supplementary
+results, plan59/state synchronization and prototype pushes remain required before mark27.
+No release/version bump/merge/deploy; parent301 and items8/11 stay open.
 
 ---
 

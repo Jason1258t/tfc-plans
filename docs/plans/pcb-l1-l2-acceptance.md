@@ -1,5 +1,40 @@
 # Aggregate L1/L2 acceptance — #301.27
 
+## Supplementary acceptance and attached worlds — 2026-11-19
+
+Lamp/LED/panel chain153504-e578→153507-22fd is accepted on mainf74a20df:
+actual cold voltages8.263640/7.472305/8.263640V, power0.179332W, mask7;
+power0 produces mask0 and negligible watts, restoration24V restores mask7.
+Actual unload/load and Circuit equality were inspected in raw replies. This adds a23rd
+lifecycle case to the22 initial cases.
+
+Three immutable world/JAR/log archives are attached to301:
+
+| File                        | Attachment           | SHA256                                                           |
+| --------------------------- | -------------------- | ---------------------------------------------------------------- |
+| pcb-lifecycle-worlds-01.zip | n9IgoTFpodL56DdzcrWv | ab709dd6d9469b151da629be8c2f488e515cfc3da678e088f46f14195a0e7bda |
+| pcb-lifecycle-worlds-02.zip | UYusy4sOCzG0SrlOMJoc | f578c31e6ae4f408ea54083463436e11e821ad30214c6ba26a899d5aaee824b5 |
+| pcb-lifecycle-worlds-03.zip | j20WmFWFIo5QckTCEFsy | c91e7ca5385a477705a921af9bda66ae7a2f0673f09b24b74d1c33643f14776c |
+
+All3323 archived files were re-read from the ZIPs and matched their per-file SHA256.
+These parts contain working lifecycle worlds, not destructive fault worlds; final instructions,
+coverage matrix, historical views and supplementary fault evidence will be separate indexed parts.
+
+Positive fault verdicts already observed: pot153618-775f, rheostat153632-a64b,
+latch winding153642-628c and timer winding153652-9d61. The first three raw transcripts
+were inspected: at60V they change Burnt0→1; watts3.59970/2.39987/3.59956 respectively.
+Timer raw inspection remains pending. Earlier latch-short failed because the fixture omitted
+its expected-voltage argument; timer-short asserted before its configured delay elapsed.
+Corrected jobs154558-f152/154612-4d18 are pending; these were fixture failures, not
+accepted fault tests or demonstrated production defects.
+
+The original strip fixture was L2. Plan59 explicitly requires the strip on L1, including
+polarity/off/overload: a new three-step chain154247-ea21→154250-bacf→154253-755c
+is prepared and queued with devtestbe813d9e. It uses the same productionf74a20df,
+five actual voltage/current readings and a separate destructive copy after cold acceptance.
+No acceptance is claimed until its raw results return. Other logic/short jobs are indexed
+in artifact `logic-protection-jobs.json` and `supplemental-jobs.json`.
+
 ## Latest evidence — 2026-11-19, continuation
 
 All22 initially prepared lifecycle cases now have inspected positive raw evidence.
