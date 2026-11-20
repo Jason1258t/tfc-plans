@@ -17,7 +17,6 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { spawnSync, spawn } from 'child_process';
-import { rimraf } from 'rimraf';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STAND_DIR = path.resolve(__dirname, '../../.cache/tfc-plans/client-stand');
