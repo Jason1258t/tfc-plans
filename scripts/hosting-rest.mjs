@@ -21,12 +21,12 @@
 import { createHash } from 'node:crypto';
 import zlib from 'node:zlib';
 import { PROJECT, token } from './firestore-rest.mjs';
-
+ 
 export const HOSTING_API = process.env.TFC_HOSTING_API ?? 'https://firebasehosting.googleapis.com/v1beta1';
 export const SITE_ID = process.env.TFC_HOSTING_SITE ?? PROJECT;
-
+ 
 const OS_BYTES = [3, 19, 0, 7, 11, 255]; // Unix, macOS, FAT, старый Mac, NTFS, неизвестно
-
+ 
 /** gzip как у firebase CLI и sha256 от него; hashes — хеш при каждом варианте байта ОС → этот байт */
 export function hostingFile(buf) {
   const gz = zlib.gzipSync(buf, { level: 9 });
@@ -40,7 +40,7 @@ export function hostingFile(buf) {
   }
   return { gz, hash, hashes };
 }
-
+ 
 /** gzip с нужным хешем (вариант байта ОС) — если Hosting попросит загрузить уже опубликованный вариант */
 export function gzipWithHash(buf, want) {
   const { gz, hashes } = hostingFile(buf);
@@ -49,7 +49,7 @@ export function gzipWithHash(buf, want) {
   v[9] = hashes.get(want);
   return v;
 }
-
+ 
 async function call(method, url, body, { raw = false } = {}) {
   const headers = { Authorization: `Bearer ${await token()}` };
   if (body !== undefined && !raw) headers['Content-Type'] = 'application/json';
@@ -63,21 +63,25 @@ async function call(method, url, body, { raw = false } = {}) {
   if (!r.ok) throw new Error(`Hosting ${method} ${url.replace(HOSTING_API, '')}: ${r.status} ${text.slice(0, 400)}`);
   return text ? JSON.parse(text) : {};
 }
-
+ 
+export async function safeCall(method, url, body, { raw = false } = {}) {
+  return retry(() => call(method, url, body, { raw }));
+}
+ 
 /** Текущий релиз сайта: { name, version: { name, status, config, … } } или null */
 export async function currentRelease(site = SITE_ID) {
   const j = await call('GET', `sites/${site}/releases?pageSize=1`);
   return j.releases?.[0] ?? null;
 }
-
+ 
 /** Последние релизы сайта, новые первыми (сообщение релиза — поле message) */
 export async function listReleases(pageSize = 100, site = SITE_ID) {
   return (await call('GET', `sites/${site}/releases?pageSize=${pageSize}`)).releases ?? [];
 }
-
+ 
 /** Сколько раз пересобирать версию поверх чужого релиза */
 export const RELEASE_RETRIES = 5;
-
+ 
 /**
  * Пока шла выкладка, вышел чужой релиз. other — этот релиз: новую версию надо собирать поверх него.
  * released — наш релиз уже вышел и затёр чужой, повторная выкладка обязательна.
@@ -89,7 +93,7 @@ export class ReleaseConflict extends Error {
     this.released = released;
   }
 }
-
+ 
 /** Файлы версии: Map путь → хеш */
 export async function versionFiles(versionName) {
   const out = new Map();
@@ -104,15 +108,26 @@ export async function versionFiles(versionName) {
   } while (page);
   return out;
 }
-
+ 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
+ 
+export function retry(fn, attempts = 4, delay = 500) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      if (i === attempts - 1) throw e;
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+}
+ 
 /** Регулярка для exclude: корни данных — файлы (точно) и папки (всё внутри) */
 export function rootsRegex(roots) {
   const alts = roots.map((r) => (r.dir ? `${escapeRe(r.name)}/` : `${escapeRe(r.name)}$`));
   return `^/(${alts.join('|')})`;
 }
-
+ 
 /** Настройки версии Hosting из блока hosting файла firebase.json (как их переводит firebase CLI) */
 export function hostingConfig(hosting) {
   const config = {};
@@ -131,12 +146,12 @@ export function hostingConfig(hosting) {
     if (hosting[k] !== undefined) throw new Error(`firebase.json hosting.${k}: перенос в версию не написан`);
   return config;
 }
-
+ 
 /** Новая пустая версия с настройками */
 export async function createVersion({ config, site = SITE_ID }) {
   return (await call('POST', `sites/${site}/versions`, { config })).name;
 }
-
+ 
 /**
  * Выкладка данных. files — Map путь («/items.json») → { hash }; gzip тех, что придётся загрузить, отдаёт
  * getGz(путь, хеш). roots — корни данных: файлы sourceVersion вне них переносятся в новую версию с теми же хешами
@@ -155,7 +170,7 @@ export async function deploy({ sourceVersion, roots, files, getGz, message, site
     }
   }
 }
-
+ 
 async function deployOnto({ sourceVersion, own, roots, files, getGz, message, site, log }) {
   const source = await call('GET', sourceVersion);
   const published = await versionFiles(sourceVersion);
@@ -167,7 +182,7 @@ async function deployOnto({ sourceVersion, own, roots, files, getGz, message, si
     if (!re.test(p)) throw new Error(`файл данных ${p} вне корней данных`);
     all.set(p, f);
   }
-  if (!kept) throw new Error(`в версии ${sourceVersion.split('/').pop()} нет файлов сайта — выкладывать не буду`);
+  if (!kept) throw new Error(`в версии ${sourceVersion.split('/').pop()} нет файлов сайта — выкладывать не будем`);
   log(`из версии ${sourceVersion.split('/').pop()} переношу файлы сайта: ${kept}; данных сборки: ${files.size}`);
   const version = await createVersion({ config: source.config ?? {}, site });
   log(`новая версия ${version.split('/').pop()}`);
@@ -188,7 +203,7 @@ async function deployOnto({ sourceVersion, own, roots, files, getGz, message, si
   });
   return { ...res, kept };
 }
-
+ 
 /** Сверка: в версии есть все файлы с нужными хешами — иначе стоп до FINALIZED (версия остаётся неопубликованной) */
 async function checkVersion(version, files) {
   const got = await versionFiles(version);
@@ -201,7 +216,7 @@ async function checkVersion(version, files) {
     );
   return got.size;
 }
-
+ 
 /** Вышел ли после base чужой релиз: сразу перед нашим (rel) или, пока rel нет, просто последний. Свои (own) не в счёт */
 async function checkBase(base, own, rel, site, log) {
   const { releases = [] } = await call('GET', `sites/${site}/releases?pageSize=20`);
@@ -214,7 +229,7 @@ async function checkBase(base, own, rel, site, log) {
   const before = releases.slice(at + 1).find((r) => !own.has(r.version?.name));
   if (before && before.version?.name !== base) throw new ReleaseConflict(before, Boolean(rel));
 }
-
+ 
 /**
  * Файлы в версию (populateFiles), загрузка недостающих хешей, FINALIZED, релиз.
  * base — версия, из которой собрана эта; вышел чужой релиз — ReleaseConflict (см. начало файла). own — версии
@@ -226,12 +241,12 @@ export async function release({ version, base, own, files, getGz, message, site 
   let uploadUrl = null;
   for (let i = 0; i < entries.length; i += 1000) {
     const batch = Object.fromEntries(entries.slice(i, i + 1000).map(([p, f]) => [p, f.hash]));
-    const r = await call('POST', `${version}:populateFiles`, { files: batch });
+    const r = await safeCall('POST', `${version}:populateFiles`, { files: batch });
     for (const h of r.uploadRequiredHashes ?? []) required.add(h);
     uploadUrl = r.uploadUrl ?? uploadUrl;
   }
   log(`файлов в версии: ${entries.length}, загрузить: ${required.size}`);
-
+ 
   const byHash = new Map(entries.map(([p, f]) => [f.hash, p]));
   let uploaded = 0;
   const queue = [...required];
@@ -239,18 +254,18 @@ export async function release({ version, base, own, files, getGz, message, site 
     for (let h = queue.shift(); h; h = queue.shift()) {
       const p = byHash.get(h);
       if (!p) throw new Error(`Hosting просит хеш ${h}, которого нет среди файлов`);
-      await call('POST', `${uploadUrl}/${h}`, await getGz(p, h), { raw: true });
+      await safeCall('POST', `${uploadUrl}/${h}`, await getGz(p, h), { raw: true });
       uploaded++;
       if (uploaded % 200 === 0) log(`загружено ${uploaded} из ${required.size}`);
     }
   };
   await Promise.all(Array.from({ length: 4 }, worker));
-
+ 
   const listed = await checkVersion(version, files);
   log(`сверка: все ${files.size} файлов на месте (в версии ${listed})`);
   await checkBase(base, own, null, site, log);
-  await call('PATCH', `${version}?update_mask=status`, { status: 'FINALIZED' });
-  const rel = await call('POST', `sites/${site}/releases?versionName=${encodeURIComponent(version)}`, {
+  await safeCall('PATCH', `${version}?update_mask=status`, { status: 'FINALIZED' });
+  const rel = await safeCall('POST', `sites/${site}/releases?versionName=${encodeURIComponent(version)}`, {
     message: message ?? 'сервер сборки',
   });
   log(`выпущено: ${rel.name}`);
