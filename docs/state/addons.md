@@ -26,6 +26,11 @@ IE 12.4.2 HV capacitor reproduced: default top is INPUT, so a charged capacitor 
 The converter now explains the missing FE output in goggles; no bypass of capacitor side configuration.
 Development-server checks use `hvtest` with a full 4,000,000 FE HV capacitor and a resistive load.
 
+2026-11-21 (dev #407, source fix awaiting combined release): Ctrl+right click cancels wire/cable/surface-wire
+selection and tension-clamp insulator selection before any ordinary use action. Dedicated C2S cancellation
+clears all selection components plus the anchor dimension marker, preserves other item data and item counts.
+Client supports physical left/right Ctrl on macOS as well as its platform modifier.
+
 ## Versions (since 2026-10-23)
 
 Task «Написание чендж логов для наших аддонов, и их поддержка в генераторе патчноута» (group «Разработка»), plan doc
