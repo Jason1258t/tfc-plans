@@ -377,3 +377,5 @@ under `kubejs/data` over the pinned M12, and the M12 site card carries the equiv
 - Host: install **Miner Tools 1.2.0** (dev #244) on the server and clients. Open an existing belt and check the group toggles and both list modes in the client.
 
 - Host: try pack update `u20261106-133656-3ca6` (dev #293) on a test profile. Check dust and all five briquette sizes in EMI, then approve.
+
+- Dev #403: install EE Extras 2.26.2 on server and clients. Verify enlarged panel inlets, paired contacts inward at top and bottom, all four panel facings. Client stand failed fetching snapshot before launch; technical renders are attached to #403.

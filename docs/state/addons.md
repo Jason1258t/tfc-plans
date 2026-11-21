@@ -12,6 +12,14 @@ game check — [pending.md](pending.md).
   и универсальной крышки. Проверены размеры, прозрачность и повторяемость полос провода; грани и иконки отрисованы
   проверочными моделями MCP. Интеграция с моделями и просмотр в клиенте относятся к приёмке #205 и #273.
 
+2026-11-21 (dev #403): **EE Extras 2.26.2** fixes duplex inlet rendering in electrical panels: the block model
+is 5 pixels wide in a 6-pixel quarter slot, mounted at the inner back wall, with paired contacts pointing inward
+(top downward, bottom upward). Existing slots and wire nodes are preserved. Gradle build/devtestJar,
+resources_check (no errors), 1344/1344 terminals and the development-server circuit after restart passed
+(299.99997 V closed, 0 V open, 299.99997 V closed again). Technical before/after renders attached to #403.
+Client scene `panel-inlets` covers all four panel facings; job `20261121-114108-f8d4` failed fetching the snapshot
+before game launch. Client appearance remains unverified. Broken local MCP/stand entry points tracked as #404.
+
 ## Versions (since 2026-10-23)
 
 Task «Написание чендж логов для наших аддонов, и их поддержка в генераторе патчноута» (group «Разработка»), plan doc
