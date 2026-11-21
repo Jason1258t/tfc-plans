@@ -40,6 +40,15 @@ contacts, blocked covered contacts, per-pair cables, saved-world restart and ind
 Migration and surface-wire endpoint save/load passed. Technical renders attached to #406; client gesture,
 HUD and cover rendering remain unverified because the client stand could not fetch the snapshot.
 
+2026-11-21 (dev #409): **EE Extras 2.26.4** corrects the intended panel feed-through layout. Inlets touch the
+upper/lower outer walls; duplex cable terminals sit at y=16/0, the paired individual-wire terminals at y=14.5/1.5
+inside the panel. Geometry and positions from both block and block entity agree; node IDs are unchanged.
+Cable clicks from the outside (UP/DOWN) select the corresponding inlet. Four panel facings × four quarter slots
+passed; actual outside cable clicks and internal ordinary-wire routing through a switch passed (300 V / 0 V).
+The client scene now includes outside duplex cables and internal individual wires; technical renders attached to #409.
+Client job `20261121-132528-e7b8` was cancelled while still queued behind a background print job;
+no client frames. The prepared scene remains available for a later run.
+
 ## Versions (since 2026-10-23)
 
 Task «Написание чендж логов для наших аддонов, и их поддержка в генераторе патчноута» (group «Разработка»), plan doc
