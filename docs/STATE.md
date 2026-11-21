@@ -57,7 +57,7 @@ When finishing work: update the topic file, and this index only if a line below 
 - Host: test **Destroy Extras 0.11.1** and the «Химия» quest route from `u20261116-122746-dfd6` (dev #382) on a test
   profile before approval. It supersedes the overlapping quest text update `u20261115-163731-67bb` (dev #375).
 - Host: approve M12 replacement `u20261105-175613-fa0b`, which removes its 32 overlay files (dev #261).
-- Host: install **EE Extras 2.26.1** on the server and players, then publish the snapshot (dev #399, #396).
+- Host: install **EE Extras 2.26.2** on the server and players, then publish the snapshot (dev #403, #399, #396).
 - Host: test **EE Extras 2.14.0** with the proposed pack update (dev #248, #249, #259) before approval. Also check the cable inlet on an existing CC computer and both
   pocket computer tiers at the charger (dev #247) before publishing the snapshot.
 - Host: install **EE Extras 2.10.2** (wire sag reduction, dev #221; PCB/electronics visual refresh, dev #216), **Small Diesel 1.0.0**, **IE Extras 1.1.0** (basin heating, dev #113) + `tfc publish`; warn players
