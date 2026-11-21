@@ -210,6 +210,12 @@ Bridge owns only the TFC/EE/Create boundary, Extras owns missing machines, and P
 
 ## EE Extras (`tools/ee-extras-mod`)
 
+2026-11-21 (dev #399): **EE Extras 2.26.1** permits loose jumpers between detached tips of separate anchored
+spans. Each tip can still be anchored by only one span. The old rule reproduced the chain failure on the dev server;
+the corrected rule passed two linked spans, occupied-tip rejection, independent release, single/short spans,
+selection and 298 V under load from a 300 V source. Full-pack client scene: `insulator-chain`. The unmodified profile could not enter the world because of an
+OptiCore/Sodium mixin descriptor conflict (dev #402); no client acceptance is claimed for that run.
+
 2026-11-19 (dev #396): **EE Extras 2.26.0** tensions an anchored span by selecting its two hanging glass strings.
 The first selection remains highlighted. The server requires a supported conductor between their lower contacts,
 valid suspensions and enough clamps, then installs both ends atomically. A spool can target the string itself
