@@ -20,16 +20,25 @@ resources_check (no errors), 1344/1344 terminals and the development-server circ
 Client scene `panel-inlets` covers all four panel facings; job `20261121-114108-f8d4` failed fetching the snapshot
 before game launch. Client appearance remains unverified. Broken local MCP/stand entry points tracked as #404.
 
-2026-11-21 (dev #405, source fix awaiting the combined release): bidirectional converter voltage control moved
+2026-11-21 (dev #405, released in 2.26.3): bidirectional converter voltage control moved
 onto the plate surface (7.1/16), explicit FE → EE output-voltage line, continuous block-to-simulation setting sync.
 IE 12.4.2 HV capacitor reproduced: default top is INPUT, so a charged capacitor with no OUTPUT side cannot discharge.
 The converter now explains the missing FE output in goggles; no bypass of capacitor side configuration.
 Development-server checks use `hvtest` with a full 4,000,000 FE HV capacitor and a resistive load.
 
-2026-11-21 (dev #407, source fix awaiting combined release): Ctrl+right click cancels wire/cable/surface-wire
+2026-11-21 (dev #407, released in 2.26.3): Ctrl+right click cancels wire/cable/surface-wire
 selection and tension-clamp insulator selection before any ordinary use action. Dedicated C2S cancellation
 clears all selection components plus the anchor dimension marker, preserves other item data and item counts.
 Client supports physical left/right Ctrl on macOS as well as its platform modifier.
+
+2026-11-21 (dev #405–407): **EE Extras 2.26.3** combines converter output-voltage control/diagnostics,
+Ctrl+right-click cancellation and independent duplex caps on input/output terminal pairs. Multi-terminal
+own devices expose only actual two-terminal sides; three-phase groups stay uncovered. Covers, cable ends,
+client snapshots and surface-wire endpoints preserve the selected pair; old two-contact caps migrate.
+Server: 96 caps on 60 device states (six facings × two rolls), correct outward geometry, free ordinary-wire
+contacts, blocked covered contacts, per-pair cables, saved-world restart and independent removal passed.
+Migration and surface-wire endpoint save/load passed. Technical renders attached to #406; client gesture,
+HUD and cover rendering remain unverified because the client stand could not fetch the snapshot.
 
 ## Versions (since 2026-10-23)
 
