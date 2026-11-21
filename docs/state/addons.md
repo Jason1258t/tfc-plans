@@ -20,6 +20,12 @@ resources_check (no errors), 1344/1344 terminals and the development-server circ
 Client scene `panel-inlets` covers all four panel facings; job `20261121-114108-f8d4` failed fetching the snapshot
 before game launch. Client appearance remains unverified. Broken local MCP/stand entry points tracked as #404.
 
+2026-11-21 (dev #405, source fix awaiting the combined release): bidirectional converter voltage control moved
+onto the plate surface (7.1/16), explicit FE → EE output-voltage line, continuous block-to-simulation setting sync.
+IE 12.4.2 HV capacitor reproduced: default top is INPUT, so a charged capacitor with no OUTPUT side cannot discharge.
+The converter now explains the missing FE output in goggles; no bypass of capacitor side configuration.
+Development-server checks use `hvtest` with a full 4,000,000 FE HV capacitor and a resistive load.
+
 ## Versions (since 2026-10-23)
 
 Task «Написание чендж логов для наших аддонов, и их поддержка в генераторе патчноута» (group «Разработка»), plan doc
