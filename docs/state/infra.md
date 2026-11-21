@@ -1,5 +1,7 @@
 # State: data builders, storage, pack server, `tfc` app
 
+- 2026-11-21 (dev #401): Hosting REST retry is async again; fixes the syntax error that blocked lint and deployment. Verified module import and recovery after a temporary failure.
+
 Part of [STATE.md](../STATE.md). Human docs: [pack-server.md](../pack-server.md), [tfc-app.md](../tfc-app.md); plan —
 [plans/pack-cli.md](../plans/pack-cli.md) (stages 1–6).
 
