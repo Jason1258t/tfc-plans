@@ -49,6 +49,17 @@ The client scene now includes outside duplex cables and internal individual wire
 Client job `20261121-132528-e7b8` was cancelled while still queued behind a background print job;
 no client frames. The prepared scene remains available for a later run.
 
+2026-11-22 (dev #410), released in **EE Extras 2.26.5**: client-side cable-cap geometry now returns no geometry when the
+underlying Electrical Energetics block or its selected contacts are gone, so breaking a covered device no longer crashes
+the client while the stale cover is still being rendered. The selected cover can also be removed with EE/IE wire cutters
+or a Create wrench; this removes only the covered contact pair and its connected cable, does not consume the tool and
+leaves ordinary wrench rotation intact on a free pair. Shift + empty-hand removal remains available. Development-server
+checks passed for both tools, independent covers, cable removal, free-pair rotation and breaking the bidirectional
+converter with a cover; a real development client broke the covered converter without an exception and confirmed that
+the removed cover disappeared. Bidirectional-converter power formulas were not changed. The released jar SHA-256 is
+`3c8dafe7d5fc0f674bec973e5f0273d3b5798637ea1a979b3d05ebd55381eb0e`; server, client and before-fix crash evidence is
+attached to task #410.
+
 ## Versions (since 2026-10-23)
 
 Task «Написание чендж логов для наших аддонов, и их поддержка в генераторе патчноута» (group «Разработка»), plan doc
