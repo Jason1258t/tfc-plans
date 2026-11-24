@@ -383,3 +383,5 @@ under `kubejs/data` over the pinned M12, and the M12 site card carries the equiv
 - Dev #405–407: install EE Extras 2.26.3 on server and clients. Verify Ctrl+right click on wires and tension clamps, independent input/output cable caps, converter voltage control and FE-output warning. Server checks passed; client stand could not fetch snapshot.
 
 - Dev #409: install EE Extras 2.26.4 on server and clients. Verify panel inlets touching the upper/lower outer walls, duplex cable outside and separate wires inside; node IDs and existing wiring preserved.
+
+- Dev #412: install EE Extras 2.26.6 on server and clients. Fixes reversed/inset inlets seen in 2.26.5. Real client baked-model coordinates and inward contact normals passed; no screenshots needed. Common snapshot still contains 2.22.1; no pack update was proposed here.
