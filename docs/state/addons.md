@@ -8,6 +8,15 @@ page `/addons/<mod>`: card `tools/<mod>/addon.json` (+ jar, `icons/`) in git, de
 `addons_list` / `addon_check`. Texts moved from the former `src/lib/addons.ts` as is (signed Claude). What still waits for the host or a
 game check — [pending.md](pending.md).
 
+2026-11-25 (dev #413): **EE Extras 2.28.1** adds an electric metering pump (`metering_pump`),
+1–1000 mB per right-click or redstone rising edge, with fluid filter, EE terminals and two independent Create pipe
+networks ending at the metering chamber. A cycle collects the full dose before dispensing; blocked output and lost
+power pause it, busy triggers are discarded. Settings apply to the next cycle; chamber, phase and redstone latch persist.
+Development server: 1/310/1000 mB through three pipes per side, held/repeated redstone, manual start, conserved 4000 mB,
+12 orientation/roll port checks, filter and simulation semantics, restart with a held signal, and 137 mB blocked dose
+across restart followed by exactly 137 mB after reconnecting the output. Resource checks and labeled model renders
+attached to #413. Full-pack client check is pending: the MCP/stand entry point fails imports (dev #414, related #404).
+
 - EE Extras, dev #271 и #274: подготовлены PNG 16×16 для поверхностного и тонкого провода, распределительной коробки
   и универсальной крышки. Проверены размеры, прозрачность и повторяемость полос провода; грани и иконки отрисованы
   проверочными моделями MCP. Интеграция с моделями и просмотр в клиенте относятся к приёмке #205 и #273.
