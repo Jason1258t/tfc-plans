@@ -60,6 +60,15 @@ the removed cover disappeared. Bidirectional-converter power formulas were not c
 `3c8dafe7d5fc0f674bec973e5f0273d3b5798637ea1a979b3d05ebd55381eb0e`; server, client and before-fix crash evidence is
 attached to task #410.
 
+2026-11-24 (dev #412): **EE Extras 2.26.6** fixes the actual upside-down/inset panel inlet model in 2.26.5.
+EE's default termination state has FLIP=true; the panel renderer now explicitly uses FLIP=false, ROLL=false.
+Previous technical renders used the stock EE model and missed our cable_gland resource override. A real
+Create+EE+IE development client checks baked vertices and both contact-face normals, without screenshots:
+old upper y=11..14.5 / lower 1.5..5, fixed upper 13.5..17 / lower -1..2.5. The body touches y=16/0 and the
+cable gland protrudes to y=17/-1. Cable nodes moved to the actual outer gland ends; electrical IDs stay unchanged.
+The old mirrored model is an explicit negative control. Published 2.26.5 jar delivery was verified separately;
+the user's game already ran 2.26.5, so the old common snapshot (2.22.1) was not their rendering issue.
+
 ## Versions (since 2026-10-23)
 
 Task «Написание чендж логов для наших аддонов, и их поддержка в генераторе патчноута» (group «Разработка»), plan doc
