@@ -69,6 +69,17 @@ cable gland protrudes to y=17/-1. Cable nodes moved to the actual outer gland en
 The old mirrored model is an explicit negative control. Published 2.26.5 jar delivery was verified separately;
 the user's game already ran 2.26.5, so the old common snapshot (2.22.1) was not their rendering issue.
 
+2026-11-24 (dev #411): **EE Extras 2.27.0** adds redstone signal wires and connectors independent of the electrical
+simulation: 16 colour channels, 0–15 without attenuation, 32-block spans through solid blocks, maximum of sources,
+branches and rings. Dedicated signal nodes on panel analog levers, steering wheels, cut-off switches and buttons
+work without wireless frequencies. Dye sets the connector channel (the analog lever's own colour selects its
+channel); Create wrench / IE screwdriver selects input/output. EE persists the graph and connector settings.
+Create + EE + IE development server verified all 16 channels, 11/15 levels, maximum 15 → 11, a stone wall and ring,
+survival two-click placement/cost, saved-world restart and 0 after disconnect. The explicit wrong expectation failed.
+Resources passed and six connector orientations plus all three items have technical renders attached to #411.
+Remote client acceptance is blocked by #404; local client loaded resources but never started the requested scene,
+so no client frames or visual-acceptance claim. Prepared `signal-wires` scene remains available.
+
 ## Versions (since 2026-10-23)
 
 Task «Написание чендж логов для наших аддонов, и их поддержка в генераторе патчноута» (group «Разработка»), plan doc

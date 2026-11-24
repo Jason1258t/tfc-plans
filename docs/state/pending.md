@@ -31,6 +31,10 @@ its one-liner in STATE.md.
 Incinerator 1.0.2 (dev #364, #352): host installs the update on the server and player clients. In the client, check the
 animated embers under the grate and the dim top under redstone power.
 
+- Dev #411: install **EE Extras 2.27.0** on the server and clients. In a test world, check the redstone-wire preview,
+  connector settings, direct analog-lever connection and all six connector orientations. The remote client stand
+  is blocked by #404; the local scene never started. Technical model/item renders and server logs are attached to #411.
+
 ## Destroy Extras gas logistics (dev #380, #381)
 
 Host: install Destroy Extras 0.11.1 on the server and on clients, then publish the pack snapshot. Check the dock controls and gas delivery into production consumers in the host world.
