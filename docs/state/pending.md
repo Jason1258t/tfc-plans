@@ -389,3 +389,10 @@ under `kubejs/data` over the pinned M12, and the M12 site card carries the equiv
 - Dev #409: install EE Extras 2.26.4 on server and clients. Verify panel inlets touching the upper/lower outer walls, duplex cable outside and separate wires inside; node IDs and existing wiring preserved.
 
 - Dev #412: install EE Extras 2.26.6 on server and clients. Fixes reversed/inset inlets seen in 2.26.5. Real client baked-model coordinates and inward contact normals passed; no screenshots needed. Common snapshot still contains 2.22.1; no pack update was proposed here.
+
+## EE Extras 2.28.1 — metering pump (dev #413)
+
+Host: install on the server and every client, publish the snapshot. Check the metering pump's Create dose/filter
+controls, terminal wires, direction arrow and right-click interaction in the full-pack client. Server checks passed
+for exact doses, held/repeated redstone, all orientations and saved blocked cycles. Model renders are interim visual
+evidence on #413; client stand entry point currently fails module imports (#414, related #404).
