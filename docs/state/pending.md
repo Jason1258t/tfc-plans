@@ -1,5 +1,12 @@
 # State: waiting for the host or an in-game check
 
+- Host: install **Destroy Extras 0.12.1** on server and clients (`tfc pull addons destroy_extras@0.12.1`), then publish
+  the snapshot (dev #415). The bath now accepts working fluid on every side and prioritises spent-fluid extraction.
+  Four upright boards share one mask slot. Client scene `etching-bath` remains dev #417: test1a lost SSH connectivity;
+  verify fluid/board rendering and all addon items in creative search after it returns. Frozen final jars:
+  `~/.cache/tfc-plans/addon-stand/etching-bath-20261125-101604`. Server checks and the labeled interim shell render
+  are attached to #415. The old 0.12.0 candidate was never released; do not use it.
+
 - Host: install **IE Extras 1.2.1** on the server and clients with `tfc pull addons ie_extras@1.2.1` and publish the pack
   snapshot (dev #387). Existing Beamhouses do not need to be rebuilt.
 
