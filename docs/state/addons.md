@@ -96,8 +96,8 @@ working tank; draining prefers the separate spent tank (4000 mB each). Destroy's
 mixtures without losing volume or species. Invalid fluid and full spent storage cannot consume the batch. Client
 renderer shows fluid level and upright boards. The dedicated creative tab enumerates all registered addon items,
 including previously omitted tank shells. Legacy inventory/tanks are retained on load. Dedicated-server
-`etchingtest` passed 31 checks (four boards consume 1000 mB and yield 1000 mB spent solution with 12 moles Cu);
-intentional negative control failed as expected, then the positive run passed. Client scene: `etching-bath`; visual/creative-search acceptance remains #417 because test1a became unreachable over SSH. A labeled static shell render and server protocols are attached to #415.
+`etchingtest` passed 43 checks (four boards consume 1000 mB and yield 1000 mB spent solution with 12 moles Cu);
+intentional negative control failed as expected, then the positive run passed. L2/L3 each processed four blanks with one reusable design and preserved all layers/vias. Client scene: `etching-bath`; visual/creative-search acceptance remains #417 because test1a became unreachable over SSH. A labeled static shell render and server protocols are attached to #415.
 
 ## Versions (since 2026-10-23)
 
