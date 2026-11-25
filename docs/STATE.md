@@ -1,6 +1,6 @@
 # Current state
 
-Updated: 2026-10-23. "Where we are now": an index — read this file at session start, open a topic file only when the
+Updated: 2026-11-25. "Where we are now": an index — read this file at session start, open a topic file only when the
 task touches it. History — `git log`.
 
 ## Topic files (`docs/state/`)
@@ -17,6 +17,9 @@ task touches it. History — `git log`.
 When finishing work: update the topic file, and this index only if a line below changes.
 
 ## In progress / waiting (details — [pending.md](state/pending.md))
+
+- Host: install **Destroy Extras 0.12.1** on server and players, publish the snapshot (dev #415). Client visuals and
+  creative search await test1a connectivity (dev #417).
 
 - Host: Create Deco bricks (dev #222), draft `GHltHxk6T0WJ2gbyAOGi`: pull into a test world, check umber and
   cracked brick crafting, then confirm.

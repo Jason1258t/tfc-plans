@@ -89,6 +89,16 @@ Resources passed and six connector orientations plus all three items have techni
 Remote client acceptance is blocked by #404; local client loaded resources but never started the requested scene,
 so no client frames or visual-acceptance claim. Prepared `signal-wires` scene remains available.
 
+2026-11-25 (dev #415): **Destroy Extras 0.12.1** rebuilds etching-bath interaction around Create fluid-container
+helpers and a registered mechanical-arm interaction point. Four upright board positions share one mask slot;
+finished boards stay in place for removal. L1 masks are consumed, L2/L3 designs remain reusable. Every side fills the
+working tank; draining prefers the separate spent tank (4000 mB each). Destroy's GeniusFluidTank mixes component
+mixtures without losing volume or species. Invalid fluid and full spent storage cannot consume the batch. Client
+renderer shows fluid level and upright boards. The dedicated creative tab enumerates all registered addon items,
+including previously omitted tank shells. Legacy inventory/tanks are retained on load. Dedicated-server
+`etchingtest` passed 31 checks (four boards consume 1000 mB and yield 1000 mB spent solution with 12 moles Cu);
+intentional negative control failed as expected, then the positive run passed. Client scene: `etching-bath`; visual/creative-search acceptance remains #417 because test1a became unreachable over SSH. A labeled static shell render and server protocols are attached to #415.
+
 ## Versions (since 2026-10-23)
 
 Task «Написание чендж логов для наших аддонов, и их поддержка в генераторе патчноута» (group «Разработка»), plan doc
