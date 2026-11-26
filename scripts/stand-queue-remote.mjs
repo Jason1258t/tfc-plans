@@ -165,8 +165,8 @@ export async function waitJob(id, { timeout = 600, since = 0, until = null } = {
 }
 
 export const listJobs = () => hostAsync(['list']);
-export const jobLog = (id, { grep = null, tail = 80 } = {}) =>
-  hostAsync(['log', id, ...(grep ? ['--grep', grep] : []), '--tail', String(tail)]);
+export const jobLog = (id, { grep = null, tail = 80, source = 'wrapper' } = {}) =>
+  hostAsync(['log', id, '--source', source, ...(grep ? ['--grep', grep] : []), '--tail', String(tail)]);
 export const cancelJob = (id) => hostAsync(['cancel', id]);
 
 const ago = (iso) => {
@@ -270,7 +270,11 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
       );
     if (cmd === 'list') return listText(await listJobs());
     if (cmd === 'log') {
-      const r = await jobLog(argv[0], { grep: one('--grep') ?? null, tail: Number(one('--tail') ?? 80) });
+      const r = await jobLog(argv[0], {
+        grep: one('--grep') ?? null,
+        tail: Number(one('--tail') ?? 80),
+        source: one('--source') ?? 'wrapper',
+      });
       return [`строк: ${r.total}`, ...r.lines].join('\n');
     }
     if (cmd === 'cancel') return JSON.stringify(await cancelJob(argv[0]));

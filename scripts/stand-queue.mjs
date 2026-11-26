@@ -223,15 +223,96 @@ function readText(file) {
   }
 }
 
-function jobLog(id, { grep = null, tail = 80 }) {
-  const text = readText(path.join(jobDir(id), 'output.log'));
+function safeLogFile(file, roots) {
+  if (!fs.existsSync(file)) return null;
+  const real = fs.realpathSync(file);
+  if (
+    !roots.some((root) => {
+      const rel = path.relative(fs.realpathSync(root), real);
+      return rel && !rel.startsWith(`..${path.sep}`) && rel !== '..' && !path.isAbsolute(rel);
+    })
+  )
+    throw new Error('журнал находится вне папки стенда');
+  if (!fs.statSync(real).isFile()) throw new Error('журнал не является файлом');
+  return real;
+}
+
+function jobLog(id, { grep = null, tail = 80, source = 'wrapper' }) {
+  const job = readJob(id);
+  if (!job) throw new Error(`нет задания ${id}`);
+  if (!['wrapper', 'client', 'latest'].includes(source)) throw new Error('источник: wrapper | client | latest');
+  if (!Number.isFinite(tail)) throw new Error('tail должен быть числом');
+  if (grep && grep.length > 300) throw new Error('grep: не больше 300 символов');
+  const roots = [jobDir(id)];
+  let file = path.join(jobDir(id), 'output.log');
+  if (source !== 'wrapper') {
+    const name = source === 'client' ? 'client.log' : 'latest.log';
+    if (job.kind !== 'client' && source === 'client') throw new Error('client.log доступен только клиентскому заданию');
+    if (job.kind === 'client') {
+      const stand = path.resolve(
+        process.env.TFC_CLIENT_STAND ?? path.join(os.homedir(), '.cache', 'tfc-plans', 'client-stand'),
+      );
+      for (const dir of ['runs', 'results'])
+        if (fs.existsSync(path.join(stand, dir))) roots.push(path.join(stand, dir));
+      if (FINAL.has(job.state)) file = job.result ? path.join(job.result, name) : null;
+      else {
+        // Только прогон с меткой этого задания; соседние и старые прогоны не подходят.
+        const dirs = fs.existsSync(path.join(stand, 'runs'))
+          ? fs
+              .readdirSync(path.join(stand, 'runs'))
+              .filter((n) => ID_RE.test(n))
+              .map((n) => path.join(stand, 'runs', n))
+          : [];
+        if (fs.existsSync('/dev/shm')) {
+          for (const n of fs.readdirSync('/dev/shm').filter((n) => /^tfc-client-\d{8}-\d{6}-[0-9a-f]{4}$/.test(n))) {
+            const dir = path.join('/dev/shm', n);
+            if (fs.lstatSync(dir).isDirectory()) {
+              dirs.push(dir);
+              roots.push(dir);
+            }
+          }
+        }
+        const run = dirs.find((dir) => readJson(path.join(dir, 'stand.json'))?.queueJob === id);
+        file = run ? path.join(run, source === 'client' ? 'client.log' : 'game/logs/latest.log') : null;
+        // Клиент уже собрал результат, но оболочка очереди ещё не завершилась.
+        if (run && !fs.existsSync(file)) {
+          const out = readJson(path.join(run, 'stand.json'))?.out;
+          if (out) file = path.join(out, name);
+        }
+      }
+    } else {
+      file = FINAL.has(job.state)
+        ? path.join(jobDir(id), 'logs', name)
+        : job.minecraftRun
+          ? path.join(job.minecraftRun, 'logs', name)
+          : null;
+      if (job.minecraftRun && fs.existsSync(job.minecraftRun)) roots.push(job.minecraftRun);
+    }
+  }
+  const checked = file && safeLogFile(file, roots);
+  if (!checked) return { source, available: false, total: 0, lines: [] };
+  // Читаем ограниченный хвост, а не многогигабайтный журнал целиком.
+  const fd = fs.openSync(checked, 'r');
+  let text, truncated;
+  try {
+    const size = fs.fstatSync(fd).size;
+    const start = Math.max(0, size - 2 * 1024 * 1024);
+    const buf = Buffer.alloc(size - start);
+    const bytes = fs.readSync(fd, buf, 0, buf.length, start);
+    text = buf.subarray(0, bytes).toString('utf8');
+    truncated = start > 0;
+    if (truncated) text = text.slice(text.indexOf('\n') + 1);
+  } finally {
+    fs.closeSync(fd);
+  }
   let rows = text.split('\n');
+  if (rows.at(-1) === '') rows.pop();
   if (grep) {
     const re = new RegExp(grep, 'i');
     rows = rows.filter((l) => re.test(l));
   }
-  const n = Math.min(400, Math.max(1, tail));
-  return { total: rows.length, lines: rows.slice(-n).map((l) => l.slice(0, 400)) };
+  const n = Math.min(400, Math.max(1, Math.trunc(tail)));
+  return { source, available: true, truncated, total: rows.length, lines: rows.slice(-n).map((l) => l.slice(0, 400)) };
 }
 
 function cancel(id) {
@@ -405,6 +486,7 @@ async function runServer(id, job) {
   const { stageShm } = await import('./stand-shm.mjs');
   const staged = stageShm(SERVER_STAND, { prefix: 'tfc-queue.' });
   let summary = '';
+  updateJob(id, { minecraftRun: path.join(staged.stand, 'run') });
   try {
     if (staged.stand !== SERVER_STAND) event(id, 'снимок и NeoForge скопированы в /dev/shm');
     const code = await runChild(id, [path.join(HERE, 'pack-stand.mjs'), ...resolveArgs(job.args)], {
@@ -441,6 +523,7 @@ async function runClientJob(id, job) {
     [path.join(HERE, 'client-stand.mjs'), 'run', ...resolveArgs(job.args), '--stdin-watch'],
     {
       stdinWatch: true,
+      env: { TFC_STAND_QUEUE_JOB: id },
       hardSec: hardLimit(job.args),
       onStdout: (l) => {
         const m = /^RESULT (.+)$/.exec(l);
@@ -594,7 +677,14 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
           .slice(-20)
           .map((j) => ({ ...j, position: positionOf(j.id) })),
       }),
-    log: async () => out(jobLog(argv[0], { grep: one('--grep') ?? null, tail: Number(one('--tail') ?? 80) })),
+    log: async () =>
+      out(
+        jobLog(argv[0], {
+          grep: one('--grep') ?? null,
+          tail: Number(one('--tail') ?? 80),
+          source: one('--source') ?? 'wrapper',
+        }),
+      ),
     cancel: async () => out(cancel(argv[0])),
   }[cmd];
   if (!run) {
