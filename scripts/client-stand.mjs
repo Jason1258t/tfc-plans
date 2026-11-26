@@ -489,7 +489,7 @@ function setupWorld(game, world, mc) {
   fs.cpSync(path.resolve(world), dir, { recursive: true });
   // session.lock прошлого владельца мешает открыть мир
   fs.rmSync(path.join(dir, 'session.lock'), { force: true });
-  return `копия ${path.basename(path.resolve(world))}`;
+  return `копия ${path.resolve(world)}`;
 }
 
 /** versions/<id>/<id>.jar — копия ванильного клиента родительской версии, как её делает официальный лаунчер */
@@ -614,10 +614,29 @@ export function buildProfile({ game, cache, mods, exclude, overlay, copyMods }) 
   // Первый запуск без экранов-знакомств: доступность Minecraft, подсказки, приветствие FancyMenu
   fs.writeFileSync(
     path.join(game, 'options.txt'),
-    ['lang:ru_ru', 'onboardAccessibility:false', 'tutorialStep:none', 'pauseOnLostFocus:false', 'narrator:0', ''].join(
-      '\n',
-    ),
+    [
+      'lang:ru_ru',
+      'onboardAccessibility:false',
+      'tutorialStep:none',
+      'pauseOnLostFocus:false',
+      'narrator:0',
+      'renderDistance:4',
+      'simulationDistance:4',
+      'maxFps:30',
+      '',
+    ].join('\n'),
   );
+  // Voxy — дальний ландшафт; llvmpipe тратит минуты на его инициализацию до первого кадра сцены.
+  // Ключи проверены в VoxyConfig 0.2.16; overlay ниже может явно включить Voxy для его собственных проверок.
+  const voxyConfig = path.join(game, 'config', 'voxy-config.json');
+  if (jars.includes('voxy-0.2.16-beta+1.21.11.jar')) {
+    const previous = fs.existsSync(voxyConfig) ? JSON.parse(fs.readFileSync(voxyConfig, 'utf8')) : {};
+    fs.mkdirSync(path.dirname(voxyConfig), { recursive: true });
+    fs.writeFileSync(
+      voxyConfig,
+      JSON.stringify({ ...previous, enabled: false, enable_rendering: false, ingest_enabled: false }, null, 2) + '\n',
+    );
+  }
   const fancy = path.join(game, 'config', 'fancymenu', 'options.txt');
   if (!fs.existsSync(fancy)) {
     fs.mkdirSync(path.dirname(fancy), { recursive: true });
@@ -627,7 +646,16 @@ export function buildProfile({ game, cache, mods, exclude, overlay, copyMods }) 
     if (!fs.existsSync(overlay)) throw new Error(`нет папки ${overlay}`);
     fs.cpSync(path.resolve(overlay), game, { recursive: true, force: true });
   }
-  return { total: jars.length, used: used.length + mods.length, excluded: jars.length - used.length, compatibility };
+  return {
+    total: jars.length,
+    used: used.length + mods.length,
+    excluded: jars.length - used.length,
+    compatibility,
+    visualProfile: {
+      options: fs.readFileSync(path.join(game, 'options.txt'), 'utf8'),
+      voxyEnabled: fs.existsSync(voxyConfig) ? JSON.parse(fs.readFileSync(voxyConfig, 'utf8')).enabled : null,
+    },
+  };
 }
 
 /** Lock и сокет экрана n, брошенные убитым Xvfb этого пользователя: процесса из lock-файла уже нет */
@@ -1011,6 +1039,16 @@ export async function runClient({
     ...(profile?.compatibility?.length
       ? [
           `Совместимость стенда: исключён ${profile.compatibility.join(', ')}; конфликт с Sodium 0.8.13-beta.1. Профиль отличается от снимка.`,
+        ]
+      : []),
+    ...(profile?.visualProfile
+      ? [
+          `Программный профиль: ${profile.visualProfile.options
+            .split('\n')
+            .filter((line) => /^(renderDistance|simulationDistance|maxFps):/.test(line))
+            .join(
+              ', ',
+            )}; Voxy ${profile.visualProfile.voxyEnabled === false ? 'выключен' : profile.visualProfile.voxyEnabled === true ? 'включён overlay' : 'нет'}.`,
         ]
       : []),
     `итог: ${state}${readySec !== null ? ` за ${readySec} с` : ''}${shownSec !== null ? `, мир на экране через ${shownSec} с` : ''}; ${stopped || 'не запускалась'}; всего ${secs()} с`,

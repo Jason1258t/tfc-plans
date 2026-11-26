@@ -924,6 +924,10 @@ Cursor configs (shapes from their docs, not tried).
 - Client stand compatibility profile removes only `Opticores-1.0.9 - Neoforge-1.21.1.jar` when paired with
   `sodium-neoforge-0.8.13-beta.1+mc1.21.1.jar`, with an explicit summary warning. MCP bytecode/decompilation confirms
   mismatched renderModel signatures; there is no OptiCore mixin switch. Live pack files are untouched.
+- Software client profile uses renderDistance=4, simulationDistance=4 and maxFps=30. Voxy 0.2.16's enabled,
+  enable_rendering and ingest_enabled are false in the test copy (config keys verified via MCP decompile); overlay can
+  override this for Voxy-specific checks. The summary reports effective settings. Heap diagnostics showed no sustained
+  full-GC pressure; watchdog stacks instead showed delayed Voxy renderer initialization and chunk-system work.
 - Standalone `addon_stand scene=… worldJob=<successful saved job>` starts in a copy of an accepted TFC world;
   candidate/verdict records the source and acceptance checks it. Useful for electronics scenes: regenerating the
   RealWorld world from scratch exceeded 1500 s, while the saved-world client logged in after 158 s. The insulator scene
