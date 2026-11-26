@@ -209,3 +209,8 @@ Part of [STATE.md](../STATE.md). What each tool does and how to add one — [doc
   (`BaseQuestFile.readID` → `Long.parseLong`) — it re-randomises them on load, so the «Химия» chapter (#345) showed
   «Безымянный» (stand probe: server chapter id `0A45…` vs file `CE64…`). Now ids start with 0–7, and `quest_chapter_put`
   repairs unreadable ids of the chapter it edits (41 in «Химия», lang keys renamed in place, rest of ru_ru byte-identical).
+
+- 2026-11-26 (dev #408): `model_render` now composes EE Extras cable covers from explicit runtime pair
+  coordinates and duplex panel inlets from slot centers, preserving facing/roll contracts. `compare`/`beforeAddon`
+  return labelled before/after technical renders; `task` attaches PNGs + Russian captions directly. Availability of
+  supplied pairs is deliberately left to runtime/code evidence, not inferred by this resource renderer.
