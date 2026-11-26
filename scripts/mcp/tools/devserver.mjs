@@ -700,20 +700,31 @@ export const TOOLS = [
   {
     name: 'stand_log',
     description:
-      'Targeted read of a stand queue job output on test1a (stand + server/client process output): last lines or lines matching grep. For the game log of a finished job use log_analyze on the copied latest.log.',
+      'Targeted bounded read of wrapper output, client console or Minecraft latest.log of an active or finished stand queue job on test1a. Not for polling.',
     inputSchema: {
       type: 'object',
       properties: {
         id: str('job id'),
+        source: {
+          type: 'string',
+          enum: ['wrapper', 'client', 'latest'],
+          description: 'Log source (default wrapper); latest is Minecraft, client is client console',
+        },
         grep: str('regex filter (case-insensitive)'),
         tail: num('last N lines (80, max 400)'),
       },
       required: ['id'],
     },
     handler: async (a) => {
-      const r = await jobLog(String(a.id), { grep: a.grep ?? null, tail: Number(a.tail ?? 80) });
+      const r = await jobLog(String(a.id), {
+        grep: a.grep ?? null,
+        tail: Number(a.tail ?? 80),
+        source: a.source ?? 'wrapper',
+      });
+      if (!r.available) return `Задание ${a.id}: журнал ${r.source} пока отсутствует или уже удалён.`;
       return [
-        `Задание ${a.id}: строк${a.grep ? ` по «${a.grep}»` : ''} ${r.total}, последние ${r.lines.length}:`,
+        ...(r.truncated ? ['Поиск ограничен последними 2 МиБ журнала.'] : []),
+        `Задание ${a.id}, журнал ${r.source}: строк${a.grep ? ` по «${a.grep}»` : ''} ${r.total}, последние ${r.lines.length}:`,
         ...r.lines,
       ].join('\n');
     },
