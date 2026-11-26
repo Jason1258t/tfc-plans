@@ -848,6 +848,11 @@ logs and old verdicts under `evidence/attempts/<step>/`. Retrying clears the pre
 Old candidates without recorded step parameters must be restarted normally. Retry preserves the original snapshot
 reference only through the stand's ordinary snapshot handling; it freezes JARs and overlay, not all external pack data.
 
+For a standalone scene, `addon_stand addon=… scene=… worldJob=<successful saved job>` uses a copy of an existing
+TFC world instead of generating the RealWorld map again (CLI `--world-job`). The source must be terminal, successful
+and contain world/level.dat. The candidate/verdict retains its id and acceptance checks the copied-world summary.
+The original world is never edited; the scene may prepare its own area in the copy.
+
 `stand_jobs` reports checkout HEAD, origin/main, branch, dirty state, ahead/behind and loaded worker SHA.
 `stand_submit` refreshes and checks runtime before uploading inputs, and the host checks again before enqueueing.
 Diverged/dirty/unknown runtime is an error. Recovery: docs/state/infra.md, “Восстановление checkout очереди”.

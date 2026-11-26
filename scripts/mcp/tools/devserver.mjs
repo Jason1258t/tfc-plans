@@ -452,6 +452,7 @@ async function addonStand(a) {
   const r = await addonStandRun({
     addon: a.addon,
     scene: a.scene,
+    worldJob: a.worldJob,
     chain: a.chain ? String(a.chain) : null,
     build: a.build !== false,
     libs: Boolean(a.libs),
@@ -654,6 +655,9 @@ export const TOOLS = [
         scene: str('scene name (default: the only scene of the addon)'),
         chain: str(
           'chain name from tools/<mod>/stand.json "chains" instead of a scene: server save → restart → client',
+        ),
+        worldJob: str(
+          'standalone scene: use a copy of the world saved by this successful queue job instead of generating a fresh TFC world',
         ),
         retry: str('failed/cancelled chain step name to retry with frozen jars and original world; requires job'),
         job: str('job id from a previous addon_stand run: wait and judge'),

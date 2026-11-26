@@ -100,6 +100,10 @@ try {
   fs.writeFileSync(path.join(temp, 'summary.txt'), 'свои: main.jar, devtest.jar\n');
   fs.writeFileSync(path.join(temp, 'latest.log'), 'SCENE END PASS demo\n');
   assert.equal(judge(temp, { state: 'done', ok: true }, candidate).ok, true);
+  const savedCandidate = { ...candidate, worldJob: 'source-id' };
+  assert.equal(judge(temp, { state: 'done', ok: true }, savedCandidate).ok, false);
+  fs.appendFileSync(path.join(temp, 'summary.txt'), 'мир: копия /jobs/source-id/logs/world\n');
+  assert.equal(judge(temp, { state: 'done', ok: true }, savedCandidate).ok, true);
   fs.appendFileSync(path.join(temp, 'latest.log'), 'SCENE FAIL неожиданная ошибка\n');
   assert.equal(judge(temp, { state: 'done', ok: true }, candidate).ok, false);
   assert.equal(judge(temp, { state: 'cancelled' }, candidate).ok, false);
