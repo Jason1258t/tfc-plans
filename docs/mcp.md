@@ -827,3 +827,27 @@ Deployment metadata is static and costs no extra Firestore reads; it can lag a q
 For the live server/local inventory and filename → pack mapping use `tfc datapacks list` / `files`. Promotion is a
 host operation after game verification (`confirm`, `unconfirm`), not an MCP write to the site's `install` flag.
 See [datapacks-pack.md](plans/datapacks-pack.md).
+
+### Stand regression smoke and step retry (dev #393/#418/#419)
+
+`npm run stand:smoke` runs without Minecraft, SSH or credentials and is mandatory in CI. It starts the real MCP
+stdio server (initialize, list, item_get on temporary data), checks queue exports, scene+world validation, positive
+and negative verdicts, the exact OptiCore/Sodium compatibility profile, immutable step retry, own-JAR exclusion,
+queue-side terminal-state checks and duplicate delivery, and runtime divergence/fetch failure on temporary git repos.
+
+`addon_stand job=<any chain job> retry=<step name>` (CLI: `npm run addon-stand -- retry <job> --step <name>`) retries
+one terminal failed/cancelled step. It refuses running/unknown jobs, successful steps, missing saved parameters, changed
+frozen JARs/overlay or unavailable input worlds. All chain jobs must be terminal. The same saved arguments and original
+`worldJob` are used; no build or new world selection occurs. Server exclusions cannot drop own JARs. Queue-side atomic
+claim prevents simultaneous duplicate retries; redelivery returns the existing replacement job. A failed request with
+unknown outcome must be reconciled against `stand_jobs`, never bypassed by manual submission. A stale local retry lock
+must only be removed after checking that the submitting agent stopped and the queue outcome is known.
+
+`addon_stand job=<old or new job>` produces a combined verdict using current step jobs, retaining prior jobs, their
+logs and old verdicts under `evidence/attempts/<step>/`. Retrying clears the previous accepted verdict and runtime flag.
+Old candidates without recorded step parameters must be restarted normally. Retry preserves the original snapshot
+reference only through the stand's ordinary snapshot handling; it freezes JARs and overlay, not all external pack data.
+
+`stand_jobs` reports checkout HEAD, origin/main, branch, dirty state, ahead/behind and loaded worker SHA.
+`stand_submit` refreshes and checks runtime before uploading inputs, and the host checks again before enqueueing.
+Diverged/dirty/unknown runtime is an error. Recovery: docs/state/infra.md, “Восстановление checkout очереди”.

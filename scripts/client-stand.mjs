@@ -586,12 +586,21 @@ function liveRuns() {
 }
 
 /** Профиль игры: моды, config/kubejs/resourcepacks снимка, тестовые настройки, оверлей поверх */
-function buildProfile({ game, cache, mods, exclude, overlay, copyMods }) {
+export function buildProfile({ game, cache, mods, exclude, overlay, copyMods }) {
   const modsDir = path.join(cache, 'mods');
   if (!fs.existsSync(modsDir)) throw new Error(`нет ${modsDir} — сначала снимок (npm run pack:fetch и синхронизация)`);
   fs.mkdirSync(path.join(game, 'mods'), { recursive: true });
   const jars = fs.readdirSync(modsDir).filter((f) => f.endsWith('.jar'));
-  const used = jars.filter((f) => !exclude.some((x) => f.toLowerCase().includes(x.toLowerCase())));
+  // Проверенная несовместимая пара: OptiCore инъектирует старую сигнатуру Sodium renderModel.
+  // Только профиль стенда; живой снимок не изменяется. Другие версии требуют отдельной проверки.
+  const compatibility =
+    jars.includes('Opticores-1.0.9 - Neoforge-1.21.1.jar') &&
+    jars.includes('sodium-neoforge-0.8.13-beta.1+mc1.21.1.jar')
+      ? ['Opticores-1.0.9 - Neoforge-1.21.1.jar']
+      : [];
+  const used = jars.filter(
+    (f) => !compatibility.includes(f) && !exclude.some((x) => f.toLowerCase().includes(x.toLowerCase())),
+  );
   // Снимок на HDD: в RAM-прогоне копия, иначе ссылки
   for (const f of used)
     if (copyMods) fs.copyFileSync(path.join(modsDir, f), path.join(game, 'mods', f));
@@ -618,7 +627,7 @@ function buildProfile({ game, cache, mods, exclude, overlay, copyMods }) {
     if (!fs.existsSync(overlay)) throw new Error(`нет папки ${overlay}`);
     fs.cpSync(path.resolve(overlay), game, { recursive: true, force: true });
   }
-  return { total: jars.length, used: used.length + mods.length, excluded: jars.length - used.length };
+  return { total: jars.length, used: used.length + mods.length, excluded: jars.length - used.length, compatibility };
 }
 
 /** Lock и сокет экрана n, брошенные убитым Xvfb этого пользователя: процесса из lock-файла уже нет */
@@ -999,6 +1008,11 @@ export async function runClient({
     (!saveWorld || Boolean(savedWorld));
   const text = [
     `Клиентский стенд: снимок ${ver.snapshot ?? '?'}, NeoForge ${nf}, прогон ${id}`,
+    ...(profile?.compatibility?.length
+      ? [
+          `Совместимость стенда: исключён ${profile.compatibility.join(', ')}; конфликт с Sodium 0.8.13-beta.1. Профиль отличается от снимка.`,
+        ]
+      : []),
     `итог: ${state}${readySec !== null ? ` за ${readySec} с` : ''}${shownSec !== null ? `, мир на экране через ${shownSec} с` : ''}; ${stopped || 'не запускалась'}; всего ${secs()} с`,
     profile
       ? `моды: ${profile.used} в профиле${profile.excluded ? `, убрано --exclude: ${profile.excluded}` : ''}${mods.length ? `, свои: ${mods.map((m) => path.basename(m)).join(', ')}` : ''}`

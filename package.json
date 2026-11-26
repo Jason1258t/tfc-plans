@@ -52,7 +52,8 @@
     "tfc:bump": "npm version --no-git-tag-version --workspace cli",
     "ui:classes": "node scripts/ui/classes.mjs",
     "ui:shots": "node scripts/ui/shots.mjs",
-    "boundaries": "node scripts/repo-boundaries.mjs"
+    "boundaries": "node scripts/repo-boundaries.mjs",
+    "stand:smoke": "node scripts/stand-smoke.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",
