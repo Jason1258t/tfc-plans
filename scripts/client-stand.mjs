@@ -489,7 +489,7 @@ function setupWorld(game, world, mc) {
   fs.cpSync(path.resolve(world), dir, { recursive: true });
   // session.lock прошлого владельца мешает открыть мир
   fs.rmSync(path.join(dir, 'session.lock'), { force: true });
-  return `копия ${path.basename(path.resolve(world))}`;
+  return `копия ${path.resolve(world)}`;
 }
 
 /** versions/<id>/<id>.jar — копия ванильного клиента родительской версии, как её делает официальный лаунчер */
