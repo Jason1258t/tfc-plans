@@ -8,6 +8,14 @@ page `/addons/<mod>`: card `tools/<mod>/addon.json` (+ jar, `icons/`) in git, de
 `addons_list` / `addon_check`. Texts moved from the former `src/lib/addons.ts` as is (signed Claude). What still waits for the host or a
 game check — [pending.md](pending.md).
 
+2026-11-26 (dev #395): temperature PCB chunk-retention investigation completed against the preserved November 19
+runs on unchanged production SHA `f74a20df`. Intact fixture `111707-2311`, PCB removed `111706-6103` and crucible
+replaced `111706-0d57` all have `no_ticket/Loaded=0/BlockTicking=0`; intact remains unloaded at 120/180 seconds.
+Full temperature lifecycle `152332-2ec2` and cold restart `152337-1e82` pass actual unload/reload and circuit equality.
+Raw summaries/RCON/scenarios attached to #395 as `temperature-chunk-diagnostics.zip`. Original one-off retention
+remains unexplained and is not evidence of a production defect; no runtime patch or weakened assertion. Parent
+#301.27 remains separate and open.
+
 2026-11-25 (dev #413): **EE Extras 2.28.1** adds an electric metering pump (`metering_pump`),
 1–1000 mB per right-click or redstone rising edge, with fluid filter, EE terminals and two independent Create pipe
 networks ending at the metering chamber. A cycle collects the full dose before dispensing; blocked output and lost
