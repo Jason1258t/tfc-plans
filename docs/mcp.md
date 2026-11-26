@@ -351,11 +351,46 @@ The Minecraft client can't run from MCP (no display), so what it does with resou
 here. Resources are resolved by layer as in game (first that has the file): pack resource packs → KubeJS assets → addon
 folders `tools/<mod>/src/main/resources` (fresher than their jars) → mod jars → Minecraft and NeoForge.
 
-| Tool                                                                            | Does                                                                                                                                                                                                                                                                                                                          |
-| ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `model_render(id*, kind, state, view, size, addon, texture, bones, silhouette)` | **PNG image**: blockstate → variant → model with `parent` → 3D under `display.gui` rotation (or top/side view); `item/generated` items — by layers; GeckoLib model (`kind=geo` or id `ns:geo/….geo.json`) with `texture=`. Text: model chain (GeckoLib — bone tree with cube counts), where each texture comes from, warnings |
-| `texture_get(path*, size, colors, addon)`                                       | texture **image** (nearest-neighbour upscale) and palette: frequent colours with shares, size, animation frames, source                                                                                                                                                                                                       |
-| `resources_check(addon \| mod, props, filter, limit, verbose)`                  | check a pack mod or an addon from `tools/`: errors, warnings, info                                                                                                                                                                                                                                                            |
+| Tool                                                                                                                           | Does                                                                                                                                                                                                                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model_render(id*, kind, state, view, size, addon, texture, bones, silhouette, caps, panelInsets, compare, beforeAddon, task)` | **PNG image**: blockstate → variant → model with `parent` → 3D under `display.gui` rotation (or top/side view); `item/generated` items — by layers; GeckoLib model (`kind=geo` or id `ns:geo/….geo.json`) with `texture=`. Text: model chain (GeckoLib — bone tree with cube counts), where each texture comes from, warnings |
+| `texture_get(path*, size, colors, addon)`                                                                                      | texture **image** (nearest-neighbour upscale) and palette: frequent colours with shares, size, animation frames, source                                                                                                                                                                                                       |
+| `resources_check(addon \| mod, props, filter, limit, verbose)`                                                                 | check a pack mod or an addon from `tools/`: errors, warnings, info                                                                                                                                                                                                                                                            |
+
+EE Extras code-rendered details (dev #408): `caps=[{contacts:[0,1], nodes:[[x,y,z],[x,y,z]],
+outward:[nx,ny,nz]}]` adds cable covers using `CableCapGeometry` and `CableCapRender` geometry. Coordinates
+are in block units **after** the base block's `FACING`/`ROLL`; use positions from the actual runtime or verified
+mod code, not guessed positions. `outward` is the renderer's outward normal (projected perpendicular to the pair).
+This renders the supplied pair; it does not establish its accessibility, device compatibility or saved-world state.
+`panelInsets=[{center:[x,y,z]}]` adds duplex inlets using `ElectricalPanelSlot.center` **before** facing rotation;
+`state.facing` rotates the panel and its inlets together. Upper/lower placement, 0.5 scale and model state
+`facing=up,roll=false,flip=false` match `PanelInlet.render`/`PanelInletGeometry`. Limits: 32 covers + 32 inlets.
+
+`compare=true` returns two images, with Russian captions «До» (base) and «После» (details).
+`beforeAddon=<old addon folder>` instead compares old/current resources with the **same supplied geometry**;
+it does not execute historical Java code. `task=<dev id>` explicitly writes each PNG and a captions text file to
+the task attachments. PNG order matches captions and filenames `before`/`after`; these are technical renders,
+not client screenshots. Example (coordinates independently checked against the device's runtime layout):
+
+```json
+{
+  "id": "ee_extras:bidirectional_converter",
+  "addon": "tools/ee-extras-mod",
+  "state": "facing=up,roll=false",
+  "caps": [
+    {
+      "contacts": [0, 1],
+      "nodes": [
+        [0.1875, 0.3125, 0.1875],
+        [0.8125, 0.3125, 0.1875]
+      ],
+      "outward": [0, 1, 0]
+    }
+  ],
+  "compare": true,
+  "task": 408
+}
+```
 
 Renderer (`scripts/mcp/render.mjs`) — port of `tools/ee-extras-mod/art/iso.py` plus: `parent`, element rotation
 (`rotation`, `rescale`), variant `x`/`y` rotation, default `uv`, face `rotation`, normal shading, translucency,

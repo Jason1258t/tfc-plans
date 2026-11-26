@@ -921,7 +921,7 @@ function chainText(m) {
  * icon (как в инвентаре: модель предмета, а нет её — блок); без kind — блок, иначе предмет, иначе модель.
  * Возвращает { png | null, lines (что нарисовано, откуда, предупреждения) }.
  */
-export function renderId(layers, id, { kind, state, view = 'gui', size = 256, aa = 4, ...geo } = {}) {
+export function renderId(layers, id, { kind, state, view = 'gui', size = 256, aa = 4, decorateParts, ...geo } = {}) {
   if (!id) return { png: null, lines: ['Укажите id блока или предмета (ns:path) или модели (ns:block/…).'] };
   if (kind === 'geo' || (!kind && isGeoId(id))) return renderGeo(layers, id, { view, size, aa, ...geo });
   const { ns, path: p } = resLoc(id);
@@ -998,6 +998,7 @@ export function renderId(layers, id, { kind, state, view = 'gui', size = 256, aa
     }
     parts = [{ model: m, x: 0, y: 0 }];
   }
+  if (decorateParts) parts = decorateParts(parts);
   const r = renderModel(layers, parts, { view, size, aa });
   for (const [t, from] of r.textures) lines.push(`  текстура ${t}: ${from ?? '❌ нет'}`);
   for (const pm of parts) for (const e of pm.model.errors) lines.push(`❌ ${e}`);

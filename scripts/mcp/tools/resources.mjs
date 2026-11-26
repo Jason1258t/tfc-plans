@@ -6,6 +6,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { attachmentParts } from '../models/ee-extras-attachments.mjs';
 import { clinitValues, enumConstants, instructions, parseClass } from '../../mods/classfile.mjs';
 import { codeRefs, parseClassFull } from '../bytecode.mjs';
 import { classRecord, parseToml } from '../code-index.mjs';
@@ -42,17 +43,58 @@ function layersFor(a) {
   return resourceLayers(null, true, null, addon);
 }
 
-function modelRender(a) {
-  const r = renderId(layersFor(a), String(a.id ?? '').trim(), {
-    kind: a.kind,
-    state: a.state,
-    view: a.view,
-    size: Math.min(1024, Math.max(32, Number(a.size ?? 256) | 0)),
-    texture: a.texture,
-    bones: a.bones,
-    silhouette: a.silhouette,
-  });
-  return r.png ? { text: r.lines.join('\n'), images: [r.png] } : r.lines.join('\n');
+async function modelRender(a) {
+  if ((a.caps?.length || a.panelInsets?.length) && a.kind && a.kind !== 'block')
+    throw new Error('Дополнительные детали доступны только для kind=block.');
+  const render = (args, details) => {
+    const layers = layersFor(args);
+    const extra = details ? attachmentParts(layers, { ...args, state: parseState(args.state) }) : [];
+    return renderId(layers, String(args.id ?? '').trim(), {
+      kind: extra.length ? 'block' : args.kind,
+      state: args.state,
+      view: args.view,
+      size: Math.min(1024, Math.max(32, Number(args.size ?? 256) | 0)),
+      texture: args.texture,
+      bones: args.bones,
+      silhouette: args.silhouette,
+      decorateParts: extra.length ? (parts) => [...parts, ...extra] : undefined,
+    });
+  };
+  const after = render(a, true);
+  if (!a.caps?.length && !a.panelInsets?.length && !a.compare && !a.beforeAddon && !a.task)
+    return after.png ? { text: after.lines.join('\n'), images: [after.png] } : after.lines.join('\n');
+  const results = [];
+  if (a.compare || a.beforeAddon) {
+    const before = render({ ...a, addon: a.beforeAddon ?? a.addon }, Boolean(a.beforeAddon));
+    results.push({ label: 'До', result: before });
+  }
+  results.push({ label: results.length ? 'После' : 'Результат', result: after });
+  const captions = results.map(({ label, result }) => `${label}: ${a.id}\n${result.lines.join('\n')}`);
+  if (a.caps?.length)
+    captions.push(
+      `Крышки: ${a.caps.map((c) => c.contacts.join('–')).join(', ')}; координаты и нормали заданы вызывающим, доступность пары в мире не проверяется.`,
+    );
+  if (a.panelInsets?.length)
+    captions.push(`Щитковые вводы: ${a.panelInsets.length}; facing=${parseState(a.state).facing ?? 'north'}.`);
+  if (a.caps?.length || a.panelInsets?.length)
+    captions.push(`Параметры деталей: ${JSON.stringify({ state: a.state, caps: a.caps, panelInsets: a.panelInsets })}`);
+  captions.push('Технический рендер ресурсов и позы Java-рендерера; не снимок клиента.');
+  if (a.task) {
+    if (!Number.isInteger(a.task) || a.task <= 0) throw new Error('task — положительный номер dev-задачи.');
+    if (results.some(({ result }) => !result.png)) throw new Error('Изображение не построено; вложения не отправлены.');
+    const { uploadDevFile } = await import('../../mcp-dev/files.mjs');
+    const stem = String(a.id)
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .slice(0, 100);
+    for (const [i, { result }] of results.entries()) {
+      const name = `${stem}-${results.length === 1 ? 'render' : i === 0 ? 'before' : 'after'}.png`;
+      await uploadDevFile(a.task, name, result.png);
+      captions.push(`Вложено в #${a.task}: ${name}`);
+    }
+    await uploadDevFile(a.task, `${stem}-captions.txt`, Buffer.from(captions.join('\n\n')));
+  }
+  const images = results.map(({ result }) => result.png).filter(Boolean);
+  return images.length ? { text: captions.join('\n\n'), images } : captions.join('\n\n');
 }
 
 // ---------------------------------------------------------------- texture_get
@@ -976,7 +1018,7 @@ export const TOOLS = [
   {
     name: 'model_render',
     description:
-      'Render a block or item model as a PNG image (no client): blockstate → variant (state) → model with parent, variant and element x/y rotations, face uv and rotation, display.gui; item/generated items — layers. GeckoLib models (assets/<ns>/geo/*.geo.json; kind=geo or id ns:geo/…) — bones and cubes as in GeckoLib 4.8 with texture=, armour over a player silhouette; text lists bones, cube count, faces with UV outside the texture or on transparent areas. Resolves by layer: resource packs, KubeJS, addon folders tools/<mod>/src/main/resources (addon from a git worktree — addon=<path>), mod jars, Minecraft. Text: model chain, source of each texture, warnings (tint, loader, missing texture).',
+      'Render a block or item model as a PNG image (no client): blockstate → variant (state) → model with parent, variant and element x/y rotations, face uv and rotation, display.gui; item/generated items — layers. GeckoLib models (assets/<ns>/geo/*.geo.json; kind=geo or id ns:geo/…) — bones and cubes as in GeckoLib 4.8 with texture=, armour over a player silhouette; text lists bones, cube count, faces with UV outside the texture or on transparent areas. Resolves by layer: resource packs, KubeJS, addon folders tools/<mod>/src/main/resources (addon from a git worktree — addon=<path>), mod jars, Minecraft. EE Extras dynamic details: caps with explicit runtime contact coordinates, panelInsets with slot centers and state facing; compare/beforeAddon returns labelled before/after images, task attaches evidence. Text: model chain, source of each texture, warnings (tint, loader, missing texture).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -999,6 +1041,45 @@ export const TOOLS = [
           description:
             'for geo: translucent player silhouette under armour — auto (parts under armorHead/armorBody/… bones with cubes, default), all (whole player), none',
         },
+        caps: {
+          type: 'array',
+          maxItems: 32,
+          description:
+            'EE Extras cable caps. Runtime contact positions AFTER state orientation, in block units; outward is the cover normal. Caller verifies pair eligibility in game/mod code.',
+          items: {
+            type: 'object',
+            properties: {
+              contacts: { type: 'array', items: { type: 'integer' }, minItems: 2, maxItems: 2 },
+              nodes: {
+                type: 'array',
+                items: { type: 'array', items: { type: 'number' }, minItems: 3, maxItems: 3 },
+                minItems: 2,
+                maxItems: 2,
+              },
+              outward: { type: 'array', items: { type: 'number' }, minItems: 3, maxItems: 3 },
+            },
+            required: ['contacts', 'nodes', 'outward'],
+          },
+        },
+        panelInsets: {
+          type: 'array',
+          maxItems: 32,
+          description:
+            'EE Extras duplex panel inlets, positioned as PanelInlet.render; center is ElectricalPanelSlot.center BEFORE panel facing rotation, in block units.',
+          items: {
+            type: 'object',
+            properties: { center: { type: 'array', items: { type: 'number' }, minItems: 3, maxItems: 3 } },
+            required: ['center'],
+          },
+        },
+        compare: {
+          type: 'boolean',
+          description: 'Return two images labelled До/После: same base without/with attachments.',
+        },
+        beforeAddon: str(
+          'Compare the same details against resources from this old addon folder (instead of a bare base).',
+        ),
+        task: num('Attach rendered PNGs and a Russian captions file to this dev task (explicit write).'),
         state: str('block state: facing=north,roll=true (missing properties — first matching variant)'),
         view: {
           type: 'string',
