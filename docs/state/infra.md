@@ -911,3 +911,44 @@ Cursor configs (shapes from their docs, not tried).
   host job j20261105-132601-69d3 and removed its data. Checked with a fake Hosting API (`TFC_HOSTING_API`): overlap before
   and right before the release, for both writers, no overlap, endless conflicts; the old code fails the same scenarios.
   Limit: three writers within seconds can still lose the middle one's non-shared files.
+
+## Stand hardening (dev #400/#402/#393/#397/#418/#419, 2026-11-26)
+
+- MCP no longer imports missing freeze.mjs; preflight and freeze live in addon-stand.mjs. The smoke command runs the
+  real stdio server and tools, so missing exports/imports cannot silently pass CI.
+- `npm run stand:smoke`: standalone fixtures, no Minecraft/SSH/credentials; MCP/queue contracts, scene+world rules,
+  unexpected SCENE FAIL, own JAR exclusion, frozen retry, duplicate requests and checkout divergence.
+- `addon_stand job=… retry=<step>` retries one terminal failed/cancelled chain step with recorded arguments, original
+  saved world and unchanged SHA256 JARs/overlay. Live/unknown jobs are refused; history is kept in the combined verdict
+  and evidence/attempts. Old candidates without recorded parameters need a fresh run.
+- Client stand compatibility profile removes only `Opticores-1.0.9 - Neoforge-1.21.1.jar` when paired with
+  `sodium-neoforge-0.8.13-beta.1+mc1.21.1.jar`, with an explicit summary warning. MCP bytecode/decompilation confirms
+  mismatched renderModel signatures; there is no OptiCore mixin switch. Live pack files are untouched.
+- Scene.useContact tries an outside camera position and fallback views, refuses collisions, verifies the actual
+  mod-selected contact before a real keyUse click, and runs the caller's server-side result check. The insulator-anchor
+  scene uses it for clamps and spool terminals.
+- Queue submission/status checks checkout and upstream SHAs, divergence, branch, tracked changes and loaded worker SHA.
+  Failed ff-only update stops startup; local commits are never discarded automatically.
+
+### Восстановление checkout очереди
+
+Only when the worker is idle: inspect `stand_jobs` and its `current`; allow an active job to finish. Stop the idle
+queue process (not Minecraft) and hold the queue's flock while repairing, so cron cannot restart it mid-update.
+Fetch origin/main and inspect status/log first. For a clean diverged checkout preserve HEAD in a unique archive branch,
+then recreate main from origin/main. Never use reset --hard on unreviewed changes:
+
+```bash
+cd ~/tfc-stand/print-worker/repo
+exec 9>~/tfc-stand/queue/lock
+flock 9
+git status --short
+git fetch origin main
+git log --oneline --left-right main...origin/main
+# Continue only with a clean worktree; preserve tracked/untracked changes separately otherwise.
+git switch -c archive/stand-before-recovery-$(date +%Y%m%d-%H%M%S)
+git branch -f main origin/main
+git switch main
+npm ci --ignore-scripts --no-audit --no-fund
+node --input-type=module -e "import {runtimeStatus,requireCurrentRuntime} from './scripts/stand-runtime.mjs'; console.log(requireCurrentRuntime(runtimeStatus(process.cwd(),{refresh:true})))"
+# Release flock; cron starts the updated worker. Check stand_jobs again, including worker.head.
+```

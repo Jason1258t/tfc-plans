@@ -19,6 +19,8 @@ jobs:
       - run: npm ci
       - name: Lint (oxlint)
         run: npx oxlint src scripts packages cli server
+      - name: Stand smoke (без Minecraft и SSH)
+        run: npm run stand:smoke
       - name: Types (tsc)
         run: npx tsc -b
       - name: Layer boundaries (FSD)

@@ -18,7 +18,8 @@ set -a
 set +a
 cd "$base/repo"
 before=$(git rev-parse HEAD)
-git pull -q --ff-only || echo "git pull не прошёл — работаю на $before"
+git pull -q --ff-only || { echo "Обновление runtime не прошло; запуск остановлен, локальные коммиты сохранены"; exit 1; }
+node --input-type=module -e "import {runtimeStatus, requireCurrentRuntime} from './scripts/stand-runtime.mjs'; requireCurrentRuntime(runtimeStatus(process.cwd()));"
 if [ "$before" != "$(git rev-parse HEAD)" ] && ! git diff --quiet "$before" HEAD -- package-lock.json; then
   npm ci --ignore-scripts --no-audit --no-fund
 fi

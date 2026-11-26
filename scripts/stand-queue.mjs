@@ -36,6 +36,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { runtimeStatus, requireCurrentRuntime } from './stand-runtime.mjs';
+
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const QUEUE = path.resolve(process.env.TFC_STAND_QUEUE ?? path.join(os.homedir(), 'tfc-stand', 'queue'));
 const JOBS = path.join(QUEUE, 'jobs');
@@ -117,11 +119,40 @@ function events(id, since = 0) {
     .filter((e) => e && e.seq > since);
 }
 
+/** SHA процесса исполнителя отдельно от HEAD checkout: git pull сам по себе код процесса не меняет. */
+const LOADED_RUNTIME = runtimeStatus(path.dirname(HERE));
+function queueRuntime(refresh = false) {
+  const status = runtimeStatus(path.dirname(HERE), { refresh });
+  const worker = readJson(path.join(QUEUE, 'worker.json'));
+  let alive = false;
+  if (worker?.pid) {
+    try {
+      process.kill(worker.pid, 0);
+      alive = true;
+    } catch {
+      /* Исполнитель уже вышел. */
+    }
+  }
+  status.worker = alive ? worker : null;
+  if (alive && worker.head !== status.head) status.ok = false;
+  return status;
+}
+
 // ---------------------------------------------------------------- команды для Mac
 
 function add(spec) {
+  const runtime = requireCurrentRuntime(queueRuntime(true));
   if (!['server', 'client'].includes(spec?.kind)) throw new Error('kind: server | client');
   if (!Array.isArray(spec.args)) throw new Error('args — массив флагов стенда');
+  if (spec.retryOf) {
+    const old = readJob(String(spec.retryOf));
+    if (!old || !(old.state === 'error' || old.state === 'cancelled' || (old.state === 'done' && old.ok === false)))
+      throw new Error('Повтор: исходное задание не является окончательно проваленным/отменённым');
+    const existing = allJobs().find((j) => j.retryOf === old.id);
+    if (existing) return { id: existing.id, position: positionOf(existing.id), current: readJson(CURRENT), runtime };
+    // mkdir атомарен между SSH-процессами; повторная доставка запроса не создаёт дубликат.
+    fs.mkdirSync(path.join(jobDir(old.id), 'retry-claimed'));
+  }
   fs.mkdirSync(JOBS, { recursive: true });
   const t = now().slice(0, 19).replace(/\D/g, '');
   const id = `${t.slice(0, 8)}-${t.slice(8)}-${randomBytes(2).toString('hex')}`;
@@ -137,12 +168,13 @@ function add(spec) {
     note: String(spec.note ?? '').slice(0, 300),
     inputs,
     after,
+    retryOf: spec.retryOf ?? null,
     chain: spec.chain ? String(spec.chain).slice(0, 120) : null,
     state: 'queued',
     createdAt: now(),
     seq: 0,
   });
-  return { id, position: positionOf(id), current: readJson(CURRENT) };
+  return { id, position: positionOf(id), current: readJson(CURRENT), runtime };
 }
 
 /** Что отдать ожидающему: задание, место, что идёт сейчас, новые события и сводка по окончании */
@@ -504,10 +536,16 @@ async function serve({ noPrint = false, noPull = false }) {
     finishJob(j.id, { state: 'error', error: 'исполнитель перезапустился посреди прогона — поставьте заново' });
   }
   writeJson(CURRENT, null);
+  writeJson(path.join(QUEUE, 'worker.json'), { pid: process.pid, head: LOADED_RUNTIME.head, startedAt: now() });
   log(`исполнитель запущен (${QUEUE})`);
   let lastPrint = 0;
   let lastPull = Date.now();
   for (;;) {
+    const runtime = noPull ? null : runtimeStatus(path.dirname(HERE));
+    if (runtime && (!runtime.ok || runtime.head !== LOADED_RUNTIME.head)) {
+      log('checkout обновлён — выхожу перед следующим заданием');
+      return;
+    }
     const next = nextJob();
     if (next) {
       await runJob(next);
@@ -538,6 +576,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   const out = (v) => process.stdout.write(JSON.stringify(v) + '\n');
   const run = {
     serve: () => serve({ noPrint: argv.includes('--no-print'), noPull: argv.includes('--no-pull') }),
+    runtime: async () => out(queueRuntime(true)),
     add: async () => out(add(JSON.parse(fs.readFileSync(0, 'utf8')))),
     wait: async () =>
       out(
@@ -550,6 +589,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     list: async () =>
       out({
         current: readJson(CURRENT),
+        runtime: queueRuntime(true),
         jobs: allJobs()
           .slice(-20)
           .map((j) => ({ ...j, position: positionOf(j.id) })),

@@ -305,7 +305,7 @@ export function preflight(dir, { main, devtest }, { scene = null, spec = {}, car
 
 /** Заморозка: копии jar с SHA в имени + candidate.json; дальше работаем только с ними */
 export function freeze(dir, jars, meta) {
-  const id = `${meta.scene ?? meta.chain ?? path.basename(dir)}-${stamp()}`;
+  const id = `${meta.scene ?? meta.chain ?? path.basename(dir)}-${stamp()}-${createHash('sha256').update(String(process.hrtime.bigint())).digest('hex').slice(0, 8)}`;
   const out = path.join(FREEZE_DIR, id);
   fs.mkdirSync(out, { recursive: true });
   const one = (src) => {
@@ -339,7 +339,8 @@ export function candidateByJob(job) {
   if (!fs.existsSync(FREEZE_DIR)) return null;
   for (const d of fs.readdirSync(FREEZE_DIR)) {
     const c = readJson(path.join(FREEZE_DIR, d, 'candidate.json'));
-    if (c?.job === job || c?.jobs?.some((j) => j.job === job)) return { dir: path.join(FREEZE_DIR, d), candidate: c };
+    if (c?.job === job || c?.jobs?.some((j) => j.job === job || j.attempts?.some((x) => x.job === job)))
+      return { dir: path.join(FREEZE_DIR, d), candidate: c };
   }
   return null;
 }
@@ -436,6 +437,17 @@ function buildAndCheck(dir, a, { env, scene, spec, card }) {
  */
 const withDevtest = (st) => st.kind === 'server' || Boolean(st.scene) || st.devtest === true;
 
+/** Серверные exclude не должны убирать свои jar (клиент исключает только снимок). */
+export function checkOwnExclusions(kind, argv) {
+  if (kind !== 'server') return;
+  const excludes = argv.flatMap((x, i) => (argv[i - 1] === '--exclude' ? [x] : []));
+  for (const file of argv.flatMap((x, i) => (argv[i - 1] === '--mod' ? [x] : []))) {
+    const ids = modIds(file, zipEntries(file));
+    if (excludes.some((q) => ids.includes(q) || path.basename(file).toLowerCase().includes(q.toLowerCase())))
+      throw new Error(`exclude удаляет собственный JAR ${path.basename(file)}`);
+  }
+}
+
 /** Флаги стенда для шага цепочки (без --world-job: его ставит chainRun, когда известен id шага-источника) */
 function stepArgs(step, fz, prefix, a) {
   const argv = ['--mod', fz.candidate.main.path];
@@ -501,6 +513,14 @@ async function chainRun(dir, a) {
   text.push(`Заморожено: ${fz.dir}`, `  ${fz.candidate.main.file} sha256 ${fz.candidate.main.sha256}`);
   text.push(`  ${fz.candidate.devtest.file} sha256 ${fz.candidate.devtest.sha256}`);
   if (fz.candidate.git.dirty) text.push(`  внимание: в папке аддона ${fz.candidate.git.dirty} незакоммиченных файлов`);
+  const frozenOptions = { exclude: [...(a.exclude ?? [])] };
+  if (a.overlay) {
+    frozenOptions.overlay = path.join(fz.dir, 'overlay');
+    fs.cpSync(path.resolve(a.overlay), frozenOptions.overlay, { recursive: true });
+  }
+  fz.candidate.inputHashes = frozenOptions.overlay
+    ? Object.fromEntries(walk(frozenOptions.overlay).map((file) => [file, sha256(file)]))
+    : {};
   const ids = {};
   let prev = null;
   const label = `${path.basename(dir)}/${name}`;
@@ -509,13 +529,21 @@ async function chainRun(dir, a) {
   const save = () =>
     fs.writeFileSync(path.join(fz.dir, 'candidate.json'), JSON.stringify(fz.candidate, null, 2) + '\n');
   for (const [i, st] of chain.steps.entries()) {
-    const argv = stepArgs(st, fz, prefix, a);
+    const argv = stepArgs(st, fz, prefix, frozenOptions);
     if (st.world) argv.push('--world-job', ids[st.world]);
     const note = `${a.note || chain.note || `цепочка ${name}`} — шаг ${i + 1}/${chain.steps.length} ${st.name}`;
+    checkOwnExclusions(st.kind, argv);
     const r = await submit(st.kind, argv, { note, by: a.by, after: prev, chain: label });
     ids[st.name] = r.id;
     prev = r.id;
-    fz.candidate.jobs.push({ step: st.name, kind: st.kind, job: r.id });
+    fz.candidate.jobs.push({
+      step: st.name,
+      kind: st.kind,
+      job: r.id,
+      argv,
+      worldJob: st.world ? ids[st.world] : null,
+      attempts: [],
+    });
     fz.candidate.job = r.id;
     save();
     text.push(
@@ -675,7 +703,7 @@ function bundleStep(evDir, step, local) {
 /** Дождаться последнего шага цепочки и принять все → как addonStandResult */
 async function chainResult(fz, { timeout }) {
   const c = fz.candidate;
-  const last = c.jobs.at(-1).job;
+  const last = c.job ?? c.jobs.at(-1).job;
   const r = await waitJob(last, { timeout });
   if (r.view.reason !== 'final') {
     const j = r.view.job;
@@ -690,10 +718,23 @@ async function chainResult(fz, { timeout }) {
   const steps = [];
   for (const [i, js] of c.jobs.entries()) {
     const w = js.job === last ? r : await waitJob(js.job, { timeout: 60 });
+    if (w.view.reason !== 'final')
+      return { ok: null, text: `Шаг ${js.step} ещё не завершён; ждать тем же вызовом.`, images: [] };
     const step = c.steps[i];
-    const src = step.world ? c.jobs.find((x) => x.step === step.world)?.job : null;
+    const src = js.worldJob ?? (step.world ? c.jobs.find((x) => x.step === step.world)?.job : null);
     const v = judgeStep(step, w.local, w.view.job, c, src);
     bundleStep(ev, step, w.local);
+    for (const attempt of js.attempts ?? []) {
+      const old = await waitJob(attempt.job, { timeout: 0 });
+      if (old.view.reason !== 'final') throw new Error(`История шага ${step.name}: ${attempt.job} не завершён`);
+      const attemptDir = bundleStep(path.join(ev, 'attempts', step.name), { name: attempt.job }, old.local);
+      const prior = path.join(fz.dir, `verdict-before-${attempt.job}.json`);
+      if (fs.existsSync(prior)) fs.copyFileSync(prior, path.join(attemptDir, 'verdict.json'));
+      fs.writeFileSync(
+        path.join(attemptDir, 'attempt.json'),
+        JSON.stringify({ ...attempt, state: old.view.job.state, error: old.view.job.error }, null, 2),
+      );
+    }
     steps.push({
       step: step.name,
       kind: step.kind,
@@ -703,6 +744,7 @@ async function chainResult(fz, { timeout }) {
       fails: v.fails,
       shots: v.shots,
       results: w.local,
+      attempts: js.attempts ?? [],
     });
   }
   const ok = steps.every((s) => s.ok);
@@ -749,6 +791,79 @@ async function chainResult(fz, { timeout }) {
     .map((s) => s.file);
   const attachName = `addon-stand-${c.addon}-${c.chain}-${last}.zip`.replace(/[^\w.-]+/g, '_');
   return { ok, text, images, verdict, note, evidence: ev, attachName, task: c.task ?? null };
+}
+
+/** Повтор только окончательно проваленного шага, без пересборки и смены исходного мира. */
+export async function addonStandRetry(jobId, stepName, { by, transport = { waitJob, submit } } = {}) {
+  const fz = candidateByJob(jobId);
+  if (!fz?.candidate.chain) throw new Error('Повтор: нужна замороженная цепочка addon_stand');
+  const lock = path.join(fz.dir, 'retry.lock');
+  fs.mkdirSync(lock);
+  try {
+    const c = readJson(path.join(fz.dir, 'candidate.json'));
+    const js = c.jobs.find((x) => x.step === stepName);
+    if (!js?.argv) throw new Error('Нет сохранённых параметров шага; старую цепочку нужно запустить заново');
+    for (const j of c.jobs) {
+      const r = await transport.waitJob(j.job, { timeout: 0 });
+      if (r.view.reason !== 'final')
+        throw new Error(`Задание ${j.job} живо или состояние неизвестно — повтор запрещён`);
+      if (
+        j === js &&
+        !(
+          r.view.job.state === 'error' ||
+          r.view.job.state === 'cancelled' ||
+          (r.view.job.state === 'done' && r.view.job.ok === false)
+        )
+      )
+        throw new Error('Можно повторить только окончательно проваленный или отменённый шаг');
+    }
+    for (const [file, hash] of Object.entries(c.inputHashes ?? {}))
+      if (sha256(file) !== hash) throw new Error(`Изменён замороженный оверлей: ${file}`);
+    if (Object.keys(c.inputHashes ?? {}).length) {
+      const overlay = path.join(fz.dir, 'overlay');
+      if (walk(overlay).length !== Object.keys(c.inputHashes).length)
+        throw new Error('Изменён состав замороженного оверлея');
+    }
+    for (const jar of [c.main, c.devtest])
+      if (sha256(jar.path) !== jar.sha256) throw new Error(`Изменён замороженный JAR: ${jar.file}`);
+    if (js.worldJob) {
+      const src = await transport.waitJob(js.worldJob, { timeout: 0 });
+      if (
+        src.view.reason !== 'final' ||
+        src.view.job.state !== 'done' ||
+        src.view.job.ok === false ||
+        !src.local ||
+        !fs.existsSync(path.join(src.local, 'world', 'level.dat'))
+      )
+        throw new Error('Исходный сохранённый мир недоступен или не принят');
+    }
+    checkOwnExclusions(js.kind, js.argv);
+    const old = js.job;
+    const r = await transport.submit(js.kind, js.argv, {
+      by,
+      note: `Повтор ${c.id}/${js.step}, исходное задание ${old}`,
+      chain: c.id,
+      retryOf: old,
+    });
+    const verdictFile = path.join(fz.dir, 'verdict.json');
+    if (fs.existsSync(verdictFile)) {
+      fs.copyFileSync(verdictFile, path.join(fz.dir, `verdict-before-${old}.json`));
+      fs.rmSync(verdictFile);
+    }
+    js.attempts ??= [];
+    js.attempts.push({ job: old, retriedAt: new Date().toISOString(), replacement: r.id });
+    js.job = r.id;
+    c.runtimeChecked = false;
+    c.job = r.id;
+    fs.writeFileSync(path.join(fz.dir, 'candidate.json'), JSON.stringify(c, null, 2) + '\n');
+    return {
+      ok: true,
+      job: r.id,
+      text: `Шаг ${stepName}: повтор ${r.id} вместо ${old}; JAR/SHA и исходный мир сохранены.`,
+    };
+  } finally {
+    fs.rmdirSync(lock);
+  }
 }
 
 /** PNG: заголовок и разброс яркости по выборке пикселей (однотонный кадр — пустой снимок) */
@@ -1013,6 +1128,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
         if (v.note && opt('--task')) console.log(await verdictToTask(Number(opt('--task')), v));
         process.exit(v.ok ? 0 : v.ok === null ? 2 : 1);
       }
+    } else if (cmd === 'retry') {
+      const r = await addonStandRetry(target, opt('--step'), { by: process.env.TFC_AGENT_NICK || 'Codex' });
+      console.log(r.text);
     } else if (cmd === 'result') {
       const v = await addonStandResult(target, { timeout: Number(opt('--timeout') ?? 1800) });
       console.log(v.text);

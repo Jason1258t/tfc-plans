@@ -22,6 +22,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { requireCurrentRuntime } from './stand-runtime.mjs';
 import { HOST, OPT, SSH, q, rsync, ssh, worldKeyword } from './client-stand-remote.mjs';
 
 const REPO = process.env.TFC_QUEUE_REPO ?? '~/tfc-stand/print-worker/repo';
@@ -109,11 +110,18 @@ function pushInputs(kind, argv) {
 export async function submit(
   kind,
   argv,
-  { note = '', by = process.env.TFC_AGENT_NICK || os.userInfo().username, after = null, chain = null } = {},
+  {
+    note = '',
+    by = process.env.TFC_AGENT_NICK || os.userInfo().username,
+    after = null,
+    chain = null,
+    retryOf = null,
+  } = {},
 ) {
   if (!KIND_RU[kind]) throw new Error('вид прогона: server | client');
+  requireCurrentRuntime(await hostAsync(['runtime']));
   const { args, inputs } = pushInputs(kind, argv);
-  const spec = JSON.stringify({ kind, args, by, note, inputs, after, chain });
+  const spec = JSON.stringify({ kind, args, by, note, inputs, after, chain, retryOf });
   const out = ssh(`${hostCmd(['add'])} <<'TFC_JOB_EOF'\n${spec}\nTFC_JOB_EOF\n`);
   return JSON.parse(out.trim().split('\n').at(-1));
 }
@@ -225,6 +233,9 @@ export function viewText(r) {
 
 export function listText(r) {
   const rows = [currentText(r.current)];
+  if (r.runtime)
+    rows.push(`Runtime очереди: ${r.runtime.ok ? 'актуален' : 'ТРЕБУЕТ ОБНОВЛЕНИЯ'} — ${JSON.stringify(r.runtime)}`);
+  else rows.push('Runtime очереди: версия неизвестна; обновите код очереди.');
   const jobs = r.jobs.slice().reverse();
   if (!jobs.length) rows.push('заданий нет');
   for (const j of jobs)

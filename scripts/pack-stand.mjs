@@ -134,6 +134,9 @@ export function selectMods({ modsDir = PACK_MODS, extra = [], exclude = [], incl
       if (q) why.set(m, 'исключён вручную');
     }
   }
+  for (const m of own)
+    if (why.has(m))
+      throw new Error(`Свой JAR ${path.basename(m.file)} исключён: ${why.get(m)} — исправьте exclude/зависимости`);
   // Зависит от исключённого — тоже вон (до неподвижной точки)
   for (let changed = true; changed;) {
     changed = false;
@@ -147,6 +150,7 @@ export function selectMods({ modsDir = PACK_MODS, extra = [], exclude = [], incl
       }
     }
   }
+  for (const m of own) if (why.has(m)) throw new Error(`Свой JAR ${path.basename(m.file)} потерян: ${why.get(m)}`);
   return {
     use: all.filter((m) => !why.has(m)),
     skipped: all.filter((m) => why.has(m)).map((m) => ({ ...m, why: why.get(m) })),
