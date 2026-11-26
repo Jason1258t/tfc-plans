@@ -837,12 +837,14 @@ the step is centred.
 
 ## Firebase diagnostics
 
-- Dev #391 (2026-11-26): guide and addon-version listeners now recover after a failed Firebase session refresh,
+- Dev #391 (2026-11-26): guide and addon-version listeners now recover after a credential error and Firebase session refresh,
   and addon panels clear a previous error when data arrives again. Reads still require anonymous Auth plus App Check;
   a player key is only required for edits. Production REST checks with a fresh anonymous account and App Check
-  confirmed description/version reads and rejection of player-only task reads. TypeScript, lint and isolated
-  recovery/cancellation checks passed. Browser verification is pending: this Codex session has no IAB surface and
-  native Chrome control timed out twice; this is not evidence of a remaining site failure.
+  confirmed description/version reads and rejection of player-only task reads; the Firebase JS SDK repeated these
+  checks with in-memory anonymous Auth. TypeScript, lint and isolated recovery/cancellation checks passed.
+  After Hosting release c148a6a40c8e1412, a CUA IAB reload without a player key showed the full description and
+  changelogs for 1.1.2/1.1.1/1.1.0, with no browser errors or warnings. The original one-off refusal is no longer
+  reproducible; its historical cause was not established.
 
 - Dev #137 (2026-10-29): `?firebaseDebug=1` opts into console diagnostics of anonymous Auth, forced App Check
   refresh, and a read of the same reserved schematic document via Firestore SDK and REST. No writes, token values,
