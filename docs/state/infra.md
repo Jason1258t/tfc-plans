@@ -971,3 +971,11 @@ npm ci --ignore-scripts --no-audit --no-fund
 node --input-type=module -e "import {runtimeStatus,requireCurrentRuntime} from './scripts/stand-runtime.mjs'; console.log(requireCurrentRuntime(runtimeStatus(process.cwd(),{refresh:true})))"
 # Release flock; cron starts the updated worker. Check stand_jobs again, including worker.head.
 ```
+
+## Targeted Minecraft logs (dev #420, 2026-11-26)
+
+`stand_log` accepts `source=wrapper|client|latest` (wrapper by default). Active client runs carry the queue job ID in
+`stand.json`, including RAM runs; reads never select an unrelated run. Terminal jobs use saved results, server jobs
+use their active run or archived logs. Reads check real paths, reject escapes, read at most the last 2 MiB and return
+at most 400 lines with bounded grep input; missing/deleted logs are reported explicitly. Fixture checks cover active
+and archived logs, filtering, truncation and path escape; stand smoke and lint pass.

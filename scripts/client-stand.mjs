@@ -870,7 +870,10 @@ export async function runClient({
   const out = path.join(STAND, 'results', id);
   const game = path.join(run, 'game');
   fs.mkdirSync(path.join(run, 'natives'), { recursive: true, mode: 0o700 });
-  fs.writeFileSync(path.join(run, 'stand.json'), JSON.stringify({ pid: process.pid, id, out }));
+  fs.writeFileSync(
+    path.join(run, 'stand.json'),
+    JSON.stringify({ pid: process.pid, id, out, queueJob: process.env.TFC_STAND_QUEUE_JOB ?? null }),
+  );
   const started = Date.now();
   const secs = () => Math.round((Date.now() - started) / 1000);
   const pngs = [];

@@ -49,7 +49,18 @@ export default function AddonVersions({ addon }: { addon: Addon }) {
   const [error, setError] = useState<string | null>(null);
   const [all, setAll] = useState(false);
   // Другой аддон — новый компонент (key в AddonPage), поэтому список заново не обнуляем
-  useEffect(() => subscribeAddonVersions(addon.id, setList, (e) => setError(e.message)), [addon.id]);
+  useEffect(
+    () =>
+      subscribeAddonVersions(
+        addon.id,
+        (value) => {
+          setError(null);
+          setList(value);
+        },
+        (e) => setError(e.message),
+      ),
+    [addon.id],
+  );
 
   if (!addonVersionsEnabled) return null;
   const latest = list ? latestReleased(list) : null;

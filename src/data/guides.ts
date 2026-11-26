@@ -1,5 +1,5 @@
 import { collection, doc, getDocs, limit, onSnapshot, orderBy, query, where, writeBatch } from 'firebase/firestore';
-import { authReady, db, requirePlayer, track } from '@/shared/api';
+import { authReady, db, recoverableSubscription, requirePlayer, track } from '@/shared/api';
 import type { Guide, GuideRevision } from '@/entities/guide';
 
 /**
@@ -11,68 +11,86 @@ import type { Guide, GuideRevision } from '@/entities/guide';
 export const guidesEnabled = Boolean(db);
 
 export function subscribeGuides(section: string, cb: (g: Guide[]) => void, onError?: (e: Error) => void) {
-  if (!db) {
-    queueMicrotask(() => cb([]));
-    return () => {};
-  }
-  let unsub = () => {};
-  let cancelled = false;
-  authReady.then(() => {
-    if (cancelled) return;
-    unsub = onSnapshot(
-      query(collection(db!, 'guides'), where('section', '==', section)),
-      (snap) => cb(snap.docs.map((d) => ({ ...(d.data() as Omit<Guide, 'id'>), id: d.id }))),
-      (e) => onError?.(e),
-    );
-  });
-  return () => {
-    cancelled = true;
-    unsub();
-  };
+  return recoverableSubscription<Guide[]>(
+    (receive, fail) => {
+      if (!db) {
+        queueMicrotask(() => receive([]));
+        return () => {};
+      }
+      let unsub = () => {};
+      let cancelled = false;
+      authReady.then(() => {
+        if (cancelled) return;
+        unsub = onSnapshot(
+          query(collection(db!, 'guides'), where('section', '==', section)),
+          (snap) => receive(snap.docs.map((d) => ({ ...(d.data() as Omit<Guide, 'id'>), id: d.id }))),
+          (e) => fail(e),
+        );
+      });
+      return () => {
+        cancelled = true;
+        unsub();
+      };
+    },
+    cb,
+    onError,
+  );
 }
 
 /** Все гайды, кроме разделов exclude (каталог справочника: разделы строятся из самих гайдов) */
 export function subscribeGuidesExcept(exclude: string[], cb: (g: Guide[]) => void, onError?: (e: Error) => void) {
-  if (!db) {
-    queueMicrotask(() => cb([]));
-    return () => {};
-  }
-  let unsub = () => {};
-  let cancelled = false;
-  authReady.then(() => {
-    if (cancelled) return;
-    unsub = onSnapshot(
-      query(collection(db!, 'guides'), where('section', 'not-in', exclude)),
-      (snap) => cb(snap.docs.map((d) => ({ ...(d.data() as Omit<Guide, 'id'>), id: d.id }))),
-      (e) => onError?.(e),
-    );
-  });
-  return () => {
-    cancelled = true;
-    unsub();
-  };
+  return recoverableSubscription<Guide[]>(
+    (receive, fail) => {
+      if (!db) {
+        queueMicrotask(() => receive([]));
+        return () => {};
+      }
+      let unsub = () => {};
+      let cancelled = false;
+      authReady.then(() => {
+        if (cancelled) return;
+        unsub = onSnapshot(
+          query(collection(db!, 'guides'), where('section', 'not-in', exclude)),
+          (snap) => receive(snap.docs.map((d) => ({ ...(d.data() as Omit<Guide, 'id'>), id: d.id }))),
+          (e) => fail(e),
+        );
+      });
+      return () => {
+        cancelled = true;
+        unsub();
+      };
+    },
+    cb,
+    onError,
+  );
 }
 
 /** Один гайд по id (статья аддона): null — статьи ещё нет */
 export function subscribeGuide(id: string, cb: (g: Guide | null) => void, onError?: (e: Error) => void) {
-  if (!db) {
-    queueMicrotask(() => cb(null));
-    return () => {};
-  }
-  let unsub = () => {};
-  let cancelled = false;
-  authReady.then(() => {
-    if (cancelled) return;
-    unsub = onSnapshot(
-      doc(db!, 'guides', id),
-      (d) => cb(d.exists() ? { ...(d.data() as Omit<Guide, 'id'>), id: d.id } : null),
-      (e) => onError?.(e),
-    );
-  });
-  return () => {
-    cancelled = true;
-    unsub();
-  };
+  return recoverableSubscription<Guide | null>(
+    (receive, fail) => {
+      if (!db) {
+        queueMicrotask(() => receive(null));
+        return () => {};
+      }
+      let unsub = () => {};
+      let cancelled = false;
+      authReady.then(() => {
+        if (cancelled) return;
+        unsub = onSnapshot(
+          doc(db!, 'guides', id),
+          (d) => receive(d.exists() ? { ...(d.data() as Omit<Guide, 'id'>), id: d.id } : null),
+          (e) => fail(e),
+        );
+      });
+      return () => {
+        cancelled = true;
+        unsub();
+      };
+    },
+    cb,
+    onError,
+  );
 }
 
 export type GuideDraft = Omit<Guide, 'id' | 'createdAt' | 'updatedAt'>;
