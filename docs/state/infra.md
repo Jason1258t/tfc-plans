@@ -435,6 +435,15 @@ node cli.mjs key add print-worker --role worker`, write it into the env file.
   ~1 min, 30k blocks ~5 min, the 190k-block cathedral 19 min of printing. Results archived on `test1a` in
   `~/tfc-stand/print-worker/test-2026-11-07/`.
 
+## Stand runtime recovery (dev #416, #414, #404)
+
+Restored the full addon acceptance and client runner after #358 had replaced them with incomplete stubs.
+`tfc-pack` and the queue now import without a missing `freeze.mjs` or missing exports. Addon acceptance again builds,
+checks and freezes jars, judges scene/chain results and attaches evidence. Client setup, launch, screenshots and
+cleanup are restored. Scenes in saved TFC worlds remain supported; acceptance requires the copied-world marker.
+Verified MCP startup and item lookup, addon chain validation, positive/negative scene verdicts, lint and package
+boundaries. A full remote run requires renewed Tailscale SSH authentication on test1a.
+
 ## Stand queue on test1a (dev #310)
 
 Agents queue whole-pack stand runs instead of holding the stand from their session and polling its log. Measured
