@@ -442,7 +442,14 @@ Restored the full addon acceptance and client runner after #358 had replaced the
 checks and freezes jars, judges scene/chain results and attaches evidence. Client setup, launch, screenshots and
 cleanup are restored. Scenes in saved TFC worlds remain supported; acceptance requires the copied-world marker.
 Verified MCP startup and item lookup, addon chain validation, positive/negative scene verdicts, lint and package
-boundaries. A full remote run requires renewed Tailscale SSH authentication on test1a.
+boundaries. After renewed Tailscale SSH authentication, the direct run of the published main reached the menu in
+172 s, returned a visually checked PNG and exited normally (187 s total; 9 startup + 3 client KubeJS scripts, zero
+script errors). Evidence is attached to #416. The queue checkout had diverged from GitHub: its clean old main was
+preserved as `archive/stand-before-recovery-20261126`, and main now tracks origin/main at 6200e325. No local commits
+were discarded. The updated queue run 20261126-125503-6e8d reached the menu in 130 s, returned a PNG and exited normally
+(149 s total, zero KubeJS script errors). Runtime checkout freshness checks are tracked in #419.
+The old etching-bath job 20261125-103306-78dd was correctly rejected by restored addon acceptance for missing
+SCENE END and required screenshots; it is not evidence of a successful addon scene.
 
 ## Stand queue on test1a (dev #310)
 
