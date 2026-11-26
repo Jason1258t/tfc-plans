@@ -979,3 +979,10 @@ node --input-type=module -e "import {runtimeStatus,requireCurrentRuntime} from '
 use their active run or archived logs. Reads check real paths, reject escapes, read at most the last 2 MiB and return
 at most 400 lines with bounded grep input; missing/deleted logs are reported explicitly. Fixture checks cover active
 and archived logs, filtering, truncation and path escape; stand smoke and lint pass.
+
+Live acceptance: remote checkout/worker updated automatically to `2eaf2ab0`. MCP `stand_log` read saved
+`wrapper`, `client` and Minecraft `latest` from terminal client job `20261126-145433-e382`. During the real
+registration-audit client job `20261126-175313-dba8`, both `source=latest` and `source=client` returned current
+mod-discovery lines from its own run `20261126-175315-41ab`, before completion. IPv4 SSH was intermittently
+unavailable; the advertised Tailscale IPv6 route worked with the same verified host key. MCP stdio/remote-client/CLI
+contracts also passed for all three sources using an isolated transport fixture (scripts attached to #420).
