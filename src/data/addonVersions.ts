@@ -1,5 +1,5 @@
 import { collection, doc, getDocs, limit, onSnapshot, orderBy, query, where, writeBatch } from 'firebase/firestore';
-import { authReady, db, requirePlayer } from '@/shared/api';
+import { authReady, db, recoverableSubscription, requirePlayer } from '@/shared/api';
 import { ADDON_VERSIONS, sortVersions, type AddonVersion, type AddonVersionRevision } from '@tfc/core/addonVersions';
 
 /**
@@ -15,24 +15,31 @@ export function subscribeAddonVersions(
   cb: (list: AddonVersion[]) => void,
   onError?: (e: Error) => void,
 ) {
-  if (!db) {
-    queueMicrotask(() => cb([]));
-    return () => {};
-  }
-  let unsub = () => {};
-  let cancelled = false;
-  authReady.then(() => {
-    if (cancelled) return;
-    unsub = onSnapshot(
-      query(collection(db!, ADDON_VERSIONS), where('addon', '==', addon)),
-      (snap) => cb(sortVersions(snap.docs.map((d) => ({ ...(d.data() as Omit<AddonVersion, 'id'>), id: d.id })))),
-      (e) => onError?.(e),
-    );
-  });
-  return () => {
-    cancelled = true;
-    unsub();
-  };
+  return recoverableSubscription<AddonVersion[]>(
+    (receive, fail) => {
+      if (!db) {
+        queueMicrotask(() => receive([]));
+        return () => {};
+      }
+      let unsub = () => {};
+      let cancelled = false;
+      authReady.then(() => {
+        if (cancelled) return;
+        unsub = onSnapshot(
+          query(collection(db!, ADDON_VERSIONS), where('addon', '==', addon)),
+          (snap) =>
+            receive(sortVersions(snap.docs.map((d) => ({ ...(d.data() as Omit<AddonVersion, 'id'>), id: d.id })))),
+          (e) => fail(e),
+        );
+      });
+      return () => {
+        cancelled = true;
+        unsub();
+      };
+    },
+    cb,
+    onError,
+  );
 }
 
 /** Версии нескольких аддонов разом (страница обновлений): мод → версии; по одному запросу на мод */

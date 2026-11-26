@@ -50,3 +50,5 @@ export {
   type VisitDay,
   type VisitEvent,
 } from './analytics';
+
+export { recoverableSubscription } from './recoverableSubscription';

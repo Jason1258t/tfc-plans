@@ -837,6 +837,13 @@ the step is centred.
 
 ## Firebase diagnostics
 
+- Dev #391 (2026-11-26): guide and addon-version listeners now recover after a failed Firebase session refresh,
+  and addon panels clear a previous error when data arrives again. Reads still require anonymous Auth plus App Check;
+  a player key is only required for edits. Production REST checks with a fresh anonymous account and App Check
+  confirmed description/version reads and rejection of player-only task reads. TypeScript, lint and isolated
+  recovery/cancellation checks passed. Browser verification is pending: this Codex session has no IAB surface and
+  native Chrome control timed out twice; this is not evidence of a remaining site failure.
+
 - Dev #137 (2026-10-29): `?firebaseDebug=1` opts into console diagnostics of anonymous Auth, forced App Check
   refresh, and a read of the same reserved schematic document via Firestore SDK and REST. No writes, token values,
   document content or user identifiers are logged. Normal links do not load the diagnostic module. An isolated SDK
