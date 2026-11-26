@@ -914,6 +914,14 @@ Cursor configs (shapes from their docs, not tried).
 
 ## Stand hardening (dev #400/#402/#393/#397/#418/#419, 2026-11-26)
 
+Client acceptance: queue job `20261126-141414-4ec6`, snapshot `20261117-180033-6dff`, source world
+`20261120-131548-0394`, runtime `a431563f`, addon sources `41e2450` (clean). `SCENE END PASS insulator-anchors`:
+25 scene checks, 0 failures, three inspected 1280×720 screenshots. The helper rejected the wrong terminal, chose a
+fallback view, sent real clicks, and server checks confirmed all five wires, both clamps and 297.9 V under load.
+The run completed in 284 s; JAR hashes matched the frozen candidate. Evidence is attached to dev #397 and #402.
+No fixture-height change was needed: the accepted run used the original positions. The compatibility profile still
+excludes the exact incompatible OptiCore pair and disables Voxy only in the software-rendered stand copy.
+
 - MCP no longer imports missing freeze.mjs; preflight and freeze live in addon-stand.mjs. The smoke command runs the
   real stdio server and tools, so missing exports/imports cannot silently pass CI.
 - `npm run stand:smoke`: standalone fixtures, no Minecraft/SSH/credentials; MCP/queue contracts, scene+world rules,
