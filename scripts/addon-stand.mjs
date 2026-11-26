@@ -351,7 +351,19 @@ export function candidateByJob(job) {
  */
 export async function addonStandRun(a) {
   const dir = resolveAddonDir(a.addon, a.toolsDir ?? path.join(process.cwd(), 'tools'));
+  if (a.chain && a.worldJob) throw new Error('worldJob предназначен для отдельной сцены; цепочка задаёт world в шагах');
   if (a.chain) return chainRun(dir, a);
+  if (a.worldJob) {
+    const source = await waitJob(String(a.worldJob), { timeout: 0 });
+    if (
+      source.view.reason !== 'final' ||
+      source.view.job.state !== 'done' ||
+      source.view.job.ok !== true ||
+      !source.local ||
+      !fs.existsSync(path.join(source.local, 'world', 'level.dat'))
+    )
+      throw new Error('worldJob: нужен успешно завершённый прогон с сохранённым миром');
+  }
   const scenes = addonScenes(dir);
   const scene = String(a.scene ?? '').trim() || (Object.keys(scenes).length === 1 ? Object.keys(scenes)[0] : '');
   if (!scene)
@@ -383,6 +395,7 @@ export async function addonStandRun(a) {
   const prefix = card?.jar && card?.version ? card.jar.replace(`${card.version}.jar`, '') : `${names.base}-`;
   const fz = freeze(dir, jars, {
     scene,
+    worldJob: a.worldJob ? String(a.worldJob) : null,
     addon: path.basename(dir),
     modId: card?.id ?? null,
     version: names.version,
@@ -403,6 +416,7 @@ export async function addonStandRun(a) {
     '--scene',
     scene,
   ];
+  if (a.worldJob) argv.push('--world-job', String(a.worldJob));
   for (const x of a.exclude ?? []) argv.push('--exclude', x);
   if (a.overlay) argv.push('--overlay', path.resolve(String(a.overlay)));
   argv.push('--timeout', String(Number(a.timeout ?? spec.timeout ?? 1500) | 0));
@@ -952,6 +966,11 @@ export function judge(local, job, candidate) {
     job.state === 'done' && job.ok !== false,
     `прогон кончился штатно (${job.state}${job.ok === false ? `, код ${job.code}` : ''})`,
   );
+  if (candidate.worldJob)
+    check(
+      (summary.match(/^мир: копия (.*)$/m)?.[1] ?? '').includes(candidate.worldJob),
+      `загружена копия мира задания ${candidate.worldJob}`,
+    );
   check(Boolean(latest), 'latest.log забран со стенда');
   const end = latest.match(new RegExp(`SCENE END (PASS|FAIL \\d+) ${scene.replace(/[.]/g, '\\.')}\\b`))?.[1];
   check(end === 'PASS', `SCENE END ${end ?? 'нет'} ${scene}`);
@@ -1008,6 +1027,7 @@ function bundle(fz, local, verdict, jobId) {
     ok: verdict.ok,
     job: jobId,
     scene: fz.candidate.scene,
+    worldJob: fz.candidate.worldJob ?? null,
     main: { file: fz.candidate.main.file, sha256: fz.candidate.main.sha256 },
     devtest: { file: fz.candidate.devtest.file, sha256: fz.candidate.devtest.sha256 },
     git: fz.candidate.git,
@@ -1116,6 +1136,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
         addon: target,
         scene: opt('--scene'),
         chain: opt('--chain'),
+        worldJob: opt('--world-job'),
         build: !rest.includes('--no-build'),
         libs: rest.includes('--libs'),
         env: Object.fromEntries(many('--env').map((kv) => kv.split(/=(.*)/s).slice(0, 2))),

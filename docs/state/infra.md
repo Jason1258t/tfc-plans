@@ -924,6 +924,10 @@ Cursor configs (shapes from their docs, not tried).
 - Client stand compatibility profile removes only `Opticores-1.0.9 - Neoforge-1.21.1.jar` when paired with
   `sodium-neoforge-0.8.13-beta.1+mc1.21.1.jar`, with an explicit summary warning. MCP bytecode/decompilation confirms
   mismatched renderModel signatures; there is no OptiCore mixin switch. Live pack files are untouched.
+- Standalone `addon_stand scene=… worldJob=<successful saved job>` starts in a copy of an accepted TFC world;
+  candidate/verdict records the source and acceptance checks it. Useful for electronics scenes: regenerating the
+  RealWorld world from scratch exceeded 1500 s, while the saved-world client logged in after 158 s. The insulator scene
+  prepares its test area in the copy only. Legacy scene dispatch entries were restored in EE Extras ClientTest.
 - Scene.useContact tries an outside camera position and fallback views, refuses collisions, verifies the actual
   mod-selected contact before a real keyUse click, and runs the caller's server-side result check. The insulator-anchor
   scene uses it for clamps and spool terminals.
