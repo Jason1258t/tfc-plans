@@ -885,7 +885,8 @@ export async function runClient({
   let shownSec = null;
   let stopped = '';
   let shotsOut = { files: [], skipped: 0 };
-  const sceneStartSec = world ? 300 : SCENE_START_SEC;
+  // Вход серверного игрока опережает первый клиентский тик: синхронизация EMI/рецептов занимает минуты.
+  const sceneStartSec = world ? 900 : SCENE_START_SEC;
   let sceneEnd = null;
   let savedWorld = null;
   try {
@@ -945,11 +946,19 @@ export async function runClient({
       );
       let lastStep = '';
       let noStart = false;
+      let lastStartNote = readySec;
       while (!exited() && !aborted() && Date.now() < deadline) {
         const text = readText(path.join(run, 'client.log'));
         sceneEnd = SCENE_END.exec(text)?.[1] ?? null;
         if (sceneEnd) break;
-        if (!/\sSCENE START /.test(text) && secs() - readySec > sceneStartSec) {
+        const sceneStarted = /\sSCENE START /.test(text);
+        if (!sceneStarted && secs() - lastStartNote >= 60) {
+          lastStartNote = secs();
+          log(
+            `жду первый тик сцены ${scene}: ${secs() - readySec} с после ${world ? 'регистрации серверного игрока' : 'меню'} (лимит ${sceneStartSec} с; общий ${timeout} с)`,
+          );
+        }
+        if (!sceneStarted && secs() - readySec > sceneStartSec) {
           noStart = true;
           break;
         }
@@ -961,7 +970,7 @@ export async function runClient({
         state = `сцена ${scene}: ${sceneEnd.startsWith('PASS') ? 'ПРОЙДЕНА' : `ПРОВАЛ (${sceneEnd.slice(5)})`}`;
       else if (aborted()) state = 'прерван (оборвался вызов)';
       else if (noStart)
-        state = `сцена ${scene} не запустилась за ${sceneStartSec} с после ${world ? 'входа в мир' : 'меню'} (нет SCENE START: нет её devtest-jar или ошибка при запуске — см. latest.log)`;
+        state = `сцена ${scene} не запустилась за ${sceneStartSec} с после ${world ? 'входа в мир' : 'меню'} (нет SCENE START: не завершилась загрузка клиента, нет devtest-jar или ошибка запуска — см. latest.log)`;
       else if (exited()) state = `сцена ${scene}: игра вышла без SCENE END (код ${exitCode})`;
       else {
         state = `сцена ${scene}: нет SCENE END за ${timeout} с`;

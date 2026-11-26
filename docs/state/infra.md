@@ -928,6 +928,9 @@ Cursor configs (shapes from their docs, not tried).
   enable_rendering and ingest_enabled are false in the test copy (config keys verified via MCP decompile); overlay can
   override this for Voxy-specific checks. The summary reports effective settings. Heap diagnostics showed no sustained
   full-GC pressure; watchdog stacks instead showed delayed Voxy renderer initialization and chunk-system work.
+- Saved-world scene startup allows 900 s after server-side login (still bounded by the overall run timeout), with
+  progress every minute. Login is not the first client tick: the observed EMI item-group synchronization alone took
+  107 s, and more client data processing followed. Missing SCENE END or frames remains a failed acceptance.
 - Standalone `addon_stand scene=… worldJob=<successful saved job>` starts in a copy of an accepted TFC world;
   candidate/verdict records the source and acceptance checks it. Useful for electronics scenes: regenerating the
   RealWorld world from scratch exceeded 1500 s, while the saved-world client logged in after 158 s. The insulator scene
