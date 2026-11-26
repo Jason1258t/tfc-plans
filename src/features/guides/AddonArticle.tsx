@@ -147,10 +147,18 @@ export default function AddonArticle({ addon }: { addon: Addon }) {
 
   useEffect(() => {
     setGuide(undefined);
-    return subscribeGuide(id, setGuide, (e) => {
-      setError(e.message);
-      setGuide(null);
-    });
+    setError(null);
+    return subscribeGuide(
+      id,
+      (value) => {
+        setError(null);
+        setGuide(value);
+      },
+      (e) => {
+        setError(e.message);
+        setGuide(null);
+      },
+    );
   }, [id]);
 
   if (!guidesEnabled) return <div className="empty">Описания хранятся в Firestore — без Firebase их негде взять</div>;
