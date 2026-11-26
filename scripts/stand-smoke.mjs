@@ -113,10 +113,21 @@ try {
   fs.mkdirSync(path.join(cache, 'mods'), { recursive: true });
   const opticore = 'Opticores-1.0.9 - Neoforge-1.21.1.jar';
   const sodium = 'sodium-neoforge-0.8.13-beta.1+mc1.21.1.jar';
-  for (const f of [opticore, sodium]) fs.writeFileSync(path.join(cache, 'mods', f), 'fixture');
+  for (const f of [opticore, sodium, 'voxy-0.2.16-beta+1.21.11.jar'])
+    fs.writeFileSync(path.join(cache, 'mods', f), 'fixture');
+  fs.mkdirSync(path.join(cache, 'config'), { recursive: true });
+  fs.writeFileSync(
+    path.join(cache, 'config', 'voxy-config.json'),
+    JSON.stringify({ enabled: true, section_render_distance: 32 }),
+  );
   const game = path.join(temp, 'game');
   const profile = buildProfile({ game, cache, mods: [], exclude: [], copyMods: true });
   assert.deepEqual(profile.compatibility, [opticore]);
+  assert.equal(profile.visualProfile.voxyEnabled, false);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(game, 'config', 'voxy-config.json'))).section_render_distance, 32);
+  assert.match(profile.visualProfile.options, /renderDistance:4/);
+  assert.match(profile.visualProfile.options, /simulationDistance:4/);
+  assert.match(profile.visualProfile.options, /maxFps:30/);
   assert.ok(!fs.existsSync(path.join(game, 'mods', opticore)));
   assert.ok(fs.existsSync(path.join(game, 'mods', sodium)));
   const jarFile = path.join(temp, 'own.jar');
