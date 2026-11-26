@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import AdmZip from 'adm-zip';
 import { runtimeStatus } from './stand-runtime.mjs';
 import { selectMods } from './pack-stand.mjs';
-import { addonChains, judge, judgeStep, freeze, addonStandRetry } from './addon-stand.mjs';
+import { addonChains, judge, judgeStep, freeze, addonStandRetry, chainResult } from './addon-stand.mjs';
 import { buildProfile, badShotPrefixes } from './client-stand.mjs';
 import * as remote from './stand-queue-remote.mjs';
 import * as queue from './stand-queue.mjs';
@@ -176,6 +176,29 @@ try {
   assert.equal(updated.jobs[1].attempts[0].job, 'failed');
   assert.equal(updated.jobs[1].worldJob, 'source');
   assert.equal(updated.runtimeChecked, false);
+
+  const accepted = path.join(temp, 'accepted');
+  fs.mkdirSync(path.join(accepted, 'world'), { recursive: true });
+  fs.writeFileSync(path.join(accepted, 'world', 'level.dat'), 'saved world');
+  fs.writeFileSync(
+    path.join(accepted, 'summary.txt'),
+    `сервер загрузился за 1 с\nмир: копия source\nмир сохранён: world\nсвои: ${c.main.file} sha256 ${c.main.sha256}\n`,
+  );
+  fs.writeFileSync(path.join(accepted, 'latest.log'), 'No failures\n');
+  const combined = await chainResult(
+    { dir: frozen.dir, candidate: updated },
+    {
+      timeout: 0,
+      wait: async (id) => ({
+        view: { reason: 'final', job: { state: id === 'failed' ? 'error' : 'done', ok: id !== 'failed' } },
+        local: id === 'failed' ? temp : accepted,
+      }),
+    },
+  );
+  assert.equal(combined.ok, true, combined.text);
+  assert.equal(combined.verdict.steps[1].attempts[0].job, 'failed');
+  assert.ok(fs.existsSync(path.join(combined.evidence, 'attempts/restart/failed/attempt.json')));
+  assert.ok(fs.existsSync(path.join(combined.evidence, 'build/world/level.dat')));
 
   const git = (cwd, ...args) =>
     execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();

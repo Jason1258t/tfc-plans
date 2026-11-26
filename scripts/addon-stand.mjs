@@ -521,6 +521,7 @@ async function chainRun(dir, a) {
   fz.candidate.inputHashes = frozenOptions.overlay
     ? Object.fromEntries(walk(frozenOptions.overlay).map((file) => [file, sha256(file)]))
     : {};
+  fz.candidate.overlay = frozenOptions.overlay ?? null;
   const ids = {};
   let prev = null;
   const label = `${path.basename(dir)}/${name}`;
@@ -701,10 +702,10 @@ function bundleStep(evDir, step, local) {
 }
 
 /** Дождаться последнего шага цепочки и принять все → как addonStandResult */
-async function chainResult(fz, { timeout }) {
+export async function chainResult(fz, { timeout, wait = waitJob }) {
   const c = fz.candidate;
   const last = c.job ?? c.jobs.at(-1).job;
-  const r = await waitJob(last, { timeout });
+  const r = await wait(last, { timeout });
   if (r.view.reason !== 'final') {
     const j = r.view.job;
     return {
@@ -713,19 +714,24 @@ async function chainResult(fz, { timeout }) {
       images: [],
     };
   }
+  const results = new Map();
+  for (const js of c.jobs) {
+    const w = js.job === last ? r : await wait(js.job, { timeout: 60 });
+    if (w.view.reason !== 'final')
+      return { ok: null, text: `Шаг ${js.step} ещё не завершён; ждать тем же вызовом.`, images: [] };
+    results.set(js.job, w);
+  }
   const ev = path.join(fz.dir, 'evidence');
   fs.rmSync(ev, { recursive: true, force: true });
   const steps = [];
   for (const [i, js] of c.jobs.entries()) {
-    const w = js.job === last ? r : await waitJob(js.job, { timeout: 60 });
-    if (w.view.reason !== 'final')
-      return { ok: null, text: `Шаг ${js.step} ещё не завершён; ждать тем же вызовом.`, images: [] };
+    const w = results.get(js.job);
     const step = c.steps[i];
     const src = js.worldJob ?? (step.world ? c.jobs.find((x) => x.step === step.world)?.job : null);
     const v = judgeStep(step, w.local, w.view.job, c, src);
     bundleStep(ev, step, w.local);
     for (const attempt of js.attempts ?? []) {
-      const old = await waitJob(attempt.job, { timeout: 0 });
+      const old = await wait(attempt.job, { timeout: 0 });
       if (old.view.reason !== 'final') throw new Error(`История шага ${step.name}: ${attempt.job} не завершён`);
       const attemptDir = bundleStep(path.join(ev, 'attempts', step.name), { name: attempt.job }, old.local);
       const prior = path.join(fz.dir, `verdict-before-${attempt.job}.json`);
@@ -819,8 +825,8 @@ export async function addonStandRetry(jobId, stepName, { by, transport = { waitJ
     }
     for (const [file, hash] of Object.entries(c.inputHashes ?? {}))
       if (sha256(file) !== hash) throw new Error(`Изменён замороженный оверлей: ${file}`);
-    if (Object.keys(c.inputHashes ?? {}).length) {
-      const overlay = path.join(fz.dir, 'overlay');
+    if (c.overlay || Object.keys(c.inputHashes ?? {}).length) {
+      const overlay = c.overlay ?? path.join(fz.dir, 'overlay');
       if (walk(overlay).length !== Object.keys(c.inputHashes).length)
         throw new Error('Изменён состав замороженного оверлея');
     }
