@@ -61,6 +61,8 @@ async function modelRender(a) {
     });
   };
   const after = render(a, true);
+  if (!a.caps?.length && !a.panelInsets?.length && !a.compare && !a.beforeAddon && !a.task)
+    return after.png ? { text: after.lines.join('\n'), images: [after.png] } : after.lines.join('\n');
   const results = [];
   if (a.compare || a.beforeAddon) {
     const before = render({ ...a, addon: a.beforeAddon ?? a.addon }, Boolean(a.beforeAddon));
