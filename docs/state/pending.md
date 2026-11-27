@@ -1,5 +1,10 @@
 # State: waiting for the host or an in-game check
 
+- Host: install **EE Extras 2.29.1** on server and every client (`tfc pull addons ee_extras@2.29.1`),
+  then publish the snapshot (dev #422). Existing presses/mixers/deployers keep working; add ordinary EE switches
+  and emergency buttons directly to the vertical centre of their side faces. Old wall-disconnect items craft back to ordinary switches;
+  placed legacy switches remain compatible. Server and full-pack client evidence is attached to #422.
+
 - Host: install **Destroy Extras 0.12.1** on server and clients (`tfc pull addons destroy_extras@0.12.1`), then publish
   the snapshot (dev #415). The bath now accepts working fluid on every side and prioritises spent-fluid extraction.
   Four upright boards share one mask slot. Client scene `etching-bath` remains dev #417: test1a lost SSH connectivity;

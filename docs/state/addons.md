@@ -8,6 +8,29 @@ page `/addons/<mod>`: card `tools/<mod>/addon.json` (+ jar, `icons/`) in git, de
 `addons_list` / `addon_check`. Texts moved from the former `src/lib/addons.ts` as is (signed Claude). What still waits for the host or a
 game check — [pending.md](pending.md).
 
+2026-11-27 (dev #422, user layout correction): **EE Extras 2.29.1** lowers the switch, emergency button and
+Create value box from y=0.8 to y=0.55 without changing horizontal positions. Switch/button scale increases from
+0.45 to 0.55 (22%); the value box from 0.2 to 0.25 (25%). Hit areas and acceptance clicks move with the models.
+Existing control NBT is unchanged; mounted controls move automatically. Build and the development-server
+`machinecontrols` command pass at the new positions. Full-pack client `20261127-191342-91bc` passes all checks
+and five inspected frames on final SHA `4e6149db4cd221c4834d37c7757f96ef9ef27f8305b35f190329b7eccaa4d18f`;
+evidence is attached to #422. Released 2026-11-28.
+
+2026-11-27 (dev #422): **EE Extras 2.29.0** adds Create speed settings (1–256 RPM, default 32) to the electric
+press, mixer and deployer. Ordinary EE cut-off switches and emergency-stop buttons mount directly on the upper side
+of a machine; panel models, switch styles and dye are reused, without wire nodes or electrical simulation of controls.
+Both contacts must permit operation; an open contact stops the drive immediately. Shift-wrench removes a control;
+machine destruction drops mounted controls. Settings and control state/style/dye persist in NBT. Existing bare machines
+keep working. Legacy wall-disconnect blocks remain compatible but their recipe/tab entry is removed; one old item
+crafts back into an ordinary EE switch. Metering-pump crafting uses the ordinary switch.
+Development server: `machinecontrols` passes on all three machines, including NBT roundtrip, emergency action,
+wrench removal and rejected wire selection. A deliberately wrong 127-RPM expectation failed; restoring 128 passed.
+Separate server restart preserves 128 RPM and the mounted emergency button on all three blocks. Full-pack client
+`20261127-164404-ccde` passes 32→128 RPM, stop on all three, client setting sync and five inspected frames,
+including the Create speed window; evidence attached to #422. Final jar SHA
+`dca58140857cf2955ab6dca3cddaf85b19cd21aae1827686d8f35f70b1daf134`.
+Gradle build and resources_check pass; lint has zero errors.
+
 2026-11-26 (dev #395): temperature PCB chunk-retention investigation completed against the preserved November 19
 runs on unchanged production SHA `f74a20df`. Intact fixture `111707-2311`, PCB removed `111706-6103` and crucible
 replaced `111706-0d57` all have `no_ticket/Loaded=0/BlockTicking=0`; intact remains unloaded at 120/180 seconds.
