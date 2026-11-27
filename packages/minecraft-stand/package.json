@@ -1,0 +1,16 @@
+{
+  "name": "@tfc/minecraft-stand",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Контракты и артефакты самостоятельного Minecraft-стенда",
+  "exports": {
+    "./*": "./*.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "minecraft-stand": "./cli.mjs"
+  }
+}

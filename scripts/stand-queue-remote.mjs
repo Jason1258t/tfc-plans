@@ -145,10 +145,12 @@ function pull(view) {
   const { job } = view;
   // Урезанную в ответе сводку — целиком в ту же папку
   const summary = view.summaryCut && view.summaryFile ? path.join(LOCAL, job.id, 'summary.txt') : null;
-  if (!job.result && !summary) return { local: null, pngs: [], gameShots: [] };
+  const contractFiles = view.contractFiles ?? [];
+  if (!job.result && !summary && !contractFiles.length) return { local: null, pngs: [], gameShots: [] };
   const local = path.join(LOCAL, job.id);
   fs.mkdirSync(local, { recursive: true });
   if (job.result) rsync([`${HOST}:${job.result}/`, `${local}/`]);
+  for (const file of contractFiles) rsync([`${HOST}:${file}`, `${local}/`]);
   if (summary) rsync([`${HOST}:${view.summaryFile}`, summary]);
   // Сводка серверного прогона лежит у задания, не в logs/: кладём рядом с журналами (приёмка читает её отсюда)
   else if (view.summary && !fs.existsSync(path.join(local, 'summary.txt')))

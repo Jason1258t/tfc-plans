@@ -17,6 +17,7 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 /** Пакеты: папка → package.json; сайт — корень, его код — src/ и конфиги в корне */
 const PACKAGES = [
   { name: 'сайт', dirs: ['src', 'vite.config.ts'], pkg: '.' },
+  { name: '@tfc/minecraft-stand', dirs: ['packages/minecraft-stand'], pkg: 'packages/minecraft-stand' },
   { name: '@tfc/core', dirs: ['packages/core'], pkg: 'packages/core' },
   { name: '@tfc/scripts', dirs: ['scripts'], pkg: 'scripts' },
   { name: '@tfc/cli', dirs: ['cli'], pkg: 'cli' },

@@ -39,6 +39,8 @@ import { fileURLToPath } from 'node:url';
 import { installCode, freezeCode, describeInputs, verifyCode } from './stand-code.mjs';
 import { selectSnapshot, verifySnapshot } from './stand-snapshot.mjs';
 import { runtimeStatus, requireCurrentRuntime } from './stand-runtime.mjs';
+import { legacyPassport, digest } from '@tfc/minecraft-stand/passport';
+import { createResult } from '@tfc/minecraft-stand/contract';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const QUEUE = path.resolve(process.env.TFC_STAND_QUEUE ?? path.join(os.homedir(), 'tfc-stand', 'queue'));
@@ -222,6 +224,9 @@ async function add(spec) {
     createdAt: now(),
     seq: 0,
   });
+  const passport = legacyPassport({ ...saved, workerHead: runtime.worker?.head ?? runtime.head });
+  writeJson(path.join(jobDir(id), 'passport.json'), passport);
+  updateJob(id, { passport: { schemaVersion: 1, sha256: digest(passport) } });
   writeJson(path.join(jobDir(id), 'run-inputs.json'), {
     snapshot,
     runtime: savedRuntime,
@@ -252,6 +257,10 @@ function view(id, since) {
     summary,
     summaryCut: Boolean(cut),
     summaryFile: full ? path.join(jobDir(id), 'summary.txt') : null,
+    contractFiles:
+      FINAL.has(job.state) && job.passport
+        ? ['passport.json', 'result.json'].map((name) => path.join(jobDir(id), name))
+        : [],
   };
 }
 
@@ -392,7 +401,30 @@ function event(id, text) {
 }
 
 function finishJob(id, patch) {
-  const j = updateJob(id, { ...patch, endedAt: now() });
+  const j = { ...readJob(id), ...patch, endedAt: now() };
+  // Старые задания остаются читаемыми; их нельзя объявлять воспроизводимыми задним числом.
+  if (j.passport) {
+    const status = j.state === 'cancelled' ? 'cancelled' : Number.isInteger(j.code) ? 'exited' : 'error';
+    const result = createResult({
+      runId: id,
+      inputs: j.passport,
+      process: {
+        status,
+        exitCode: Number.isInteger(j.code) ? j.code : null,
+        signal: typeof j.code === 'string' && j.code !== 'cancelled' ? j.code : null,
+      },
+      checks: [{ name: 'Проверки отдельным протоколом ещё не передаются', status: 'unknown' }],
+      artifacts: [
+        { name: 'Паспорт', path: 'passport.json' },
+        ...(j.result ? [{ name: 'Результаты прежнего backend', path: j.result }] : []),
+        ...(j.world ? [{ name: 'Мир', path: j.world }] : []),
+      ],
+      error: j.error ?? null,
+    });
+    writeJson(path.join(jobDir(id), 'result.json'), result);
+  }
+  // Финальное состояние публикуем после метаданных: wait сразу может начать их скачивание.
+  writeJson(path.join(jobDir(id), 'job.json'), j);
   if (j.inputs?.startsWith(path.join(QUEUE, 'inputs'))) fs.rmSync(j.inputs, { recursive: true, force: true });
   return j;
 }
@@ -613,6 +645,13 @@ async function runJob(job) {
   updateJob(id, { state: 'running', startedAt: now() });
   log(`задание ${id} (${job.kind}, ${job.by}${job.note ? `: ${job.note}` : ''})`);
   try {
+    if (job.passport) {
+      const passport = readJson(path.join(jobDir(id), 'passport.json'));
+      if (!passport || digest(passport) !== job.passport.sha256) throw new Error('Изменён паспорт задания');
+      const actual = legacyPassport({ ...job, workerHead: LOADED_RUNTIME.head });
+      // Версия worker фиксируется при постановке; исполнение после обновления требует нового задания.
+      if (digest(actual) !== job.passport.sha256) throw new Error('Исполнитель или входы не совпадают с паспортом');
+    }
     if (JSON.stringify(describeInputs(job.args)) !== JSON.stringify(job.inputFiles))
       throw new Error('Входы задания изменились после постановки');
     verifyCode(path.join(jobDir(id), 'runtime'), job.runtime, path.dirname(HERE));
@@ -625,7 +664,10 @@ async function runJob(job) {
     });
     event(id, `запускаю ${job.kind === 'server' ? 'серверный' : 'клиентский'} стенд`);
     const r = job.kind === 'server' ? await runServer(id, job, cache) : await runClientJob(id, job, cache);
-    if (r.result) fs.copyFileSync(path.join(jobDir(id), 'run-inputs.json'), path.join(r.result, 'run-inputs.json'));
+    if (r.result) {
+      fs.copyFileSync(path.join(jobDir(id), 'run-inputs.json'), path.join(r.result, 'run-inputs.json'));
+      if (job.passport) fs.copyFileSync(path.join(jobDir(id), 'passport.json'), path.join(r.result, 'passport.json'));
+    }
     const summary = `Закреплённый снимок: ${job.snapshot.id}; manifest SHA256 ${job.snapshot.sha256}; runtime ${job.runtime?.head} (${job.runtime?.source}, SHA256 ${job.runtime?.sha256 ?? LOADED_RUNTIME.head})\n${r.summary.trim()}`;
     fs.writeFileSync(path.join(jobDir(id), 'summary.txt'), `${summary}\n`);
     const state = r.code === 'cancelled' ? 'cancelled' : r.summary.trim() ? 'done' : 'error';

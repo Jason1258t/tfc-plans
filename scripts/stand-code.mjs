@@ -85,6 +85,7 @@ export function installCode(source, dest, repo) {
   }
   for (const [name, folder] of Object.entries({
     core: 'packages/core',
+    'minecraft-stand': 'packages/minecraft-stand',
     cli: 'cli',
     scripts: 'scripts',
     'pack-server': 'server/pack-server',
