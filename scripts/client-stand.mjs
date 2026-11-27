@@ -52,7 +52,7 @@ const GUARD_EXPORTS = [
 const DEFAULT_NF = '21.1.251';
 const MANIFEST = 'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json';
 const ASSETS_URL = 'https://resources.download.minecraft.net';
-/** Главное меню: FancyMenu регистрирует слой титульного экрана, когда тот открылся */
+/** Ранний lifecycle marker: готовый кадр подтверждает отдельный render probe. */
 const READY = /ScreenCustomizationLayer registered: title_screen/;
 /** В мире: встроенный сервер впустил игрока стенда (строка PlayerList — без перевода, в отличие от чата) */
 const READY_WORLD = /StandTest\[[^\]]*\] logged in with entity id/;
@@ -112,6 +112,8 @@ export function buildRegistrateGuard(run) {
   fs.mkdirSync(classes, { recursive: true });
   const source = path.join(dir, 'RegistrateGuard.java');
   fs.copyFileSync(GUARD_SOURCE, source);
+  const probeSource = path.join(dir, 'MenuProbe.java');
+  fs.copyFileSync(path.join(path.dirname(GUARD_SOURCE), 'MenuProbe.java'), probeSource);
   const home = javaHome();
   const jdkTool = (tool) => (home ? path.join(home, 'bin', tool) : tool);
   const invoke = (tool, args) => {
@@ -119,15 +121,22 @@ export function buildRegistrateGuard(run) {
     if (result.status !== 0)
       throw new Error(`Защита Registrate: ${tool}: ${result.error?.message ?? result.stderr ?? result.stdout}`);
   };
-  invoke('javac', [...GUARD_EXPORTS, '-source', '21', '-target', '21', '-d', classes, source]);
+  invoke('javac', [...GUARD_EXPORTS, '-source', '21', '-target', '21', '-d', classes, source, probeSource]);
   const manifest = path.join(dir, 'MANIFEST.MF');
   fs.writeFileSync(manifest, 'Manifest-Version: 1.0\nPremain-Class: tfc.stand.RegistrateGuard\n\n');
   const jar = path.join(dir, 'registrate-guard.jar');
   invoke('jar', ['--create', '--file', jar, '--manifest', manifest, '-C', classes, '.']);
+  const probeJar = path.join(dir, 'menu-probe.jar');
+  invoke('jar', ['--create', '--file', probeJar, '-C', classes, 'tfc/stand/probe']);
   const hash = (file) => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-  const evidence = { sourceSha256: hash(source), jarSha256: hash(jar) };
+  const evidence = {
+    sourceSha256: hash(source),
+    jarSha256: hash(jar),
+    probeSourceSha256: hash(probeSource),
+    probeJarSha256: hash(probeJar),
+  };
   fs.writeFileSync(path.join(dir, 'guard.json'), JSON.stringify(evidence, null, 2) + '\n');
-  return { jar, ...evidence };
+  return { jar, probeJar, ...evidence };
 }
 
 // ------------------------------------------------------------------ подготовка
@@ -577,7 +586,7 @@ function launchCommand({ nf, game, natives, memory, size: [w, h], world, guard }
     '-Dstdout.encoding=UTF-8',
     '-Dstderr.encoding=UTF-8',
     ...GUARD_EXPORTS,
-    `-javaagent:${guard.jar}`,
+    `-javaagent:${guard.jar}=${guard.probeJar}`,
     child.mainClass,
     ...expand(parent.arguments.game),
     ...expand(child.arguments?.game),
@@ -648,7 +657,9 @@ export function buildProfile({ game, cache, mods, exclude, overlay, copyMods }) 
     else fs.symlinkSync(path.join(modsDir, f), path.join(game, 'mods', f));
   for (const m of mods) {
     if (!fs.existsSync(m)) throw new Error(`нет jar ${m}`);
-    fs.copyFileSync(m, path.join(game, 'mods', path.basename(m)));
+    const target = path.join(game, 'mods', path.basename(m));
+    fs.rmSync(target, { force: true });
+    fs.copyFileSync(m, target);
   }
   for (const d of ['config', 'kubejs', 'resourcepacks', 'defaultconfigs', 'shaderpacks'])
     if (fs.existsSync(path.join(cache, d))) fs.cpSync(path.join(cache, d), path.join(game, d), { recursive: true });
@@ -757,6 +768,17 @@ async function startDisplay(run, [w, h]) {
 function capture(env, file) {
   const r = spawnSync(java(), [CAPTURE, file], { env, encoding: 'utf8', timeout: 120_000 });
   return r.status === 0 && fs.existsSync(file) ? null : (r.stderr || r.error?.message || 'нет файла').trim();
+}
+
+/** Свежее подтверждение от рендера TitleScreen; lifecycle marker сюда не подходит. */
+export function menuFrameReady(text, now = Date.now()) {
+  const frames = [...text.matchAll(/TFC MENU (FRAME|BLOCKED) (\d+)/g)].slice(-2);
+  if (frames.length !== 2 || frames.some((f) => f[1] !== 'FRAME')) return false;
+  const first = Number(frames[0][2]);
+  const stamp = Number(frames[1][2]);
+  return (
+    text.includes('TFC MENU PROBE APPLIED render-return') && stamp - first >= 1000 && now >= stamp && now - stamp < 5000
+  );
 }
 
 /** Остановить игру: SIGTERM — штатный выход через её shutdown hook; не вышла за минуту — убить */
@@ -1031,7 +1053,19 @@ export async function runClient({
         if (!capture(env, file)) pngs.push(file);
       }
     } else if (readySec !== null) {
-      state = world ? 'в мире' : 'главное меню';
+      state = world ? 'в мире' : 'меню ещё не подтверждено';
+      if (!world) {
+        log(`marker меню через ${readySec} с; жду отрисованный TitleScreen без overlay`);
+        while (!exited() && !aborted() && Date.now() < deadline) {
+          if (menuFrameReady(readText(path.join(run, 'client.log')))) {
+            shownSec = secs();
+            state = 'главное меню подтверждено кадром';
+            break;
+          }
+          await wait(1000);
+        }
+        if (shownSec === null) state = `меню не отрисовано за ${timeout} с (ранний marker ${readySec} с)`;
+      }
       if (world) {
         // Игрок вошёл раньше, чем мир на экране: на программном OpenGL «Загрузка территории…» висит минутами, и этот
         // кадр неподвижен. Пробные снимки раз в 10 с, пока картинка не сменится (не дольше load)
@@ -1059,7 +1093,13 @@ export async function runClient({
         const file = path.join(run, `${world ? 'world' : 'menu'}-${String(i).padStart(2, '0')}.png`);
         const err = capture(env, file);
         if (err) notes.push(`снимок ${i} не вышел: ${err.split('\n').at(-1)}`);
-        else pngs.push(file);
+        else {
+          pngs.push(file);
+          if (!world && !menuFrameReady(readText(path.join(run, 'client.log')))) {
+            shownSec = null;
+            state = 'кадр меню не подтверждён при снимке';
+          }
+        }
         if (i < shots) await wait(interval * 1000);
       }
     } else if (failScreen) {
@@ -1098,7 +1138,7 @@ export async function runClient({
     guardApplied &&
     (scene
       ? Boolean(sceneEnd?.startsWith('PASS')) && !crashes.length
-      : readySec !== null && pngs.length > 0 && !crashes.length) &&
+      : readySec !== null && (world || shownSec !== null) && pngs.length > 0 && !crashes.length) &&
     (!saveWorld || Boolean(savedWorld));
   const text = [
     `Клиентский стенд: снимок ${ver.snapshot ?? '?'}, NeoForge ${nf}, прогон ${id}`,
@@ -1123,7 +1163,7 @@ export async function runClient({
           `Загрузка модов FML: maxThreads=${profile.fmlMaxThreads ?? 'по умолчанию загрузчика'} (config/fml.toml после overlay).`,
         ]
       : []),
-    `итог: ${state}${readySec !== null ? ` за ${readySec} с` : ''}${shownSec !== null ? `, мир на экране через ${shownSec} с` : ''}; ${stopped || 'не запускалась'}; всего ${secs()} с`,
+    `итог: ${state}${readySec !== null ? ` за ${readySec} с` : ''}${shownSec !== null ? `, ${world ? 'мир' : 'меню'} на экране через ${shownSec} с` : ''}; ${stopped || 'не запускалась'}; всего ${secs()} с`,
     profile
       ? `моды: ${profile.used} в профиле${profile.excluded ? `, убрано --exclude: ${profile.excluded}` : ''}${mods.length ? `, свои: ${mods.map((m) => path.basename(m)).join(', ')}` : ''}`
       : 'профиль не собран',

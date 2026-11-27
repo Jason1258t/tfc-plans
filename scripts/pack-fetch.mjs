@@ -96,7 +96,7 @@ function seedFile(seeds, f) {
  * options.compare — папка, с которой сверяются уже лежащие файлы (по умолчанию dir; fetchData пишет в промежуточную
  * папку и сверяется с итоговой); options.signal — отмена загрузки (таймаут вызывающего).
  */
-async function sync(srv, dir, files, url, seeds = [], { signal, compare = dir } = {}) {
+async function sync(srv, dir, files, url, seeds = [], { signal, compare = dir, copySeeds = false } = {}) {
   const want = [];
   for (const f of files) {
     const local = path.join(compare, ...f.path.split('/'));
@@ -122,7 +122,8 @@ async function sync(srv, dir, files, url, seeds = [], { signal, compare = dir } 
       if (seed) {
         fs.rmSync(local, { force: true });
         try {
-          fs.linkSync(seed, local);
+          if (copySeeds) fs.copyFileSync(seed, local, fs.constants.COPYFILE_FICLONE);
+          else fs.linkSync(seed, local);
         } catch {
           fs.copyFileSync(seed, local);
         }
@@ -206,9 +207,17 @@ export async function fetchData({ outDir = path.join(ROOT, 'public'), srv = pack
 }
 
 /** Текущий снимок → into/ (папка версии: jar в into/mods); kubejs — ещё и слой KubeJS pack */
-export async function fetchPack({ into = PACK_CACHE, kubejs = false, srv = packServer() } = {}) {
+export async function fetchPack({
+  into = PACK_CACHE,
+  kubejs = false,
+  srv = packServer(),
+  snapshot = null,
+  seeds: extraSeeds = [],
+  copySeeds = false,
+} = {}) {
   if (!srv) throw new Error('нет TFC_PACK_URL / TFC_PACK_TOKEN (окружение или .env.local) и входа в программу tfc');
-  const snap = await api(srv, '/pack/current');
+  const snap = await api(srv, snapshot ? `/pack/snapshots/${encodeURIComponent(snapshot)}` : '/pack/current');
+  if (snapshot && snap.id !== snapshot) throw new Error('Сервер вернул другой снимок');
   log(
     `снимок ${snap.id} от ${snap.createdAt} (${snap.author}${snap.note ? `: ${snap.note}` : ''}), файлов ${snap.files.length}`,
   );
@@ -217,7 +226,8 @@ export async function fetchPack({ into = PACK_CACHE, kubejs = false, srv = packS
     .filter(Boolean)
     .map((r) => path.join(r, 'mods'))
     .filter((d) => fs.existsSync(d));
-  const r = await sync(srv, into, snap.files, (f) => `/blobs/${f.sha256}`, seeds);
+  const r = await sync(srv, into, snap.files, (f) => `/blobs/${f.sha256}`, [...extraSeeds, ...seeds], { copySeeds });
+  fs.writeFileSync(path.join(into, '.tfc-manifest.json'), JSON.stringify(snap));
   const removed = prune(
     into,
     [...new Set(snap.files.map((f) => f.path.split('/')[0]))],
@@ -248,7 +258,12 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   const argv = process.argv.slice(2);
   const flag = (f) => argv.includes(f);
   (async () => {
-    if (!flag('--data-only')) await fetchPack({ kubejs: flag('--kubejs') });
+    if (!flag('--data-only'))
+      await fetchPack({
+        kubejs: flag('--kubejs'),
+        snapshot:
+          argv[argv.indexOf('--snapshot') + 1] && flag('--snapshot') ? argv[argv.indexOf('--snapshot') + 1] : null,
+      });
     if (flag('--data') || flag('--data-only')) await fetchData();
     if (!flag('--data-only'))
       log(`jar сборки — в ${path.join(PACK_CACHE, 'mods')}: их читают MCP, npm run mods и аддоны (tools/*/libs.sh)`);

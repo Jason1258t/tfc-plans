@@ -474,10 +474,9 @@ re-reads the whole context. So the queue answers «done» in one call.
   waits for that job and runs only if it passed, else it is cancelled; `--world-job <id>` → `--world <saved world>`
   (`npm run stand-queue -- submit … --after <id> --world-job <id>`; «Chains» under «Addon scene acceptance»).
 - **Before each job** the worker compares `.tfc-fetch.json` with `GET /pack/current` (print-worker key) and runs
-  `pack-fetch.mjs` when the snapshot moved: queue runs always use the current snapshot, not the Mac's cache. Server
+  `pack-fetch.mjs` when the snapshot moved: new queue jobs pin the current snapshot at submission (dev #425), not the Mac's cache; see “Pinned stand runs” below. Server
   runs: snapshot + NeoForge staged in `/dev/shm` (`scripts/stand-shm.mjs`, shared with print-worker). Client runs:
-  `client-stand.mjs run … --stdin-watch` (cancel closes stdin → clean exit). Stand code is main's: to test a change to
-  the stand code itself use the direct path (`pack_client direct=true`, `npm run client-stand`).
+  `client-stand.mjs run … --stdin-watch` (cancel closes stdin → clean exit). Stand code is frozen per job: default verified main; test stand code changes with `stand_submit runtime=worktree`, which uploads the current worktree automatically.
 - **Mac side** — `scripts/stand-queue-remote.mjs` (`npm run stand-queue -- submit|wait|list|log|cancel`), MCP
   `stand_submit` / `stand_wait` / `stand_log` / `stand_jobs`; `pack_client` goes through the queue (submit + wait).
   `stand_wait` is a long-poll on the host (`stand-queue.mjs wait`, checks the job file every second) over an async ssh,
@@ -1034,7 +1033,7 @@ that run is not accepted and the slowdown's cause is unproven. Same-JAR unguarde
 showed the menu at 114 seconds. A constant guard deadlock is contradicted by the later completed guarded runs.
 The original November 8 missing extendo entry was not replayed directly; the observed unsafe concurrent writer path
 and the underlying table-loss mechanism are confirmed and protected. The normal Debug Tools JAR excludes the audit
-source set. IPv6 result retrieval (#421) and automatic visible-menu confirmation (#423) remain separate tasks.
+source set. IPv6 result retrieval (#421) and automatic visible-menu confirmation (#423) are implemented below.
 
 Final deployed queue acceptance: `20261127-084423-f0b5`, runtime checkout/worker `f48e8ed0`, normal client without
 audit mod, snapshot `20261117-180033-6dff`, FML maxThreads=-1. Run `20261127-084426-91ce` reached the title marker at
@@ -1045,3 +1044,41 @@ APPLIED marker present. Full result attached to #312 as `x7xEJYPNI16XbJXiJmrX`. 
 unowned `.git/index.lock` as `queue/stale-index-lock-1795769028`, with the idle queue lock held; no local changes or
 commits were discarded. Debug audit sources are on tfc-addons main `912a061`; stand implementation is on tfc-plans
 main `f48e8ed0`. All four #312 checklist items are verified. No player addon/pack release or Hosting change is needed.
+
+### Pinned stand runs, menu frames and recovery (dev #421, #423–425, 2026-11-27)
+
+Every new queue job pins the server's immutable pack manifest at submission; `snapshot=<id>` selects an explicit one.
+Chain steps, copied worlds and retries inherit it, with refusal on conflicting/legacy unknown snapshots. A cache per
+manifest SHA256 is populated in a temporary directory, verified file by file, then renamed; the shared cache used by
+direct runs and print checks cannot change the job's mods. Cache files copied from seeds are separate copies.
+The source runtime is also frozen per job, including main; chained steps/retries inherit its bytes.
+`runtime=worktree` freezes/uploads local runner sources and resolves workspace packages inside that bundle. No manual
+SSH, git pull, archive or copy is needed. Addon changes continue through `addon_stand` (frozen JARs/overlay).
+The source dependency lock must match installed dependencies. `run-inputs.json` in results records the pack manifest,
+runtime SHA256 and custom input hashes. Input/runtime changes are an explicit error.
+
+IPv6 transfers use a fixed rsync destination alias with the real SSH `HostName` and user passed separately. Host key
+checking stays enabled. Full saved results (including long logs, summary, PNG and worlds) use the same path as IPv4.
+`stand_wait` timeout observes the existing job; it never submits another one.
+
+A stand-only bootstrap helper observes the end of client rendering. Menu success requires two fresh TitleScreen
+frames without overlay and confirmation at screenshot capture; FancyMenu's early marker is only diagnostic. Scene
+acceptance remains `SCENE END PASS`. Sources and hashes of both Java helpers are archived with the result.
+
+Runtime diagnostics include `index.lock` age, owner uid, size and git processes. For recovery, first stop the idle
+worker (check `stand_jobs.current` and queued jobs); from its checkout call:
+
+```bash
+node scripts/stand-runtime.mjs --recover
+```
+
+The command obtains the queue flock itself. It refuses a busy queue/live worker, recent/nonempty/active lock and
+local changes/commits/divergence; saves an old empty lock to `queue/stale-index-lock-<time>` before fast-forwarding.
+No reset or forced checkout. Cron prints diagnostics when its pull is blocked.
+
+Verification: autonomous smoke covers pinned-current changes, exact snapshot fetch, inherited snapshot conflicts,
+unknown legacy jobs, changed/extra cache files, source-bundle tampering, IPv4/hostname/IPv6 argument handling, fresh vs
+stale/blocked menu markers, recent/busy/ahead lock refusal and archived stale-lock recovery.
+Live direct run `20261127-090958-6c9d`: early marker 102 s, confirmed menu frame 105 s, normal stop 114 s; PNG viewed.
+Saved results and the earlier queue run `20261127-084423-f0b5` were retrieved through the same verified-key IPv6 transport.
+Queue acceptance after rollout follows.

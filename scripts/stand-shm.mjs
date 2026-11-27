@@ -19,7 +19,7 @@ export function packMeta(cache = PACK_CACHE) {
  * Копия снимка и установленного NeoForge (loader из снимка) в /dev/shm; места меньше 2 ГБ — работаем с диска.
  * stand — папка стенда (TFC_STAND_DIR), где лежит neoforge-<версия>. → { pack, stand, clean }
  */
-export function stageShm(stand, { prefix = 'tfc-stand.', loader = packMeta().loader } = {}) {
+export function stageShm(stand, { prefix = 'tfc-stand.', cache = PACK_CACHE, loader = packMeta(cache).loader } = {}) {
   const free = (() => {
     try {
       const s = fs.statfsSync('/dev/shm');
@@ -28,9 +28,9 @@ export function stageShm(stand, { prefix = 'tfc-stand.', loader = packMeta().loa
       return 0;
     }
   })();
-  if (free < 2 * 1024 ** 3) return { pack: PACK_CACHE, stand, clean: () => {} };
+  if (free < 2 * 1024 ** 3) return { pack: cache, stand, clean: () => {} };
   const ram = fs.mkdtempSync(`/dev/shm/${prefix}`);
-  fs.cpSync(PACK_CACHE, path.join(ram, 'pack'), { recursive: true });
+  fs.cpSync(cache, path.join(ram, 'pack'), { recursive: true });
   fs.mkdirSync(path.join(ram, 'stand'));
   const nf = loader ? path.join(stand, loader) : null;
   if (nf && fs.existsSync(nf)) fs.cpSync(nf, path.join(ram, 'stand', loader), { recursive: true });

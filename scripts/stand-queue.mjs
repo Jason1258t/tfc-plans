@@ -36,6 +36,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { installCode, freezeCode, describeInputs, verifyCode } from './stand-code.mjs';
+import { selectSnapshot, verifySnapshot } from './stand-snapshot.mjs';
 import { runtimeStatus, requireCurrentRuntime } from './stand-runtime.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -140,16 +142,35 @@ function queueRuntime(refresh = false) {
 
 // ---------------------------------------------------------------- команды для Mac
 
-function add(spec) {
+async function add(spec) {
   const runtime = requireCurrentRuntime(queueRuntime(true));
   if (!['server', 'client'].includes(spec?.kind)) throw new Error('kind: server | client');
   if (!Array.isArray(spec.args)) throw new Error('args — массив флагов стенда');
+  const refs = [
+    spec.after,
+    spec.retryOf,
+    ...spec.args.flatMap((a, i) => (a === '--world-job' ? [spec.args[i + 1]] : [])),
+  ]
+    .filter(Boolean)
+    .map((id) => {
+      const job = readJob(String(id));
+      if (!job) throw new Error(`Нет исходного задания ${id}`);
+      return job;
+    });
+  const snapshot = await selectSnapshot(refs, spec.snapshot);
   if (spec.retryOf) {
     const old = readJob(String(spec.retryOf));
     if (!old || !(old.state === 'error' || old.state === 'cancelled' || (old.state === 'done' && old.ok === false)))
       throw new Error('Повтор: исходное задание не является окончательно проваленным/отменённым');
     const existing = allJobs().find((j) => j.retryOf === old.id);
-    if (existing) return { id: existing.id, position: positionOf(existing.id), current: readJson(CURRENT), runtime };
+    if (existing)
+      return {
+        id: existing.id,
+        position: positionOf(existing.id),
+        current: readJson(CURRENT),
+        runtime,
+        snapshot: snapshot.id,
+      };
     // mkdir атомарен между SSH-процессами; повторная доставка запроса не создаёт дубликат.
     fs.mkdirSync(path.join(jobDir(old.id), 'retry-claimed'));
   }
@@ -160,10 +181,37 @@ function add(spec) {
   const inputs = spec.inputs ? path.resolve(QUEUE, 'inputs', path.basename(String(spec.inputs))) : null;
   const after = spec.after ? String(spec.after) : null;
   if (after && !readJob(after)) throw new Error(`after: нет задания ${after}`);
-  updateJob(id, {
+  let savedRuntime;
+  if (spec.code) {
+    const code = fs.realpathSync(spec.code);
+    if (!inputs || !code.startsWith(`${fs.realpathSync(inputs)}/`)) throw new Error('Runtime вне входов задания');
+    savedRuntime = installCode(code, path.join(jobDir(id), 'runtime'), path.dirname(HERE));
+  } else {
+    const source = spec.retryOf ? readJob(String(spec.retryOf)) : after ? readJob(after) : null;
+    if (source?.runtime?.sha256) {
+      savedRuntime = installCode(
+        path.join(jobDir(source.id), 'runtime'),
+        path.join(jobDir(id), 'runtime'),
+        path.dirname(HERE),
+      );
+      savedRuntime.source = source.runtime.source;
+    } else {
+      const frozen = freezeCode(path.dirname(HERE));
+      try {
+        savedRuntime = installCode(frozen.dir, path.join(jobDir(id), 'runtime'), path.dirname(HERE));
+      } finally {
+        fs.rmSync(frozen.dir, { recursive: true, force: true });
+      }
+      savedRuntime.source = 'main';
+    }
+  }
+  const saved = updateJob(id, {
     id,
+    snapshot,
+    runtime: savedRuntime,
     kind: spec.kind,
     args: spec.args.map(String),
+    inputFiles: describeInputs(spec.args.map(String)),
     by: String(spec.by ?? '?').slice(0, 60),
     note: String(spec.note ?? '').slice(0, 300),
     inputs,
@@ -174,7 +222,13 @@ function add(spec) {
     createdAt: now(),
     seq: 0,
   });
-  return { id, position: positionOf(id), current: readJson(CURRENT), runtime };
+  writeJson(path.join(jobDir(id), 'run-inputs.json'), {
+    snapshot,
+    runtime: savedRuntime,
+    args: saved.args,
+    inputFiles: saved.inputFiles,
+  });
+  return { id, position: positionOf(id), current: readJson(CURRENT), runtime: savedRuntime, snapshot: snapshot.id };
 }
 
 /** Что отдать ожидающему: задание, место, что идёт сейчас, новые события и сводка по окончании */
@@ -343,21 +397,26 @@ function finishJob(id, patch) {
   return j;
 }
 
-/** Текущий снимок сервера сборки; отличается от кеша — подтянуть (pack-fetch.mjs) */
-async function ensurePack(id) {
-  const url = process.env.TFC_PACK_URL;
-  const token = process.env.TFC_PACK_TOKEN;
-  if (!url || !token) return;
-  const res = await fetch(`${url.replace(/\/$/, '')}/pack/current`, { headers: { Authorization: `Bearer ${token}` } });
-  if (!res.ok) throw new Error(`сервер сборки: ${res.status}`);
-  const cur = (await res.json()).id;
-  const { packMeta } = await import('./stand-shm.mjs');
-  if (packMeta().snapshot === cur) return;
-  event(id, `подтягиваю снимок ${cur}`);
-  const code = await runChild(id, [path.join(HERE, 'pack-fetch.mjs')], {
-    onStdout: (l) => l.trim() && event(id, l.replace(/^\[pack:fetch\]\s*/, '').slice(0, 300)),
-  });
-  if (code !== 0) throw new Error(`снимок не подтянулся (код ${code})`);
+/** Кеш только для этого manifest; переиспользуем его лишь после полной проверки байтов. */
+async function ensurePack(id, snapshot) {
+  if (!snapshot) throw new Error('Нет закреплённого снимка: поставьте новый прогон');
+  const base = path.join(QUEUE, 'packs');
+  const dir = path.join(base, snapshot.sha256);
+  if (verifySnapshot(dir, snapshot)) return dir;
+  fs.mkdirSync(base, { recursive: true });
+  const staging = fs.mkdtempSync(path.join(base, '.fetch-'));
+  try {
+    event(id, `подтягиваю закреплённый снимок ${snapshot.id}`);
+    const { fetchPack } = await import('./pack-fetch.mjs');
+    const { PACK_CACHE } = await import('./pack-cache.mjs');
+    await fetchPack({ into: staging, snapshot: snapshot.id, seeds: [path.join(PACK_CACHE, 'mods')], copySeeds: true });
+    if (!verifySnapshot(staging, snapshot)) throw new Error('Байты сборки не совпали с закреплённым manifest');
+    fs.rmSync(dir, { recursive: true, force: true });
+    fs.renameSync(staging, dir);
+    return dir;
+  } finally {
+    fs.rmSync(staging, { recursive: true, force: true });
+  }
 }
 
 /** Строки, которые стенд пишет о себе: этапы прогона — в события, остальное — только в output.log */
@@ -482,14 +541,15 @@ function hardLimit(args) {
   return t + (u >= 0 ? Number(args[u + 1]) || 0 : 0) + 1200;
 }
 
-async function runServer(id, job) {
+async function runServer(id, job, cache) {
   const { stageShm } = await import('./stand-shm.mjs');
-  const staged = stageShm(SERVER_STAND, { prefix: 'tfc-queue.' });
+  const staged = stageShm(SERVER_STAND, { prefix: 'tfc-queue.', cache });
+  const codeRoot = job.runtime?.sha256 ? path.join(jobDir(id), 'runtime/scripts') : HERE;
   let summary = '';
   updateJob(id, { minecraftRun: path.join(staged.stand, 'run') });
   try {
     if (staged.stand !== SERVER_STAND) event(id, 'снимок и NeoForge скопированы в /dev/shm');
-    const code = await runChild(id, [path.join(HERE, 'pack-stand.mjs'), ...resolveArgs(job.args)], {
+    const code = await runChild(id, [path.join(codeRoot, 'pack-stand.mjs'), ...resolveArgs(job.args)], {
       env: { TFC_PACK_CACHE: staged.pack, TFC_STAND_DIR: staged.stand },
       hardSec: hardLimit(job.args),
       onStdout: (l) => (summary += `${l}\n`),
@@ -515,15 +575,16 @@ async function runServer(id, job) {
   }
 }
 
-async function runClientJob(id, job) {
+async function runClientJob(id, job, cache) {
   let summary = '';
   let result = null;
+  const codeRoot = job.runtime?.sha256 ? path.join(jobDir(id), 'runtime/scripts') : HERE;
   const code = await runChild(
     id,
-    [path.join(HERE, 'client-stand.mjs'), 'run', ...resolveArgs(job.args), '--stdin-watch'],
+    [path.join(codeRoot, 'client-stand.mjs'), 'run', ...resolveArgs(job.args), '--stdin-watch'],
     {
       stdinWatch: true,
-      env: { TFC_STAND_QUEUE_JOB: id },
+      env: { TFC_STAND_QUEUE_JOB: id, TFC_PACK_CACHE: cache },
       hardSec: hardLimit(job.args),
       onStdout: (l) => {
         const m = /^RESULT (.+)$/.exec(l);
@@ -545,12 +606,22 @@ async function runJob(job) {
   updateJob(id, { state: 'running', startedAt: now() });
   log(`задание ${id} (${job.kind}, ${job.by}${job.note ? `: ${job.note}` : ''})`);
   try {
-    await ensurePack(id);
+    if (JSON.stringify(describeInputs(job.args)) !== JSON.stringify(job.inputFiles))
+      throw new Error('Входы задания изменились после постановки');
+    verifyCode(path.join(jobDir(id), 'runtime'), job.runtime);
+    const cache = await ensurePack(id, job.snapshot);
+    writeJson(path.join(jobDir(id), 'run-inputs.json'), {
+      snapshot: job.snapshot,
+      runtime: job.runtime,
+      args: job.args,
+      inputFiles: job.inputFiles,
+    });
     event(id, `запускаю ${job.kind === 'server' ? 'серверный' : 'клиентский'} стенд`);
-    const r = job.kind === 'server' ? await runServer(id, job) : await runClientJob(id, job);
-    const summary = r.summary.trim();
+    const r = job.kind === 'server' ? await runServer(id, job, cache) : await runClientJob(id, job, cache);
+    if (r.result) fs.copyFileSync(path.join(jobDir(id), 'run-inputs.json'), path.join(r.result, 'run-inputs.json'));
+    const summary = `Закреплённый снимок: ${job.snapshot.id}; manifest SHA256 ${job.snapshot.sha256}; runtime ${job.runtime?.head} (${job.runtime?.source}, SHA256 ${job.runtime?.sha256 ?? LOADED_RUNTIME.head})\n${r.summary.trim()}`;
     fs.writeFileSync(path.join(jobDir(id), 'summary.txt'), `${summary}\n`);
-    const state = r.code === 'cancelled' ? 'cancelled' : summary ? 'done' : 'error';
+    const state = r.code === 'cancelled' ? 'cancelled' : r.summary.trim() ? 'done' : 'error';
     finishJob(id, {
       state,
       code: r.code,
@@ -589,6 +660,11 @@ function prune() {
   const done = allJobs().filter((j) => FINAL.has(j.state));
   for (const j of done.slice(0, Math.max(0, done.length - KEEP_JOBS)))
     fs.rmSync(path.join(JOBS, j.id), { recursive: true, force: true });
+  const packs = path.join(QUEUE, 'packs');
+  const usedPacks = new Set(allJobs().map((j) => j.snapshot?.sha256));
+  if (fs.existsSync(packs))
+    for (const name of fs.readdirSync(packs))
+      if (!usedPacks.has(name)) fs.rmSync(path.join(packs, name), { recursive: true, force: true });
   const inputs = path.join(QUEUE, 'inputs');
   if (!fs.existsSync(inputs)) return;
   const used = new Set(allJobs().map((j) => j.inputs));
@@ -660,7 +736,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   const run = {
     serve: () => serve({ noPrint: argv.includes('--no-print'), noPull: argv.includes('--no-pull') }),
     runtime: async () => out(queueRuntime(true)),
-    add: async () => out(add(JSON.parse(fs.readFileSync(0, 'utf8')))),
+    add: async () => out(await add(JSON.parse(fs.readFileSync(0, 'utf8')))),
     wait: async () =>
       out(
         await wait(argv[0], {
