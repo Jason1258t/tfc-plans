@@ -1118,3 +1118,31 @@ CLI validation, invalid graph/refs/distributions/limits, world dependencies, pro
 hashes; isolated queue submission, cancellation, passport tampering rejection and metadata delivery list.
 Lint and package boundaries pass. This is contract extraction only: standalone Minecraft execution, isolated
 preparation, general backend, adapters and clean-worker real client/server acceptance remain open in #426.
+
+### Stand extraction: immutable inputs and lifecycle (dev #426, stage 2, 2026-11-27)
+
+`@tfc/minecraft-stand` 0.2.0 now provides standalone `identity`, `freeze`, `transfer` and `run` commands. It has
+no external dependencies and does not import the old TFC scripts. The immutable store keeps file blobs and tree
+manifests (SHA256, size, executable bit); capture freezes local directories/scenario JSON, transfer sends only the
+job's transitive input closure. Input bytes are verified while copying into each environment. Internal JDK file
+symlinks become independent files; external/directory links are refused.
+
+The shared runner validates installed runner identity and worker resources/capabilities, creates separate Java and
+game directories per step, layers pinned Minecraft/loader/base/candidate trees, runs the installed backend, evaluates
+checks, archives outputs/worlds and cleans up on success/failure/cancellation. The next step gets a pinned copy of
+its predecessor's accepted world, without session.lock. Independent failed checks block only dependent steps.
+Prepare/step/total timeouts and SIGINT/SIGTERM are supported. After cancellation/deadline, archiving has its own
+bounded budget (archiveSeconds, default 60 s), so already-created evidence is retained before cleanup. Async event
+observers cannot block execution/cleanup. Output is bounded; process groups are terminated on leader exit and stop.
+Results include an installed-code passport, events, structured step/check outcomes, output trees and cleanup status.
+
+Currently the installed registry contains generic `jvm` for prepared distributions; no network resolver or NeoForge
+installer is implied by this command. The Java heap defaults to the job's declared memory reservation. This is file
+isolation, not a container. The old MCP/queue path remains `legacy-args` until the transport/queue/adapters migration.
+
+Verified with a real Java 26 fixture, not a substitute Minecraft acceptance: server/client-labelled JVM steps,
+cold/warm copies, immutable candidate/scenario, world-file handoff and session.lock removal, repeat with identical job
+SHA and new run IDs, failing check/dependency skip, process timeout/cancel, preparation timeout/cancel, resource and
+runner mismatch, corrupt blob/path/symlink rejection, standalone CLI copied outside checkout/node_modules.
+Existing `stand:smoke`, npm ci, lint and boundaries pass. Real Minecraft client/server and clean Linux worker
+acceptance, shared queue/transport and TFC/NeoForge/printing adapters remain open in #426.
