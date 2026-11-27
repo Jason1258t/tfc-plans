@@ -116,7 +116,9 @@ export function describeInputs(args) {
   return files;
 }
 
-export function verifyCode(dir, expected) {
+export function verifyCode(dir, expected, repo = null) {
+  if (repo && hash(path.join(dir, 'package-lock.json')) !== hash(path.join(repo, 'package-lock.json')))
+    throw new Error('Зависимости стенда изменились после постановки; нужен новый прогон');
   const file = path.join(dir, 'stand-code.json');
   if (hash(file) !== expected.sha256) throw new Error('Изменён manifest runtime');
   const manifest = JSON.parse(fs.readFileSync(file));

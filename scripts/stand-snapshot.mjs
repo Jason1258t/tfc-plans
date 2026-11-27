@@ -56,6 +56,15 @@ export function verifySnapshot(dir, snapshot) {
   try {
     checkManifest(snapshot.manifest);
     if (manifestHash(snapshot.manifest) !== snapshot.sha256) return false;
+    const metadata = JSON.parse(fs.readFileSync(path.join(dir, '.tfc-fetch.json')));
+    if (
+      metadata.snapshot !== snapshot.id ||
+      metadata.mc !== snapshot.manifest.mc ||
+      metadata.loader !== snapshot.manifest.loader
+    )
+      return false;
+    if (manifestHash(JSON.parse(fs.readFileSync(path.join(dir, '.tfc-manifest.json')))) !== snapshot.sha256)
+      return false;
     const expected = new Set(snapshot.manifest.files.map((f) => f.path));
     const walk = (base, prefix = '') =>
       fs.readdirSync(base).every((name) => {
