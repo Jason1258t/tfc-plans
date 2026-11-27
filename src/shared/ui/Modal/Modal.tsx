@@ -35,6 +35,7 @@ export function Modal({ onClose, children, title, actions, footer, narrow, wide,
       className={styles.backdrop}
       aria-label={label ?? (typeof title === 'string' ? title : undefined)}
       onCancel={(e) => {
+        e.stopPropagation();
         e.preventDefault();
         if (!locked) onClose();
       }}
