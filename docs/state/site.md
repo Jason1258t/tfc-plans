@@ -914,3 +914,9 @@ the step is centred.
 - Home (dev #252): a full-height introduction presents TFC Studio as the team’s development of TerraFirmaCraft RealWorld. The existing section directory and search sit below it.
 
 - Home (dev #270): the pack story sits between the introduction and the directory. The directory jump scrolls smoothly and respects reduced motion.
+
+- Dev #427 (2026-11-27): shared Modal uses native `dialog.showModal()` and browser-managed modal layers, focus and
+  Escape. Scroll locking follows `html:has(dialog:modal)` instead of saving/restoring body styles per window, avoiding
+  a stale lock when dialogs overlap or close out of order. Local browser checks: overlapping dialogs, top-only Escape,
+  lower-first removal, final scroll unlock and reopening under StrictMode. Dev task UI itself requires a player key in
+  the check browser and was not exercised there.
