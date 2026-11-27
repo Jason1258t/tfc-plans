@@ -1081,4 +1081,18 @@ unknown legacy jobs, changed/extra cache files, source-bundle tampering, IPv4/ho
 stale/blocked menu markers, recent/busy/ahead lock refusal and archived stale-lock recovery.
 Live direct run `20261127-090958-6c9d`: early marker 102 s, confirmed menu frame 105 s, normal stop 114 s; PNG viewed.
 Saved results and the earlier queue run `20261127-084423-f0b5` were retrieved through the same verified-key IPv6 transport.
-Queue acceptance after rollout follows.
+Live queue client `20261127-093622-ea9e` passed: early marker 123 s, visible menu 126 s, normal exit, 9/9 startup
+and 3/3 client KubeJS scripts without script errors. PNG viewed and attached to #423; logs, helper sources, full
+2641-file manifest and source SHA256 are attached to #425. The `FROZEN-WORKTREE-425` marker appeared after its local
+source was restored, proving delivery of the captured uncommitted worktree. Cancel/retry and duplicate delivery kept
+the same manifest/source digest; conflicting snapshot selection was refused. Server step `20261127-093624-9730`
+inherited the same manifest and source digest, booted in 86 s, answered RCON `list` and completed in 111 s.
+Its passport and full logs are attached to #425. This was a stand boot/transport check; existing pack recipe/tag and
+client-class diagnostics remain in the archived logs.
+
+Exact-path cache seeding verifies SHA256 and copies independent files; a complete verified cache plus the saved
+manifest works without contacting the pack server. Missing blobs still require that server. Transient GET connection
+errors get bounded retries with an endpoint/cause in the error. SSH submit loads the queue worker environment, so its
+pack credentials are available when pinning. Both metadata and payload hashes are checked before reuse; changed
+installed dependencies cause a refusal before execution. Active git detection uses process executable names on
+Linux/macOS without disclosing command arguments.

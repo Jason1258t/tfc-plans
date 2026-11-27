@@ -615,7 +615,7 @@ async function runJob(job) {
   try {
     if (JSON.stringify(describeInputs(job.args)) !== JSON.stringify(job.inputFiles))
       throw new Error('Входы задания изменились после постановки');
-    verifyCode(path.join(jobDir(id), 'runtime'), job.runtime);
+    verifyCode(path.join(jobDir(id), 'runtime'), job.runtime, path.dirname(HERE));
     const cache = await ensurePack(id, job.snapshot);
     writeJson(path.join(jobDir(id), 'run-inputs.json'), {
       snapshot: job.snapshot,
