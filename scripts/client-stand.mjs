@@ -1163,7 +1163,7 @@ export async function runClient({
           `Загрузка модов FML: maxThreads=${profile.fmlMaxThreads ?? 'по умолчанию загрузчика'} (config/fml.toml после overlay).`,
         ]
       : []),
-    `итог: ${state}${readySec !== null ? ` за ${readySec} с` : ''}${shownSec !== null ? `, ${world ? 'мир' : 'меню'} на экране через ${shownSec} с` : ''}; ${stopped || 'не запускалась'}; всего ${secs()} с`,
+    `итог: ${state}${readySec !== null ? (!world && !scene ? `; ранний marker меню ${readySec} с` : ` за ${readySec} с`) : ''}${shownSec !== null ? `, ${world ? 'мир' : 'меню'} на экране через ${shownSec} с` : ''}; ${stopped || 'не запускалась'}; всего ${secs()} с`,
     profile
       ? `моды: ${profile.used} в профиле${profile.excluded ? `, убрано --exclude: ${profile.excluded}` : ''}${mods.length ? `, свои: ${mods.map((m) => path.basename(m)).join(', ')}` : ''}`
       : 'профиль не собран',
