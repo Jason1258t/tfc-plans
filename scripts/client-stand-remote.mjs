@@ -30,7 +30,7 @@ import { PACK_CACHE } from './pack-cache.mjs';
 import { packServer } from './pack-fetch.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-export const HOST = process.env.TFC_CLIENT_HOST ?? 'master@100.109.147.20';
+export const HOST = (process.env.TFC_CLIENT_HOST ?? 'master@100.109.147.20').replace(/(^|@)\[([^\]]+)\]$/, '$1$2');
 const ALIAS = process.env.TFC_CLIENT_HOST_ALIAS ?? '192.168.0.101';
 export const OPT = process.env.TFC_CLIENT_OPT ?? '~/.local/opt/tfc-stand';
 /** Код стенда на хосте: только эти файлы, без node_modules */

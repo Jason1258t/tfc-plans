@@ -40,7 +40,7 @@ const STATE_RU = {
 };
 
 const hostCmd = (args) =>
-  `export PATH=${OPT}/node/bin:$PATH TFC_STAND_QUEUE=~/${REMOTE_QUEUE} && cd ${REPO} && exec node scripts/stand-queue.mjs ${args.map(q).join(' ')}`;
+  `set -a && . ${REPO}/../env && set +a && export PATH=${OPT}/node/bin:$PATH TFC_STAND_QUEUE=~/${REMOTE_QUEUE} && cd ${REPO} && exec node scripts/stand-queue.mjs ${args.map(q).join(' ')}`;
 
 /** Команда stand-queue.mjs на хосте без блокировки процесса (MCP-сервер в это время отвечает другим) → JSON */
 function hostAsync(args, { timeoutSec = 120 } = {}) {

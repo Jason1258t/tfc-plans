@@ -301,6 +301,15 @@ try {
   fs.writeFileSync(path.join(queueDir, 'current.json'), JSON.stringify({ id: 'busy' }));
   assert.throws(() => recoverIndexLock(clean, queueDir), /занята/);
   fs.writeFileSync(path.join(queueDir, 'current.json'), 'null');
+  const activeGit = spawn('git', ['-C', clean, 'hash-object', '--stdin'], { stdio: ['pipe', 'ignore', 'ignore'] });
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    assert.ok(indexLockStatus(clean).gitProcesses.some((p) => p.pid === activeGit.pid));
+    assert.throws(() => recoverIndexLock(clean, queueDir), /старой/);
+  } finally {
+    activeGit.stdin.end();
+    await new Promise((resolve) => activeGit.once('close', resolve));
+  }
   const repaired = recoverIndexLock(clean, queueDir);
   assert.ok(fs.existsSync(repaired.backup));
   assert.equal(repaired.runtime.ok, true);
@@ -327,6 +336,18 @@ try {
     const fetched = path.join(temp, 'fetched');
     await fetchPack({ into: fetched, snapshot: atSubmit.id, srv });
     assert.equal(verifySnapshot(fetched, atSubmit), true);
+    const seeded = path.join(temp, 'seeded');
+    await fetchPack({
+      into: seeded,
+      snapshot: atSubmit.id,
+      manifest: atSubmit.manifest,
+      srv: { url: 'http://127.0.0.1:1', token: 'offline' },
+      seedRoot: fetched,
+      copySeeds: true,
+    });
+    assert.equal(verifySnapshot(seeded, atSubmit), true);
+    fs.writeFileSync(path.join(fetched, 'mods/a.jar'), 'изменён общий кеш');
+    assert.equal(verifySnapshot(seeded, atSubmit), true);
     await assert.rejects(fetchPack({ into: path.join(temp, 'missing'), snapshot: 'missing', srv }), /404/);
   } finally {
     await new Promise((resolve) => apiServer.close(resolve));

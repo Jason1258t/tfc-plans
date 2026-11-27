@@ -409,7 +409,14 @@ async function ensurePack(id, snapshot) {
     event(id, `подтягиваю закреплённый снимок ${snapshot.id}`);
     const { fetchPack } = await import('./pack-fetch.mjs');
     const { PACK_CACHE } = await import('./pack-cache.mjs');
-    await fetchPack({ into: staging, snapshot: snapshot.id, seeds: [path.join(PACK_CACHE, 'mods')], copySeeds: true });
+    await fetchPack({
+      into: staging,
+      snapshot: snapshot.id,
+      manifest: snapshot.manifest,
+      seedRoot: PACK_CACHE,
+      copySeeds: true,
+      onLog: (...parts) => event(id, parts.join(' ')),
+    });
     if (!verifySnapshot(staging, snapshot)) throw new Error('Байты сборки не совпали с закреплённым manifest');
     fs.rmSync(dir, { recursive: true, force: true });
     fs.renameSync(staging, dir);

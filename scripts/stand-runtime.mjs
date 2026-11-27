@@ -56,16 +56,13 @@ export function indexLockStatus(repo) {
     }).trim();
     if (!fs.existsSync(file)) return null;
     const st = fs.lstatSync(file);
-    const gitProcesses = [];
-    if (fs.existsSync('/proc'))
-      for (const pid of fs.readdirSync('/proc').filter((n) => /^\d+$/.test(n))) {
-        try {
-          const command = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8').replaceAll('\0', ' ');
-          if (/(^|\/)git(?: |$)/.test(command)) gitProcesses.push({ pid: Number(pid), command: command.slice(0, 200) });
-        } catch {
-          /* Процесс уже завершился или недоступен. */
-        }
-      }
+    // comm не содержит аргументов с ключами и работает на Linux и macOS.
+    const gitProcesses = execFileSync('ps', ['-eo', 'pid=,comm='], { encoding: 'utf8', timeout: 5000 })
+      .split('\n')
+      .flatMap((line) => {
+        const match = /^\s*(\d+)\s+(.+)$/.exec(line);
+        return match && path.basename(match[2]) === 'git' ? [{ pid: Number(match[1]), command: match[2] }] : [];
+      });
     return {
       file,
       ageSeconds: Math.floor((Date.now() - st.mtimeMs) / 1000),

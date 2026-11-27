@@ -60,19 +60,27 @@ const pickEnv = () =>
  * Запрос к серверу сборки. signal обязателен для вызывающих с таймаутом: без него fetch висит на мёртвой сети
  * (и, например, npm run dev из ворктри не стартует — см. ensure-mods.mjs).
  */
-async function api(srv, p, { raw = false, signal } = {}) {
-  const r = await fetch(`${srv.url}${p}`, { headers: { Authorization: `Bearer ${srv.token}` }, signal });
-  if (!r.ok) {
-    const t = await r.text();
-    let msg = t;
-    try {
-      msg = JSON.parse(t).error ?? t;
-    } catch {
-      /* не JSON */
+async function api(srv, p, { raw = false, signal = AbortSignal.timeout(120_000), attempt = 0 } = {}) {
+  try {
+    const r = await fetch(`${srv.url}${p}`, { headers: { Authorization: `Bearer ${srv.token}` }, signal });
+    if (!r.ok) {
+      const t = await r.text();
+      let msg = t;
+      try {
+        msg = JSON.parse(t).error ?? t;
+      } catch {
+        /* не JSON */
+      }
+      throw new Error(`сервер сборки ${p}: ${r.status} ${msg.slice(0, 200)}`);
     }
-    throw new Error(`сервер сборки ${p}: ${r.status} ${msg.slice(0, 200)}`);
+    return raw ? Buffer.from(await r.arrayBuffer()) : await r.json();
+  } catch (e) {
+    if (e.cause && attempt < 2 && !signal?.aborted) {
+      await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+      return api(srv, p, { raw, signal, attempt: attempt + 1 });
+    }
+    throw new Error(`сервер сборки ${p}: ${e.message}${e.cause?.message ? ` (${e.cause.message})` : ''}`);
   }
-  return raw ? Buffer.from(await r.arrayBuffer()) : r.json();
 }
 
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
@@ -96,7 +104,14 @@ function seedFile(seeds, f) {
  * options.compare — папка, с которой сверяются уже лежащие файлы (по умолчанию dir; fetchData пишет в промежуточную
  * папку и сверяется с итоговой); options.signal — отмена загрузки (таймаут вызывающего).
  */
-async function sync(srv, dir, files, url, seeds = [], { signal, compare = dir, copySeeds = false } = {}) {
+async function sync(
+  srv,
+  dir,
+  files,
+  url,
+  seeds = [],
+  { signal, compare = dir, copySeeds = false, seedRoot = null } = {},
+) {
   const want = [];
   for (const f of files) {
     const local = path.join(compare, ...f.path.split('/'));
@@ -118,7 +133,8 @@ async function sync(srv, dir, files, url, seeds = [], { signal, compare = dir, c
       if (signal?.aborted) return; // не начинать новые загрузки после отмены
       const local = path.join(dir, ...f.path.split('/'));
       fs.mkdirSync(path.dirname(local), { recursive: true });
-      const seed = seeds.length ? seedFile(seeds, f) : null;
+      const rooted = seedRoot ? seedFile([path.dirname(path.join(seedRoot, f.path))], f) : null;
+      const seed = rooted ?? (seeds.length ? seedFile(seeds, f) : null);
       if (seed) {
         fs.rmSync(local, { force: true });
         try {
@@ -141,7 +157,9 @@ async function sync(srv, dir, files, url, seeds = [], { signal, compare = dir, c
       written.push(f.path);
     }
   };
-  await Promise.all(Array.from({ length: 4 }, worker));
+  const outcomes = await Promise.allSettled(Array.from({ length: 4 }, worker));
+  const failed = outcomes.find((r) => r.status === 'rejected');
+  if (failed) throw failed.reason;
   signal?.throwIfAborted();
   return { total: files.length, fetched: want.length - seeded, seeded, bytes, written };
 }
@@ -214,9 +232,14 @@ export async function fetchPack({
   snapshot = null,
   seeds: extraSeeds = [],
   copySeeds = false,
+  seedRoot = null,
+  manifest = null,
+  onLog = log,
 } = {}) {
+  const log = onLog;
   if (!srv) throw new Error('нет TFC_PACK_URL / TFC_PACK_TOKEN (окружение или .env.local) и входа в программу tfc');
-  const snap = await api(srv, snapshot ? `/pack/snapshots/${encodeURIComponent(snapshot)}` : '/pack/current');
+  const snap =
+    manifest ?? (await api(srv, snapshot ? `/pack/snapshots/${encodeURIComponent(snapshot)}` : '/pack/current'));
   if (snapshot && snap.id !== snapshot) throw new Error('Сервер вернул другой снимок');
   log(
     `снимок ${snap.id} от ${snap.createdAt} (${snap.author}${snap.note ? `: ${snap.note}` : ''}), файлов ${snap.files.length}`,
@@ -226,7 +249,10 @@ export async function fetchPack({
     .filter(Boolean)
     .map((r) => path.join(r, 'mods'))
     .filter((d) => fs.existsSync(d));
-  const r = await sync(srv, into, snap.files, (f) => `/blobs/${f.sha256}`, [...extraSeeds, ...seeds], { copySeeds });
+  const r = await sync(srv, into, snap.files, (f) => `/blobs/${f.sha256}`, [...extraSeeds, ...seeds], {
+    copySeeds,
+    seedRoot,
+  });
   fs.writeFileSync(path.join(into, '.tfc-manifest.json'), JSON.stringify(snap));
   const removed = prune(
     into,
