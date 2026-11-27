@@ -986,3 +986,52 @@ registration-audit client job `20261126-175313-dba8`, both `source=latest` and `
 mod-discovery lines from its own run `20261126-175315-41ab`, before completion. IPv4 SSH was intermittently
 unavailable; the advertised Tailscale IPv6 route worked with the same verified host key. MCP stdio/remote-client/CLI
 contracts also passed for all three sources using an isolated transport fixture (scripts attached to #420).
+
+### Create registration concurrency on the client stand (dev #312, 2026-11-26)
+
+A separate `debug-tools-mod` devtest JAR audits Registrate captures, writer thread IDs, overlap, table contents before
+registration, bound entries afterwards, and `extendo_grip` before trigger registration. It is excluded from the normal
+Debug Tools JAR and is not a player addon release. Source, wrapper, exact run parameters and hashes are attached to #312.
+
+On snapshot `20261117-180033-6dff`, Create 6.0.10 / Registrate 1.3.0+67 / FML 4.0.44, queue job
+`20261126-175636-ad19` demonstrated concurrent writes into Create's unsynchronized `HashBasedTable`: Create Deco
+initializes `AllItems` on one thread, Aeronautics initializes `AllBlocks` on another. Their FML thread names are equal,
+but thread IDs differ. Overlapping item registration was observed. All 699 items and 643 blocks survived in this run;
+the historical missing `extendo_grip` was not reproduced directly. A standalone Guava 32.1.2 stress demonstrates that
+the same table structure can lose entries under concurrent writes; this is mechanism evidence, not a replay of the crash.
+
+Paired job `20261126-191010-c1fb` used the same diagnostic JAR SHA256
+`0d63deaa1a90e4e96f66e85b7ac84b4cdaa5376b7ef0fb069fac3c9b1d086583` and only an overlay setting root
+`config/fml.toml` `maxThreads=1`. The loader's raw debug log confirms `Using 1 threads for parallel mod-loading`:
+no overlapping captures, all 699/699 items and 643/643 blocks bound, `extendoBound=true`, menu after 122 seconds.
+The pool still used two writer thread IDs sequentially, so `maxThreads` is pool parallelism rather than a promise of
+one physical thread. Evidence archives: `hzuCOBkRGgXGT4FslDHY` (parallel) and `oM6CF2vj5V5SJetp2bKZ` (serial).
+
+#### Guarded registration accepted (2026-11-27)
+
+A Java 21 agent built from `scripts/client-stand/RegistrateGuard.java` wraps the freshly created Registrate table
+in Guava `Tables.synchronizedTable` in the isolated client JVM. It matches the exact target field/constructor/factory
+shape and one assignment; incompatible bytecode halts with code 86. Player JARs and the pack cache are unchanged.
+The stand builds the helper per run and archives its source, JAR and SHA256 metadata. Acceptance requires the
+`APPLIED` console marker and no guard failure. Both queue and direct stand-code synchronization include the source.
+FML parallelism is preserved; the maxThreads=1 experiment is not shipped as a substitute for synchronization.
+
+On Java 21, an exact-constructor fixture lost 4655 entries in 20/20 unguarded runs; the actual transformer produced
+`Synchronized$SynchronizedTable` with no lost entries in 20 runs. A mismatched factory halted before probe execution.
+Fixture archive on #312: `h7tBalvee45qpo31QyEG`; guard source SHA256
+`2c3b4b6435e97c7fb6bcf71422ee11ac6e9339a6893ef2e9ab06aaf076efed8c`.
+
+Real parallel guarded audit `20261126-232114-1e27` confirms the synchronized runtime table, three writer thread IDs,
+699/699 items, 643/643 blocks and `extendoBound=true`; audit JAR SHA256 is
+`cd6e8727dd7b0fa31d3ff6b889ae1f3eff873e40be3f9a86b3ab58cddec4ecb7`.
+Its title marker appeared at 213 seconds, but the frame still showed the loading overlay; that PNG is not accepted
+as visual menu evidence (#423 tracks the early marker). Normal guarded run `20261127-083717-af78` without the audit
+mod reached the marker at 142 seconds and its inspected frame shows the actual menu, followed by clean exit.
+Evidence: `Fjytf4I83ndlHINvuXCS` (audit) and `K8rUtfTEMKzSSHWSzTFP` (normal client).
+
+History is retained: first guarded run `224933-06fe` timed out at 900 seconds while model loading still made progress;
+that run is not accepted and the slowdown's cause is unproven. Same-JAR unguarded baseline `231818-02b3` subsequently
+showed the menu at 114 seconds. A constant guard deadlock is contradicted by the later completed guarded runs.
+The original November 8 missing extendo entry was not replayed directly; the observed unsafe concurrent writer path
+and the underlying table-loss mechanism are confirmed and protected. The normal Debug Tools JAR excludes the audit
+source set. IPv6 result retrieval (#421) and automatic visible-menu confirmation (#423) remain separate tasks.

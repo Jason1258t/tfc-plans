@@ -34,7 +34,13 @@ export const HOST = process.env.TFC_CLIENT_HOST ?? 'master@100.109.147.20';
 const ALIAS = process.env.TFC_CLIENT_HOST_ALIAS ?? '192.168.0.101';
 export const OPT = process.env.TFC_CLIENT_OPT ?? '~/.local/opt/tfc-stand';
 /** Код стенда на хосте: только эти файлы, без node_modules */
-const CODE = ['client-stand.mjs', 'mc-server.mjs', 'pack-cache.mjs', 'client-stand/Capture.java'];
+const CODE = [
+  'client-stand.mjs',
+  'mc-server.mjs',
+  'pack-cache.mjs',
+  'client-stand/Capture.java',
+  'client-stand/RegistrateGuard.java',
+];
 const REMOTE_CODE = '~/tfc-stand/client-stand-code';
 const REMOTE_STAND = '.cache/tfc-plans/client-stand';
 const LOCAL = path.join(os.homedir(), '.cache', 'tfc-plans', 'client-stand');

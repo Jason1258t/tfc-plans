@@ -43,6 +43,12 @@ export const STAND = path.resolve(
 const LAUNCHER = path.join(STAND, 'launcher');
 const XVFB = path.join(STAND, 'x11', 'usr', 'bin', 'Xvfb');
 const CAPTURE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'client-stand', 'Capture.java');
+const GUARD_SOURCE = path.join(path.dirname(CAPTURE), 'RegistrateGuard.java');
+const GUARD_APPLIED = 'TFC REGISTRATE GUARD APPLIED synchronizedTable assignments=1';
+const GUARD_EXPORTS = [
+  '--add-exports=java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED',
+  '--add-exports=java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED',
+];
 const DEFAULT_NF = '21.1.251';
 const MANIFEST = 'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json';
 const ASSETS_URL = 'https://resources.download.minecraft.net';
@@ -97,6 +103,31 @@ const neoforgeOf = (loader) => /^(?:neoforge-)?(\d+\.\d+\.\d+(?:-beta)?)$/i.exec
 function java() {
   const home = javaHome();
   return home ? path.join(home, 'bin', 'java') : 'java';
+}
+
+/** Собирается для конкретного прогона: исходник и jar сохраняются вместе с доказательствами. */
+export function buildRegistrateGuard(run) {
+  const dir = path.join(run, 'registrate-guard');
+  const classes = path.join(dir, 'classes');
+  fs.mkdirSync(classes, { recursive: true });
+  const source = path.join(dir, 'RegistrateGuard.java');
+  fs.copyFileSync(GUARD_SOURCE, source);
+  const home = javaHome();
+  const jdkTool = (tool) => (home ? path.join(home, 'bin', tool) : tool);
+  const invoke = (tool, args) => {
+    const result = spawnSync(jdkTool(tool), args, { encoding: 'utf8', timeout: 60_000 });
+    if (result.status !== 0)
+      throw new Error(`Защита Registrate: ${tool}: ${result.error?.message ?? result.stderr ?? result.stdout}`);
+  };
+  invoke('javac', [...GUARD_EXPORTS, '-source', '21', '-target', '21', '-d', classes, source]);
+  const manifest = path.join(dir, 'MANIFEST.MF');
+  fs.writeFileSync(manifest, 'Manifest-Version: 1.0\nPremain-Class: tfc.stand.RegistrateGuard\n\n');
+  const jar = path.join(dir, 'registrate-guard.jar');
+  invoke('jar', ['--create', '--file', jar, '--manifest', manifest, '-C', classes, '.']);
+  const hash = (file) => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+  const evidence = { sourceSha256: hash(source), jarSha256: hash(jar) };
+  fs.writeFileSync(path.join(dir, 'guard.json'), JSON.stringify(evidence, null, 2) + '\n');
+  return { jar, ...evidence };
 }
 
 // ------------------------------------------------------------------ подготовка
@@ -501,7 +532,7 @@ function versionJar(id, mc) {
 }
 
 /** Команда запуска по описаниям версий — как у официального лаунчера */
-function launchCommand({ nf, game, natives, memory, size: [w, h], world }) {
+function launchCommand({ nf, game, natives, memory, size: [w, h], world, guard }) {
   const id = `neoforge-${nf}`;
   const child = versionJson(id);
   const parent = versionJson(child.inheritsFrom);
@@ -545,6 +576,8 @@ function launchCommand({ nf, game, natives, memory, size: [w, h], world }) {
     // Консоль (client.log) в UTF-8: иначе кириллица строк мода и сцены в прогрессе стенда — «???»
     '-Dstdout.encoding=UTF-8',
     '-Dstderr.encoding=UTF-8',
+    ...GUARD_EXPORTS,
+    `-javaagent:${guard.jar}`,
     child.mainClass,
     ...expand(parent.arguments.game),
     ...expand(child.arguments?.game),
@@ -585,6 +618,14 @@ function liveRuns() {
   });
 }
 
+// FML пишет этот скаляр в корне TOML. Таблицы и прочие ключи сохраняем дословно.
+const FML_THREADS =
+  /^([ \t]*(?:maxThreads|"maxThreads"|'maxThreads')[ \t]*=[ \t]*)([+-]?\d[\d_]*)(?=[ \t]*(?:#|\r?$))/m;
+function fmlRoot(text) {
+  const table = text.search(/^[ \t]*\[/m);
+  return table < 0 ? text : text.slice(0, table);
+}
+
 /** Профиль игры: моды, config/kubejs/resourcepacks снимка, тестовые настройки, оверлей поверх */
 export function buildProfile({ game, cache, mods, exclude, overlay, copyMods }) {
   const modsDir = path.join(cache, 'mods');
@@ -611,6 +652,7 @@ export function buildProfile({ game, cache, mods, exclude, overlay, copyMods }) 
   }
   for (const d of ['config', 'kubejs', 'resourcepacks', 'defaultconfigs', 'shaderpacks'])
     if (fs.existsSync(path.join(cache, d))) fs.cpSync(path.join(cache, d), path.join(game, d), { recursive: true });
+  const fmlConfig = path.join(game, 'config', 'fml.toml');
   // Первый запуск без экранов-знакомств: доступность Minecraft, подсказки, приветствие FancyMenu
   fs.writeFileSync(
     path.join(game, 'options.txt'),
@@ -651,6 +693,7 @@ export function buildProfile({ game, cache, mods, exclude, overlay, copyMods }) 
     used: used.length + mods.length,
     excluded: jars.length - used.length,
     compatibility,
+    fmlMaxThreads: fmlRoot(readText(fmlConfig)).match(FML_THREADS)?.[2] ?? null,
     visualProfile: {
       options: fs.readFileSync(path.join(game, 'options.txt'), 'utf8'),
       voxyEnabled: fs.existsSync(voxyConfig) ? JSON.parse(fs.readFileSync(voxyConfig, 'utf8')).enabled : null,
@@ -810,6 +853,7 @@ function collect(game, run, out) {
   };
   take(path.join(run, 'client.log'));
   take(path.join(run, 'xvfb.log'));
+  take(path.join(run, 'registrate-guard'));
   take(path.join(game, 'logs', 'latest.log'));
   take(path.join(game, 'logs', 'debug.log'));
   take(path.join(game, 'logs', 'kubejs'), 'kubejs');
@@ -880,6 +924,7 @@ export async function runClient({
   const notes = [];
   let display;
   let profile;
+  let guard;
   let worldNote = null;
   ready ??= world ? READY_WORLD : READY;
   let state = 'не запускалась';
@@ -894,6 +939,7 @@ export async function runClient({
   let savedWorld = null;
   try {
     profile = buildProfile({ game, cache, mods, exclude, overlay, copyMods: ram });
+    guard = buildRegistrateGuard(run);
     if (world) worldNote = setupWorld(game, world, versionJson(`neoforge-${nf}`).inheritsFrom);
     if (scene) fs.writeFileSync(path.join(game, 'scene'), `${scene}\n`);
     if (scene && world) fs.writeFileSync(path.join(game, 'scene-world'), `${world}\n`);
@@ -909,12 +955,16 @@ export async function runClient({
     };
     log(`прогон ${id}: экран ${display.display}, модов ${profile.used}, NeoForge ${nf}`);
     const fd = fs.openSync(path.join(run, 'client.log'), 'w');
-    const child = spawn(java(), launchCommand({ nf, game, natives: path.join(run, 'natives'), memory, size, world }), {
-      cwd: game,
-      env,
-      stdio: ['ignore', fd, fd],
-      detached: true,
-    });
+    const child = spawn(
+      java(),
+      launchCommand({ nf, game, natives: path.join(run, 'natives'), memory, size, world, guard }),
+      {
+        cwd: game,
+        env,
+        stdio: ['ignore', fd, fd],
+        detached: true,
+      },
+    );
     fs.closeSync(fd);
     stopWithProcess(child);
     let exitCode;
@@ -1041,13 +1091,18 @@ export async function runClient({
   const crashes = fs.existsSync(path.join(out, 'crash-reports')) ? fs.readdirSync(path.join(out, 'crash-reports')) : [];
   const sceneLines = scene ? [...latest.matchAll(SCENE_LINE)].map((m) => m[1]) : [];
   const sceneOk = sceneLines.filter((l) => l.startsWith('SCENE OK')).length;
+  // premain пишет в stderr, поэтому проверяем консоль, а не только Minecraft latest.log.
+  const consoleLog = readText(path.join(out, 'client.log'));
+  const guardApplied = consoleLog.includes(GUARD_APPLIED) && !consoleLog.includes('TFC REGISTRATE GUARD FAIL:');
   const ok =
+    guardApplied &&
     (scene
       ? Boolean(sceneEnd?.startsWith('PASS')) && !crashes.length
       : readySec !== null && pngs.length > 0 && !crashes.length) &&
     (!saveWorld || Boolean(savedWorld));
   const text = [
     `Клиентский стенд: снимок ${ver.snapshot ?? '?'}, NeoForge ${nf}, прогон ${id}`,
+    `Защита Registrate (только стенд): ${guardApplied ? 'применена — synchronizedTable' : 'НЕ ПРИМЕНЕНА — приёмка не пройдена'}; SHA256 ${guard?.jarSha256 ?? '?'}.`,
     ...(profile?.compatibility?.length
       ? [
           `Совместимость стенда: исключён ${profile.compatibility.join(', ')}; конфликт с Sodium 0.8.13-beta.1. Профиль отличается от снимка.`,
@@ -1061,6 +1116,11 @@ export async function runClient({
             .join(
               ', ',
             )}; Voxy ${profile.visualProfile.voxyEnabled === false ? 'выключен' : profile.visualProfile.voxyEnabled === true ? 'включён overlay' : 'нет'}.`,
+        ]
+      : []),
+    ...(profile
+      ? [
+          `Загрузка модов FML: maxThreads=${profile.fmlMaxThreads ?? 'по умолчанию загрузчика'} (config/fml.toml после overlay).`,
         ]
       : []),
     `итог: ${state}${readySec !== null ? ` за ${readySec} с` : ''}${shownSec !== null ? `, мир на экране через ${shownSec} с` : ''}; ${stopped || 'не запускалась'}; всего ${secs()} с`,
