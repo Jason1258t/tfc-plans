@@ -880,8 +880,7 @@ must only be removed after checking that the submitting agent stopped and the qu
 
 `addon_stand job=<old or new job>` produces a combined verdict using current step jobs, retaining prior jobs, their
 logs and old verdicts under `evidence/attempts/<step>/`. Retrying clears the previous accepted verdict and runtime flag.
-Old candidates without recorded step parameters must be restarted normally. Retry preserves the original snapshot
-reference only through the stand's ordinary snapshot handling; it freezes JARs and overlay, not all external pack data.
+Old candidates without recorded step parameters must be restarted normally. Retry inherits the original job's pinned pack manifest and frozen stand runtime, in addition to frozen JARs, overlay and the original input world. Legacy jobs without a pinned manifest require a new run.
 
 For a standalone scene, `addon_stand addon=… scene=… worldJob=<successful saved job>` uses a copy of an existing
 TFC world instead of generating the RealWorld map again (CLI `--world-job`). The source must be terminal, successful
@@ -891,3 +890,30 @@ The original world is never edited; the scene may prepare its own area in the co
 `stand_jobs` reports checkout HEAD, origin/main, branch, dirty state, ahead/behind and loaded worker SHA.
 `stand_submit` refreshes and checks runtime before uploading inputs, and the host checks again before enqueueing.
 Diverged/dirty/unknown runtime is an error. Recovery: docs/state/infra.md, “Восстановление checkout очереди”.
+
+### Pinned stand inputs and worktree runtime (dev #425)
+
+`stand_submit` pins the current pack manifest **at submission**, not when its turn starts. `snapshot=<id>` selects an
+exact existing snapshot. `after`, `worldJob` and `retryOf` inherit that snapshot; conflicting references are refused.
+The worker uses a separate cache per manifest SHA256, checks every file and refuses changed/missing bytes. It never
+falls back to the newer current snapshot. `run-inputs.json` in results records the full pack manifest, stand source
+manifest digest, arguments and input-file SHA256. Chain/retry retains the original source bundle as well.
+
+For an addon, use `addon_stand`: build, freeze and upload are automatic; no git/SSH steps on test1a.
+For **stand runner code changes** use `stand_submit kind=client|server runtime=worktree`: source files from the caller's
+worktree (including uncommitted changes) are frozen, uploaded and kept with that job. The worker verifies file hashes;
+workspace imports resolve inside the bundle. Dependency lock must match the installed host dependencies; dependency
+changes must be shipped first. Default `runtime=main` freezes the host's verified main for that specific job. Neither
+mode switches the shared remote checkout. CLI: `npm run stand-queue -- submit client --runtime worktree --note "…"`.
+Normal `stand_wait` observation timeout only returns a cursor; it never resubmits.
+
+Remote file transfers pass IPv4/hostname/IPv6 as SSH `HostName`, separately from rsync's path grammar, preserving host-key
+checks and quoted paths. Terminal `stand_wait` returns full logs/summary/PNG/world through the same transport.
+
+Client menu acceptance requires two fresh rendered TitleScreen frames without an overlay, plus a confirmed capture.
+The FancyMenu lifecycle marker is retained as an earlier diagnostic timestamp. Error/dialog screens, stale render
+markers and a Mojang overlay cannot pass; scenes still require `SCENE END PASS`.
+
+`stand_jobs` / `runtime` diagnose `index.lock` (age, uid, size, git processes). After stopping an **idle** worker,
+`node scripts/stand-runtime.mjs --recover` on test1a obtains queue flock itself, refuses busy/dirty/diverged/unknown
+states, active git or a recent/nonempty lock, archives an old empty lock and fast-forwards only. It never resets commits.

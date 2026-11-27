@@ -40,6 +40,7 @@ const CODE = [
   'pack-cache.mjs',
   'client-stand/Capture.java',
   'client-stand/RegistrateGuard.java',
+  'client-stand/MenuProbe.java',
 ];
 const REMOTE_CODE = '~/tfc-stand/client-stand-code';
 const REMOTE_STAND = '.cache/tfc-plans/client-stand';
@@ -59,12 +60,27 @@ export function ssh(script) {
   return r.stdout;
 }
 
+/** SSH получает адрес отдельно: rsync никогда не разбирает двоеточия IPv6 как HOST:путь. */
+export function transferArgs(args, host = HOST) {
+  const match = /^(?:([^@]+)@)?(.*)$/.exec(host);
+  const hostname = match[2].replace(/^\[|\]$/g, '');
+  if (!hostname || hostname.startsWith('-') || /[\s'"`\\]/.test(hostname)) throw new Error('Неверный SSH host');
+  const transport = ['ssh', ...SSH, '-o', `HostName=${hostname}`, ...(match[1] ? ['-l', match[1]] : [])];
+  return [
+    '-a',
+    '-e',
+    transport.map(q).join(' '),
+    ...args.map((arg) => (arg.startsWith(`${host}:`) ? `tfc-stand-transfer:${q(arg.slice(host.length + 1))}` : arg)),
+  ];
+}
+
 export function rsync(args) {
-  const r = spawnSync('rsync', ['-a', '-e', ['ssh', ...SSH].join(' '), ...args], {
+  const r = spawnSync('rsync', transferArgs(args), {
     stdio: ['ignore', 'ignore', 'pipe'],
     encoding: 'utf8',
   });
-  if (r.status !== 0) throw new Error(`rsync ${args.at(-1)}: код ${r.status} ${(r.stderr ?? '').trim()}`);
+  if (r.status !== 0)
+    throw new Error(`rsync ${args.at(-1)}: код ${r.status} ${(r.stderr ?? r.error?.message ?? '').trim()}`);
 }
 
 /** Код стенда — каждый раз заново, из рабочей копии (проверяем ровно то, что лежит здесь) */

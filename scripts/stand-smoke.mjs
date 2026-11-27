@@ -8,10 +8,16 @@ import path from 'node:path';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import AdmZip from 'adm-zip';
-import { runtimeStatus } from './stand-runtime.mjs';
+import { createServer } from 'node:http';
+import { fetchPack } from './pack-fetch.mjs';
+import { createHash } from 'node:crypto';
+import { selectSnapshot, verifySnapshot, manifestHash } from './stand-snapshot.mjs';
+import { transferArgs } from './client-stand-remote.mjs';
+import { freezeCode, installCode } from './stand-code.mjs';
+import { runtimeStatus, indexLockStatus, recoverIndexLock } from './stand-runtime.mjs';
 import { selectMods } from './pack-stand.mjs';
 import { addonChains, judge, judgeStep, freeze, addonStandRetry, chainResult } from './addon-stand.mjs';
-import { buildProfile, badShotPrefixes } from './client-stand.mjs';
+import { buildProfile, badShotPrefixes, menuFrameReady } from './client-stand.mjs';
 import * as remote from './stand-queue-remote.mjs';
 import * as queue from './stand-queue.mjs';
 
@@ -225,17 +231,33 @@ try {
   git(checkout, 'config', 'user.email', 'smoke@localhost');
   git(checkout, 'config', 'user.name', 'Smoke');
   fs.mkdirSync(path.join(checkout, 'scripts'));
-  for (const file of ['stand-queue.mjs', 'stand-runtime.mjs'])
+  for (const file of ['stand-queue.mjs', 'stand-runtime.mjs', 'stand-snapshot.mjs', 'stand-code.mjs'])
     fs.copyFileSync(path.join(root, 'scripts', file), path.join(checkout, 'scripts', file));
+  for (const file of ['package-lock.json', 'package.json', '.gitignore'])
+    fs.copyFileSync(path.join(root, file), path.join(checkout, file));
+  let dependencies = root;
+  while (!fs.existsSync(path.join(dependencies, 'node_modules'))) dependencies = path.dirname(dependencies);
+  fs.symlinkSync(path.join(dependencies, 'node_modules'), path.join(checkout, 'node_modules'));
   git(checkout, 'add', '.');
   git(checkout, 'commit', '-m', 'Начальное состояние');
   git(checkout, 'push', '-u', 'origin', 'main');
   assert.equal(runtimeStatus(checkout, { refresh: true }).ok, true);
   const queueDir = path.join(temp, 'queue');
+  fs.mkdirSync(path.join(queueDir, 'jobs', '20260101-000000-abcd'), { recursive: true });
+  const bytes = Buffer.from('pack fixture');
+  const manifest = {
+    id: 'snapshot-A',
+    files: [{ path: 'mods/a.jar', size: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') }],
+  };
+  const pinned = { id: manifest.id, manifest, sha256: manifestHash(manifest) };
+  fs.writeFileSync(
+    path.join(queueDir, 'jobs/20260101-000000-abcd/job.json'),
+    JSON.stringify({ id: '20260101-000000-abcd', state: 'done', ok: true, snapshot: pinned }),
+  );
   const queueCall = (cmd, data) =>
     spawnSync(process.execPath, [path.join(checkout, 'scripts/stand-queue.mjs'), cmd], {
       env: { ...process.env, TFC_STAND_QUEUE: queueDir },
-      input: JSON.stringify(data),
+      input: JSON.stringify({ after: '20260101-000000-abcd', ...data }),
       encoding: 'utf8',
     });
   let response = queueCall('add', { kind: 'server', args: [] });
@@ -243,6 +265,7 @@ try {
   const first = JSON.parse(response.stdout);
   const jobFile = path.join(queueDir, 'jobs', first.id, 'job.json');
   const job = JSON.parse(fs.readFileSync(jobFile));
+  assert.equal(job.snapshot.id, 'snapshot-A');
   response = queueCall('add', { kind: 'server', args: [], retryOf: first.id });
   assert.notEqual(response.status, 0);
   job.state = 'cancelled';
@@ -259,6 +282,103 @@ try {
   assert.equal(stale.ok, false);
   assert.equal(stale.ahead, 1);
   assert.notEqual(queueCall('add', { kind: 'server', args: [] }).status, 0);
+
+  // Старый lock диагностируется отдельно от dirty/ahead; восстановление не сбрасывает локальный коммит.
+  const indexLock = path.join(checkout, '.git/index.lock');
+  fs.writeFileSync(indexLock, '');
+  const oldTime = new Date(Date.now() - 7200_000);
+  fs.utimesSync(indexLock, oldTime, oldTime);
+  assert.ok(indexLockStatus(checkout).ageSeconds >= 7200);
+  fs.writeFileSync(path.join(queueDir, 'current.json'), 'null');
+  assert.throws(() => recoverIndexLock(checkout, queueDir), /dirty|diverged|неизвестен/);
+  assert.ok(fs.existsSync(indexLock));
+  fs.rmSync(indexLock);
+  const clean = path.join(temp, 'clean');
+  git(temp, 'clone', '--branch', 'main', upstream, clean);
+  fs.writeFileSync(path.join(clean, '.git/index.lock'), '');
+  assert.throws(() => recoverIndexLock(clean, queueDir), /старой/);
+  fs.utimesSync(path.join(clean, '.git/index.lock'), oldTime, oldTime);
+  fs.writeFileSync(path.join(queueDir, 'current.json'), JSON.stringify({ id: 'busy' }));
+  assert.throws(() => recoverIndexLock(clean, queueDir), /занята/);
+  fs.writeFileSync(path.join(queueDir, 'current.json'), 'null');
+  const repaired = recoverIndexLock(clean, queueDir);
+  assert.ok(fs.existsSync(repaired.backup));
+  assert.equal(repaired.runtime.ok, true);
+
+  const snapshots = { 'snapshot-A': manifest, 'snapshot-B': { ...manifest, id: 'snapshot-B' } };
+  let currentSnapshot = 'snapshot-A';
+  const apiServer = createServer((req, res) => {
+    if (req.url.startsWith('/blobs/')) {
+      res.end(bytes);
+      return;
+    }
+    const value = req.url === '/pack/current' ? snapshots[currentSnapshot] : snapshots[req.url.split('/').at(-1)];
+    res.writeHead(value ? 200 : 404, { 'content-type': 'application/json' });
+    res.end(JSON.stringify(value ?? { error: 'нет снимка' }));
+  });
+  await new Promise((resolve) => apiServer.listen(0, '127.0.0.1', resolve));
+  try {
+    const srv = { url: `http://127.0.0.1:${apiServer.address().port}`, token: 'fixture' };
+    const server = { TFC_PACK_URL: srv.url, TFC_PACK_TOKEN: srv.token };
+    const atSubmit = await selectSnapshot([], null, server);
+    currentSnapshot = 'snapshot-B';
+    assert.equal((await selectSnapshot([], null, server)).id, 'snapshot-B');
+    assert.equal((await selectSnapshot([{ snapshot: atSubmit }], null, server)).id, 'snapshot-A');
+    const fetched = path.join(temp, 'fetched');
+    await fetchPack({ into: fetched, snapshot: atSubmit.id, srv });
+    assert.equal(verifySnapshot(fetched, atSubmit), true);
+    await assert.rejects(fetchPack({ into: path.join(temp, 'missing'), snapshot: 'missing', srv }), /404/);
+  } finally {
+    await new Promise((resolve) => apiServer.close(resolve));
+  }
+  const snapshotDir = path.join(temp, 'pinned-pack');
+  fs.mkdirSync(path.join(snapshotDir, 'mods'), { recursive: true });
+  fs.writeFileSync(path.join(snapshotDir, 'mods/a.jar'), bytes);
+  assert.equal(verifySnapshot(snapshotDir, pinned), true);
+  fs.writeFileSync(path.join(snapshotDir, 'mods/a.jar'), 'changed');
+  assert.equal(verifySnapshot(snapshotDir, pinned), false);
+  fs.writeFileSync(path.join(snapshotDir, 'mods/a.jar'), bytes);
+  fs.mkdirSync(path.join(snapshotDir, 'config'));
+  fs.writeFileSync(path.join(snapshotDir, 'config/stale'), 'old root');
+  assert.equal(verifySnapshot(snapshotDir, pinned), false);
+  assert.equal((await selectSnapshot([{ id: 'source', snapshot: pinned }], null)).id, 'snapshot-A');
+  await assert.rejects(selectSnapshot([{ id: 'legacy' }], null), /нет закреплённого/);
+  await assert.rejects(selectSnapshot([{ id: 'source', snapshot: pinned }], 'snapshot-B'), /разные снимки/);
+  for (const host of [
+    'master@100.109.147.20',
+    'master@test1a',
+    'master@fd7a:115c:a1e0::d31:9315',
+    'master@[fd7a:115c:a1e0::d31:9315]',
+  ]) {
+    const args = transferArgs([`${host}:/remote/path with spaces/`, '/local path/'], host);
+    assert.equal(args.at(-2), "tfc-stand-transfer:'/remote/path with spaces/'");
+    assert.ok(args[2].includes('HostName='));
+    assert.ok(args[2].includes('StrictHostKeyChecking=yes'));
+  }
+  assert.equal(menuFrameReady('ScreenCustomizationLayer registered: title_screen'), false);
+  assert.equal(
+    menuFrameReady('TFC MENU PROBE APPLIED render-return\nTFC MENU FRAME 9000\nTFC MENU FRAME 10000', 11000),
+    true,
+  );
+  assert.equal(
+    menuFrameReady('TFC MENU PROBE APPLIED render-return\nTFC MENU FRAME 9000\nTFC MENU FRAME 10000', 16000),
+    false,
+  );
+  assert.equal(
+    menuFrameReady('TFC MENU PROBE APPLIED render-return\nTFC MENU FRAME 9000\nTFC MENU BLOCKED 10000', 11000),
+    false,
+  );
+  const codeBundle = freezeCode(root);
+  try {
+    const installed = path.join(temp, 'runtime');
+    const info = installCode(codeBundle.dir, installed, root);
+    assert.equal(info.source, 'worktree');
+    assert.ok(fs.existsSync(path.join(installed, 'scripts/client-stand.mjs')));
+    fs.appendFileSync(path.join(codeBundle.dir, 'scripts/client-stand.mjs'), '//changed');
+    assert.throws(() => installCode(codeBundle.dir, path.join(temp, 'bad-runtime'), root), /Изменились исходники/);
+  } finally {
+    fs.rmSync(codeBundle.dir, { recursive: true, force: true });
+  }
   git(checkout, 'remote', 'set-url', 'origin', path.join(temp, 'missing.git'));
   assert.equal(runtimeStatus(checkout, { refresh: true }).ok, false);
 

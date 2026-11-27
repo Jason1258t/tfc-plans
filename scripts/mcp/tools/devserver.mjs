@@ -391,7 +391,13 @@ async function standSubmit(a) {
   if (!argv) throw new Error('kind: server | client');
   if (a.saveWorld) argv.push('--save-world');
   if (a.worldJob) argv.push('--world-job', String(a.worldJob));
-  const r = await submit(kind, argv, { note: a.note ? String(a.note) : '', by: NICK, after: a.after ?? null });
+  const r = await submit(kind, argv, {
+    note: a.note ? String(a.note) : '',
+    by: NICK,
+    after: a.after ?? null,
+    snapshot: a.snapshot ?? null,
+    runtime: a.runtime ?? 'main',
+  });
   const wait = Number(a.wait ?? 0) | 0;
   if (wait > 0) return waitAnswer(await waitJob(r.id, { timeout: wait, until: a.until ?? null }), a.images);
   return [
@@ -585,10 +591,19 @@ export const TOOLS = [
   {
     name: 'stand_submit',
     description:
-      'Queue a whole-pack stand run on test1a (scripts/stand-queue-remote.mjs; one run at a time, agents before background print checks) and return the job id at once. kind=server — production NeoForge dedicated server (like pack_devserver, but on test1a, snapshot staged in RAM): RCON commands, KubeJS counts/errors, deduped latest.log errors, crash. kind=client — full client (like pack_client). The host pulls the current snapshot itself; own jars/overlay/world are uploaded. Then stand_wait id=… — one call until the result instead of polling logs. wait=N waits right here up to N s.',
+      'Queue a whole-pack stand run on test1a (scripts/stand-queue-remote.mjs; one run at a time, agents before background print checks) and return the job id at once. kind=server — production NeoForge dedicated server (like pack_devserver, but on test1a, snapshot staged in RAM): RCON commands, KubeJS counts/errors, deduped latest.log errors, crash. kind=client — full client (like pack_client). The host pins the pack snapshot at submission; chains/retries inherit it; isolated SHA256-verified cache per manifest; own jars/overlay/world are uploaded. Then stand_wait id=… — one call until the result instead of polling logs. wait=N waits right here up to N s.',
     inputSchema: {
       type: 'object',
       properties: {
+        runtime: {
+          type: 'string',
+          enum: ['main', 'worktree'],
+          description:
+            'main by default; worktree freezes and uploads local stand source files for this job, no manual SSH/git needed',
+        },
+        snapshot: str(
+          'optional exact pack snapshot id; default pins current at submission, inherits after/world/retry',
+        ),
         kind: { type: 'string', enum: ['server', 'client'], description: 'server or client stand' },
         note: str('what the run checks (shown in the queue)'),
         after: str('run only after this job id finished and passed (else it is cancelled) — a hand-made chain'),

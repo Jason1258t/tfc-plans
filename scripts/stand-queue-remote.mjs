@@ -22,6 +22,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { freezeCode } from './stand-code.mjs';
 import { requireCurrentRuntime } from './stand-runtime.mjs';
 import { HOST, OPT, SSH, q, rsync, ssh, worldKeyword } from './client-stand-remote.mjs';
 
@@ -77,7 +78,7 @@ function hostAsync(args, { timeoutSec = 120 } = {}) {
 /** Флаги, за которыми идёт локальный путь: заливаем в inputs/<метка> на хосте и подменяем путь */
 function pathFlag(kind, argv, i) {
   const a = argv[i];
-  if (a === '--mod' || a === '--overlay') return true;
+  if (a === '--mod' || a === '--overlay' || a === '--runtime-code') return true;
   return kind === 'client' && a === '--world' && !worldKeyword(argv[i + 1]);
 }
 
@@ -116,12 +117,25 @@ export async function submit(
     after = null,
     chain = null,
     retryOf = null,
+    snapshot = null,
+    runtime = 'main',
   } = {},
 ) {
   if (!KIND_RU[kind]) throw new Error('вид прогона: server | client');
   requireCurrentRuntime(await hostAsync(['runtime']));
-  const { args, inputs } = pushInputs(kind, argv);
-  const spec = JSON.stringify({ kind, args, by, note, inputs, after, chain, retryOf });
+  if (!['main', 'worktree'].includes(runtime)) throw new Error('runtime: main | worktree');
+  const frozen =
+    runtime === 'worktree' ? freezeCode(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')) : null;
+  let uploaded;
+  try {
+    uploaded = pushInputs(kind, [...argv, ...(frozen ? ['--runtime-code', frozen.dir] : [])]);
+  } finally {
+    if (frozen) fs.rmSync(frozen.dir, { recursive: true, force: true });
+  }
+  const { args, inputs } = uploaded;
+  const index = args.indexOf('--runtime-code');
+  const code = index >= 0 ? args.splice(index, 2)[1] : null;
+  const spec = JSON.stringify({ kind, args, by, note, inputs, after, chain, retryOf, snapshot, code });
   const out = ssh(`${hostCmd(['add'])} <<'TFC_JOB_EOF'\n${spec}\nTFC_JOB_EOF\n`);
   return JSON.parse(out.trim().split('\n').at(-1));
 }
@@ -187,6 +201,7 @@ export function viewText(r) {
   const j = view.job;
   const head = `Задание ${j.id} (${KIND_RU[j.kind]} стенд, ${j.by}${j.note ? `: ${j.note}` : ''}) — ${STATE_RU[j.state] ?? j.state}`;
   const out = [head];
+  if (j.snapshot) out.push(`Снимок: ${j.snapshot.id}; manifest SHA256 ${j.snapshot.sha256}`);
   if (j.chain || j.after) out.push(`цепочка ${j.chain ?? '—'}${j.after ? `, после задания ${j.after}` : ''}`);
   if (j.state === 'queued') out.push(`место в очереди: ${view.position}; ${currentText(view.current)}`);
   if (j.state === 'running') out.push(`идёт ${ago(j.startedAt)}; этап: ${j.stage ?? '—'}`);
@@ -254,9 +269,11 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   const run = async () => {
     if (cmd === 'submit') {
       const [kind, ...rest] = argv;
-      const r = await submit(kind, without(rest, ['--note', '--after']), {
+      const r = await submit(kind, without(rest, ['--note', '--after', '--snapshot', '--runtime']), {
         note: one('--note') ?? '',
         after: one('--after') ?? null,
+        snapshot: one('--snapshot') ?? null,
+        runtime: one('--runtime') ?? 'main',
       });
       return `Задание ${r.id} в очереди, место ${r.position}; ${currentText(r.current)}\nЖдать: npm run stand-queue -- wait ${r.id}`;
     }
