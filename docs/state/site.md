@@ -920,3 +920,6 @@ the step is centred.
   a stale lock when dialogs overlap or close out of order. Local browser checks: overlapping dialogs, top-only Escape,
   lower-first removal, final scroll unlock and reopening under StrictMode. Dev task UI itself requires a player key in
   the check browser and was not exercised there.
+  Image lightbox also uses a native dialog so it stays interactive above task dialogs; cancel events stop at their
+  own dialog (including React portal propagation). Browser verified Gallery inside Modal: Escape leaves the task
+  open, then closing the task removes all dialogs and restores scrolling.

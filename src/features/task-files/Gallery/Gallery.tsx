@@ -219,16 +219,22 @@ function Lightbox({
   onRemove: (shot: Shot) => void;
   onClose: () => void;
 }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    dialog.showModal();
+    return () => dialog.close();
+  }, []);
+
   const shot = shots[index];
   const { url: savedUrl } = useImageUrl(source, shot?.kind === 'file' ? shot.file : undefined);
   const url = shot?.kind === 'pending' ? shot.url : savedUrl;
   const go = (d: number) => onIndex((index + d + shots.length) % shots.length);
 
   useEffect(() => {
-    // capture на window срабатывает раньше обработчика модалки — Esc закрывает только просмотр
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-      else if (e.key === 'ArrowRight') go(1);
+      if (e.key === 'ArrowRight') go(1);
       else if (e.key === 'ArrowLeft') go(-1);
       else return;
       e.stopImmediatePropagation();
@@ -246,10 +252,15 @@ function Lightbox({
       : 'не загружено — появится после создания задачи';
 
   return createPortal(
-    <div
+    <dialog
+      ref={dialogRef}
       className={styles.lightbox}
+      onCancel={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        onClose();
+      }}
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
-      role="dialog"
       aria-label={shot.name}
     >
       <div className={styles.lbTop}>
@@ -296,7 +307,7 @@ function Lightbox({
           </button>
         </>
       )}
-    </div>,
+    </dialog>,
     document.body,
   );
 }
