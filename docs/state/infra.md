@@ -1035,3 +1035,13 @@ showed the menu at 114 seconds. A constant guard deadlock is contradicted by the
 The original November 8 missing extendo entry was not replayed directly; the observed unsafe concurrent writer path
 and the underlying table-loss mechanism are confirmed and protected. The normal Debug Tools JAR excludes the audit
 source set. IPv6 result retrieval (#421) and automatic visible-menu confirmation (#423) remain separate tasks.
+
+Final deployed queue acceptance: `20261127-084423-f0b5`, runtime checkout/worker `f48e8ed0`, normal client without
+audit mod, snapshot `20261117-180033-6dff`, FML maxThreads=-1. Run `20261127-084426-91ce` reached the title marker at
+118 seconds and exited cleanly at 144 seconds; its inspected PNG shows the actual main menu with buttons and no
+loading overlay. Guard source SHA256 matches the accepted source above, helper JAR SHA256
+`c77a4a59a54837d7018e5ff202d5982f684f58a930d0bb7f311156d6b721750f` was verified against archived bytes, console
+APPLIED marker present. Full result attached to #312 as `x7xEJYPNI16XbJXiJmrX`. Runtime update preserved a stale,
+unowned `.git/index.lock` as `queue/stale-index-lock-1795769028`, with the idle queue lock held; no local changes or
+commits were discarded. Debug audit sources are on tfc-addons main `912a061`; stand implementation is on tfc-plans
+main `f48e8ed0`. All four #312 checklist items are verified. No player addon/pack release or Hosting change is needed.
