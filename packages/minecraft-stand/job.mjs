@@ -27,6 +27,7 @@ export function checkJob(job) {
   }
   positive(job.limits?.prepareSeconds, 'limits.prepareSeconds');
   positive(job.limits?.totalSeconds, 'limits.totalSeconds');
+  if (job.limits.archiveSeconds !== undefined) positive(job.limits.archiveSeconds, 'limits.archiveSeconds');
   positive(job.resources?.memoryMiB, 'resources.memoryMiB');
   strings(job.resources?.capabilities, 'resources.capabilities');
   if (!Array.isArray(job.steps) || !job.steps.length) invalid('нужен хотя бы один шаг');
