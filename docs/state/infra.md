@@ -1096,3 +1096,25 @@ errors get bounded retries with an endpoint/cause in the error. SSH submit loads
 pack credentials are available when pinning. Both metadata and payload hashes are checked before reuse; changed
 installed dependencies cause a refusal before execution. Active git detection uses process executable names on
 Linux/macOS without disclosing command arguments.
+
+### Stand extraction: contracts (dev #426, stage 1, 2026-11-27)
+
+`packages/minecraft-stand` (`@tfc/minecraft-stand`, 0.1.0) is a Node-only package with no external dependencies.
+It owns the pack-file manifest validator (the old hash remains compatible), canonical JSON hashes, version-1 run
+passport/result and a declarative job validator. Its CLI is `node cli.mjs validate job.json`; see the package README
+for the server → client example, pinned distributions, resources, limits, scenarios, checks and world dependencies.
+The job validator does not yet prepare or execute these declarations.
+
+The existing queue is an explicit `legacy-args` adapter. New jobs save `passport.json`, binding separate worker and
+runner identities, base pack and candidate; the queue verifies its hash and the actual identity before execution.
+The legacy worker identity describes a clean checkout revision, not an independent released worker archive.
+Terminal jobs save `result.json`; `stand_wait` downloads both files even for cancellation without game artifacts.
+Exit code and acceptance verdict are separate: the legacy backend supplies no structured checks, so exit 0 yields
+`unknown` in the new protocol. Existing MCP replies/chain acceptance keep their compatibility semantics. Old jobs
+are not retroactively assigned a passport.
+
+Verified: existing `stand:smoke`; scratch checks of a package copy outside the checkout without node_modules,
+CLI validation, invalid graph/refs/distributions/limits, world dependencies, process/check verdicts and canonical
+hashes; isolated queue submission, cancellation, passport tampering rejection and metadata delivery list.
+Lint and package boundaries pass. This is contract extraction only: standalone Minecraft execution, isolated
+preparation, general backend, adapters and clean-worker real client/server acceptance remain open in #426.
