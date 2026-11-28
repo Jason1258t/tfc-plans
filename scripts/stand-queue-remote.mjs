@@ -26,6 +26,13 @@ import { freezeCode } from './stand-code.mjs';
 import { requireCurrentRuntime } from './stand-runtime.mjs';
 import { HOST, OPT, SSH, q, rsync, ssh, worldKeyword } from './client-stand-remote.mjs';
 
+import {
+  declarationId,
+  waitDeclaration,
+  cancelDeclaration,
+  logDeclaration,
+  declarationText,
+} from './stand-declaration.mjs';
 const REPO = process.env.TFC_QUEUE_REPO ?? '~/tfc-stand/print-worker/repo';
 /** Папка очереди на хосте относительно ~ (как TFC_STAND_QUEUE у stand-queue.mjs) */
 const REMOTE_QUEUE = process.env.TFC_QUEUE_DIR ?? 'tfc-stand/queue';
@@ -171,6 +178,7 @@ function pull(view) {
  * view: { job, position, current, events, skipped, seq, summary, reason: final|until|timeout }
  */
 export async function waitJob(id, { timeout = 600, since = 0, until = null } = {}) {
+  if (declarationId(id)) return waitDeclaration(id, { timeout, since, until });
   const t = Math.min(3600, Math.max(0, Number(timeout) | 0));
   const view = await hostAsync(
     ['wait', id, '--timeout', String(t), '--since', String(since), ...(until ? ['--until', until] : [])],
@@ -181,9 +189,11 @@ export async function waitJob(id, { timeout = 600, since = 0, until = null } = {
 }
 
 export const listJobs = () => hostAsync(['list']);
-export const jobLog = (id, { grep = null, tail = 80, source = 'wrapper' } = {}) =>
-  hostAsync(['log', id, '--source', source, ...(grep ? ['--grep', grep] : []), '--tail', String(tail)]);
-export const cancelJob = (id) => hostAsync(['cancel', id]);
+export const jobLog = (id, { grep = null, tail = 80, source = 'wrapper', step = null } = {}) =>
+  declarationId(id)
+    ? logDeclaration(id, { grep, tail, source, step })
+    : hostAsync(['log', id, '--source', source, ...(grep ? ['--grep', grep] : []), '--tail', String(tail)]);
+export const cancelJob = (id) => (declarationId(id) ? cancelDeclaration(id) : hostAsync(['cancel', id]));
 
 const ago = (iso) => {
   const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000));
@@ -199,6 +209,7 @@ export function currentText(cur) {
 
 /** Ответ ожидания — текстом для агента */
 export function viewText(r) {
+  if (declarationId(r.view.job.id)) return declarationText(r);
   const { view } = r;
   const j = view.job;
   const head = `Задание ${j.id} (${KIND_RU[j.kind]} стенд, ${j.by}${j.note ? `: ${j.note}` : ''}) — ${STATE_RU[j.state] ?? j.state}`;

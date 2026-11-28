@@ -1,6 +1,6 @@
 /** Версионированный паспорт прогона: worker, runner, сборка и кандидат независимы. */
 export const SCHEMA_VERSION = 1;
-export const TOOL_VERSION = '0.2.0';
+export const TOOL_VERSION = '0.3.0';
 const SHA = /^[a-f0-9]{64}$/;
 const fail = (message) => {
   throw new Error(`Контракт стенда: ${message}`);
