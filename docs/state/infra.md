@@ -1179,8 +1179,9 @@ The standalone worker was started under that policy with queue `~/tfc-stand/stan
 inputs (no Minecraft yet). Tailscale authentication was explicitly renewed by the owner.
 
 Real SSH delivery then failed with connection reset, followed by IPv4/IPv6 SSH timeouts; Tailscale peer ping still
-responded. The worker's last SSH handle remained open, so it was not declared stopped or restarted. Reconcile the
-existing queue keys `linux-cold` / `linux-warm` before any new attempt; frozen job SHA256 is
+responded. The worker was not restarted after the observation failure. During cleanup, SIGTERM was sent only after verifying
+its saved process identity; the original SSH handle then exited 0 with `Worker остановлен`, confirming termination.
+The follow-up queue reconciliation timed out again. Before the next execution, reconcile the existing queue keys `linux-cold` / `linux-warm` before any new attempt; frozen job SHA256 is
 `689d2b92f830c17f1a7eaf3177f3b3439a4ed5d469080ac003e643815c9eb205`.
 No successful Linux execution is claimed. Real client/server/chain acceptance, NeoForge/TFC/printing adapters and
 migration of the legacy default paths remain open in #426.
