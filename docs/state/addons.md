@@ -8,6 +8,13 @@ page `/addons/<mod>`: card `tools/<mod>/addon.json` (+ jar, `icons/`) in git, de
 `addons_list` / `addon_check`. Texts moved from the former `src/lib/addons.ts` as is (signed Claude). What still waits for the host or a
 game check — [pending.md](pending.md).
 
+2026-11-28 (dev #398): **Frontier 0.1.0** is the visual foundation of the factoria MVP, not a released gameplay
+version. Adds frame, roof, core, market stall and planner models, original TFC-style textures, formed/facing states,
+Russian/English names and drops, plus 64×64 guest/supplier/broker skins. Build, resources_check and local dedicated-server
+placement pass; labeled technical renders are attached to #398. The full-pack client scene `frontier-assets` is prepared,
+but test1a requires Tailscale reauthentication, so client frames remain pending. Recipes, BE/GUI, multiblock validation,
+NPC presets and economy remain open in #398.
+
 2026-11-27 (dev #422, user layout correction): **EE Extras 2.29.1** lowers the switch, emergency button and
 Create value box from y=0.8 to y=0.55 without changing horizontal positions. Switch/button scale increases from
 0.45 to 0.55 (22%); the value box from 0.2 to 0.25 (25%). Hit areas and acceptance clicks move with the models.
