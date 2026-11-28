@@ -1146,3 +1146,42 @@ SHA and new run IDs, failing check/dependency skip, process timeout/cancel, prep
 runner mismatch, corrupt blob/path/symlink rejection, standalone CLI copied outside checkout/node_modules.
 Existing `stand:smoke`, npm ci, lint and boundaries pass. Real Minecraft client/server and clean Linux worker
 acceptance, shared queue/transport and TFC/NeoForge/printing adapters remain open in #426.
+
+### Stand extraction: queue, transport and MCP (dev #426, stage 3, 2026-11-28)
+
+`@tfc/minecraft-stand` 0.3.0 adds a standalone Unix-socket worker, persistent request keys, FIFO queue numbers,
+event-based wait, terminal-failure retry, bounded log reads and cancellation. A retry reuses the original job SHA;
+duplicate delivery returns the existing queue ID. Queue metadata is saved before publishing state transitions.
+The worker saves the child process identity before sending START through stdin; losing that pipe cancels the runner.
+Recovery checks PID/start-time/boot identities and refuses to overlap a surviving runner/JVM. Incomplete HTTP requests
+and disconnected observers cannot hold shutdown indefinitely.
+
+The shared local/SSH transport transfers CAS inputs with rsync and invokes the installed CLI. It does not upload
+runner code or access git. IPv6 is passed via HostName; paths are quoted. Transport cancellation escalates to SIGKILL
+and bounds output. `stand_submit declaration=<spec.json> requestKey=<key>` uses this path; `retry=<stand-id>` repeats
+frozen inputs. IDs `stand-…` route wait/log/cancel to this worker; `stand_jobs standalone=true` lists it. Per-step
+logs/frames/results and even queued-cancel metadata are downloaded. Application settings: `TFC_STAND_TARGET` points
+to target.json; `TFC_STAND_CACHE` overrides its local cache. Legacy kind-based jobs keep their old behavior.
+
+Verified on macOS with a real Java fixture: concurrent duplicate submission/conflicting keys, terminal/event wait,
+observation timeout without resubmission, queued/running cancellation, retry byte identity and deduplication,
+acceptance failure independent of exit code, artifact/log download, restart persistence, worker SIGKILL/runner EOF,
+missing-runner-record recovery, cancellation of the observer, incomplete-body shutdown, and MCP stdio
+initialize/list/submit/wait/log/jobs. Real rsync and remote CLI were also exercised through a test SSH channel with
+IPv6-style addressing, spaces/quotes and a TERM-ignoring transport process. This does not claim real-network acceptance.
+
+On test1a, an isolated release copy is installed at
+`~/tfc-stand/standalone-426/runner-0.3.0-0e6c7edcf55c`; identity SHA256 is
+`0e6c7edcf55cf7d7e28e7ef347a8db5649ec433d5cfc7f129f46af3c58bf4999`.
+A test-only Landlock/seccomp launcher restricts filesystem reads to that case/system dependencies and denies all
+AF_INET/AF_INET6 sockets. Its probe proved EACCES for the old tfc-plans checkout and EPERM for internet socket creation.
+The standalone worker was started under that policy with queue `~/tfc-stand/standalone-426/queue` and Java 21 fixture
+inputs (no Minecraft yet). Tailscale authentication was explicitly renewed by the owner.
+
+Real SSH delivery then failed with connection reset, followed by IPv4/IPv6 SSH timeouts; Tailscale peer ping still
+responded. The worker was not restarted after the observation failure. During cleanup, SIGTERM was sent only after verifying
+its saved process identity; the original SSH handle then exited 0 with `Worker остановлен`, confirming termination.
+The follow-up queue reconciliation timed out again. Before the next execution, reconcile the existing queue keys `linux-cold` / `linux-warm` before any new attempt; frozen job SHA256 is
+`689d2b92f830c17f1a7eaf3177f3b3439a4ed5d469080ac003e643815c9eb205`.
+No successful Linux execution is claimed. Real client/server/chain acceptance, NeoForge/TFC/printing adapters and
+migration of the legacy default paths remain open in #426.

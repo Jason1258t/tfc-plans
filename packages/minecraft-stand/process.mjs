@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { StringDecoder } from 'node:string_decoder';
+import { recordProcess } from './process-identity.mjs';
 
 export async function runProcess({
   executable,
@@ -72,6 +73,13 @@ export async function runProcess({
     else kill('SIGTERM');
     later(() => kill('SIGKILL'), 5000);
   };
+  try {
+    if (!Number.isSafeInteger(child.pid)) throw new Error('Не удалось создать процесс');
+    recordProcess(path.join(output, 'process.json'), child.pid);
+  } catch (error) {
+    failure = error.message;
+    stop();
+  }
   const onAbort = () => {
     aborted = true;
     abortReason = signal.reason;

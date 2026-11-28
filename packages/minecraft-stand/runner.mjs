@@ -78,7 +78,7 @@ export async function runJob(ref, { store, outputRoot, workRoot, worker, signal,
     error = null,
     cleanupError = null;
   const event = async (stage, detail = {}) => {
-    const record = { seq: ++sequence, time: new Date().toISOString(), stage, ...detail };
+    const record = { runId, seq: ++sequence, time: new Date().toISOString(), stage, ...detail };
     await fs.appendFile(path.join(output, 'events.jsonl'), `${JSON.stringify(record)}\n`);
     try {
       Promise.resolve(onEvent(record)).catch(() => {});

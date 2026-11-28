@@ -917,3 +917,26 @@ markers and a Mojang overlay cannot pass; scenes still require `SCENE END PASS`.
 `stand_jobs` / `runtime` diagnose `index.lock` (age, uid, size, git processes). After stopping an **idle** worker,
 `node scripts/stand-runtime.mjs --recover` on test1a obtains queue flock itself, refuses busy/dirty/diverged/unknown
 states, active git or a recent/nonempty lock, archives an old empty lock and fast-forwards only. It never resets commits.
+
+### Standalone declarative worker (dev #426)
+
+`stand_submit declaration=<spec.json> requestKey=<key>` freezes local input directories/scenario files, transfers only
+content-addressed blobs and submits the graph to an installed standalone worker. Configure the application adapter
+once with `TFC_STAND_TARGET=/absolute/path/target.json`; the target declares local socket/store paths or SSH host,
+options and absolute installed Node/CLI/socket/store paths. See `packages/minecraft-stand/README.md`.
+Submission never updates the tool or reads/pulls the worker checkout. The existing `kind=server|client` path remains
+the legacy TFC queue until its profiles are migrated; declaration mode rejects legacy run parameters.
+
+A repeated `requestKey` with identical inputs returns the same queue ID; changed inputs/metadata with that key are
+refused. The default key is the frozen job SHA256. For an intentional new attempt use
+`stand_submit retry=<stand-id> requestKey=<new-key>` after a terminal failed/cancelled job: its input SHA remains
+unchanged. Both kinds and whole chains are a single declaration. Independent declarations use separate environments.
+
+`stand_wait id=stand-…` selects the standalone transport automatically, waits in one event-based call and downloads
+per-step results/PNG/logs at completion. An observation timeout does not restart or cancel a job. Use
+`stand_log id=stand-… step=<step-id> source=wrapper|client|latest` for bounded per-step console/game logs; without a
+step, wrapper reads the lifecycle event log. `stand_jobs standalone=true` lists that worker;
+`stand_jobs cancel=stand-…` cancels its queued or running job. Legacy IDs keep their existing routing.
+
+The standalone core currently has the prepared-distribution JVM backend. Automatic NeoForge preparation, visible
+client acceptance and TFC/printing adapters are still being extracted; a JVM fixture is not Minecraft acceptance.

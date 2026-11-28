@@ -19,6 +19,7 @@ import { clientStand, worldKeyword } from '../../client-stand-remote.mjs';
 import { addonStandResult, addonStandRun, addonStandRetry, verdictToTask } from '../../addon-stand.mjs';
 import { runStand } from '../../pack-stand.mjs';
 import { cancelJob, jobLog, listJobs, listText, submit, viewText, waitJob } from '../../stand-queue-remote.mjs';
+import { submitDeclaration, retryDeclaration, listDeclarations, declarationsText } from '../../stand-declaration.mjs';
 import { NICK, str, num } from '../fmt.mjs';
 import { TOOLS_DIR } from '../resources.mjs';
 
@@ -386,6 +387,21 @@ function waitAnswer(r, images = 2) {
 }
 
 async function standSubmit(a) {
+  if (a.declaration || a.retry) {
+    const incompatible = Object.keys(a).filter(
+      (key) => !['declaration', 'retry', 'requestKey', 'note', 'wait', 'until', 'images'].includes(key),
+    );
+    if (incompatible.length)
+      throw new Error(`Параметры прогона задаются декларацией: уберите ${incompatible.join(', ')}`);
+    if (a.declaration && a.retry) throw new Error('Укажите declaration или retry');
+    const options = { key: a.requestKey, note: a.note ?? '', by: NICK };
+    const result = a.retry
+      ? await retryDeclaration(String(a.retry), a.requestKey, options)
+      : await submitDeclaration(String(a.declaration), options);
+    if (Number(a.wait) > 0)
+      return waitAnswer(await waitJob(result.id, { timeout: Number(a.wait), until: a.until ?? null }), a.images);
+    return `Задание ${result.id}: место ${result.position}; SHA256 ${result.ref.sha256}. Ожидать: stand_wait id=${result.id}.`;
+  }
   const kind = String(a.kind ?? '');
   const argv = kind === 'client' ? clientArgs(a) : kind === 'server' ? serverArgs(a) : null;
   if (!argv) throw new Error('kind: server | client');
@@ -591,10 +607,17 @@ export const TOOLS = [
   {
     name: 'stand_submit',
     description:
-      'Queue a whole-pack stand run on test1a (scripts/stand-queue-remote.mjs; one run at a time, agents before background print checks) and return the job id at once. kind=server — production NeoForge dedicated server (like pack_devserver, but on test1a, snapshot staged in RAM): RCON commands, KubeJS counts/errors, deduped latest.log errors, crash. kind=client — full client (like pack_client). The host pins the pack snapshot at submission; chains/retries inherit it; isolated SHA256-verified cache per manifest; own jars/overlay/world are uploaded. Then stand_wait id=… — one call until the result instead of polling logs. wait=N waits right here up to N s.',
+      'With declaration=<local JSON>, freeze and queue a self-contained client/server graph on the installed standalone worker (TFC_STAND_TARGET); requestKey deduplicates delivery, retry=<stand-id> repeats frozen inputs. Otherwise queue a legacy whole-pack stand run on test1a (scripts/stand-queue-remote.mjs; one run at a time, agents before background print checks) and return the job id at once. kind=server — production NeoForge dedicated server (like pack_devserver, but on test1a, snapshot staged in RAM): RCON commands, KubeJS counts/errors, deduped latest.log errors, crash. kind=client — full client (like pack_client). The host pins the pack snapshot at submission; chains/retries inherit it; isolated SHA256-verified cache per manifest; own jars/overlay/world are uploaded. Then stand_wait id=… — one call until the result instead of polling logs. wait=N waits right here up to N s.',
     inputSchema: {
       type: 'object',
       properties: {
+        declaration: str(
+          'Local self-contained job spec JSON; freezes inputs and submits to installed standalone worker configured by TFC_STAND_TARGET, no git',
+        ),
+        requestKey: str('Idempotency key for declaration submission (default job SHA256); required for retry'),
+        retry: str(
+          'Terminal failed/cancelled standalone job id to retry with exactly the same inputs; requires requestKey',
+        ),
         runtime: {
           type: 'string',
           enum: ['main', 'worktree'],
@@ -655,7 +678,6 @@ export const TOOLS = [
         memory: str('-Xmx (server 6G, client 8G)'),
         timeout: num('max seconds to boot / reach menu or world (900)'),
       },
-      required: ['kind'],
     },
     handler: standSubmit,
   },
@@ -720,6 +742,7 @@ export const TOOLS = [
       type: 'object',
       properties: {
         id: str('job id'),
+        step: str('Standalone declaration step id for per-step console/latest logs'),
         source: {
           type: 'string',
           enum: ['wrapper', 'client', 'latest'],
@@ -732,6 +755,7 @@ export const TOOLS = [
     },
     handler: async (a) => {
       const r = await jobLog(String(a.id), {
+        step: a.step ?? null,
         grep: a.grep ?? null,
         tail: Number(a.tail ?? 80),
         source: a.source ?? 'wrapper',
@@ -750,13 +774,20 @@ export const TOOLS = [
       'Stand queue on test1a: what runs now and the last 20 jobs (state, place, who, note). cancel=<id> — cancel a job.',
     inputSchema: {
       type: 'object',
-      properties: { cancel: str('job id to cancel (queued — dropped, running — stopped)') },
+      properties: {
+        cancel: str('job id to cancel (queued — dropped, running — stopped)'),
+        standalone: {
+          type: 'boolean',
+          description: 'List the installed standalone declaration worker instead of the legacy queue',
+        },
+      },
     },
     handler: async (a) => {
       if (a.cancel) {
         const r = await cancelJob(String(a.cancel));
         return `Задание ${a.cancel}: ${r.state === 'cancelling' ? 'останавливается' : r.state === 'cancelled' ? 'отменено' : `уже ${r.state}`}`;
       }
+      if (a.standalone) return declarationsText(await listDeclarations());
       return listText(await listJobs());
     },
   },
